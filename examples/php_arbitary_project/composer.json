@@ -1,0 +1,22 @@
+{
+    "name": "fahara02/udb-php-arbitary-project-example",
+    "description": "Standalone PHP UDB SDK example for the ACME Billing arbitrary project schema.",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "fahara02/udb-laravel": "dev-main"
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/fahara02/udb-laravel.git"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "PhpArbitaryProject\\": "gen/PhpArbitaryProject/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

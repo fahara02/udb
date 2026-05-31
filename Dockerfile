@@ -1,4 +1,9 @@
 # syntax=docker/dockerfile:1.7
+#
+# UDB broker image. Builds the `udb-proto-parser` binary from the ROOT crate
+# (Cargo.toml + src/ live at the repo root; there is no src/udb/ crate) and runs
+# it as the gRPC broker. `build.rs` vendors protoc via `protoc-bin-vendored`, so
+# no google/api proto vendoring is needed here.
 
 FROM rust:1.91-bookworm AS builder
 
@@ -10,57 +15,20 @@ RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.l
     && apt-get install -y --no-install-recommends cmake clang curl libcurl4-openssl-dev ca-certificates protobuf-compiler libprotobuf-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY src/udb/Cargo.toml src/udb/Cargo.lock src/udb/build.rs ./src/udb/
-COPY src/udb/src ./src/udb/src
-COPY src/udb/tests ./src/udb/tests
-COPY src/udb/benches ./src/udb/benches
+# Manifests and workspace members first (better layer caching). The workspace
+# declares crates/udb-portable as a member, so its manifest must be present.
+COPY Cargo.toml Cargo.lock build.rs ./
+COPY crates ./crates
+COPY src ./src
 COPY proto ./proto
-RUN mkdir -p /workspace/proto/google/api \
-    && cat > /workspace/proto/google/api/http.proto <<'EOF'
-syntax = "proto3";
-package google.api;
+COPY configs ./configs
+# `[[bench]] core_bench` resolves to benches/core_bench.rs; cargo needs the file
+# to exist when it parses the manifest, even for a --bin build.
+COPY benches ./benches
 
-message Http {
-  repeated HttpRule rules = 1;
-  bool fully_decode_reserved_expansion = 2;
-}
-
-message HttpRule {
-  string selector = 1;
-  oneof pattern {
-    string get = 2;
-    string put = 3;
-    string post = 4;
-    string delete = 5;
-    string patch = 6;
-    CustomHttpPattern custom = 8;
-  }
-  string body = 7;
-  string response_body = 12;
-  repeated HttpRule additional_bindings = 11;
-}
-
-message CustomHttpPattern {
-  string kind = 1;
-  string path = 2;
-}
-EOF
-RUN cat > /workspace/proto/google/api/annotations.proto <<'EOF'
-syntax = "proto3";
-package google.api;
-
-import "google/api/http.proto";
-import "google/protobuf/descriptor.proto";
-
-extend google.protobuf.MethodOptions {
-  HttpRule http = 72295728;
-}
-EOF
-
-WORKDIR /workspace/src/udb
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
-    --mount=type=cache,target=/workspace/src/udb/target \
+    --mount=type=cache,target=/workspace/target \
     cargo build --release --bin udb-proto-parser \
     && cp target/release/udb-proto-parser /tmp/udb-proto-parser
 
@@ -79,8 +47,10 @@ WORKDIR /app
 COPY --from=builder /tmp/udb-proto-parser /usr/local/bin/udb-proto-parser
 COPY --from=builder /usr/local/bin/grpc_health_probe /usr/local/bin/grpc_health_probe
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+# UDB-owned proto + default configs. Application schemas (e.g. the acme_billing
+# example) are mounted in at runtime and served via an overridden CMD.
 COPY proto ./proto
-COPY src/udb/configs ./configs
+COPY configs ./configs
 
 ENV RUST_LOG=info \
     UDB_METRICS_ADDR=0.0.0.0:50052

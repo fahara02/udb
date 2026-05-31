@@ -77,6 +77,47 @@ fn bool_env(key: &str) -> Option<bool> {
     })
 }
 
+/// Assemble a PostgreSQL DSN from libpq-style component env vars
+/// (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGSSLMODE`,
+/// `PGCHANNELBINDING`).
+///
+/// Managed Postgres providers (Neon, Supabase, RDS, …) and the `psql` client
+/// emit these standard variables rather than a single URL. Previously UDB only
+/// read `UDB_PG_DSN` / `DATABASE_URL`, so a `.env` populated straight from a
+/// provider's dashboard left `postgres_configured()` false and startup aborted
+/// with "PostgreSQL is required". This fallback builds an equivalent DSN so
+/// those deployments work without hand-assembling a URL.
+///
+/// Returns `None` unless at least `PGHOST` and `PGDATABASE` are present, so it
+/// never fabricates a half-formed DSN. User and password are percent-encoded so
+/// credentials containing reserved characters survive URL parsing.
+fn pg_dsn_from_libpq_env() -> Option<String> {
+    let host = env_first(&["PGHOST"])?;
+    let database = env_first(&["PGDATABASE"])?;
+    let port = env_first(&["PGPORT"]).unwrap_or_else(|| "5432".to_string());
+
+    let mut authority = String::new();
+    if let Some(user) = env_first(&["PGUSER"]) {
+        authority.push_str(&urlencoding::encode(&user));
+        if let Some(password) = env_first(&["PGPASSWORD"]) {
+            authority.push(':');
+            authority.push_str(&urlencoding::encode(&password));
+        }
+        authority.push('@');
+    }
+
+    let mut dsn = format!("postgresql://{authority}{host}:{port}/{database}");
+
+    // libpq `sslmode` maps directly onto the sqlx/libpq query parameter.
+    // `channel_binding` is negotiated automatically by SCRAM over TLS, so it is
+    // intentionally not appended (sqlx rejects unknown query parameters).
+    if let Some(sslmode) = env_first(&["PGSSLMODE"]) {
+        dsn.push_str("?sslmode=");
+        dsn.push_str(&sslmode);
+    }
+    Some(dsn)
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TlsSettings {
@@ -1022,8 +1063,11 @@ impl UdbConfig {
         let profile = DeployProfile::from_env();
         self.deploy = profile.clone();
 
-        // PostgreSQL primary
-        if let Some(dsn) = env_first(&["UDB_PG_DSN", "DATABASE_URL"]) {
+        // PostgreSQL primary. Prefer an explicit URL, then fall back to
+        // libpq-style component vars (PGHOST/PGUSER/PGPASSWORD/…) emitted by
+        // managed providers and the psql client.
+        if let Some(dsn) = env_first(&["UDB_PG_DSN", "DATABASE_URL"]).or_else(pg_dsn_from_libpq_env)
+        {
             self.primary.direct_dsn = dsn;
         }
         self.primary.deploy = profile.postgres.clone();

@@ -1,0 +1,3 @@
+*.exe
+.udb/
+db_ops/

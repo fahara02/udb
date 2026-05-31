@@ -628,3 +628,39 @@ fn restore_env(key: &str, value: Option<String>) {
         }
     }
 }
+
+#[test]
+fn pg_dsn_from_libpq_env_assembles_neon_style_dsn() {
+    let keys = [
+        "PGHOST",
+        "PGPORT",
+        "PGUSER",
+        "PGPASSWORD",
+        "PGDATABASE",
+        "PGSSLMODE",
+    ];
+    let saved: Vec<_> = keys.iter().map(|k| (*k, std::env::var(k).ok())).collect();
+
+    restore_env("PGHOST", Some("ep-demo.neon.tech".to_string()));
+    restore_env("PGUSER", Some("neondb_owner".to_string()));
+    // Password with a reserved char must be percent-encoded.
+    restore_env("PGPASSWORD", Some("p@ss/word".to_string()));
+    restore_env("PGDATABASE", Some("neondb".to_string()));
+    restore_env("PGSSLMODE", Some("require".to_string()));
+    restore_env("PGPORT", None);
+
+    assert_eq!(
+        super::pg_dsn_from_libpq_env().as_deref(),
+        Some(
+            "postgresql://neondb_owner:p%40ss%2Fword@ep-demo.neon.tech:5432/neondb?sslmode=require"
+        )
+    );
+
+    // Without the minimum required parts, no DSN is fabricated.
+    restore_env("PGHOST", None);
+    assert!(super::pg_dsn_from_libpq_env().is_none());
+
+    for (key, value) in saved {
+        restore_env(key, value);
+    }
+}

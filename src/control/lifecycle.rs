@@ -709,67 +709,74 @@ pub async fn run_startup_lifecycle(
         }
     }
 
-    for store in manifest
-        .stores
-        .iter()
-        .filter(|store| store.store_kind == "vector")
-    {
-        if !runtime.qdrant_configured() {
-            if allow_degraded_backend_startup(runtime) {
-                report.warnings.push(format!(
-                    "skipped vector store verification '{}' because qdrant is not configured",
-                    store.resource_name
-                ));
-                continue;
-            }
-            return Err(fail(
-                runtime,
-                &mut report,
-                "qdrant_required",
-                format!(
-                    "manifest requires vector store '{}' but qdrant is not configured",
-                    store.resource_name
-                ),
-            ));
-        }
+    if dry_run {
+        report.step(
+            FsmState::Verifying,
+            "dry-run mode — skipping live backend resource verification (backend provisioning not applied)",
+        );
+    } else {
+        for store in manifest
+            .stores
+            .iter()
+            .filter(|store| store.store_kind == "vector")
         {
-            runtime
-                .verify_qdrant_store(store)
-                .await
-                .map_err(|err| fail(runtime, &mut report, "qdrant_verify", err.to_string()))?;
-            report.verified_vector_collections += 1;
-        }
-    }
-    #[cfg(feature = "s3")]
-    for store in manifest
-        .stores
-        .iter()
-        .filter(|store| matches!(store.store_kind.as_str(), "object" | "blob" | "storage"))
-    {
-        if !runtime.s3_configured() {
-            if allow_degraded_backend_startup(runtime) {
-                report.warnings.push(format!(
-                    "skipped object store verification '{}' because s3/minio is not configured",
-                    store.resource_name
+            if !runtime.qdrant_configured() {
+                if allow_degraded_backend_startup(runtime) {
+                    report.warnings.push(format!(
+                        "skipped vector store verification '{}' because qdrant is not configured",
+                        store.resource_name
+                    ));
+                    continue;
+                }
+                return Err(fail(
+                    runtime,
+                    &mut report,
+                    "qdrant_required",
+                    format!(
+                        "manifest requires vector store '{}' but qdrant is not configured",
+                        store.resource_name
+                    ),
                 ));
-                continue;
             }
-            return Err(fail(
-                runtime,
-                &mut report,
-                "s3_required",
-                format!(
-                    "manifest requires object store '{}' but s3/minio is not configured",
-                    store.resource_name
-                ),
-            ));
+            {
+                runtime
+                    .verify_qdrant_store(store)
+                    .await
+                    .map_err(|err| fail(runtime, &mut report, "qdrant_verify", err.to_string()))?;
+                report.verified_vector_collections += 1;
+            }
         }
+        #[cfg(feature = "s3")]
+        for store in manifest
+            .stores
+            .iter()
+            .filter(|store| matches!(store.store_kind.as_str(), "object" | "blob" | "storage"))
         {
-            runtime
-                .verify_s3_bucket(store)
-                .await
-                .map_err(|err| fail(runtime, &mut report, "s3_verify", err.to_string()))?;
-            report.verified_object_buckets += 1;
+            if !runtime.s3_configured() {
+                if allow_degraded_backend_startup(runtime) {
+                    report.warnings.push(format!(
+                        "skipped object store verification '{}' because s3/minio is not configured",
+                        store.resource_name
+                    ));
+                    continue;
+                }
+                return Err(fail(
+                    runtime,
+                    &mut report,
+                    "s3_required",
+                    format!(
+                        "manifest requires object store '{}' but s3/minio is not configured",
+                        store.resource_name
+                    ),
+                ));
+            }
+            {
+                runtime
+                    .verify_s3_bucket(store)
+                    .await
+                    .map_err(|err| fail(runtime, &mut report, "s3_verify", err.to_string()))?;
+                report.verified_object_buckets += 1;
+            }
         }
     }
 

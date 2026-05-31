@@ -1,0 +1,124 @@
+name: Release · binaries
+
+# Builds the `udb-proto-parser` broker/CLI binary for Windows, Linux, and macOS
+# and attaches each as a RAW binary to the GitHub Release for a SemVer tag.
+#
+# Asset names match the contract the example scripts download by
+# (examples/*/scripts/udb.ps1, run-udb-linux.sh, docker-compose.yml):
+#
+#   udb-proto-parser-linux-amd64
+#   udb-proto-parser-windows-amd64.exe
+#   udb-proto-parser-darwin-arm64
+#
+# (os ∈ linux|windows|darwin, arch ∈ amd64|arm64; NOT archived, so the scripts'
+# `-notmatch "\.(zip|tar\.gz)$"` asset filter selects them.)
+#
+# Feature set: a PORTABLE subset of `default` — drops native-C backends that are
+# painful on Windows/macOS runners (kafka/rdkafka, cassandra/scylla,
+# mssql/tiberius, memcached, mongodb-native) while keeping the common surface
+# (postgres, qdrant, s3, redis, the REST backends, otel). The Linux Docker image
+# still ships full default features. A disabled backend's RPCs return
+# FailedPrecondition rather than disappearing.
+#
+# Trigger: a pushed `v*.*.*` tag, or manual dispatch for a build-only dry run.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  PORTABLE_FEATURES: >-
+    postgres,mysql,sqlite,qdrant,s3,mongodb,neo4j,clickhouse,redis,elasticsearch,weaviate,pinecone,azureblob,gcs,otel,runtime-logging,http-client
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build (${{ matrix.asset }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset: udb-proto-parser-linux-amd64
+            ext: ''
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            asset: udb-proto-parser-windows-amd64.exe
+            ext: '.exe'
+          - os: macos-14
+            target: aarch64-apple-darwin
+            asset: udb-proto-parser-darwin-arm64
+            ext: ''
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      # Native build deps. aws-lc-sys (s3) needs cmake + NASM; several REST
+      # backends need a C toolchain.
+      - name: Install build deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake clang nasm ninja-build pkg-config libssl-dev
+
+      - name: Install build deps (macOS)
+        if: runner.os == 'macOS'
+        run: brew install cmake nasm ninja
+
+      - name: Install build deps (Windows)
+        if: runner.os == 'Windows'
+        run: choco install nasm --no-progress -y
+
+      - name: Build
+        shell: bash
+        run: |
+          cargo build --release --locked --target ${{ matrix.target }} \
+            --bin udb-proto-parser \
+            --no-default-features --features "${PORTABLE_FEATURES}"
+
+      - name: Stage asset + checksum
+        id: stage
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp "target/${{ matrix.target }}/release/udb-proto-parser${{ matrix.ext }}" "dist/${{ matrix.asset }}"
+          cd dist
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256"
+          else
+            shasum -a 256 "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256"
+          fi
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: |
+            dist/${{ matrix.asset }}
+            dist/${{ matrix.asset }}.sha256
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/${{ matrix.asset }}
+            dist/${{ matrix.asset }}.sha256
+          fail_on_unmatched_files: true

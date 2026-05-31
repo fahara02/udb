@@ -459,13 +459,34 @@ $$;
                 process::exit(1);
             });
             eprintln!("udb DataBroker listening on {addr}");
-            let runtime = tokio::runtime::Runtime::new().unwrap_or_else(|err| {
-                eprintln!("failed to create tokio runtime: {err}");
-                process::exit(1);
-            });
-            if let Err(err) = runtime.block_on(serve(manifest, schemas, addr)) {
-                eprintln!("udb DataBroker stopped with error: {err}");
-                process::exit(1);
+            let serve_thread = std::thread::Builder::new()
+                .name("udb-serve".to_string())
+                .stack_size(64 * 1024 * 1024)
+                .spawn(move || {
+                    let runtime = tokio::runtime::Builder::new_multi_thread()
+                        .enable_all()
+                        .thread_name("udb-runtime")
+                        .thread_stack_size(64 * 1024 * 1024)
+                        .build()
+                        .map_err(|err| format!("failed to create tokio runtime: {err}"))?;
+                    runtime
+                        .block_on(serve(manifest, schemas, addr))
+                        .map_err(|err| format!("udb DataBroker stopped with error: {err}"))
+                })
+                .unwrap_or_else(|err| {
+                    eprintln!("failed to spawn serve thread: {err}");
+                    process::exit(1);
+                });
+            match serve_thread.join() {
+                Ok(Ok(())) => {}
+                Ok(Err(err)) => {
+                    eprintln!("{err}");
+                    process::exit(1);
+                }
+                Err(_) => {
+                    eprintln!("udb DataBroker serve thread panicked");
+                    process::exit(1);
+                }
             }
         }
         Command::AdminForceSync => {
