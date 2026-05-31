@@ -4,20 +4,30 @@
 [![PHP Version](https://img.shields.io/badge/php-%5E8.1-blue.svg)](https://www.php.net/)
 [![Laravel](https://img.shields.io/badge/laravel-10%20%7C%2011%20%7C%2012-red.svg)](https://laravel.com/)
 
-The official Laravel SDK for [**UDB** (Universal Data Broker)](https://github.com/fahara02/udb) — a real gRPC client, a Laravel `ServiceProvider` + `Facade`, automatic request-context propagation, typed exceptions, and a tested middleware that resolves tenant / user / correlation per request.
+Laravel client for [UDB](https://github.com/fahara02/udb), a service that lets your app read and write data through one broker instead of connecting directly to every database or storage backend.
 
-This package gives Laravel apps the same first-class UDB experience the Go, Python, TypeScript, C# and Java SDKs already have, with Laravel-idiomatic ergonomics on top.
+Install this package when a Laravel app needs to call a running UDB broker. It gives you a Laravel `ServiceProvider`, a `Udb` facade, generated PHP protobuf classes, request middleware, and clear exceptions for gRPC errors.
 
 ---
 
-## Why this exists
+## What is UDB?
 
-Before this SDK, Laravel apps that wanted to talk to UDB had two unappealing options:
+UDB stands for Universal Data Broker. Think of it as a data API that sits between your Laravel app and the systems where the data actually lives.
 
-1. **Bypass UDB entirely and write SQL** — defeats the whole point of having a broker (no RLS, no audit, no cross-backend routing).
-2. **Hand-roll a gRPC wrapper per project** — every app re-implements metadata injection, error mapping, and request-context plumbing.
+A Laravel app sends a request such as "select patients", "upsert this invoice", or "delete this object". UDB decides where that data lives, applies the broker rules, talks to the right backend, and returns a typed response.
 
-The SDK fixes both: you `composer require` it, set `UDB_ENDPOINT` in `.env`, and `Udb::select($req)` returns a typed proto response with all 8 broker-required headers attached automatically.
+That means the Laravel app does not need to know whether the data is in Postgres, MySQL, SQLite, MongoDB, S3, Redis, Qdrant, or another supported backend. The app only needs the UDB endpoint and the request it wants to send.
+
+## What This Package Does
+
+This package makes UDB feel natural inside Laravel:
+
+- `composer require fahara02/udb-laravel`
+- set `UDB_ENDPOINT` in `.env`
+- call `Udb::select()`, `Udb::upsert()`, or `Udb::delete()`
+- use typed generated PHP classes for requests and responses
+- let middleware attach tenant, user, and correlation context automatically
+- catch Laravel-friendly exceptions instead of handling raw gRPC status arrays everywhere
 
 ---
 
@@ -36,7 +46,7 @@ The SDK fixes both: you `composer require` it, set `UDB_ENDPOINT` in `.env`, and
 composer require fahara02/udb-laravel
 ```
 
-That's it. The `UdbServiceProvider` is auto-discovered. The `Udb` facade is registered. The middleware is mounted on `web` and `api` route groups (opt-out via config).
+The service provider is auto-discovered by Laravel. The `Udb` facade is registered automatically. By default, the package also adds middleware to the `web` and `api` route groups so each request can carry tenant and user context into UDB.
 
 Publish the config file when you need to override defaults:
 
@@ -50,10 +60,16 @@ This drops a documented `config/udb.php` into your app.
 
 ## Configuration
 
-All values are overridable via `.env`:
+For local development, the only required value is usually:
 
 ```env
-UDB_ENDPOINT=udb.internal:50051
+UDB_ENDPOINT=127.0.0.1:50051
+```
+
+For production, you will normally set TLS, service identity, project, and timeout values too:
+
+```env
+UDB_ENDPOINT=udb.prod.svc.cluster.local:50051
 
 # TLS
 UDB_TLS_ENABLED=true
@@ -82,7 +98,7 @@ The full reference lives in [`config/udb.php`](config/udb.php).
 
 ## Usage
 
-### Basic — Select
+### Read Data
 
 ```php
 use Udb\Entity\V1\SelectRequest;
@@ -95,27 +111,37 @@ $req = (new SelectRequest())
 $records = Udb::select($req);
 
 foreach ($records->getRecords() as $record) {
-    // $record is a \Udb\Entity\V1\Record proto
+    // $record is a typed protobuf object.
 }
 ```
 
-The middleware has already filled in `x-tenant-id`, `x-user-id`, `x-correlation-id` from the request — you didn't have to think about them.
+If the call happens during an HTTP request, the middleware will try to attach the current tenant, user, and correlation ID automatically.
 
-### Upsert + Delete
+### Write Data
 
 ```php
 use Udb\Entity\V1\UpsertRequest;
-use Udb\Entity\V1\DeleteRequest;
+use Fahara02\UdbLaravel\Facades\Udb;
 
 $response = Udb::upsert($upsertRequest);
+```
+
+`upsert()` returns a `MutationResponse`.
+
+### Delete Data
+
+```php
+use Udb\Entity\V1\DeleteRequest;
+use Fahara02\UdbLaravel\Facades\Udb;
+
 $response = Udb::delete($deleteRequest);
 ```
 
-Both return `\Udb\Entity\V1\MutationResponse`.
+`delete()` also returns a `MutationResponse`.
 
-### One-off metadata override (queue jobs, scheduler)
+### Queue Jobs And Scheduled Commands
 
-When you're outside the HTTP request lifecycle:
+Jobs, commands, and schedulers do not have an HTTP request, so pass metadata explicitly:
 
 ```php
 use Fahara02\UdbLaravel\UdbMetadata;
@@ -131,9 +157,9 @@ $meta = UdbMetadata::fromContext(
 $response = Udb::upsert($req, $meta);
 ```
 
-### Accessing the raw stub
+### Raw gRPC Stub
 
-For RPCs the convenience methods don't wrap (`BeginTx`, `PublishCDC`, vector ops, blob ops):
+For broker RPCs that do not have a convenience method yet, use the generated gRPC stub:
 
 ```php
 $stub = Udb::stub();
@@ -151,12 +177,12 @@ use Fahara02\UdbLaravel\Exceptions\UdbException;
 try {
     Udb::select($req);
 } catch (UdbRpcException $e) {
-    // Broker said no. $e->status holds the \Grpc\STATUS_* code.
+    // UDB returned a gRPC error. $e->status holds the \Grpc\STATUS_* code.
     if ($e->status === \Grpc\STATUS_NOT_FOUND) { /* ... */ }
 } catch (UdbConfigurationException $e) {
-    // Misconfigured deployment — alert the on-call.
+    // Missing endpoint, invalid TLS config, or similar app setup problem.
 } catch (UdbException $e) {
-    // Catch-all for anything UDB-shaped.
+    // Base exception for this package.
 }
 ```
 

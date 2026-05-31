@@ -192,11 +192,12 @@ mod tests {
     use super::*;
 
     fn cfg_with_mode(mode: CdcExactlyOnceMode) -> CdcConfig {
-        let mut cfg = CdcConfig::default();
-        cfg.exactly_once_mode = mode;
-        cfg.transactional_id_prefix = "udb-cdc".to_string();
-        cfg.slot_name = "udb_outbox_slot".to_string();
-        cfg
+        CdcConfig {
+            exactly_once_mode: mode,
+            transactional_id_prefix: "udb-cdc".to_string(),
+            slot_name: "udb_outbox_slot".to_string(),
+            ..Default::default()
+        }
     }
 
     #[test]

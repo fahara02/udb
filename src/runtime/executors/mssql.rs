@@ -537,7 +537,7 @@ mod tests {
         ));
         assert!(matches!(SqlParam::from_json(&json!(42)), SqlParam::Int(42)));
         assert!(matches!(
-            SqlParam::from_json(&json!(3.14)),
+            SqlParam::from_json(&json!(2.5)),
             SqlParam::Float(_)
         ));
         match SqlParam::from_json(&json!("hello")) {

@@ -84,7 +84,7 @@ mod tests {
             LogicalValue::Null,
             LogicalValue::Bool(true),
             LogicalValue::Int(42),
-            LogicalValue::Float(3.14),
+            LogicalValue::Float(2.5),
             LogicalValue::String("hello".to_string()),
             LogicalValue::Bytes(vec![1, 2, 3]),
             LogicalValue::Json(serde_json::json!({"k": "v"})),

@@ -755,9 +755,11 @@ mod tests {
         .await
         .unwrap();
 
-        let mut settings = SagaSettings::default();
-        settings.recovery_interval_secs = 1;
-        settings.stale_threshold_secs = 1;
+        let settings = SagaSettings {
+            recovery_interval_secs: 1,
+            stale_threshold_secs: 1,
+            ..Default::default()
+        };
         let worker = SagaRecoveryWorker::with_settings(store.clone(), &settings);
 
         let report = worker.run_once().await;
@@ -778,9 +780,11 @@ mod tests {
     async fn worker_lease_serializes_concurrent_workers() {
         let store = fresh_store().await;
 
-        let mut settings = SagaSettings::default();
-        settings.recovery_interval_secs = 1;
-        settings.stale_threshold_secs = 1;
+        let settings = SagaSettings {
+            recovery_interval_secs: 1,
+            stale_threshold_secs: 1,
+            ..Default::default()
+        };
         let worker_a = SagaRecoveryWorker::with_settings(store.clone(), &settings);
         let worker_b = SagaRecoveryWorker::with_settings(store.clone(), &settings);
 

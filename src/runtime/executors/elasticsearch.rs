@@ -486,8 +486,10 @@ mod tests {
             "http://localhost:9200",
             ElasticsearchAuth::None,
         ));
-        let mut ctx = AppliedContext::default();
-        ctx.tenant_id = "acme".into();
+        let ctx = AppliedContext {
+            tenant_id: "acme".into(),
+            ..Default::default()
+        };
         match exec.enforce(&ctx) {
             ContextEffect::Enforced { mechanism } => {
                 assert!(mechanism.contains("_tenant_id"));

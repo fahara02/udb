@@ -51,8 +51,10 @@ impl GcsClient {
         // service account via its standard ADC chain. For
         // anonymous-only deployments the default config is fine.
         let project_id = project.into();
-        let mut config = ClientConfig::default();
-        config.project_id = Some(project_id.clone());
+        let config = ClientConfig {
+            project_id: Some(project_id.clone()),
+            ..Default::default()
+        };
         let client = Client::new(config);
         Ok(Self {
             inner: Arc::new(client),

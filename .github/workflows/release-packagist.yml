@@ -171,6 +171,10 @@ jobs:
           status=$(printf '%s' "$response" | tail -n 1)
           echo "Packagist response: $status"
           printf '%s\n' "$body"
+          if [ "$status" = "404" ]; then
+            echo "::warning::Packagist does not know this package yet. Submit https://github.com/fahara02/udb-laravel at https://packagist.org/packages/submit once, then rerun this workflow. Package name defaults to $PACKAGE; PACKAGIST_PACKAGE is only needed if you publish under a different name."
+            exit 0
+          fi
           if [ "$status" != "200" ] && [ "$status" != "202" ]; then
             echo "::error::Packagist update failed with status $status"
             exit 1
