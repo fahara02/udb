@@ -52,6 +52,10 @@ Go to https://github.com/new and create:
 Do NOT add a `.gitignore`, license, or README — git subtree push
 needs a truly empty repo.
 
+Until this repo exists, any `fahara02/udb-laravel` Settings URL will
+show 404. GitHub also shows 404 if you're not logged in with admin
+access to the repo.
+
 ### 2. Split + push the SDK subtree
 
 From the root of this repo (`E:\Projects\udb`):
@@ -126,9 +130,11 @@ ssh-keygen -t ed25519 -f udb_laravel_deploy_key -N "" -C "udb-monorepo -> udb-la
 cat udb_laravel_deploy_key.pub
 ```
 
-- Paste the **public** key (`.pub`) into
-  https://github.com/fahara02/udb-laravel/settings/keys/new with
-  **Allow write access** ticked. Title: `udb-monorepo-sync`.
+- In GitHub, open the satellite repo
+  `https://github.com/fahara02/udb-laravel`, then go to
+  **Settings → Deploy keys → Add deploy key**. Paste the **public**
+  key (`.pub`), tick **Allow write access**, and use the title
+  `udb-monorepo-sync`.
 - Paste the **private** key (no `.pub`) into
   https://github.com/fahara02/udb/settings/secrets/actions/new as
   `UDB_LARAVEL_DEPLOY_KEY` (full file contents, including the
