@@ -113,6 +113,8 @@ configs/*.yaml
 *.pem
 *.key
 *.crt
+udb_laravel_deploy_key
+udb_laravel_deploy_key.pub
 
 # ── Docker ───────────────────────────────────────────────────────────────────
 .docker/
