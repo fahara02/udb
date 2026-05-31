@@ -5,7 +5,7 @@ name: Release · crates.io
 # `cargo publish`. The token is a GitHub Actions secret — never read
 # from disk, never written to the runner filesystem.
 #
-# Required repo secret:
+# Required `production` environment secret:
 #   CARGO_REGISTRY_TOKEN   (https://crates.io/settings/tokens)
 #
 # Rollback: crates.io versions are IMMUTABLE. The only undo is
@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment:
-      name: crates-io
+      name: production
       url: https://crates.io/crates/udb
     permissions:
       contents: read

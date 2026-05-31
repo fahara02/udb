@@ -12,7 +12,7 @@ name: Release · Packagist
 #      `composer require` immediately (instead of waiting for the
 #      hourly poll).
 #
-# Required repo secrets:
+# Required `production` environment secrets:
 #   UDB_LARAVEL_DEPLOY_KEY   SSH private key (deploy key with write
 #                            access to fahara02/udb-laravel). See
 #                            docs/publishing-laravel-sdk.md for the
@@ -71,6 +71,8 @@ jobs:
     needs: validate-php-sdk
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment:
+      name: production
     steps:
       - uses: actions/checkout@v4
         with:
@@ -145,7 +147,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment:
-      name: packagist
+      name: production
       url: https://packagist.org/packages/${{ vars.PACKAGIST_PACKAGE || 'fahara02/udb-laravel' }}
     steps:
       - name: POST update hook to Packagist
