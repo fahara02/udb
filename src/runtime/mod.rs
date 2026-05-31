@@ -1,0 +1,56 @@
+pub mod catalog;
+pub mod cdc;
+
+pub mod channels;
+pub mod config;
+pub mod connection_manager;
+pub mod core;
+mod encryption;
+pub(crate) mod executor_utils;
+pub mod executors;
+pub mod metrics;
+pub mod migration_audit;
+pub mod observability;
+pub mod pipeline;
+pub mod pipeline_coverage; // U7: per-RPC pipeline-adoption tracker
+pub(crate) mod postgres_helpers;
+
+pub mod backend_context; // NW-deep: uniform request-context applicator across all backends
+pub mod canonical_store; // P2P: pluggable canonical-store trait + Postgres/MySQL/SQLite impls
+pub mod consistency;
+pub mod consistency_fence;
+pub mod drift_reconciliation;
+#[cfg(feature = "runtime-logging")]
+pub(crate) mod pretty_log;
+pub mod project_backend_router; // U4 step 2: strict project-scoped instance routing
+#[cfg(test)]
+mod project_isolation_tests;
+pub mod projection;
+#[cfg(test)]
+mod projection_acceptance_tests;
+pub mod replica;
+#[cfg(test)]
+mod rls_context_tests;
+pub mod saga;
+pub mod saga_compensators; // U19: plugin-aware backend compensator dispatch
+pub mod schema_registry;
+pub mod security;
+pub mod service;
+pub mod signal;
+pub mod system;
+pub mod xa;
+pub mod xa_postgres;
+pub mod xa_recovery; // C6: in-doubt 2PC recovery worker (PG + MySQL participants)
+
+pub use channels::{ChannelManager, OperationChannel};
+pub use connection_manager::{ClientSnapshot, ClientState, ConnectionManager, PoolingMode};
+pub use core::{
+    ConfigReloadMode, ConfigReloadOptions, ConfigReloadReport, DataBrokerRuntime, RuntimeInitReport,
+};
+#[cfg(feature = "clickhouse")]
+pub use executors::clickhouse::{ClickHouseConfig, ClickHouseExecutor};
+#[cfg(feature = "mongodb")]
+pub use executors::mongodb::{MongoDbConfig, MongoDbExecutor};
+#[cfg(feature = "neo4j")]
+pub use executors::neo4j::{Neo4jConfig, Neo4jExecutor};
+pub use migration_audit::PostgresMigrationAuditSink;

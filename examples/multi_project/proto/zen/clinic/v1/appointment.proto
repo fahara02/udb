@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package zen.clinic.v1;
+
+message Appointment {
+  string appointment_id = 1;
+  string tenant_id = 2;
+  string patient_id = 3;
+  string clinician_id = 4;
+  string scheduled_at = 5;
+  string status = 6;
+}
+
+message CareGraphEdge {
+  string edge_id = 1;
+  string tenant_id = 2;
+  string from_id = 3;
+  string to_id = 4;
+  string relationship = 5;
+}

@@ -1,0 +1,56 @@
+# Minimal CI and smoke-test configuration.
+app_name: udb-ci
+default_limit: 100
+max_limit: 1000
+ddl_concurrency: 1
+project_routing_mode: permissive
+
+primary:
+  direct_dsn: postgres://udb:udb@localhost:5432/udb_ci?sslmode=prefer
+  min_connections: 1
+  max_open_conns: 8
+  max_idle_conns: 2
+  acquire_timeout_secs: 5
+
+service:
+  metrics_addr: 127.0.0.1:19090
+  abac_default_allow: true
+  grpc_timeout_secs: 10
+  grpc_max_concurrent: 32
+  allow_degraded_backends: true
+  catalog_compat_warn_only: true
+  catalog_compatibility_level: backward
+
+migration:
+  migrations_path: db/migration
+  seeders_path: db/seeders
+  proto_dir: proto
+  proto_namespace: ""
+  bootstrap_dir: db/bootstrap
+  db_ops_root: ""
+  manifest_dir: db/migration_manifest
+  generate_sql: true
+  generate_bootstrap: false
+  emergency_auto_alter: false
+  strict_verify: true
+  dry_run: false
+  log_queries: false
+  force_reseed: false
+  lock_timeout: 5s
+  statement_timeout: 60s
+  exec_timeout_secs: 120
+  require_approval_plan: ""
+  notification_url: ""
+  notification_on: []
+  pre_migrate_sql: ""
+  post_migrate_sql: ""
+  max_retries: 3
+
+saga:
+  recovery_enabled: false
+  recovery_interval_secs: 60
+  stale_threshold_secs: 300
+
+circuit_breaker:
+  failure_threshold: 2
+  cooldown_secs: 10

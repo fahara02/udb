@@ -1,0 +1,891 @@
+//! Qdrant HTTP client and vector-store executor.
+//! Contains `QdrantHttpClient` (internal) and the `impl DataBrokerRuntime`
+//! vector executor methods are kept in `core.rs`; this module owns the
+//! HTTP transport layer for the Qdrant API.
+
+// Struct imported via prost_types in method signatures (reqwest bring it in transitively)
+use serde_json::{Value as JsonValue, json};
+
+use crate::generation::ManifestStore;
+use crate::proto::{
+    VectorHybridSearchRequest, VectorPoint, VectorPointMutation, VectorSearchRequest, VectorSet,
+    VectorUpsertRequest,
+};
+
+use crate::runtime::executor_utils::{
+    json_bool, json_i32, json_required_f32_vec, json_required_str, json_scalar_to_string,
+    json_to_struct, qdrant_status, store_option, store_option_i32, struct_to_json,
+};
+use crate::runtime::executors::{
+    BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
+    ResourceAdminExecutor, SearchExecutor,
+};
+
+// ── Collection name validation (GAP 27) ────────────────────────────────
+
+/// Validate a Qdrant collection name received from a gRPC caller.
+///
+/// Rejects names that could escape the collections path via path traversal
+/// (e.g. `../cluster`, `../snapshots`).  Allowed: ASCII letters, digits,
+/// hyphens, and underscores; 1–255 characters; must not start with `.` or `-`.
+#[allow(clippy::result_large_err)]
+fn validate_collection_name(name: &str) -> Result<(), tonic::Status> {
+    if name.is_empty() || name.len() > 255 {
+        return Err(tonic::Status::invalid_argument(
+            "Qdrant collection name must be 1–255 characters",
+        ));
+    }
+    if !name
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-'))
+    {
+        return Err(tonic::Status::invalid_argument(
+            "Qdrant collection name may only contain ASCII letters, digits, hyphens, and underscores",
+        ));
+    }
+    if name.starts_with('.') || name.starts_with('-') {
+        return Err(tonic::Status::invalid_argument(
+            "Qdrant collection name may not start with '.' or '-'",
+        ));
+    }
+    Ok(())
+}
+
+/// URL-percent-encode a validated collection name (defence in depth).
+fn encode_collection(name: &str) -> String {
+    // After validation only [A-Za-z0-9_-] remain, which are all unreserved
+    // characters in RFC 3986 and require no encoding.  We still go through
+    // the encoding step so future validators with broader allowed sets stay safe.
+    name.chars()
+        .flat_map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' || c == '-' {
+                vec![c]
+            } else {
+                format!("%{:02X}", c as u32).chars().collect()
+            }
+        })
+        .collect()
+}
+
+// ── Distance normalisation ────────────────────────────────────────────────────
+
+/// Convert a proto-enum distance string to the value expected by the Qdrant REST
+/// API.  The manifest stores values like `"VECTOR_DISTANCE_COSINE"` (the raw
+/// proto enum name), but Qdrant requires `"Cosine"` / `"Dot"` / `"Euclid"` /
+/// `"Manhattan"`.  Also accepts the already-normalised forms so the function is
+/// idempotent.
+fn normalize_qdrant_distance(raw: &str) -> String {
+    let upper = raw.trim().to_ascii_uppercase();
+    let canonical = upper
+        .trim_start_matches("VECTOR_DISTANCE_")
+        .trim_start_matches("DISTANCE_");
+    match canonical {
+        "COSINE" => "Cosine",
+        "DOT" => "Dot",
+        "EUCLID" | "EUCLIDEAN" => "Euclid",
+        "MANHATTAN" => "Manhattan",
+        _ => "Cosine", // safe default for unrecognised or empty
+    }
+    .to_string()
+}
+
+// ── QdrantHttpClient ──────────────────────────────────────────────────────────
+
+/// Lightweight reqwest-based HTTP client for the Qdrant REST API.
+#[derive(Debug, Clone)]
+pub(crate) struct QdrantHttpClient {
+    pub(crate) base_url: String,
+    pub(crate) api_key: Option<String>,
+    pub(crate) http: reqwest::Client,
+}
+
+impl QdrantHttpClient {
+    pub(crate) async fn collection_exists(&self, collection: &str) -> Result<(), tonic::Status> {
+        validate_collection_name(collection)?;
+        let url = format!(
+            "{}/collections/{}",
+            self.base_url,
+            encode_collection(collection)
+        );
+        let response = self.auth(self.http.get(url)).send().await.map_err(|err| {
+            tonic::Status::unavailable(format!("Qdrant collection check failed: {err}"))
+        })?;
+        if response.status() == reqwest::StatusCode::NOT_FOUND {
+            return Err(tonic::Status::not_found(format!(
+                "Qdrant collection {collection} is missing"
+            )));
+        }
+        qdrant_status(response.status())
+    }
+
+    pub(crate) async fn ensure_collection(
+        &self,
+        store: &ManifestStore,
+    ) -> Result<(), tonic::Status> {
+        validate_collection_name(&store.resource_name)?;
+        if self.collection_exists(&store.resource_name).await.is_ok() {
+            return Ok(());
+        }
+        let dimension = store_option_i32(store, "dimension").max(1);
+        let distance = normalize_qdrant_distance(&store_option(store, "distance"));
+        let url = format!(
+            "{}/collections/{}",
+            self.base_url,
+            encode_collection(&store.resource_name)
+        );
+        let response = self
+            .auth(self.http.put(url))
+            .json(&json!({
+                "vectors": {
+                    "size": dimension,
+                    "distance": distance,
+                }
+            }))
+            .send()
+            .await
+            .map_err(|err| {
+                tonic::Status::unavailable(format!("Qdrant collection create failed: {err}"))
+            })?;
+        let status = response.status();
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(tonic::Status::unavailable(format!(
+                "Qdrant collection create failed: HTTP {status}: {body}"
+            )));
+        }
+        Ok(())
+    }
+
+    pub(crate) async fn search(
+        &self,
+        request: &VectorSearchRequest,
+        filter: JsonValue,
+    ) -> Result<VectorSet, tonic::Status> {
+        validate_collection_name(&request.collection)?;
+        let mut body = json!({
+            "vector": request.vector,
+            "limit": if request.limit > 0 { request.limit } else { 10 },
+            "with_payload": request.with_payload,
+        });
+        if !filter.is_null() {
+            body["filter"] = filter;
+        }
+        if request.score_threshold > 0.0 {
+            body["score_threshold"] = json!(request.score_threshold);
+        }
+        let url = format!(
+            "{}/collections/{}/points/search",
+            self.base_url,
+            encode_collection(&request.collection)
+        );
+        let response = self
+            .auth(self.http.post(url))
+            .json(&body)
+            .send()
+            .await
+            .map_err(|err| tonic::Status::unavailable(format!("Qdrant search failed: {err}")))?;
+        qdrant_status(response.status())?;
+        let payload: JsonValue = response.json().await.map_err(|err| {
+            tonic::Status::unavailable(format!("Qdrant response decode failed: {err}"))
+        })?;
+        let points = payload
+            .get("result")
+            .and_then(JsonValue::as_array)
+            .into_iter()
+            .flatten()
+            .map(|point| VectorPoint {
+                id: point
+                    .get("id")
+                    .map(json_scalar_to_string)
+                    .unwrap_or_default(),
+                score: point
+                    .get("score")
+                    .and_then(JsonValue::as_f64)
+                    .unwrap_or_default() as f32,
+                payload: point.get("payload").and_then(json_to_struct),
+            })
+            .collect();
+        Ok(VectorSet { points })
+    }
+
+    pub(crate) async fn upsert(&self, request: &VectorUpsertRequest) -> Result<(), tonic::Status> {
+        validate_collection_name(&request.collection)?;
+        let points = request
+            .points
+            .iter()
+            .map(|point| {
+                json!({
+                    "id": point.id,
+                    "vector": point.vector,
+                    "payload": point.payload.as_ref().map(struct_to_json).unwrap_or(JsonValue::Null),
+                })
+            })
+            .collect::<Vec<_>>();
+        let url = format!(
+            "{}/collections/{}/points?wait=true",
+            self.base_url,
+            encode_collection(&request.collection)
+        );
+        let response = self
+            .auth(self.http.put(url))
+            .json(&json!({ "points": points }))
+            .send()
+            .await
+            .map_err(|err| tonic::Status::unavailable(format!("Qdrant upsert failed: {err}")))?;
+        qdrant_status(response.status())?;
+        Ok(())
+    }
+
+    pub(crate) async fn delete_points(
+        &self,
+        collection: &str,
+        point_ids: &[String],
+    ) -> Result<(), tonic::Status> {
+        validate_collection_name(collection)?;
+        if point_ids.is_empty() {
+            return Ok(());
+        }
+        let url = format!(
+            "{}/collections/{}/points/delete?wait=true",
+            self.base_url,
+            encode_collection(collection)
+        );
+        let response = self
+            .auth(self.http.post(url))
+            .json(&json!({ "points": point_ids }))
+            .send()
+            .await
+            .map_err(|err| tonic::Status::unavailable(format!("Qdrant delete failed: {err}")))?;
+        qdrant_status(response.status())?;
+        Ok(())
+    }
+
+    pub(crate) async fn delete_by_filter(
+        &self,
+        collection: &str,
+        filter: JsonValue,
+    ) -> Result<(), tonic::Status> {
+        validate_collection_name(collection)?;
+        let url = format!(
+            "{}/collections/{}/points/delete?wait=true",
+            self.base_url,
+            encode_collection(collection)
+        );
+        let response = self
+            .auth(self.http.post(url))
+            .json(&json!({ "filter": filter }))
+            .send()
+            .await
+            .map_err(|err| {
+                tonic::Status::unavailable(format!("Qdrant filtered delete failed: {err}"))
+            })?;
+        qdrant_status(response.status())?;
+        Ok(())
+    }
+
+    pub(crate) async fn set_payload(
+        &self,
+        collection: &str,
+        payload: JsonValue,
+        point_ids: Option<Vec<String>>,
+        filter: Option<JsonValue>,
+    ) -> Result<(), tonic::Status> {
+        validate_collection_name(collection)?;
+        let mut body = json!({ "payload": payload });
+        if let Some(ids) = point_ids {
+            body["points"] = json!(ids);
+        }
+        if let Some(filter) = filter {
+            body["filter"] = filter;
+        }
+        let url = format!(
+            "{}/collections/{}/points/payload?wait=true",
+            self.base_url,
+            encode_collection(collection)
+        );
+        let response = self
+            .auth(self.http.post(url))
+            .json(&body)
+            .send()
+            .await
+            .map_err(|err| {
+                tonic::Status::unavailable(format!("Qdrant payload patch failed: {err}"))
+            })?;
+        qdrant_status(response.status())?;
+        Ok(())
+    }
+
+    /// True hybrid search using Qdrant's `/points/query` RRF API (Qdrant ≥ v1.7).
+    ///
+    /// GAP 27 fix: collection name is validated and URL-encoded before use.
+    pub(crate) async fn hybrid_search(
+        &self,
+        request: &VectorHybridSearchRequest,
+        filter: JsonValue,
+    ) -> Result<VectorSet, tonic::Status> {
+        validate_collection_name(&request.collection)?;
+        let limit = if request.limit > 0 {
+            request.limit as usize
+        } else {
+            10
+        };
+        let text_query = request.text_query.trim().to_lowercase();
+        let dense_weight = request.fusion_weights.first().copied().unwrap_or(0.7) as f64;
+        let sparse_weight = request.fusion_weights.get(1).copied().unwrap_or(0.3) as f64;
+
+        // ── Tier 1: Qdrant native /points/query with RRF ──────────────────────
+        if !request.vector.is_empty() {
+            let prefetch_limit = (limit * 4).max(50);
+            let mut prefetch = vec![json!({
+                "query": request.vector,
+                "limit": prefetch_limit
+            })];
+
+            // Add a text-match prefetch if text_query is provided so Qdrant can
+            // also score by lexical relevance in collections that have a
+            // payload text index set up.
+            if !text_query.is_empty() {
+                prefetch.push(json!({
+                    "query": request.vector,
+                    "filter": {
+                        "must": [{
+                            "key": "_full_text",
+                            "match": { "text": text_query }
+                        }]
+                    },
+                    "limit": prefetch_limit
+                }));
+            }
+
+            let mut query_body = json!({
+                "prefetch": prefetch,
+                "query": { "fusion": "rrf" },
+                "limit": (limit * 2).max(20),
+                "with_payload": true,
+            });
+            if !filter.is_null() {
+                query_body["filter"] = filter.clone();
+            }
+
+            let url = format!(
+                "{}/collections/{}/points/query",
+                self.base_url,
+                encode_collection(&request.collection)
+            );
+            if let Ok(resp) = self
+                .auth(self.http.post(&url))
+                .json(&query_body)
+                .send()
+                .await
+                && resp.status().is_success()
+                && let Ok(payload) = resp.json::<JsonValue>().await
+            {
+                let points = self.parse_query_response(&payload);
+                let reranked = if text_query.is_empty() {
+                    points.into_iter().take(limit).collect()
+                } else {
+                    rerank_with_text(points, &text_query, dense_weight, sparse_weight, limit)
+                };
+                return Ok(VectorSet { points: reranked });
+            }
+        }
+
+        // ── Tier 2: Dense search + local lexical re-ranking fallback ──────────
+        let fetch_limit = if text_query.is_empty() {
+            limit as i32
+        } else {
+            (limit * 4).max(40) as i32
+        };
+        let dense_req = VectorSearchRequest {
+            context: request.context.clone(),
+            collection: request.collection.clone(),
+            vector: request.vector.clone(),
+            filter: request.filter.clone(),
+            limit: fetch_limit,
+            score_threshold: 0.0,
+            with_payload: true,
+        };
+        let result = self.search(&dense_req, filter).await?;
+        if text_query.is_empty() {
+            return Ok(result);
+        }
+        let reranked = rerank_with_text(
+            result.points,
+            &text_query,
+            dense_weight,
+            sparse_weight,
+            limit,
+        );
+        Ok(VectorSet { points: reranked })
+    }
+
+    /// Parse the result array from a Qdrant `/points/query` response.
+    fn parse_query_response(&self, payload: &JsonValue) -> Vec<VectorPoint> {
+        payload
+            .get("result")
+            .and_then(JsonValue::as_array)
+            .into_iter()
+            .flatten()
+            .map(|point| VectorPoint {
+                id: point
+                    .get("id")
+                    .map(json_scalar_to_string)
+                    .unwrap_or_default(),
+                score: point
+                    .get("score")
+                    .and_then(JsonValue::as_f64)
+                    .unwrap_or_default() as f32,
+                payload: point.get("payload").and_then(json_to_struct),
+            })
+            .collect()
+    }
+
+    pub(crate) fn auth(&self, builder: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        if let Some(api_key) = &self.api_key {
+            builder.header("api-key", api_key)
+        } else {
+            builder
+        }
+    }
+}
+
+// ── Hybrid search helpers ─────────────────────────────────────────────────────
+
+/// Re-rank `points` by combining the normalised dense vector score with a
+/// lexical text score computed against `text_query`.
+///
+/// Scoring: `combined = dw * (dense / max_dense) + sw * lexical_score`
+/// where `dw + sw = 1` after normalisation.
+fn rerank_with_text(
+    points: Vec<VectorPoint>,
+    text_query: &str,
+    dense_weight: f64,
+    sparse_weight: f64,
+    limit: usize,
+) -> Vec<VectorPoint> {
+    if points.is_empty() {
+        return vec![];
+    }
+    let query_tokens: Vec<String> = text_query
+        .split_whitespace()
+        .map(|t| t.to_lowercase())
+        .collect();
+    if query_tokens.is_empty() {
+        return points.into_iter().take(limit).collect();
+    }
+
+    // Normalise weights.
+    let total = dense_weight + sparse_weight;
+    let (dw, sw) = if total > 0.0 {
+        (dense_weight / total, sparse_weight / total)
+    } else {
+        (0.5, 0.5)
+    };
+
+    let max_dense = points
+        .iter()
+        .map(|p| p.score as f64)
+        .fold(0.0_f64, f64::max)
+        .max(1e-9);
+
+    let mut scored: Vec<(f32, VectorPoint)> = points
+        .into_iter()
+        .map(|p| {
+            let text_score = p
+                .payload
+                .as_ref()
+                .map(|pl| lexical_score(&payload_to_text(pl), &query_tokens))
+                .unwrap_or(0.0);
+            let norm_dense = p.score as f64 / max_dense;
+            let combined = (dw * norm_dense + sw * text_score) as f32;
+            (combined, p)
+        })
+        .collect();
+
+    scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+    scored
+        .into_iter()
+        .take(limit)
+        .map(|(combined_score, mut p)| {
+            p.score = combined_score;
+            p
+        })
+        .collect()
+}
+
+/// Flatten all string/number fields of a `prost_types::Struct` payload into a
+/// single lower-cased string for lexical scoring.
+fn payload_to_text(payload: &prost_types::Struct) -> String {
+    payload
+        .fields
+        .values()
+        .map(|v| match &v.kind {
+            Some(prost_types::value::Kind::StringValue(s)) => s.to_lowercase(),
+            Some(prost_types::value::Kind::NumberValue(n)) => n.to_string(),
+            _ => String::new(),
+        })
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Simple token-overlap lexical score in [0, 1].
+///
+/// Score = (number of query tokens found in `text`) / (total query tokens).
+/// Each token is counted at most once (set intersection semantics).
+fn lexical_score(text: &str, tokens: &[String]) -> f64 {
+    if text.is_empty() || tokens.is_empty() {
+        return 0.0;
+    }
+    let matched = tokens.iter().filter(|t| text.contains(t.as_str())).count();
+    matched as f64 / tokens.len() as f64
+}
+
+// ── QdrantExecutor: BackendExecutor over QdrantHttpClient ───────────────────────
+// Newtype wrapper so the generic-dispatch trait methods (search/mutate/...) do not
+// collide with the low-level inherent methods on QdrantHttpClient. Stateless leaf
+// I/O; instance selection / circuit-breaking stay in the orchestration layer.
+// Request shapes mirror the former inline arms in core.rs.
+
+pub(crate) struct QdrantExecutor(pub(crate) QdrantHttpClient);
+
+impl crate::runtime::backend_context::BackendContextEnforcer for QdrantExecutor {
+    fn backend_label(&self) -> &str {
+        "qdrant"
+    }
+
+    fn enforce(
+        &self,
+        ctx: &crate::runtime::backend_context::AppliedContext,
+    ) -> crate::runtime::backend_context::ContextEffect {
+        if ctx.is_empty() {
+            return crate::runtime::backend_context::ContextEffect::Advisory {
+                recorded_in: "no_context_to_apply".into(),
+            };
+        }
+        // C7/C8: the Qdrant IR compiler now stamps `_tenant_id` /
+        // `_project_id` onto every point payload at write time AND
+        // ANDs them into the `must` clause of every read/search/
+        // delete filter. Tenant boundary is protocol-enforced —
+        // a cross-tenant search can't surface points across the
+        // boundary.
+        crate::runtime::backend_context::ContextEffect::Enforced {
+            mechanism: "_tenant_id / _project_id payload stamps; AND'd into must-filters".into(),
+        }
+    }
+}
+
+impl BackendHealth for QdrantExecutor {
+    async fn ping(&self) -> Result<(), String> {
+        // Loose reachability probe (mirrors the former ping arm: a missing sentinel
+        // collection still counts as reachable).
+        let _ = self.0.collection_exists("__ping__").await;
+        Ok(())
+    }
+}
+
+impl QueryExecutor for QdrantExecutor {
+    async fn query(&self, _request_json: &str) -> Result<String, tonic::Status> {
+        Err(tonic::Status::failed_precondition(
+            "qdrant does not support generic query; use search",
+        ))
+    }
+}
+
+impl SearchExecutor for QdrantExecutor {
+    /// `{"collection","vector","filter?","limit?","score_threshold?","with_payload?","text_query?","fusion_weights?"}`.
+    async fn search(&self, request_json: &str) -> Result<String, tonic::Status> {
+        let spec: JsonValue = serde_json::from_str(request_json)
+            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let collection = json_required_str(&spec, "collection")?;
+        let vector = json_required_f32_vec(&spec, "vector")?;
+        let filter = spec.get("filter").cloned().unwrap_or(JsonValue::Null);
+        let limit = json_i32(&spec, "limit").unwrap_or(10);
+        let with_payload = json_bool(&spec, "with_payload").unwrap_or(true);
+        let result = if let Some(text_query) = spec
+            .get("text_query")
+            .and_then(JsonValue::as_str)
+            .filter(|value| !value.trim().is_empty())
+        {
+            let fusion_weights = spec
+                .get("fusion_weights")
+                .and_then(JsonValue::as_array)
+                .map(|values| {
+                    values
+                        .iter()
+                        .filter_map(|value| value.as_f64().map(|number| number as f32))
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            let request = VectorHybridSearchRequest {
+                context: None,
+                collection: collection.to_string(),
+                vector,
+                text_query: text_query.to_string(),
+                filter: json_to_struct(&filter),
+                limit,
+                fusion_weights,
+                with_payload,
+            };
+            self.0.hybrid_search(&request, filter).await?
+        } else {
+            let request = VectorSearchRequest {
+                context: None,
+                collection: collection.to_string(),
+                vector,
+                filter: json_to_struct(&filter),
+                limit,
+                score_threshold: spec
+                    .get("score_threshold")
+                    .and_then(JsonValue::as_f64)
+                    .unwrap_or_default() as f32,
+                with_payload,
+            };
+            self.0.search(&request, filter).await?
+        };
+        let points = result
+            .points
+            .iter()
+            .map(|point| {
+                json!({
+                    "id": point.id,
+                    "score": point.score,
+                    "payload": point.payload.as_ref().map(struct_to_json).unwrap_or(JsonValue::Null)
+                })
+            })
+            .collect::<Vec<_>>();
+        serde_json::to_string(&points).map_err(|e| tonic::Status::internal(e.to_string()))
+    }
+}
+
+impl MutationExecutor for QdrantExecutor {
+    /// `{"operation":"upsert"|"delete", "collection", ...}`.
+    async fn mutate(&self, request_json: &str) -> Result<String, tonic::Status> {
+        let spec: JsonValue = serde_json::from_str(request_json)
+            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        match spec
+            .get("operation")
+            .and_then(JsonValue::as_str)
+            .unwrap_or("upsert")
+        {
+            "upsert" | "upsert_points" => {
+                let collection = json_required_str(&spec, "collection")?;
+                let point_specs = spec
+                    .get("points")
+                    .and_then(JsonValue::as_array)
+                    .ok_or_else(|| tonic::Status::invalid_argument("points must be an array"))?;
+                let mut points = Vec::with_capacity(point_specs.len());
+                for point in point_specs {
+                    points.push(VectorPointMutation {
+                        id: json_required_str(point, "id")?.to_string(),
+                        vector: json_required_f32_vec(point, "vector")?,
+                        payload: point.get("payload").and_then(json_to_struct),
+                    });
+                }
+                let request = VectorUpsertRequest {
+                    context: None,
+                    collection: collection.to_string(),
+                    points,
+                    idempotency_key: spec
+                        .get("idempotency_key")
+                        .and_then(JsonValue::as_str)
+                        .unwrap_or_default()
+                        .to_string(),
+                };
+                self.0.upsert(&request).await?;
+                Ok(json!({
+                    "resource_uri": format!("vector://{collection}"),
+                    "affected_rows": request.points.len()
+                })
+                .to_string())
+            }
+            "delete" | "delete_points" => {
+                let collection = json_required_str(&spec, "collection")?;
+                if let Some(filter) = spec.get("filter").cloned() {
+                    self.0.delete_by_filter(collection, filter).await?;
+                    return Ok(json!({
+                        "resource_uri": format!("vector://{collection}"),
+                        "affected_rows": 0,
+                        "matched_by_filter": true
+                    })
+                    .to_string());
+                }
+                let point_ids = spec
+                    .get("point_ids")
+                    .or_else(|| spec.get("ids"))
+                    .and_then(JsonValue::as_array)
+                    .ok_or_else(|| {
+                        tonic::Status::invalid_argument(
+                            "point_ids must be an array when filter is absent",
+                        )
+                    })?
+                    .iter()
+                    .map(json_scalar_to_string)
+                    .collect::<Vec<_>>();
+                self.0.delete_points(collection, &point_ids).await?;
+                Ok(json!({
+                    "resource_uri": format!("vector://{collection}"),
+                    "affected_rows": point_ids.len()
+                })
+                .to_string())
+            }
+            "set_payload" | "patch_payload" | "upsert_payload" => {
+                let collection = json_required_str(&spec, "collection")?;
+                let payload = spec
+                    .get("payload")
+                    .cloned()
+                    .ok_or_else(|| tonic::Status::invalid_argument("payload is required"))?;
+                let point_ids = spec
+                    .get("point_ids")
+                    .or_else(|| spec.get("ids"))
+                    .and_then(|ids| {
+                        ids.as_array().map(|values| {
+                            values.iter().map(json_scalar_to_string).collect::<Vec<_>>()
+                        })
+                    });
+                let filter = spec.get("filter").cloned();
+                if point_ids.is_none() && filter.is_none() {
+                    return Err(tonic::Status::invalid_argument(
+                        "set_payload requires point_ids or filter",
+                    ));
+                }
+                self.0
+                    .set_payload(collection, payload, point_ids, filter)
+                    .await?;
+                Ok(json!({
+                    "resource_uri": format!("vector://{collection}"),
+                    "affected_rows": 0
+                })
+                .to_string())
+            }
+            other => Err(tonic::Status::invalid_argument(format!(
+                "unsupported Qdrant mutation operation '{other}'"
+            ))),
+        }
+    }
+}
+
+impl ObjectExecutor for QdrantExecutor {
+    async fn get_object(&self, _request_json: &str) -> Result<Vec<u8>, tonic::Status> {
+        Err(tonic::Status::failed_precondition(
+            "qdrant is not an object store",
+        ))
+    }
+    async fn put_object(
+        &self,
+        _request_json: &str,
+        _bytes: Vec<u8>,
+    ) -> Result<String, tonic::Status> {
+        Err(tonic::Status::failed_precondition(
+            "qdrant is not an object store",
+        ))
+    }
+}
+
+impl ResourceAdminExecutor for QdrantExecutor {
+    async fn ensure_resource(
+        &self,
+        resource_name: &str,
+        _spec_json: &str,
+    ) -> Result<(), tonic::Status> {
+        // ensure_resource = collection must already exist; creation needs the full
+        // dimension + distance spec, which flows through catalog stage/activate.
+        self.0.collection_exists(resource_name).await.map_err(|_| {
+            tonic::Status::failed_precondition(
+                "Qdrant collection does not exist; use the full catalog stage/activate flow to create it with dimension + distance",
+            )
+        })
+    }
+    async fn drop_resource(&self, resource_name: &str) -> Result<(), tonic::Status> {
+        let url = format!("{}/collections/{}", self.0.base_url, resource_name);
+        let resp = self
+            .0
+            .http
+            .delete(url)
+            .send()
+            .await
+            .map_err(|e| tonic::Status::unavailable(format!("qdrant delete failed: {e}")))?;
+        if resp.status().is_success() || resp.status() == reqwest::StatusCode::NOT_FOUND {
+            Ok(())
+        } else {
+            Err(tonic::Status::internal(format!(
+                "qdrant drop_resource status: {}",
+                resp.status()
+            )))
+        }
+    }
+    async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
+        let url = format!("{}/collections", self.0.base_url);
+        let resp = self
+            .0
+            .http
+            .get(url)
+            .send()
+            .await
+            .map_err(|e| tonic::Status::unavailable(format!("qdrant list failed: {e}")))?;
+        let body: JsonValue = resp
+            .json()
+            .await
+            .map_err(|e| tonic::Status::internal(format!("qdrant list parse failed: {e}")))?;
+        let names = body
+            .get("result")
+            .and_then(|r| r.get("collections"))
+            .and_then(|c| c.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|item| item.get("name").and_then(|n| n.as_str()))
+                    .map(str::to_owned)
+                    .collect()
+            })
+            .unwrap_or_default();
+        Ok(names)
+    }
+}
+
+impl BackendExecutor for QdrantExecutor {
+    async fn transaction(&self, _request_json: &str) -> Result<String, tonic::Status> {
+        Err(tonic::Status::failed_precondition(
+            "qdrant does not support transactions",
+        ))
+    }
+    async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
+        let (ok, error) = match <Self as BackendHealth>::ping(self).await {
+            Ok(()) => (true, None),
+            Err(e) => (false, Some(e)),
+        };
+        Ok(BackendProbe {
+            backend: "qdrant".to_string(),
+            instance: None,
+            ok,
+            error,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn exec() -> QdrantExecutor {
+        QdrantExecutor(QdrantHttpClient {
+            base_url: "http://localhost:6333".to_string(),
+            api_key: None,
+            http: reqwest::Client::new(),
+        })
+    }
+
+    #[tokio::test]
+    async fn qdrant_executor_rejects_unsupported_and_malformed() {
+        let e = exec();
+        assert!(QueryExecutor::query(&e, "{}").await.is_err());
+        assert!(ObjectExecutor::get_object(&e, "{}").await.is_err());
+        assert!(BackendExecutor::transaction(&e, "{}").await.is_err());
+        assert!(SearchExecutor::search(&e, "not json").await.is_err());
+        assert!(SearchExecutor::search(&e, "{}").await.is_err()); // missing collection
+        assert!(
+            MutationExecutor::mutate(&e, r#"{"operation":"bogus"}"#)
+                .await
+                .is_err()
+        );
+    }
+}

@@ -1,0 +1,16 @@
+{
+  "context": {
+    "tenant_id": "tenant-zen",
+    "purpose": "example",
+    "scopes": ["udb:read"],
+    "service_identity": "example.multi_project",
+    "project_id": "zen-clinic"
+  },
+  "message_type": "zen.clinic.v1.Appointment",
+  "filter": {
+    "fields": {
+      "status": { "string_value": "scheduled" }
+    }
+  },
+  "limit": 10
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "effect": "Allow",
+    "service_identity": "example.ocr.python",
+    "tenant_id": "*",
+    "purpose": "*",
+    "message_type": "DocumentExtraction",
+    "operation": "*",
+    "required_scope": "udb:write"
+  },
+  {
+    "effect": "Allow",
+    "service_identity": "example.ocr.python",
+    "tenant_id": "*",
+    "purpose": "*",
+    "message_type": "ProcessingQueue",
+    "operation": "Select",
+    "required_scope": "udb:read"
+  },
+  {
+    "effect": "Allow",
+    "service_identity": "example.workflow.go",
+    "tenant_id": "*",
+    "purpose": "*",
+    "message_type": "*",
+    "operation": "*",
+    "required_scope": "udb:write"
+  },
+  {
+    "effect": "Allow",
+    "service_identity": "example.admin.csharp",
+    "tenant_id": "*",
+    "purpose": "*",
+    "message_type": "*",
+    "operation": "*",
+    "required_scope": "udb:admin"
+  },
+  {
+    "effect": "Allow",
+    "service_identity": "example.reporting.csharp",
+    "tenant_id": "*",
+    "purpose": "*",
+    "message_type": "*",
+    "operation": "Select",
+    "required_scope": "udb:read"
+  }
+]

@@ -1,0 +1,61 @@
+# Multi-backend runtime example. Use env-backed secrets for real deployments.
+app_name: udb-backends
+
+primary:
+  direct_dsn: postgres://udb:udb@localhost:5432/udb?sslmode=prefer
+
+redis:
+  host: localhost
+  port: 6379
+  database: 0
+  pool_size: 20
+  min_idle_conns: 2
+  default_ttl_secs: 3600
+  mode: standalone
+  dsn: redis://localhost:6379/0
+
+qdrant:
+  host: localhost
+  grpc_port: 6334
+  http_port: 6333
+  default_dimension: 1536
+  default_distance: Cosine
+  url: http://localhost:6333
+
+minio:
+  endpoint: http://localhost:9000
+  access_key: minioadmin
+  secret_key: minioadmin
+  region: us-east-1
+  bucket_prefix: udb-
+
+backend_instances:
+  instances:
+    - name: primary
+      backend: postgres
+      role: read_write
+      dsn: postgres://udb:udb@localhost:5432/udb?sslmode=prefer
+      labels:
+        region: local
+        workload: canonical
+    - name: cache
+      backend: redis
+      role: read_write
+      dsn: redis://localhost:6379/0
+      labels:
+        tier: cache
+    - name: vectors
+      backend: qdrant
+      role: read_write
+      dsn: http://localhost:6333
+      capabilities:
+        - vector_search
+      labels:
+        tier: vector
+    - name: artifacts
+      backend: s3
+      role: read_write
+      dsn: http://localhost:9000
+      labels:
+        provider: minio
+        bucket_prefix: udb-

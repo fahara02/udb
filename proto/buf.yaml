@@ -1,0 +1,31 @@
+version: v2
+# UDB-internal buf module. Defines the broker wire contract:
+# entity types (RequestContext, SelectRequest, …), event envelopes
+# (CDC, drift, provisioning), and the DataBroker gRPC service.
+#
+# Publishing target: buf.build/fahara02/udb
+# Consumers add this as a dep in their own buf.yaml:
+#
+#   deps:
+#     - buf.build/fahara02/udb
+#
+# Then they `import "udb/entity/v1/types.proto";` from their own
+# .proto files — no copy-paste, no drift between client and broker.
+modules:
+  - path: .
+    name: buf.build/fahara02/udb
+deps:
+  - buf.build/googleapis/googleapis
+  - buf.build/grpc-ecosystem/grpc-gateway
+lint:
+  use: [STANDARD]
+  except:
+    - PACKAGE_VERSION_SUFFIX
+    - RPC_REQUEST_RESPONSE_UNIQUE
+    - RPC_REQUEST_STANDARD_NAME
+    - RPC_RESPONSE_STANDARD_NAME
+    - IMPORT_NO_PUBLIC
+    - ENUM_VALUE_PREFIX
+    - SERVICE_SUFFIX
+breaking:
+  use: [FILE]

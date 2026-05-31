@@ -1,0 +1,25 @@
+# Redis-focused runtime config example consumed by UdbConfig::load_file.
+app_name: udb-redis-example
+
+primary:
+  direct_dsn: postgresql://udb:udb@localhost:5432/udb?sslmode=prefer
+
+redis:
+  dsn: redis://127.0.0.1:6379/0
+  pool_size: 20
+  min_idle_conns: 5
+  default_ttl_secs: 3600
+  mode: standalone
+
+backend_instances:
+  instances:
+    - name: primary
+      backend: postgres
+      role: read_write
+      dsn: postgresql://udb:udb@localhost:5432/udb?sslmode=prefer
+    - name: cache_primary
+      backend: redis
+      role: read_write
+      dsn: redis://127.0.0.1:6379/0
+      labels:
+        region: local

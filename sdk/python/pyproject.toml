@@ -1,0 +1,13 @@
+[project]
+name = "udb-client"
+version = "0.1.0"
+description = "Python client helpers for UDB"
+requires-python = ">=3.10"
+dependencies = [
+  "grpcio>=1.68",
+  "protobuf>=5",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["udb_client*", "udb*"]

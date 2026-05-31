@@ -1,0 +1,21 @@
+{
+  "context": {
+    "tenant_id": "tenant-acme",
+    "purpose": "example",
+    "scopes": ["udb:write"],
+    "service_identity": "example.multi_project",
+    "project_id": "acme-billing"
+  },
+  "message_type": "acme.billing.v1.Invoice",
+  "payload": {
+    "fields": {
+      "invoice_id": { "string_value": "inv-001" },
+      "tenant_id": { "string_value": "tenant-acme" },
+      "customer_email": { "string_value": "customer@example.com" },
+      "amount_cents": { "number_value": 1999 },
+      "currency": { "string_value": "USD" },
+      "status": { "string_value": "open" }
+    }
+  },
+  "idempotency_key": "acme-inv-001"
+}

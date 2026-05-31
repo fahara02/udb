@@ -1,0 +1,59 @@
+# Core database configuration for a local UDB runtime.
+app_name: udb-local
+
+primary:
+  host: localhost
+  port: 5432
+  database: udb
+  role: udb
+  ssl_mode: prefer
+  direct_dsn: postgres://udb:udb@localhost:5432/udb?sslmode=prefer
+  pooler_dsn: postgres://udb:udb@localhost:5432/udb?sslmode=prefer
+  min_connections: 2
+  max_open_conns: 20
+  max_idle_conns: 5
+  acquire_timeout_secs: 10
+
+backup:
+  host: localhost
+  port: 5433
+  database: udb
+  role: udb
+  ssl_mode: prefer
+
+signal:
+  host: localhost
+  port: 5432
+  database: udb_signal
+  role: udb
+  ssl_mode: prefer
+
+failover:
+  enabled: false
+  failure_threshold: 3
+  cooldown: 5m
+
+migration:
+  migrations_path: db/migration
+  seeders_path: db/seeders
+  proto_dir: proto
+  proto_namespace: ""
+  bootstrap_dir: db/bootstrap
+  db_ops_root: ""
+  manifest_dir: db/migration_manifest
+  generate_sql: true
+  generate_bootstrap: true
+  emergency_auto_alter: false
+  strict_verify: true
+  dry_run: false
+  log_queries: false
+  force_reseed: false
+  lock_timeout: 5s
+  statement_timeout: 120s
+  exec_timeout_secs: 300
+  require_approval_plan: ""
+  notification_url: ""
+  notification_on: []
+  pre_migrate_sql: ""
+  post_migrate_sql: ""
+  max_retries: 3

@@ -1,0 +1,74 @@
+version: v2
+# Standalone-repo codegen config.
+#
+# Outputs are self-contained inside the repo so consumers can either:
+#   a) pull the published artifacts (Composer / npm / Maven / NuGet / PyPI), or
+#   b) clone the repo and run `buf generate` to regen locally.
+#
+# Each SDK directory hosts its own `gen/` so the language-native
+# package can autoload / import the generated stubs without
+# reaching out of its own tree.
+managed:
+  enabled: true
+  disable:
+    # Preserve explicit `option php_namespace = "Udb\\Entity\\V1"` etc.
+    # in the proto files so the generated PHP autoload keys stay
+    # stable across regen.
+    - file_option: php_namespace
+    - file_option: php_metadata_namespace
+  override:
+    - file_option: go_package_prefix
+      value: github.com/fahara02/udb/sdk/go/gen
+plugins:
+  # ── PHP / Laravel SDK ──────────────────────────────────────────────
+  - remote: buf.build/protocolbuffers/php
+    out: sdk/php/gen
+  - remote: buf.build/grpc/php
+    out: sdk/php/gen
+
+  # ── TypeScript SDK ─────────────────────────────────────────────────
+  - remote: buf.build/bufbuild/es
+    out: sdk/typescript/gen
+    opt: [target=ts]
+
+  # ── OpenAPI v2 — for HTTP/JSON gateway transcoding + docs ──────────
+  - remote: buf.build/grpc-ecosystem/openapiv2
+    out: api
+    opt:
+      - logtostderr=true
+      - allow_merge=true
+      - merge_file_name=udb-broker
+      - json_names_for_fields=true
+      - include_package_in_tags=false
+      - fqn_for_openapi_name=false
+
+  # ── Go SDK ─────────────────────────────────────────────────────────
+  # Emits Go structs + gRPC service code into sdk/go/gen, importable
+  # as github.com/fahara02/udb/sdk/go/gen/udb/{entity,events,services}/v1
+  # via the `go_package_prefix` managed override above.
+  - remote: buf.build/protocolbuffers/go
+    out: sdk/go/gen
+    opt: [paths=source_relative]
+  - remote: buf.build/grpc/go
+    out: sdk/go/gen
+    opt: [paths=source_relative, require_unimplemented_servers=false]
+
+  # Python / C# / Java codegen stays commented for now to keep
+  # `buf generate` fast; flip on when those SDKs ship.
+  #
+  # - remote: buf.build/protocolbuffers/python:v31.1
+  #   out: sdk/python/gen
+  # - remote: buf.build/grpc/python:v1.76.0
+  #   out: sdk/python/gen
+  # - remote: buf.build/protocolbuffers/pyi:v31.1
+  #   out: sdk/python/gen
+  #
+  # - remote: buf.build/protocolbuffers/csharp
+  #   out: sdk/csharp/gen
+  # - remote: buf.build/grpc/csharp
+  #   out: sdk/csharp/gen
+  #
+  # - remote: buf.build/protocolbuffers/java
+  #   out: sdk/java/gen
+  # - remote: buf.build/grpc/java
+  #   out: sdk/java/gen

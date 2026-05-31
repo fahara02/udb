@@ -1,0 +1,85 @@
+# Service, security, channel, CDC, and recovery tuning.
+app_name: udb-service
+
+primary:
+  direct_dsn: postgres://udb:udb@localhost:5432/udb?sslmode=prefer
+
+service:
+  metrics_addr: 0.0.0.0:50052
+  metrics_allowed_cidr: 127.0.0.1/32
+  abac_refresh_secs: 60
+  abac_default_allow: false
+  grpc_timeout_secs: 30
+  grpc_max_concurrent: 200
+  allow_degraded_backends: true
+  catalog_compat_warn_only: false
+  catalog_compatibility_level: backward
+  rate_limit_window_secs: 60
+  rate_limit_max_per_window: 1000
+
+channels:
+  read_max_concurrent: 300
+  write_max_concurrent: 100
+  tx_max_concurrent: 50
+  migration_max_concurrent: 1
+  cdc_max_concurrent: 32
+  admin_max_concurrent: 20
+  vector_max_concurrent: 80
+  object_max_concurrent: 80
+  generic_max_concurrent: 50
+  read_timeout_secs: 10
+  write_timeout_secs: 20
+  tx_timeout_secs: 30
+  migration_timeout_secs: 300
+  cdc_timeout_secs: 30
+  admin_timeout_secs: 15
+  vector_timeout_secs: 20
+  object_timeout_secs: 60
+  generic_timeout_secs: 30
+
+cdc:
+  system_schema: public
+  outbox_table: udb_outbox
+  offsets_table: udb_cdc_offsets
+  lock_log_table: udb_cdc_lock_log
+  publication_name: udb_publication
+  slot_name: udb_slot
+  dlq_topic: udb.dlq
+  schema_uri_template: udb://schema/{message}
+  valid_topics:
+    - udb.events
+  schema_registry_mode: warn
+  retry_topic_prefix: udb.retry
+  max_retry_attempts: 3
+  retry_delay_secs:
+    - 5
+    - 30
+    - 120
+  exactly_once_mode: at_least_once
+  transactional_id_prefix: udb
+  kafka_tx_timeout_secs: 60
+  redaction_mode: hash
+  redaction_version: 1
+
+security:
+  tls_required: false
+  pg_tls_required: false
+  redis_tls_required: false
+  kafka_tls_required: false
+  service_identity_required: false
+  mtls_required: false
+  allow_header_scopes: true
+  encryption_key_rotation_enabled: false
+  current_encryption_key_id: local
+  pii_safe_logging: true
+  metric_endpoint_allowlist:
+    - 127.0.0.1
+
+saga:
+  recovery_enabled: true
+  recovery_interval_secs: 60
+  stale_threshold_secs: 300
+
+circuit_breaker:
+  failure_threshold: 3
+  cooldown_secs: 30

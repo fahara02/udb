@@ -1,0 +1,175 @@
+name: Release · Packagist
+
+# Triggers on a SemVer tag push (`v*.*.*`). Does three things:
+#
+#   1. Validates `sdk/php/composer.json` is well-formed and the
+#      generated PHP stubs are committed (no broken release).
+#   2. Performs a `git subtree split --prefix=sdk/php` and force-pushes
+#      the result to the SATELLITE repo `fahara02/udb-laravel`, then
+#      mirrors the same `v*.*.*` tag onto it. Packagist watches the
+#      satellite — see `docs/publishing-laravel-sdk.md` for why.
+#   3. POSTs Packagist's update hook so the new version surfaces on
+#      `composer require` immediately (instead of waiting for the
+#      hourly poll).
+#
+# Required repo secrets:
+#   UDB_LARAVEL_DEPLOY_KEY   SSH private key (deploy key with write
+#                            access to fahara02/udb-laravel). See
+#                            docs/publishing-laravel-sdk.md for the
+#                            ssh-keygen + GitHub registration steps.
+#   PACKAGIST_USERNAME       Your packagist.org username.
+#   PACKAGIST_API_TOKEN      https://packagist.org/profile/ → API Token.
+#
+# Optional repo variable:
+#   PACKAGIST_PACKAGE        Override the published package name.
+#                            Defaults to `fahara02/udb-laravel`.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  SATELLITE_REPO: git@github.com:fahara02/udb-laravel.git
+
+jobs:
+  # ── 1. Validate the SDK before touching the satellite ─────────────
+  validate-php-sdk:
+    name: composer validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: sdk/php
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: grpc, mbstring
+          tools: composer:v2
+      - name: composer validate (strict)
+        # `--no-check-publish` skips Packagist-side name/license checks
+        # because the package's metadata is enforced server-side
+        # anyway; we only need local syntax validation here.
+        run: composer validate --strict --no-check-publish
+      - name: composer install (verify deps resolve)
+        run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Verify generated stubs are committed
+        run: |
+          set -euo pipefail
+          if [ ! -f gen/Udb/Services/V1/DataBrokerClient.php ]; then
+            echo "::error::sdk/php/gen/ is missing — run 'buf generate' before tagging."
+            exit 1
+          fi
+          count=$(find gen -type f | wc -l)
+          echo "Generated stubs present: $count files"
+
+  # ── 2. Split sdk/php into the satellite repo + mirror the tag ─────
+  push-satellite:
+    name: Split + push to udb-laravel satellite
+    needs: validate-php-sdk
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history — `git subtree split` walks every commit
+          # that touched sdk/php/ to build the satellite's history.
+          # Shallow checkout would lose the SDK's commit story on
+          # the satellite (each release would look like a single
+          # squash, breaking `git log` for downstream debugging).
+          fetch-depth: 0
+
+      - name: Set up deploy key for the satellite repo
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.UDB_LARAVEL_DEPLOY_KEY }}
+
+      - name: Add satellite host key
+        # Pin GitHub's SSH host key so strict host-key checking
+        # doesn't prompt during the push. Pulling fresh from
+        # `ssh-keyscan` is fine in CI — the value is published at
+        # https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Configure git committer identity
+        run: |
+          git config --global user.email "noreply@fahara02.dev"
+          git config --global user.name "udb-monorepo-sync"
+
+      - name: Extract tag name
+        id: tag
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          echo "name=$tag" >> "$GITHUB_OUTPUT"
+          echo "Tag: $tag"
+
+      - name: git subtree split sdk/php
+        run: |
+          set -euo pipefail
+          # `subtree split` creates a new branch where every commit
+          # is rewritten as if `sdk/php/` were the repo root. The
+          # result has `composer.json` at the top — which is what
+          # Packagist needs.
+          git subtree split --prefix=sdk/php -b sdk-php-split
+          echo "Split branch sdk-php-split created with $(git rev-list --count sdk-php-split) commits"
+
+      - name: Push split branch to satellite main
+        run: |
+          set -euo pipefail
+          # Force push — the satellite is a derived artifact; its
+          # main branch should always be the latest split of the
+          # monorepo's main. There's no other writer.
+          git push --force "$SATELLITE_REPO" sdk-php-split:main
+
+      - name: Mirror release tag onto satellite
+        run: |
+          set -euo pipefail
+          tag="${{ steps.tag.outputs.name }}"
+          # Push the same tag pointing at the satellite's split HEAD.
+          # Packagist reads tags to determine versions; without this
+          # the satellite's `main` would update but no new version
+          # would publish.
+          git tag -f "$tag" sdk-php-split
+          git push --force "$SATELLITE_REPO" "refs/tags/$tag"
+          echo "Tagged satellite at $tag"
+
+  # ── 3. Tell Packagist to re-index immediately ─────────────────────
+  notify-packagist:
+    name: Notify Packagist
+    needs: push-satellite
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: packagist
+      url: https://packagist.org/packages/${{ vars.PACKAGIST_PACKAGE || 'fahara02/udb-laravel' }}
+    steps:
+      - name: POST update hook to Packagist
+        env:
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_API_TOKEN: ${{ secrets.PACKAGIST_API_TOKEN }}
+          PACKAGE: ${{ vars.PACKAGIST_PACKAGE || 'fahara02/udb-laravel' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PACKAGIST_USERNAME:-}" ] || [ -z "${PACKAGIST_API_TOKEN:-}" ]; then
+            echo "::warning::Packagist credentials not configured — set PACKAGIST_USERNAME and PACKAGIST_API_TOKEN secrets. Skipping notify; the package will still update on Packagist's next hourly poll."
+            exit 0
+          fi
+          # Note the URL is the SATELLITE repo, not this monorepo —
+          # Packagist tracks the satellite as `fahara02/udb-laravel`.
+          response=$(curl -sS -w "\n%{http_code}" -X POST \
+            "https://packagist.org/api/update-package?username=$PACKAGIST_USERNAME&apiToken=$PACKAGIST_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            -d '{"repository":{"url":"https://github.com/fahara02/udb-laravel"}}')
+          body=$(printf '%s' "$response" | head -n -1)
+          status=$(printf '%s' "$response" | tail -n 1)
+          echo "Packagist response: $status"
+          printf '%s\n' "$body"
+          if [ "$status" != "200" ] && [ "$status" != "202" ]; then
+            echo "::error::Packagist update failed with status $status"
+            exit 1
+          fi

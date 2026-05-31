@@ -1,0 +1,128 @@
+# ── Rust build outputs ───────────────────────────────────────────────────────
+/bin/
+/target/
+/target_*/
+/target-*/
+target/
+target_*/
+target-*/
+Cargo.lock.bak
+*.pdb
+*.rlib
+*.rmeta
+*.profraw
+*.profdata
+
+# ── Generated / temporary test artifacts ─────────────────────────────────────
+tmp/
+temp/
+.tmp/
+.temp/
+*.tmp
+*.temp
+*.bak
+*.orig
+*.log
+*.trace
+*.timestamp
+*.profraw
+coverage/
+coverage-final.json
+lcov.info
+
+# ── C# SDK ───────────────────────────────────────────────────────────────────
+sdk/csharp/**/obj/
+sdk/csharp/**/bin/
+sdk/csharp/**/*.user
+sdk/csharp/**/*.suo
+sdk/csharp/**/.vs/
+sdk/csharp/**/TestResults/
+sdk/csharp/**/*.nupkg
+sdk/csharp/**/*.snupkg
+
+# ── TypeScript SDK ───────────────────────────────────────────────────────────
+sdk/typescript/node_modules/
+sdk/typescript/dist/
+sdk/typescript/build/
+sdk/typescript/coverage/
+sdk/typescript/.turbo/
+sdk/typescript/.next/
+sdk/typescript/.vite/
+sdk/typescript/*.tsbuildinfo
+sdk/typescript/npm-debug.log*
+sdk/typescript/yarn-debug.log*
+sdk/typescript/yarn-error.log*
+sdk/typescript/pnpm-debug.log*
+
+# ── Python SDK ───────────────────────────────────────────────────────────────
+sdk/python/**/__pycache__/
+sdk/python/**/*.pyc
+sdk/python/**/*.pyo
+sdk/python/**/*.pyd
+sdk/python/**/.venv/
+sdk/python/**/venv/
+sdk/python/**/.pytest_cache/
+sdk/python/**/*.egg-info/
+sdk/python/**/dist/
+sdk/python/**/build/
+sdk/python/**/.mypy_cache/
+sdk/python/**/.ruff_cache/
+
+# ── Go SDK ───────────────────────────────────────────────────────────────────
+sdk/go/**/vendor/
+sdk/go/**/*.test
+sdk/go/**/*.out
+sdk/go/coverage.out
+
+# ── PHP / Laravel SDK ────────────────────────────────────────────────────────
+sdk/php/vendor/
+sdk/php/composer.lock
+sdk/php/.phpunit.cache/
+sdk/php/.phpunit.result.cache
+sdk/php/.php-cs-fixer.cache
+sdk/php/.phpstan-cache/
+sdk/php/coverage/
+sdk/php/build/
+
+# ── Generated SDK stubs ──────────────────────────────────────────────────────
+# Generated stubs for SDKs that ship as their own package (PHP /
+# TypeScript) ARE committed so `composer require` / `npm install`
+# work without buf being installed on the consumer side. Generated
+# stubs for Go / Python / C# stay out — those ecosystems regenerate
+# at build time via their respective package-manager hooks.
+sdk/python/udb/
+sdk/python/**/*.pyi
+sdk/csharp/Generated/
+
+# ── Docs ─────────────────────────────────────────────────────────────────────
+docs/generated/
+docs/upgrade_todo.md
+
+# ── Environment & secrets ────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.env
+configs/*.yaml
+!configs/*.example.yaml
+!configs/database.yaml
+!configs/backends.yaml
+!configs/services.yaml
+!configs/ci.yaml
+!configs/redis.yaml
+*.pem
+*.key
+*.crt
+
+# ── Docker ───────────────────────────────────────────────────────────────────
+.docker/
+
+# ── IDE ──────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

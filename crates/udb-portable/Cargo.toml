@@ -1,0 +1,47 @@
+# U28 — udb-portable: the WASM/edge-safe subset of the UDB stack.
+#
+# This crate is the planner/client surface: AST types, deterministic
+# checksum, proto lexer, and a source-based parser API. It has zero
+# native networking, zero TLS, zero database drivers, and zero async
+# runtime — so it builds for both native targets and
+# `wasm32-unknown-unknown` (browser) and `wasm32-wasi` (edge).
+#
+# Source files are NOT duplicated. The crate's lib.rs uses `#[path =
+# "../../src/…"]` to include the existing portable modules from the
+# main `udb/` source tree. That way there's exactly one definition of
+# `ProtoSchema`, the lexer, the checksum, and the parser submodules —
+# the server crate and the WASM crate share bytes.
+#
+# Only files that are truly portable (no fs::read_dir, no fs::read in
+# the public API, no tokio/sqlx/reqwest/tonic) are included. The
+# main crate's `parser/mod.rs` exposes `parse_directory` and
+# `parse_file` that touch `std::fs::read_dir` — those are NOT
+# re-exported here. WASM consumers call `parse_proto_source` with
+# bytes/strings they fetched themselves (browser fetch, edge KV, etc).
+[package]
+name = "udb-portable"
+version = "0.1.0"
+edition = "2024"
+description = "WASM/edge-safe subset of UDB: AST, lexer, deterministic checksum, source-based parser"
+license = "Apache-2.0"
+# Crates.io cannot publish this — its source files are `#[path =
+# "../../src/..."]` includes into the parent crate, which doesn't
+# exist after extraction from the registry tarball. The portable
+# subset is consumed via `path = "crates/udb-portable"` inside the
+# workspace; never via `cargo publish`.
+publish = false
+
+[lib]
+name = "udb_portable"
+path = "src/lib.rs"
+
+[dependencies]
+# Only crates that are wasm32-unknown-unknown clean. No tokio, no
+# reqwest, no sqlx, no rdkafka, no aws-*, no tonic. Versions match the
+# parent crate so we don't double-link.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+
+[features]
+default = []

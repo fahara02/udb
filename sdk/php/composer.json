@@ -1,0 +1,77 @@
+{
+    "name": "fahara02/udb-laravel",
+    "description": "Laravel SDK for UDB (Universal Data Broker) — gRPC client, ServiceProvider, Facade, request-context middleware, and tenant-aware request injection.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "udb",
+        "universal-data-broker",
+        "laravel",
+        "grpc",
+        "data-broker",
+        "tenant",
+        "multi-tenant"
+    ],
+    "homepage": "https://github.com/fahara02/udb",
+    "support": {
+        "issues": "https://github.com/fahara02/udb/issues",
+        "source": "https://github.com/fahara02/udb"
+    },
+    "authors": [
+        {
+            "name": "fahara02",
+            "homepage": "https://github.com/fahara02"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "ext-grpc": "*",
+        "grpc/grpc": "^1.57",
+        "google/protobuf": "^4.33.6",
+        "illuminate/contracts": "^10.0|^11.0|^12.0",
+        "illuminate/support": "^10.0|^11.0|^12.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0|^9.0|^10.0",
+        "pestphp/pest": "^2.0|^3.0",
+        "pestphp/pest-plugin-laravel": "^2.0|^3.0",
+        "phpstan/phpstan": "^1.10",
+        "friendsofphp/php-cs-fixer": "^3.50"
+    },
+    "autoload": {
+        "psr-4": {
+            "Fahara02\\UdbLaravel\\": "src/",
+            "Udb\\": "gen/Udb/",
+            "GPBMetadata\\Udb\\": "gen/GPBMetadata/Udb/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Fahara02\\UdbLaravel\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "test:coverage": "vendor/bin/pest --coverage",
+        "analyse": "vendor/bin/phpstan analyse src tests",
+        "format": "vendor/bin/php-cs-fixer fix"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Fahara02\\UdbLaravel\\UdbServiceProvider"
+            ],
+            "aliases": {
+                "Udb": "Fahara02\\UdbLaravel\\Facades\\Udb"
+            }
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

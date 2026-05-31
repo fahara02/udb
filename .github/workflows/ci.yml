@@ -1,0 +1,322 @@
+name: CI
+
+# Adapted from the lifeplusbd-backend monorepo's udb-ci.yml for the
+# standalone repo layout: everything lives at the repo root (no
+# `working-directory: udb`), protos are at `proto/`, and SDK stubs
+# come from the root `buf generate` rather than the old protoc
+# `gen_sdk.sh` path.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ── Rust build + test + clippy across OSes ────────────────────────
+  rust:
+    name: Rust (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+      - name: Build all targets
+        run: cargo build --locked --all-targets
+      - name: Compile tests and benches
+        run: cargo test --locked --no-run --all-targets
+      - name: Test UDB library
+        run: cargo test --locked --lib
+      - name: Build CLI
+        run: cargo build --locked --bin udb-proto-parser
+      - name: Clippy (advisory for v0.1; promote to -D warnings post-cleanup)
+        # 120 pre-existing clippy lints on the v0.1 baseline (mostly
+        # field_reassign_with_default, useless_format, doc style,
+        # needless_lifetimes, etc.). Soft-fail so the rest of the
+        # pipeline stays gated. Tracked for cleanup before v0.2; flip
+        # to `-D warnings` once the count is at zero.
+        continue-on-error: true
+        run: cargo clippy --locked --all-targets
+
+  # ── Slim postgres-only build + dep-graph guard ────────────────────
+  slim-build:
+    name: Slim build (postgres-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build slim (no-default-features, postgres only)
+        run: cargo build --locked --all-targets --no-default-features --features postgres
+      - name: Verify slim dependency graph
+        shell: bash
+        run: bash scripts/ci_slim_dep_guard.sh
+
+  # ── Per-backend plugin feature builds ─────────────────────────────
+  plugin-feature-matrix:
+    name: Plugin feature (${{ matrix.feature }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        feature:
+          - qdrant
+          - s3
+          - mongodb
+          - mongodb-native
+          - neo4j
+          - clickhouse
+          - redis
+          - elasticsearch
+          - memcached
+          - mssql
+          - weaviate
+          - pinecone
+          - cassandra
+          - azureblob
+          - gcs
+          - kafka
+          - otel
+          - runtime-logging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build postgres + plugin feature
+        run: cargo build --locked --all-targets --no-default-features --features "postgres,${{ matrix.feature }}"
+
+  # ── gRPC reflection smoke test against a live Postgres ────────────
+  grpc-reflection-smoke:
+    name: gRPC reflection smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: udb_ci
+          POSTGRES_USER: udb
+          POSTGRES_PASSWORD: udb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U udb -d udb_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      UDB_PG_DSN: postgres://udb:udb@localhost:5432/udb_ci
+      UDB_GRPC_ADDR: 127.0.0.1:50051
+      UDB_METRICS_ADDR: 127.0.0.1:19090
+      UDB_ABAC_DEFAULT_ALLOW: "true"
+      UDB_CDC_ENABLED: "false"
+      UDB_PROJECTION_WORKER_ENABLED: "false"
+      UDB_RECONCILIATION_ENABLED: "false"
+      UDB_SAGA_RECOVERY_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Install grpcurl
+        run: go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+      - name: Build CLI
+        run: cargo build --locked --bin udb-proto-parser --no-default-features --features "postgres,runtime-logging"
+      - name: Start UDB
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Standalone layout: protos are at ./proto (not ../proto).
+          target/debug/udb-proto-parser serve proto "" 127.0.0.1:50051 > /tmp/udb-server.log 2>&1 &
+          echo $! > /tmp/udb-server.pid
+          for attempt in {1..60}; do
+            if "$HOME/go/bin/grpcurl" -plaintext 127.0.0.1:50051 list >/tmp/grpcurl-list.txt 2>/tmp/grpcurl.err; then
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/udb-server.pid)" 2>/dev/null; then
+              cat /tmp/udb-server.log
+              cat /tmp/grpcurl.err || true
+              exit 1
+            fi
+            sleep 2
+          done
+          cat /tmp/udb-server.log
+          cat /tmp/grpcurl.err || true
+          exit 1
+      - name: Verify reflection surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$HOME/go/bin/grpcurl" -plaintext 127.0.0.1:50051 list | tee /tmp/grpcurl-list.txt
+          grep -q '^udb.services.v1.DataBroker$' /tmp/grpcurl-list.txt
+          "$HOME/go/bin/grpcurl" -plaintext 127.0.0.1:50051 describe udb.services.v1.DataBroker | tee /tmp/grpcurl-describe.txt
+          grep -q 'rpc GetHealthReport' /tmp/grpcurl-describe.txt
+          grep -q 'rpc LookupMessageSchema' /tmp/grpcurl-describe.txt
+      - name: Stop UDB
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/udb-server.pid ]; then
+            kill "$(cat /tmp/udb-server.pid)" 2>/dev/null || true
+          fi
+
+  # ── Supply-chain: cargo-deny + vendored postgres-replication audit ─
+  supply-chain:
+    name: Supply chain policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo-deny advisories (advisory)
+        # RUSTSEC advisories can land against transitive dependencies
+        # before upstream crates publish a compatible fix. Keep this
+        # visible without blocking the stable policy gates below.
+        continue-on-error: true
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: Cargo.toml
+          command: check advisories
+      - name: cargo-deny policy gates
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: Cargo.toml
+          command: check bans licenses sources
+      - name: Verify vendored postgres-replication provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_rev='31acf55c7e5c2244e5bb3a36e7afa2a01bf52c38'
+
+          # 1. Vendored postgres-replication module must be intact —
+          #    sources, NOTICE.md (referencing the fork rev), and
+          #    dual MIT/Apache-2.0 LICENSES for attribution.
+          for required in \
+            src/runtime/cdc/postgres_replication/mod.rs \
+            src/runtime/cdc/postgres_replication/protocol.rs \
+            src/runtime/cdc/postgres_replication/NOTICE.md \
+            src/runtime/cdc/postgres_replication/LICENSES/LICENSE-MIT \
+            src/runtime/cdc/postgres_replication/LICENSES/LICENSE-APACHE; do
+            if [ ! -f "$required" ]; then
+              echo "::error ::vendored postgres-replication is missing $required"
+              exit 1
+            fi
+          done
+          if ! grep -q "$expected_rev" src/runtime/cdc/postgres_replication/NOTICE.md; then
+            echo "::error ::NOTICE.md does not reference fork rev $expected_rev"
+            exit 1
+          fi
+
+          # 2. Cargo.toml must NOT redeclare postgres-replication as an
+          #    external dep — the vendored module owns that crate name.
+          if grep -E '^postgres-replication\s*=' Cargo.toml; then
+            echo "::error ::Cargo.toml has an external postgres-replication dep; remove it — the vendored copy in src/runtime/cdc/postgres_replication/ is authoritative"
+            exit 1
+          fi
+
+          # 3. Published crates must build from crates.io sources only. Keep
+          #    any upstream-fork provenance documented in NOTICE.md, not as a
+          #    Cargo patch that would be stripped during packaging.
+          if grep -q '^\[patch\.crates-io\]' Cargo.toml; then
+            echo "::error ::Cargo.toml must not use [patch.crates-io] for the publishable package"
+            exit 1
+          fi
+          if grep -q 'git = ' Cargo.toml; then
+            echo "::error ::Cargo.toml must not use git dependencies for the publishable package"
+            exit 1
+          fi
+
+  # ── buf: lint, build, and verify committed stubs are current ──────
+  buf:
+    name: Proto (buf)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          buf_api_token: ${{ secrets.BUF_TOKEN }}
+      - run: buf lint
+      - run: buf build
+      - name: buf breaking (against origin/main)
+        if: github.event_name == 'pull_request'
+        run: buf breaking --against ".git#branch=origin/main"
+      - name: Verify committed stubs are current (advisory)
+        # Soft-fail because the CI buf version often differs from
+        # the local one and the diff is just header re-rendering /
+        # newline whitespace. Promote to hard-fail after pinning
+        # buf to an exact version with `bufbuild/buf-setup-action`'s
+        # `version:` input.
+        continue-on-error: true
+        run: |
+          buf generate
+          if ! git diff --quiet -- sdk/php/gen sdk/go/gen sdk/typescript/gen api; then
+            echo "::warning::Generated stubs differ from CI 'buf generate' output. Likely buf-version drift, not a real source change."
+            git diff --stat -- sdk/php/gen sdk/go/gen sdk/typescript/gen api
+          fi
+
+  # ── PHP / Laravel SDK: composer + pest ────────────────────────────
+  php-sdk:
+    name: PHP SDK (pest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: sdk/php
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: grpc, protobuf, mbstring, intl
+          coverage: none
+          tools: composer:v2
+      - name: Cache composer deps
+        uses: actions/cache@v4
+        with:
+          path: sdk/php/vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('sdk/php/composer.json') }}
+          restore-keys: composer-${{ runner.os }}-
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - run: composer test
+      - name: composer analyse (PHPStan)
+        continue-on-error: true
+        run: composer analyse
+
+  # ── Go SDK: vet + build ───────────────────────────────────────────
+  go-sdk:
+    name: Go SDK (vet + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: sdk/go
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - run: go vet ./...
+      - run: go build ./...

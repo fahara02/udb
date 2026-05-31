@@ -1,0 +1,36 @@
+projects:
+  - project_id: acme-billing
+    display_name: ACME Billing
+    proto_root: examples/multi_project/proto
+    namespace: acme.billing.v1
+    catalog_version: acme-billing-v1
+    cdc_topic_prefix: acme.billing
+    backends:
+      canonical:
+        backend: postgres
+        instance: pg-primary
+      cache:
+        backend: redis
+        instance: redis-main
+      vector:
+        backend: qdrant
+        instance: qdrant-main
+      object:
+        backend: s3
+        instance: minio-main
+  - project_id: zen-clinic
+    display_name: Zen Clinic
+    proto_root: examples/multi_project/proto
+    namespace: zen.clinic.v1
+    catalog_version: zen-clinic-v1
+    cdc_topic_prefix: zen.clinic
+    backends:
+      canonical:
+        backend: postgres
+        instance: pg-primary
+      graph:
+        backend: neo4j
+        instance: neo4j-main
+      analytics:
+        backend: clickhouse
+        instance: clickhouse-main

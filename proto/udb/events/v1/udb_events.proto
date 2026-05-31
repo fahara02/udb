@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package udb.events.v1;
+
+option go_package = "github.com/udb-project/udb/gen/go/udb/events/v1;udbeventsv1";
+option java_package      = "com.udb.events.v1";
+option csharp_namespace = "Udb.Events.V1";
+
+import "google/protobuf/timestamp.proto";
+
+// Kafka topic: udb.cdc.envelope.v1
+message CDCEnvelope {
+  string event_id = 1;
+  string topic = 2;
+  string partition_key = 3;
+  string payload_json = 4;
+  google.protobuf.Timestamp published_at = 5;
+}
+
+// Kafka topic: udb.migration.drift_detected.v1
+message DriftDetectedEvent {
+  string event_id = 1;
+  string schema_checksum_sha256 = 2;
+  int32 blocked_operation_count = 3;
+  string report_json = 4;
+  string correlation_id = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+}
+
+// Kafka topic: udb.provisioning.completed.v1
+message ProvisioningCompletedEvent {
+  string event_id = 1;
+  string schema_checksum_sha256 = 2;
+  int32 applied_operation_count = 3;
+  string correlation_id = 4;
+  google.protobuf.Timestamp occurred_at = 5;
+}

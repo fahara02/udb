@@ -1,0 +1,26 @@
+version: v2
+# Standalone UDB repo workspace.
+#
+# The single proto module here is the broker wire contract. The
+# nested `proto/buf.yaml` declares its module name
+# (`buf.build/fahara02/udb`); this file lifts it to the repo root
+# so `buf generate` / `buf lint` / `buf build` can be run from
+# anywhere in the tree.
+modules:
+  - path: proto
+    name: buf.build/fahara02/udb
+deps:
+  - buf.build/googleapis/googleapis
+  - buf.build/grpc-ecosystem/grpc-gateway
+lint:
+  use: [STANDARD]
+  except:
+    - PACKAGE_VERSION_SUFFIX
+    - RPC_REQUEST_RESPONSE_UNIQUE
+    - RPC_REQUEST_STANDARD_NAME
+    - RPC_RESPONSE_STANDARD_NAME
+    - IMPORT_NO_PUBLIC
+    - ENUM_VALUE_PREFIX
+    - SERVICE_SUFFIX
+breaking:
+  use: [FILE]

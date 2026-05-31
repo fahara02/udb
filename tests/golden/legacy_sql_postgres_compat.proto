@@ -1,0 +1,47 @@
+syntax = "proto3";
+package example.udb.compat.v1;
+
+import "example/examplecore/common/v1/db.proto";
+
+message legacy_sqlCompatAccount {
+  option (example.examplecore.common.v1.table) = {
+    table_name: "accounts"
+    schema_name: "billing"
+    migration_order: 10
+    is_table: true
+    comment: "legacy_sql PostgreSQL parser compatibility fixture"
+    audit_fields: true
+    enable_rls: true
+  };
+
+  string account_id = 1 [(example.examplecore.common.v1.column) = {
+    column_name: "account_id"
+    sql_type: "UUID"
+    primary_key: true
+    not_null: true
+    default_value: "gen_random_uuid()"
+  }];
+
+  string tenant_id = 2 [(example.examplecore.common.v1.column) = {
+    column_name: "tenant_id"
+    sql_type: "UUID"
+    not_null: true
+    index: {
+      index_name: "idx_accounts_tenant_id"
+      index_type: INDEX_TYPE_BTREE
+    }
+  }];
+
+  string owner_user_id = 3 [(example.examplecore.common.v1.column) = {
+    column_name: "owner_user_id"
+    sql_type: "UUID"
+    not_null: true
+    foreign_key: {
+      references_schema: "authn"
+      references_table: "users"
+      references_column: "user_id"
+      on_delete: REFERENTIAL_ACTION_RESTRICT
+      constraint_name: "fk_accounts_owner"
+    }
+  }];
+}

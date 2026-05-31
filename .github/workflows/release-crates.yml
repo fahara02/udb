@@ -1,0 +1,57 @@
+name: Release · crates.io
+
+# Triggers on a SemVer tag push (`v0.1.0`, `v1.2.3`, `v2.0.0-rc1`).
+# Validates the package, runs the default-features test suite, then
+# `cargo publish`. The token is a GitHub Actions secret — never read
+# from disk, never written to the runner filesystem.
+#
+# Required repo secret:
+#   CARGO_REGISTRY_TOKEN   (https://crates.io/settings/tokens)
+#
+# Rollback: crates.io versions are IMMUTABLE. The only undo is
+# `cargo yank --version <ver>` (hides from new resolves, does NOT
+# delete). Choose the version carefully.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    name: cargo publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: crates-io
+      url: https://crates.io/crates/udb
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Verify tag matches Cargo.toml version
+        run: |
+          tag="${GITHUB_REF#refs/tags/v}"
+          crate_version=$(grep -E '^version = "' Cargo.toml | head -1 | sed -E 's/version = "(.+)"/\1/')
+          if [ "$tag" != "$crate_version" ]; then
+            echo "::error::Tag v$tag does not match Cargo.toml version $crate_version"
+            exit 1
+          fi
+          echo "Tag and Cargo.toml both at $tag"
+
+      - name: Run the default test suite before publishing
+        run: cargo test --locked --lib
+
+      - name: cargo publish --dry-run
+        run: cargo publish --dry-run
+
+      - name: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish

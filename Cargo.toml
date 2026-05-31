@@ -1,0 +1,198 @@
+# Workspace hosts the main `udb` crate and the `udb-portable` sub-crate.
+# The portable crate uses #[path] includes from `src/` so there is a single
+# source of truth for the AST, lexer, checksum, and source-based parser.
+# See crates/udb-portable/Cargo.toml.
+[workspace]
+members = ["crates/udb-portable"]
+resolver = "2"
+
+[package]
+name = "udb"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Universal Data Broker — a Rust gRPC broker over multiple databases (Postgres, MySQL, SQLite, MongoDB, ClickHouse, Cassandra, MSSQL, Redis, Qdrant, S3, Neo4j, …) with per-tenant RLS, 2PC, sagas, and CDC."
+license = "MIT"
+repository = "https://github.com/fahara02/udb"
+homepage = "https://github.com/fahara02/udb"
+documentation = "https://docs.rs/udb"
+readme = "README.md"
+keywords = ["grpc", "database", "multi-tenant", "broker", "cdc"]
+categories = ["database", "network-programming", "web-programming::http-server"]
+authors = ["fahara02 <idea3d.faruk@gmail.com>"]
+# `cargo publish` honours this glob. Keep docs, examples, configs, SDKs, and
+# generated protocol artifacts because the README links to them; omit only CI,
+# local build output, and temporary files.
+exclude = [
+    "/.github/**",
+    "/target*/**",
+    "/bin/**",
+    "/tmp/**",
+    "/.tmp/**",
+]
+
+[lib]
+name = "udb"
+path = "src/lib.rs"
+
+[[bin]]
+name = "udb-proto-parser"
+path = "src/main.rs"
+
+[features]
+# Per-backend feature gating. `default` enables every backend, so the normal
+# build, binary, and full test suite include the complete broker surface.
+# Each backend can be turned off individually; a slim broker is built with e.g.
+# `--no-default-features --features postgres`. When a backend is disabled its
+# code/deps are compiled out, and any gRPC-contract RPC it owns (e.g. VectorSearch
+# for qdrant, the object RPCs for s3) stays present but returns FailedPrecondition.
+# Postgres is the always-on core (sqlx is never gated).
+default = ["postgres", "mysql", "sqlite", "qdrant", "s3", "mongodb", "neo4j", "clickhouse", "redis", "elasticsearch", "memcached", "mssql", "weaviate", "pinecone", "cassandra", "azureblob", "gcs", "kafka", "otel", "runtime-logging", "http-client"]
+postgres = []
+# MySQL and SQLite are optional SQL backends. Each pulls its sqlx driver and is
+# enabled by `default`; slim postgres-only builds skip both.
+mysql = ["sqlx/mysql"]
+sqlite = ["sqlx/sqlite"]
+# HTTP-using backends depend on `http-client`, so postgres-only builds do not
+# pull reqwest. Adding an HTTP backend automatically enables the shared client.
+qdrant = ["http-client"]
+mongodb = ["http-client"]
+mongodb-native = ["mongodb", "dep:mongodb-driver"]
+neo4j = ["http-client"]
+clickhouse = ["http-client"]
+# Elasticsearch backend over the REST Query DSL.
+elasticsearch = ["http-client"]
+# Memcached cache backend via the `memcache` crate.
+memcached = ["dep:memcache"]
+# Microsoft SQL Server backend via the `tiberius` TDS driver.
+mssql = ["dep:tiberius", "dep:tokio-util"]
+# Weaviate vector backend over the REST API.
+weaviate = ["http-client"]
+# Pinecone vector backend over the REST API.
+pinecone = ["http-client"]
+# Cassandra/Scylla wide-column backend via the `scylla` driver.
+cassandra = ["dep:scylla"]
+# Azure Blob Storage object backend.
+azureblob = ["dep:azure_storage", "dep:azure_storage_blobs", "dep:azure_core"]
+# Google Cloud Storage object backend.
+gcs = ["dep:google-cloud-storage"]
+s3 = ["dep:aws-config", "dep:aws-sdk-s3"]
+redis = ["dep:redis"]
+# CDC (kafka) uses Redis for publish idempotency and the HTTP client for
+# optional schema-registry validation, so it pulls both features. It also
+# pulls the vendored `postgres-replication` module's direct deps —
+# byteorder/memchr/pin-project-lite/futures-util plus the upstream
+# postgres-protocol + postgres-types crates whose APIs the WAL decoder
+# consumes. These are wrapped here so the slim postgres-only build does
+# not drag them in.
+kafka = [
+    "dep:rdkafka",
+    "redis",
+    "http-client",
+    "dep:byteorder",
+    "dep:memchr",
+    "dep:pin-project-lite",
+    "dep:futures-util",
+    "dep:postgres-protocol",
+    "dep:postgres-types",
+]
+otel = ["dep:opentelemetry", "dep:opentelemetry-otlp", "dep:tracing-opentelemetry"]
+runtime-logging = ["dep:tracing-subscriber"]
+# Shared HTTP client used by REST-backed integrations.
+http-client = ["dep:reqwest"]
+
+[dependencies]
+async-stream = "0.3"
+async-trait = "0.1"
+aead = "0.5"
+aws-config = { version = "1", optional = true }
+aws-sdk-s3 = { version = "1", optional = true }
+aes-gcm-siv = "0.11"
+base64 = "0.22"
+bytes = "1"
+chrono = { version = "0.4", features = ["serde"] }
+opentelemetry = { version = "0.27", optional = true }
+opentelemetry-otlp = { version = "0.27", optional = true }
+prometheus = "0.13"
+prost = "0.13"
+prost-types = "0.13"
+rcgen = "0.13"
+rdkafka = { version = "0.36", default-features = false, features = ["cmake-build", "tokio", "curl-static"], optional = true }
+redis = { version = "0.27", features = ["tokio-comp"], optional = true }
+mongodb-driver = { package = "mongodb", version = "3.7", optional = true }
+# Memcached binary-protocol client. The sync API is wrapped in
+# `tokio::task::spawn_blocking` by the executor so the async runtime does not
+# block. `default-features = false` avoids pulling native TLS/OpenSSL.
+memcache = { version = "0.17", default-features = false, optional = true }
+# Microsoft SQL Server driver over TDS. Default features are disabled to avoid
+# the driver's chrono shim; enable the SQL Server 2008+ wire format and rustls.
+tiberius = { version = "0.12", default-features = false, features = ["tds73", "rustls"], optional = true }
+tokio-util = { version = "0.7", features = ["compat"], optional = true }
+# Cassandra / ScyllaDB driver over the CQL binary protocol. Default features
+# stay off to avoid unused metrics and cloud-bundle dependencies.
+scylla = { version = "0.13", default-features = false, optional = true }
+# Azure Blob Storage SDK split across core primitives, storage account support,
+# and the blob client.
+azure_core = { version = "0.21", default-features = false, optional = true }
+azure_storage = { version = "0.21", default-features = false, optional = true }
+azure_storage_blobs = { version = "0.21", default-features = false, optional = true }
+# Google Cloud Storage client with rustls TLS.
+google-cloud-storage = { version = "0.22", default-features = false, features = ["rustls-tls"], optional = true }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"], optional = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+toml = "0.8"
+sha2 = "0.10"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "json", "uuid", "chrono"] }
+futures = { version = "0.3", default-features = false, features = ["std"] }
+tokio = { version = "1", features = ["full"] }
+tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-uuid-1", "with-serde_json-1", "runtime"] }
+tokio-stream = "0.1"
+# Dependencies of the vendored `postgres-replication` module
+# (`src/runtime/cdc/postgres_replication/`). Pulled only when the
+# `kafka` feature is on; the slim postgres-only build skips them.
+byteorder = { version = "1.5", optional = true }
+memchr = { version = "2.7", optional = true }
+pin-project-lite = { version = "0.2", optional = true }
+futures-util = { version = "0.3", default-features = false, features = ["std", "sink"], optional = true }
+postgres-protocol = { version = "0.6", optional = true }
+postgres-types = { version = "0.2", optional = true }
+tonic = { version = "0.12", features = ["tls"] }
+tonic-health = "0.12"
+tonic-reflection = "0.12"
+tower = { version = "0.4", features = ["timeout", "limit"] }
+tracing = "0.1"
+tracing-opentelemetry = { version = "0.28", optional = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"], optional = true }
+uuid = { version = "1", features = ["serde", "v4"] }
+wildmatch = "2.3"
+x509-parser = "0.16"
+jsonwebtoken = "9"
+dotenvy = "0.15"
+arc-swap = "1.9.1"
+urlencoding = "2"
+
+[build-dependencies]
+protoc-bin-vendored = "3"
+tonic-build = "0.12"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+redis = { version = "0.27", features = ["tokio-comp"] }
+rdkafka = { version = "0.36", default-features = false, features = ["cmake-build", "tokio", "curl-static"] }
+aws-config = "1"
+aws-sdk-s3 = "1"
+chrono = { version = "0.4", features = ["serde"] }
+tokio = { version = "1", features = ["full"] }
+uuid = { version = "1", features = ["serde", "v4"] }
+serde_json = "1"
+# Parity between this crate and `udb-portable` is structural: both crates
+# include the same source files (`schema/ast.rs`, `schema/checksum.rs`,
+# `parser/*.rs`) via `#[path]` inside `crates/udb-portable/src/lib.rs`.
+# The portable crate's own tests (`cargo test -p udb-portable`) pin checksum
+# determinism, AST round-trip, and parser smoke behavior.
+
+[[bench]]
+name = "core_bench"
+harness = false

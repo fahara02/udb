@@ -1,0 +1,14 @@
+[package]
+name = "udb-toy-backend-plugin"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+async-trait = "0.1"
+udb = { path = "../..", default-features = false, features = ["postgres"] }
+
+[patch.crates-io]
+tokio-postgres = { git = "https://github.com/iambriccardo/rust-postgres", rev = "31acf55c7e5c2244e5bb3a36e7afa2a01bf52c38" }
+postgres-types = { git = "https://github.com/iambriccardo/rust-postgres", rev = "31acf55c7e5c2244e5bb3a36e7afa2a01bf52c38" }
+postgres-protocol = { git = "https://github.com/iambriccardo/rust-postgres", rev = "31acf55c7e5c2244e5bb3a36e7afa2a01bf52c38" }

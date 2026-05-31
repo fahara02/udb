@@ -1,0 +1,45 @@
+# configs/database.yaml — ACME Billing connection template for UDB
+#
+# Copy this file, fill in the real credentials, and point UDB_CONFIG_PATH at it.
+# All values can also be supplied as environment variables (env overrides config).
+
+database:
+  # PostgreSQL (required)
+  pg_dsn: "${UDB_PG_DSN:-postgres://udb:udb@localhost:5432/acme_billing_dev}"
+
+  # Redis cache (optional — read-through/write-through caching)
+  cache_dsn: "${UDB_CACHE_DSN:-redis://localhost:6379}"
+
+  # Qdrant vector store (optional — required for VectorSearch RPCs)
+  vector_dsn: "${UDB_VECTOR_DSN:-http://localhost:6333}"
+  # If your Qdrant instance requires an API key:
+  # qdrant_api_key: "${QDRANT_API_KEY}"
+
+  # MinIO / S3 (optional — required for PutObject / GetObject / PresignedUrl RPCs)
+  object_dsn: "${UDB_OBJECT_DSN:-http://localhost:9000}"
+  s3_bucket:  "${UDB_S3_BUCKET:-acme-billing-documents}"
+  aws_access_key_id:     "${AWS_ACCESS_KEY_ID:-minioadmin}"
+  aws_secret_access_key: "${AWS_SECRET_ACCESS_KEY:-minioadmin}"
+  aws_region:            "${AWS_REGION:-us-east-1}"
+
+  # Kafka (optional — required for CDC/outbox event publishing)
+  kafka_brokers: "${UDB_KAFKA_BROKERS:-localhost:9092}"
+
+server:
+  port: 50051
+  metrics_port: 50052
+
+system:
+  schema: "udb_system"
+  abac_schema: "udb_system"
+  abac_table: "udb_abac_policies"
+  abac_default_allow: false   # set true for development
+
+saga:
+  recovery_enabled: true
+  recovery_interval_seconds: 60
+  stale_threshold_seconds: 300
+
+cdc:
+  journal_enabled: true
+  journal_retention_days: 7

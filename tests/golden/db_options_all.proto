@@ -1,0 +1,123 @@
+syntax = "proto3";
+package example.udb.golden.v1;
+
+import "example/examplecore/common/v1/db.proto";
+
+message DbOptionGolden {
+  option (example.examplecore.common.v1.table) = {
+    table_name: "db_option_golden"
+    schema_name: "golden"
+    migration_order: 7
+    is_table: true
+    comment: "covers declared db.proto table options"
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    partition_strategy: PARTITION_STRATEGY_RANGE_MONTH
+    partition_column: "created_at"
+    retention_days: 30
+  };
+
+  option (example.examplecore.common.v1.vector_store) = {
+    backend: VECTOR_BACKEND_QDRANT
+    collection_name: "db_option_golden_vectors"
+    dimension: 1536
+    distance: VECTOR_DISTANCE_COSINE
+    shard_count: 2
+    replica_count: 1
+    on_disk: true
+    payload_schema_json: "{\"tenant_id\":\"keyword\"}"
+    hnsw_m: 16
+    hnsw_ef_construction: 64
+  };
+
+  option (example.examplecore.common.v1.cache) = {
+    backend: CACHE_BACKEND_REDIS
+    key_pattern: "golden:{tenant_id}:{golden_id}"
+    ttl_seconds: 600
+    write_through: true
+    read_through: true
+    eviction_policy: "allkeys-lru"
+    cluster_env_key: "REDIS_DSN"
+    namespace: "golden"
+  };
+
+  option (example.examplecore.common.v1.model_registry) = {
+    backend: MODEL_BACKEND_MLFLOW
+    experiment_name: "golden-models"
+    artifact_path: "runs/latest"
+    auto_register: true
+    stage: "staging"
+    metric_keys: "accuracy"
+    param_keys: "threshold"
+    storage_uri_env: "MODEL_STORE_URI"
+  };
+
+  string golden_id = 1 [(example.examplecore.common.v1.column) = {
+    column_name: "golden_id"
+    sql_type: "UUID"
+    not_null: true
+    unique: true
+    primary_key: true
+    auto_increment: false
+    default_value: "gen_random_uuid()"
+    check_constraint: "golden_id IS NOT NULL"
+    foreign_key: {
+      references_table: "tenants"
+      references_column: "tenant_id"
+      references_schema: "authn"
+      on_delete: REFERENTIAL_ACTION_CASCADE
+      on_update: REFERENTIAL_ACTION_RESTRICT
+      constraint_name: "fk_golden_tenant"
+    }
+    index: {
+      index_name: "idx_golden_hnsw"
+      index_type: INDEX_TYPE_HNSW
+      unique: false
+      composite_fields: "tenant_id"
+      include_columns: "status"
+      index_method: "hnsw"
+      where_clause: "deleted_at IS NULL"
+      operator_class: "vector_cosine_ops"
+      index_params: {
+        key: "m"
+        value: "16"
+      }
+    }
+    comment: "covers declared db.proto column options"
+    exclude_from_insert: false
+    exclude_from_update: false
+    encrypted: true
+    is_json: false
+  }];
+
+  string tenant_id = 2 [(example.examplecore.common.v1.column) = {
+    column_name: "tenant_id"
+    sql_type: "UUID"
+    not_null: true
+  }];
+
+  string status = 3 [(example.examplecore.common.v1.column) = {
+    column_name: "status"
+    sql_type: "TEXT"
+    default_value: "'active'"
+  }];
+
+  string object_key = 4 [
+    (example.examplecore.common.v1.column) = {
+      column_name: "object_key"
+      sql_type: "TEXT"
+    },
+    (example.examplecore.common.v1.storage) = {
+      backend: STORAGE_BACKEND_MINIO
+      bucket_env_key: "GOLDEN_BUCKET"
+      key_prefix: "golden/{tenant_id}"
+      presigned_read: true
+      presigned_write: true
+      presigned_ttl_seconds: 900
+      server_side_encryption: true
+      kms_key_id: "alias/golden"
+      acl: "private"
+    }
+  ];
+}

@@ -1,0 +1,372 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: udbbrokers.udb.io
+spec:
+  group: udb.io
+  scope: Namespaced
+  names:
+    plural: udbbrokers
+    singular: udbbroker
+    kind: UdbBroker
+    shortNames: [udbb]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              required: [image, configRef]
+              properties:
+                image:
+                  type: string
+                replicas:
+                  type: integer
+                  minimum: 1
+                  default: 1
+                configRef:
+                  type: object
+                  required: [name]
+                  properties:
+                    name:
+                      type: string
+                    key:
+                      type: string
+                      default: database.yaml
+                reloadStrategy:
+                  type: string
+                  enum: [ShadowValidateThenSwap, Restart]
+                  default: ShadowValidateThenSwap
+                credentialRotation:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: true
+                    secretRefs:
+                      type: array
+                      items:
+                        type: string
+                healthGates:
+                  type: object
+                  properties:
+                    requireConnectedBackends:
+                      type: boolean
+                      default: true
+                    grpcurlReflection:
+                      type: boolean
+                      default: true
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  type: integer
+                endpoint:
+                  type: string
+                activeConfigChecksum:
+                  type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+      additionalPrinterColumns:
+        - name: Ready
+          type: string
+          jsonPath: .status.conditions[?(@.type=="Ready")].status
+        - name: Endpoint
+          type: string
+          jsonPath: .status.endpoint
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: udbprojectcatalogs.udb.io
+spec:
+  group: udb.io
+  scope: Namespaced
+  names:
+    plural: udbprojectcatalogs
+    singular: udbprojectcatalog
+    kind: UdbProjectCatalog
+    shortNames: [udbcat]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              required: [projectId, sourceRef, version]
+              properties:
+                projectId:
+                  type: string
+                version:
+                  type: string
+                sourceRef:
+                  type: object
+                  required: [kind, name]
+                  properties:
+                    kind:
+                      type: string
+                      enum: [ConfigMap, GitRepository, OCIArtifact]
+                    name:
+                      type: string
+                    path:
+                      type: string
+                activationPolicy:
+                  type: string
+                  enum: [Manual, AutoIfCompatible]
+                  default: Manual
+            status:
+              type: object
+              properties:
+                activeVersion:
+                  type: string
+                checksum:
+                  type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: udbbackendinstances.udb.io
+spec:
+  group: udb.io
+  scope: Namespaced
+  names:
+    plural: udbbackendinstances
+    singular: udbbackendinstance
+    kind: UdbBackendInstance
+    shortNames: [udbbi]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              required: [backend, instanceName, role, secretRef]
+              properties:
+                backend:
+                  type: string
+                  enum: [postgres, redis, qdrant, s3, mongodb, neo4j, clickhouse, kafka]
+                instanceName:
+                  type: string
+                role:
+                  type: string
+                  enum: [read, write, read_write, admin, cache, projection, cdc]
+                projectSelector:
+                  type: object
+                  additionalProperties:
+                    type: string
+                secretRef:
+                  type: object
+                  required: [name]
+                  properties:
+                    name:
+                      type: string
+                    dsnKey:
+                      type: string
+                      default: dsn
+                connectionBudget:
+                  type: object
+                  properties:
+                    maxConnections:
+                      type: integer
+                      minimum: 1
+                    safetyFactor:
+                      type: string
+                      default: "0.8"
+            status:
+              type: object
+              properties:
+                connected:
+                  type: boolean
+                lastProbeUnixMs:
+                  type: integer
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: udbmigrationruns.udb.io
+spec:
+  group: udb.io
+  scope: Namespaced
+  names:
+    plural: udbmigrationruns
+    singular: udbmigrationrun
+    kind: UdbMigrationRun
+    shortNames: [udbmr]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              required: [projectId, catalogVersion]
+              properties:
+                projectId:
+                  type: string
+                catalogVersion:
+                  type: string
+                mode:
+                  type: string
+                  enum: [PlanOnly, ApplyIfSafe, ApplyWithApproval]
+                  default: PlanOnly
+                approvalRef:
+                  type: string
+            status:
+              type: object
+              properties:
+                runId:
+                  type: string
+                state:
+                  type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: udbcdcstreams.udb.io
+spec:
+  group: udb.io
+  scope: Namespaced
+  names:
+    plural: udbcdcstreams
+    singular: udbcdcstream
+    kind: UdbCdcStream
+    shortNames: [udbcdc]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              required: [projectId, topicPrefix]
+              properties:
+                projectId:
+                  type: string
+                topicPrefix:
+                  type: string
+                exactlyOnceMode:
+                  type: string
+                  enum: [at_least_once, state_machine, kafka_transactional]
+                  default: state_machine
+                tenantPolicies:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      tenantId:
+                        type: string
+                      topic:
+                        type: string
+                      redactionMode:
+                        type: string
+                        enum: [mask, hash, drop]
+            status:
+              type: object
+              properties:
+                lastEventId:
+                  type: string
+                lagSeconds:
+                  type: number
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: udbprojectionworkers.udb.io
+spec:
+  group: udb.io
+  scope: Namespaced
+  names:
+    plural: udbprojectionworkers
+    singular: udbprojectionworker
+    kind: UdbProjectionWorker
+    shortNames: [udbpw]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              properties:
+                projectSelector:
+                  type: object
+                  additionalProperties:
+                    type: string
+                concurrency:
+                  type: integer
+                  minimum: 1
+                  default: 4
+                reconciliation:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: true
+                    mode:
+                      type: string
+                      enum: [sampled, full]
+                      default: sampled
+            status:
+              type: object
+              properties:
+                pending:
+                  type: integer
+                failed:
+                  type: integer
+                lagSeconds:
+                  type: number
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true

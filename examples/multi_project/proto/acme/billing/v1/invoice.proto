@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package acme.billing.v1;
+
+message Invoice {
+  string invoice_id = 1;
+  string tenant_id = 2;
+  string customer_email = 3;
+  int64 amount_cents = 4;
+  string currency = 5;
+  string status = 6;
+}
+
+message ProductSearchDocument {
+  string product_id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  repeated float embedding = 5;
+}

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Grpc.Net.Client" Version="2.66.0" />
+    <PackageReference Include="Google.Protobuf" Version="3.27.3" />
+    <PackageReference Include="Grpc.Tools" Version="2.66.0" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <Protobuf Include="..\..\..\..\proto\udb\entity\v1\types.proto"
+              ProtoRoot="..\..\..\..\proto"
+              GrpcServices="None" />
+    <Protobuf Include="..\..\..\..\proto\udb\events\v1\udb_events.proto"
+              ProtoRoot="..\..\..\..\proto"
+              GrpcServices="None" />
+    <Protobuf Include="..\..\..\..\proto\udb\services\v1\data_broker.proto"
+              ProtoRoot="..\..\..\..\proto"
+              GrpcServices="Client" />
+  </ItemGroup>
+</Project>
