@@ -1,0 +1,17 @@
+{
+  "name": "udb-native-services-ts-example",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Simplest→advanced UDB native auth services example (TypeScript).",
+  "scripts": {
+    "start": "tsx main.ts"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.10.0",
+    "@grpc/proto-loader": "^0.7.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.0"
+  }
+}

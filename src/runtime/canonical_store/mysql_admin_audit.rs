@@ -14,9 +14,10 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sqlx::Row;
+use sqlx::{Connection, Row, mysql::MySqlConnection};
 use uuid::Uuid;
 
+use super::dialect::{SqlDialect, build_eq_where, normalize_limit_offset};
 use super::mysql::MysqlCanonicalStore;
 use super::system_store::{
     AdminAuditChainReport, AdminAuditInsert, AdminAuditListFilter, AdminAuditRow, AdminAuditStore,
@@ -25,8 +26,6 @@ use super::system_store::{
 
 const TABLE: &str = "udb_admin_audit_log";
 const CHAIN_LOCK_NAME: &str = "udb_admin_audit_chain";
-const VERIFY_PAGE_SIZE: i64 = 1000;
-
 fn row_to_audit(row: sqlx::mysql::MySqlRow) -> SystemStoreResult<AdminAuditRow> {
     let audit_id_str: String = row
         .try_get("audit_id")
@@ -116,17 +115,22 @@ impl AdminAuditStore for MysqlCanonicalStore {
     }
 
     async fn append_admin_audit(&self, entry: &AdminAuditInsert) -> SystemStoreResult<Uuid> {
-        // MySQL pattern: acquire the named lock, run the read+insert
-        // in a transaction (the lock is connection-scoped, not
-        // tx-scoped, so a clean release after commit), release.
-        //
-        // We grab the lock *outside* the transaction so the lock is
-        // held across the entire tx + commit. The wait is 30s; if it
-        // doesn't acquire, we bail with an error.
+        // MySQL named locks are CONNECTION-scoped. GET_LOCK, the read+insert
+        // transaction, and RELEASE_LOCK must therefore all run on the SAME
+        // pinned connection — otherwise the lock serializes nothing (the tx
+        // runs on a different pooled connection) and RELEASE_LOCK on yet
+        // another connection is a silent no-op. Acquire one connection and
+        // hold it for the entire critical section.
+        let mut conn = self
+            .mysql_pool()
+            .acquire()
+            .await
+            .map_err(|e| SystemStoreError::io("mysql", e))?;
+
         let lock_acquired: Option<(i64,)> = sqlx::query_as("SELECT GET_LOCK(?, ?)")
             .bind(CHAIN_LOCK_NAME)
             .bind(30i64)
-            .fetch_optional(self.mysql_pool())
+            .fetch_optional(&mut *conn)
             .await
             .map_err(|e| SystemStoreError::query("mysql", "GET_LOCK", e))?;
         // `GET_LOCK` returns 1 on success, 0 on timeout, NULL on error.
@@ -137,14 +141,12 @@ impl AdminAuditStore for MysqlCanonicalStore {
                 source: format!("could not acquire chain lock '{CHAIN_LOCK_NAME}' within 30s"),
             });
         }
-        // From here on we MUST release the lock — wrap the rest in a
-        // helper closure so we can release in both success and
-        // failure paths.
-        let result = self.append_admin_audit_locked(entry).await;
-        // Release in any case (we know we hold it).
+        // From here on we MUST release the lock. Run the tx on the same conn,
+        // then release on the same conn (success or failure).
+        let result = self.append_admin_audit_locked(&mut conn, entry).await;
         let _ = sqlx::query("SELECT RELEASE_LOCK(?)")
             .bind(CHAIN_LOCK_NAME)
-            .execute(self.mysql_pool())
+            .execute(&mut *conn)
             .await;
         result
     }
@@ -153,26 +155,19 @@ impl AdminAuditStore for MysqlCanonicalStore {
         &self,
         filter: &AdminAuditListFilter,
     ) -> SystemStoreResult<Vec<AdminAuditRow>> {
-        let mut clauses: Vec<&str> = Vec::new();
-        if filter.operation.is_some() {
-            clauses.push("operation = ?");
-        }
-        if filter.actor.is_some() {
-            clauses.push("actor = ?");
-        }
-        if filter.tenant_id.is_some() {
-            clauses.push("tenant_id = ?");
-        }
-        if filter.project_id.is_some() {
-            clauses.push("project_id = ?");
-        }
-        let where_sql = if clauses.is_empty() {
-            String::new()
-        } else {
-            format!("WHERE {}", clauses.join(" AND "))
-        };
-        let limit = if filter.limit <= 0 { 100 } else { filter.limit };
-        let offset = filter.offset.max(0);
+        let w = build_eq_where(
+            SqlDialect::MYSQL,
+            &[
+                ("operation", filter.operation.is_some()),
+                ("actor", filter.actor.is_some()),
+                ("tenant_id", filter.tenant_id.is_some()),
+                ("project_id", filter.project_id.is_some()),
+            ],
+        );
+        let where_sql = &w.where_sql;
+        let limit_placeholder = &w.limit_placeholder;
+        let offset_placeholder = &w.offset_placeholder;
+        let (limit, offset) = normalize_limit_offset(filter.limit, filter.offset);
         let sql = format!(
             "SELECT audit_id, actor, operation, target, request_json, result,
                     tenant_id, project_id, correlation_id,
@@ -181,7 +176,7 @@ impl AdminAuditStore for MysqlCanonicalStore {
              FROM {TABLE}
              {where_sql}
              ORDER BY created_at DESC
-             LIMIT ? OFFSET ?"
+             LIMIT {limit_placeholder} OFFSET {offset_placeholder}"
         );
         let mut q = sqlx::query(&sql);
         if let Some(o) = &filter.operation {
@@ -216,18 +211,36 @@ impl AdminAuditStore for MysqlCanonicalStore {
         &self,
         limit: Option<i64>,
     ) -> SystemStoreResult<AdminAuditChainReport> {
+        let mut conn = self
+            .mysql_pool()
+            .acquire()
+            .await
+            .map_err(|e| SystemStoreError::io("mysql", e))?;
+        sqlx::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| {
+                SystemStoreError::query("mysql", "SET TRANSACTION ISOLATION LEVEL SERIALIZABLE", e)
+            })?;
+        sqlx::query("START TRANSACTION")
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| SystemStoreError::query("mysql", "START TRANSACTION", e))?;
         let mut previous_hash = String::new();
         let mut checked: i64 = 0;
         let mut offset: i64 = 0;
-        loop {
+        let final_report = loop {
             let remaining = match limit {
                 Some(n) if n > 0 => (n - checked).max(0),
                 _ => i64::MAX,
             };
             if remaining == 0 {
-                break;
+                break AdminAuditChainReport::Passed {
+                    checked_count: checked,
+                    last_hash: previous_hash.clone(),
+                };
             }
-            let page = remaining.min(VERIFY_PAGE_SIZE);
+            let page = remaining.min(super::dialect::admin_audit_verify_page_size());
             let sql = format!(
                 "SELECT audit_id, actor, operation, target, request_json, result,
                         tenant_id, project_id, correlation_id,
@@ -237,35 +250,61 @@ impl AdminAuditStore for MysqlCanonicalStore {
                  ORDER BY created_at ASC, audit_id ASC
                  LIMIT ? OFFSET ?"
             );
-            let rows = sqlx::query(&sql)
+            let rows = match sqlx::query(&sql)
                 .bind(page)
                 .bind(offset)
-                .fetch_all(self.mysql_pool())
+                .fetch_all(&mut *conn)
                 .await
-                .map_err(|e| SystemStoreError::query("mysql", sql.clone(), e))?;
+            {
+                Ok(rows) => rows,
+                Err(e) => {
+                    let _ = sqlx::query("ROLLBACK").execute(&mut *conn).await;
+                    return Err(SystemStoreError::query("mysql", sql.clone(), e));
+                }
+            };
             if rows.is_empty() {
-                break;
+                break AdminAuditChainReport::Passed {
+                    checked_count: checked,
+                    last_hash: previous_hash.clone(),
+                };
             }
             let n_rows = rows.len() as i64;
+            let mut tamper: Option<AdminAuditChainReport> = None;
             for r in rows {
-                let row = row_to_audit(r)?;
+                let row = match row_to_audit(r) {
+                    Ok(row) => row,
+                    Err(err) => {
+                        let _ = sqlx::query("ROLLBACK").execute(&mut *conn).await;
+                        return Err(err);
+                    }
+                };
                 match verify_admin_audit_chain_step(&row, &previous_hash, checked) {
                     Ok(next) => {
                         previous_hash = next;
                         checked += 1;
                     }
-                    Err(report) => return Ok(report),
+                    Err(report) => {
+                        tamper = Some(report);
+                        break;
+                    }
                 }
+            }
+            if let Some(report) = tamper {
+                break report;
             }
             offset += n_rows;
             if n_rows < page {
-                break;
+                break AdminAuditChainReport::Passed {
+                    checked_count: checked,
+                    last_hash: previous_hash.clone(),
+                };
             }
-        }
-        Ok(AdminAuditChainReport::Passed {
-            checked_count: checked,
-            last_hash: previous_hash,
-        })
+        };
+        sqlx::query("COMMIT")
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| SystemStoreError::query("mysql", "COMMIT", e))?;
+        Ok(final_report)
     }
 }
 
@@ -273,9 +312,12 @@ impl MysqlCanonicalStore {
     /// Inner — caller MUST have acquired the chain lock; this runs
     /// the read-latest + INSERT inside a transaction. The named lock
     /// gives us serialization across concurrent calls.
-    async fn append_admin_audit_locked(&self, entry: &AdminAuditInsert) -> SystemStoreResult<Uuid> {
-        let mut tx = self
-            .mysql_pool()
+    async fn append_admin_audit_locked(
+        &self,
+        conn: &mut MySqlConnection,
+        entry: &AdminAuditInsert,
+    ) -> SystemStoreResult<Uuid> {
+        let mut tx = conn
             .begin()
             .await
             .map_err(|e| SystemStoreError::io("mysql", e))?;

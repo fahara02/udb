@@ -1,13 +1,78 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "udb-client"
-version = "0.1.0"
-description = "Python client helpers for UDB"
+version = "0.1.4"
+description = "Python SDK for the UDB DataBroker gRPC API"
+readme = "README.md"
+license = "MIT"
 requires-python = ">=3.10"
+authors = [
+  { name = "fahara02" },
+]
+keywords = ["udb", "grpc", "database", "sdk", "databroker"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Typing :: Typed",
+]
 dependencies = [
-  "grpcio>=1.68",
-  "protobuf>=5",
+  "grpcio>=1.80",
+  "protobuf>=6.31.1,<7",
 ]
 
+[project.optional-dependencies]
+pydantic = [
+  "pydantic>=2.7,<3",
+]
+dev = [
+  "build>=1.5",
+  "grpcio-tools>=1.80",
+  "pydantic>=2.7,<3",
+  "pyrefly>=1",
+  "pytest>=9",
+  "twine>=6.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/fahara02/udb"
+Repository = "https://github.com/fahara02/udb"
+Issues = "https://github.com/fahara02/udb/issues"
+
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["udb_client*", "udb*"]
+# Two roots. The handwritten `udb_client` wrapper lives at the SDK root; the
+# buf-generated stubs live under `gen/` — the full `udb.*` surface (entity,
+# events, services, AND the native control-plane services udb.core.{authn,
+# authz,apikey,tenant,notification,analytics}) plus the vendored
+# `google.api` annotation stubs the native gRPC stubs import.
+# `namespaces = true` ships `gen/` as PEP 420 namespace packages so the
+# vendored `google.api` coexists with protobuf's `google.protobuf` instead of
+# shadowing it (no `google/__init__.py` is emitted into the wheel).
+where = ["gen", "."]
+include = ["udb*", "google*", "udb_client*"]
+namespaces = true
+
+[tool.setuptools.package-data]
+udb_client = ["py.typed"]
+# Ship the generated type stubs alongside the modules.
+"*" = ["*.pyi"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+# `udb_client` resolves from the SDK root; the generated `udb.*` packages from
+# `gen/`, matching the installed-wheel import paths.
+pythonpath = [".", "gen"]
+
+[tool.pyrefly]
+project-includes = ["udb_client", "tests"]
+python-version = "3.12"
+search-path = [".", "gen"]

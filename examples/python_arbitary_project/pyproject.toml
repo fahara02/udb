@@ -1,0 +1,29 @@
+[project]
+name = "udb-python-acme-billing-example"
+version = "0.1.0"
+description = "Standalone Python example for the UDB SDK"
+requires-python = ">=3.10"
+dependencies = [
+  "pydantic>=2.7,<3",
+  "udb-client>=0.1.4",
+]
+
+[project.optional-dependencies]
+dev = [
+  "grpcio-tools>=1.80",
+  "pyrefly>=1",
+  "pytest>=9",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.pyrefly]
+project-includes = ["acme_billing.py", "tests"]
+project-excludes = ["gen"]
+python-version = "3.12"
+search-path = ["."]

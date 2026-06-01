@@ -124,6 +124,37 @@ fn parse_args_recognizes_policy_lint() {
 }
 
 #[test]
+fn parse_args_recognizes_auth_commands() {
+    let args = vec![
+        "auth".to_string(),
+        "api-key".to_string(),
+        "create".to_string(),
+        "--owner".to_string(),
+        "svc.search".to_string(),
+        "--scope".to_string(),
+        "catalog:read".to_string(),
+        "--scope".to_string(),
+        "catalog:write".to_string(),
+    ];
+    let (command, _, _, _) = parse_args(&args);
+    assert!(matches!(
+        command,
+        Command::Auth(AuthCommand::ApiKeyCreate {
+            owner_id,
+            scopes,
+            ..
+        }) if owner_id == "svc.search" && scopes.len() == 2
+    ));
+}
+
+#[test]
+fn parse_args_recognizes_auth_policy_lint() {
+    let args = vec!["auth".to_string(), "policy".to_string(), "lint".to_string()];
+    let (command, _, _, _) = parse_args(&args);
+    assert!(matches!(command, Command::Auth(AuthCommand::PolicyLint)));
+}
+
+#[test]
 fn parse_args_recognizes_field_mask_preview() {
     let args = vec!["field-mask-preview".to_string()];
     let (command, _, _, _) = parse_args(&args);

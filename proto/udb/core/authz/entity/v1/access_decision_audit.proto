@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package udb.core.authz.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/authz/entity/v1/enums.proto";
+import "udb/core/common/v1/db.proto";
+
+option csharp_namespace = "udb.core.Authz.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
+option java_package = "com.udb.core.authz.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Entity\\V1";
+
+message AccessDecisionAudit {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "access_decision_audits"
+    schema_name: "udb_authz"
+    migration_order: 5
+    is_table: true
+    comment: "Decision trail for sensitive authorization checks"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: true
+    partition_strategy: PARTITION_STRATEGY_RANGE_MONTH
+    partition_column: "decided_at"
+    retention_days: 2555 // 7 years — authorization decisions are compliance records
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+  };
+
+  string decision_audit_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "decision_audit_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string user_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "user_id" sql_type: "UUID" not_null: true index: { index_name: "idx_access_decision_audits_user_id" index_type: "BTREE" } }];
+
+  string domain = 3 [(udb.core.common.v1.pg_column) = { column_name: "domain" sql_type: "VARCHAR(200)" not_null: true }];
+
+  string object = 4 [(udb.core.common.v1.pg_column) = { column_name: "object" sql_type: "VARCHAR(200)" not_null: true }];
+
+  string action = 5 [(udb.core.common.v1.pg_column) = { column_name: "action" sql_type: "VARCHAR(80)" not_null: true }];
+
+  PolicyEffect effect = 6 [(udb.core.common.v1.pg_column) = { column_name: "effect" sql_type: "VARCHAR(20)" not_null: true }];
+
+  DecisionSource decision_source = 7 [(udb.core.common.v1.pg_column) = { column_name: "decision_source" sql_type: "VARCHAR(30)" not_null: true }];
+
+  string matched_rule = 8 [(udb.core.common.v1.pg_column) = { column_name: "matched_rule" sql_type: "TEXT" }];
+
+  string reason = 9 [(udb.core.common.v1.pg_column) = { column_name: "reason" sql_type: "TEXT" }];
+
+  string ip_address = 10 [(udb.core.common.v1.pg_column) = { column_name: "ip_address" sql_type: "VARCHAR(64)" }];
+
+  string correlation_id = 11 [(udb.core.common.v1.pg_column) = { column_name: "correlation_id" sql_type: "VARCHAR(120)" index: { index_name: "idx_access_decision_audits_correlation_id" index_type: "BTREE" } }];
+
+  google.protobuf.Timestamp decided_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "decided_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" }];
+  string tenant_id = 13 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_accessdecisionaudit_tenant" index_type: "BTREE" } }];
+}

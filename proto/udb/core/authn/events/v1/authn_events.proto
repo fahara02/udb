@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+package udb.core.authn.events.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/authn/entity/v1/enums.proto";
+
+option csharp_namespace = "udb.core.Authn.Events.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/events/v1;authneventsv1";
+option java_package = "com.udb.core.authn.events.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Events\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Events\\V1";
+
+// Kafka topic: udb.authn.user.registered.v1
+message UserRegisteredEvent {
+  string event_id = 1;
+  string user_id = 2;
+  string username = 3;
+  string email = 4; // masked in logs
+  string tenant_id = 5;
+  string created_by = 6;
+  string correlation_id = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+  string access_surface = 9;
+  string project_id = 10;
+  udb.core.authn.entity.v1.AccountKind account_kind = 11;
+  string contact_address = 12; // Masked email, phone, handle, or provider subject.
+  string provider_id = 13;
+}
+
+// Kafka topic: udb.authn.user.login.v1
+message UserLoggedInEvent {
+  string event_id = 1;
+  string user_id = 2;
+  string session_id = 3;
+  udb.core.authn.entity.v1.SessionType session_type = 4;
+  udb.core.authn.entity.v1.DeviceType device_type = 5;
+  string ip_address = 6; // masked in logs
+  string tenant_id = 7;
+  string correlation_id = 8;
+  google.protobuf.Timestamp occurred_at = 9;
+  string project_id = 10;
+  string principal_id = 11;
+  string access_surface = 12;
+}
+
+// Kafka topic: udb.authn.session.revoked.v1
+message SessionRevokedEvent {
+  string event_id = 1;
+  string session_id = 2;
+  string user_id = 3;
+  string revoked_by = 4; // user_id of revoker (same user = self-logout)
+  string revoke_reason = 5; // logout | admin_revoke | password_change | security_event
+  string correlation_id = 6;
+  google.protobuf.Timestamp occurred_at = 7;
+  string tenant_id = 8;
+}
+
+// Kafka topic: udb.authn.user.locked.v1
+message UserLockedEvent {
+  string event_id = 1;
+  string user_id = 2;
+  int32 attempt_count = 3;
+  string ip_address = 4; // masked in logs
+  google.protobuf.Timestamp locked_until = 5;
+  string correlation_id = 6;
+  google.protobuf.Timestamp occurred_at = 7;
+  string tenant_id = 8;
+}
+
+// Kafka topic: udb.authn.user.password.changed.v1
+message PasswordChangedEvent {
+  string event_id = 1;
+  string user_id = 2;
+  bool is_reset = 3; // true = admin reset; false = user-initiated change
+  string changed_by = 4;
+  string correlation_id = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+  string tenant_id = 7;
+  string ip_address = 8; // masked in logs
+}
+
+// Kafka topic: udb.authn.otp.sent.v1
+message OTPSentEvent {
+  string event_id = 1;
+  string otp_id = 2;
+  string user_id = 3;
+  udb.core.authn.entity.v1.OTPType otp_type = 4;
+  string delivery_channel = 5;
+  int32 expires_in_seconds = 6;
+  string correlation_id = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+  string tenant_id = 9;
+}
+
+// Kafka topic: udb.authn.user.status.changed.v1
+message UserStatusChangedEvent {
+  string event_id = 1;
+  string user_id = 2;
+  udb.core.authn.entity.v1.UserStatus old_status = 3;
+  udb.core.authn.entity.v1.UserStatus new_status = 4;
+  string changed_by = 5;
+  string reason = 6;
+  string correlation_id = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+  string tenant_id = 9;
+}
+
+// Kafka topic: udb.authn.user.email.verified.v1
+message EmailVerifiedEvent {
+  string event_id = 1;
+  string user_id = 2;
+  string email = 3;
+  string correlation_id = 4;
+  string tenant_id = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+}
+
+// Kafka topic: udb.authn.user.password.reset.requested.v1
+message PasswordResetRequestedEvent {
+  string event_id = 1;
+  string user_id = 2;
+  string contact_address = 3; // Masked email, phone, handle, or provider subject.
+  string ip_address = 4; // masked in logs
+  udb.core.authn.entity.v1.DeviceType device_type = 5;
+  string otp_id = 6;
+  string correlation_id = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+  string tenant_id = 9;
+  string project_id = 10;
+}
+
+// Kafka topic: udb.authn.user.email.password.reset.requested.v1
+message PasswordResetByEmailRequestedEvent {
+  string event_id = 1;
+  string user_id = 2;
+  string email_masked = 3;
+  string otp_id = 4;
+  string ip_address = 5; // masked in logs
+  string correlation_id = 6;
+  google.protobuf.Timestamp occurred_at = 7;
+  string tenant_id = 8;
+}

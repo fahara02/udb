@@ -1,0 +1,388 @@
+syntax = "proto3";
+
+package udb.core.authn.services.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/authn/entity/v1/enums.proto";
+import "udb/core/authn/entity/v1/session.proto";
+import "udb/core/authn/entity/v1/user.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/types.proto";
+
+option csharp_namespace = "udb.core.Authn.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/services/v1;authnservicev1";
+option java_package = "com.udb.core.authn.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Services\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Services\\V1";
+
+// ============================================================
+// User registration and management
+// ============================================================
+
+message CreateUserRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3; // Min 10 chars; 1 upper, 1 lower, 1 digit, 1 special
+  string tenant_id = 4;
+  string full_name = 5;
+  udb.core.common.v1.RequestContext context = 6;
+  udb.core.authn.entity.v1.AccountKind account_kind = 7;
+  string project_id = 8;
+  string external_provider_id = 9;
+  string external_subject = 10;
+  map<string, string> profile_attributes = 11;
+}
+
+message CreateUserResponse {
+  udb.core.authn.entity.v1.User user = 1;
+  string otp_id = 2; // Verification OTP sent to email
+}
+
+message GetUserRequest {
+  string user_id = 1; // lookup by ID
+  string username = 2; // or by username
+  string email = 3; // or by email
+}
+
+message GetUserResponse {
+  udb.core.authn.entity.v1.User user = 1;
+}
+
+message ListUsersRequest {
+  string tenant_id = 1;
+  udb.core.authn.entity.v1.AccountKind account_kind = 2;
+  udb.core.authn.entity.v1.UserStatus status = 3;
+  udb.core.common.v1.PageRequest page = 4;
+}
+
+message ListUsersResponse {
+  repeated udb.core.authn.entity.v1.User users = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+message UpdateUserRequest {
+  string user_id = 1;
+  string full_name = 2;
+  string email = 3;
+  string tenant_id = 4;
+  udb.core.common.v1.RequestContext context = 5;
+  udb.core.authn.entity.v1.AccountKind account_kind = 6;
+  string project_id = 7;
+  map<string, string> profile_attributes = 8;
+  string external_provider_id = 9;
+  string external_subject = 10;
+}
+
+message UpdateUserResponse {
+  udb.core.authn.entity.v1.User user = 1;
+}
+
+message ChangeUserStatusRequest {
+  string user_id = 1;
+  udb.core.authn.entity.v1.UserStatus new_status = 2;
+  string reason = 3;
+  udb.core.common.v1.RequestContext context = 4;
+}
+
+message ChangeUserStatusResponse {
+  udb.core.authn.entity.v1.User user = 1;
+}
+
+// Admin password reset (generates a temporary password + sends email OTP)
+message AdminResetPasswordRequest {
+  string user_id = 1;
+  udb.core.common.v1.RequestContext context = 2;
+}
+
+message AdminResetPasswordResponse {
+  string otp_id = 1; // OTP to complete the reset flow
+}
+
+// ============================================================
+// OTP
+// ============================================================
+
+message SendOTPRequest {
+  string user_id = 1;
+  udb.core.authn.entity.v1.OTPType otp_type = 2;
+  // correlation_id to link the OTP to an in-flight operation
+  string correlation_id = 3;
+  udb.core.common.v1.RequestContext context = 4;
+}
+
+message SendOTPResponse {
+  string otp_id = 1;
+  int32 expires_in_seconds = 2;
+  int32 cooldown_seconds = 3; // Wait before next resend
+}
+
+message VerifyOTPRequest {
+  string otp_id = 1;
+  string code = 2; // Plain 6-digit code (transmitted over TLS; hashed server-side)
+}
+
+message VerifyOTPResponse {
+  bool verified = 1;
+  string user_id = 2;
+  udb.core.authn.entity.v1.OTPType otp_type = 3;
+}
+
+message ResendOTPRequest {
+  string original_otp_id = 1;
+  string reason = 2; // "not_received" | "expired" | "delivery_failed"
+}
+
+message ResendOTPResponse {
+  string otp_id = 1;
+  int32 expires_in_seconds = 2;
+  int32 cooldown_seconds = 3;
+  int32 attempts_remaining = 4;
+}
+
+// ============================================================
+// Authentication
+// ============================================================
+
+// An authenticated caller, normalized to the claims UDB and project services
+// need after token/session/API-key validation.
+message Principal {
+  string principal_id = 1;
+  string subject = 2;
+  string user_id = 3;
+  string service_identity = 4;
+  string tenant_id = 5;
+  string project_id = 6;
+  repeated string scopes = 7;
+  repeated string roles = 8;
+  string provider_id = 9;
+  string auth_method = 10;
+  int64 expires_at_unix = 11;
+  udb.core.authn.entity.v1.AccountKind account_kind = 12;
+  string domain = 13;
+  map<string, string> attributes = 14;
+}
+
+message AuthnRequest {
+  string bearer_token = 1;
+  string session_id = 2;
+  string api_key = 3;
+  string external_provider_id = 4;
+  string external_token = 5;
+  string tenant_hint = 6;
+  string project_hint = 7;
+  repeated string requested_scopes = 8;
+  map<string, string> attributes = 9;
+  udb.core.authn.entity.v1.AuthCredentialType credential_type = 10;
+  string client_id = 11;
+  string audience = 12;
+  string issuer = 13;
+}
+
+message AuthnResponse {
+  Principal principal = 1;
+  string session_id = 2;
+  string access_token = 3;
+  int64 expires_at_unix = 4;
+  string relationship_version = 5;
+  repeated string warnings = 6;
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+  udb.core.authn.entity.v1.DeviceType device_type = 3;
+  string device_name = 4; // human-readable
+  string ip_address = 5; // forwarded by gateway
+  string user_agent = 6;
+  string device_id = 7; // client device fingerprint (optional; for JWT device binding)
+
+  // MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
+  // When mfa_otp_id is non-empty the credential check is skipped and the service
+  // instead consumes the MFA session token and validates the TOTP code.
+  string mfa_otp_id = 8; // pending MFA session token from step-1 LoginResponse.mfa_otp_id
+  string totp_code = 9; // 6-digit TOTP code from the user's authenticator app
+  string tenant_hint = 10;
+  string project_hint = 11;
+  string access_surface = 12;
+}
+
+message LoginResponse {
+  string user_id = 1;
+  string session_id = 2;
+
+  // JWT fields (only when device_type != WEB)
+  string access_token = 3;
+  string refresh_token = 4;
+  int32 access_token_expires_in = 5; // seconds
+
+  // Server-side session fields (only when device_type = WEB)
+  // session_token returned to gateway which sets it as HttpOnly cookie
+  string session_token = 6;
+  string csrf_token = 7; // injected into a readable cookie
+
+  bool mfa_required = 8; // true = client must present OTP before access
+  string mfa_otp_id = 9; // OTP ID to complete MFA
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+  string session_id = 2;
+}
+
+message RefreshTokenResponse {
+  string access_token = 1;
+  int32 access_token_expires_in = 2;
+}
+
+message LogoutRequest {
+  string session_id = 1;
+  bool all_sessions = 2; // if true, revoke all sessions for this user
+  string revoke_reason = 3;
+  udb.core.common.v1.RequestContext context = 4;
+}
+
+message LogoutResponse {
+  int32 sessions_revoked = 1;
+}
+
+message ChangePasswordRequest {
+  string user_id = 1;
+  string current_password = 2;
+  string new_password = 3;
+  string otp_id = 4; // 2FA OTP confirming the change
+  udb.core.common.v1.RequestContext context = 5;
+}
+
+message ChangePasswordResponse {
+  string user_id = 1;
+  google.protobuf.Timestamp changed_at = 2;
+  string operation_id = 3;
+}
+
+// ============================================================
+// Token validation (called by API gateway and service interceptors)
+// ============================================================
+
+message ValidateTokenRequest {
+  string token = 1; // raw JWT or session_token
+  udb.core.authn.entity.v1.TokenType token_type = 2;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  string user_id = 2;
+  string session_id = 3;
+  udb.core.authn.entity.v1.AccountKind account_kind = 4;
+  string tenant_id = 5;
+  // Resolved roles (from authz domain)
+  repeated string roles = 6;
+  google.protobuf.Timestamp expires_at = 7;
+  string access_surface = 8;
+  string device_id = 9; // device fingerprint (JWT sessions only)
+  string token_id = 10; // JWT jti (JWT sessions) or session_token SHA256 prefix
+  udb.core.authn.entity.v1.SessionType session_type = 11;
+  Principal principal = 12;
+  string project_id = 13;
+  repeated string scopes = 14;
+  map<string, string> attributes = 15;
+}
+
+// ============================================================
+// Session management
+// ============================================================
+
+message CreateSessionRequest {
+  Principal principal = 1;
+  int64 ttl_seconds = 2;
+  string client_fingerprint = 3;
+}
+
+message CreateSessionResponse {
+  string session_id = 1;
+  int64 expires_at_unix = 2;
+}
+
+message RefreshSessionRequest {
+  string session_id = 1;
+  int64 ttl_seconds = 2;
+}
+
+message RefreshSessionResponse {
+  int64 expires_at_unix = 1;
+  bool active = 2;
+}
+
+message GetSessionRequest {
+  string session_id = 1;
+}
+
+message GetSessionResponse {
+  udb.core.authn.entity.v1.Session session = 1;
+}
+
+message ListSessionsRequest {
+  string user_id = 1;
+  bool active_only = 2;
+  udb.core.common.v1.PageRequest page = 3;
+}
+
+message ListSessionsResponse {
+  repeated udb.core.authn.entity.v1.Session sessions = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+message RevokeSessionRequest {
+  string session_id = 1;
+  string revoke_reason = 2;
+  udb.core.common.v1.RequestContext context = 3;
+  string principal_id = 4;
+  bool all_for_principal = 5;
+}
+
+message RevokeSessionResponse {
+  string session_id = 1;
+  google.protobuf.Timestamp revoked_at = 2;
+  string operation_id = 3;
+  int32 revoked_count = 4;
+}
+
+// ============================================================
+// CSRF validation (server-side sessions)
+// ============================================================
+
+message ValidateCSRFRequest {
+  string session_id = 1;
+  string csrf_token = 2; // value from the csrf cookie / header
+}
+
+message ValidateCSRFResponse {
+  bool valid = 1;
+}
+
+// ============================================================
+// MFA enrollment
+// ============================================================
+
+message EnrollMFARequest {
+  string user_id = 1;
+  udb.core.authn.entity.v1.AuthFactorKind mfa_type = 2;
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message EnrollMFAResponse {
+  // For TOTP: base32 secret + QR code URI so user can scan with authenticator app
+  string totp_secret = 1; // base32 raw secret (shown once, not stored in plaintext)
+  string totp_qr_uri = 2; // otpauth:// URI for QR rendering
+  string verify_otp_id = 3; // OTP ID to confirm enrollment
+}
+
+message ConfirmMFAEnrollmentRequest {
+  string user_id = 1;
+  string otp_id = 2;
+  string code = 3; // TOTP code or email OTP code to confirm
+  udb.core.common.v1.RequestContext context = 4;
+}
+
+message ConfirmMFAEnrollmentResponse {
+  bool enrolled = 1;
+}

@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+package udb.core.apikey.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/apikey/services/v1/core.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Apikey.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/apikey/services/v1;apikeyservicev1";
+option java_package = "com.udb.core.apikey.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Apikey\\Services\\V1";
+option php_namespace = "Udb\\Core\\Apikey\\Services\\V1";
+
+// ---------------------------------------------------------------------------
+// ApiKeyService — Machine-to-machine key lifecycle and validation.
+//
+// HTTP prefix: /v1/api_keys
+// URL conventions (Rule 07): snake_case paths, :<verb> custom method suffix, kebab-case query params.
+//
+// The gateway calls ValidateApiKey on every inbound API request to:
+//   1. Verify key hash
+//   2. Check scope grants
+//   3. Enforce IP allowlist
+//   4. Enforce rate limits (increment usage counter)
+// ---------------------------------------------------------------------------
+service ApiKeyService {
+  // ── Key lifecycle (admin-only) ────────────────────────────────────────────
+  // Returns the plain key ONCE in CreateApiKeyResponse — never again.
+  rpc CreateApiKey(CreateApiKeyRequest) returns (CreateApiKeyResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/api_keys"
+      body: "*"
+    };
+  }
+  rpc GetApiKey(GetApiKeyRequest) returns (GetApiKeyResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/api_keys/{key_id}"};
+  }
+  rpc ListApiKeys(ListApiKeysRequest) returns (ListApiKeysResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/api_keys"};
+  }
+  rpc UpdateApiKey(UpdateApiKeyRequest) returns (UpdateApiKeyResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      patch: "/v1/api_keys/{key_id}"
+      body: "*"
+    };
+  }
+  rpc RevokeApiKey(RevokeApiKeyRequest) returns (RevokeApiKeyResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {delete: "/v1/api_keys/{key_id}"};
+  }
+
+  // ── Validation (called by API gateway — internal, not public HTTP) ────────
+  rpc ValidateApiKey(ValidateApiKeyRequest) returns (ValidateApiKeyResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/api_keys:validate"
+      body: "*"
+    };
+  }
+
+  // ── Usage stats ───────────────────────────────────────────────────────────
+  rpc GetApiKeyUsageStats(GetApiKeyUsageStatsRequest) returns (GetApiKeyUsageStatsResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/api_keys/{key_id}/stats"};
+  }
+}

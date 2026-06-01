@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package udb.core.analytics.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+
+option csharp_namespace = "udb.core.Analytics.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/analytics/entity/v1;analyticsv1";
+option java_package = "com.udb.core.analytics.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Analytics\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// PipelineMetricSnapshot — Hourly aggregated metrics per pipeline stage.
+// Backs the Pipeline Overview and Infrastructure dashboards in Grafana.
+// ---------------------------------------------------------------------------
+
+message PipelineMetricSnapshot {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "pipeline_metric_snapshots"
+    schema_name: "udb_analytics"
+    migration_order: 1
+    is_table: true
+    comment: "Hourly aggregated pipeline stage metrics backing Grafana dashboards"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: false
+    partition_strategy: PARTITION_STRATEGY_RANGE_MONTH
+    partition_column: "snapshot_hour"
+    retention_days: 365 // 1 year — hourly pipeline metrics; Grafana hot window
+    indexes: {
+      index_name: "idx_pms_stage_hour"
+      index_type: "BTREE"
+      columns: "stage_name"
+      columns: "snapshot_hour"
+    }
+    extensions: {
+      name: "btree_gin"
+      schema: "public"
+    }
+    materialized_views: {
+      view_name: "mv_daily_throughput"
+      schema_name: "udb_analytics"
+      with_data: true
+      query:
+        "SELECT date_trunc('day', snapshot_hour) AS day, stage_name, tenant_id, "
+        "SUM(total_requests) AS total_requests, SUM(successful) AS successful, "
+        "SUM(failed) AS failed, AVG(throughput_rps) AS avg_throughput_rps "
+        "FROM udb_analytics.pipeline_metric_snapshots "
+        "GROUP BY date_trunc('day', snapshot_hour), stage_name, tenant_id"
+    }
+    replica_hint: "replica"
+  };
+
+  string snapshot_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "snapshot_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  // ISO 8601 truncated to the hour: 2025-07-15T14:00:00Z
+  google.protobuf.Timestamp snapshot_hour = 2 [(udb.core.common.v1.pg_column) = { column_name: "snapshot_hour" sql_type: "TIMESTAMPTZ" not_null: true index: { index_name: "idx_pipeline_snapshots_hour_stage" index_type: "BTREE" columns: "stage_name" columns: "tenant_id" unique: true } }];
+
+  string stage_name = 3 [(udb.core.common.v1.pg_column) = { column_name: "stage_name" sql_type: "VARCHAR(80)" not_null: true comment: "ingest | validate | route | execute | reconcile | project | notify" }];
+  string tenant_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" comment: "null = system-wide aggregate" }];
+
+  int64 total_requests = 5 [(udb.core.common.v1.pg_column) = { column_name: "total_requests" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  int64 successful = 6 [(udb.core.common.v1.pg_column) = { column_name: "successful" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  int64 failed = 7 [(udb.core.common.v1.pg_column) = { column_name: "failed" sql_type: "BIGINT" not_null: true default_value: "0" }];
+
+  double p50_latency_ms = 8 [(udb.core.common.v1.pg_column) = { column_name: "p50_latency_ms" sql_type: "DOUBLE PRECISION" }];
+  double p95_latency_ms = 9 [(udb.core.common.v1.pg_column) = { column_name: "p95_latency_ms" sql_type: "DOUBLE PRECISION" }];
+  double p99_latency_ms = 10 [(udb.core.common.v1.pg_column) = { column_name: "p99_latency_ms" sql_type: "DOUBLE PRECISION" }];
+  double avg_latency_ms = 11 [(udb.core.common.v1.pg_column) = { column_name: "avg_latency_ms" sql_type: "DOUBLE PRECISION" }];
+
+  double error_rate = 12 [(udb.core.common.v1.pg_column) = { column_name: "error_rate" sql_type: "DOUBLE PRECISION" comment: "failed / total_requests" }];
+  double throughput_rps = 13 [(udb.core.common.v1.pg_column) = { column_name: "throughput_rps" sql_type: "DOUBLE PRECISION" comment: "Requests per second (total / 3600)" }];
+
+  google.protobuf.Timestamp recorded_at = 14 [(udb.core.common.v1.pg_column) = { column_name: "recorded_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+}

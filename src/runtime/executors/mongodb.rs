@@ -37,6 +37,7 @@ use serde::Serialize;
 use serde_json::{Value as Json, json};
 
 use crate::backend::BackendKind;
+use crate::runtime::executor_utils::build_probe;
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
@@ -170,20 +171,15 @@ impl crate::runtime::backend_context::BackendContextEnforcer for MongoDbExecutor
         &self,
         ctx: &crate::runtime::backend_context::AppliedContext,
     ) -> crate::runtime::backend_context::ContextEffect {
-        if ctx.is_empty() {
-            return crate::runtime::backend_context::ContextEffect::Advisory {
-                recorded_in: "no_context_to_apply".into(),
-            };
-        }
         // C7/C8: the Mongo IR compiler now AND-injects `_tenant_id`
         // and `_project_id` into every read/delete filter AND stamps
         // them onto every written document. Tenant boundary is
         // protocol-enforced — a cross-tenant find/update/delete
         // cannot succeed without going around the broker.
-        crate::runtime::backend_context::ContextEffect::Enforced {
-            mechanism: "_tenant_id / _project_id stamped on writes; ANDed into read/delete filters"
-                .into(),
-        }
+        crate::runtime::backend_context::enforce_with_mechanism(
+            ctx,
+            "_tenant_id / _project_id stamped on writes; ANDed into read/delete filters",
+        )
     }
 }
 
@@ -202,6 +198,33 @@ enum MongoDbTransport {
 struct MongoDbNativeExecutor {
     config: MongoDbNativeConfig,
     client: mongodb_driver::Client,
+}
+
+/// Wrap an update document in `$set` ONLY when it does not already use MongoDB
+/// update operators (top-level `$`-prefixed keys like `$set`/`$inc`/`$push`/
+/// `$unset`). Unconditionally wrapping an operator doc produces
+/// `{"$set":{"$inc":...}}`, which MongoDB rejects.
+fn mongo_wrap_update(update: Json) -> Json {
+    let has_operator = update
+        .as_object()
+        .map(|m| m.keys().any(|k| k.starts_with('$')))
+        .unwrap_or(false);
+    if has_operator {
+        update
+    } else {
+        json!({ "$set": update })
+    }
+}
+
+#[cfg(feature = "mongodb-native")]
+fn mongo_wrap_update_bson(
+    update: mongodb_driver::bson::Document,
+) -> mongodb_driver::bson::Document {
+    if update.keys().any(|k| k.starts_with('$')) {
+        update
+    } else {
+        mongodb_driver::bson::doc! { "$set": update }
+    }
 }
 
 impl MongoDbExecutor {
@@ -448,7 +471,7 @@ impl MongoDbExecutor {
 
         let mut body = self.base_body(collection);
         body["filter"] = filter;
-        body["update"] = json!({ "$set": update });
+        body["update"] = mongo_wrap_update(update);
         let resp = self.post_action("updateOne", body).await?;
         let modified = resp
             .get("modifiedCount")
@@ -473,7 +496,7 @@ impl MongoDbExecutor {
 
         let mut body = self.base_body(collection);
         body["filter"] = filter;
-        body["update"] = json!({ "$set": update });
+        body["update"] = mongo_wrap_update(update);
         body["upsert"] = json!(true);
         let resp = self.post_action("updateOne", body).await?;
         let modified = resp
@@ -554,7 +577,7 @@ impl MongoDbExecutor {
 
         let mut body = self.base_body(collection);
         body["filter"] = filter;
-        body["update"] = json!({ "$set": update });
+        body["update"] = mongo_wrap_update(update);
         let resp = self.post_action("updateMany", body).await?;
         Ok(resp
             .get("modifiedCount")
@@ -730,7 +753,7 @@ impl MongoDbNativeExecutor {
     ) -> Result<i64, String> {
         let filter = MongoDbExecutor::json_to_document(&filter, "update filter")?;
         let update = MongoDbExecutor::json_to_document(&update, "update document")?;
-        let update = mongodb_driver::bson::doc! { "$set": update };
+        let update = mongo_wrap_update_bson(update);
         let result = self
             .collection(collection)
             .update_one(filter, update)
@@ -785,7 +808,7 @@ impl MongoDbNativeExecutor {
     ) -> Result<i64, String> {
         let filter = MongoDbExecutor::json_to_document(&filter, "updateMany filter")?;
         let update = MongoDbExecutor::json_to_document(&update, "updateMany document")?;
-        let update = mongodb_driver::bson::doc! { "$set": update };
+        let update = mongo_wrap_update_bson(update);
         let result = self
             .collection(collection)
             .update_many(filter, update)
@@ -894,7 +917,7 @@ impl MongoDbNativeExecutor {
                     MongoDbExecutor::json_to_document(filter, "transaction update filter")?;
                 let update = MongoDbExecutor::json_to_document(update, "transaction update")?;
                 let result = coll
-                    .update_one(filter, mongodb_driver::bson::doc! { "$set": update })
+                    .update_one(filter, mongo_wrap_update_bson(update))
                     .upsert(operation.contains("upsert"))
                     .session(&mut *session)
                     .await
@@ -1270,16 +1293,10 @@ impl BackendExecutor for MongoDbExecutor {
         ))
     }
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
-        let (ok, error) = match <Self as BackendHealth>::ping(self).await {
-            Ok(()) => (true, None),
-            Err(e) => (false, Some(e)),
-        };
-        Ok(BackendProbe {
-            backend: "mongodb".to_string(),
-            instance: None,
-            ok,
-            error,
-        })
+        Ok(build_probe(
+            "mongodb",
+            <Self as BackendHealth>::ping(self).await,
+        ))
     }
 }
 

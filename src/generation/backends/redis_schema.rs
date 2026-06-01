@@ -18,9 +18,8 @@
 //! | `udb.redis_outbox_queue` | `false` | Generate outbox queue config |
 //! | `udb.redis_outbox_max_len` | `10000` | Max outbox list length |
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use crate::generation::backend_safety::generated_at_unix;
 
-use crate::ast::ProtoSchema;
 use crate::generation::GeneratedArtifact;
 use crate::generation::backend_safety::{
     safe_comment_value, sanitize_filename, store_opt_bool_any, store_opt_i64_any, store_opt_str_any,
@@ -30,10 +29,9 @@ use crate::generation::sql::SqlGenerationConfig;
 
 /// Generate Redis key-schema YAML artifacts from the proto AST.
 pub fn generate_redis_artifacts(
-    schemas: &[ProtoSchema],
+    manifest: &CatalogManifest,
     _config: &SqlGenerationConfig,
 ) -> Result<Vec<GeneratedArtifact>, serde_json::Error> {
-    let manifest = CatalogManifest::from_schemas(schemas)?;
     let checksum = manifest.checksum_sha256.clone();
     let ts = generated_at_unix();
 
@@ -163,13 +161,6 @@ fn yaml_string(value: &str) -> String {
             .replace('"', "\\\"")
             .replace(['\r', '\n'], " ")
     )
-}
-
-fn generated_at_unix() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or_default()
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

@@ -1,12 +1,17 @@
 use serde::Serialize;
 use sqlx::{Executor, PgPool};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, OnceLock};
+
+use arc_swap::ArcSwap;
 
 use crate::cdc::CdcConfig;
 use crate::runtime::config::UdbConfig;
 use crate::runtime::executor_utils::{env_identifier, qi_runtime as qi};
 
-static INSTALLED_SYSTEM_CATALOG_CONFIG: OnceLock<Mutex<SystemCatalogConfig>> = OnceLock::new();
+// #214: stored behind an `ArcSwap` so the hot path (`current_arc`) reads the
+// installed config with a lock-free refcount bump instead of cloning all ~18
+// `String` fields under a Mutex on every call.
+static INSTALLED_SYSTEM_CATALOG_CONFIG: OnceLock<ArcSwap<SystemCatalogConfig>> = OnceLock::new();
 
 #[derive(Debug, Clone)]
 pub struct SystemCatalogConfig {
@@ -14,6 +19,7 @@ pub struct SystemCatalogConfig {
     pub abac_schema: String,
     pub abac_table: String,
     pub saga_table: String,
+    pub xa_ledger_table: String,
     // Phase 1.1 — Catalog versioning
     pub catalog_versions_table: String,
     pub catalog_activation_log_table: String,
@@ -45,19 +51,26 @@ impl Default for SystemCatalogConfig {
 }
 
 impl SystemCatalogConfig {
+    /// The process-global config cell, lazily seeded from env on first touch.
+    fn cell() -> &'static ArcSwap<SystemCatalogConfig> {
+        INSTALLED_SYSTEM_CATALOG_CONFIG
+            .get_or_init(|| ArcSwap::from_pointee(Self::from_env_uninstalled()))
+    }
+
     pub fn install_global(config: Self) {
-        let cell = INSTALLED_SYSTEM_CATALOG_CONFIG
-            .get_or_init(|| Mutex::new(Self::from_env_uninstalled()));
-        if let Ok(mut guard) = cell.lock() {
-            *guard = config;
-        }
+        Self::cell().store(Arc::new(config));
+    }
+
+    /// Shared handle to the installed config (#214) — a lock-free `Arc` clone,
+    /// not a deep copy. Prefer this on per-request hot paths; access fields via
+    /// deref. `current()` is the owned-clone variant kept for callers that need
+    /// `SystemCatalogConfig` by value.
+    pub fn current_arc() -> Arc<SystemCatalogConfig> {
+        Self::cell().load_full()
     }
 
     pub fn current() -> Self {
-        INSTALLED_SYSTEM_CATALOG_CONFIG
-            .get()
-            .and_then(|cell| cell.lock().ok().map(|guard| guard.clone()))
-            .unwrap_or_else(Self::from_env_uninstalled)
+        (*Self::current_arc()).clone()
     }
 
     pub fn from_udb_config(config: &UdbConfig) -> Self {
@@ -67,6 +80,10 @@ impl SystemCatalogConfig {
             abac_schema: non_empty(&config.abac_schema, "udb_system"),
             abac_table: non_empty(&config.abac_table, "udb_abac_policies"),
             saga_table: non_empty(&config.system_catalog.saga_table, &defaults.saga_table),
+            xa_ledger_table: non_empty(
+                &config.system_catalog.xa_ledger_table,
+                &defaults.xa_ledger_table,
+            ),
             catalog_versions_table: non_empty(
                 &config.system_catalog.catalog_versions_table,
                 &defaults.catalog_versions_table,
@@ -125,6 +142,7 @@ impl SystemCatalogConfig {
             abac_schema: env_identifier("UDB_ABAC_SCHEMA", "udb_system"),
             abac_table: env_identifier("UDB_ABAC_TABLE", "udb_abac_policies"),
             saga_table: env_identifier("UDB_SAGA_TABLE", "udb_saga_coordinator"),
+            xa_ledger_table: env_identifier("UDB_XA_LEDGER_TABLE", "udb_xa_ledger"),
             catalog_versions_table: env_identifier(
                 "UDB_CATALOG_VERSIONS_TABLE",
                 "udb_catalog_versions",
@@ -187,6 +205,10 @@ impl SystemCatalogConfig {
         relation(&self.cdc.system_schema, &self.saga_table)
     }
 
+    pub(crate) fn xa_ledger_relation(&self) -> String {
+        relation(&self.cdc.system_schema, &self.xa_ledger_table)
+    }
+
     pub(crate) fn catalog_versions_relation(&self) -> String {
         relation(&self.cdc.system_schema, &self.catalog_versions_table)
     }
@@ -242,7 +264,7 @@ impl SystemCatalogConfig {
 }
 
 pub async fn ensure_system_catalog(pool: &PgPool) -> Result<SystemCatalogReport, tonic::Status> {
-    let config = SystemCatalogConfig::default();
+    let config = SystemCatalogConfig::current();
     let statements = system_catalog_statements(&config);
     let mut tx = pool.begin().await.map_err(|err| {
         tonic::Status::internal(format!(
@@ -351,7 +373,7 @@ struct ExpectedRelation {
 }
 
 fn expected_relations(config: &SystemCatalogConfig) -> Vec<ExpectedRelation> {
-    vec![
+    let mut relations = vec![
         expected_relation(
             "cdc_outbox",
             &config.cdc.system_schema,
@@ -372,6 +394,11 @@ fn expected_relations(config: &SystemCatalogConfig) -> Vec<ExpectedRelation> {
             "saga_coordinator",
             &config.cdc.system_schema,
             &config.saga_table,
+        ),
+        expected_relation(
+            "xa_ledger",
+            &config.cdc.system_schema,
+            &config.xa_ledger_table,
         ),
         // Phase 1.1 — catalog versioning
         expected_relation(
@@ -447,7 +474,25 @@ fn expected_relations(config: &SystemCatalogConfig) -> Vec<ExpectedRelation> {
             &config.cdc.system_schema,
             &config.projection_tasks_table,
         ),
-    ]
+    ];
+
+    if let Ok(manifest) = crate::runtime::native_catalog::native_service_manifest() {
+        relations.extend(
+            manifest
+                .tables
+                .iter()
+                .filter(|table| table.schema.starts_with("udb_"))
+                .map(|table| {
+                    expected_relation(
+                        &format!("native_{}_{}", table.schema, table.table),
+                        &table.schema,
+                        &table.table,
+                    )
+                }),
+        );
+    }
+
+    relations
 }
 
 fn expected_relation(role: &str, schema: &str, table: &str) -> ExpectedRelation {
@@ -591,6 +636,14 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
             qi(&format!("idx_{}_lock_key", config.cdc.lock_log_table)),
             config.cdc.lock_log_relation()
         ),
+        // The CDC leader election upserts `ON CONFLICT (lock_key)`, which requires
+        // a UNIQUE constraint on lock_key — without it the upsert errors and the
+        // tailer never acquires leadership (one lock row per lock_key).
+        format!(
+            "CREATE UNIQUE INDEX IF NOT EXISTS {} ON {} (lock_key)",
+            qi(&format!("uq_{}_lock_key", config.cdc.lock_log_table)),
+            config.cdc.lock_log_relation()
+        ),
         format!(
             "CREATE TABLE IF NOT EXISTS {} (
                 policy_id BIGSERIAL PRIMARY KEY,
@@ -659,6 +712,28 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
             "CREATE INDEX IF NOT EXISTS {} ON {} (tenant_id, status, updated_at DESC)",
             qi(&format!("idx_{}_tenant_status", config.saga_table)),
             config.saga_relation()
+        ),
+        format!(
+            "CREATE TABLE IF NOT EXISTS {} (
+                xid TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL DEFAULT '',
+                project_id TEXT NOT NULL DEFAULT '',
+                origin_rpc TEXT NOT NULL DEFAULT '',
+                correlation_id TEXT NOT NULL DEFAULT '',
+                participants JSONB NOT NULL DEFAULT '[]'::JSONB,
+                decision TEXT NOT NULL DEFAULT 'in_doubt'
+                    CHECK (decision IN ('committed','rolled_back','in_doubt')),
+                reason TEXT NOT NULL DEFAULT '',
+                recovery_attempts INTEGER NOT NULL DEFAULT 0,
+                decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )",
+            config.xa_ledger_relation()
+        ),
+        format!(
+            "CREATE INDEX IF NOT EXISTS {} ON {} (decision, updated_at)",
+            qi(&format!("idx_{}_decision_updated", config.xa_ledger_table)),
+            config.xa_ledger_relation()
         ),
         // ── Phase 1.1 — Catalog version tables ───────────────────────────────
         format!(
@@ -849,6 +924,8 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
                 dlq_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 event_id UUID NOT NULL,
                 topic TEXT NOT NULL,
+                tenant_id TEXT NOT NULL DEFAULT '',
+                project_id TEXT NOT NULL DEFAULT '',
                 payload JSONB NOT NULL,
                 error_type TEXT NOT NULL DEFAULT '',
                 error_message TEXT NOT NULL DEFAULT '',
@@ -868,6 +945,24 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
             config.dlq_relation()
         ),
         format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS tenant_id TEXT NOT NULL DEFAULT ''",
+            config.dlq_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS project_id TEXT NOT NULL DEFAULT ''",
+            config.dlq_relation()
+        ),
+        format!(
+            "CREATE INDEX IF NOT EXISTS {} ON {} (tenant_id, project_id, topic, status, created_at DESC)",
+            qi(&format!("idx_{}_tenant_project_topic_status", config.dlq_table)),
+            config.dlq_relation()
+        ),
+        format!(
+            "CREATE UNIQUE INDEX IF NOT EXISTS {} ON {} (event_id)",
+            qi(&format!("idx_{}_event_id_unique", config.dlq_table)),
+            config.dlq_relation()
+        ),
+        format!(
             "CREATE INDEX IF NOT EXISTS {} ON {} (next_retry_at) WHERE status = 'RETRYING' AND next_retry_at IS NOT NULL",
             qi(&format!("idx_{}_next_retry", config.dlq_table)),
             config.dlq_relation()
@@ -876,11 +971,26 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
         format!(
             "CREATE TABLE IF NOT EXISTS {} (
                 slot_name TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL DEFAULT '',
+                project_id TEXT NOT NULL DEFAULT '',
                 paused BOOLEAN NOT NULL DEFAULT FALSE,
                 pause_reason TEXT NOT NULL DEFAULT '',
                 requested_leader_stepdown_at TIMESTAMPTZ,
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )",
+            config.cdc_control_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS tenant_id TEXT NOT NULL DEFAULT ''",
+            config.cdc_control_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS project_id TEXT NOT NULL DEFAULT ''",
+            config.cdc_control_relation()
+        ),
+        format!(
+            "CREATE INDEX IF NOT EXISTS {} ON {} (tenant_id, project_id, slot_name)",
+            qi(&format!("idx_{}_tenant_project_slot", config.cdc_control_table)),
             config.cdc_control_relation()
         ),
         // ── Phase 7 — Topic policy ────────────────────────────────────────────
@@ -1017,6 +1127,7 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
                     CHECK (status IN ('PENDING','IN_PROGRESS','COMPLETED','FAILED','DEAD_LETTER')),
                 retry_count INTEGER NOT NULL DEFAULT 0,
                 last_error TEXT NOT NULL DEFAULT '',
+                next_retry_at TIMESTAMPTZ,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 completed_at TIMESTAMPTZ,
@@ -1037,6 +1148,10 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
             config.projection_tasks_relation()
         ),
         format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS next_retry_at TIMESTAMPTZ",
+            config.projection_tasks_relation()
+        ),
+        format!(
             "CREATE INDEX IF NOT EXISTS {} ON {} (status, created_at)",
             qi(&format!("idx_{}_status", config.projection_tasks_table)),
             config.projection_tasks_relation()
@@ -1046,7 +1161,22 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
             qi(&format!("idx_{}_backend_status", config.projection_tasks_table)),
             config.projection_tasks_relation()
         ),
+        format!(
+            "CREATE INDEX IF NOT EXISTS {} ON {} (next_retry_at) WHERE status = 'FAILED' AND next_retry_at IS NOT NULL",
+            qi(&format!("idx_{}_next_retry", config.projection_tasks_table)),
+            config.projection_tasks_relation()
+        ),
     ]);
+    // UDB-owned native-service tables are migrated through the normal proto →
+    // manifest → diff/apply engine (see `run_startup_lifecycle`, which merges the
+    // native manifest), not created by hand here. Bootstrap only needs to ensure
+    // the native namespaces exist before that migration runs; the schema set is
+    // derived from the proto manifest, so proto stays the source of truth.
+    if crate::runtime::native_catalog::native_services_enabled() {
+        for schema in crate::runtime::native_catalog::native_schema_names() {
+            statements.push(format!("CREATE SCHEMA IF NOT EXISTS {}", qi(&schema)));
+        }
+    }
     statements
 }
 
@@ -1068,6 +1198,27 @@ fn non_empty(value: &str, fallback: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn system_catalog_bootstraps_stage1_auth_schemas_not_tables() {
+        let sql = system_catalog_statements_public().join("\n");
+        // Native-service TABLES are migrated through the proto → manifest →
+        // diff/apply engine (`run_startup_lifecycle` merges the native manifest),
+        // NOT created by the bootstrap statement list. Bootstrap only ensures the
+        // native namespaces exist first; the schema set is derived from proto.
+        for schema in ["udb_authn", "udb_authz"] {
+            assert!(
+                sql.contains(&format!("CREATE SCHEMA IF NOT EXISTS \"{schema}\"")),
+                "system catalog bootstrap must create native schema {schema}"
+            );
+        }
+        // It must no longer hand-write (or proto-bootstrap) native table DDL here.
+        assert!(
+            !sql.contains("\"udb_authn\".\"users\"")
+                && !sql.contains("\"udb_authz\".\"policy_rules\""),
+            "native tables must come from the migration engine, not the bootstrap statement list"
+        );
+    }
 
     #[test]
     fn system_catalog_sql_is_neutral_and_configurable() {
@@ -1106,32 +1257,46 @@ mod tests {
             .map(|relation| relation.role.as_str())
             .collect::<Vec<_>>();
 
-        assert_eq!(
-            roles,
-            vec![
-                "cdc_outbox",
-                "cdc_offsets",
-                "cdc_lock_log",
-                "abac_policies",
-                "saga_coordinator",
-                "catalog_versions",
-                "catalog_activation_log",
-                "project_catalog_bindings",
-                "catalog_reload_log",
-                "migration_runs",
-                "migration_op_ledger",
-                "cdc_event_journal",
-                "cdc_dlq_events",
-                "cdc_control",
-                "topic_policy",
-                "admin_audit_log",
-                "projects",
-                "projection_tasks",
-            ]
-        );
-        assert!(relations.iter().all(
-            |relation| relation.display_relation.starts_with("udb_system.")
-                || relation.display_relation.starts_with("udb_system.")
-        ));
+        for role in [
+            "cdc_outbox",
+            "cdc_offsets",
+            "cdc_lock_log",
+            "abac_policies",
+            "saga_coordinator",
+            "catalog_versions",
+            "catalog_activation_log",
+            "project_catalog_bindings",
+            "catalog_reload_log",
+            "migration_runs",
+            "migration_op_ledger",
+            "cdc_event_journal",
+            "cdc_dlq_events",
+            "cdc_control",
+            "topic_policy",
+            "admin_audit_log",
+            "projects",
+            "projection_tasks",
+            "native_udb_authn_users",
+            "native_udb_authn_sessions",
+            "native_udb_authn_otps",
+            "native_udb_authn_api_keys",
+            "native_udb_authz_policy_rules",
+            "native_udb_authz_roles",
+            "native_udb_authz_user_roles",
+        ] {
+            assert!(
+                roles.contains(&role),
+                "missing expected relation role {role}"
+            );
+        }
+        assert!(relations.iter().all(|relation| {
+            relation.display_relation.starts_with("udb_system.")
+                || relation.display_relation.starts_with("udb_authn.")
+                || relation.display_relation.starts_with("udb_authz.")
+                || relation.display_relation.starts_with("udb_apikey.")
+                || relation.display_relation.starts_with("udb_tenant.")
+                || relation.display_relation.starts_with("udb_notification.")
+                || relation.display_relation.starts_with("udb_analytics.")
+        }));
     }
 }

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package udb.core.authn.entity.v1;
+
+import public "udb/core/authn/entity/v1/enums.proto";
+import public "udb/core/authn/entity/v1/otp.proto";
+import public "udb/core/authn/entity/v1/session.proto";
+import public "udb/core/authn/entity/v1/user.proto";
+
+option csharp_namespace = "udb.core.Authn.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";
+option java_package = "com.udb.core.authn.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Entity\\V1";

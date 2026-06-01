@@ -14,6 +14,7 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 use uuid::Uuid;
 
+use super::dialect::{SqlDialect, build_eq_where, normalize_limit_offset};
 use super::postgres::PostgresCanonicalStore;
 use super::system_store::{
     MigrationAuditStore, MigrationOpInsert, MigrationOpRow, MigrationRunInsert, MigrationRunRow,
@@ -289,29 +290,18 @@ impl MigrationAuditStore for PostgresCanonicalStore {
         filter: &MigrationRunsFilter,
     ) -> SystemStoreResult<Vec<MigrationRunRow>> {
         let rel = self.runs_rel();
-        let mut clauses: Vec<String> = Vec::new();
-        let mut bind_index = 0usize;
-        if filter.project_id.is_some() {
-            bind_index += 1;
-            clauses.push(format!("project_id = ${bind_index}"));
-        }
-        if filter.state.is_some() {
-            bind_index += 1;
-            clauses.push(format!("state = ${bind_index}"));
-        }
-        if filter.catalog_version.is_some() {
-            bind_index += 1;
-            clauses.push(format!("catalog_version = ${bind_index}"));
-        }
-        let where_sql = if clauses.is_empty() {
-            String::new()
-        } else {
-            format!("WHERE {}", clauses.join(" AND "))
-        };
-        let limit_p = bind_index + 1;
-        let offset_p = bind_index + 2;
-        let limit = if filter.limit <= 0 { 100 } else { filter.limit };
-        let offset = filter.offset.max(0);
+        let w = build_eq_where(
+            SqlDialect::POSTGRES,
+            &[
+                ("project_id", filter.project_id.is_some()),
+                ("state", filter.state.is_some()),
+                ("catalog_version", filter.catalog_version.is_some()),
+            ],
+        );
+        let where_sql = &w.where_sql;
+        let limit_placeholder = &w.limit_placeholder;
+        let offset_placeholder = &w.offset_placeholder;
+        let (limit, offset) = normalize_limit_offset(filter.limit, filter.offset);
         let sql = format!(
             r#"SELECT run_id, project_id, catalog_version, state,
                       operations_hash, approval_token,
@@ -319,7 +309,7 @@ impl MigrationAuditStore for PostgresCanonicalStore {
                FROM {rel}
                {where_sql}
                ORDER BY started_at DESC
-               LIMIT ${limit_p} OFFSET ${offset_p}"#
+               LIMIT {limit_placeholder} OFFSET {offset_placeholder}"#
         );
         let mut q = sqlx::query(&sql);
         if let Some(p) = &filter.project_id {

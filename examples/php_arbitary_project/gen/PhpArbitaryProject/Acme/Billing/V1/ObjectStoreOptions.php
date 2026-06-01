@@ -215,3 +215,4 @@ class ObjectStoreOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
+

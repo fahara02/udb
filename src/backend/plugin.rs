@@ -215,6 +215,17 @@ pub fn has_runtime_implementation(kind: &BackendKind) -> bool {
             | BackendKind::Mongodb
             | BackendKind::Neo4j
             | BackendKind::Clickhouse
+            // These all have runtime executors under `runtime/executors/`; they
+            // were missing here, so feature-disabled builds wrongly reported
+            // KnownUnsupported (a hard lint error) instead of DisabledByFeature.
+            | BackendKind::Mssql
+            | BackendKind::Memcached
+            | BackendKind::Elasticsearch
+            | BackendKind::Weaviate
+            | BackendKind::Pinecone
+            | BackendKind::Cassandra
+            | BackendKind::AzureBlob
+            | BackendKind::Gcs
     )
 }
 
@@ -328,7 +339,7 @@ pub trait Backend: Send + Sync {
     /// also takes a `CatalogManifest`.
     fn generate_artifacts(
         &self,
-        _schemas: &[crate::ast::ProtoSchema],
+        _manifest: &crate::generation::CatalogManifest,
         _sql_config: &crate::generation::sql::SqlGenerationConfig,
     ) -> Result<Vec<crate::generation::GeneratedArtifact>, String> {
         Ok(Vec::new())

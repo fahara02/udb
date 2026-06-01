@@ -58,6 +58,10 @@ func (c *Client) Upsert(ctx context.Context, req *entityv1.UpsertRequest) (*enti
 	return c.Broker.Upsert(c.Context(ctx), req)
 }
 
+func (c *Client) Delete(ctx context.Context, req *entityv1.DeleteRequest) (*entityv1.MutationResponse, error) {
+	return c.Broker.Delete(c.Context(ctx), req)
+}
+
 func joinScopes(scopes []string) string {
 	if len(scopes) == 0 {
 		return ""

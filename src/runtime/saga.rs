@@ -39,8 +39,6 @@ use crate::runtime::config::SagaSettings;
 use crate::runtime::system::SystemCatalogConfig;
 
 const SAGA_WORKER_LEASE: &str = "udb-saga-worker";
-const SAGA_WORKER_LEASE_TTL_SECS: u64 = 120;
-const DEFAULT_POISON_THRESHOLD: i64 = 3;
 
 /// Terminal statuses written by the recovery loop. Pinned strings
 /// matching the values the admin RPC and dashboards expect; they
@@ -106,6 +104,8 @@ pub struct SagaRecoveryWorker {
     config: SystemCatalogConfig,
     interval: Duration,
     stale_threshold: Duration,
+    worker_lease_ttl: Duration,
+    recovery_batch_size: i64,
     owner_id: String,
     poison_threshold: i64,
     /// U19: plugin-aware backend compensator registry. Empty registry
@@ -119,6 +119,10 @@ pub struct SagaRecoveryWorker {
     /// escalated to `manual_review` instead of retried on the next
     /// sweep.
     quarantine_policy: crate::runtime::saga_compensators::QuarantinePolicy,
+    /// Metrics sink for recovery outcomes (compensated / failed-compensation).
+    /// Defaults to `NoopMetrics`; the supervisor wires the live
+    /// `PrometheusMetrics` via [`SagaRecoveryWorker::with_metrics`].
+    metrics: std::sync::Arc<dyn crate::metrics::MetricsRecorder>,
 }
 
 impl SagaRecoveryWorker {
@@ -136,13 +140,32 @@ impl SagaRecoveryWorker {
             config: SystemCatalogConfig::default(),
             interval: Duration::from_secs(settings.recovery_interval_secs.max(1)),
             stale_threshold: Duration::from_secs(settings.stale_threshold_secs.max(1)),
+            worker_lease_ttl: Duration::from_secs(settings.worker_lease_ttl_secs.max(1)),
+            recovery_batch_size: settings.recovery_batch_size.max(1),
             owner_id: Uuid::new_v4().to_string(),
-            poison_threshold: DEFAULT_POISON_THRESHOLD,
+            poison_threshold: settings.poison_threshold.max(1),
             compensators: Arc::new(
                 crate::runtime::saga_compensators::CompensatorRegistry::default(),
             ),
-            quarantine_policy: crate::runtime::saga_compensators::QuarantinePolicy::default(),
+            quarantine_policy: crate::runtime::saga_compensators::QuarantinePolicy {
+                // Align the policy's max-attempts with the configured poison
+                // threshold; the per-saga cooldown comes from the default (#134).
+                max_attempts: settings.poison_threshold.max(1) as u32,
+                ..crate::runtime::saga_compensators::QuarantinePolicy::default()
+            },
+            metrics: Arc::new(crate::metrics::NoopMetrics),
         }
+    }
+
+    /// Wire a live metrics recorder so recovery outcomes
+    /// (`inc_saga_compensated_total` / `inc_saga_failed_compensations_total`)
+    /// are emitted. Without this the worker uses `NoopMetrics`.
+    pub fn with_metrics(
+        mut self,
+        metrics: std::sync::Arc<dyn crate::metrics::MetricsRecorder>,
+    ) -> Self {
+        self.metrics = metrics;
+        self
     }
 
     /// U19: wire a registry of backend-aware compensators. The runtime
@@ -224,12 +247,11 @@ impl SagaRecoveryWorker {
             ..SagaRecoveryReport::default()
         };
         // NW1-3c: claim_recoverable_sagas returns INDETERMINATE +
-        // stale IN_PROGRESS in oldest-first order; LIMIT 100 matches
-        // the pre-NW1-3c hardcoded LIMIT.
+        // stale IN_PROGRESS in oldest-first order.
         let candidates = match SagaStore::claim_recoverable_sagas(
             self.store.as_ref(),
             self.stale_threshold,
-            100,
+            self.recovery_batch_size,
         )
         .await
         {
@@ -241,10 +263,35 @@ impl SagaRecoveryWorker {
         };
         report.scanned = candidates.len();
 
+        // Accumulate terminal outcomes and flush them grouped after the loop —
+        // one status round-trip per outcome instead of one per saga (#89).
+        let mut compensated_ids = Vec::new();
+        let mut manual_review_ids = Vec::new();
+
         for row in candidates {
             let saga_id = row.saga_id;
             let saga_id_str = saga_id.to_string();
             let compensations = row.compensations;
+
+            // #134: drive the retry decision through the QuarantinePolicy. A saga
+            // that has exhausted its attempts is escalated without re-attempting;
+            // one still inside its per-saga cooldown window is skipped this sweep
+            // (the claim already gates on stale_threshold; this adds the policy's
+            // cooldown + max-attempts that recovery previously ignored).
+            use crate::runtime::saga_compensators::QuarantineState;
+            match self.quarantine_policy.evaluate(
+                row.recovery_attempts.max(0) as u32,
+                row.updated_at.timestamp(),
+                chrono::Utc::now().timestamp(),
+            ) {
+                QuarantineState::Quarantine { .. } => {
+                    manual_review_ids.push(saga_id);
+                    report.marked_manual_review += 1;
+                    continue;
+                }
+                QuarantineState::Cooldown { .. } => continue,
+                QuarantineState::Retry { .. } => {}
+            }
 
             // Attempt compensation
             let compensation_result = self
@@ -254,9 +301,13 @@ impl SagaRecoveryWorker {
             let new_status = match compensation_result {
                 Ok(_) => {
                     report.compensated += 1;
+                    self.metrics.inc_saga_compensated_total();
                     SagaStatus::Compensated
                 }
                 Err(err) => {
+                    // Every failed compensation attempt is recorded (whether it
+                    // will be retried next sweep or escalated to manual review).
+                    self.metrics.inc_saga_failed_compensations_total();
                     // Increment recovery_attempts atomically. The
                     // trait returns the post-increment counter; the
                     // pre-NW1-3c code did the same via PG `RETURNING`.
@@ -272,10 +323,7 @@ impl SagaRecoveryWorker {
                             report.errors.push(format!(
                                 "saga {saga_id_str} recovery_attempts increment failed: {e}"
                             ));
-                            // Use the pre-NW1-3c fallback: assume one
-                            // attempt has occurred so we don't loop on
-                            // an unreachable saga forever.
-                            1
+                            continue;
                         }
                     };
 
@@ -291,23 +339,40 @@ impl SagaRecoveryWorker {
                 }
             };
 
-            let compensation_status = match new_status {
-                SagaStatus::Compensated => CompensationStatus::Completed,
-                SagaStatus::ManualReview => CompensationStatus::ManualReview,
-                _ => CompensationStatus::None,
-            };
-            if let Err(err) = SagaStore::update_saga_status(
+            match new_status {
+                SagaStatus::Compensated => compensated_ids.push(saga_id),
+                SagaStatus::ManualReview => manual_review_ids.push(saga_id),
+                _ => {}
+            }
+        }
+
+        // Flush the terminal status writes grouped by outcome — Postgres applies
+        // each group in a single `WHERE saga_id = ANY(...)` round-trip (#89).
+        if !compensated_ids.is_empty()
+            && let Err(err) = SagaStore::update_saga_statuses_batch(
                 self.store.as_ref(),
-                saga_id,
-                new_status,
-                compensation_status,
+                &compensated_ids,
+                SagaStatus::Compensated,
+                CompensationStatus::Completed,
             )
             .await
-            {
-                report
-                    .errors
-                    .push(format!("saga {saga_id_str} status update failed: {err}"));
-            }
+        {
+            report
+                .errors
+                .push(format!("batch compensated status update failed: {err}"));
+        }
+        if !manual_review_ids.is_empty()
+            && let Err(err) = SagaStore::update_saga_statuses_batch(
+                self.store.as_ref(),
+                &manual_review_ids,
+                SagaStatus::ManualReview,
+                CompensationStatus::ManualReview,
+            )
+            .await
+        {
+            report
+                .errors
+                .push(format!("batch manual-review status update failed: {err}"));
         }
         report
     }
@@ -324,7 +389,7 @@ impl SagaRecoveryWorker {
             self.store.as_ref(),
             SAGA_WORKER_LEASE,
             &self.owner_id,
-            Duration::from_secs(SAGA_WORKER_LEASE_TTL_SECS),
+            self.worker_lease_ttl,
         )
         .await
         {

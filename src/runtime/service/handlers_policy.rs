@@ -17,34 +17,21 @@ impl DataBrokerService {
         &self,
         request: Request<PolicyListRequest>,
     ) -> Result<Response<PolicyListResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("ListPolicies", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "ListPolicies").await {
+        let (started, security) = authorized_call!(self, request, "ListPolicies");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("ListPolicies", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "ListPolicies",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let limit = bounded_list_limit(req.limit);
         let offset = page_offset(&req.page_token);
         let result = self
             .runtime_snapshot()
-            .list_policies(!req.include_disabled)
+            .list_policies_page(!req.include_disabled, limit as i64, offset as i64)
             .await;
         match result {
-            Ok(entries) => {
+            Ok((entries, total_count)) => {
                 let policies: Vec<PolicyRecord> = entries
                     .iter()
-                    .skip(offset as usize)
-                    .take(limit as usize)
                     .map(|e| PolicyRecord {
                         policy_id: e["policy_id"].as_i64().unwrap_or_default(),
                         effect: e["effect"].as_str().unwrap_or_default().into(),
@@ -65,7 +52,7 @@ impl DataBrokerService {
                     Ok(Response::new(PolicyListResponse {
                         policies,
                         next_page_token: next_page_token(offset, limit, returned),
-                        total_count: entries.len() as i32,
+                        total_count: total_count as i32,
                     })),
                 )
             }
@@ -77,20 +64,9 @@ impl DataBrokerService {
         &self,
         request: Request<PutPolicyRequest>,
     ) -> Result<Response<MutationResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("PutPolicy", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "PutPolicy").await {
+        let (started, security) = authorized_call!(self, request, "PutPolicy");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("PutPolicy", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "PutPolicy",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let p = req.policy.unwrap_or_default();
@@ -139,20 +115,9 @@ impl DataBrokerService {
         &self,
         request: Request<PolicyRequest>,
     ) -> Result<Response<MutationResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("DeletePolicy", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "DeletePolicy").await {
+        let (started, security) = authorized_call!(self, request, "DeletePolicy");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("DeletePolicy", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "DeletePolicy",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let result = self.runtime_snapshot().delete_policy(req.policy_id).await;
@@ -190,28 +155,15 @@ impl DataBrokerService {
         &self,
         request: Request<CapabilitiesRequest>,
     ) -> Result<Response<MutationResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("ReloadPolicies", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "ReloadPolicies").await {
+        let (started, security) = authorized_call!(self, request, "ReloadPolicies");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("ReloadPolicies", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "ReloadPolicies",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         // Load fresh policies from DB, then atomically swap into the live policy set
         // so that all subsequent authorize() calls use the new policies without restart.
         let fresh = self.runtime_snapshot().load_abac_policies().await;
         let count = fresh.len();
-        if let Ok(mut guard) = self.abac_policies.write() {
-            *guard = fresh;
-        }
+        self.replace_abac_policies(fresh);
         let _ = self
             .runtime_snapshot()
             .write_audit_log(
@@ -241,20 +193,9 @@ impl DataBrokerService {
         &self,
         request: Request<CapabilitiesRequest>,
     ) -> Result<Response<PolicyLintResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("LintPolicies", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "LintPolicies").await {
+        let (started, security) = authorized_call!(self, request, "LintPolicies");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("LintPolicies", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "LintPolicies",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let result = self.runtime_snapshot().lint_policies().await;
         match result {
@@ -274,20 +215,9 @@ impl DataBrokerService {
         &self,
         request: Request<EnsureProjectRequest>,
     ) -> Result<Response<MutationResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("EnsureProject", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "EnsureProject").await {
+        let (started, security) = authorized_call!(self, request, "EnsureProject");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("EnsureProject", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "EnsureProject",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         if req.project_id.trim().is_empty() {
@@ -335,20 +265,9 @@ impl DataBrokerService {
         &self,
         request: Request<ProjectListRequest>,
     ) -> Result<Response<ProjectListResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("ListProjects", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "ListProjects").await {
+        let (started, security) = authorized_call!(self, request, "ListProjects");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("ListProjects", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "ListProjects",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let limit = bounded_list_limit(req.limit);
@@ -392,37 +311,48 @@ impl DataBrokerService {
         &self,
         request: Request<AdminSummaryRequest>,
     ) -> Result<Response<AdminSummaryResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("GetAdminSummary", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "GetAdminSummary").await {
-            return self.record_grpc("GetAdminSummary", started, Err(err));
-        }
+        let (started, security) = authorized_call!(self, request, "GetAdminSummary");
         if let Err(err) = self.require_portal_permission(&security, "GetAdminSummary", false) {
             return self.record_grpc("GetAdminSummary", started, Err(err));
         }
         let req = request.into_inner();
         let mut warnings: Vec<String> = Vec::new();
+        if let (Some(requested), Some(bound)) =
+            (non_empty(&req.project_id), non_empty(&security.project_id))
+        {
+            if requested != bound && !security.has_scope("udb:admin") {
+                return self.record_grpc(
+                    "GetAdminSummary",
+                    started,
+                    Err(Status::permission_denied(
+                        "requested project_id does not match authenticated project",
+                    )),
+                );
+            }
+        }
+        let project_id = non_empty(&req.project_id)
+            .or_else(|| non_empty(&security.project_id))
+            .unwrap_or("default")
+            .to_string();
 
         // ── Catalog summary ───────────────────────────────────────────────────
         let catalog = {
             use sha2::Digest;
+            let active_catalog = self.catalog.active_for(&project_id);
             let mut hasher = sha2::Sha256::new();
-            for t in &self.catalog.active().manifest.tables {
+            for t in &active_catalog.manifest.tables {
                 hasher.update(t.message_name.as_bytes());
             }
             let checksum = format!("{:x}", hasher.finalize());
             // Try to fetch active version from DB.
             let (active_version, active_since) = self
                 .runtime_snapshot()
-                .get_catalog_versions(&req.project_id)
+                .get_catalog_versions(&project_id)
                 .await
                 .ok()
                 .and_then(|rows| {
                     rows.into_iter()
-                        .find(|r| r["status"].as_str() == Some("active"))
+                        .find(|r| r["status"].as_str() == Some("ACTIVE"))
                         .map(|r| {
                             (
                                 r["version"].as_str().unwrap_or("in-memory").to_string(),
@@ -435,12 +365,12 @@ impl DataBrokerService {
                 })
                 .unwrap_or_else(|| ("in-memory".to_string(), String::new()));
             vec![AdminCatalogSummary {
-                project_id: req.project_id.clone(),
+                project_id: project_id.clone(),
                 active_version,
                 active_checksum: checksum,
                 active_since,
-                table_count: self.catalog.active().manifest.tables.len() as i32,
-                store_count: self.catalog.active().manifest.stores.len() as i32,
+                table_count: active_catalog.manifest.tables.len() as i32,
+                store_count: active_catalog.manifest.stores.len() as i32,
                 pending_migration_state: String::new(),
             }]
         };
@@ -450,7 +380,7 @@ impl DataBrokerService {
             let slot_name = self.runtime_snapshot().config().cdc.slot_name.clone();
             let cdc_json = self
                 .runtime_snapshot()
-                .get_cdc_status(&slot_name)
+                .get_cdc_status(&slot_name, &security.tenant_id, &project_id)
                 .await
                 .ok();
             let paused = cdc_json
@@ -466,7 +396,7 @@ impl DataBrokerService {
             // Count open DLQ events.
             let dlq_open_count = self
                 .runtime_snapshot()
-                .list_dlq_events("", "open", 1000, "0")
+                .list_dlq_events("", "open", 1000, "0", &security.tenant_id, &project_id)
                 .await
                 .map(|rows| rows.len() as i64)
                 .unwrap_or(0);
@@ -787,14 +717,7 @@ impl DataBrokerService {
         &self,
         request: Request<AdminAuditLogRequest>,
     ) -> Result<Response<AdminAuditLogResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("ListAdminAuditLogs", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "ListAdminAuditLogs").await {
-            return self.record_grpc("ListAdminAuditLogs", started, Err(err));
-        }
+        let (started, security) = authorized_call!(self, request, "ListAdminAuditLogs");
         if let Err(err) = self.require_portal_permission(&security, "ListAdminAuditLogs", false) {
             return self.record_grpc("ListAdminAuditLogs", started, Err(err));
         }
@@ -822,7 +745,12 @@ impl DataBrokerService {
                         actor: row["actor"].as_str().unwrap_or_default().to_string(),
                         operation: row["operation"].as_str().unwrap_or_default().to_string(),
                         target: row["target"].as_str().unwrap_or_default().to_string(),
-                        request_json: row["request_json"].to_string().into_bytes(),
+                        request_json: admin_audit_request_json_for_response(
+                            row["request_json"].clone(),
+                            req.redact,
+                        )
+                        .to_string()
+                        .into_bytes(),
                         result: row["result"].as_str().unwrap_or_default().to_string(),
                         tenant_id: row["tenant_id"].as_str().unwrap_or_default().to_string(),
                         project_id: row["project_id"].as_str().unwrap_or_default().to_string(),
@@ -865,14 +793,7 @@ impl DataBrokerService {
         &self,
         request: Request<AdminAuditVerifyRequest>,
     ) -> Result<Response<AdminAuditVerifyResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("VerifyAdminAuditLog", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "VerifyAdminAuditLog").await {
-            return self.record_grpc("VerifyAdminAuditLog", started, Err(err));
-        }
+        let (started, security) = authorized_call!(self, request, "VerifyAdminAuditLog");
         if let Err(err) = self.require_portal_permission(&security, "VerifyAdminAuditLog", false) {
             return self.record_grpc("VerifyAdminAuditLog", started, Err(err));
         }
@@ -914,5 +835,22 @@ impl DataBrokerService {
             ),
             Err(err) => self.record_grpc("VerifyAdminAuditLog", started, Err(err)),
         }
+    }
+}
+
+fn admin_audit_request_json_for_response(
+    value: serde_json::Value,
+    redacted: bool,
+) -> serde_json::Value {
+    if redacted {
+        return value;
+    }
+    match crate::runtime::cdc::encryption::StaticKeyResolver::from_env() {
+        Some(resolver) => crate::runtime::cdc::decrypt_encrypted_json_fields(
+            value,
+            &resolver,
+            crate::runtime::cdc::encryption::DecryptScope::Audit,
+        ),
+        None => value,
     }
 }

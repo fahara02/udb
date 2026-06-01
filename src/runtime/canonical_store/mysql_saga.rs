@@ -14,6 +14,9 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 use uuid::Uuid;
 
+use super::dialect::{
+    SqlDialect, apply_saga_summary_bucket, build_eq_where, normalize_limit_offset,
+};
 use super::mysql::MysqlCanonicalStore;
 use super::system_store::{
     CompensationStatus, SagaInsert, SagaListFilter, SagaRow, SagaStatus, SagaStore, SagaSummary,
@@ -35,7 +38,9 @@ fn row_to_saga(row: sqlx::mysql::MySqlRow) -> SystemStoreResult<SagaRow> {
     let status = SagaStatus::parse(&status_str).ok_or_else(|| {
         SystemStoreError::InvalidInput(format!("unknown saga status '{status_str}' in MySQL row"))
     })?;
-    let comp_status_str: String = row.try_get("compensation_status").unwrap_or_default();
+    let comp_status_str: String = row
+        .try_get("compensation_status")
+        .map_err(|e| SystemStoreError::query("mysql", "SELECT compensation_status", e))?;
     let compensation_status = CompensationStatus::parse(&comp_status_str).ok_or_else(|| {
         SystemStoreError::InvalidInput(format!(
             "unknown compensation_status '{comp_status_str}' in MySQL row"
@@ -44,29 +49,47 @@ fn row_to_saga(row: sqlx::mysql::MySqlRow) -> SystemStoreResult<SagaRow> {
 
     Ok(SagaRow {
         saga_id,
-        tx_id: row.try_get("tx_id").unwrap_or_default(),
-        tenant_id: row.try_get("tenant_id").unwrap_or_default(),
-        correlation_id: row.try_get("correlation_id").unwrap_or_default(),
+        tx_id: row
+            .try_get("tx_id")
+            .map_err(|e| SystemStoreError::query("mysql", "SELECT tx_id", e))?,
+        tenant_id: row
+            .try_get("tenant_id")
+            .map_err(|e| SystemStoreError::query("mysql", "SELECT tenant_id", e))?,
+        correlation_id: row
+            .try_get("correlation_id")
+            .map_err(|e| SystemStoreError::query("mysql", "SELECT correlation_id", e))?,
         status,
-        backend_instance: row.try_get("backend_instance").unwrap_or_default(),
-        operation: row.try_get("operation").unwrap_or_default(),
-        current_step: row.try_get("current_step").unwrap_or(0),
-        retry_count: row.try_get("retry_count").unwrap_or(0),
-        recovery_attempts: row.try_get("recovery_attempts").unwrap_or(0),
+        backend_instance: row
+            .try_get("backend_instance")
+            .map_err(|e| SystemStoreError::query("mysql", "SELECT backend_instance", e))?,
+        operation: row
+            .try_get("operation")
+            .map_err(|e| SystemStoreError::query("mysql", "SELECT operation", e))?,
+        current_step: row
+            .try_get("current_step")
+            .map_err(|e| SystemStoreError::query("mysql", "SELECT current_step", e))?,
+        retry_count: row
+            .try_get("retry_count")
+            .map_err(|e| SystemStoreError::query("mysql", "SELECT retry_count", e))?,
+        recovery_attempts: row
+            .try_get("recovery_attempts")
+            .map_err(|e| SystemStoreError::query("mysql", "SELECT recovery_attempts", e))?,
         compensation_status,
         steps: row
             .try_get("steps")
-            .unwrap_or(serde_json::Value::Array(vec![])),
+            .map_err(|e| SystemStoreError::query("mysql", "SELECT steps", e))?,
         compensations: row
             .try_get("compensations")
-            .unwrap_or(serde_json::Value::Array(vec![])),
-        last_error: row.try_get("last_error").unwrap_or_default(),
+            .map_err(|e| SystemStoreError::query("mysql", "SELECT compensations", e))?,
+        last_error: row
+            .try_get("last_error")
+            .map_err(|e| SystemStoreError::query("mysql", "SELECT last_error", e))?,
         created_at: row
             .try_get::<DateTime<Utc>, _>("created_at")
-            .unwrap_or_else(|_| Utc::now()),
+            .map_err(|e| SystemStoreError::query("mysql", "SELECT created_at", e))?,
         updated_at: row
             .try_get::<DateTime<Utc>, _>("updated_at")
-            .unwrap_or_else(|_| Utc::now()),
+            .map_err(|e| SystemStoreError::query("mysql", "SELECT updated_at", e))?,
     })
 }
 
@@ -96,7 +119,7 @@ impl SagaStore for MysqlCanonicalStore {
                 last_error           TEXT NOT NULL,
                 created_at           TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                 updated_at           TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-                CONSTRAINT chk_{TABLE}_status CHECK (status IN ('indeterminate','in_progress','pending','committed','compensated','failed','failed_compensation','manual_review')),
+                CONSTRAINT chk_{TABLE}_status CHECK (status IN ('indeterminate','in_progress','pending','committed','compensated','failed','in_doubt','failed_compensation','manual_review')),
                 CONSTRAINT chk_{TABLE}_comp_status CHECK (compensation_status IN ('none','completed','manual_review','retry_requested'))
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             "#
@@ -173,26 +196,19 @@ impl SagaStore for MysqlCanonicalStore {
     async fn list_sagas(&self, filter: &SagaListFilter) -> SystemStoreResult<Vec<SagaRow>> {
         // MySQL uses `?` placeholders — order matters but the numbers
         // don't need to be embedded.
-        let mut clauses: Vec<&str> = Vec::new();
-        if filter.tenant_id.is_some() {
-            clauses.push("tenant_id = ?");
-        }
-        if filter.status.is_some() {
-            clauses.push("status = ?");
-        }
-        if filter.tx_id.is_some() {
-            clauses.push("tx_id = ?");
-        }
-        if filter.correlation_id.is_some() {
-            clauses.push("correlation_id = ?");
-        }
-        let where_sql = if clauses.is_empty() {
-            String::new()
-        } else {
-            format!("WHERE {}", clauses.join(" AND "))
-        };
-        let limit = if filter.limit <= 0 { 100 } else { filter.limit };
-        let offset = filter.offset.max(0);
+        let w = build_eq_where(
+            SqlDialect::MYSQL,
+            &[
+                ("tenant_id", filter.tenant_id.is_some()),
+                ("status", filter.status.is_some()),
+                ("tx_id", filter.tx_id.is_some()),
+                ("correlation_id", filter.correlation_id.is_some()),
+            ],
+        );
+        let where_sql = &w.where_sql;
+        let limit_placeholder = &w.limit_placeholder;
+        let offset_placeholder = &w.offset_placeholder;
+        let (limit, offset) = normalize_limit_offset(filter.limit, filter.offset);
         let sql = format!(
             "SELECT saga_id, tx_id, tenant_id, correlation_id, status,
                     backend_instance, operation, current_step, retry_count,
@@ -201,7 +217,7 @@ impl SagaStore for MysqlCanonicalStore {
              FROM {TABLE}
              {where_sql}
              ORDER BY updated_at DESC
-             LIMIT ? OFFSET ?"
+             LIMIT {limit_placeholder} OFFSET {offset_placeholder}"
         );
         let mut q = sqlx::query(&sql);
         if let Some(t) = &filter.tenant_id {
@@ -352,7 +368,7 @@ impl SagaStore for MysqlCanonicalStore {
                     recovery_attempts, compensation_status, steps, compensations,
                     last_error, created_at, updated_at
              FROM {TABLE}
-             WHERE status = 'indeterminate'
+             WHERE status IN ('indeterminate', 'in_doubt')
                 OR (status = 'in_progress'
                     AND TIMESTAMPDIFF(SECOND, updated_at, NOW(6)) > ?)
              ORDER BY updated_at ASC
@@ -399,24 +415,7 @@ impl SagaStore for MysqlCanonicalStore {
             .map_err(|e| SystemStoreError::query("mysql", sql.clone(), e))?;
         let mut s = SagaSummary::default();
         for (status, n) in rows {
-            match SagaStatus::parse(&status) {
-                Some(SagaStatus::Indeterminate) => s.indeterminate = n,
-                Some(SagaStatus::InProgress) => s.in_progress = n,
-                Some(SagaStatus::Pending) => s.pending = n,
-                Some(SagaStatus::Committed) => s.committed = n,
-                Some(SagaStatus::Compensated) => s.compensated = n,
-                Some(SagaStatus::Failed) => s.failed = n,
-                Some(SagaStatus::FailedCompensation) => s.failed_compensation = n,
-                Some(SagaStatus::ManualReview) => s.manual_review = n,
-                None => {
-                    return Err(SystemStoreError::SchemaMismatch {
-                        backend: "mysql",
-                        detail: format!(
-                            "unexpected saga status '{status}' (CHECK constraint should prevent this)"
-                        ),
-                    });
-                }
-            }
+            apply_saga_summary_bucket(&mut s, "mysql", &status, n)?;
         }
         Ok(s)
     }

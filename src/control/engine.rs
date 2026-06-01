@@ -81,6 +81,25 @@ impl std::fmt::Display for FsmState {
 }
 
 impl FsmState {
+    pub const ALL: [FsmState; 14] = [
+        FsmState::Idle,
+        FsmState::Initialising,
+        FsmState::LoadProtoState,
+        FsmState::ProtoChecksumLint,
+        FsmState::PlanProtoDiff,
+        FsmState::GenerateSql,
+        FsmState::ChecksumLint,
+        FsmState::Applying,
+        FsmState::Linting,
+        FsmState::AutoAltering,
+        FsmState::Verifying,
+        FsmState::Recovering,
+        FsmState::Completed,
+        FsmState::Error,
+    ];
+
+    pub const VARIANT_COUNT: usize = Self::ALL.len();
+
     /// Returns the canonical uppercase string stored in DB records / JSON.
     /// Mirrors the `MigrationState` constants in legacy_sql `migrate.go`.
     pub fn as_str(&self) -> &'static str {
@@ -376,22 +395,8 @@ mod tests {
 
     #[test]
     fn from_str_round_trip() {
-        for state in [
-            FsmState::Idle,
-            FsmState::Initialising,
-            FsmState::LoadProtoState,
-            FsmState::ProtoChecksumLint,
-            FsmState::PlanProtoDiff,
-            FsmState::GenerateSql,
-            FsmState::ChecksumLint,
-            FsmState::Applying,
-            FsmState::Linting,
-            FsmState::AutoAltering,
-            FsmState::Verifying,
-            FsmState::Recovering,
-            FsmState::Completed,
-            FsmState::Error,
-        ] {
+        assert_eq!(FsmState::VARIANT_COUNT, 14);
+        for state in FsmState::ALL {
             let s = state.as_str();
             assert_eq!(
                 FsmState::from_str(s).unwrap(),

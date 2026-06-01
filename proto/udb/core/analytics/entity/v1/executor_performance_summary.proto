@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package udb.core.analytics.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+
+option csharp_namespace = "udb.core.Analytics.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/analytics/entity/v1;analyticsv1";
+option java_package = "com.udb.core.analytics.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Analytics\\Entity\\V1";
+
+// Daily executor performance roll-up for project-defined workers, handlers,
+// data pipelines, or backend executors.
+message ExecutorPerformanceSummary {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "executor_performance_summaries"
+    schema_name: "udb_analytics"
+    migration_order: 2
+    is_table: true
+    comment: "Daily executor performance roll-up for project-defined processing units"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: false
+    partition_strategy: PARTITION_STRATEGY_RANGE_MONTH
+    partition_column: "summary_date"
+    retention_days: 365
+    replica_hint: "replica"
+  };
+
+  string summary_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "summary_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  google.protobuf.Timestamp summary_date = 2 [(udb.core.common.v1.pg_column) = { column_name: "summary_date" sql_type: "DATE" not_null: true index: { index_name: "idx_executor_perf_date_executor" index_type: "BTREE" columns: "executor_identity" unique: true } }];
+
+  string executor_identity = 3 [(udb.core.common.v1.pg_column) = { column_name: "executor_identity" sql_type: "VARCHAR(120)" not_null: true }];
+  string workload_kind = 4 [(udb.core.common.v1.pg_column) = { column_name: "workload_kind" sql_type: "VARCHAR(120)" }];
+
+  int64 total_dispatches = 5 [(udb.core.common.v1.pg_column) = { column_name: "total_dispatches" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  int64 successful_results = 6 [(udb.core.common.v1.pg_column) = { column_name: "successful_results" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  int64 timeout_count = 7 [(udb.core.common.v1.pg_column) = { column_name: "timeout_count" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  int64 error_count = 8 [(udb.core.common.v1.pg_column) = { column_name: "error_count" sql_type: "BIGINT" not_null: true default_value: "0" }];
+
+  double avg_execution_ms = 9 [(udb.core.common.v1.pg_column) = { column_name: "avg_execution_ms" sql_type: "DOUBLE PRECISION" }];
+  double p99_execution_ms = 10 [(udb.core.common.v1.pg_column) = { column_name: "p99_execution_ms" sql_type: "DOUBLE PRECISION" }];
+  double avg_confidence = 11 [(udb.core.common.v1.pg_column) = { column_name: "avg_confidence" sql_type: "DOUBLE PRECISION" }];
+  double success_rate = 12 [(udb.core.common.v1.pg_column) = { column_name: "success_rate" sql_type: "DOUBLE PRECISION" }];
+  double avg_capacity_utilisation = 13 [(udb.core.common.v1.pg_column) = { column_name: "avg_capacity_utilisation" sql_type: "DOUBLE PRECISION" }];
+
+  google.protobuf.Timestamp recorded_at = 14 [(udb.core.common.v1.pg_column) = { column_name: "recorded_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+}

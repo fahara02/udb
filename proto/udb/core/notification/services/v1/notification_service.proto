@@ -1,0 +1,191 @@
+syntax = "proto3";
+
+package udb.core.notification.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/notification/services/v1/core.proto";
+
+option csharp_namespace = "udb.core.Notification.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/notification/services/v1;notificationservicev1";
+option java_package = "com.udb.core.notification.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Notification\\Services\\V1";
+option php_namespace = "Udb\\Core\\Notification\\Services\\V1";
+
+// ---------------------------------------------------------------------------
+// NotificationService — Template-based multi-channel notification delivery.
+//
+// HTTP prefix: /v1/notifications
+// ---------------------------------------------------------------------------
+
+service NotificationService {
+  // Send a notification (or enqueue it for async delivery).
+  rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/notifications"
+      body: "*"
+    };
+  }
+
+  // Get delivery status for a specific log entry.
+  rpc GetNotification(GetNotificationRequest) returns (GetNotificationResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/notifications/{log_id}"};
+  }
+
+  // List notification logs with rich filters.
+  rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/notifications"};
+  }
+
+  // Retry a failed notification.
+  rpc RetryNotification(RetryNotificationRequest) returns (RetryNotificationResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/notifications/{log_id}:retry"
+      body: "*"
+    };
+  }
+
+  // ── Template management ─────────────────────────────────────────────────
+
+  // Upsert a notification template.
+  rpc UpsertTemplate(UpsertTemplateRequest) returns (UpsertTemplateResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      put: "/v1/notifications/templates/{event_type}/{channel}"
+      body: "*"
+    };
+  }
+
+  // Get a template by event_type + channel + locale.
+  rpc GetTemplate(GetTemplateRequest) returns (GetTemplateResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/notifications/templates/{event_type}/{channel}"};
+  }
+
+  // List all templates.
+  rpc ListTemplates(ListTemplatesRequest) returns (ListTemplatesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/notifications/templates"};
+  }
+
+  // Get delivery statistics.
+  rpc GetDeliveryStats(GetDeliveryStatsRequest) returns (GetDeliveryStatsResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/notifications/stats"};
+  }
+
+  // ── Notification preferences ────────────────────────────────────────────
+
+  // Set (upsert) a per-user channel/event opt-out preference.
+  rpc SetPreference(SetPreferenceRequest) returns (SetPreferenceResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      put: "/v1/notifications/preferences/{user_id}/{channel}"
+      body: "*"
+    };
+  }
+
+  // Get a single preference entry.
+  rpc GetPreference(GetPreferenceRequest) returns (GetPreferenceResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/notifications/preferences/{user_id}/{channel}"};
+  }
+
+  // List all preferences for a user.
+  rpc ListPreferences(ListPreferencesRequest) returns (ListPreferencesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/notifications/preferences/{user_id}"};
+  }
+}

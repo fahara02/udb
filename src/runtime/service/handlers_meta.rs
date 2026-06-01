@@ -8,26 +8,17 @@ impl DataBrokerService {
         &self,
         request: Request<CapabilitiesRequest>,
     ) -> Result<Response<CapabilitiesResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("GetCapabilities", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "GetCapabilities").await {
+        let (started, security) = authorized_call!(self, request, "GetCapabilities");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("GetCapabilities", started, Err(err));
         }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "GetCapabilities",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
-        }
         let mut enabled_backends = self.runtime_snapshot().enabled_backend_names();
+        let enabled_set: std::collections::HashSet<String> =
+            enabled_backends.iter().cloned().collect();
         let mut degraded_backends: Vec<String> = crate::backend::all_plugins()
             .into_iter()
             .map(|plugin| plugin.kind().as_str().to_string())
-            .filter(|backend| !enabled_backends.iter().any(|enabled| enabled == backend))
+            .filter(|backend| !enabled_set.contains(backend))
             .collect();
         enabled_backends.sort();
         enabled_backends.dedup();
@@ -121,20 +112,9 @@ impl DataBrokerService {
         &self,
         request: Request<HealthReportRequest>,
     ) -> Result<Response<HealthReportResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("GetHealthReport", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "GetHealthReport").await {
+        let (started, security) = authorized_call!(self, request, "GetHealthReport");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("GetHealthReport", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "GetHealthReport",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let request = request.into_inner();
         let project_scope = request.project_id.trim().to_string();
@@ -256,15 +236,21 @@ impl DataBrokerService {
         &self,
         request: Request<MessageSchemaLookupRequest>,
     ) -> Result<Response<MessageSchemaLookupResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("LookupMessageSchema", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "LookupMessageSchema").await {
-            return self.record_grpc("LookupMessageSchema", started, Err(err));
-        }
+        let (started, security) = authorized_call!(self, request, "LookupMessageSchema");
         let req = request.into_inner();
+        if let (Some(requested), Some(bound)) =
+            (non_empty(&req.project_id), non_empty(&security.project_id))
+        {
+            if requested != bound && !security.has_scope("udb:admin") {
+                return self.record_grpc(
+                    "LookupMessageSchema",
+                    started,
+                    Err(Status::permission_denied(
+                        "requested project_id does not match authenticated project",
+                    )),
+                );
+            }
+        }
         let project_id = non_empty(&req.project_id)
             .or_else(|| non_empty(&security.project_id))
             .unwrap_or("default")
@@ -307,15 +293,21 @@ impl DataBrokerService {
         &self,
         request: Request<MessageSchemaListRequest>,
     ) -> Result<Response<MessageSchemaListResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("ListMessageSchemas", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "ListMessageSchemas").await {
-            return self.record_grpc("ListMessageSchemas", started, Err(err));
-        }
+        let (started, security) = authorized_call!(self, request, "ListMessageSchemas");
         let req = request.into_inner();
+        if let (Some(requested), Some(bound)) =
+            (non_empty(&req.project_id), non_empty(&security.project_id))
+        {
+            if requested != bound && !security.has_scope("udb:admin") {
+                return self.record_grpc(
+                    "ListMessageSchemas",
+                    started,
+                    Err(Status::permission_denied(
+                        "requested project_id does not match authenticated project",
+                    )),
+                );
+            }
+        }
         let project_id = non_empty(&req.project_id)
             .or_else(|| non_empty(&security.project_id))
             .unwrap_or("default")

@@ -15,11 +15,14 @@ pub mod pipeline;
 pub mod pipeline_coverage; // U7: per-RPC pipeline-adoption tracker
 pub(crate) mod postgres_helpers;
 
+pub mod authn; // Stage 1 auth: UDB-owned authn primitives (sessions, API keys, identities, hashing)
+pub mod authz; // Stage 1 auth: UDB-owned authz engine (Decision/Principal/ResourceRef, RBAC/ABAC/ReBAC)
 pub mod backend_context; // NW-deep: uniform request-context applicator across all backends
 pub mod canonical_store; // P2P: pluggable canonical-store trait + Postgres/MySQL/SQLite impls
 pub mod consistency;
 pub mod consistency_fence;
 pub mod drift_reconciliation;
+pub mod native_catalog; // Native-service entity protos (embedded) → CatalogManifest (proto-driven migration; no hand-written DDL)
 #[cfg(feature = "runtime-logging")]
 pub(crate) mod pretty_log;
 pub mod project_backend_router; // U4 step 2: strict project-scoped instance routing

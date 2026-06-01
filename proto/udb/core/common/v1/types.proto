@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package udb.core.common.v1;
+
+import "google/protobuf/timestamp.proto";
+import public "udb/core/common/v1/domain_types.proto";
+
+option csharp_namespace = "udb.core.Common.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/common/v1;commonv1";
+option java_package = "com.udb.core.common.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Common\\V1";
+option php_namespace = "Udb\\Core\\Common\\V1";
+
+message TenantContext {
+  // Tenant or account boundary chosen by the caller or resolved by UDB.
+  string tenant_id = 1;
+  // Optional owning organization/workspace above the tenant boundary.
+  string organization_id = 2;
+  // Project/application namespace inside the tenant.
+  string project_id = 3;
+  // Deployment environment, for example prod, staging, dev, or test.
+  string environment = 4;
+  // Region, shard, or residency boundary when routing matters.
+  string region = 5;
+  // Optional data partition or workspace identifier for fine-grained isolation.
+  string partition_id = 6;
+  // UI/API surface or workload channel such as web, mobile, api, worker.
+  string access_surface = 7;
+  // Consumer-defined labels for policy routing and audit enrichment.
+  map<string, string> attributes = 8;
+}
+
+message RequestContext {
+  TenantContext tenant = 1;
+  string request_id = 2;
+  string correlation_id = 3;
+  string user_id = 4;
+  map<string, string> headers = 5;
+  string trace_id = 6;
+  string span_id = 7;
+  string ip_address = 8;
+  string user_agent = 9;
+  google.protobuf.Timestamp timestamp = 10;
+  string principal_id = 11;
+  string service_identity = 12;
+  repeated string scopes = 13;
+  repeated string roles = 14;
+  string purpose = 15;
+  string idempotency_key = 16;
+  string client_catalog_version = 17;
+  string consistency = 18;
+  map<string, string> attributes = 19;
+  string traceparent = 20;
+}
+
+message AuditInfo {
+  google.protobuf.Timestamp created_at = 1;
+  google.protobuf.Timestamp updated_at = 2;
+  string created_by = 3;
+  string updated_by = 4;
+  google.protobuf.Timestamp deleted_at = 5;
+  string deleted_by = 6;
+}
+
+message FileReference {
+  string file_id = 1;
+  string file_name = 2;
+  string storage_uri = 3;
+  string mime_type = 4;
+  int64 file_size = 5;
+  string checksum = 6;
+}
+
+message BoundingBox {
+  float x = 1;
+  float y = 2;
+  float width = 3;
+  float height = 4;
+}
+
+message ConfidenceScore {
+  float value = 1;
+  ConfidenceLevel level = 2;
+}
+
+enum ConfidenceLevel {
+  CONFIDENCE_LEVEL_UNSPECIFIED = 0;
+  CONFIDENCE_LEVEL_HIGH = 1;
+  CONFIDENCE_LEVEL_MEDIUM = 2;
+  CONFIDENCE_LEVEL_LOW = 3;
+  CONFIDENCE_LEVEL_REVIEW_REQUIRED = 4;
+}
+
+enum IngestionSource {
+  INGESTION_SOURCE_UNSPECIFIED = 0;
+  INGESTION_SOURCE_WEB_UPLOAD = 1;
+  INGESTION_SOURCE_EMAIL = 2;
+  INGESTION_SOURCE_MOBILE_APP = 3;
+  INGESTION_SOURCE_API = 4;
+  INGESTION_SOURCE_BATCH_IMPORT = 5;
+  INGESTION_SOURCE_WORKER = 6;
+}
+
+enum ContentType {
+  CONTENT_TYPE_UNSPECIFIED = 0;
+  CONTENT_TYPE_JSON = 1;
+  CONTENT_TYPE_TEXT = 2;
+  CONTENT_TYPE_PDF = 3;
+  CONTENT_TYPE_JPEG = 4;
+  CONTENT_TYPE_PNG = 5;
+  CONTENT_TYPE_BINARY = 6;
+}
+
+enum ExportFormat {
+  EXPORT_FORMAT_UNSPECIFIED = 0;
+  EXPORT_FORMAT_JSON = 1;
+  EXPORT_FORMAT_CSV = 2;
+  EXPORT_FORMAT_XLSX = 3;
+  EXPORT_FORMAT_DOCX = 4;
+  EXPORT_FORMAT_PDF = 5;
+}
+
+enum SortDirection {
+  SORT_DIRECTION_UNSPECIFIED = 0;
+  SORT_DIRECTION_ASC = 1;
+  SORT_DIRECTION_DESC = 2;
+}
+
+message DateRangeFilter {
+  string from = 1;
+  string to = 2;
+}

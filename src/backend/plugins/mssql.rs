@@ -24,6 +24,15 @@ impl Backend for MssqlPlugin {
     async fn register(&self, ctx: &mut RegisterCtx<'_>) {
         crate::runtime::core::setup_data::register_mssql(ctx).await;
     }
+
+    fn generate_artifacts(
+        &self,
+        manifest: &crate::generation::CatalogManifest,
+        sql_config: &crate::generation::sql::SqlGenerationConfig,
+    ) -> Result<Vec<crate::generation::GeneratedArtifact>, String> {
+        crate::generation::backends::generate_mssql_artifacts(manifest, sql_config)
+            .map_err(|err| err.to_string())
+    }
 }
 
 impl crate::runtime::executors::handle::DispatchFactory for MssqlPlugin {

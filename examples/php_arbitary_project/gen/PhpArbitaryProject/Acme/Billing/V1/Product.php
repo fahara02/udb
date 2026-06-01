@@ -164,3 +164,4 @@ class Product extends \Google\Protobuf\Internal\Message
     }
 
 }
+

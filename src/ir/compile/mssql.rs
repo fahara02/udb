@@ -22,132 +22,83 @@
 //!   any string column when text_query is set; vector search isn't a
 //!   native SQL Server primitive — refused with `OperatorUnsupported`.
 
-use std::collections::HashSet;
-
 use crate::backend::BackendKind;
 use crate::generation::ManifestTable;
 use crate::ir::filter::{ComparisonOp, LogicalFilter};
 use crate::ir::operations::{
-    AggregateExpr, AggregateFunc, ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead,
-    LogicalResourceOp, LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
+    ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead, LogicalResourceOp,
+    LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
 };
 use crate::ir::value::LogicalValue;
 
+use super::sql_dialect::{SqlCompiler, SqlDialect};
 use super::{CompileContext, CompileError, CompiledRendering, Compiler};
+
+/// T-SQL dialect marker for the generic [`SqlCompiler`]: `[bracketed]`
+/// quoting, named `@PN` placeholders, `1=0` false-literal, and the
+/// `'%' + … ESCAPE '\'` LIKE idiom. `ILike` folds to plain `LIKE`.
+struct Mssql;
+
+impl SqlDialect for Mssql {
+    fn backend() -> BackendKind {
+        BackendKind::Mssql
+    }
+    fn quote(ident: &str) -> String {
+        format!("[{ident}]")
+    }
+    fn placeholder(index: usize) -> String {
+        format!("@P{index}")
+    }
+    fn false_literal() -> &'static str {
+        "1=0"
+    }
+    fn having_true_literal() -> &'static str {
+        "1=1"
+    }
+    fn having_false_literal() -> &'static str {
+        "1=0"
+    }
+    fn sql_op_for(op: ComparisonOp) -> &'static str {
+        match op {
+            ComparisonOp::Eq => "=",
+            ComparisonOp::Ne => "<>",
+            ComparisonOp::Lt => "<",
+            ComparisonOp::Le => "<=",
+            ComparisonOp::Gt => ">",
+            ComparisonOp::Ge => ">=",
+            ComparisonOp::Like
+            | ComparisonOp::Contains
+            | ComparisonOp::StartsWith
+            | ComparisonOp::EndsWith
+            | ComparisonOp::ILike => "LIKE",
+        }
+    }
+    /// T-SQL `LIKE` is case-insensitive when the column collation is
+    /// case-insensitive (typical default). `ILIKE` maps to plain `LIKE`
+    /// with the same semantics for default collations.
+    fn wrap_value_for_op(op: ComparisonOp, placeholder: &str) -> String {
+        // Escape LIKE metacharacters (`\`, `%`, `_`, and `[` which opens a T-SQL
+        // character class) so a literal value matches literally instead of acting
+        // as a wildcard. T-SQL string literals do not process backslash escapes,
+        // so `'\'` is one literal backslash: double it, prefix the wildcard chars,
+        // and close the predicate with `ESCAPE '\'`.
+        let escaped = format!(
+            r"REPLACE(REPLACE(REPLACE(REPLACE({placeholder}, '\', '\\'), '%', '\%'), '_', '\_'), '[', '\[')"
+        );
+        match op {
+            ComparisonOp::Contains => format!(r"'%' + {escaped} + '%' ESCAPE '\'"),
+            ComparisonOp::StartsWith => format!(r"{escaped} + '%' ESCAPE '\'"),
+            ComparisonOp::EndsWith => format!(r"'%' + {escaped} ESCAPE '\'"),
+            _ => placeholder.to_string(),
+        }
+    }
+}
+
+type Ms = SqlCompiler<Mssql>;
 
 /// T-SQL compiler for Microsoft SQL Server.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct MssqlCompiler;
-
-impl MssqlCompiler {
-    fn resolve_table<'a>(
-        &self,
-        message_type: &str,
-        ctx: &'a CompileContext<'_>,
-    ) -> Result<&'a ManifestTable, CompileError> {
-        crate::broker::table_for_message(ctx.manifest, message_type).ok_or_else(|| {
-            CompileError::UnknownMessageType {
-                message_type: message_type.to_string(),
-            }
-        })
-    }
-
-    fn column_for<'a>(
-        &self,
-        table: &'a ManifestTable,
-        field: &str,
-        message_type: &str,
-    ) -> Result<&'a str, CompileError> {
-        table
-            .columns
-            .iter()
-            .find(|c| c.field_name.eq_ignore_ascii_case(field) || c.column_name == field)
-            .map(|c| c.column_name.as_str())
-            .ok_or_else(|| CompileError::UnknownField {
-                message_type: message_type.to_string(),
-                field: field.to_string(),
-            })
-    }
-
-    fn render_where(
-        &self,
-        filter: &LogicalFilter,
-        table: &ManifestTable,
-        message_type: &str,
-        params: &mut Vec<LogicalValue>,
-    ) -> Result<Option<String>, CompileError> {
-        match filter {
-            LogicalFilter::And(c) if c.is_empty() => Ok(None),
-            LogicalFilter::Or(c) if c.is_empty() => Ok(Some("1=0".to_string())),
-            _ => Ok(Some(self.render_filter(
-                filter,
-                table,
-                message_type,
-                params,
-            )?)),
-        }
-    }
-
-    fn render_filter(
-        &self,
-        filter: &LogicalFilter,
-        table: &ManifestTable,
-        message_type: &str,
-        params: &mut Vec<LogicalValue>,
-    ) -> Result<String, CompileError> {
-        match filter {
-            LogicalFilter::And(clauses) => {
-                let parts = clauses
-                    .iter()
-                    .map(|c| self.render_filter(c, table, message_type, params))
-                    .collect::<Result<Vec<_>, _>>()?;
-                Ok(format!("({})", parts.join(" AND ")))
-            }
-            LogicalFilter::Or(clauses) => {
-                let parts = clauses
-                    .iter()
-                    .map(|c| self.render_filter(c, table, message_type, params))
-                    .collect::<Result<Vec<_>, _>>()?;
-                Ok(format!("({})", parts.join(" OR ")))
-            }
-            LogicalFilter::Not(inner) => {
-                let r = self.render_filter(inner, table, message_type, params)?;
-                Ok(format!("(NOT {r})"))
-            }
-            LogicalFilter::Comparison { field, op, value } => {
-                let column = self.column_for(table, field, message_type)?;
-                if value.is_null() {
-                    return Err(CompileError::Malformed {
-                        reason: format!(
-                            "comparison with NULL on field '{field}' must use IsNull, not {}",
-                            op.token()
-                        ),
-                    });
-                }
-                let placeholder = push_param(params, value.clone());
-                let sql_op = sql_op_for(*op);
-                let rhs = wrap_value_for_op(*op, &placeholder);
-                Ok(format!("[{column}] {sql_op} {rhs}"))
-            }
-            LogicalFilter::IsNull(field) => {
-                let column = self.column_for(table, field, message_type)?;
-                Ok(format!("[{column}] IS NULL"))
-            }
-            LogicalFilter::InList { field, values } => {
-                if values.is_empty() {
-                    return Ok("1=0".to_string());
-                }
-                let column = self.column_for(table, field, message_type)?;
-                let placeholders = values
-                    .iter()
-                    .map(|v| push_param(params, v.clone()))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                Ok(format!("[{column}] IN ({placeholders})"))
-            }
-        }
-    }
-}
 
 impl Compiler for MssqlCompiler {
     fn kind(&self) -> BackendKind {
@@ -159,7 +110,7 @@ impl Compiler for MssqlCompiler {
         op: &LogicalRead,
         ctx: &CompileContext<'_>,
     ) -> Result<CompiledRendering, CompileError> {
-        let table = self.resolve_table(&op.message_type, ctx)?;
+        let table = Ms::resolve_table(&op.message_type, ctx.manifest)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
         let select = match &op.projection {
@@ -167,7 +118,7 @@ impl Compiler for MssqlCompiler {
                 .fields
                 .iter()
                 .map(|f| {
-                    let col = self.column_for(table, f, &op.message_type)?;
+                    let col = Ms::column_for(table, f, &op.message_type)?;
                     Ok(format!("[{col}]"))
                 })
                 .collect::<Result<Vec<_>, CompileError>>()?
@@ -182,7 +133,7 @@ impl Compiler for MssqlCompiler {
         );
 
         if let Some(filter) = &op.filter
-            && let Some(body) = self.render_where(filter, table, &op.message_type, &mut params)?
+            && let Some(body) = Ms::render_where(filter, table, &op.message_type, &mut params)?
         {
             sql.push_str(&format!(" WHERE {body}"));
         }
@@ -192,7 +143,7 @@ impl Compiler for MssqlCompiler {
                 .sort
                 .iter()
                 .map(|s| {
-                    let col = self.column_for(table, &s.field, &op.message_type)?;
+                    let col = Ms::column_for(table, &s.field, &op.message_type)?;
                     let direction = s.direction.token().to_uppercase();
                     // T-SQL has no NULLS FIRST/LAST; emulate via prefix sort.
                     let null_prefix = match s.nulls {
@@ -252,13 +203,13 @@ impl Compiler for MssqlCompiler {
                 reason: "LogicalWrite::records must be non-empty".into(),
             });
         }
-        let table = self.resolve_table(&op.message_type, ctx)?;
+        let table = Ms::resolve_table(&op.message_type, ctx.manifest)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
         let first = &op.records[0];
         let columns: Vec<&str> = first
             .keys()
-            .map(|k| self.column_for(table, k, &op.message_type))
+            .map(|k| Ms::column_for(table, k, &op.message_type))
             .collect::<Result<Vec<_>, _>>()?;
         let column_list = columns
             .iter()
@@ -280,7 +231,7 @@ impl Compiler for MssqlCompiler {
             }
             let row = first
                 .keys()
-                .map(|k| push_param(&mut params, record[k].clone()))
+                .map(|k| Ms::push_param(&mut params, record[k].clone()))
                 .collect::<Vec<_>>()
                 .join(", ");
             value_rows.push(format!("({row})"));
@@ -318,7 +269,7 @@ impl Compiler for MssqlCompiler {
                         op: "batch_insert_ignore",
                     });
                 }
-                let on_clause = build_merge_on_clause(table, self, &op.message_type)?;
+                let on_clause = build_merge_on_clause(table, &op.message_type)?;
                 let sql = format!(
                     "MERGE INTO [{schema}].[{table}] AS target \
                      USING (VALUES {values}) AS source({column_list}) \
@@ -355,11 +306,11 @@ impl Compiler for MssqlCompiler {
                         op: "batch_upsert",
                     });
                 }
-                let on_clause = build_merge_on_clause(table, self, &op.message_type)?;
+                let on_clause = build_merge_on_clause(table, &op.message_type)?;
                 let target_cols: Vec<&str> = match &op.conflict {
                     ConflictStrategy::Update { fields } => fields
                         .iter()
-                        .map(|f| self.column_for(table, f, &op.message_type))
+                        .map(|f| Ms::column_for(table, f, &op.message_type))
                         .collect::<Result<Vec<_>, _>>()?,
                     ConflictStrategy::Replace => columns.clone(),
                     _ => unreachable!(),
@@ -399,15 +350,15 @@ impl Compiler for MssqlCompiler {
         op: &LogicalDelete,
         ctx: &CompileContext<'_>,
     ) -> Result<CompiledRendering, CompileError> {
-        let table = self.resolve_table(&op.message_type, ctx)?;
+        let table = Ms::resolve_table(&op.message_type, ctx.manifest)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
-        let body = self
-            .render_where(&op.filter, table, &op.message_type, &mut params)?
-            .ok_or_else(|| CompileError::Malformed {
+        let body = Ms::render_where(&op.filter, table, &op.message_type, &mut params)?.ok_or_else(
+            || CompileError::Malformed {
                 reason: "LogicalDelete::filter cannot be empty; use Drop resource to truncate"
                     .into(),
-            })?;
+            },
+        )?;
         if body == "1=0" {
             return Err(CompileError::Malformed {
                 reason: "LogicalDelete::filter resolves to FALSE; refusing no-op delete".into(),
@@ -435,15 +386,15 @@ impl Compiler for MssqlCompiler {
                 reason: "LogicalAggregate::aggregates must be non-empty".into(),
             });
         }
-        let mut seen: HashSet<&str> = HashSet::new();
-        for agg in &op.aggregates {
-            if !seen.insert(agg.alias.as_str()) {
-                return Err(CompileError::Malformed {
-                    reason: format!("duplicate aggregate alias '{}'", agg.alias),
-                });
-            }
-        }
-        let table = self.resolve_table(&op.message_type, ctx)?;
+        super::util::validate_aggregate_aliases(&op.aggregates)?;
+        let table = Ms::resolve_table(&op.message_type, ctx.manifest)?;
+        // #151: reject a GROUP BY column colliding with an aggregate alias.
+        let group_names: Vec<&str> = op
+            .group_by
+            .iter()
+            .map(|f| Ms::column_for(table, f, &op.message_type))
+            .collect::<Result<Vec<_>, _>>()?;
+        super::util::validate_no_groupby_alias_collision(&group_names, &op.aggregates)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
         let mut select_parts: Vec<String> = Vec::new();
@@ -451,7 +402,7 @@ impl Compiler for MssqlCompiler {
             .group_by
             .iter()
             .map(|f| {
-                let col = self.column_for(table, f, &op.message_type)?;
+                let col = Ms::column_for(table, f, &op.message_type)?;
                 Ok::<_, CompileError>(format!("[{col}]"))
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -459,7 +410,7 @@ impl Compiler for MssqlCompiler {
             select_parts.push(col.clone());
         }
         for agg in &op.aggregates {
-            select_parts.push(render_aggregate(agg, table, &op.message_type)?);
+            select_parts.push(Ms::render_aggregate(agg, table, &op.message_type)?);
         }
         let mut sql = format!(
             "SELECT {sel} FROM [{schema}].[{table}]",
@@ -469,7 +420,7 @@ impl Compiler for MssqlCompiler {
         );
 
         if let Some(filter) = &op.filter
-            && let Some(body) = self.render_where(filter, table, &op.message_type, &mut params)?
+            && let Some(body) = Ms::render_where(filter, table, &op.message_type, &mut params)?
         {
             sql.push_str(&format!(" WHERE {body}"));
         }
@@ -479,7 +430,7 @@ impl Compiler for MssqlCompiler {
         }
 
         if let Some(having) = &op.having {
-            let body = render_having(having, op, &mut params)?;
+            let body = Ms::render_having(having, op, table, &mut params)?;
             sql.push_str(&format!(" HAVING {body}"));
         }
 
@@ -488,7 +439,7 @@ impl Compiler for MssqlCompiler {
                 .sort
                 .iter()
                 .map(|s| {
-                    let token = resolve_sort_field(&s.field, op, table)?;
+                    let token = Ms::resolve_sort_field(&s.field, op, table)?;
                     let direction = s.direction.token().to_uppercase();
                     Ok::<_, CompileError>(format!("{token} {direction}"))
                 })
@@ -541,14 +492,14 @@ impl Compiler for MssqlCompiler {
                 reason: "text_query must be non-empty for T-SQL CONTAINS()".into(),
             });
         }
-        let table = self.resolve_table(&op.message_type, ctx)?;
+        let table = Ms::resolve_table(&op.message_type, ctx.manifest)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
         // CONTAINS(*, @P1) — searches every fulltext-indexed column.
         // T-SQL requires Full-Text Search to be enabled and a fulltext
         // catalog on the table; that's an operator-side setup outside
         // the broker's purview.
-        push_param(&mut params, LogicalValue::String(text.to_string()));
+        Ms::push_param(&mut params, LogicalValue::String(text.to_string()));
         let mut sql = format!(
             "SELECT TOP({top_k}) * FROM [{schema}].[{table}] WHERE CONTAINS(*, @P1)",
             top_k = op.top_k,
@@ -557,7 +508,7 @@ impl Compiler for MssqlCompiler {
         );
 
         if let Some(filter) = &op.filter
-            && let Some(body) = self.render_where(filter, table, &op.message_type, &mut params)?
+            && let Some(body) = Ms::render_where(filter, table, &op.message_type, &mut params)?
         {
             sql.push_str(&format!(" AND {body}"));
         }
@@ -734,203 +685,19 @@ impl Compiler for MssqlCompiler {
     }
 }
 
-/// Push a parameter and return the `@PN` placeholder for it.
-/// T-SQL named parameters are 1-indexed by convention; tiberius
-/// accepts any order as long as the names match.
-fn push_param(params: &mut Vec<LogicalValue>, v: LogicalValue) -> String {
-    params.push(v);
-    format!("@P{}", params.len())
-}
-
-fn sql_op_for(op: ComparisonOp) -> &'static str {
-    match op {
-        ComparisonOp::Eq => "=",
-        ComparisonOp::Ne => "<>",
-        ComparisonOp::Lt => "<",
-        ComparisonOp::Le => "<=",
-        ComparisonOp::Gt => ">",
-        ComparisonOp::Ge => ">=",
-        ComparisonOp::Like
-        | ComparisonOp::Contains
-        | ComparisonOp::StartsWith
-        | ComparisonOp::EndsWith
-        | ComparisonOp::ILike => "LIKE",
-    }
-}
-
-/// T-SQL `LIKE` is case-insensitive when the column collation is
-/// case-insensitive (typical default). `ILIKE` maps to plain `LIKE`
-/// with the same semantics for default collations.
-fn wrap_value_for_op(op: ComparisonOp, placeholder: &str) -> String {
-    match op {
-        ComparisonOp::Contains => format!("'%' + {placeholder} + '%'"),
-        ComparisonOp::StartsWith => format!("{placeholder} + '%'"),
-        ComparisonOp::EndsWith => format!("'%' + {placeholder}"),
-        _ => placeholder.to_string(),
-    }
-}
-
 fn build_merge_on_clause(
     table: &ManifestTable,
-    compiler: &MssqlCompiler,
     message_type: &str,
 ) -> Result<String, CompileError> {
     let parts = table
         .primary_key
         .iter()
         .map(|pk| {
-            let col = compiler.column_for(table, pk, message_type)?;
+            let col = Ms::column_for(table, pk, message_type)?;
             Ok(format!("target.[{col}] = source.[{col}]"))
         })
         .collect::<Result<Vec<_>, CompileError>>()?;
     Ok(parts.join(" AND "))
-}
-
-fn render_aggregate(
-    agg: &AggregateExpr,
-    table: &ManifestTable,
-    message_type: &str,
-) -> Result<String, CompileError> {
-    let token = agg.func.sql_token();
-    let body = match agg.func {
-        AggregateFunc::Count if agg.field == "*" => "*".to_string(),
-        AggregateFunc::Count => {
-            let col = resolve_column(table, &agg.field, message_type)?;
-            format!("[{col}]")
-        }
-        AggregateFunc::CountDistinct => {
-            if agg.field == "*" {
-                return Err(CompileError::Malformed {
-                    reason: "COUNT(DISTINCT *) is not allowed; specify a field".into(),
-                });
-            }
-            let col = resolve_column(table, &agg.field, message_type)?;
-            format!("DISTINCT [{col}]")
-        }
-        AggregateFunc::Sum | AggregateFunc::Avg | AggregateFunc::Min | AggregateFunc::Max => {
-            if agg.field == "*" {
-                return Err(CompileError::Malformed {
-                    reason: format!("{} requires a field name, not '*'", agg.func.sql_token()),
-                });
-            }
-            let col = resolve_column(table, &agg.field, message_type)?;
-            format!("[{col}]")
-        }
-    };
-    Ok(format!("{token}({body}) AS [{}]", agg.alias))
-}
-
-fn resolve_sort_field(
-    field: &str,
-    op: &LogicalAggregate,
-    table: &ManifestTable,
-) -> Result<String, CompileError> {
-    if op.aggregates.iter().any(|a| a.alias == field) {
-        return Ok(format!("[{field}]"));
-    }
-    if op.group_by.iter().any(|f| f == field) {
-        let col = resolve_column(table, field, &op.message_type)?;
-        return Ok(format!("[{col}]"));
-    }
-    Err(CompileError::Malformed {
-        reason: format!(
-            "ORDER BY field '{field}' is neither an aggregate alias nor a GROUP BY column"
-        ),
-    })
-}
-
-fn render_having(
-    filter: &LogicalFilter,
-    op: &LogicalAggregate,
-    params: &mut Vec<LogicalValue>,
-) -> Result<String, CompileError> {
-    match filter {
-        LogicalFilter::And(c) if c.is_empty() => Ok("1=1".to_string()),
-        LogicalFilter::Or(c) if c.is_empty() => Ok("1=0".to_string()),
-        LogicalFilter::And(clauses) => {
-            let parts = clauses
-                .iter()
-                .map(|c| render_having(c, op, params))
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(format!("({})", parts.join(" AND ")))
-        }
-        LogicalFilter::Or(clauses) => {
-            let parts = clauses
-                .iter()
-                .map(|c| render_having(c, op, params))
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(format!("({})", parts.join(" OR ")))
-        }
-        LogicalFilter::Not(inner) => {
-            let r = render_having(inner, op, params)?;
-            Ok(format!("(NOT {r})"))
-        }
-        LogicalFilter::Comparison {
-            field,
-            op: cmp,
-            value,
-        } => {
-            if value.is_null() {
-                return Err(CompileError::Malformed {
-                    reason: format!(
-                        "HAVING comparison with NULL on '{field}' must use IsNull, not {}",
-                        cmp.token()
-                    ),
-                });
-            }
-            let token = resolve_having_field(field, op)?;
-            let placeholder = push_param(params, value.clone());
-            let sql_op = sql_op_for(*cmp);
-            let rhs = wrap_value_for_op(*cmp, &placeholder);
-            Ok(format!("{token} {sql_op} {rhs}"))
-        }
-        LogicalFilter::IsNull(field) => {
-            let token = resolve_having_field(field, op)?;
-            Ok(format!("{token} IS NULL"))
-        }
-        LogicalFilter::InList { field, values } => {
-            if values.is_empty() {
-                return Ok("1=0".to_string());
-            }
-            let token = resolve_having_field(field, op)?;
-            let placeholders = values
-                .iter()
-                .map(|v| push_param(params, v.clone()))
-                .collect::<Vec<_>>()
-                .join(", ");
-            Ok(format!("{token} IN ({placeholders})"))
-        }
-    }
-}
-
-fn resolve_having_field(field: &str, op: &LogicalAggregate) -> Result<String, CompileError> {
-    if op.aggregates.iter().any(|a| a.alias == field) {
-        return Ok(format!("[{field}]"));
-    }
-    if op.group_by.iter().any(|f| f == field) {
-        return Ok(format!("[{field}]"));
-    }
-    Err(CompileError::Malformed {
-        reason: format!(
-            "HAVING field '{field}' is neither an aggregate alias nor a GROUP BY column"
-        ),
-    })
-}
-
-fn resolve_column<'a>(
-    table: &'a ManifestTable,
-    field: &str,
-    message_type: &str,
-) -> Result<&'a str, CompileError> {
-    table
-        .columns
-        .iter()
-        .find(|c| c.field_name.eq_ignore_ascii_case(field) || c.column_name == field)
-        .map(|c| c.column_name.as_str())
-        .ok_or_else(|| CompileError::UnknownField {
-            message_type: message_type.to_string(),
-            field: field.to_string(),
-        })
 }
 
 #[cfg(test)]

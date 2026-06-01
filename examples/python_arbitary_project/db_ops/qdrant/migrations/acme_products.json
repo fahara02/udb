@@ -1,0 +1,27 @@
+{
+  "_udb_meta": {
+    "backend": "qdrant",
+    "collection": "acme_products",
+    "generated_at": 1780238208,
+    "generator": "udb",
+    "migration_kind": "bootstrap",
+    "proto_manifest_checksum": "sha256:2eb6e66f4d6bdeb34e2b21cad3baf571d3d53dbbe4e24d52cf2cf17f8f116588"
+  },
+  "collection_name": "acme_products",
+  "hnsw_config": {
+    "ef_construct": 100,
+    "m": 16
+  },
+  "optimizers_config": {
+    "default_segment_number": 2
+  },
+  "payload_schema": {
+    "tenant_id": {
+      "data_type": "keyword"
+    }
+  },
+  "vectors": {
+    "distance": "Cosine",
+    "size": 768
+  }
+}

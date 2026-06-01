@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package udb.core.authn.entity.v1;
+
+option csharp_namespace = "udb.core.Authn.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";
+option java_package = "com.udb.core.authn.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Entity\\V1";
+
+// Generic principal category used by native authn, external identity mapping,
+// API keys, and workload/service accounts.
+enum AccountKind {
+  ACCOUNT_KIND_UNSPECIFIED = 0;
+  ACCOUNT_KIND_PERSON = 1;
+  ACCOUNT_KIND_SERVICE_ACCOUNT = 2;
+  ACCOUNT_KIND_WORKLOAD = 3;
+  ACCOUNT_KIND_EXTERNAL_IDENTITY = 4;
+  ACCOUNT_KIND_SYSTEM = 5;
+  ACCOUNT_KIND_ANONYMOUS = 6;
+}
+
+enum UserStatus {
+  USER_STATUS_UNSPECIFIED = 0;
+  USER_STATUS_PENDING_VERIFICATION = 1; // Email not yet verified
+  USER_STATUS_ACTIVE = 2;
+  USER_STATUS_SUSPENDED = 3; // Temporarily suspended by admin
+  USER_STATUS_LOCKED = 4; // Locked after repeated failed logins
+  USER_STATUS_DEACTIVATED = 5; // Permanently deactivated
+}
+
+enum SessionType {
+  SESSION_TYPE_UNSPECIFIED = 0;
+  SESSION_TYPE_SERVER_SIDE = 1; // Cookie + CSRF token.
+  SESSION_TYPE_JWT = 2; // Access + refresh JWT.
+  SESSION_TYPE_API_KEY = 3;
+  SESSION_TYPE_MTLS = 4;
+  SESSION_TYPE_EXTERNAL = 5;
+}
+
+enum DeviceType {
+  DEVICE_TYPE_UNSPECIFIED = 0;
+  DEVICE_TYPE_WEB = 1;
+  DEVICE_TYPE_API = 2;
+  DEVICE_TYPE_DESKTOP = 3;
+  DEVICE_TYPE_MOBILE = 4;
+  DEVICE_TYPE_WORKER = 5;
+  DEVICE_TYPE_CLI = 6;
+}
+
+enum OTPType {
+  OTP_TYPE_UNSPECIFIED = 0;
+  OTP_TYPE_EMAIL_VERIFICATION = 1; // New account email confirmation
+  OTP_TYPE_LOGIN_2FA = 2; // Login second-factor (email OTP)
+  OTP_TYPE_PASSWORD_RESET = 3; // Password reset
+  OTP_TYPE_SENSITIVE_OPERATION = 4; // Step-up auth for a protected action.
+}
+
+enum OTPStatus {
+  OTP_STATUS_UNSPECIFIED = 0;
+  OTP_STATUS_PENDING = 1;
+  OTP_STATUS_USED = 2;
+  OTP_STATUS_EXPIRED = 3;
+  OTP_STATUS_INVALIDATED = 4; // Superseded by resend
+}
+
+enum IdentityProviderKind {
+  IDENTITY_PROVIDER_KIND_UNSPECIFIED = 0;
+  IDENTITY_PROVIDER_KIND_NATIVE = 1;
+  IDENTITY_PROVIDER_KIND_OIDC = 2;
+  IDENTITY_PROVIDER_KIND_SAML = 3;
+  IDENTITY_PROVIDER_KIND_LDAP = 4;
+  IDENTITY_PROVIDER_KIND_CUSTOM_JWT = 5;
+  IDENTITY_PROVIDER_KIND_EXTERNAL_SESSION = 6;
+}
+
+enum AuthFactorKind {
+  AUTH_FACTOR_KIND_UNSPECIFIED = 0;
+  AUTH_FACTOR_KIND_PASSWORD = 1;
+  AUTH_FACTOR_KIND_EMAIL_OTP = 2;
+  AUTH_FACTOR_KIND_SMS_OTP = 3;
+  AUTH_FACTOR_KIND_TOTP = 4;
+  AUTH_FACTOR_KIND_WEBAUTHN = 5;
+  AUTH_FACTOR_KIND_RECOVERY_CODE = 6;
+}
+
+enum AuthCredentialType {
+  AUTH_CREDENTIAL_TYPE_UNSPECIFIED = 0;
+  AUTH_CREDENTIAL_TYPE_BEARER_TOKEN = 1;
+  AUTH_CREDENTIAL_TYPE_SESSION = 2;
+  AUTH_CREDENTIAL_TYPE_API_KEY = 3;
+  AUTH_CREDENTIAL_TYPE_MTLS = 4;
+  AUTH_CREDENTIAL_TYPE_OIDC_TOKEN = 5;
+  AUTH_CREDENTIAL_TYPE_SAML_ASSERTION = 6;
+  AUTH_CREDENTIAL_TYPE_PASSWORD = 7;
+  AUTH_CREDENTIAL_TYPE_CUSTOM = 8;
+}
+
+enum TokenType {
+  TOKEN_TYPE_UNSPECIFIED = 0;
+  TOKEN_TYPE_JWT_ACCESS = 1;
+  TOKEN_TYPE_JWT_REFRESH = 2;
+  TOKEN_TYPE_SESSION = 3;
+  TOKEN_TYPE_API_KEY = 4;
+  TOKEN_TYPE_EXTERNAL = 5;
+}

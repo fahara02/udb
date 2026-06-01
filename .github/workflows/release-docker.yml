@@ -37,6 +37,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Version guard: the `v<x.y.z>` tag must equal the crate version and every
+      # manifest/protocol constant must match versions.json before we publish an
+      # image tagged from that version. See VERSIONING.md.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Versions consistent with versions.json
+        run: node scripts/check-versions.mjs
+      - name: Tag matches crate version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          crate="$(node -p "require('./versions.json').components.udb.version")"
+          tag="${GITHUB_REF_NAME#v}"
+          if [[ "${tag}" != "${crate}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match udb crate version ${crate}" >&2
+            exit 1
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 

@@ -191,3 +191,4 @@ class InvoiceLineItem extends \Google\Protobuf\Internal\Message
     }
 
 }
+

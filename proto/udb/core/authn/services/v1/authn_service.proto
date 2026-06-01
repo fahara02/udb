@@ -1,0 +1,375 @@
+syntax = "proto3";
+
+package udb.core.authn.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/authn/services/v1/core.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authn.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/services/v1;authnservicev1";
+option java_package = "com.udb.core.authn.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Services\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Services\\V1";
+
+// ---------------------------------------------------------------------------
+// AuthnService — native and hybrid authentication for UDB-backed projects.
+//
+// HTTP prefix: /v1/auth
+// URL conventions (Rule 07): snake_case paths, :<verb> custom method suffix, kebab-case query params.
+//
+// Auth method routing is policy-driven. Typical deployments use server-side
+// sessions for browser clients, JWT for APIs/desktop/mobile clients, API keys
+// for service integrations, and external OIDC/SAML/JWT proofs for hybrid auth.
+// ---------------------------------------------------------------------------
+service AuthnService {
+  // ── User management (admin-only) ─────────────────────────────────────────
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/users"
+      body: "*"
+    };
+  }
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/auth/users/{user_id}"};
+  }
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/auth/users"};
+  }
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      patch: "/v1/auth/users/{user_id}"
+      body: "*"
+    };
+  }
+  rpc ChangeUserStatus(ChangeUserStatusRequest) returns (ChangeUserStatusResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/users/{user_id}:change-status"
+      body: "*"
+    };
+  }
+  // Admin-triggered password reset — sends email OTP to complete flow
+  rpc AdminResetPassword(AdminResetPasswordRequest) returns (AdminResetPasswordResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/users/{user_id}/password:reset"
+      body: "*"
+    };
+  }
+
+  // ── OTP ──────────────────────────────────────────────────────────────────
+  rpc SendOTP(SendOTPRequest) returns (SendOTPResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/otp:send"
+      body: "*"
+    };
+  }
+  rpc VerifyOTP(VerifyOTPRequest) returns (VerifyOTPResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/otp:verify"
+      body: "*"
+    };
+  }
+  rpc ResendOTP(ResendOTPRequest) returns (ResendOTPResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/otp:resend"
+      body: "*"
+    };
+  }
+
+  // ── Authentication ───────────────────────────────────────────────────────
+  rpc Authenticate(AuthnRequest) returns (AuthnResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_PUBLIC
+      tenant_required: false
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/authenticate"
+      body: "*"
+    };
+  }
+
+  rpc Login(LoginRequest) returns (LoginResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/login"
+      body: "*"
+    };
+  }
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/token:refresh"
+      body: "*"
+    };
+  }
+  rpc Logout(LogoutRequest) returns (LogoutResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/logout"
+      body: "*"
+    };
+  }
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/password:change"
+      body: "*"
+    };
+  }
+
+  // ── Token validation (called by gateway + per-service interceptors) ───────
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/token:validate"
+      body: "*"
+    };
+  }
+
+  // ── Session management ───────────────────────────────────────────────────
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/sessions"
+      body: "*"
+    };
+  }
+
+  rpc RefreshSession(RefreshSessionRequest) returns (RefreshSessionResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/sessions/{session_id}:refresh"
+      body: "*"
+    };
+  }
+
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/auth/sessions/{session_id}"};
+  }
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/auth/users/{user_id}/sessions"};
+  }
+  rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {delete: "/v1/auth/sessions/{session_id}"};
+  }
+
+  // ── CSRF (server-side sessions only) ────────────────────────────────────
+  rpc ValidateCSRF(ValidateCSRFRequest) returns (ValidateCSRFResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/csrf:validate"
+      body: "*"
+    };
+  }
+
+  // ── MFA enrollment ───────────────────────────────────────────────────────
+  // Step 1: initiate enrollment — returns TOTP secret / QR URI
+  rpc EnrollMFA(EnrollMFARequest) returns (EnrollMFAResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/users/{user_id}/mfa:enroll"
+      body: "*"
+    };
+  }
+  // Step 2: confirm with first TOTP code (or email OTP)
+  rpc ConfirmMFAEnrollment(ConfirmMFAEnrollmentRequest) returns (ConfirmMFAEnrollmentResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/users/{user_id}/mfa:confirm"
+      body: "*"
+    };
+  }
+}

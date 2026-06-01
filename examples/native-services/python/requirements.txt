@@ -1,0 +1,5 @@
+# UDB native-services Python example.
+# The SDK itself (sdk/python/udb_client) is pure-Python and imported via a
+# sys.path insert in main.py; only the gRPC runtime is needed here. The generated
+# udb.* stubs are produced by `buf generate --include-imports` in sdk/python.
+grpcio>=1.60

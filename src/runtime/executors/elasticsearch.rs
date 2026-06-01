@@ -28,7 +28,11 @@ use std::time::Duration;
 
 use serde_json::Value as JsonValue;
 
-use crate::runtime::backend_context::{AppliedContext, BackendContextEnforcer, ContextEffect};
+use crate::runtime::backend_context::{
+    AppliedContext, BackendContextEnforcer, ContextEffect, enforce_with_mechanism,
+};
+use crate::runtime::executor_utils::build_probe;
+use crate::runtime::executors::http::{HttpClientSpec, env_timeout};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
@@ -54,10 +58,14 @@ pub enum ElasticsearchAuth {
 
 impl ElasticsearchHttpClient {
     /// Construct a client from base URL + auth. Pre-resolves the
-    /// underlying reqwest client with a 30s default timeout matching
+    /// underlying reqwest client with a configurable default timeout matching
     /// the Qdrant / Mongo patterns.
     pub fn new(base_url: impl Into<String>, auth: ElasticsearchAuth) -> Self {
-        Self::with_timeout(base_url, auth, Duration::from_secs(30))
+        Self::with_timeout(
+            base_url,
+            auth,
+            env_timeout("UDB_ELASTICSEARCH_HTTP_TIMEOUT_SECS", 30),
+        )
     }
 
     pub fn with_timeout(
@@ -65,7 +73,7 @@ impl ElasticsearchHttpClient {
         auth: ElasticsearchAuth,
         timeout: Duration,
     ) -> Self {
-        let http = crate::runtime::executors::http::HttpClientSpec::with_timeout(timeout).build();
+        let http = HttpClientSpec::with_timeout(timeout).build();
         Self {
             base_url: base_url.into().trim_end_matches('/').to_string(),
             auth,
@@ -183,7 +191,12 @@ impl ElasticsearchHttpClient {
 /// ES error responses include a JSON body with `error.type` /
 /// `error.reason` that we surface so operators can diagnose.
 fn es_status_to_tonic(status: reqwest::StatusCode, body: &str) -> tonic::Status {
-    // Try to extract `error.reason` from the response body.
+    // Extract the ES-specific `error.reason` from the response body (falling
+    // back to a truncated body), then delegate the status→code mapping to the
+    // shared `http_status_to_tonic` (#21) so pinecone/weaviate/elasticsearch
+    // map HTTP codes identically. Note: this folds `422` into invalid_argument
+    // (the shared `400 | 422` arm), where the prior ES-local mapping treated
+    // 422 as internal — ES does not emit 422 in practice (it uses 400).
     let detail = serde_json::from_str::<JsonValue>(body)
         .ok()
         .and_then(|v| {
@@ -193,19 +206,7 @@ fn es_status_to_tonic(status: reqwest::StatusCode, body: &str) -> tonic::Status 
                 .map(str::to_string)
         })
         .unwrap_or_else(|| body.chars().take(200).collect::<String>());
-    match status.as_u16() {
-        400 => tonic::Status::invalid_argument(format!("Elasticsearch 400: {detail}")),
-        401 | 403 => {
-            tonic::Status::permission_denied(format!("Elasticsearch {}: {detail}", status.as_u16()))
-        }
-        404 => tonic::Status::not_found(format!("Elasticsearch 404: {detail}")),
-        409 => tonic::Status::already_exists(format!("Elasticsearch 409: {detail}")),
-        429 => tonic::Status::resource_exhausted(format!("Elasticsearch 429: {detail}")),
-        500..=599 => {
-            tonic::Status::unavailable(format!("Elasticsearch {}: {detail}", status.as_u16()))
-        }
-        _ => tonic::Status::internal(format!("Elasticsearch {}: {detail}", status.as_u16())),
-    }
+    crate::runtime::executor_utils::http_status_to_tonic(status, &detail, "Elasticsearch")
 }
 
 // ── Executor ────────────────────────────────────────────────────────────
@@ -230,18 +231,13 @@ impl BackendContextEnforcer for ElasticsearchExecutor {
     }
 
     fn enforce(&self, ctx: &AppliedContext) -> ContextEffect {
-        if ctx.is_empty() {
-            return ContextEffect::Advisory {
-                recorded_in: "no_context_to_apply".into(),
-            };
-        }
         // C7/C8: the ES IR compiler stamps `_tenant_id` / `_project_id`
         // on every written document and ANDs them into every read /
         // delete / search / aggregate query.
-        ContextEffect::Enforced {
-            mechanism: "_tenant_id / _project_id stamped on writes; ANDed into bool/must on reads"
-                .into(),
-        }
+        enforce_with_mechanism(
+            ctx,
+            "_tenant_id / _project_id stamped on writes; ANDed into bool/must on reads",
+        )
     }
 }
 
@@ -255,23 +251,9 @@ impl BackendHealth for ElasticsearchExecutor {
 // directly as `{ "path": "...", "method": "POST", "body": {...} }`
 // — the compiler already produced the wire shape, the executor just
 // forwards it.
-fn parse_dispatch(
-    request_json: &str,
-) -> Result<(reqwest::Method, String, JsonValue), tonic::Status> {
-    let req: JsonValue = serde_json::from_str(request_json)
-        .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
-    let path = req
-        .get("path")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| tonic::Status::invalid_argument("missing `path` in dispatch request"))?
-        .to_string();
-    let method_str = req.get("method").and_then(|v| v.as_str()).unwrap_or("POST");
-    let method = method_str
-        .parse::<reqwest::Method>()
-        .map_err(|e| tonic::Status::invalid_argument(format!("bad method '{method_str}': {e}")))?;
-    let body = req.get("body").cloned().unwrap_or(JsonValue::Null);
-    Ok((method, path, body))
-}
+// #21: REST dispatch parsing is shared with pinecone/weaviate via
+// `executor_utils::parse_rest_dispatch` (byte-identical shape).
+use crate::runtime::executor_utils::parse_rest_dispatch as parse_dispatch;
 
 impl QueryExecutor for ElasticsearchExecutor {
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
@@ -380,20 +362,7 @@ impl BackendExecutor for ElasticsearchExecutor {
     }
 
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
-        match self.client.ping().await {
-            Ok(()) => Ok(BackendProbe {
-                backend: "elasticsearch".to_string(),
-                instance: None,
-                ok: true,
-                error: None,
-            }),
-            Err(err) => Ok(BackendProbe {
-                backend: "elasticsearch".to_string(),
-                instance: None,
-                ok: false,
-                error: Some(err),
-            }),
-        }
+        Ok(build_probe("elasticsearch", self.client.ping().await))
     }
 }
 

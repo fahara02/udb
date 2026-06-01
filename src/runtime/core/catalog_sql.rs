@@ -1,5 +1,29 @@
 //! Continuation `impl DataBrokerRuntime` block (Phase F split of core.rs).
 use super::*;
+use crate::control::tracker::DEFAULT_LEDGER_SCHEMA;
+
+/// Structured DB-vs-proto drift finding produced by the pg_catalog verifier.
+///
+/// `kind` uses the same snake_case identifiers the repair planner consumes
+/// (`missing_table`, `missing_column`, `missing_index`, `missing_trigger`,
+/// `rls_enabled_no_policies`) so emergency auto-alter can route *real* live
+/// drift into `plan_repairs` instead of re-linting the proto manifest in
+/// isolation (which can never surface missing-table/column drift) — #133.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ManifestDrift {
+    pub kind: String,
+    pub schema: String,
+    pub table: String,
+    /// Empty when the finding is table-level.
+    pub column: String,
+    /// SQL type from the manifest column (for ADD COLUMN repairs). Empty for
+    /// non-column findings.
+    pub sql_type: String,
+    /// Default-value expression from the manifest column. Empty when none.
+    pub default_value: String,
+    /// Human-readable description (identical to the legacy findings string).
+    pub message: String,
+}
 
 impl DataBrokerRuntime {
     /// GAP 7: Execute SQL artifacts with bounded-parallel schema-level execution.
@@ -33,14 +57,18 @@ impl DataBrokerRuntime {
         allow_parallel: bool,
     ) -> Result<(), tonic::Status> {
         let pool = self.pg_pool()?;
+        let ledger_schema = self.config.migration.ledger_schema.as_str();
+        let schema_migrations = ledger_relation(ledger_schema, "schema_migrations");
 
         // GAP 35 / GAP 44: Load already-applied artifact filename+checksum pairs
         // from the migration ledger. A stable rel_path alone is not enough: the
         // artifact may have changed while keeping the same file name.
         // On the next startup after a partial failure, artifacts that committed
         // successfully with the same content are skipped rather than re-applied.
+        let applied_sql =
+            format!("SELECT filename, checksum FROM {schema_migrations} WHERE state = 'applied'");
         let applied_set: std::collections::HashSet<(String, String)> = match sqlx::query_as(
-            "SELECT filename, checksum FROM public.schema_migrations WHERE state = 'applied'",
+            &applied_sql,
         )
         .fetch_all(pool)
         .await
@@ -96,8 +124,13 @@ impl DataBrokerRuntime {
         if !allow_parallel {
             for artifact in &pending {
                 eprintln!("udb force-sync: applying {}", artifact.rel_path);
-                Self::apply_sql_artifact(pool, artifact, self.config.migration.force_reseed)
-                    .await?;
+                Self::apply_sql_artifact(
+                    pool,
+                    artifact,
+                    self.config.migration.force_reseed,
+                    ledger_schema,
+                )
+                .await?;
                 eprintln!("udb force-sync: applied {}", artifact.rel_path);
             }
             return Ok(());
@@ -115,7 +148,13 @@ impl DataBrokerRuntime {
 
         for artifact in &serial_first {
             eprintln!("udb force-sync: applying {}", artifact.rel_path);
-            Self::apply_sql_artifact(pool, artifact, self.config.migration.force_reseed).await?;
+            Self::apply_sql_artifact(
+                pool,
+                artifact,
+                self.config.migration.force_reseed,
+                ledger_schema,
+            )
+            .await?;
             eprintln!("udb force-sync: applied {}", artifact.rel_path);
         }
 
@@ -132,6 +171,7 @@ impl DataBrokerRuntime {
                 let pool = pool.clone();
                 let sem = sem.clone();
                 let force_reseed = self.config.migration.force_reseed;
+                let ledger_schema = ledger_schema.to_string();
                 async move {
                     // Hold the semaphore permit for the full duration of this DDL.
                     let _permit = sem
@@ -140,7 +180,9 @@ impl DataBrokerRuntime {
                         .expect("DDL semaphore unexpectedly closed");
 
                     eprintln!("udb force-sync: applying {}", artifact.rel_path);
-                    let result = Self::apply_sql_artifact(&pool, artifact, force_reseed).await;
+                    let result =
+                        Self::apply_sql_artifact(&pool, artifact, force_reseed, &ledger_schema)
+                            .await;
                     if result.is_ok() {
                         eprintln!("udb force-sync: applied {}", artifact.rel_path);
                     }
@@ -156,7 +198,13 @@ impl DataBrokerRuntime {
         // Serial pass: cross-schema FK constraints and other final artifacts.
         for artifact in &serial_last {
             eprintln!("udb force-sync: applying {}", artifact.rel_path);
-            Self::apply_sql_artifact(pool, artifact, self.config.migration.force_reseed).await?;
+            Self::apply_sql_artifact(
+                pool,
+                artifact,
+                self.config.migration.force_reseed,
+                ledger_schema,
+            )
+            .await?;
             eprintln!("udb force-sync: applied {}", artifact.rel_path);
         }
         Ok(())
@@ -166,8 +214,10 @@ impl DataBrokerRuntime {
         pool: &PgPool,
         artifact: &GeneratedArtifact,
         force_reseed: bool,
+        ledger_schema: &str,
     ) -> Result<(), tonic::Status> {
         let checksum = artifact_content_checksum(&artifact.content);
+        let schema_migrations = ledger_relation(ledger_schema, "schema_migrations");
         // Use INSERT ... ON CONFLICT DO UPDATE only when the checksum has
         // changed (i.e. the artifact content differs from the previously
         // recorded version).  When the checksum is identical, DO NOTHING
@@ -179,8 +229,11 @@ impl DataBrokerRuntime {
         // active — in that case we still want to re-apply the DDL but we
         // must not reset a cleanly-applied row back to 'in_progress' until
         // we are actually about to execute it.
-        let _ = sqlx::query(
-            "INSERT INTO public.schema_migrations \
+        // Ledger write is best-effort: a transient failure must not abort
+        // startup, but it must not be silent either — a swallowed failure here
+        // leaves the artifact unrecorded and re-applied on the next run.
+        let in_progress_sql = format!(
+            "INSERT INTO {schema_migrations} \
              (filename, checksum, state, migration_kind, proto_manifest_checksum, source_schema, source_table, operation_kind) \
              VALUES ($1, $2, 'in_progress', $3, $4, $5, $6, $7) \
              ON CONFLICT (filename) DO UPDATE SET \
@@ -191,18 +244,26 @@ impl DataBrokerRuntime {
                 source_schema = EXCLUDED.source_schema, \
                 source_table = EXCLUDED.source_table, \
                 operation_kind = EXCLUDED.operation_kind \
-             WHERE public.schema_migrations.checksum IS DISTINCT FROM EXCLUDED.checksum \
-                OR public.schema_migrations.state IS DISTINCT FROM 'applied'",
-        )
-        .bind(&artifact.rel_path)
-        .bind(&checksum)
-        .bind(&artifact.kind)
-        .bind(extract_manifest_checksum(&artifact.content))
-        .bind(&artifact.schema)
-        .bind(&artifact.table)
-        .bind(&artifact.kind)
-        .execute(pool)
-        .await;
+             WHERE {schema_migrations}.checksum IS DISTINCT FROM EXCLUDED.checksum \
+                OR {schema_migrations}.state IS DISTINCT FROM 'applied'"
+        );
+        if let Err(err) = sqlx::query(&in_progress_sql)
+            .bind(&artifact.rel_path)
+            .bind(&checksum)
+            .bind(&artifact.kind)
+            .bind(extract_manifest_checksum(&artifact.content))
+            .bind(&artifact.schema)
+            .bind(&artifact.table)
+            .bind(&artifact.kind)
+            .execute(pool)
+            .await
+        {
+            tracing::warn!(
+                artifact = %artifact.rel_path,
+                error = %err,
+                "failed to record schema_migrations 'in_progress' ledger entry; artifact will re-apply next run",
+            );
+        }
 
         // Large seed files (> 1 MiB) are split into individual ;-terminated
         // statements and executed one at a time.  Sending a 39 MB INSERT as a
@@ -226,23 +287,28 @@ impl DataBrokerRuntime {
             );
             // Resume checkpoint: skip statements already applied in a previous
             // interrupted run (e.g. Windows os error 10053 / WSAECONNABORTED).
-            let start_stmt_idx: usize = if is_seed {
-                Self::ensure_seed_progress_table(pool).await;
+            // (start_stmt_idx, start_row_idx): resume position. start_row_idx is
+            // only meaningful for the statement at start_stmt_idx — rows below it
+            // were committed in a prior interrupted run and must not be replayed.
+            let (start_stmt_idx, start_row_idx): (usize, usize) = if is_seed {
+                Self::ensure_seed_progress_table(pool, ledger_schema).await;
                 if force_reseed {
-                    Self::clear_seed_checkpoint(pool, &artifact.rel_path).await;
-                    0
+                    Self::clear_seed_checkpoint(pool, ledger_schema, &artifact.rel_path).await;
+                    (0, 0)
                 } else {
-                    Self::load_seed_checkpoint(pool, &artifact.rel_path).await
+                    Self::load_seed_checkpoint(pool, ledger_schema, &artifact.rel_path).await
                 }
             } else {
-                0
+                (0, 0)
             };
-            if start_stmt_idx > 0 {
+            if start_stmt_idx > 0 || start_row_idx > 0 {
                 tracing::info!(
                     artifact = %artifact.rel_path,
-                    resuming_from = start_stmt_idx,
-                    "seed resume: skipping {} already-applied statement(s)",
+                    resuming_from_statement = start_stmt_idx,
+                    resuming_from_row = start_row_idx,
+                    "seed resume: skipping {} statement(s); skipping {} row(s) of the resume statement",
                     start_stmt_idx,
+                    start_row_idx,
                 );
             }
             for (idx, stmt) in stmts.iter().enumerate() {
@@ -255,7 +321,13 @@ impl DataBrokerRuntime {
                     match pool.execute(stmt.as_str()).await {
                         Ok(_) => {
                             if is_seed {
-                                Self::save_seed_checkpoint(pool, &artifact.rel_path, idx).await;
+                                Self::save_seed_checkpoint(
+                                    pool,
+                                    ledger_schema,
+                                    &artifact.rel_path,
+                                    idx,
+                                )
+                                .await;
                             }
                             break 'stmt;
                         }
@@ -282,6 +354,13 @@ impl DataBrokerRuntime {
                                     use futures::stream::FuturesUnordered;
                                     const ROW_CHUNK: usize = 8;
                                     let mut first_fatal: Option<(usize, sqlx::Error)> = None;
+                                    // On a mid-statement resume, skip rows already
+                                    // committed in the prior run (row-level resume).
+                                    let row_skip = if idx == start_stmt_idx {
+                                        start_row_idx
+                                    } else {
+                                        0
+                                    };
                                     'chunks: for (chunk_i, chunk) in
                                         row_stmts.chunks(ROW_CHUNK).enumerate()
                                     {
@@ -290,6 +369,9 @@ impl DataBrokerRuntime {
                                             .iter()
                                             .cloned()
                                             .enumerate()
+                                            .filter(|(local_idx, _)| {
+                                                chunk_start + local_idx >= row_skip
+                                            })
                                             .map(|(local_idx, row_stmt)| {
                                                 let p = pool.clone();
                                                 let row_idx = chunk_start + local_idx;
@@ -321,6 +403,23 @@ impl DataBrokerRuntime {
                                         }
                                         if first_fatal.is_some() {
                                             break 'chunks;
+                                        }
+                                        // Chunk fully applied — every row up to
+                                        // chunk_last is committed or skipped. Chunks
+                                        // run in order, so this is a safe contiguous
+                                        // checkpoint. Guard against regressing the
+                                        // checkpoint when an early chunk was entirely
+                                        // below row_skip (already done in a prior run).
+                                        let chunk_last = chunk_start + chunk.len() - 1;
+                                        if chunk_last >= row_skip {
+                                            Self::save_seed_row_checkpoint(
+                                                pool,
+                                                ledger_schema,
+                                                &artifact.rel_path,
+                                                idx,
+                                                chunk_last,
+                                            )
+                                            .await;
                                         }
                                     }
                                     if let Some((row_idx, row_err)) = first_fatal {
@@ -380,7 +479,13 @@ impl DataBrokerRuntime {
                             }
                             // Save checkpoint after per-row retry block completes.
                             if is_seed {
-                                Self::save_seed_checkpoint(pool, &artifact.rel_path, idx).await;
+                                Self::save_seed_checkpoint(
+                                    pool,
+                                    ledger_schema,
+                                    &artifact.rel_path,
+                                    idx,
+                                )
+                                .await;
                             }
                             break 'stmt;
                         }
@@ -418,7 +523,7 @@ impl DataBrokerRuntime {
             }
             // Clear the statement-level checkpoint once the entire artifact succeeds.
             if is_seed {
-                Self::clear_seed_checkpoint(pool, &artifact.rel_path).await;
+                Self::clear_seed_checkpoint(pool, ledger_schema, &artifact.rel_path).await;
             }
         } else {
             pool.execute(artifact.content.as_str())
@@ -439,15 +544,23 @@ impl DataBrokerRuntime {
                 })?;
         }
 
-        let _ = sqlx::query(
-            "UPDATE public.schema_migrations \
+        let applied_sql = format!(
+            "UPDATE {schema_migrations} \
              SET state = 'applied', applied_at = NOW(), checksum = $2 \
-             WHERE filename = $1",
-        )
-        .bind(&artifact.rel_path)
-        .bind(&checksum)
-        .execute(pool)
-        .await;
+             WHERE filename = $1"
+        );
+        if let Err(err) = sqlx::query(&applied_sql)
+            .bind(&artifact.rel_path)
+            .bind(&checksum)
+            .execute(pool)
+            .await
+        {
+            tracing::warn!(
+                artifact = %artifact.rel_path,
+                error = %err,
+                "failed to mark schema_migrations 'applied'; artifact will re-apply next run",
+            );
+        }
         Ok(())
     }
 
@@ -690,60 +803,126 @@ impl DataBrokerRuntime {
 
     /// Ensure the `udb_seed_progress` checkpoint table exists.
     /// Created once per force-sync run; errors are silently ignored.
-    pub(crate) async fn ensure_seed_progress_table(pool: &PgPool) {
-        let _ = pool
-            .execute(
-                "CREATE TABLE IF NOT EXISTS public.udb_seed_progress (\
+    pub(crate) async fn ensure_seed_progress_table(pool: &PgPool, ledger_schema: &str) {
+        let seed_progress = ledger_relation(ledger_schema, "udb_seed_progress");
+        let create_sql = format!(
+            "CREATE TABLE IF NOT EXISTS {seed_progress} (\
                     artifact_path TEXT PRIMARY KEY, \
                     statement_index INTEGER NOT NULL, \
+                    row_index INTEGER NOT NULL DEFAULT -1, \
                     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
-                )",
-            )
-            .await;
+                )"
+        );
+        let _ = pool.execute(create_sql.as_str()).await;
+        // Backfill row_index for checkpoint tables created before row-level
+        // resume existed. -1 means "statement fully applied" (no partial rows).
+        let alter_sql = format!(
+            "ALTER TABLE {seed_progress} \
+             ADD COLUMN IF NOT EXISTS row_index INTEGER NOT NULL DEFAULT -1"
+        );
+        let _ = pool.execute(alter_sql.as_str()).await;
     }
 
-    /// Load the last successfully applied statement index for `artifact_path`.
-    /// Returns the index of the **next** statement to run (checkpoint + 1),
-    /// or 0 if no checkpoint exists.
-    pub(crate) async fn load_seed_checkpoint(pool: &PgPool, artifact_path: &str) -> usize {
-        match sqlx::query_as::<_, (i32,)>(
-            "SELECT statement_index \
-             FROM public.udb_seed_progress \
-             WHERE artifact_path = $1",
-        )
-        .bind(artifact_path)
-        .fetch_optional(pool)
-        .await
+    /// Load the resume position for `artifact_path` as `(stmt_idx, row_idx)`:
+    /// skip statements below `stmt_idx`, and within the statement *at* `stmt_idx`
+    /// skip rows below `row_idx`. Returns `(0, 0)` when no checkpoint exists.
+    ///
+    /// `row_index = -1` in storage means the recorded statement was fully
+    /// applied, so we resume at the next statement (`stmt + 1`, row 0). A
+    /// non-negative `row_index = R` means the statement was only partially
+    /// applied (interrupted mid per-row split), so we re-enter that statement
+    /// and skip rows `<= R`.
+    pub(crate) async fn load_seed_checkpoint(
+        pool: &PgPool,
+        ledger_schema: &str,
+        artifact_path: &str,
+    ) -> (usize, usize) {
+        let seed_progress = ledger_relation(ledger_schema, "udb_seed_progress");
+        let sql = format!(
+            "SELECT statement_index, row_index \
+             FROM {seed_progress} \
+             WHERE artifact_path = $1"
+        );
+        match sqlx::query_as::<_, (i32, i32)>(&sql)
+            .bind(artifact_path)
+            .fetch_optional(pool)
+            .await
         {
-            Ok(Some((idx,))) => (idx as usize).saturating_add(1),
-            _ => 0,
+            Ok(Some((stmt, row))) => {
+                if row < 0 {
+                    ((stmt as usize).saturating_add(1), 0)
+                } else {
+                    (stmt as usize, (row as usize).saturating_add(1))
+                }
+            }
+            _ => (0, 0),
         }
     }
 
-    /// Persist the index of the last successfully applied statement so a
-    /// subsequent interrupted run can resume from the right position.
-    pub(crate) async fn save_seed_checkpoint(pool: &PgPool, artifact_path: &str, stmt_idx: usize) {
-        let _ = sqlx::query(
-            "INSERT INTO public.udb_seed_progress \
-                 (artifact_path, statement_index, updated_at) \
-             VALUES ($1, $2, NOW()) \
+    /// Persist that statement `stmt_idx` was applied **in full** (row_index = -1)
+    /// so a subsequent interrupted run resumes at the next statement.
+    pub(crate) async fn save_seed_checkpoint(
+        pool: &PgPool,
+        ledger_schema: &str,
+        artifact_path: &str,
+        stmt_idx: usize,
+    ) {
+        let seed_progress = ledger_relation(ledger_schema, "udb_seed_progress");
+        let sql = format!(
+            "INSERT INTO {seed_progress} \
+                 (artifact_path, statement_index, row_index, updated_at) \
+             VALUES ($1, $2, -1, NOW()) \
              ON CONFLICT (artifact_path) DO UPDATE SET \
                  statement_index = EXCLUDED.statement_index, \
-                 updated_at = NOW()",
-        )
-        .bind(artifact_path)
-        .bind(stmt_idx as i32)
-        .execute(pool)
-        .await;
+                 row_index = -1, \
+                 updated_at = NOW()"
+        );
+        let _ = sqlx::query(&sql)
+            .bind(artifact_path)
+            .bind(stmt_idx as i32)
+            .execute(pool)
+            .await;
+    }
+
+    /// Persist a **partial** checkpoint: every row up to and including `row_idx`
+    /// of statement `stmt_idx` has been committed or skipped. Used between the
+    /// sequential row-chunks of a split multi-row INSERT so a mid-statement
+    /// interruption resumes without replaying already-committed rows.
+    pub(crate) async fn save_seed_row_checkpoint(
+        pool: &PgPool,
+        ledger_schema: &str,
+        artifact_path: &str,
+        stmt_idx: usize,
+        row_idx: usize,
+    ) {
+        let seed_progress = ledger_relation(ledger_schema, "udb_seed_progress");
+        let sql = format!(
+            "INSERT INTO {seed_progress} \
+                 (artifact_path, statement_index, row_index, updated_at) \
+             VALUES ($1, $2, $3, NOW()) \
+             ON CONFLICT (artifact_path) DO UPDATE SET \
+                 statement_index = EXCLUDED.statement_index, \
+                 row_index = EXCLUDED.row_index, \
+                 updated_at = NOW()"
+        );
+        let _ = sqlx::query(&sql)
+            .bind(artifact_path)
+            .bind(stmt_idx as i32)
+            .bind(row_idx as i32)
+            .execute(pool)
+            .await;
     }
 
     /// Remove the checkpoint for `artifact_path` after it has been fully
     /// and successfully applied so stale data cannot affect future runs.
-    pub(crate) async fn clear_seed_checkpoint(pool: &PgPool, artifact_path: &str) {
-        let _ = sqlx::query("DELETE FROM public.udb_seed_progress WHERE artifact_path = $1")
-            .bind(artifact_path)
-            .execute(pool)
-            .await;
+    pub(crate) async fn clear_seed_checkpoint(
+        pool: &PgPool,
+        ledger_schema: &str,
+        artifact_path: &str,
+    ) {
+        let seed_progress = ledger_relation(ledger_schema, "udb_seed_progress");
+        let sql = format!("DELETE FROM {seed_progress} WHERE artifact_path = $1");
+        let _ = sqlx::query(&sql).bind(artifact_path).execute(pool).await;
     }
 
     /// Returns `true` when the sqlx error represents dirty MySQL export data
@@ -791,6 +970,10 @@ impl DataBrokerRuntime {
     /// This eliminates the 3-5s slow-query warning on cloud/Neon PostgreSQL instances.
     pub async fn load_last_manifest(&self) -> Result<Option<CatalogManifest>, tonic::Status> {
         let pool = self.pg_pool()?;
+        let proto_schema_versions = ledger_relation(
+            &self.config.migration.ledger_schema,
+            "proto_schema_versions",
+        );
         // Pin both queries to one connection so that:
         //  a) Neon cold-start latency is paid once (the first SELECT warms the compute).
         //  b) Phase 2 re-uses the already-warm backend — avoids the 5-9 s cold-start
@@ -800,36 +983,38 @@ impl DataBrokerRuntime {
         })?;
         // Phase 1: fetch only the checksum — covered by the composite index on
         // (applied_at DESC NULLS LAST, id DESC), returning just a TEXT column.
-        let checksum_row: Option<(String,)> = sqlx::query_as(
+        let checksum_sql = format!(
             "SELECT manifest_checksum \
-             FROM public.proto_schema_versions \
+             FROM {proto_schema_versions} \
              ORDER BY applied_at DESC NULLS LAST, id DESC \
-             LIMIT 1",
-        )
-        .fetch_optional(&mut *conn)
-        .await
-        .map_err(|err| {
-            tonic::Status::internal(format!(
-                "proto_schema_versions checksum query failed: {err}"
-            ))
-        })?;
+             LIMIT 1"
+        );
+        let checksum_row: Option<(String,)> = sqlx::query_as(&checksum_sql)
+            .fetch_optional(&mut *conn)
+            .await
+            .map_err(|err| {
+                tonic::Status::internal(format!(
+                    "proto_schema_versions checksum query failed: {err}"
+                ))
+            })?;
         let checksum = match checksum_row {
             None => return Ok(None),
             Some((c,)) => c,
         };
         // Phase 2: fetch full JSON by primary key — always a fast index lookup.
         // Re-uses the same warm connection from phase 1, avoiding a second cold-start.
-        let json_row: Option<(String,)> = sqlx::query_as(
+        let json_sql = format!(
             "SELECT manifest_json::TEXT \
-             FROM public.proto_schema_versions \
-             WHERE manifest_checksum = $1",
-        )
-        .bind(&checksum)
-        .fetch_optional(&mut *conn)
-        .await
-        .map_err(|err| {
-            tonic::Status::internal(format!("proto_schema_versions json query failed: {err}"))
-        })?;
+             FROM {proto_schema_versions} \
+             WHERE manifest_checksum = $1"
+        );
+        let json_row: Option<(String,)> = sqlx::query_as(&json_sql)
+            .bind(&checksum)
+            .fetch_optional(&mut *conn)
+            .await
+            .map_err(|err| {
+                tonic::Status::internal(format!("proto_schema_versions json query failed: {err}"))
+            })?;
         decode_catalog_manifest_row(json_row)
     }
 
@@ -841,32 +1026,41 @@ impl DataBrokerRuntime {
         &self,
     ) -> Result<Option<String>, tonic::Status> {
         let pool = self.pg_pool()?;
-        let exists: bool =
-            sqlx::query_scalar("SELECT to_regclass('public.proto_schema_versions') IS NOT NULL")
-                .fetch_one(pool)
-                .await
-                .map_err(|err| {
-                    tonic::Status::internal(format!(
-                        "proto_schema_versions existence query failed: {err}"
-                    ))
-                })?;
+        let proto_schema_versions = ledger_relation(
+            &self.config.migration.ledger_schema,
+            "proto_schema_versions",
+        );
+        let proto_schema_versions_regclass = ledger_regclass_name(
+            &self.config.migration.ledger_schema,
+            "proto_schema_versions",
+        );
+        let exists: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
+            .bind(proto_schema_versions_regclass)
+            .fetch_one(pool)
+            .await
+            .map_err(|err| {
+                tonic::Status::internal(format!(
+                    "proto_schema_versions existence query failed: {err}"
+                ))
+            })?;
         if !exists {
             return Ok(None);
         }
 
-        sqlx::query_scalar(
+        let checksum_sql = format!(
             "SELECT manifest_checksum \
-             FROM public.proto_schema_versions \
+             FROM {proto_schema_versions} \
              ORDER BY applied_at DESC NULLS LAST, id DESC \
-             LIMIT 1",
-        )
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| {
-            tonic::Status::internal(format!(
-                "proto_schema_versions checksum query failed: {err}"
-            ))
-        })
+             LIMIT 1"
+        );
+        sqlx::query_scalar(&checksum_sql)
+            .fetch_optional(pool)
+            .await
+            .map_err(|err| {
+                tonic::Status::internal(format!(
+                    "proto_schema_versions checksum query failed: {err}"
+                ))
+            })
     }
 
     /// Load a specific manifest by checksum.
@@ -875,17 +1069,22 @@ impl DataBrokerRuntime {
         checksum: &str,
     ) -> Result<Option<CatalogManifest>, tonic::Status> {
         let pool = self.pg_pool()?;
-        let json_row: Option<(String,)> = sqlx::query_as(
+        let proto_schema_versions = ledger_relation(
+            &self.config.migration.ledger_schema,
+            "proto_schema_versions",
+        );
+        let json_sql = format!(
             "SELECT manifest_json::TEXT \
-             FROM public.proto_schema_versions \
-             WHERE manifest_checksum = $1",
-        )
-        .bind(checksum)
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| {
-            tonic::Status::internal(format!("proto_schema_versions json query failed: {err}"))
-        })?;
+             FROM {proto_schema_versions} \
+             WHERE manifest_checksum = $1"
+        );
+        let json_row: Option<(String,)> = sqlx::query_as(&json_sql)
+            .bind(checksum)
+            .fetch_optional(pool)
+            .await
+            .map_err(|err| {
+                tonic::Status::internal(format!("proto_schema_versions json query failed: {err}"))
+            })?;
         decode_catalog_manifest_row(json_row)
     }
 
@@ -899,6 +1098,10 @@ impl DataBrokerRuntime {
         timeout: Duration,
     ) -> Result<Option<CatalogManifest>, tonic::Status> {
         let pool = self.pg_pool()?;
+        let proto_schema_versions = ledger_relation(
+            &self.config.migration.ledger_schema,
+            "proto_schema_versions",
+        );
         let mut tx = pool.begin().await.map_err(|err| {
             tonic::Status::internal(format!(
                 "proto_schema_versions json transaction failed: {err}"
@@ -916,17 +1119,18 @@ impl DataBrokerRuntime {
                 ))
             })?;
 
-        let json_row: Option<(String,)> = sqlx::query_as(
+        let json_sql = format!(
             "SELECT manifest_json::TEXT \
-             FROM public.proto_schema_versions \
-             WHERE manifest_checksum = $1",
-        )
-        .bind(checksum)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|err| {
-            tonic::Status::internal(format!("proto_schema_versions json query failed: {err}"))
-        })?;
+             FROM {proto_schema_versions} \
+             WHERE manifest_checksum = $1"
+        );
+        let json_row: Option<(String,)> = sqlx::query_as(&json_sql)
+            .bind(checksum)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|err| {
+                tonic::Status::internal(format!("proto_schema_versions json query failed: {err}"))
+            })?;
 
         tx.commit().await.map_err(|err| {
             tonic::Status::internal(format!(
@@ -941,74 +1145,157 @@ impl DataBrokerRuntime {
     /// Called at the end of every successful migration run so that the next run can
     /// compute a precise diff and generate only the delta ALTER statements needed.
     pub async fn save_manifest(&self, manifest: &CatalogManifest) -> Result<(), tonic::Status> {
+        self.save_manifest_inner(manifest, None).await
+    }
+
+    /// Save the manifest only if the applied-manifest ledger still matches the
+    /// checksum observed before the migration run began.
+    ///
+    /// This closes the apply→verify→save TOCTOU window: if another UDB instance
+    /// advances `proto_schema_versions` while this instance is applying or
+    /// verifying, the save aborts instead of overwriting the newer manifest's
+    /// `applied_at` ordering.
+    pub async fn save_manifest_if_latest(
+        &self,
+        manifest: &CatalogManifest,
+        expected_latest_checksum: Option<&str>,
+    ) -> Result<(), tonic::Status> {
+        self.save_manifest_inner(manifest, Some(expected_latest_checksum))
+            .await
+    }
+
+    async fn save_manifest_inner(
+        &self,
+        manifest: &CatalogManifest,
+        expected_latest_checksum: Option<Option<&str>>,
+    ) -> Result<(), tonic::Status> {
         let pool = self.pg_pool()?;
+        let proto_schema_versions = ledger_relation(
+            &self.config.migration.ledger_schema,
+            "proto_schema_versions",
+        );
 
         // Acquire one connection and hold it for all operations so that the
         // ping and the INSERT (or UPDATE) share the same backend.  This
         // prevents sqlx from giving us a different, potentially dead
         // connection from the pool for the heavy write after the ping.
-        let mut conn = pool.acquire().await.map_err(|err| {
-            tonic::Status::internal(format!("save_manifest: acquire failed: {err}"))
+        let mut tx = pool.begin().await.map_err(|err| {
+            tonic::Status::internal(format!("save_manifest: transaction begin failed: {err}"))
         })?;
 
-        // Warm up this specific connection before the write.  Neon serverless
-        // can silently kill the server-side backend while the pool holds the
-        // socket open; a cheap ping forces reconnection at a predictable cost.
-        let _ = sqlx::query("SELECT 1").execute(&mut *conn).await;
+        // Serialize the latest-check and save against other lifecycle writers.
+        let lock_sql = format!("LOCK TABLE {proto_schema_versions} IN SHARE ROW EXCLUSIVE MODE");
+        sqlx::query(&lock_sql)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| {
+                tonic::Status::internal(format!("proto_schema_versions lock failed: {err}"))
+            })?;
+
+        let latest_sql = format!(
+            "SELECT manifest_checksum \
+             FROM {proto_schema_versions} \
+             ORDER BY applied_at DESC NULLS LAST, id DESC \
+             LIMIT 1"
+        );
+        let latest_checksum: Option<String> = sqlx::query_scalar(&latest_sql)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|err| {
+                tonic::Status::internal(format!(
+                    "proto_schema_versions latest checksum query failed: {err}"
+                ))
+            })?;
+        if let Some(expected_latest_checksum) = expected_latest_checksum
+            && latest_checksum.as_deref() != expected_latest_checksum
+        {
+            return Err(tonic::Status::aborted(format!(
+                "manifest ledger advanced during migration lifecycle: expected latest checksum {:?}, found {:?}",
+                expected_latest_checksum, latest_checksum
+            )));
+        }
 
         // If the manifest checksum is already recorded, only touch `applied_at`.
         // The manifest JSON for a given checksum is immutable, so re-inserting
         // the full multi-MB JSONB document on every run is wasteful and is the
         // dominant cause of the slow-statement warning on Neon.
-        let already_exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM public.proto_schema_versions WHERE manifest_checksum = $1)",
-        )
-        .bind(&manifest.checksum_sha256)
-        .fetch_one(&mut *conn)
-        .await
-        .unwrap_or(false);
+        let exists_sql = format!(
+            "SELECT EXISTS(SELECT 1 FROM {proto_schema_versions} WHERE manifest_checksum = $1)"
+        );
+        let already_exists: bool = sqlx::query_scalar(&exists_sql)
+            .bind(&manifest.checksum_sha256)
+            .fetch_one(&mut *tx)
+            .await
+            .unwrap_or(false);
 
         if already_exists {
-            sqlx::query(
-                "UPDATE public.proto_schema_versions
+            let update_sql = format!(
+                "UPDATE {proto_schema_versions}
                  SET applied_at = NOW()
-                 WHERE manifest_checksum = $1",
-            )
-            .bind(&manifest.checksum_sha256)
-            .execute(&mut *conn)
-            .await
-            .map_err(|err| {
-                tonic::Status::internal(format!("proto_schema_versions touch failed: {err}"))
+                 WHERE manifest_checksum = $1"
+            );
+            sqlx::query(&update_sql)
+                .bind(&manifest.checksum_sha256)
+                .execute(&mut *tx)
+                .await
+                .map_err(|err| {
+                    tonic::Status::internal(format!("proto_schema_versions touch failed: {err}"))
+                })?;
+            tx.commit().await.map_err(|err| {
+                tonic::Status::internal(format!("proto_schema_versions touch commit failed: {err}"))
             })?;
             return Ok(());
         }
 
         let json = serde_json::to_string(manifest)
             .map_err(|err| tonic::Status::internal(format!("manifest serialise failed: {err}")))?;
-        sqlx::query(
-            "INSERT INTO public.proto_schema_versions
+        let insert_sql = format!(
+            "INSERT INTO {proto_schema_versions}
                  (manifest_checksum, manifest_json, generator_version, applied_at)
              VALUES ($1, $2::jsonb, $3, NOW())
              ON CONFLICT (manifest_checksum) DO UPDATE
-                 SET applied_at = NOW()",
-        )
-        .bind(&manifest.checksum_sha256)
-        .bind(&json)
-        .bind(&manifest.generator_version)
-        .execute(&mut *conn)
-        .await
-        .map_err(|err| {
-            tonic::Status::internal(format!("proto_schema_versions upsert failed: {err}"))
+                 SET applied_at = NOW()"
+        );
+        sqlx::query(&insert_sql)
+            .bind(&manifest.checksum_sha256)
+            .bind(&json)
+            .bind(&manifest.generator_version)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| {
+                tonic::Status::internal(format!("proto_schema_versions upsert failed: {err}"))
+            })?;
+        tx.commit().await.map_err(|err| {
+            tonic::Status::internal(format!("proto_schema_versions upsert commit failed: {err}"))
         })?;
         Ok(())
     }
 
+    /// Verify the live PostgreSQL schema against the manifest, returning
+    /// human-readable drift findings. Thin string wrapper over
+    /// [`verify_postgres_manifest_drift`] preserving the historical output shape
+    /// used by the startup fail-closed path and its tests.
     pub async fn verify_postgres_manifest(
         &self,
         manifest: &CatalogManifest,
     ) -> Result<Vec<String>, tonic::Status> {
+        Ok(self
+            .verify_postgres_manifest_drift(manifest)
+            .await?
+            .into_iter()
+            .map(|d| d.message)
+            .collect())
+    }
+
+    /// Verify the live PostgreSQL schema against the manifest, returning
+    /// **structured** drift findings keyed by repair `kind`. Used by emergency
+    /// auto-alter (#133) to feed real DB-vs-proto drift into `plan_repairs`.
+    pub async fn verify_postgres_manifest_drift(
+        &self,
+        manifest: &CatalogManifest,
+    ) -> Result<Vec<ManifestDrift>, tonic::Status> {
         let pool = self.pg_pool()?;
-        let mut findings = Vec::new();
+        let mut drift = Vec::new();
 
         // Collect all expected schema names so we can scope the bulk queries.
         let schemas: Vec<&str> = manifest
@@ -1046,13 +1333,22 @@ impl DataBrokerRuntime {
         //   'i' → (schema, table, index_name)  — index exists
         //   'g' → (schema, table, trigger_name)— trigger exists
         //   'r' → (schema, table, "rls")       — RLS enabled on table
-        // Set statement_timeout for this query only. SET LOCAL only takes effect
-        // inside a transaction; outside one, use SET + reset after to avoid
-        // leaking the timeout to the next pool borrower.
-        // We use a plain SET here and reset after the query completes.
-        let _ = sqlx::query("SET statement_timeout = '60s'")
-            .execute(pool)
-            .await;
+        // Run introspection inside a transaction with SET LOCAL so the elevated
+        // statement_timeout is scoped to this connection and auto-resets on
+        // commit. A plain pool-level SET + reset could leak the timeout to the
+        // next pool borrower, because the reset may land on a different
+        // connection than the one that ran the query.
+        let mut introspection_tx = pool.begin().await.map_err(|err| {
+            tonic::Status::internal(format!(
+                "pg_catalog introspection: failed to begin transaction: {err}"
+            ))
+        })?;
+        if let Err(err) = sqlx::query("SET LOCAL statement_timeout = '60s'")
+            .execute(&mut *introspection_tx)
+            .await
+        {
+            tracing::warn!(error = %err, "failed to set statement_timeout for pg_catalog introspection");
+        }
         let introspection_rows: Vec<(String, String, String, String)> =
             sqlx::query_as::<_, (String, String, String, String)>(
                 r#"
@@ -1121,15 +1417,16 @@ SELECT kind, schema_name, table_name, extra FROM (
             )
             .bind(&schemas)
             .bind(&table_names)
-            .fetch_all(pool)
+            .fetch_all(&mut *introspection_tx)
             .await
             .map_err(|err| {
                 tonic::Status::internal(format!("pg_catalog schema introspection failed: {err}"))
             })?;
-        // Reset statement_timeout to default so this pool connection is safe to reuse.
-        let _ = sqlx::query("SET statement_timeout = DEFAULT")
-            .execute(pool)
-            .await;
+        introspection_tx.commit().await.map_err(|err| {
+            tonic::Status::internal(format!(
+                "pg_catalog introspection: failed to commit transaction: {err}"
+            ))
+        })?;
 
         let mut existing_tables: std::collections::HashSet<(String, String)> =
             std::collections::HashSet::new();
@@ -1166,10 +1463,15 @@ SELECT kind, schema_name, table_name, extra FROM (
         // ── 4. Diff in memory ────────────────────────────────────────────────
         for table in &manifest.tables {
             if !existing_tables.contains(&(table.schema.clone(), table.table.clone())) {
-                findings.push(format!(
-                    "missing PostgreSQL table {}.{}",
-                    table.schema, table.table
-                ));
+                drift.push(ManifestDrift {
+                    kind: "missing_table".to_string(),
+                    schema: table.schema.clone(),
+                    table: table.table.clone(),
+                    column: String::new(),
+                    sql_type: String::new(),
+                    default_value: String::new(),
+                    message: format!("missing PostgreSQL table {}.{}", table.schema, table.table),
+                });
                 continue;
             }
             for column in &table.columns {
@@ -1178,10 +1480,18 @@ SELECT kind, schema_name, table_name, extra FROM (
                     table.table.clone(),
                     column.column_name.clone(),
                 )) {
-                    findings.push(format!(
-                        "missing PostgreSQL column {}.{}.{}",
-                        table.schema, table.table, column.column_name
-                    ));
+                    drift.push(ManifestDrift {
+                        kind: "missing_column".to_string(),
+                        schema: table.schema.clone(),
+                        table: table.table.clone(),
+                        column: column.column_name.clone(),
+                        sql_type: column.sql_type.clone(),
+                        default_value: column.default_value.clone(),
+                        message: format!(
+                            "missing PostgreSQL column {}.{}.{}",
+                            table.schema, table.table, column.column_name
+                        ),
+                    });
                 }
             }
 
@@ -1198,10 +1508,18 @@ SELECT kind, schema_name, table_name, extra FROM (
                     index.name.clone()
                 };
                 if !existing_indexes.contains(&index_name) {
-                    findings.push(format!(
-                        "missing index {} on {}.{}",
-                        index_name, table.schema, table.table
-                    ));
+                    drift.push(ManifestDrift {
+                        kind: "missing_index".to_string(),
+                        schema: table.schema.clone(),
+                        table: table.table.clone(),
+                        column: index.columns.join(","),
+                        sql_type: String::new(),
+                        default_value: String::new(),
+                        message: format!(
+                            "missing index {} on {}.{}",
+                            index_name, table.schema, table.table
+                        ),
+                    });
                 }
             }
 
@@ -1212,10 +1530,18 @@ SELECT kind, schema_name, table_name, extra FROM (
                     table.table.clone(),
                     trigger.name.clone(),
                 )) {
-                    findings.push(format!(
-                        "missing trigger {} on {}.{}",
-                        trigger.name, table.schema, table.table
-                    ));
+                    drift.push(ManifestDrift {
+                        kind: "missing_trigger".to_string(),
+                        schema: table.schema.clone(),
+                        table: table.table.clone(),
+                        column: String::new(),
+                        sql_type: String::new(),
+                        default_value: String::new(),
+                        message: format!(
+                            "missing trigger {} on {}.{}",
+                            trigger.name, table.schema, table.table
+                        ),
+                    });
                 }
             }
 
@@ -1223,15 +1549,23 @@ SELECT kind, schema_name, table_name, extra FROM (
             if !table.rls_policies.is_empty()
                 && !rls_enabled_tables.contains(&(table.schema.clone(), table.table.clone()))
             {
-                findings.push(format!(
-                    "RLS not enabled on {}.{} but {} polic(ies) declared",
-                    table.schema,
-                    table.table,
-                    table.rls_policies.len()
-                ));
+                drift.push(ManifestDrift {
+                    kind: "rls_enabled_no_policies".to_string(),
+                    schema: table.schema.clone(),
+                    table: table.table.clone(),
+                    column: String::new(),
+                    sql_type: String::new(),
+                    default_value: String::new(),
+                    message: format!(
+                        "RLS not enabled on {}.{} but {} polic(ies) declared",
+                        table.schema,
+                        table.table,
+                        table.rls_policies.len()
+                    ),
+                });
             }
         }
-        Ok(findings)
+        Ok(drift)
     }
 
     pub async fn cdc_outbox_metrics(&self) -> Result<(f64, i64), tonic::Status> {
@@ -1356,4 +1690,33 @@ SELECT kind, schema_name, table_name, extra FROM (
             "UDB startup drift detected"
         );
     }
+}
+
+fn ledger_relation(schema: &str, table: &str) -> String {
+    format!(
+        "{}.{}",
+        pg_ident(normalize_ledger_schema(schema)),
+        pg_ident(table)
+    )
+}
+
+fn ledger_regclass_name(schema: &str, table: &str) -> String {
+    format!(
+        "{}.{}",
+        pg_ident(normalize_ledger_schema(schema)),
+        pg_ident(table)
+    )
+}
+
+fn normalize_ledger_schema(schema: &str) -> &str {
+    let schema = schema.trim();
+    if schema.is_empty() {
+        DEFAULT_LEDGER_SCHEMA
+    } else {
+        schema
+    }
+}
+
+fn pg_ident(value: &str) -> String {
+    format!("\"{}\"", value.replace('"', "\"\""))
 }

@@ -3,16 +3,20 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::ast::ProtoSchema;
+use crate::control::auto_alter::{LintInput, plan_repairs};
+use crate::control::plan_approval::{
+    ApprovalConfig, ApprovedPlan, ExportedPlan, plan_matches_current_diff,
+};
 use crate::db_ops_sync::{discover_db_ops_root, resolve_seeders_dir};
 use crate::engine::{Engine, FsmState};
 use crate::generation::{
-    CatalogManifest, DsnGenerationConfig, LintSeverity, SqlGenerationConfig,
+    CatalogManifest, DsnGenerationConfig, GeneratedArtifact, LintSeverity, SqlGenerationConfig,
     generate_bootstrap_sql, generate_delta_sql, generate_unified_dsn_catalog,
 };
-use crate::migration::diff::diff_manifests;
-use crate::provisioning::build_provisioning_plan;
+use crate::migration::diff::{ChangeOperation, ChangeSafety, diff_manifests};
+use crate::provisioning::try_build_provisioning_plan;
 use crate::runtime::DataBrokerRuntime;
-use crate::tracker::all_tracker_ddl_sql;
+use crate::tracker::all_tracker_ddl_sql_for_schema;
 use crate::{lint_catalog, schema_checksum};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -34,6 +38,15 @@ pub struct StartupLifecycleReport {
     pub errors: Vec<String>,
     /// SQL artifact bodies included when dry_run = true.
     pub dry_run_plan: Vec<String>,
+    pub migration_metric_operations: Vec<MigrationMetricOperation>,
+    pub pending_migration_files: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct MigrationMetricOperation {
+    pub kind: String,
+    pub schema: String,
+    pub safety: String,
 }
 
 impl StartupLifecycleReport {
@@ -44,7 +57,96 @@ impl StartupLifecycleReport {
     }
 }
 
+fn record_change_metric_operations(
+    report: &mut StartupLifecycleReport,
+    changes: &[ChangeOperation],
+) {
+    for change in changes {
+        report
+            .migration_metric_operations
+            .push(MigrationMetricOperation {
+                kind: format!("{:?}", change.kind).to_ascii_lowercase(),
+                schema: if change.schema.trim().is_empty() {
+                    "default".to_string()
+                } else {
+                    change.schema.clone()
+                },
+                safety: match change.safety {
+                    ChangeSafety::SafeAuto => "auto",
+                    ChangeSafety::RequiresReview => "requires_review",
+                    ChangeSafety::Blocked => "blocked",
+                }
+                .to_string(),
+            });
+    }
+}
+
+/// Run the startup migration lifecycle and POST the configured migration
+/// notification webhook (completed / failed) on the way out — wiring the
+/// previously dead `control::notification` surface the legacy Go service used to
+/// send. Best-effort: the webhook never affects the lifecycle result (#138).
 pub async fn run_startup_lifecycle(
+    runtime: &DataBrokerRuntime,
+    manifest: &CatalogManifest,
+    schemas: &[ProtoSchema],
+    force_sync: bool,
+    dry_run: bool,
+) -> Result<StartupLifecycleReport, String> {
+    let result = run_startup_lifecycle_core(runtime, manifest, schemas, force_sync, dry_run).await;
+    #[cfg(feature = "http-client")]
+    send_lifecycle_webhook(runtime, &result).await;
+    result
+}
+
+/// Best-effort migration completion webhook: builds a [`NotificationConfig`]
+/// from `MigrationOptions.notification_url`/`notification_on` and POSTs the
+/// completed/failed payload when the operator opted into that event (#138).
+#[cfg(feature = "http-client")]
+async fn send_lifecycle_webhook(
+    runtime: &DataBrokerRuntime,
+    result: &Result<StartupLifecycleReport, String>,
+) {
+    use crate::control::notification::{NotificationConfig, NotificationEvent};
+    let migration = &runtime.config().migration;
+    let cfg = NotificationConfig::new(
+        migration.notification_url.clone(),
+        &migration.notification_on,
+    );
+    if cfg.url.trim().is_empty() {
+        return;
+    }
+    let payload = match result {
+        Ok(report) => {
+            if !cfg.wants_event(&NotificationEvent::Completed) {
+                return;
+            }
+            cfg.completed_payload(&report.run_id)
+        }
+        Err(err) => {
+            if !cfg.wants_event(&NotificationEvent::Failed) {
+                return;
+            }
+            // The error may be a serialized report (carries run_id) or a plain
+            // message; recover the run_id when possible.
+            let run_id = serde_json::from_str::<StartupLifecycleReport>(err)
+                .map(|r| r.run_id)
+                .unwrap_or_else(|_| "unknown".to_string());
+            cfg.failed_payload(&run_id, err, "")
+        }
+    };
+    let client = reqwest::Client::new();
+    if let Err(e) = client
+        .post(&cfg.url)
+        .json(&payload)
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await
+    {
+        tracing::warn!(url = %cfg.url, error = %e, "migration completion webhook POST failed (best-effort)");
+    }
+}
+
+async fn run_startup_lifecycle_core(
     runtime: &DataBrokerRuntime,
     manifest: &CatalogManifest,
     schemas: &[ProtoSchema],
@@ -53,6 +155,16 @@ pub async fn run_startup_lifecycle(
     // pre-flight review in production environments.
     dry_run: bool,
 ) -> Result<StartupLifecycleReport, String> {
+    // Native services (auth, …) migrate through this same diff/apply engine:
+    // merge their proto-derived schemas into the catalog so their tables are
+    // created/altered exactly like user tables. Proto is the single source of
+    // truth — there is no separate hand-written DDL path. No-op when native
+    // services are disabled or the merge fails.
+    let (merged_manifest, merged_schemas) =
+        crate::runtime::native_catalog::merge_native(manifest, schemas);
+    let manifest: &CatalogManifest = &merged_manifest;
+    let schemas: &[ProtoSchema] = &merged_schemas;
+
     let mut engine = Engine::new_auto_id();
     let mut report = StartupLifecycleReport {
         run_id: engine.run_id.clone(),
@@ -225,7 +337,7 @@ pub async fn run_startup_lifecycle(
         // Execute tracker DDL on the same connection that holds the advisory lock.
         // We split on ";\n" and run each statement individually since sqlx does
         // not support executing multi-statement strings on a PoolConnection directly.
-        for stmt in all_tracker_ddl_sql()
+        for stmt in all_tracker_ddl_sql_for_schema(&runtime.config().migration.ledger_schema)
             .split(";\n")
             .map(str::trim)
             .filter(|s| !s.is_empty())
@@ -255,10 +367,20 @@ pub async fn run_startup_lifecycle(
             }
         }
         // Release the advisory lock on the same connection that holds it.
-        let _ = sqlx::query("SELECT pg_advisory_unlock($1)")
+        // A failed unlock is self-healing (PostgreSQL drops session-level
+        // advisory locks when the backend disconnects), but record it so an
+        // operator can see it rather than having it vanish silently.
+        if let Err(err) = sqlx::query("SELECT pg_advisory_unlock($1)")
             .bind(PG_ADVISORY_LOCK_KEY)
             .execute(&mut *conn)
-            .await;
+            .await
+        {
+            report.warnings.push(format!(
+                "failed to release startup advisory session-lock ({:#x}): {err} \
+                 (PostgreSQL will free it on backend disconnect)",
+                PG_ADVISORY_LOCK_KEY
+            ));
+        }
         report.step(
             FsmState::Initialising,
             format!(
@@ -327,7 +449,8 @@ pub async fn run_startup_lifecycle(
     )?;
     let dsn_catalog = generate_unified_dsn_catalog(schemas, &DsnGenerationConfig::default())
         .map_err(|err| fail(runtime, &mut report, "dsn_catalog", err.to_string()))?;
-    let provisioning_plan = build_provisioning_plan(manifest, &dsn_catalog.entries);
+    let provisioning_plan = try_build_provisioning_plan(manifest, &dsn_catalog.entries)
+        .map_err(|err| fail(runtime, &mut report, "provisioning_plan", err))?;
 
     // Load the prior manifest here — before SQL generation — so we can skip the
     // bootstrap apply entirely when the proto checksum is unchanged.  Previously
@@ -376,25 +499,60 @@ pub async fn run_startup_lifecycle(
     // Supabase, RDS) on every run wastes 5-30 s and produces noisy slow-query
     // warnings.
     //
-    // force_sync bypasses the outer checksum check only when
-    // migration.force_reseed=true, which allows an operator to force a full
-    // re-apply after manual schema edits or a DB restore. Without force_reseed,
-    // force_sync still
-    // skips bootstrap when the checksum is unchanged — the schema_migrations
-    // ledger's per-artifact applied_set already provides idempotency protection
-    // for partial-failure recovery, which is what force_sync is primarily for.
+    // force_sync and force_reseed both bypass the checksum shortcut. force_sync
+    // is an operator assertion that live state may need reconciliation even when
+    // the proto checksum is unchanged; the schema_migrations ledger's
+    // per-artifact applied_set still protects partial-failure recovery.
+    // Pre-migrate hook: execute the operator's SQL file before any migration
+    // SQL is applied. A failure here aborts the run (fail-closed).
+    let pre_hook = runtime
+        .config()
+        .migration
+        .pre_migrate_sql
+        .trim()
+        .to_string();
+    if !pre_hook.is_empty() && !dry_run {
+        match fs::read_to_string(&pre_hook) {
+            Ok(sql) => {
+                runtime
+                    .execute_raw_sql(&sql, "pre_migrate_sql hook")
+                    .await
+                    .map_err(|err| {
+                        fail(
+                            runtime,
+                            &mut report,
+                            "pre_migrate_hook",
+                            format!("pre-migrate hook {pre_hook} failed: {err}"),
+                        )
+                    })?;
+                report.step(
+                    FsmState::Applying,
+                    format!("ran pre-migrate hook {pre_hook}"),
+                );
+            }
+            Err(err) => {
+                return Err(fail(
+                    runtime,
+                    &mut report,
+                    "pre_migrate_hook",
+                    format!("cannot read pre-migrate hook {pre_hook}: {err}"),
+                ));
+            }
+        }
+    }
+
     let force_reseed = runtime.config().migration.force_reseed;
-    if checksum_unchanged && !force_reseed {
+    if checksum_unchanged && !force_reseed && !force_sync {
         report.step(
             FsmState::Applying,
             if dry_run {
                 format!(
-                    "proto checksum {} unchanged — DRY RUN would skip bootstrap SQL apply (set migration.force_reseed=true to override)",
+                    "proto checksum {} unchanged — DRY RUN would skip bootstrap SQL apply (set migration.force_reseed=true or force_sync=true to override)",
                     &manifest.checksum_sha256[..8.min(manifest.checksum_sha256.len())]
                 )
             } else {
                 format!(
-                    "proto checksum {} unchanged — skipping bootstrap SQL apply (set migration.force_reseed=true to override)",
+                    "proto checksum {} unchanged — skipping bootstrap SQL apply (set migration.force_reseed=true or force_sync=true to override)",
                     &manifest.checksum_sha256[..8.min(manifest.checksum_sha256.len())]
                 )
             },
@@ -403,6 +561,24 @@ pub async fn run_startup_lifecycle(
     } else {
         let sql_artifacts = generate_bootstrap_sql(schemas, &SqlGenerationConfig::default())
             .map_err(|err| fail(runtime, &mut report, "generate_sql", err.to_string()))?;
+        report.pending_migration_files = if dry_run {
+            sql_artifacts.len() as i64
+        } else {
+            0
+        };
+        for artifact in &sql_artifacts {
+            report
+                .migration_metric_operations
+                .push(MigrationMetricOperation {
+                    kind: if artifact.kind.trim().is_empty() {
+                        "bootstrap_sql".to_string()
+                    } else {
+                        artifact.kind.clone()
+                    },
+                    schema: artifact.schema.clone(),
+                    safety: "auto".to_string(),
+                });
+        }
 
         // GAP 8: In dry-run mode, collect artifact SQL for the plan report instead of executing.
         if dry_run {
@@ -570,7 +746,110 @@ pub async fn run_startup_lifecycle(
     match &prior_manifest {
         Some(prior) if prior.checksum_sha256 != manifest.checksum_sha256 => {
             let changes = diff_manifests(Some(prior), manifest);
+            record_change_metric_operations(&mut report, &changes);
+
+            // Fail-closed: a RequiresReview/Blocked change must never be silently
+            // dropped while the manifest checksum advances — that would mark the
+            // migration "done" and never retry it. Surface them and abort so an
+            // operator handles the change explicitly (apply manually / approve).
+            if !dry_run {
+                let needs_review: Vec<String> = changes
+                    .iter()
+                    .filter(|c| c.safety != ChangeSafety::SafeAuto)
+                    .map(|c| {
+                        format!(
+                            "{:?} {}.{}({}) [{:?}: {}]",
+                            c.kind, c.schema, c.table, c.column, c.safety, c.blocked_reason
+                        )
+                    })
+                    .collect();
+                if !needs_review.is_empty() {
+                    return Err(fail(
+                        runtime,
+                        &mut report,
+                        "blocked_schema_change",
+                        format!(
+                            "{} schema change(s) require manual review and cannot be auto-applied: {}",
+                            needs_review.len(),
+                            needs_review.join("; ")
+                        ),
+                    ));
+                }
+            }
+
+            // Approval gate: when an approved-plan file is configured the current
+            // diff must exactly match it before any DDL is applied (four-eyes).
+            let approval_plan_path = runtime
+                .config()
+                .migration
+                .require_approval_plan
+                .trim()
+                .to_string();
+            if !approval_plan_path.is_empty() && !dry_run {
+                let raw = fs::read_to_string(&approval_plan_path).map_err(|err| {
+                    fail(
+                        runtime,
+                        &mut report,
+                        "load_approved_plan",
+                        format!("cannot read approved plan {approval_plan_path}: {err}"),
+                    )
+                })?;
+                // Prefer the SEALED quorum format (ApprovedPlan = ExportedPlan +
+                // HMAC signatures + expiry + seal). When the file is a sealed
+                // plan carrying at least one signature, enforce the full
+                // four-eyes check (signatures + freshness + diff match) via
+                // ready_to_apply using the UDB_APPROVAL_* config. Otherwise fall
+                // back to a bare ExportedPlan + count/hash diff match (the
+                // single-signer / Git-PR model).
+                let sealed: Option<ApprovedPlan> = serde_json::from_str::<ApprovedPlan>(&raw)
+                    .ok()
+                    .filter(|p| !p.signatures.is_empty());
+                let verdict = if let Some(sealed) = sealed {
+                    let now_ms = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_millis() as i64)
+                        .unwrap_or(0);
+                    sealed
+                        .ready_to_apply(&ApprovalConfig::from_env(), manifest, &changes, now_ms)
+                        .map_err(|err| {
+                            fail(
+                                runtime,
+                                &mut report,
+                                "approval_plan_rejected",
+                                format!(
+                                    "sealed approval plan {approval_plan_path} rejected: {err:?}"
+                                ),
+                            )
+                        })?
+                } else {
+                    let approved: ExportedPlan = serde_json::from_str(&raw).map_err(|err| {
+                        fail(
+                            runtime,
+                            &mut report,
+                            "load_approved_plan",
+                            format!("approved plan {approval_plan_path} is not valid JSON: {err}"),
+                        )
+                    })?;
+                    plan_matches_current_diff(&approved, manifest, &changes)
+                };
+                if !verdict.is_match() {
+                    return Err(fail(
+                        runtime,
+                        &mut report,
+                        "approval_plan_mismatch",
+                        format!(
+                            "current diff does not match approved plan {approval_plan_path}: {verdict:?}"
+                        ),
+                    ));
+                }
+                report.step(
+                    FsmState::Applying,
+                    format!("approved plan {approval_plan_path} accepted (diff matches)"),
+                );
+            }
+
             let delta = generate_delta_sql(manifest, &changes, &SqlGenerationConfig::default());
+            report.pending_migration_files = if dry_run { delta.len() as i64 } else { 0 };
             report.step(
                 FsmState::Applying,
                 format!(
@@ -592,21 +871,45 @@ pub async fn run_startup_lifecycle(
                 let db_ops_root = resolve_db_ops_root(runtime);
                 let bootstrap_dir = db_ops_root.join("postgres").join("bootstrap");
                 match std::fs::create_dir_all(&bootstrap_dir) {
-                    Err(err) => report.warnings.push(format!(
-                        "could not create bootstrap dir {}: {err}",
-                        bootstrap_dir.display()
-                    )),
+                    Err(err) => {
+                        return Err(fail(
+                            runtime,
+                            &mut report,
+                            "write_bootstrap_artifacts",
+                            format!(
+                                "could not create bootstrap dir {}: {err}",
+                                bootstrap_dir.display()
+                            ),
+                        ));
+                    }
                     Ok(()) => {
                         for artifact in &delta {
                             let dest = bootstrap_dir.join(&artifact.rel_path);
                             if let Some(parent) = dest.parent() {
-                                let _ = std::fs::create_dir_all(parent);
+                                std::fs::create_dir_all(parent).map_err(|err| {
+                                    fail(
+                                        runtime,
+                                        &mut report,
+                                        "write_bootstrap_artifacts",
+                                        format!(
+                                            "could not create bootstrap artifact dir {}: {err}",
+                                            parent.display()
+                                        ),
+                                    )
+                                })?;
                             }
                             match std::fs::write(&dest, artifact.content.as_bytes()) {
-                                Err(err) => report.warnings.push(format!(
-                                    "could not write bootstrap artifact {}: {err}",
-                                    artifact.rel_path
-                                )),
+                                Err(err) => {
+                                    return Err(fail(
+                                        runtime,
+                                        &mut report,
+                                        "write_bootstrap_artifacts",
+                                        format!(
+                                            "could not write bootstrap artifact {}: {err}",
+                                            artifact.rel_path
+                                        ),
+                                    ));
+                                }
                                 Ok(()) => report.step(
                                     FsmState::Applying,
                                     format!("wrote bootstrap/{}", artifact.rel_path),
@@ -669,43 +972,88 @@ pub async fn run_startup_lifecycle(
         report.applied_sql_artifacts += seed_artifacts.len();
     }
 
+    // Post-migrate hook: execute the operator's SQL file after all migrations
+    // and seeds. A failure here is non-fatal (logged as a warning).
+    let post_hook = runtime
+        .config()
+        .migration
+        .post_migrate_sql
+        .trim()
+        .to_string();
+    if !post_hook.is_empty() && !dry_run {
+        match fs::read_to_string(&post_hook) {
+            Ok(sql) => match runtime.execute_raw_sql(&sql, "post_migrate_sql hook").await {
+                Ok(()) => report.step(
+                    FsmState::Applying,
+                    format!("ran post-migrate hook {post_hook}"),
+                ),
+                Err(err) => report
+                    .warnings
+                    .push(format!("post-migrate hook {post_hook} failed: {err}")),
+            },
+            Err(err) => report
+                .warnings
+                .push(format!("cannot read post-migrate hook {post_hook}: {err}")),
+        }
+    }
+
     transition(
         &mut engine,
         &mut report,
         FsmState::Verifying,
         "verifying live backend topology",
     )?;
-    // Skip the expensive pg_catalog introspection query (1-2s on cloud PG)
-    // when the proto checksum is unchanged and no SQL was applied. If the
-    // checksum matches the last recorded run, the schema was verified on the
-    // previous successful run and nothing in the proto changed. Operators can
-    // still force the heavy path with migration.force_reseed=true.
+    // Verify by default even when the proto checksum is unchanged. External
+    // schema drift can happen after a successful run, and a proto checksum alone
+    // cannot prove the live database still matches it. Operators who explicitly
+    // accept that risk can set migration.skip_unchanged_verify=true.
+    //
+    // #133: live DB-vs-proto drift the verifier surfaces. When emergency
+    // auto-alter is enabled, this is carried into the auto-alter block below and
+    // fed to the repair planner instead of fail-closing the startup — lint of
+    // the proto manifest alone can never produce missing-table/column drift.
+    let emergency_auto_alter = runtime.config().migration.emergency_auto_alter;
+    let skip_unchanged_verify = runtime.config().migration.skip_unchanged_verify;
+    let mut pg_drift: Vec<crate::runtime::core::ManifestDrift> = Vec::new();
     if dry_run {
         report.step(
             FsmState::Verifying,
             "dry-run mode — skipping pg_catalog verification (SQL not applied)".to_string(),
         );
         report.verified_tables = manifest.tables.len();
-    } else if checksum_unchanged && !force_reseed {
+    } else if checksum_unchanged && !force_reseed && !force_sync && skip_unchanged_verify {
         report.step(
             FsmState::Verifying,
             format!(
-                "proto checksum {} unchanged — skipping pg_catalog verification (set migration.force_reseed=true to override)",
+                "proto checksum {} unchanged — skipping pg_catalog verification because migration.skip_unchanged_verify=true",
                 &manifest.checksum_sha256[..8.min(manifest.checksum_sha256.len())]
             ),
         );
         report.verified_tables = manifest.tables.len();
     } else {
-        let pg_findings = runtime
-            .verify_postgres_manifest(manifest)
+        let drift = runtime
+            .verify_postgres_manifest_drift(manifest)
             .await
             .map_err(|err| fail(runtime, &mut report, "postgres_verify", err.to_string()))?;
         report.verified_tables = manifest.tables.len();
-        if !pg_findings.is_empty() {
+        if !drift.is_empty() {
             runtime.emit_drift_metric("postgres_manifest_mismatch");
-            report.errors.extend(pg_findings);
-            return Err(serde_json::to_string(&report)
-                .unwrap_or_else(|_| "PostgreSQL drift detected".to_string()));
+            if emergency_auto_alter {
+                // #133: defer to the emergency auto-alter block, which feeds this
+                // live drift into the repair planner and applies the safe repairs.
+                report.step(
+                    FsmState::Verifying,
+                    format!(
+                        "detected {} schema drift finding(s); deferring to emergency auto-alter",
+                        drift.len()
+                    ),
+                );
+                pg_drift = drift;
+            } else {
+                report.errors.extend(drift.into_iter().map(|d| d.message));
+                return Err(serde_json::to_string(&report)
+                    .unwrap_or_else(|_| "PostgreSQL drift detected".to_string()));
+            }
         }
     }
 
@@ -784,11 +1132,156 @@ pub async fn run_startup_lifecycle(
     // In dry-run mode, skip the save so the DB state is not mutated.
     if !dry_run {
         runtime
-            .save_manifest(manifest)
+            .save_manifest_if_latest(
+                manifest,
+                prior_manifest
+                    .as_ref()
+                    .map(|prior| prior.checksum_sha256.as_str()),
+            )
             .await
             .map_err(|err| fail(runtime, &mut report, "save_manifest", err.to_string()))?;
     }
     // ── End proto-diff auto-alter ─────────────────────────────────────────────
+
+    // ── Lint-driven auto-alter (emergency_auto_alter) ─────────────────────────
+    // After topology verification, when emergency_auto_alter is enabled, lint the
+    // live schema and apply the SAFE automatic repairs the planner derives
+    // (CREATE SCHEMA / ADD COLUMN / SET DEFAULT / ENABLE RLS / …). Findings that
+    // require manual review are surfaced as warnings, never auto-applied. The FSM
+    // path Verifying → AutoAltering → Completed is valid; when disabled the run
+    // stays Verifying → Completed.
+    if emergency_auto_alter && !dry_run {
+        transition(
+            &mut engine,
+            &mut report,
+            FsmState::AutoAltering,
+            "linting live schema and applying safe auto-repairs",
+        )?;
+        // #133: feed the LIVE DB-vs-proto drift captured during verification into
+        // the repair planner. `lint_catalog(manifest)` lints the proto manifest in
+        // isolation and can never surface missing-table/column drift (it has no view
+        // of the live DB); the real drift comes from `verify_postgres_manifest_drift`
+        // above (`pg_drift`), carrying the manifest column `sql_type`/`default_value`
+        // so ADD COLUMN / SET DEFAULT repairs generate correct DDL.
+        const SAFE_REPAIR_KINDS: [&str; 6] = [
+            "missing_schema",
+            "missing_table",
+            "missing_column",
+            "default_mismatch",
+            "nullability_mismatch",
+            "rls_enabled_no_policies",
+        ];
+        let mut repair_inputs: Vec<LintInput> = pg_drift
+            .iter()
+            .filter(|d| SAFE_REPAIR_KINDS.contains(&d.kind.as_str()))
+            .map(|d| LintInput {
+                lint_kind: d.kind.clone(),
+                schema: d.schema.clone(),
+                table: d.table.clone(),
+                column: d.column.clone(),
+                sql_type: d.sql_type.clone(),
+                default_value: d.default_value.clone(),
+            })
+            .collect();
+        // Also fold in proto-manifest lint findings (e.g. declared RLS without a
+        // policy) that the live introspection does not cover, de-duplicating
+        // against the live drift already collected.
+        let live_lint = lint_catalog(manifest);
+        for item in live_lint
+            .items
+            .iter()
+            .filter(|item| SAFE_REPAIR_KINDS.contains(&item.kind.as_str()))
+        {
+            let already = repair_inputs.iter().any(|r| {
+                r.lint_kind == item.kind
+                    && r.schema == item.schema
+                    && r.table == item.table
+                    && r.column == item.column
+            });
+            if !already {
+                repair_inputs.push(LintInput {
+                    lint_kind: item.kind.clone(),
+                    schema: item.schema.clone(),
+                    table: item.table.clone(),
+                    column: item.column.clone(),
+                    sql_type: String::new(),
+                    default_value: String::new(),
+                });
+            }
+        }
+        if !repair_inputs.is_empty() {
+            let repair_plan = plan_repairs(&repair_inputs);
+            for decision in &repair_plan.decisions {
+                report
+                    .migration_metric_operations
+                    .push(MigrationMetricOperation {
+                        kind: decision.kind.as_str().to_string(),
+                        schema: if decision.schema.trim().is_empty() {
+                            "public".to_string()
+                        } else {
+                            decision.schema.clone()
+                        },
+                        safety: if decision.is_auto_safe {
+                            "auto".to_string()
+                        } else {
+                            "requires_review".to_string()
+                        },
+                    });
+            }
+            report.step(
+                FsmState::AutoAltering,
+                format!(
+                    "discovered {} repair(s): {} auto-safe, {} require review",
+                    repair_plan.decisions.len(),
+                    repair_plan.auto_safe_count,
+                    repair_plan.requires_review_count
+                ),
+            );
+            // Apply only auto-safe repairs that produced a concrete DDL statement.
+            let artifacts: Vec<GeneratedArtifact> = repair_plan
+                .decisions
+                .iter()
+                .filter(|d| d.is_auto_safe && !d.ddl.trim().is_empty())
+                .enumerate()
+                .map(|(i, d)| GeneratedArtifact {
+                    rel_path: format!("auto_alter/{:03}_{}.sql", i, d.kind.as_str()),
+                    kind: "auto_alter".to_string(),
+                    schema: if d.schema.is_empty() {
+                        "public".to_string()
+                    } else {
+                        d.schema.clone()
+                    },
+                    table: d.table.clone(),
+                    content: d.ddl.clone(),
+                })
+                .collect();
+            if !artifacts.is_empty() {
+                runtime
+                    .execute_sql_artifacts(&artifacts)
+                    .await
+                    .map_err(|err| {
+                        fail(runtime, &mut report, "auto_alter_apply", err.to_string())
+                    })?;
+                report.applied_sql_artifacts += artifacts.len();
+                report.step(
+                    FsmState::AutoAltering,
+                    format!("applied {} auto-repair(s)", artifacts.len()),
+                );
+            }
+            // Surface review-required repairs as warnings (never auto-applied).
+            for d in repair_plan.decisions.iter().filter(|d| !d.is_auto_safe) {
+                report.warnings.push(format!(
+                    "[auto-alter requires review] {} {}.{}: {}",
+                    d.kind.as_str(),
+                    d.schema,
+                    d.table,
+                    d.reason
+                ));
+            }
+        } else {
+            report.step(FsmState::AutoAltering, "no auto-repair opportunities found");
+        }
+    }
 
     transition(
         &mut engine,
@@ -827,12 +1320,8 @@ async fn load_prior_manifest_for_dry_run(
     if prior_checksum == manifest.checksum_sha256 {
         report.step(
             FsmState::PlanProtoDiff,
-            "dry-run prior checksum matches startup manifest; skipped manifest_json fetch",
+            "dry-run prior checksum matches startup manifest; loading full prior manifest_json",
         );
-        return Ok(Some(CatalogManifest {
-            checksum_sha256: prior_checksum,
-            ..CatalogManifest::default()
-        }));
     }
 
     let timeout = dry_run_manifest_fetch_timeout();
@@ -916,12 +1405,8 @@ async fn load_prior_manifest_for_apply(
     if prior_checksum == manifest.checksum_sha256 {
         report.step(
             FsmState::PlanProtoDiff,
-            "prior checksum matches startup manifest; skipped manifest_json fetch",
+            "prior checksum matches startup manifest; loading full prior manifest_json",
         );
-        return Ok(Some(CatalogManifest {
-            checksum_sha256: prior_checksum,
-            ..CatalogManifest::default()
-        }));
     }
 
     runtime

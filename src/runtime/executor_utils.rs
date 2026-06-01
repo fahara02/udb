@@ -3,9 +3,9 @@
 //! Pure utility helpers shared across executor modules and the core runtime.
 //! Nothing in this module depends on `DataBrokerRuntime` directly.
 
-use std::env;
 #[cfg(feature = "s3")]
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::{env, future::Future, time::Duration};
 
 use prost_types::{ListValue, Struct, Value as ProstValue, value::Kind};
 use serde_json::Value as JsonValue;
@@ -14,6 +14,48 @@ use sha2::{Digest, Sha256};
 use crate::broker::RequestContext;
 use crate::generation::{CatalogManifest, ManifestColumn, ManifestMaterializedView, ManifestStore};
 use crate::proto::{RecordSet, RequestContext as ProtoRequestContext, Row as ProtoRow};
+
+// ── Object-store limits ──────────────────────────────────────────────────────
+
+/// Generic inline object writes are capped; larger uploads should use
+/// presigned/resumable upload flows rather than the generic RPC body.
+pub(crate) const INLINE_OBJECT_LIMIT_BYTES: usize = 1_048_576;
+
+pub(crate) fn executor_timeout_duration() -> Duration {
+    let millis = env::var("UDB_EXECUTOR_TIMEOUT_MS")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(30_000)
+        .max(1);
+    Duration::from_millis(millis)
+}
+
+pub(crate) async fn with_executor_timeout<T, F>(
+    backend: &str,
+    operation: &str,
+    future: F,
+) -> Result<T, tonic::Status>
+where
+    F: Future<Output = Result<T, tonic::Status>>,
+{
+    tokio::time::timeout(executor_timeout_duration(), future)
+        .await
+        .map_err(|_| {
+            tonic::Status::deadline_exceeded(format!(
+                "{backend} generic {operation} exceeded UDB_EXECUTOR_TIMEOUT_MS"
+            ))
+        })?
+}
+
+pub(crate) fn reject_oversized_object(len: usize) -> Result<(), tonic::Status> {
+    if len > INLINE_OBJECT_LIMIT_BYTES {
+        Err(tonic::Status::resource_exhausted(
+            "generic object writes are limited to 1MB; use presigned upload for larger files",
+        ))
+    } else {
+        Ok(())
+    }
+}
 
 // ── Struct / prost ────────────────────────────────────────────────────────────
 
@@ -81,7 +123,10 @@ pub(crate) fn merge_context(
         return metadata_context;
     };
     RequestContext {
-        tenant_id: first_non_empty(&proto.tenant_id, &metadata_context.tenant_id),
+        // SECURITY: tenant_id is the authenticated isolation boundary — take it
+        // from the request metadata context, NOT a caller-supplied per-op proto
+        // context (which could target a foreign tenant). Mirrors project_id below.
+        tenant_id: metadata_context.tenant_id,
         user_id: first_non_empty(&proto.user_id, &metadata_context.user_id),
         correlation_id: first_non_empty(&proto.correlation_id, &metadata_context.correlation_id),
         purpose: first_non_empty(&proto.purpose, &metadata_context.purpose),
@@ -105,6 +150,10 @@ pub(crate) fn merge_context(
         } else {
             proto.scopes.clone()
         },
+        // The broker stamps these from the verified SecurityContext / decision;
+        // the wire `RequestContext` cannot assert them, so the metadata side wins.
+        service_identity: metadata_context.service_identity,
+        decision_id: metadata_context.decision_id,
     }
 }
 
@@ -413,6 +462,259 @@ pub(crate) fn env_u32(key: &str) -> Option<u32> {
 
 pub(crate) fn env_i32(key: &str) -> Option<i32> {
     env::var(key).ok()?.parse().ok()
+}
+
+// ── Generic-dispatch SQL request helpers ────────────────────────────────────────
+// Shared by the SQL/CQL generic-dispatch executors (mysql, sqlite, mssql,
+// cassandra). The dispatch JSON shape is `{"sql":"…","params":[…]}` (the
+// `parameters` key is accepted as an alias). Pulled out of the per-backend
+// modules so the byte-identical parser lives in exactly one place.
+
+/// Parse `{"sql":"…","params":[…]}` (or `"parameters"`) out of a generic
+/// dispatch request. Returns the SQL string plus the positional parameter
+/// array (defaulting to empty when absent).
+pub(crate) fn parse_sql_dispatch(
+    request_json: &str,
+) -> Result<(String, Vec<JsonValue>), tonic::Status> {
+    let value: JsonValue = serde_json::from_str(request_json)
+        .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
+    let sql = value
+        .get("sql")
+        .and_then(JsonValue::as_str)
+        .ok_or_else(|| tonic::Status::invalid_argument("missing `sql` in dispatch request"))?
+        .to_string();
+    let params = value
+        .get("params")
+        .or_else(|| value.get("parameters"))
+        .and_then(JsonValue::as_array)
+        .cloned()
+        .unwrap_or_default();
+    Ok((sql, params))
+}
+
+/// Encode a binary cell as the `base64:<STANDARD>` JSON string the SQL
+/// executors (mysql / sqlite / mssql) emit for `BLOB`/`VARBINARY` columns.
+#[cfg(any(feature = "mysql", feature = "sqlite", feature = "mssql"))]
+pub(crate) fn base64_cell(bytes: &[u8]) -> JsonValue {
+    use base64::Engine as _;
+    JsonValue::String(format!(
+        "base64:{}",
+        base64::engine::general_purpose::STANDARD.encode(bytes)
+    ))
+}
+
+/// Render a generic `sqlx::Row` into a JSON object. Each column becomes a
+/// key; values are coerced by probing `i64 → f64 → bool → String → Vec<u8>`
+/// (bytes → `base64:` string) and falling back to JSON null. Shared by the
+/// mysql + sqlite executors, whose row converters were byte-identical save
+/// for the concrete `Row` type.
+#[cfg(any(feature = "mysql", feature = "sqlite"))]
+pub(crate) fn sqlx_row_to_json<R>(row: &R) -> JsonValue
+where
+    R: sqlx::Row,
+    usize: sqlx::ColumnIndex<R>,
+    for<'a> i64: sqlx::Decode<'a, R::Database> + sqlx::Type<R::Database>,
+    for<'a> f64: sqlx::Decode<'a, R::Database> + sqlx::Type<R::Database>,
+    for<'a> bool: sqlx::Decode<'a, R::Database> + sqlx::Type<R::Database>,
+    for<'a> String: sqlx::Decode<'a, R::Database> + sqlx::Type<R::Database>,
+    for<'a> Vec<u8>: sqlx::Decode<'a, R::Database> + sqlx::Type<R::Database>,
+{
+    use sqlx::{Column as _, Row as _};
+    let mut obj = serde_json::Map::new();
+    for (i, col) in row.columns().iter().enumerate() {
+        let name = col.name().to_string();
+        // Try common types in order; fall back to NULL.
+        let value: JsonValue = if let Ok(v) = row.try_get::<Option<i64>, _>(i) {
+            v.map(JsonValue::from).unwrap_or(JsonValue::Null)
+        } else if let Ok(v) = row.try_get::<Option<f64>, _>(i) {
+            v.map(JsonValue::from).unwrap_or(JsonValue::Null)
+        } else if let Ok(v) = row.try_get::<Option<bool>, _>(i) {
+            v.map(JsonValue::from).unwrap_or(JsonValue::Null)
+        } else if let Ok(v) = row.try_get::<Option<String>, _>(i) {
+            v.map(JsonValue::from).unwrap_or(JsonValue::Null)
+        } else if let Ok(v) = row.try_get::<Option<Vec<u8>>, _>(i) {
+            v.map(|bytes| base64_cell(&bytes))
+                .unwrap_or(JsonValue::Null)
+        } else {
+            JsonValue::Null
+        };
+        obj.insert(name, value);
+    }
+    JsonValue::Object(obj)
+}
+
+/// Bind a slice of JSON values as positional parameters onto an `sqlx`
+/// query. Numbers go to i64/f64, strings/bool/null map directly, and
+/// objects/arrays serialise to JSON-text so the driver stores them in a
+/// JSON column. Shared by the mysql + sqlite executors.
+#[cfg(any(feature = "mysql", feature = "sqlite"))]
+pub(crate) fn bind_json_params<'q, DB>(
+    mut q: sqlx::query::Query<'q, DB, <DB as sqlx::Database>::Arguments<'q>>,
+    params: &'q [JsonValue],
+) -> sqlx::query::Query<'q, DB, <DB as sqlx::Database>::Arguments<'q>>
+where
+    DB: sqlx::Database,
+    for<'a> Option<i64>: sqlx::Encode<'a, DB> + sqlx::Type<DB>,
+    for<'a> i64: sqlx::Encode<'a, DB> + sqlx::Type<DB>,
+    for<'a> f64: sqlx::Encode<'a, DB> + sqlx::Type<DB>,
+    for<'a> bool: sqlx::Encode<'a, DB> + sqlx::Type<DB>,
+    for<'a> String: sqlx::Encode<'a, DB> + sqlx::Type<DB>,
+{
+    for p in params {
+        q = match p {
+            JsonValue::Null => q.bind(Option::<i64>::None),
+            JsonValue::Bool(b) => q.bind(*b),
+            JsonValue::Number(n) => {
+                if let Some(i) = n.as_i64() {
+                    q.bind(i)
+                } else if let Some(f) = n.as_f64() {
+                    q.bind(f)
+                } else {
+                    q.bind(n.to_string())
+                }
+            }
+            JsonValue::String(s) => q.bind(s.clone()),
+            other => q.bind(other.to_string()),
+        };
+    }
+    q
+}
+
+/// Apply a batch of context SET / INSERT statements (rendered by
+/// `render_sql_session_settings`) on an open `sqlx` transaction. Shared by
+/// the mysql + sqlite session-context application paths, which differed only
+/// in the connection type and the error-message prefix.
+#[cfg(any(feature = "mysql", feature = "sqlite"))]
+pub(crate) async fn apply_context_statements<'c, DB>(
+    tx: &mut sqlx::Transaction<'c, DB>,
+    statements: &[String],
+    error_prefix: &str,
+) -> Result<(), tonic::Status>
+where
+    DB: sqlx::Database,
+    for<'e> &'e mut <DB as sqlx::Database>::Connection: sqlx::Executor<'e, Database = DB>,
+    for<'q> <DB as sqlx::Database>::Arguments<'q>: sqlx::IntoArguments<'q, DB>,
+{
+    for stmt in statements {
+        sqlx::query(stmt)
+            .execute(&mut **tx)
+            .await
+            .map_err(|err| tonic::Status::internal(format!("{error_prefix}: {err}")))?;
+    }
+    Ok(())
+}
+
+// ── Object-store dispatch helper ─────────────────────────────────────────────
+// Shared by the GCS + Azure-Blob executors, whose `parse_dispatch` differed
+// only in which field name is primary and the missing-field error label.
+
+/// Parse an object-store dispatch request of the shape
+/// `{"op":"…","<bucket>":"…","<key>":"…","content_type":"…"}`. The
+/// `bucket_keys` / `object_keys` slices list the accepted field aliases in
+/// priority order (e.g. `["bucket","container"]`). `bucket_label` names the
+/// bucket field in the missing-field error. Returns
+/// `(op, bucket, object, content_type)`.
+#[cfg(any(feature = "gcs", feature = "azureblob"))]
+pub(crate) fn parse_object_dispatch(
+    req: &str,
+    bucket_keys: &[&str],
+    object_keys: &[&str],
+    bucket_label: &str,
+) -> Result<(String, String, String, Option<String>), tonic::Status> {
+    let v: JsonValue = serde_json::from_str(req)
+        .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
+    let op = v
+        .get("op")
+        .and_then(JsonValue::as_str)
+        .ok_or_else(|| tonic::Status::invalid_argument("missing `op`"))?
+        .to_string();
+    let bucket = bucket_keys
+        .iter()
+        .find_map(|key| v.get(*key).and_then(JsonValue::as_str))
+        .ok_or_else(|| tonic::Status::invalid_argument(format!("missing `{bucket_label}`")))?
+        .to_string();
+    let object = object_keys
+        .iter()
+        .find_map(|key| v.get(*key).and_then(JsonValue::as_str))
+        .unwrap_or("")
+        .to_string();
+    let content_type = v
+        .get("content_type")
+        .and_then(JsonValue::as_str)
+        .map(str::to_string);
+    Ok((op, bucket, object, content_type))
+}
+
+// ── REST dispatch + HTTP-status helpers ──────────────────────────────────────
+// Shared by the REST-backed executors (pinecone, weaviate, elasticsearch).
+
+/// Parse a REST dispatch request of the shape
+/// `{"path":"…","method":"…","body":{…}}`. `method` defaults to `POST` and
+/// `body` defaults to JSON null. Byte-identical across pinecone + weaviate +
+/// elasticsearch.
+#[cfg(any(feature = "pinecone", feature = "weaviate", feature = "elasticsearch"))]
+pub(crate) fn parse_rest_dispatch(
+    req: &str,
+) -> Result<(reqwest::Method, String, JsonValue), tonic::Status> {
+    let v: JsonValue = serde_json::from_str(req)
+        .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
+    let path = v
+        .get("path")
+        .and_then(JsonValue::as_str)
+        .ok_or_else(|| tonic::Status::invalid_argument("missing `path`"))?
+        .to_string();
+    let method = v
+        .get("method")
+        .and_then(JsonValue::as_str)
+        .unwrap_or("POST")
+        .parse::<reqwest::Method>()
+        .map_err(|e| tonic::Status::invalid_argument(format!("bad method: {e}")))?;
+    let body = v.get("body").cloned().unwrap_or(JsonValue::Null);
+    Ok((method, path, body))
+}
+
+/// Map an unsuccessful HTTP status + (already-extracted) detail message to a
+/// typed `tonic::Status`, tagging the message with `backend`. This is the
+/// shared mapping for the REST backends (pinecone, weaviate, elasticsearch).
+/// The caller supplies the human-readable `detail` (truncated body, or a parsed
+/// `error.reason`) so each backend keeps control of how it summarises bodies.
+#[cfg(any(feature = "pinecone", feature = "weaviate", feature = "elasticsearch"))]
+pub(crate) fn http_status_to_tonic(
+    status: reqwest::StatusCode,
+    detail: &str,
+    backend: &str,
+) -> tonic::Status {
+    let code = status.as_u16();
+    match code {
+        400 | 422 => tonic::Status::invalid_argument(format!("{backend} {code}: {detail}")),
+        401 | 403 => tonic::Status::permission_denied(format!("{backend} {code}: {detail}")),
+        404 => tonic::Status::not_found(format!("{backend} 404: {detail}")),
+        409 => tonic::Status::already_exists(format!("{backend} 409: {detail}")),
+        429 => tonic::Status::resource_exhausted(format!("{backend} 429: {detail}")),
+        500..=599 => tonic::Status::unavailable(format!("{backend} {code}: {detail}")),
+        _ => tonic::Status::internal(format!("{backend} {code}: {detail}")),
+    }
+}
+
+// ── Probe builder ─────────────────────────────────────────────────────────────
+
+/// Build a `BackendProbe` from a backend name and a health-check result.
+/// Every backend (except S3, which is special-cased to always report ok)
+/// constructed its probe with this exact `match` — pulled into one place.
+pub(crate) fn build_probe(
+    name: &str,
+    health: Result<(), String>,
+) -> crate::runtime::executors::BackendProbe {
+    let (ok, error) = match health {
+        Ok(()) => (true, None),
+        Err(err) => (false, Some(err)),
+    };
+    crate::runtime::executors::BackendProbe {
+        backend: name.to_string(),
+        instance: None,
+        ok,
+        error,
+    }
 }
 
 // ── HTTP / Qdrant helpers ─────────────────────────────────────────────────────

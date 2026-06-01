@@ -1,0 +1,663 @@
+syntax = "proto3";
+
+package udb.entity.v1;
+
+import "udb/entity/v1/context.proto";
+
+option csharp_namespace = "Udb.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/entity/v1;entityv1";
+option java_package = "com.udb.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
+option php_namespace = "Udb\\Entity\\V1";
+
+// ── Admin API ─────────────────────────────────────────────────────────────────
+
+message CapabilitiesRequest {
+  RequestContext context = 1;
+  // Optional project scope. When set, the response includes project-specific
+  // catalog version and system catalog information.
+  string project_id = 2;
+}
+
+message CapabilitiesResponse {
+  // SHA-256 checksum of the loaded proto schema.
+  string schema_checksum = 1;
+  // Semantic version of the UDB wire protocol (e.g. "1.0.0").
+  string protocol_version = 2;
+  // Backends that have a live connection pool: "postgres", "redis", "qdrant", "s3".
+  repeated string enabled_backends = 3;
+  // Backends that are configured but degraded (returning UNAVAILABLE to RPCs).
+  repeated string degraded_backends = 4;
+  // Fully-qualified names of all system catalog relations known to this instance.
+  repeated string system_catalog_relations = 5;
+  // List of RPC method names supported by this DataBroker instance.
+  repeated string supported_rpcs = 6;
+  // Redacted named backend instance inventory visible to clients/admin tools.
+  repeated BackendInstanceStatus backend_instances = 7;
+  // Machine-readable backend operation support matrix.
+  repeated BackendCapabilityDescriptor backend_capabilities = 8;
+}
+
+message BackendCapabilityDescriptor {
+  string backend = 1;
+  string tier = 2;
+  repeated string operations = 3;
+  string unsupported_error_code = 4;
+  string consistency_model = 5;
+  int64 max_payload_bytes = 6;
+  bool supports_xa = 7;
+  bool supports_two_phase_commit = 8;
+}
+
+message BackendInstanceStatus {
+  string backend = 1;
+  string instance_name = 2;
+  string role = 3;
+  bool enabled = 4;
+  bool configured = 5;
+  bool connected = 6;
+  uint32 read_weight = 7;
+  uint32 write_weight = 8;
+  map<string, string> labels = 9;
+  repeated string capabilities = 10;
+  string routing_status = 11;
+  bool healthy = 12;
+  bool circuit_open = 13;
+}
+
+message CatalogManifestRequest {
+  RequestContext context = 1;
+  // When true, strip column-level PII / encryption metadata from the response.
+  bool redact = 2;
+}
+
+message CatalogManifestResponse {
+  // Full CatalogManifest serialised as pretty-printed JSON.
+  bytes manifest_json = 1;
+}
+
+message MessageSchemaLookupRequest {
+  RequestContext context = 1;
+  // Project to resolve against. Empty uses context/default project.
+  string project_id = 2;
+  // Canonical or manifest message name, e.g. "your.project.v1.Resource".
+  string message_type = 3;
+  // Optional client catalog version. Empty means the active version.
+  string client_catalog_version = 4;
+}
+
+message MessageFieldDescriptor {
+  string name = 1;
+  string column_name = 2;
+  string proto_type = 3;
+  string sql_type = 4;
+  bool not_null = 5;
+  bool is_primary = 6;
+  bool is_array = 7;
+}
+
+message MessageSchemaDescriptor {
+  string message_type = 1;
+  string project_id = 2;
+  string catalog_version = 3;
+  string manifest_checksum = 4;
+  string schema = 5;
+  string table = 6;
+  repeated string primary_key = 7;
+  repeated MessageFieldDescriptor fields = 8;
+}
+
+message MessageSchemaLookupResponse {
+  MessageSchemaDescriptor descriptor = 1;
+}
+
+message MessageSchemaListRequest {
+  RequestContext context = 1;
+  // Project to resolve against. Empty uses context/default project.
+  string project_id = 2;
+  // Optional client catalog version. Empty means the active version.
+  string client_catalog_version = 3;
+}
+
+message MessageSchemaListResponse {
+  string project_id = 1;
+  string catalog_version = 2;
+  string manifest_checksum = 3;
+  repeated string message_types = 4;
+}
+
+message HealthReportRequest {
+  RequestContext context = 1;
+  // When true, send live probes to each configured backend.
+  bool with_probes = 2;
+  // Optional project scope. When set, catalog and system catalog state is
+  // reported for the given project only.
+  string project_id = 3;
+}
+
+message HealthReportResponse {
+  bool passed = 1;
+  bool postgres_configured = 2;
+  bool redis_configured = 3;
+  bool qdrant_configured = 4;
+  bool s3_configured = 5;
+  repeated string errors = 6;
+  repeated string warnings = 7;
+  // JSON-encoded PostgresPrivilegeReport (omitted if PG not configured).
+  bytes privileges_json = 8;
+  // JSON-encoded list of BackendProbeResult objects (populated only when with_probes=true).
+  bytes probes_json = 9;
+  repeated BackendInstanceStatus backend_instances = 10;
+}
+
+// Generic resource administration.
+
+message GenericDispatchRequest {
+  RequestContext context = 1;
+  // Target backend: "mongodb", "neo4j", "clickhouse", "qdrant", "s3", etc.
+  string backend = 2;
+  // Allowed operations: "ping", "ensure_resource", "drop_resource", "list_resources".
+  string operation = 3;
+  string resource_kind = 4;
+  string resource_name = 5;
+  string resource_uri = 6;
+  // Operation-specific parameters as JSON.
+  string spec_json = 7;
+  string idempotency_key = 8;
+  bool dry_run = 9;
+}
+
+message GenericDispatchResponse {
+  string backend = 1;
+  string operation = 2;
+  string resource_uri = 3;
+  // Operation result serialised as JSON.
+  string result_json = 4;
+  repeated string errors = 5;
+}
+
+message ResourceAdminRequest {
+  RequestContext context = 1;
+  // Target backend: "mongodb", "neo4j", "clickhouse", "qdrant", "s3".
+  string backend = 2;
+  string resource_name = 3;
+  // Resource-specific parameters as JSON.
+  string spec_json = 4;
+  string idempotency_key = 5;
+  bool dry_run = 6;
+}
+
+message ResourceListResponse {
+  string backend = 1;
+  repeated string resources = 2;
+}
+
+// Catalog stage / activate / rollback.
+
+message StageCatalogRequest {
+  RequestContext context = 1;
+  // Full CatalogManifest serialised as JSON.
+  bytes manifest_json = 1000;
+  string project_id = 2;
+  string reason = 3;
+  string idempotency_key = 4;
+}
+
+message CatalogVersionRequest {
+  RequestContext context = 1;
+  string project_id = 2;
+  // Target catalog version string (empty = latest STAGED).
+  string version = 3;
+  string reason = 4;
+  string idempotency_key = 5;
+}
+
+message CatalogVersionResponse {
+  string catalog_id = 1;
+  string project_id = 2;
+  string version = 3;
+  string status = 4;
+  string checksum_sha256 = 5;
+  int64 created_at_unix = 6;
+  repeated string errors = 7;
+  repeated string warnings = 8;
+}
+
+message CatalogValidationResponse {
+  bool valid = 1;
+  string checksum_sha256 = 2;
+  repeated string errors = 3;
+  repeated string warnings = 4;
+}
+
+message CatalogVersionListResponse {
+  string project_id = 1;
+  repeated CatalogVersionResponse versions = 2;
+  string active_version = 3;
+}
+
+// Live migration apply engine.
+
+message MigrationPlanRequest {
+  RequestContext context = 1;
+  string project_id = 2;
+  // When true, apply only dry-run checks without touching the database.
+  bool dry_run = 3;
+}
+
+message MigrationPlanResponse {
+  string run_id = 1;
+  string project_id = 2;
+  string catalog_version = 3;
+  string state = 4;
+  repeated string operations = 5;
+  repeated string requires_review = 6;
+  repeated string blocked = 7;
+  string operations_hash = 8;
+}
+
+message MigrationApplyRequest {
+  RequestContext context = 1;
+  string run_id = 2;
+  string project_id = 3;
+  // Approval token from ApproveMigrationPlan (required for blocked operations).
+  string approval_token = 4;
+  string idempotency_key = 5;
+}
+
+message MigrationRunRequest {
+  RequestContext context = 1;
+  string run_id = 2;
+  string project_id = 3;
+  string idempotency_key = 4;
+}
+
+message MigrationRunListRequest {
+  RequestContext context = 1;
+  string project_id = 2;
+  string state_filter = 3;
+  int32 limit = 4;
+  string page_token = 5;
+}
+
+message MigrationRunListResponse {
+  repeated MigrationStatusResponse runs = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message MigrationStatusResponse {
+  string run_id = 1;
+  string project_id = 2;
+  string catalog_version = 3;
+  // States: DRY_RUN, PREFLIGHT, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
+  string state = 4;
+  string started_at = 5;
+  string finished_at = 6;
+  repeated MigrationOperationStatus operations = 7;
+  string error = 8;
+}
+
+message MigrationOperationStatus {
+  int32 index = 1;
+  string backend = 2;
+  string resource_uri = 3;
+  string operation_kind = 4;
+  // States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+  string status = 5;
+  string error = 6;
+}
+
+// DLQ management.
+
+message DlqListRequest {
+  RequestContext context = 1;
+  string topic = 2;
+  // Filter by status: OPEN, REPLAYED, DISMISSED, QUARANTINED
+  string status_filter = 3;
+  int32 limit = 4;
+  string page_token = 5;
+}
+
+message DlqEventRecord {
+  string dlq_id = 1;
+  string event_id = 2;
+  string topic = 3;
+  bytes payload_json = 4;
+  string error_type = 5;
+  string error_message = 6;
+  string status = 7;
+  int64 created_at_unix = 8;
+  int64 updated_at_unix = 9;
+}
+
+message DlqListResponse {
+  repeated DlqEventRecord events = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message DlqEventRequest {
+  RequestContext context = 1;
+  string dlq_id = 2;
+}
+
+message DlqEventResponse {
+  DlqEventRecord event = 1;
+}
+
+message DlqActionRequest {
+  RequestContext context = 1;
+  string dlq_id = 2;
+  // For ReplayDlqEvent: when true, preserve the original event_id on replay.
+  bool preserve_event_id = 3;
+  string reason = 4;
+}
+
+// CDC redaction preview.
+
+message CdcRedactionPreviewRequest {
+  RequestContext context = 1;
+  string message_type = 2;
+  string topic = 3;
+  string schema_uri = 4;
+  bytes payload_json = 5;
+  string redaction_mode = 6;
+  int32 redaction_version = 7;
+}
+
+message CdcRedactionPreviewResponse {
+  bytes payload_json = 1;
+  repeated string redacted_fields = 2;
+  string redaction_mode = 3;
+  int32 redaction_version = 4;
+  bool would_redact = 5;
+}
+
+// Projection drift administration.
+
+message ProjectionDriftScanRequest {
+  RequestContext context = 1;
+  string project_id = 2;
+  string message_type = 3;
+  string scan_mode = 4;
+  int32 rows_per_target = 5;
+  bool repair = 6;
+  int32 limit = 7;
+}
+
+message ProjectionDriftDivergentRow {
+  bytes row_key_json = 1;
+  string source_checksum = 2;
+  string target_checksum = 3;
+  string kind = 4;
+}
+
+message ProjectionDriftTargetReport {
+  string target_backend = 1;
+  string target_instance = 2;
+  string target_resource = 3;
+  int32 source_rows_scanned = 4;
+  repeated ProjectionDriftDivergentRow divergent_rows = 5;
+  int32 rows_to_repair = 6;
+  double estimated_cost_units = 7;
+  int64 repair_tasks_enqueued = 8;
+  repeated string warnings = 9;
+}
+
+message ProjectionDriftScanResponse {
+  string project_id = 1;
+  string message_type = 2;
+  string scan_mode = 3;
+  int32 source_rows_loaded = 4;
+  repeated ProjectionDriftTargetReport reports = 5;
+  bytes summary_json = 6;
+  repeated string warnings = 7;
+}
+
+// Saga administration.
+
+message SagaListRequest {
+  RequestContext context = 1;
+  string tenant_id_filter = 2;
+  // Filter by status: pending, in_progress, committed, compensated, failed_compensation, manual_review
+  string status_filter = 3;
+  string tx_id_filter = 4;
+  string correlation_id_filter = 5;
+  int32 limit = 6;
+  string page_token = 7;
+}
+
+message SagaRecord {
+  string saga_id = 1;
+  string tx_id = 2;
+  string tenant_id = 3;
+  string correlation_id = 4;
+  string status = 5;
+  int32 current_step = 6;
+  bytes steps_json = 7;
+  bytes compensations_json = 8;
+  string last_error = 9;
+  int64 created_at_unix = 10;
+  int64 updated_at_unix = 11;
+}
+
+message SagaListResponse {
+  repeated SagaRecord sagas = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message SagaRequest {
+  RequestContext context = 1;
+  string saga_id = 2;
+  string reason = 3;
+  string idempotency_key = 4;
+}
+
+message SagaResponse {
+  SagaRecord saga = 1;
+  repeated string errors = 2;
+}
+
+// Policy administration.
+
+message PolicyRecord {
+  int64 policy_id = 1;
+  string effect = 2;
+  string service_identity = 3;
+  string tenant_id = 4;
+  string purpose = 5;
+  string message_type = 6;
+  string operation = 7;
+  string required_scope = 8;
+  int32 priority = 9;
+  bool enabled = 10;
+}
+
+message PolicyListRequest {
+  RequestContext context = 1;
+  bool include_disabled = 2;
+  int32 limit = 3;
+  string page_token = 4;
+}
+
+message PolicyListResponse {
+  repeated PolicyRecord policies = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message PutPolicyRequest {
+  RequestContext context = 1;
+  PolicyRecord policy = 2;
+}
+
+message PolicyRequest {
+  RequestContext context = 1;
+  int64 policy_id = 2;
+}
+
+message PolicyLintResponse {
+  bool passed = 1;
+  repeated string findings = 2;
+}
+
+// Multi-project registry.
+
+message EnsureProjectRequest {
+  RequestContext context = 1;
+  // Stable identifier for the project, for example "billing" or "search".
+  string project_id = 2;
+  // Human-readable name.
+  string name = 3;
+  // Kafka topic prefix for this project's CDC events (e.g. "billing.").
+  string cdc_topic_prefix = 4;
+}
+
+message ProjectRecord {
+  string project_id = 1;
+  string name = 2;
+  string cdc_topic_prefix = 3;
+  string active_catalog_version = 4;
+  int64 created_at_unix = 5;
+}
+
+message ProjectListRequest {
+  RequestContext context = 1;
+  int32 limit = 2;
+  string page_token = 3;
+}
+
+message ProjectListResponse {
+  repeated ProjectRecord projects = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+// ── Unified Admin Surface ─────────────────────────────────────────────────────
+
+message AdminSummaryRequest {
+  RequestContext context = 1;
+  // Optional project filter; empty = all projects / single-project mode.
+  string project_id = 2;
+  // When true, include live backend probe results (adds latency).
+  bool with_probes = 3;
+  // When true, redact optional payload-like details from the admin snapshot.
+  bool redact = 4;
+}
+
+message AdminAuditLogRequest {
+  RequestContext context = 1;
+  string operation_filter = 2;
+  string actor_filter = 3;
+  string tenant_id_filter = 4;
+  string project_id_filter = 5;
+  int32 limit = 6;
+  string page_token = 7;
+  bool redact = 8;
+}
+
+message AdminAuditLogRecord {
+  string audit_id = 1;
+  string actor = 2;
+  string operation = 3;
+  string target = 4;
+  bytes request_json = 5;
+  string result = 6;
+  string tenant_id = 7;
+  string project_id = 8;
+  string correlation_id = 9;
+  int64 created_at_unix = 10;
+  string previous_hash = 11;
+  string current_hash = 12;
+  string signer_key_id = 13;
+  string external_anchor = 14;
+}
+
+message AdminAuditLogResponse {
+  repeated AdminAuditLogRecord logs = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+message AdminAuditVerifyRequest {
+  RequestContext context = 1;
+  // Optional maximum rows to scan. <= 0 verifies the full local chain.
+  int32 limit = 2;
+}
+
+message AdminAuditVerifyResponse {
+  bool passed = 1;
+  int32 checked_count = 2;
+  string first_broken_audit_id = 3;
+  string reason = 4;
+  string expected_previous_hash = 5;
+  string actual_previous_hash = 6;
+  string expected_current_hash = 7;
+  string actual_current_hash = 8;
+  string last_hash = 9;
+}
+
+message AdminBackendSummary {
+  string backend = 1;
+  string status = 2;
+  string transport = 3;
+  string consistency_model = 4;
+  bool supports_transactions = 5;
+  bool supports_schema_migration = 6;
+  bool supports_vector_search = 7;
+  bool supports_hybrid_search = 8;
+  int64 max_payload_bytes = 9;
+  // Populated when with_probes=true.
+  bool probe_ok = 10;
+  int64 probe_latency_ms = 11;
+  string instance_name = 12;
+  string role = 13;
+  map<string, string> labels = 14;
+  string routing_status = 15;
+}
+
+message AdminCdcSummary {
+  bool is_leader = 1;
+  bool paused = 2;
+  string slot_name = 3;
+  string last_event_id = 4;
+  double lag_seconds = 5;
+  int64 outbox_depth = 6;
+  int64 dlq_open_count = 7;
+}
+
+message AdminSagaSummary {
+  int64 active = 1;
+  int64 compensated = 2;
+  int64 failed_compensation = 3;
+  int64 manual_review = 4;
+  int64 indeterminate = 5;
+}
+
+message AdminCatalogSummary {
+  string project_id = 1;
+  string active_version = 2;
+  string active_checksum = 3;
+  string active_since = 4;
+  int32 table_count = 5;
+  int32 store_count = 6;
+  string pending_migration_state = 7;
+}
+
+message AdminSummaryResponse {
+  // Catalog state per project (one entry in single-project mode).
+  repeated AdminCatalogSummary catalog = 1;
+  // CDC state for this deployment.
+  AdminCdcSummary cdc = 2;
+  // Saga coordinator aggregate counters.
+  AdminSagaSummary sagas = 3;
+  // One entry per configured backend.
+  repeated AdminBackendSummary backends = 4;
+  // Active ABAC policy count.
+  int32 active_policy_count = 5;
+  // Milliseconds since Unix epoch when the snapshot was taken.
+  int64 snapshot_at_unix_ms = 6;
+  repeated string warnings = 7;
+}

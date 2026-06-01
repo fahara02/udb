@@ -57,6 +57,89 @@ pub(crate) fn allowed_columns(table: &ManifestTable) -> BTreeSet<String> {
         .collect()
 }
 
+/// #117: map every accepted field reference (proto `field_name` AND physical
+/// `column_name`, lowercased) to the physical `column_name`. The IR compilers
+/// accept proto `field_name` aliases; the broker planner must resolve them too,
+/// or a column override / identifier normalization (`field_name != column_name`)
+/// makes a valid request reject or bind the wrong column.
+pub(crate) fn column_resolver(table: &ManifestTable) -> std::collections::HashMap<String, String> {
+    let mut map = std::collections::HashMap::new();
+    for column in &table.columns {
+        map.insert(
+            column.column_name.to_ascii_lowercase(),
+            column.column_name.clone(),
+        );
+        if !column.field_name.is_empty() {
+            map.entry(column.field_name.to_ascii_lowercase())
+                .or_insert_with(|| column.column_name.clone());
+        }
+    }
+    map
+}
+
+/// Resolve one field reference to its physical column name, falling back to the
+/// lowercased input when unknown so downstream validation still surfaces it (#117).
+pub(crate) fn resolve_column(
+    resolver: &std::collections::HashMap<String, String>,
+    name: &str,
+) -> String {
+    let key = name.to_ascii_lowercase();
+    resolver.get(&key).cloned().unwrap_or(key)
+}
+
+/// Rewrite the TOP-LEVEL keys of an upsert record (proto `field_name`s) to their
+/// physical `column_name`s so binding by column name finds each value. Only
+/// top-level keys are columns — nested objects are JSONB column *values* and are
+/// left untouched (#117).
+pub(crate) fn normalize_record_keys(table: &ManifestTable, record: &Value) -> Value {
+    let resolver = column_resolver(table);
+    match record {
+        Value::Object(map) => Value::Object(
+            map.iter()
+                .map(|(key, value)| (resolve_column(&resolver, key), value.clone()))
+                .collect(),
+        ),
+        other => other.clone(),
+    }
+}
+
+/// Rewrite filter object keys (proto `field_name`s) to physical `column_name`s,
+/// preserving logical (`$and`/`$or`) and comparison (`$eq`/`$in`/…) operator keys
+/// and recursing into nested groups (#117).
+pub(crate) fn normalize_filter_keys(
+    resolver: &std::collections::HashMap<String, String>,
+    value: &Value,
+) -> Value {
+    match value {
+        Value::Object(map) => Value::Object(
+            map.iter()
+                .map(|(key, nested)| {
+                    let lower = key.to_ascii_lowercase();
+                    if matches!(lower.as_str(), "$and" | "$or" | "and" | "or")
+                        || is_operator(&lower)
+                    {
+                        // Logical / comparison operator: keep the key, recurse the value.
+                        (key.clone(), normalize_filter_keys(resolver, nested))
+                    } else {
+                        // Field reference: resolve to the physical column name.
+                        (
+                            resolve_column(resolver, key),
+                            normalize_filter_keys(resolver, nested),
+                        )
+                    }
+                })
+                .collect(),
+        ),
+        Value::Array(items) => Value::Array(
+            items
+                .iter()
+                .map(|item| normalize_filter_keys(resolver, item))
+                .collect(),
+        ),
+        other => other.clone(),
+    }
+}
+
 pub(crate) fn is_server_owned_column(table: &ManifestTable, column_name: &str) -> bool {
     table.columns.iter().any(|column| {
         column.column_name == column_name

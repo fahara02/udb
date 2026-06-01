@@ -74,6 +74,7 @@ pub mod redis;
 #[cfg(any(feature = "s3", test))]
 pub mod s3;
 
+mod sql_dialect;
 mod util;
 
 /// What every per-backend compiler implements.

@@ -1,0 +1,112 @@
+syntax = "proto3";
+
+package udb.core.common.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "udb.core.Common.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/common/v1;commonv1";
+option java_package = "com.udb.core.common.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Common\\V1";
+option php_namespace = "Udb\\Core\\Common\\V1";
+
+// Common project-neutral primitives. These are intentionally small so project
+// schemas can import them as stable building blocks and extend with their own
+// domain-specific messages.
+
+message Money {
+  // Value in the smallest currency unit, for example cents or paisa.
+  int64 amount_minor = 1;
+  // ISO 4217 currency code, for example "USD" or "BDT".
+  string currency = 2;
+}
+
+message Address {
+  string address_line1 = 1;
+  string address_line2 = 2;
+  string locality = 3;
+  string region = 4;
+  string postal_code = 5;
+  string country_code = 6;
+  double latitude = 7;
+  double longitude = 8;
+}
+
+message ContactInfo {
+  string primary_phone = 1;
+  string email = 2;
+  string alternate_phone = 3;
+  string website = 4;
+}
+
+message GeoPoint {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+message DateRange {
+  google.protobuf.Timestamp from = 1;
+  google.protobuf.Timestamp to = 2;
+}
+
+message ExternalReference {
+  string system = 1;
+  string resource_type = 2;
+  string resource_id = 3;
+  map<string, string> labels = 4;
+}
+
+message ActorReference {
+  string principal_id = 1;
+  string subject = 2;
+  string tenant_id = 3;
+  string project_id = 4;
+  string account_kind = 5;
+  string display_name = 6;
+  map<string, string> attributes = 7;
+}
+
+message ResourceReference {
+  string resource_type = 1;
+  string resource_id = 2;
+  string resource_name = 3;
+  string tenant_id = 4;
+  string project_id = 5;
+  string backend = 6;
+  string instance = 7;
+  string path = 8;
+  map<string, string> attributes = 9;
+}
+
+message TagSet {
+  repeated string tags = 1;
+  map<string, string> attributes = 2;
+}
+
+enum PersonGender {
+  PERSON_GENDER_UNSPECIFIED = 0;
+  PERSON_GENDER_MALE = 1;
+  PERSON_GENDER_FEMALE = 2;
+  PERSON_GENDER_OTHER = 3;
+  PERSON_GENDER_NOT_PROVIDED = 4;
+}
+
+enum ClientSurface {
+  CLIENT_SURFACE_UNSPECIFIED = 0;
+  CLIENT_SURFACE_WEB = 1;
+  CLIENT_SURFACE_IOS = 2;
+  CLIENT_SURFACE_ANDROID = 3;
+  CLIENT_SURFACE_API = 4;
+  CLIENT_SURFACE_ADMIN = 5;
+  CLIENT_SURFACE_WORKER = 6;
+}
+
+enum PaymentMethod {
+  PAYMENT_METHOD_UNSPECIFIED = 0;
+  PAYMENT_METHOD_CARD = 1;
+  PAYMENT_METHOD_CASH = 2;
+  PAYMENT_METHOD_BANK_TRANSFER = 3;
+  PAYMENT_METHOD_MOBILE_WALLET = 4;
+  PAYMENT_METHOD_ACCOUNT_CREDIT = 5;
+  PAYMENT_METHOD_OTHER = 6;
+}

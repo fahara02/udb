@@ -51,7 +51,7 @@ class CDCEnvelope extends \Google\Protobuf\Internal\Message
      * }
      */
     public function __construct($data = NULL) {
-        \GPBMetadata\Udb\Events\V1\UdbEvents::initOnce();
+        \Udb\GPBMetadata\Events\V1\UdbEvents::initOnce();
         parent::__construct($data);
     }
 

@@ -9,28 +9,88 @@ use serde::Serialize;
 use serde_yaml::Value as YamlValue;
 use udb::{
     AbacPolicy, BackendCapabilityMatrixEntry, BackendProbeResult, BackendSyncTarget,
-    CatalogManifest, DDL_ANALYTICS_EVENTS_DAILY, DataBrokerRuntime, DbOpsSyncConfig,
-    DsnGenerationConfig, FsmState, LintReport, LintSeverity, MigrationOptions, MigrationPlanConfig,
-    MultiPgConfig, ParserConfig, PgInstance, PolicyLintFinding, PostgresPrivilegeReport,
-    ProtoCatalog, SqlGenerationConfig, StartupLifecycleReport, SystemCatalogConfig,
-    SystemCatalogInspection, all_tracker_ddl_sql, build_drift_report, build_migration_plan,
+    CatalogManifest, DDL_ANALYTICS_EVENTS_DAILY, DEFAULT_LEDGER_SCHEMA, DataBrokerRuntime,
+    DbOpsSyncConfig, DsnGenerationConfig, FsmState, LintReport, LintSeverity, MigrationOptions,
+    MigrationPlanConfig, MultiPgConfig, ParserConfig, PgInstance, PolicyLintFinding,
+    PostgresPrivilegeReport, ProtoCatalog, SqlGenerationConfig, StartupLifecycleReport,
+    SystemCatalogConfig, SystemCatalogInspection, build_drift_report, build_migration_plan,
     default_system_catalog_ddl, generate_bootstrap_sql, generate_unified_dsn_catalog,
     init_observability, lint_catalog, lint_policies, parse_directory_report, run_startup_lifecycle,
     schema_checksum, serve, sync_all_backends, sync_db_ops,
 };
 
 mod args;
+mod auth;
 mod doctor;
 mod env_setup;
 mod output;
 mod scaffold;
 pub(crate) use args::*;
+pub(crate) use auth::*;
 pub(crate) use doctor::*;
 pub(crate) use env_setup::*;
 pub(crate) use output::*;
 pub(crate) use scaffold::*;
 #[cfg(test)]
 mod tests;
+
+const DEFAULT_SERVE_THREAD_STACK_SIZE: usize = 64 * 1024 * 1024;
+
+fn serve_thread_stack_size() -> usize {
+    env::var("UDB_THREAD_STACK_SIZE")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(DEFAULT_SERVE_THREAD_STACK_SIZE)
+}
+
+fn admin_reset_sql(ledger_schema: &str) -> String {
+    let ledger_schema = if ledger_schema.trim().is_empty() {
+        DEFAULT_LEDGER_SCHEMA
+    } else {
+        ledger_schema.trim()
+    };
+    let escaped = ledger_schema.replace('"', "\"\"");
+    format!(
+        r#"
+DO $$
+DECLARE
+    _schema TEXT;
+    _dropped_schemas TEXT[] := '{{}}';
+BEGIN
+    FOR _schema IN
+        SELECT nspname
+        FROM pg_namespace
+        WHERE nspname NOT IN ({ledger_literal}, 'information_schema')
+          AND nspname NOT LIKE 'pg_%'
+        ORDER BY nspname
+    LOOP
+        EXECUTE format('DROP SCHEMA IF EXISTS %I CASCADE', _schema);
+        _dropped_schemas := _dropped_schemas || _schema;
+        RAISE NOTICE 'dropped schema %', _schema;
+    END LOOP;
+
+    DROP TABLE IF EXISTS "{escaped}".migration_error_log      CASCADE;
+    DROP TABLE IF EXISTS "{escaped}".migration_runtime_state  CASCADE;
+    DROP TABLE IF EXISTS "{escaped}".schema_migrations        CASCADE;
+    DROP TABLE IF EXISTS "{escaped}".proto_schema_versions    CASCADE;
+
+    RAISE NOTICE 'dropped UDB ledger tables from schema {escaped}';
+    RAISE NOTICE 'reset complete — dropped schemas: %',
+        CASE WHEN array_length(_dropped_schemas, 1) IS NULL
+             THEN '(none)'
+             ELSE array_to_string(_dropped_schemas, ', ')
+        END;
+END;
+$$;
+"#,
+        ledger_literal = sql_literal(ledger_schema),
+    )
+}
+
+fn sql_literal(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "''"))
+}
 
 pub fn run() {
     // Load project root env file.
@@ -43,6 +103,7 @@ pub fn run() {
     let args: Vec<String> = env::args().skip(1).collect();
     load_project_dotenv();
     load_udb_config_overlay(&args);
+    ensure_cli_correlation_id();
     init_observability();
     let (command, proto_root, namespace, serve_addr) = parse_args(&args);
     let proto_root = resolve_existing_project_path(&proto_root);
@@ -50,7 +111,9 @@ pub fn run() {
     // Commands that do not need proto parsing — emit output and exit immediately.
     match command {
         Command::TrackerDdl => {
-            print!("{}", all_tracker_ddl_sql());
+            let ledger_schema =
+                env::var("UDB_LEDGER_SCHEMA").unwrap_or_else(|_| DEFAULT_LEDGER_SCHEMA.to_string());
+            print!("{}", udb::all_tracker_ddl_sql_for_schema(&ledger_schema));
             process::exit(0);
         }
         Command::SystemDdl => {
@@ -67,23 +130,7 @@ pub fn run() {
                 state: String,
                 transitions: Vec<String>,
             }
-            let all_states = [
-                FsmState::Idle,
-                FsmState::Initialising,
-                FsmState::LoadProtoState,
-                FsmState::ProtoChecksumLint,
-                FsmState::PlanProtoDiff,
-                FsmState::GenerateSql,
-                FsmState::ChecksumLint,
-                FsmState::Applying,
-                FsmState::Linting,
-                FsmState::AutoAltering,
-                FsmState::Verifying,
-                FsmState::Recovering,
-                FsmState::Completed,
-                FsmState::Error,
-            ];
-            let info: Vec<StateInfo> = all_states
+            let info: Vec<StateInfo> = FsmState::ALL
                 .iter()
                 .map(|s| StateInfo {
                     state: s.as_str().to_string(),
@@ -111,7 +158,7 @@ pub fn run() {
                 process::exit(1);
             });
             let report = runtime.block_on(run_doctor(with_probes));
-            let exit_code = if report.passed { 0 } else { 1 };
+            let exit_code = doctor_status(&report).exit_code();
             match output_mode {
                 DoctorOutputMode::Json => output_json(&report, "doctor report"),
                 DoctorOutputMode::Human => print_doctor_human(&report),
@@ -152,6 +199,9 @@ pub fn run() {
             confirmed,
         } => {
             process::exit(run_dev_sandbox(action, service.as_deref(), confirmed));
+        }
+        Command::Auth(auth_command) => {
+            process::exit(run_auth_command(auth_command));
         }
         Command::AdminReleaseLock => {
             let runtime = tokio::runtime::Runtime::new().unwrap_or_else(|err| {
@@ -225,49 +275,17 @@ pub fn run() {
             // Reads from pg_namespace directly — works even when the UDB ledger was
             // already dropped (previous partial reset, manual cleanup, etc.).
             // vision_db is a UDB-owned database; all non-system schemas are UDB schemas.
-            const RESET_SQL: &str = r#"
-DO $$
-DECLARE
-    _schema TEXT;
-    _dropped_schemas TEXT[] := '{}';
-BEGIN
-    -- Enumerate every non-system schema from the live catalog.
-    -- pg_namespace is always authoritative; no dependency on the UDB ledger.
-    FOR _schema IN
-        SELECT nspname
-        FROM pg_namespace
-        WHERE nspname NOT IN ('public', 'information_schema')
-          AND nspname NOT LIKE 'pg_%'
-        ORDER BY nspname
-    LOOP
-        EXECUTE format('DROP SCHEMA IF EXISTS %I CASCADE', _schema);
-        _dropped_schemas := _dropped_schemas || _schema;
-        RAISE NOTICE 'dropped schema %', _schema;
-    END LOOP;
-
-    -- Drop UDB ledger tables from public schema.
-    DROP TABLE IF EXISTS public.migration_error_log      CASCADE;
-    DROP TABLE IF EXISTS public.migration_runtime_state  CASCADE;
-    DROP TABLE IF EXISTS public.schema_migrations        CASCADE;
-    DROP TABLE IF EXISTS public.proto_schema_versions    CASCADE;
-
-    RAISE NOTICE 'dropped UDB ledger tables';
-    RAISE NOTICE 'reset complete — dropped schemas: %',
-        CASE WHEN array_length(_dropped_schemas, 1) IS NULL
-             THEN '(none)'
-             ELSE array_to_string(_dropped_schemas, ', ')
-        END;
-END;
-$$;
-"#;
-
+            let reset_sql = admin_reset_sql(
+                &env::var("UDB_LEDGER_SCHEMA")
+                    .unwrap_or_else(|_| DEFAULT_LEDGER_SCHEMA.to_string()),
+            );
             let runtime = tokio::runtime::Runtime::new().unwrap_or_else(|err| {
                 eprintln!("failed to create tokio runtime: {err}");
                 process::exit(1);
             });
             runtime.block_on(async {
                 let rt = DataBrokerRuntime::from_env().await;
-                match rt.execute_raw_sql(RESET_SQL, "admin reset-db").await {
+                match rt.execute_raw_sql(&reset_sql, "admin reset-db").await {
                     Ok(()) => {
                         eprintln!("admin reset-db: complete — all UDB-managed schemas and ledger tables dropped");
                         process::exit(0);
@@ -394,8 +412,13 @@ $$;
             output_json(&artifacts, "SQL artifacts");
         }
         Command::Plan => {
-            let plan = build_migration_plan(None, &schemas, &MigrationPlanConfig::default())
-                .unwrap_or_else(|err| fatal_json("failed to build migration plan", err));
+            // Load prior manifest from --prior <path> or UDB_PRIOR_MANIFEST_PATH,
+            // mirroring the Drift handler. Hardcoding None always emitted a
+            // full-create diff, contradicting the documented --prior behaviour.
+            let prior = load_prior_manifest_from_args(&args);
+            let plan =
+                build_migration_plan(prior.as_ref(), &schemas, &MigrationPlanConfig::default())
+                    .unwrap_or_else(|err| fatal_json("failed to build migration plan", err));
             output_json(&plan, "migration plan");
         }
         Command::Lint => {
@@ -459,14 +482,15 @@ $$;
                 process::exit(1);
             });
             eprintln!("udb DataBroker listening on {addr}");
+            let stack_size = serve_thread_stack_size();
             let serve_thread = std::thread::Builder::new()
                 .name("udb-serve".to_string())
-                .stack_size(64 * 1024 * 1024)
+                .stack_size(stack_size)
                 .spawn(move || {
                     let runtime = tokio::runtime::Builder::new_multi_thread()
                         .enable_all()
                         .thread_name("udb-runtime")
-                        .thread_stack_size(64 * 1024 * 1024)
+                        .thread_stack_size(stack_size)
                         .build()
                         .map_err(|err| format!("failed to create tokio runtime: {err}"))?;
                     runtime
@@ -556,6 +580,7 @@ $$;
         | Command::HealthCheck
         | Command::InitProject
         | Command::Dev { .. }
+        | Command::Auth(_)
         | Command::AdminReleaseLock
         | Command::AdminVerifyAudit { .. }
         | Command::AdminResetDb { .. }
@@ -683,16 +708,8 @@ $$;
             }
             // --backend flag overrides env var
             if let Some(ref b) = backend {
-                cfg.backend = match b.to_ascii_lowercase().as_str() {
-                    "qdrant" => BackendSyncTarget::Qdrant,
-                    "minio" | "s3" => BackendSyncTarget::Minio,
-                    "redis" => BackendSyncTarget::Redis,
-                    "mongodb" | "mongo" => BackendSyncTarget::Mongodb,
-                    "neo4j" => BackendSyncTarget::Neo4j,
-                    "clickhouse" => BackendSyncTarget::Clickhouse,
-                    "all" => BackendSyncTarget::All,
-                    _ => BackendSyncTarget::Postgres,
-                };
+                cfg.backend =
+                    BackendSyncTarget::from_token(b).unwrap_or(BackendSyncTarget::Postgres);
             }
             let is_multi = !matches!(cfg.backend, BackendSyncTarget::Postgres);
             if is_multi {
@@ -740,6 +757,22 @@ $$;
             }
         }
     }
+}
+
+fn ensure_cli_correlation_id() -> String {
+    if let Ok(existing) = env::var("UDB_CORRELATION_ID")
+        && !existing.trim().is_empty()
+    {
+        return existing;
+    }
+    let generated = uuid::Uuid::new_v4().to_string();
+    // This CLI helper runs during command startup, before UDB spawns worker
+    // threads that read process environment. Keep the mutation here so callers
+    // that still consult UDB_CORRELATION_ID see the generated id consistently.
+    unsafe {
+        env::set_var("UDB_CORRELATION_ID", &generated);
+    }
+    generated
 }
 
 fn run_dev_sandbox(action: DevAction, service: Option<&str>, confirmed: bool) -> i32 {

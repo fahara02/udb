@@ -57,7 +57,9 @@ pub struct CatalogManager {
     /// In-progress stagings keyed by project. Stage → activate is a
     /// project-local transition, so an RwLock around the map is fine
     /// (writes are infrequent; reads use the active_catalogs path).
-    staged_catalogs: RwLock<HashMap<String, CatalogState>>,
+    /// Staged catalogs keyed by project, each tagged with its staged-at instant
+    /// so old un-activated stagings can be evicted (#211).
+    staged_catalogs: RwLock<HashMap<String, (CatalogState, std::time::Instant)>>,
 }
 
 impl CatalogManager {
@@ -155,7 +157,11 @@ impl CatalogManager {
     /// Staged (not yet active) catalog for `project_id`.
     pub async fn staged_for(&self, project_id: &str) -> Option<CatalogState> {
         let key = canonical_project_key(project_id);
-        self.staged_catalogs.read().await.get(&*key).cloned()
+        self.staged_catalogs
+            .read()
+            .await
+            .get(&*key)
+            .map(|(state, _)| state.clone())
     }
 
     /// Stage a new catalog **for the project carried in the metadata**.
@@ -194,7 +200,26 @@ impl CatalogManager {
         };
 
         let mut staged = self.staged_catalogs.write().await;
-        staged.insert(key, new_state);
+        // #211: bound the staged map — evict stagings idle past the TTL, then
+        // the oldest until under the cap, before inserting this project's entry.
+        // Re-staging a project replaces its own entry, so this only grows with
+        // distinct projects that stage without ever activating/rolling back.
+        const STAGED_CATALOG_MAX: usize = 1000;
+        const STAGED_CATALOG_TTL: std::time::Duration = std::time::Duration::from_secs(3600);
+        let now = std::time::Instant::now();
+        if staged.len() >= STAGED_CATALOG_MAX && !staged.contains_key(&key) {
+            staged.retain(|_, (_, at)| now.saturating_duration_since(*at) < STAGED_CATALOG_TTL);
+            if staged.len() >= STAGED_CATALOG_MAX {
+                let mut ages: Vec<(String, std::time::Instant)> =
+                    staged.iter().map(|(k, (_, at))| (k.clone(), *at)).collect();
+                ages.sort_by_key(|(_, t)| *t);
+                let to_remove = staged.len() + 1 - STAGED_CATALOG_MAX;
+                for (k, _) in ages.into_iter().take(to_remove) {
+                    staged.remove(&k);
+                }
+            }
+        }
+        staged.insert(key, (new_state, now));
         Ok(checksum)
     }
 
@@ -215,7 +240,7 @@ impl CatalogManager {
     ) -> Result<(), String> {
         let key = canonical_project_key(project_id).into_owned();
         let mut staged = self.staged_catalogs.write().await;
-        let Some(state) = staged.remove(&*key) else {
+        let Some((state, staged_at)) = staged.remove(&*key) else {
             return Err(format!("no catalog staged for project '{key}'"));
         };
         let selector = expected_selector.trim();
@@ -225,7 +250,7 @@ impl CatalogManager {
         if !matched {
             let staged_version = state.metadata.version.clone();
             let staged_checksum = state.metadata.checksum.clone();
-            staged.insert(key.clone(), state);
+            staged.insert(key.clone(), (state, staged_at));
             return Err(format!(
                 "catalog selector mismatch for project '{key}': expected {expected_selector}, \
                  staged version is {staged_version}, staged checksum is {staged_checksum}"
@@ -236,12 +261,18 @@ impl CatalogManager {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs() as i64;
-        // Clone-and-replace the active map; ArcSwap publishes the new
-        // pointer atomically and concurrent readers see one or the other,
-        // never a torn write.
-        let mut next: HashMap<String, Arc<CatalogState>> = (**self.active_catalogs.load()).clone();
-        next.insert(key, Arc::new(activated));
-        self.active_catalogs.store(Arc::new(next));
+        // Publish into the active map via `rcu` (compare-and-swap retry) so the
+        // read-clone-mutate-store is atomic against any future writer, not just
+        // the `staged_catalogs` write lock currently held here. Readers continue
+        // to see one consistent pointer or the other, never a torn write.
+        // (#207 — defensive: today the held staged lock already serializes
+        // activations, so the CAS never actually retries.)
+        let activated = Arc::new(activated);
+        self.active_catalogs.rcu(|current| {
+            let mut next: HashMap<String, Arc<CatalogState>> = (**current).clone();
+            next.insert(key.clone(), Arc::clone(&activated));
+            Arc::new(next)
+        });
         Ok(())
     }
 

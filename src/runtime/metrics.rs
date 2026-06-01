@@ -20,6 +20,37 @@
 /// Implement this trait and supply it via `MigrationOptions::metrics` to wire
 /// in your preferred metrics backend (Prometheus, OTEL, Datadog, etc.).
 pub trait MetricsRecorder: Send + Sync + std::fmt::Debug {
+    fn record_grpc(&self, _method: &str, _status: &str, _seconds: f64) {}
+    fn observe_pg_query(&self, _op: &str, _table: &str, _seconds: f64) {}
+    fn inc_cache_op(&self, _op: &str, _hit: bool) {}
+    fn inc_vector_op(&self, _collection: &str, _op: &str) {}
+    fn inc_object_op(&self, _bucket: &str, _method: &str) {}
+    fn inc_channel_inflight(&self, _channel: &str) {}
+    fn dec_channel_inflight(&self, _channel: &str) {}
+    fn inc_channel_rejected(&self, _channel: &str) {}
+    fn inc_channel_timeout(&self, _channel: &str) {}
+    fn observe_channel_latency(&self, _channel: &str, _seconds: f64) {}
+    fn record_fair_admission(
+        &self,
+        _project: &str,
+        _tenant_hash: &str,
+        _backend: &str,
+        _instance: &str,
+        _op: &str,
+        _status: &str,
+    ) {
+    }
+    fn add_fair_cost(
+        &self,
+        _project: &str,
+        _tenant_hash: &str,
+        _backend: &str,
+        _instance: &str,
+        _op: &str,
+        _cost: f64,
+    ) {
+    }
+
     /// Increment the migration run counter.
     ///
     /// `status` is one of: `"completed"`, `"failed"`, `"blocked"`.
@@ -282,6 +313,13 @@ pub struct PrometheusMetrics {
     saga_active: prometheus::IntGauge,
     saga_compensated: prometheus::IntCounter,
     saga_failed_compensations: prometheus::IntCounter,
+    // Migration / startup-lifecycle metrics (item 8): collectors that back the
+    // formerly no-op MetricsRecorder migration methods.
+    migration_runs: prometheus::IntCounterVec,
+    migration_operations: prometheus::IntCounterVec,
+    migration_blocked: prometheus::IntGaugeVec,
+    migration_lint_warnings: prometheus::IntCounterVec,
+    migration_pending_files: prometheus::IntGauge,
     saga_duration: prometheus::Histogram,
     channel_inflight: prometheus::IntGaugeVec,
     channel_rejected: prometheus::IntCounterVec,
@@ -385,6 +423,39 @@ impl PrometheusMetrics {
         let saga_failed_compensations = prometheus::IntCounter::new(
             "udb_saga_failed_compensations_total",
             "Saga compensation actions that failed",
+        )?;
+        // Migration / startup-lifecycle collectors (item 8).
+        let migration_runs = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_migration_runs_total",
+                "Startup migration runs by terminal status",
+            ),
+            &["status"],
+        )?;
+        let migration_operations = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_migration_operations_total",
+                "Migration schema operations by kind, schema, and safety",
+            ),
+            &["kind", "schema", "safety"],
+        )?;
+        let migration_blocked = prometheus::IntGaugeVec::new(
+            prometheus::Opts::new(
+                "udb_migration_blocked_operations",
+                "Blocked / requires-review schema operations by schema and kind",
+            ),
+            &["schema", "kind"],
+        )?;
+        let migration_lint_warnings = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_migration_lint_warnings_total",
+                "Migration lint warnings by kind",
+            ),
+            &["kind"],
+        )?;
+        let migration_pending_files = prometheus::IntGauge::new(
+            "udb_migration_pending_files",
+            "Pending migration files awaiting apply",
         )?;
         let saga_duration = prometheus::Histogram::with_opts(
             prometheus::HistogramOpts::new(
@@ -504,6 +575,11 @@ impl PrometheusMetrics {
             Box::new(saga_compensated.clone()),
             Box::new(saga_failed_compensations.clone()),
             Box::new(saga_duration.clone()),
+            Box::new(migration_runs.clone()),
+            Box::new(migration_operations.clone()),
+            Box::new(migration_blocked.clone()),
+            Box::new(migration_lint_warnings.clone()),
+            Box::new(migration_pending_files.clone()),
             Box::new(channel_inflight.clone()),
             Box::new(channel_rejected.clone()),
             Box::new(channel_timeout.clone()),
@@ -542,6 +618,11 @@ impl PrometheusMetrics {
             saga_compensated,
             saga_failed_compensations,
             saga_duration,
+            migration_runs,
+            migration_operations,
+            migration_blocked,
+            migration_lint_warnings,
+            migration_pending_files,
             channel_inflight,
             channel_rejected,
             channel_timeout,
@@ -648,18 +729,123 @@ impl PrometheusMetrics {
     }
 }
 
+fn cdc_topic_label(topic: &str) -> &'static str {
+    let topic = topic.trim();
+    if topic == "workflow.dead_letter.v1" {
+        "workflow.dead_letter"
+    } else if topic.starts_with("workflow.retry") {
+        "workflow.retry"
+    } else if topic.starts_with("udb.cdc.") {
+        "udb.cdc"
+    } else if topic.starts_with("udb.") {
+        "udb.other"
+    } else if topic.is_empty() {
+        "empty"
+    } else {
+        "external"
+    }
+}
+
+fn cdc_error_reason_label(reason: &str) -> &'static str {
+    match reason.trim() {
+        "validation" | "schema_registry_rejected" | "source_identity_missing" => "validation",
+        "dlq_routed" => "dlq_routed",
+        "transient" | "source_stream_error" | "broadcast_lagged" => "transient",
+        "duplicate" | "duplicate_skipped" => "duplicate",
+        "" => "unknown",
+        _ => "other",
+    }
+}
+
 impl MetricsRecorder for PrometheusMetrics {
-    fn inc_runs_total(&self, _status: &str) {}
-    fn inc_operations_total(&self, _kind: &str, _schema: &str, _safety: &str) {}
+    fn record_grpc(&self, method: &str, status: &str, seconds: f64) {
+        PrometheusMetrics::record_grpc(self, method, status, seconds);
+    }
+    fn observe_pg_query(&self, op: &str, table: &str, seconds: f64) {
+        PrometheusMetrics::observe_pg_query(self, op, table, seconds);
+    }
+    fn inc_cache_op(&self, op: &str, hit: bool) {
+        PrometheusMetrics::inc_cache_op(self, op, hit);
+    }
+    fn inc_vector_op(&self, collection: &str, op: &str) {
+        PrometheusMetrics::inc_vector_op(self, collection, op);
+    }
+    fn inc_object_op(&self, bucket: &str, method: &str) {
+        PrometheusMetrics::inc_object_op(self, bucket, method);
+    }
+    fn inc_channel_inflight(&self, channel: &str) {
+        PrometheusMetrics::inc_channel_inflight(self, channel);
+    }
+    fn dec_channel_inflight(&self, channel: &str) {
+        PrometheusMetrics::dec_channel_inflight(self, channel);
+    }
+    fn inc_channel_rejected(&self, channel: &str) {
+        PrometheusMetrics::inc_channel_rejected(self, channel);
+    }
+    fn inc_channel_timeout(&self, channel: &str) {
+        PrometheusMetrics::inc_channel_timeout(self, channel);
+    }
+    fn observe_channel_latency(&self, channel: &str, seconds: f64) {
+        PrometheusMetrics::observe_channel_latency(self, channel, seconds);
+    }
+    fn record_fair_admission(
+        &self,
+        project: &str,
+        tenant_hash: &str,
+        backend: &str,
+        instance: &str,
+        op: &str,
+        status: &str,
+    ) {
+        PrometheusMetrics::record_fair_admission(
+            self,
+            project,
+            tenant_hash,
+            backend,
+            instance,
+            op,
+            status,
+        );
+    }
+    fn add_fair_cost(
+        &self,
+        project: &str,
+        tenant_hash: &str,
+        backend: &str,
+        instance: &str,
+        op: &str,
+        cost: f64,
+    ) {
+        PrometheusMetrics::add_fair_cost(self, project, tenant_hash, backend, instance, op, cost);
+    }
+
+    fn inc_runs_total(&self, status: &str) {
+        self.migration_runs.with_label_values(&[status]).inc();
+    }
+    fn inc_operations_total(&self, kind: &str, schema: &str, safety: &str) {
+        self.migration_operations
+            .with_label_values(&[kind, schema, safety])
+            .inc();
+    }
     fn observe_file_duration(&self, schema: &str, seconds: f64) {
         self.observe_pg_query("migration", schema, seconds);
     }
-    fn set_blocked_operations(&self, _schema: &str, _kind: &str, _count: i64) {}
-    fn inc_lint_warnings(&self, _kind: &str) {}
+    fn set_blocked_operations(&self, schema: &str, kind: &str, count: i64) {
+        self.migration_blocked
+            .with_label_values(&[schema, kind])
+            .set(count);
+    }
+    fn inc_lint_warnings(&self, kind: &str) {
+        self.migration_lint_warnings
+            .with_label_values(&[kind])
+            .inc();
+    }
     fn observe_run_duration(&self, status: &str, seconds: f64) {
         self.record_grpc("startup_lifecycle", status, seconds);
     }
-    fn set_pending_files(&self, _count: i64) {}
+    fn set_pending_files(&self, count: i64) {
+        self.migration_pending_files.set(count);
+    }
     fn set_cdc_is_leader(&self, host: &str, is_leader: bool) {
         self.cdc_is_leader
             .with_label_values(&[host])
@@ -669,10 +855,14 @@ impl MetricsRecorder for PrometheusMetrics {
         self.cdc_wal_messages.inc();
     }
     fn inc_cdc_events_published_total(&self, topic: &str) {
-        self.cdc_events.with_label_values(&[topic]).inc();
+        self.cdc_events
+            .with_label_values(&[cdc_topic_label(topic)])
+            .inc();
     }
     fn inc_cdc_errors_total(&self, reason: &str) {
-        self.cdc_errors.with_label_values(&[reason]).inc();
+        self.cdc_errors
+            .with_label_values(&[cdc_error_reason_label(reason)])
+            .inc();
     }
     fn set_cdc_lag_seconds(&self, seconds: f64) {
         self.cdc_lag.set(seconds);

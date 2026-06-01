@@ -64,6 +64,15 @@ use std::time::Duration;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
+pub(crate) const POSTGRES_DURABILITY_POLL_MS: u64 = 25;
+pub(crate) const MYSQL_DURABILITY_POLL_MS: u64 = 50;
+pub(crate) const SQLITE_DURABILITY_POLL_MS: u64 = 5;
+
+pub(crate) fn durability_poll_interval(timeout: Duration, default_ms: u64) -> Duration {
+    let adaptive_ms = (timeout.as_millis() / 100).clamp(1, u128::from(default_ms)) as u64;
+    Duration::from_millis(adaptive_ms)
+}
+
 #[cfg(feature = "mysql")]
 pub mod mysql;
 #[cfg(feature = "postgres")]
@@ -72,6 +81,11 @@ pub mod postgres;
 pub mod sqlite;
 // NW1-1a: system-table operations (projection tasks first).
 pub mod system_store;
+// #13/#24: shared SQL-dialect adapter + SQL-template helpers used by
+// the per-backend system-store impls. Compiled whenever any SQL
+// canonical-store backend is enabled.
+#[cfg(any(feature = "postgres", feature = "mysql", feature = "sqlite"))]
+mod dialect;
 // NW1-1a: SQLite implementation of ProjectionTaskStore.
 #[cfg(feature = "sqlite")]
 mod sqlite_projection;
@@ -250,12 +264,14 @@ pub trait CanonicalStore: Send + Sync {
     async fn ensure_advisory_lease_table(&self) -> Result<(), String>;
 
     /// Try to acquire the named lease, holding it for `ttl`. Returns
-    /// `Ok(true)` if we now own it, `Ok(false)` if another owner
-    /// holds an unexpired lease.
+    /// `Ok(true)` if the row was inserted, if an expired row was taken
+    /// over, or if the current owner refreshed its own live lease.
+    /// Returns `Ok(false)` only when a different owner holds an
+    /// unexpired lease.
     ///
     /// The implementation is **atomic at the SQL layer**: a single
-    /// statement inserts a new row OR re-claims an expired row. No
-    /// transaction wrapping needed.
+    /// statement inserts a new row OR re-claims an expired row OR
+    /// refreshes the same owner's row. No transaction wrapping needed.
     async fn try_acquire_advisory_lease(
         &self,
         lease_name: &str,

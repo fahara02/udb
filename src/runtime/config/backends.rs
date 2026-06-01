@@ -29,18 +29,21 @@ pub struct DbConfig {
     pub pooler_dsn: String,
     /// Direct DSN (non-pooled) for migrations and DDL.
     pub direct_dsn: String,
-    /// Maximum open connections in the pooler.
+    /// Maximum open connections in the pooler. Zero uses
+    /// `DEFAULT_DB_MAX_OPEN_CONNS`; backend instances may override it.
     pub max_open_conns: i32,
     /// Maximum idle connections in the pooler.
     pub max_idle_conns: i32,
-    /// Connection max lifetime in seconds.
+    /// Connection max lifetime in seconds. Zero uses the system-wide default.
     pub conn_max_lifetime_secs: u64,
-    /// Connection max idle time in seconds.
+    /// Connection max idle time in seconds. Zero uses the system-wide default.
     pub conn_max_idle_secs: u64,
-    /// Minimum connections in the pool. Default: 5.
+    /// Minimum connections in the pool. Default is the system-wide
+    /// `DEFAULT_DB_MIN_CONNECTIONS`; per-instance values win.
     #[serde(default = "five_i32")]
     pub min_connections: i32,
-    /// Connection acquire timeout in seconds. Default: 10.
+    /// Connection acquire timeout in seconds. Default is the system-wide
+    /// `DEFAULT_DB_ACQUIRE_TIMEOUT_SECS`; per-instance values win.
     #[serde(default = "ten_u64")]
     pub acquire_timeout_secs: u64,
 }
@@ -406,6 +409,51 @@ impl AuditSinkConfig {
                 .ok()
                 .filter(|v| !v.is_empty()),
             min_severity,
+        }
+    }
+
+    /// Overlay env-provided fields onto an existing (file-loaded) config,
+    /// touching only fields whose env var is present so YAML audit-sink config
+    /// is preserved rather than wiped.
+    pub fn merge_env(&mut self) {
+        if let Ok(raw) = std::env::var("UDB_AUDIT_SINK") {
+            self.kind = match raw.to_lowercase().as_str() {
+                "stdout" => AuditSinkKind::Stdout,
+                "file" => AuditSinkKind::File,
+                "kafka" => AuditSinkKind::Kafka,
+                "postgres" | "pg" => AuditSinkKind::Postgres,
+                _ => AuditSinkKind::None,
+            };
+        }
+        if let Some(v) = std::env::var("UDB_AUDIT_MIN_SEVERITY")
+            .ok()
+            .filter(|v| !v.is_empty())
+        {
+            self.min_severity = v;
+        }
+        if let Some(v) = std::env::var("UDB_AUDIT_FILE_PATH")
+            .ok()
+            .filter(|v| !v.is_empty())
+        {
+            self.file_path = Some(v);
+        }
+        if let Some(v) = std::env::var("UDB_AUDIT_KAFKA_TOPIC")
+            .ok()
+            .filter(|v| !v.is_empty())
+        {
+            self.kafka_topic = Some(v);
+        }
+        if let Some(v) = std::env::var("UDB_AUDIT_KAFKA_BROKERS")
+            .ok()
+            .filter(|v| !v.is_empty())
+        {
+            self.kafka_brokers = Some(v);
+        }
+        if let Some(v) = std::env::var("UDB_AUDIT_PG_TABLE")
+            .ok()
+            .filter(|v| !v.is_empty())
+        {
+            self.pg_table = Some(v);
         }
     }
 

@@ -10,14 +10,16 @@
 //!   serialization guarantee that `pg_advisory_xact_lock` gives on
 //!   Postgres or `GET_LOCK` gives on MySQL.
 //! - **Chain verification** streams rows in pages of 1,000 ordered
-//!   by `(created_at ASC, audit_id ASC)` so the audit log can be
-//!   arbitrarily large without buffering it all into memory.
+//!   by `rowid ASC` (the monotonic insertion key, immune to
+//!   same-timestamp UUID tie-break reordering) so the audit log can
+//!   be arbitrarily large without buffering it all into memory.
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sqlx::Row;
+use sqlx::{Row, sqlite::SqliteConnection};
 use uuid::Uuid;
 
+use super::dialect::{SqlDialect, build_eq_where, normalize_limit_offset};
 use super::sqlite::SqliteCanonicalStore;
 use super::system_store::{
     AdminAuditChainReport, AdminAuditInsert, AdminAuditListFilter, AdminAuditRow, AdminAuditStore,
@@ -25,10 +27,6 @@ use super::system_store::{
 };
 
 const TABLE: &str = "udb_admin_audit_log";
-
-/// Verify pulls this many rows per page. Tuned so the page fits in
-/// a single sqlx round-trip without dominating memory.
-const VERIFY_PAGE_SIZE: i64 = 1000;
 
 fn parse_iso(s: &str) -> DateTime<Utc> {
     DateTime::parse_from_rfc3339(s)
@@ -119,10 +117,13 @@ impl AdminAuditStore for SqliteCanonicalStore {
     }
 
     async fn latest_admin_audit_hash(&self) -> SystemStoreResult<String> {
+        // Order by the monotonic insertion key (rowid), not (created_at,
+        // audit_id): same-timestamp rows have random-UUID tie-breaks that can
+        // mis-order the chain head. rowid reflects true append order.
         let sql = format!(
             "SELECT current_hash FROM {TABLE} \
              WHERE current_hash <> '' \
-             ORDER BY created_at DESC, audit_id DESC LIMIT 1"
+             ORDER BY rowid DESC LIMIT 1"
         );
         let hash: Option<String> = sqlx::query_scalar(&sql)
             .fetch_optional(self.pool_ref())
@@ -132,28 +133,208 @@ impl AdminAuditStore for SqliteCanonicalStore {
     }
 
     async fn append_admin_audit(&self, entry: &AdminAuditInsert) -> SystemStoreResult<Uuid> {
-        // SQLite's BEGIN IMMEDIATE acquires the write lock immediately.
-        // While this transaction is open no other writer can interleave,
-        // so the read-latest + insert is atomic against concurrent
-        // append_admin_audit calls.
-        let mut tx = self
+        // The read-latest + insert must be atomic against concurrent appends or
+        // the hash chain forks. sqlx's `begin()` issues `BEGIN DEFERRED`, which
+        // only takes the write lock lazily — two appends can both read the same
+        // latest hash before either writes. Pin one connection and start the tx
+        // with an explicit `BEGIN IMMEDIATE` so the write lock is held for the
+        // entire critical section, then COMMIT (or ROLLBACK on failure).
+        let mut conn = self
             .pool_ref()
-            .begin()
+            .acquire()
             .await
             .map_err(|e| SystemStoreError::io("sqlite", e))?;
-        // Begin immediate semantics: sqlx-sqlite's `begin()` issues
-        // `BEGIN DEFERRED` by default; force the immediate mode by
-        // running a write SQL inside the tx first. The simplest pure
-        // approach: explicitly emit `COMMIT TRANSACTION` after our
-        // logic and let SQLite's exclusive lock be acquired by the
-        // first write below.
+        sqlx::query("BEGIN IMMEDIATE")
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| SystemStoreError::query("sqlite", "BEGIN IMMEDIATE", e))?;
+        let result = Self::append_admin_audit_locked(&mut conn, entry).await;
+        match &result {
+            Ok(_) => {
+                sqlx::query("COMMIT")
+                    .execute(&mut *conn)
+                    .await
+                    .map_err(|e| SystemStoreError::io("sqlite", e))?;
+            }
+            Err(_) => {
+                let _ = sqlx::query("ROLLBACK").execute(&mut *conn).await;
+            }
+        }
+        result
+    }
+
+    async fn list_admin_audit(
+        &self,
+        filter: &AdminAuditListFilter,
+    ) -> SystemStoreResult<Vec<AdminAuditRow>> {
+        let w = build_eq_where(
+            SqlDialect::SQLITE,
+            &[
+                ("operation", filter.operation.is_some()),
+                ("actor", filter.actor.is_some()),
+                ("tenant_id", filter.tenant_id.is_some()),
+                ("project_id", filter.project_id.is_some()),
+            ],
+        );
+        let where_sql = &w.where_sql;
+        let limit_placeholder = &w.limit_placeholder;
+        let offset_placeholder = &w.offset_placeholder;
+        let (limit, offset) = normalize_limit_offset(filter.limit, filter.offset);
+        let sql = format!(
+            "SELECT audit_id, actor, operation, target, request_json, result,
+                    tenant_id, project_id, correlation_id,
+                    previous_hash, current_hash, signer_key_id, external_anchor,
+                    created_at
+             FROM {TABLE}
+             {where_sql}
+             ORDER BY created_at DESC
+             LIMIT {limit_placeholder} OFFSET {offset_placeholder}"
+        );
+        let mut q = sqlx::query(&sql);
+        if let Some(o) = &filter.operation {
+            q = q.bind(o.clone());
+        }
+        if let Some(a) = &filter.actor {
+            q = q.bind(a.clone());
+        }
+        if let Some(t) = &filter.tenant_id {
+            q = q.bind(t.clone());
+        }
+        if let Some(p) = &filter.project_id {
+            q = q.bind(p.clone());
+        }
+        q = q.bind(limit).bind(offset);
+        let rows = q
+            .fetch_all(self.pool_ref())
+            .await
+            .map_err(|e| SystemStoreError::query("sqlite", sql.clone(), e))?;
+        let mut out = Vec::with_capacity(rows.len());
+        for r in rows {
+            let mut row = row_to_audit(r)?;
+            if filter.redact_request_json {
+                row.request_json = serde_json::json!({"redacted": true});
+            }
+            out.push(row);
+        }
+        Ok(out)
+    }
+
+    async fn verify_admin_audit_chain(
+        &self,
+        limit: Option<i64>,
+    ) -> SystemStoreResult<AdminAuditChainReport> {
+        let mut conn = self
+            .pool_ref()
+            .acquire()
+            .await
+            .map_err(|e| SystemStoreError::io("sqlite", e))?;
+        sqlx::query("BEGIN IMMEDIATE")
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| SystemStoreError::query("sqlite", "BEGIN IMMEDIATE", e))?;
+        let mut previous_hash = String::new();
+        let mut checked: i64 = 0;
+        let mut offset: i64 = 0;
+
+        // Streaming-friendly: pull rows page by page in oldest-first
+        // order, feed each into the shared verify helper, stop on
+        // the first failure or when the limit is hit.
+        let final_report = loop {
+            let remaining = match limit {
+                Some(n) if n > 0 => (n - checked).max(0),
+                _ => i64::MAX,
+            };
+            if remaining == 0 {
+                break AdminAuditChainReport::Passed {
+                    checked_count: checked,
+                    last_hash: previous_hash.clone(),
+                };
+            }
+            let page = remaining.min(super::dialect::admin_audit_verify_page_size());
+            let sql = format!(
+                "SELECT audit_id, actor, operation, target, request_json, result,
+                        tenant_id, project_id, correlation_id,
+                        previous_hash, current_hash, signer_key_id, external_anchor,
+                        created_at
+                 FROM {TABLE}
+                 ORDER BY rowid ASC
+                 LIMIT ? OFFSET ?"
+            );
+            let rows = match sqlx::query(&sql)
+                .bind(page)
+                .bind(offset)
+                .fetch_all(&mut *conn)
+                .await
+            {
+                Ok(rows) => rows,
+                Err(e) => {
+                    let _ = sqlx::query("ROLLBACK").execute(&mut *conn).await;
+                    return Err(SystemStoreError::query("sqlite", sql.clone(), e));
+                }
+            };
+            if rows.is_empty() {
+                break AdminAuditChainReport::Passed {
+                    checked_count: checked,
+                    last_hash: previous_hash.clone(),
+                };
+            }
+            let n_rows = rows.len() as i64;
+            let mut tamper: Option<AdminAuditChainReport> = None;
+            for r in rows {
+                let row = match row_to_audit(r) {
+                    Ok(row) => row,
+                    Err(err) => {
+                        let _ = sqlx::query("ROLLBACK").execute(&mut *conn).await;
+                        return Err(err);
+                    }
+                };
+                match verify_admin_audit_chain_step(&row, &previous_hash, checked) {
+                    Ok(next) => {
+                        previous_hash = next;
+                        checked += 1;
+                    }
+                    Err(report) => {
+                        tamper = Some(report);
+                        break;
+                    }
+                }
+            }
+            if let Some(report) = tamper {
+                break report;
+            }
+            offset += n_rows;
+            if n_rows < page {
+                break AdminAuditChainReport::Passed {
+                    checked_count: checked,
+                    last_hash: previous_hash.clone(),
+                };
+            }
+        };
+        sqlx::query("COMMIT")
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| SystemStoreError::query("sqlite", "COMMIT", e))?;
+        Ok(final_report)
+    }
+}
+
+impl SqliteCanonicalStore {
+    /// Read-latest + insert on a connection already inside a `BEGIN IMMEDIATE`
+    /// transaction (caller commits/rolls back). Kept out of the trait impl so
+    /// the `#[async_trait]` macro doesn't process it as a trait method.
+    async fn append_admin_audit_locked(
+        conn: &mut SqliteConnection,
+        entry: &AdminAuditInsert,
+    ) -> SystemStoreResult<Uuid> {
+        // Order by rowid (monotonic insertion key), not (created_at, audit_id):
+        // same-timestamp rows have random-UUID tie-breaks that can fork the chain.
         let latest_sql = format!(
             "SELECT current_hash FROM {TABLE} \
              WHERE current_hash <> '' \
-             ORDER BY created_at DESC, audit_id DESC LIMIT 1"
+             ORDER BY rowid DESC LIMIT 1"
         );
         let previous_hash: String = sqlx::query_scalar(&latest_sql)
-            .fetch_optional(&mut *tx)
+            .fetch_optional(&mut *conn)
             .await
             .map_err(|e| SystemStoreError::query("sqlite", latest_sql.clone(), e))?
             .unwrap_or_default();
@@ -194,138 +375,10 @@ impl AdminAuditStore for SqliteCanonicalStore {
             .bind(&current_hash)
             .bind(&entry.signer_key_id)
             .bind(&entry.external_anchor)
-            .execute(&mut *tx)
+            .execute(&mut *conn)
             .await
             .map_err(|e| SystemStoreError::query("sqlite", insert_sql.clone(), e))?;
-        tx.commit()
-            .await
-            .map_err(|e| SystemStoreError::io("sqlite", e))?;
         Ok(audit_id)
-    }
-
-    async fn list_admin_audit(
-        &self,
-        filter: &AdminAuditListFilter,
-    ) -> SystemStoreResult<Vec<AdminAuditRow>> {
-        let mut clauses: Vec<&str> = Vec::new();
-        if filter.operation.is_some() {
-            clauses.push("operation = ?");
-        }
-        if filter.actor.is_some() {
-            clauses.push("actor = ?");
-        }
-        if filter.tenant_id.is_some() {
-            clauses.push("tenant_id = ?");
-        }
-        if filter.project_id.is_some() {
-            clauses.push("project_id = ?");
-        }
-        let where_sql = if clauses.is_empty() {
-            String::new()
-        } else {
-            format!("WHERE {}", clauses.join(" AND "))
-        };
-        let limit = if filter.limit <= 0 { 100 } else { filter.limit };
-        let offset = filter.offset.max(0);
-        let sql = format!(
-            "SELECT audit_id, actor, operation, target, request_json, result,
-                    tenant_id, project_id, correlation_id,
-                    previous_hash, current_hash, signer_key_id, external_anchor,
-                    created_at
-             FROM {TABLE}
-             {where_sql}
-             ORDER BY created_at DESC
-             LIMIT ? OFFSET ?"
-        );
-        let mut q = sqlx::query(&sql);
-        if let Some(o) = &filter.operation {
-            q = q.bind(o.clone());
-        }
-        if let Some(a) = &filter.actor {
-            q = q.bind(a.clone());
-        }
-        if let Some(t) = &filter.tenant_id {
-            q = q.bind(t.clone());
-        }
-        if let Some(p) = &filter.project_id {
-            q = q.bind(p.clone());
-        }
-        q = q.bind(limit).bind(offset);
-        let rows = q
-            .fetch_all(self.pool_ref())
-            .await
-            .map_err(|e| SystemStoreError::query("sqlite", sql.clone(), e))?;
-        let mut out = Vec::with_capacity(rows.len());
-        for r in rows {
-            let mut row = row_to_audit(r)?;
-            if filter.redact_request_json {
-                row.request_json = serde_json::json!({"redacted": true});
-            }
-            out.push(row);
-        }
-        Ok(out)
-    }
-
-    async fn verify_admin_audit_chain(
-        &self,
-        limit: Option<i64>,
-    ) -> SystemStoreResult<AdminAuditChainReport> {
-        let mut previous_hash = String::new();
-        let mut checked: i64 = 0;
-        let mut offset: i64 = 0;
-
-        // Streaming-friendly: pull rows page by page in oldest-first
-        // order, feed each into the shared verify helper, stop on
-        // the first failure or when the limit is hit.
-        loop {
-            let remaining = match limit {
-                Some(n) if n > 0 => (n - checked).max(0),
-                _ => i64::MAX,
-            };
-            if remaining == 0 {
-                break;
-            }
-            let page = remaining.min(VERIFY_PAGE_SIZE);
-            let sql = format!(
-                "SELECT audit_id, actor, operation, target, request_json, result,
-                        tenant_id, project_id, correlation_id,
-                        previous_hash, current_hash, signer_key_id, external_anchor,
-                        created_at
-                 FROM {TABLE}
-                 ORDER BY created_at ASC, audit_id ASC
-                 LIMIT ? OFFSET ?"
-            );
-            let rows = sqlx::query(&sql)
-                .bind(page)
-                .bind(offset)
-                .fetch_all(self.pool_ref())
-                .await
-                .map_err(|e| SystemStoreError::query("sqlite", sql.clone(), e))?;
-            if rows.is_empty() {
-                break;
-            }
-            let n_rows = rows.len() as i64;
-            for r in rows {
-                let row = row_to_audit(r)?;
-                match verify_admin_audit_chain_step(&row, &previous_hash, checked) {
-                    Ok(next) => {
-                        previous_hash = next;
-                        checked += 1;
-                    }
-                    Err(report) => {
-                        return Ok(report);
-                    }
-                }
-            }
-            offset += n_rows;
-            if n_rows < page {
-                break;
-            }
-        }
-        Ok(AdminAuditChainReport::Passed {
-            checked_count: checked,
-            last_hash: previous_hash,
-        })
     }
 }
 

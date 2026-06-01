@@ -46,3 +46,4 @@ class ObjectBackend
         return constant($const);
     }
 }
+

@@ -1,27 +1,37 @@
-# Universal Data Broker (UDB)
+<h1 align="center">🛰️ Universal Data Broker (UDB)</h1>
 
-[![Rust 2024](https://img.shields.io/badge/Rust-2024-b7410e?logo=rust)](Cargo.toml)
-[![gRPC + Protobuf](https://img.shields.io/badge/API-gRPC%20%2B%20Protobuf-244c5a)](proto/README.md)
-[![Protocol 1.0.0](https://img.shields.io/badge/protocol-1.0.0-2f855a)](sdk/UDB_PROTOCOL_VERSION)
-[![Backends](https://img.shields.io/badge/backend%20kinds-18-4c51bf)](#backend-model)
+<p align="center"><em>One proto-driven gRPC control point in front of 18 databases — with built-in auth, multi-tenant RLS, migrations, CDC, and SDKs for 6 languages.</em></p>
 
-UDB is a Rust implementation of a proto-driven data broker. It reads project
-owned `.proto` schemas, extracts storage annotations, builds a catalog manifest,
-generates migration/bootstrap artifacts, and can serve those schemas through a
-neutral gRPC `DataBroker` API.
+<p align="center">
+<a href="Cargo.toml"><img alt="Rust 2024" src="https://img.shields.io/badge/Rust-2024-b7410e?logo=rust&logoColor=white"></a>
+<a href="proto/README.md"><img alt="gRPC + Protobuf" src="https://img.shields.io/badge/API-gRPC%20%2B%20Protobuf-244c5a?logo=grpc&logoColor=white"></a>
+<a href="sdk/UDB_PROTOCOL_VERSION"><img alt="Protocol 1.0.0" src="https://img.shields.io/badge/protocol-1.0.0-2f855a"></a>
+<a href="#-backend-matrix"><img alt="Backends" src="https://img.shields.io/badge/backends-18-4c51bf"></a>
+<a href="#-supported-features"><img alt="DataBroker RPCs" src="https://img.shields.io/badge/DataBroker-73%20RPCs-0e7490"></a>
+<a href="#native-control-plane"><img alt="Control plane" src="https://img.shields.io/badge/control%20plane-6%20services%20%C2%B7%2077%20RPCs-7c3aed"></a>
+<a href="#-quickstart-per-language"><img alt="SDKs" src="https://img.shields.io/badge/SDKs-Go%20%C2%B7%20Python%20%C2%B7%20TS%20%C2%B7%20Java%20%C2%B7%20C%23%20%C2%B7%20PHP-1f6feb"></a>
+<a href="LICENSE"><img alt="License MIT" src="https://img.shields.io/badge/license-MIT-555"></a>
+</p>
 
-The important idea is this:
+UDB is a Rust implementation of a proto-driven data broker. It reads project-owned
+`.proto` schemas, extracts storage annotations, builds a catalog manifest, generates
+migration/bootstrap artifacts, and serves those schemas through a neutral gRPC
+`DataBroker` API — fronted by a native auth/authz control plane.
 
-```text
-project .proto files
-        |
-        v
-parser -> ProtoSchema AST -> CatalogManifest/checksum
-        |                     |
-        |                     +-> lint, drift, migration plans, SQL/artifacts
-        |
-        v
-DataBroker runtime -> auth/ABAC -> channel admission -> IR -> backend executor
+```mermaid
+flowchart LR
+    P["📦 project .proto<br/>(+ udb annotations)"] --> PA["🧩 parser →<br/>ProtoSchema AST"]
+    PA --> CM["📚 CatalogManifest<br/>+ checksum"]
+    CM --> GEN["🛠️ lint · drift ·<br/>migrations · SQL"]
+    CM --> RT["⚙️ DataBroker runtime"]
+    subgraph RT_PIPE["request pipeline"]
+        direction LR
+        AUTH["🔐 authn / authz"] --> ADM["🚦 channel admission"] --> IR["🔁 neutral IR"] --> EX["🔌 backend executor"]
+    end
+    RT --> RT_PIPE
+    EX --> DB[("🗄️ 18 backends<br/>SQL · vector · object ·<br/>cache · doc · graph · column")]
+    classDef accent fill:#1f6feb,stroke:#0b3d91,color:#fff;
+    class RT,RT_PIPE accent;
 ```
 
 This repo is not only a parser and not only a gRPC server. It is a crate,
@@ -48,6 +58,29 @@ UDB centralizes those concerns:
   and catalog version metadata.
 - Backends are reached through a neutral logical IR and feature-gated plugin
   modules instead of service code hand-writing each database dialect.
+
+## ⚡ Supported Features
+
+Data plane (`DataBroker`, 73 RPCs):
+
+- **Relational** CRUD + batch (`Select`/`BatchSelect`/`Upsert`/`BatchUpsert`/`Delete`).
+- **Vector** search / hybrid search / upsert (Qdrant, Weaviate, Pinecone, Elasticsearch knn).
+- **Object/blob** put/get, presigned URLs, multipart (S3, MinIO, Azure Blob, GCS).
+- **Cache** get/set/delete/scan (Redis, Memcached).
+- **Document / graph / time-series / analytical** ops (MongoDB, Neo4j, ClickHouse, Cassandra).
+- **Transactions**: per-request transactionality, real Postgres **2PC** and MySQL **XA** (`UDB_2PC_ENABLED`), **sagas** with recovery/compensation.
+- **CDC → Kafka** via a transactional outbox relay, with DLQ, topic policy, and a CDC control plane.
+- **Catalog & migrations**: staged/activate/rollback catalogs, proto-driven migration plan/apply with an audited op ledger.
+- **Projections / materialized views**, **per-tenant RLS**, **field-level encryption** (AES-256-GCM-SIV), rate limiting / fair channels / backpressure, Prometheus metrics.
+
+Control plane (`proto/udb/core/**`, isolated listener — see [Native Control Plane](#native-control-plane)):
+
+- **Authn**: native JWT validation (JWKS/`kid`), **UDB-issued RS256 JWT signing + refresh tokens**, **Argon2id** passwords, **RFC 6238 TOTP MFA**, server-side sessions, **CSRF**, OTP, full user admin, mTLS + hybrid external identity (OIDC/Better Auth bridge).
+- **Authz**: RBAC + ABAC + simple ReBAC over a Casbin enforcer, role/policy/relationship CRUD, audit decisions, **`GetNativeAccess`** (restricted role + scoped DSN + RLS session vars), **signed policy bundles** for offline SDK caches.
+- **ApiKey**: hashed keys, scopes, rotation, revocation, usage stats.
+- **Tenant / Notification / Analytics**: tenant + config management, notification logs/templates/preferences/delivery-stats (with Kafka emit), and pipeline/executor/reconciliation/throughput/SLA analytics.
+
+All native control-plane CRUD is **proto-driven** (table + column shape resolved from the embedded `proto/udb/core/**` manifest via `NativeModel`) and **Postgres-backed, fail-closed** — no in-memory stores.
 
 ## Honest Status
 
@@ -94,6 +127,28 @@ entry point is tiny by design: [`src/main.rs`](src/main.rs) calls the CLI module
 
 ## Request Flow
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as 📱 Client / SDK
+    participant S as ⚙️ DataBrokerService
+    participant A as 🔐 authz (v2)
+    participant Ch as 🚦 channels
+    participant IR as 🔁 IR + router
+    participant B as 🔌 Backend
+    C->>S: gRPC + metadata (tenant, purpose, scopes, …)
+    S->>S: SecurityContext · ensure_ready() · catalog compat
+    S->>A: authorize(identity, tenant, op, resource)
+    A-->>S: Decision (allow + decision_id / deny)
+    S->>Ch: acquire permit (limit · fairness · backpressure)
+    Ch-->>S: permit
+    S->>IR: lower to neutral IR · resolve target
+    IR->>B: execute (SET LOCAL app.current_* for RLS)
+    B-->>S: result
+    S-->>C: response + catalog/consistency headers (+ write receipt)
+    Note over S,B: side effects → metrics · audit · CDC · projection · saga · DLQ
+```
+
 For a normal gRPC call:
 
 1. `DataBrokerService` receives the RPC in [`src/runtime/service/mod.rs`](src/runtime/service/mod.rs).
@@ -113,10 +168,16 @@ For a normal gRPC call:
 11. Metrics, audit, CDC, projection, saga, or DLQ paths record side effects as
     configured.
 
-The gRPC protocol currently defines 60 RPCs in
+The `DataBroker` data-plane contract defines 73 RPCs in
 [`proto/udb/services/v1/data_broker.proto`](proto/udb/services/v1/data_broker.proto).
-They cover data, vector, object, transaction, CDC, resource admin, catalog,
-migration, DLQ, saga, policy, project, health, and admin/audit surfaces.
+They cover relational, vector, object, cache, document, graph, time-series,
+analytical, transaction/2PC, CDC, resource admin, catalog, migration, DLQ, saga,
+policy, project, health, and admin/audit surfaces.
+
+Alongside the data plane, UDB now ships a **native control plane** under
+`proto/udb/core/**` — six services (Authn, Authz, ApiKey, Tenant, Notification,
+Analytics, 77 RPCs total) that run on a **separate, network-isolated listener**
+(`UDB_AUTH_GRPC_ADDR`). See [Native Control Plane](#native-control-plane).
 
 ## Main Concepts
 
@@ -180,7 +241,7 @@ Key files:
 - [`src/ir/compile/`](src/ir/compile)
 - [`src/ir/cross_backend_tests.rs`](src/ir/cross_backend_tests.rs)
 
-### Backend Model
+### 🗄️ Backend Matrix
 
 UDB separates backend identity from runtime availability:
 
@@ -192,18 +253,38 @@ UDB separates backend identity from runtime availability:
 - `Backend` plugin structs register backend-specific setup, generation, and
   conformance contracts.
 
-Backend kinds currently present in code:
+The code declares **18 `BackendKind` variants** (`src/backend/mod.rs`), all enabled
+in the default feature set. `role` is whether a backend can host UDB system tables
+(canonical) or only serve reads/projections; `RLS` is how per-tenant context is
+enforced (Postgres/MySQL/SQLite session GUCs, key-prefix for KV/object, filter
+predicate for document/vector). Slim builds compile a subset, e.g.
+`--no-default-features --features postgres`.
 
-| Tier | Backends |
-|---|---|
-| SQL / relational | Postgres, MySQL, SQLite, SQL Server, ClickHouse |
-| Cache | Redis, Memcached |
-| Vector | Qdrant, Weaviate, Pinecone |
-| Object | MinIO, S3, Azure Blob, Google Cloud Storage |
-| Document/search/graph/column | MongoDB, Elasticsearch, Neo4j, Cassandra/ScyllaDB |
+| Backend | Tier | Feature flag | Role | Operations | Txn / 2PC | RLS |
+|---|---|---|---|---|---|---|
+| Postgres | SQL | `postgres` (always on) | canonical | relational CRUD, tx | yes / **2PC** | session GUC |
+| MySQL | SQL | `mysql` | canonical | relational CRUD, tx | yes / **XA+2PC** | session GUC |
+| SQLite | SQL | `sqlite` | canonical | relational CRUD, tx | yes / — | context table |
+| SQL Server | SQL | `mssql` | projection | relational CRUD, tx | yes / — | `SESSION_CONTEXT` |
+| ClickHouse | column | `clickhouse` | both | analytical query, mutate | — | session setting |
+| Redis | cache | `redis` | projection | cache get/set/del/scan | — | key prefix |
+| Memcached | cache | `memcached` | projection | cache get/set | — | key prefix |
+| Qdrant | vector | `qdrant` | projection | vector search/upsert | — | filter |
+| Weaviate | vector | `weaviate` | projection | vector + hybrid search | — | filter |
+| Pinecone | vector | `pinecone` | projection | vector + hybrid search | — | filter |
+| MinIO | object | `s3` | projection | object put/get/presign | — | key prefix |
+| S3 | object | `s3` | projection | object put/get/presign | — | key prefix |
+| Azure Blob | object | `azureblob` | projection | object put/get | — | key prefix |
+| Google Cloud Storage | object | `gcs` | projection | object put/get | — | key prefix |
+| MongoDB | document | `mongodb` | canonical | document find/upsert, tx | yes / — | filter |
+| Elasticsearch | search | `elasticsearch` | projection | search + hybrid | — | filter |
+| Neo4j | graph | `neo4j` | both | graph query/mutate, tx | yes / — | Cypher param |
+| Cassandra / ScyllaDB | column | `cassandra` | projection | wide-column query/mutate | LWT only | partition key |
 
-Core backend defaults from the old spec remain Postgres, Redis, Qdrant, and
-MinIO. The newer plugin inventory is broader.
+Postgres is always compiled (never feature-gated); the other 17 are gated. MinIO
+and S3 share the `s3` feature. `src/backend/mod.rs` is the source of truth for the
+full `BackendCapability` matrix (transactions, XA/2PC, RLS, vector/hybrid search,
+TTL, object-store, migration-ledger, consistency model).
 
 ### Canonical Stores
 
@@ -290,10 +371,10 @@ cargo test --lib
 ```
 
 ```powershell
-cargo run --bin udb-proto-parser -- lint examples/arbitrary_project/proto --human
-cargo run --bin udb-proto-parser -- catalog examples/arbitrary_project/proto
-cargo run --bin udb-proto-parser -- sql examples/arbitrary_project/proto
-cargo run --bin udb-proto-parser -- plan examples/arbitrary_project/proto
+cargo run --bin udb-proto-parser -- lint examples/go_arbitary_project/proto --human
+cargo run --bin udb-proto-parser -- catalog examples/go_arbitary_project/proto
+cargo run --bin udb-proto-parser -- sql examples/go_arbitary_project/proto
+cargo run --bin udb-proto-parser -- plan examples/go_arbitary_project/proto
 ```
 
 Run a Postgres-backed broker locally:
@@ -302,7 +383,7 @@ Run a Postgres-backed broker locally:
 Copy-Item .env.example .env.local
 $env:UDB_PG_DSN = "postgresql://udb:udb@localhost:5432/udb?sslmode=prefer"
 $env:UDB_ABAC_DEFAULT_ALLOW = "true"
-cargo run --bin udb-proto-parser -- serve examples/arbitrary_project/proto "" 0.0.0.0:50051
+cargo run --bin udb-proto-parser -- serve examples/go_arbitary_project/proto "" 0.0.0.0:50051
 ```
 
 Run local readiness checks:
@@ -450,6 +531,72 @@ Start here:
 - [`docs/security.md`](docs/security.md)
 - [`docs/integration.md`](docs/integration.md)
 
+## Native Control Plane
+
+Beyond the data-plane `DataBroker`, UDB serves a UDB-owned **auth/admin control
+plane** defined under `proto/udb/core/**`. These six services are **network-isolated
+on a separate listener** (`UDB_AUTH_GRPC_ADDR`, default loopback `port+10`) because
+they are a policy decision point that accepts the subject principal as input — they
+must not sit on the public `DataBroker` port where any client could assert identity.
+All of them are proto-driven (`NativeModel`) and Postgres-backed, failing closed
+when no PG pool is configured; their tables are generated from the embedded
+`proto/udb/core/**` manifest through the normal migration path.
+
+```mermaid
+flowchart TB
+    APP["📱 app / SDK<br/>(6 languages)"]
+    PEP["🛡️ trusted PEP / gateway"]
+    subgraph UDB["UDB process"]
+        direction TB
+        PUB["🌐 public listener<br/><b>DataBroker</b> · 73 RPCs"]
+        INT["🔒 internal listener · UDB_AUTH_GRPC_ADDR<br/><b>Authn · Authz · ApiKey · Tenant · Notification · Analytics</b>"]
+    end
+    BK[("🗄️ 18 backends")]
+    KAFKA["📨 Kafka (CDC / events)"]
+    APP -->|"data RPCs"| PUB
+    PEP -->|"auth / admin RPCs"| INT
+    INT -.->|"Authorize / GetNativeAccess"| PUB
+    PUB --> BK
+    INT --> BK
+    PUB -.->|"outbox relay"| KAFKA
+    INT -.->|"auth/notification events"| KAFKA
+    classDef pub fill:#0e7490,stroke:#083344,color:#fff;
+    classDef int fill:#7c3aed,stroke:#3b0764,color:#fff;
+    class PUB pub;
+    class INT int;
+```
+
+| Service | Proto | RPCs | What it does |
+|---|---|---:|---|
+| `AuthnService` | `core/authn` | 23 | Authenticate (JWT / session / API key / external), login/logout, **RS256 JWT signing + refresh**, sessions, **TOTP MFA**, **CSRF**, OTP, user admin |
+| `AuthzService` | `core/authz` | 23 | `Authorize`/`CheckAccess`/batch over RBAC+ABAC+ReBAC (Casbin), role/policy/relationship CRUD, audit decisions, **`GetNativeAccess`**, **`GetPolicyBundle`** |
+| `ApiKeyService` | `core/apikey` | 7 | Create/get/list/update/revoke/validate API keys + usage stats |
+| `TenantService` | `core/tenant` | 6 | Tenant + tenant-config CRUD |
+| `NotificationService` | `core/notification` | 11 | Notifications, templates, preferences, delivery stats (emits `udb.notification.sent.v1` to Kafka) |
+| `AnalyticsService` | `core/analytics` | 7 | Pipeline metrics, executor performance, reconciliation, throughput, SLA compliance |
+
+Key capabilities:
+
+- **Identity**: native JWT (static PEM or JWKS URL with `kid` rotation), UDB-issued
+  RS256 access tokens + refresh tokens (`UDB_JWT_PRIVATE_KEY`), Argon2id passwords
+  (legacy keyed-HMAC auto-upgraded on login), RFC 6238 TOTP MFA, server-side sessions
+  with idle/absolute TTL + revocation, mTLS SAN identity, and a hybrid external-identity
+  bridge (the external provider proves *who*; UDB authz still decides *what*).
+- **Authorization**: one engine for RBAC (roles + bindings), ABAC (attribute
+  conditions), and simple ReBAC (relationship tuples) with tenant/project domains,
+  explicit-deny-wins, priority, and deterministic `decision_id` + audit records.
+  `UDB_AUTHZ_V2` (default **on**) routes broker enforcement through it.
+- **Native fast path**: `GetNativeAccess` authorizes a request and, when allowed,
+  mints a short-lived restricted-role DSN plus the exact `app.current_*` session
+  variables to `SET LOCAL`, so an SDK can talk to Postgres directly while the
+  broker-generated RLS still applies.
+- **Offline SDK authz**: `GetPolicyBundle` returns an HMAC-signed, time-boxed
+  snapshot the SDK caches to answer `can()` locally.
+
+Source: [`src/runtime/authn/`](src/runtime/authn), [`src/runtime/authz/`](src/runtime/authz),
+[`src/runtime/service/auth_service/`](src/runtime/service/auth_service),
+[`docs/native-services.md`](docs/native-services.md).
+
 ## Protocol And SDKs
 
 The UDB-owned broker contract is:
@@ -483,6 +630,152 @@ SDK folders:
 | PHP / Laravel | [`sdk/php`](sdk/php/README.md) |
 
 Protocol version: [`sdk/UDB_PROTOCOL_VERSION`](sdk/UDB_PROTOCOL_VERSION).
+
+## 🚀 Quickstart Per Language
+
+Most SDKs ship generated stubs (in each SDK's `gen/` dir — no regen needed to
+consume), a thin **broker client** that attaches the request metadata headers
+(`x-tenant-id`, `x-user-id`, `x-purpose`, `x-correlation-id`, `x-scopes`,
+`x-service-identity`, `x-udb-project-id`, `x-udb-client-catalog-version`), and an
+**auth client** (`Authenticate` + `Authorize`/`can`). To regenerate after editing
+protos: `buf generate` (or `scripts/gen_sdk.{ps1,sh}`).
+
+> **TypeScript note:** the Node SDK (`@udb_plus/sdk`) loads the protos
+> **dynamically** at runtime via `@grpc/proto-loader` (the `.proto` files are
+> bundled into the package and resolved by `protoRoot.ts`) — you consume it
+> through the package entry points (`@udb_plus/sdk`, `/client`, `/auth`), not by
+> importing the `gen/` stubs. The committed `sdk/typescript/gen/**` tree is a
+> buf drift-parity artifact (kept in lockstep with the protos by CI) and is
+> intentionally excluded from the published package and the build; it requires
+> `@bufbuild/protobuf` and is **not** part of the SDK's runtime. See
+> [`sdk/typescript/gen/README.md`](sdk/typescript/gen/README.md).
+
+<details open>
+<summary><b>🐹 Go</b> — <code>go get github.com/fahara02/udb/sdk/go</code></summary>
+
+```go
+import (
+    entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
+    authzv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1"
+    "github.com/fahara02/udb/sdk/go/udbclient"
+    "google.golang.org/grpc"
+    "google.golang.org/grpc/credentials/insecure"
+)
+
+conn, _ := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+meta := udbclient.Metadata{TenantID: "acme", UserID: "user-1", Purpose: "web.request",
+    Scopes: []string{"udb:read", "udb:write"}, ServiceIdentity: "billing.api",
+    ClientCatalogVersion: udbclient.ProtocolVersion}
+
+udb := udbclient.New(conn, meta)
+rs, _ := udb.Select(ctx, &entityv1.SelectRequest{MessageType: "acme.billing.v1.Invoice", Limit: 50})
+
+auth := udbclient.NewAuthClient(conn, meta)
+allowed, decision, _ := auth.Can(ctx, &authzv1.ResourceRef{MessageType: "acme.billing.v1.Invoice"}, "read", "")
+// native fast path: grant, _ := auth.NativeAccess(ctx, res, "data.select", ""); udbclient.WithNativeTx(ctx, db, grant, fn)
+```
+</details>
+
+<details>
+<summary><b>🐍 Python</b> — <code>pip install udb-client</code></summary>
+
+```python
+from udb_client import Metadata, UdbClient, decode_records
+from udb_client.auth import UdbAuthClient
+from udb.core.authz.services.v1 import core_pb2 as authz
+
+meta = Metadata(tenant_id="acme", user_id="user-1", purpose="billing.demo",
+                correlation_id="demo-001", scopes=("udb:read", "udb:write"))
+
+with UdbClient("127.0.0.1:50051", meta) as udb:
+    udb.upsert(message_type="acme.billing.v1.Customer",
+               record={"customer_id": "cus_001", "tenant_id": "acme"},
+               conflict_fields=("customer_id",))
+    rs = udb.select(message_type="acme.billing.v1.Customer", limit=10)
+    print(decode_records(rs))
+
+with UdbAuthClient("127.0.0.1:50051", meta) as auth:
+    allowed, decision = auth.can(authz.ResourceRef(message_type="acme.billing.v1.Customer"), "read")
+```
+</details>
+
+<details>
+<summary><b>🟦 TypeScript</b> — <code>npm i @grpc/grpc-js @grpc/proto-loader</code></summary>
+
+```ts
+import { dataBrokerClient, metadata, UdbMetadata } from "@udb_plus/sdk/client";
+import { UdbAuthClient } from "@udb_plus/sdk/auth";
+
+const meta: UdbMetadata = { tenantId: "acme", userId: "user-1", purpose: "web.request",
+    scopes: ["udb:read", "udb:write"], serviceIdentity: "billing.api" };
+
+const broker = dataBrokerClient("localhost:50051");
+broker.Select({ message_type: "acme.billing.v1.Invoice", limit: 50 }, metadata(meta),
+    (err: any, rs: any) => console.log(rs?.records));
+
+const auth = new UdbAuthClient("localhost:50051", meta);
+const [allowed, decision] = await auth.can({ message_type: "acme.billing.v1.Invoice" }, "read");
+```
+</details>
+
+<details>
+<summary><b>☕ Java</b> — Maven <code>dev.udb:udb-java-client</code> (Java 17)</summary>
+
+```java
+import dev.udb.client.*;
+import com.udb.entity.v1.Types.*;
+import com.udb.core.authz.services.v1.ResourceRef;
+
+var meta = new UdbMetadata("acme", "web.request", "corr-123",
+    java.util.List.of("udb:read", "udb:write"), "billing.api", "user-1", "default", UdbClient.PROTOCOL_VERSION);
+
+try (UdbClient udb = new UdbClient("localhost:50051", meta)) {
+    RecordSet rs = udb.select(SelectRequest.newBuilder()
+        .setMessageType("acme.billing.v1.Invoice").setLimit(50).build());
+}
+try (UdbAuthClient auth = new UdbAuthClient("localhost:50051", meta)) {
+    var d = auth.can(ResourceRef.newBuilder().setMessageType("acme.billing.v1.Invoice").build(), "read", "");
+}
+```
+</details>
+
+<details>
+<summary><b>🟣 C#</b> — NuGet, target <code>net8.0</code></summary>
+
+```csharp
+using Udb.Client; using Udb.Entity.V1;
+using AuthzV1 = udb.core.Authz.Services.V1;
+
+await using var udb = new UdbClient("http://localhost:50051", new UdbMetadata(
+    TenantId: "acme", Purpose: "web.request", CorrelationId: "corr-123",
+    Scopes: new[] { "udb:read", "udb:write" }, ServiceIdentity: "billing.api", UserId: "user-1"));
+RecordSet rs = await udb.SelectAsync(new SelectRequest { MessageType = "acme.billing.v1.Invoice", Limit = 50 });
+
+await using var auth = new UdbAuthClient("http://localhost:50051", /* same meta */ default!);
+var (allowed, decision) = await auth.CanAsync(new AuthzV1.ResourceRef { MessageType = "acme.billing.v1.Invoice" }, "read");
+```
+</details>
+
+<details>
+<summary><b>🐘 PHP / Laravel</b> — <code>composer require fahara02/udb-laravel</code> (needs <code>ext-grpc</code>)</summary>
+
+```php
+use Fahara02\UdbLaravel\Facades\Udb;
+use Udb\Entity\V1\SelectRequest;
+use Udb\Core\Authz\Services\V1\ResourceRef;
+
+// request context auto-bound by middleware; pass UdbMetadata explicitly off-request
+$rs = Udb::select((new SelectRequest())->setMessageType('acme.billing.v1.Invoice')->setLimit(50));
+
+[$allowed, $decision] = app(\Fahara02\UdbLaravel\UdbAuthClient::class)
+    ->can((new ResourceRef())->setMessageType('acme.billing.v1.Invoice'), 'read');
+```
+</details>
+
+> Native fast-path transaction helpers (`WithNativeTx`/`native_transaction`/`withNativeTx`)
+> and a local TTL authz cache (`AuthzCache`) ship in the Go, Python, and TypeScript
+> SDKs; C#/Java/PHP expose `nativeAccess` + `getPolicyBundle` and apply the grant's
+> `set_config` session vars manually. Full per-language detail: each SDK's README.
 
 ## Testing
 
@@ -563,7 +856,10 @@ Operational docs:
 
 | Example | What to look at |
 |---|---|
-| [`examples/arbitrary_project`](examples/arbitrary_project/README.md) | A project namespace that UDB does not own; shows table, cache, vector, object, PII, encryption |
+| [`examples/go_arbitary_project`](examples/go_arbitary_project/README.md) | A Go project namespace UDB does not own; shows table, cache, vector, object, PII, encryption end-to-end |
+| [`examples/python_arbitary_project`](examples/python_arbitary_project/README.md) | The same arbitrary-project flow driven from the Python SDK |
+| [`examples/php_arbitary_project`](examples/php_arbitary_project/README.md) | The same flow from the PHP/Laravel SDK |
+| [`examples/native-services/go`](examples/native-services/go) | Using the native control plane (Authn/Authz/ApiKey/Tenant/Notification/Analytics) from Go |
 | [`examples/multi_project`](examples/multi_project/README.md) | One broker serving unrelated projects with separate proto roots/catalogs |
 | [`examples/toy_backend_plugin`](examples/toy_backend_plugin/README.md) | Minimal external backend plugin contract |
 

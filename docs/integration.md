@@ -17,26 +17,38 @@ can inspect the compiled descriptor set.
 
 ## Required Request Metadata
 
-Every non-health request should carry:
+Every non-health request should carry these headers (exact names — see
+`context_from_metadata` in `../src/runtime/service/mod.rs`):
 
 | Metadata | Meaning |
 |---|---|
-| `x-udb-service-identity` | Calling service identity |
-| `x-udb-tenant-id` | Tenant boundary |
+| `x-tenant-id` | Tenant boundary |
+| `x-user-id` | Subject / user id |
+| `x-purpose` | Purpose for ABAC/audit |
+| `x-correlation-id` | Request correlation id |
+| `x-scopes` | Comma-separated scopes |
+| `x-service-identity` | Calling service identity |
 | `x-udb-project-id` | Project/catalog routing boundary |
-| `x-udb-purpose` | Purpose for ABAC/audit |
-| `x-udb-scopes` | Comma-separated scopes |
 | `x-udb-client-catalog-version` | Client-side catalog expectation |
 
+All wrapper SDKs attach these for you from their `Metadata`/`UdbMetadata` object.
 Header-scoped permissions should stay disabled in production unless the trust
 boundary is explicit (`UDB_ALLOW_HEADER_SCOPES=false`).
 
+The native control-plane services (Authn/Authz/ApiKey/Tenant/Notification/
+Analytics) are served on a **separate internal listener** (`UDB_AUTH_GRPC_ADDR`),
+not the `DataBroker` endpoint above — see [native-services.md](native-services.md).
+
 ## Client Packages
 
-- PHP/Laravel SDK: [../sdk/php](../sdk/php)
-- Go SDK/examples: [../sdk/go](../sdk/go)
+- Go SDK: [../sdk/go](../sdk/go)
 - Python SDK: [../sdk/python](../sdk/python)
 - TypeScript client: [../sdk/typescript](../sdk/typescript)
+- Java SDK: [../sdk/java](../sdk/java)
+- C# SDK: [../sdk/csharp](../sdk/csharp)
+- PHP/Laravel SDK: [../sdk/php](../sdk/php)
+
+Per-language quickstarts: [root README](../README.md#-quickstart-per-language).
 
 Common client env:
 

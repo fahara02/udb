@@ -130,6 +130,89 @@ pub(crate) fn render_delta_table(
     sql
 }
 
+/// Header for a **standalone, NON-transactional** artifact — a single statement
+/// PostgreSQL forbids inside a `BEGIN/COMMIT` block (`CREATE INDEX CONCURRENTLY`,
+/// `ALTER TYPE … ADD VALUE`). It is comments-only on purpose: the applier runs a
+/// small artifact with one `pool.execute(content)`, and Postgres treats a
+/// multi-statement string as an implicit transaction — so emitting `SET` or
+/// `BEGIN` alongside the DDL would re-wrap it and defeat the point. The
+/// `UDB:no_transaction=true` marker records the intent for tooling. (#116/#120)
+pub(crate) fn render_non_tx_header(
+    manifest_checksum: &str,
+    schema: &str,
+    table: &str,
+    kind: &str,
+    config: &SqlGenerationConfig,
+) -> String {
+    format!(
+        "-- UDB:migration_kind={kind}\n-- UDB:no_transaction=true\n-- UDB:schema={schema}\n-- UDB:table={table}\n-- UDB:proto_manifest_checksum={manifest_checksum}\n-- UDB:generator={}\n-- This artifact MUST run outside a transaction (single statement, autocommit).\n\n",
+        config.generator_name,
+    )
+}
+
+/// True when a delta op must run as its own standalone, non-transactional
+/// artifact because PostgreSQL forbids it inside a `BEGIN/COMMIT` block:
+/// `ALTER TYPE … ADD VALUE` (#116) and concurrent non-unique index creation
+/// (#120). Everything else stays in the grouped transactional delta artifact.
+pub(crate) fn op_requires_standalone(manifest: &CatalogManifest, op: &ChangeOperation) -> bool {
+    match op.kind {
+        ChangeKind::AlterEnumAddValue => true,
+        ChangeKind::CreateIndex => manifest
+            .table(&op.schema, &op.table)
+            .and_then(|t| find_index(t, &op.object_name))
+            .map(|idx| idx.concurrent && !idx.unique)
+            .unwrap_or(false),
+        _ => false,
+    }
+}
+
+/// Render a single delta op as a standalone, non-transactional artifact body:
+/// a comments-only header plus exactly one statement (no `BEGIN/COMMIT`/`SET`),
+/// so the applier executes it in autocommit. (#116/#120)
+pub(crate) fn render_standalone_delta(
+    manifest: &CatalogManifest,
+    op: &ChangeOperation,
+    config: &SqlGenerationConfig,
+) -> String {
+    let table_manifest = manifest.table(&op.schema, &op.table);
+    let stmt = match op.kind {
+        // CreateIndex via the normal delta path downgrades CONCURRENTLY (it
+        // assumes a surrounding transaction); render the concurrent form here.
+        ChangeKind::CreateIndex => table_manifest
+            .and_then(|t| find_index(t, &op.object_name).map(|idx| render_index_standalone(t, idx)))
+            .unwrap_or_default(),
+        _ => render_delta_operation(manifest, table_manifest, op),
+    };
+    if stmt.trim().is_empty() {
+        return String::new();
+    }
+    format!(
+        "{}{}\n",
+        render_non_tx_header(
+            &manifest.checksum_sha256,
+            &op.schema,
+            &op.table,
+            "proto_delta_non_transactional",
+            config,
+        ),
+        stmt,
+    )
+}
+
+/// Visible placeholder emitted when a column-dependent delta operation
+/// references a column absent from the new manifest. These arms previously
+/// returned an empty string, silently dropping the change with no trace.
+fn missing_object_note(op: &ChangeOperation, what: &str, name: &str) -> String {
+    format!(
+        "-- UDB:skipped {:?} on {}.{}: {} '{}' not found in new manifest",
+        op.kind, op.schema, op.table, what, name
+    )
+}
+
+fn missing_column_note(op: &ChangeOperation) -> String {
+    missing_object_note(op, "column", &op.column)
+}
+
 pub(crate) fn render_delta_operation(
     manifest: &CatalogManifest,
     table: Option<&ManifestTable>,
@@ -199,7 +282,7 @@ pub(crate) fn render_delta_operation(
                     )
                 }
             })
-            .unwrap_or_default(),
+            .unwrap_or_else(|| missing_column_note(op)),
         ChangeKind::RenameColumn => format!(
             "ALTER TABLE {}.{} RENAME COLUMN {} TO {};",
             qi(&op.schema),
@@ -224,7 +307,7 @@ pub(crate) fn render_delta_operation(
                     using
                 )
             })
-            .unwrap_or_default(),
+            .unwrap_or_else(|| missing_column_note(op)),
         ChangeKind::SetColumnCollation => table
             .and_then(|table| find_column(table, &op.column))
             .map(|column| {
@@ -237,7 +320,7 @@ pub(crate) fn render_delta_operation(
                     qi(&column.collation)
                 )
             })
-            .unwrap_or_default(),
+            .unwrap_or_else(|| missing_column_note(op)),
         ChangeKind::SetDefault => table
             .and_then(|table| find_column(table, &op.column))
             .map(|column| {
@@ -249,7 +332,7 @@ pub(crate) fn render_delta_operation(
                     column.default_value
                 )
             })
-            .unwrap_or_default(),
+            .unwrap_or_else(|| missing_column_note(op)),
         ChangeKind::DropDefault => format!(
             "ALTER TABLE {}.{} ALTER COLUMN {} DROP DEFAULT;",
             qi(&op.schema),
@@ -280,7 +363,7 @@ pub(crate) fn render_delta_operation(
                     qi(&column.column_name)
                 )
             })
-            .unwrap_or_default(),
+            .unwrap_or_else(|| missing_column_note(op)),
         ChangeKind::DropNotNull => format!(
             "ALTER TABLE {}.{} ALTER COLUMN {} DROP NOT NULL;",
             qi(&op.schema),
@@ -296,7 +379,7 @@ pub(crate) fn render_delta_operation(
         ChangeKind::AddCheck => table
             .and_then(|table| find_check(table, &op.object_name))
             .map(|check| render_add_check(&op.schema, &op.table, check))
-            .unwrap_or_default(),
+            .unwrap_or_else(|| missing_object_note(op, "check constraint", &op.object_name)),
         ChangeKind::AddUnique => {
             let columns = table
                 .map(|table| {
@@ -409,13 +492,30 @@ pub(crate) fn render_delta_operation(
         // GAP 4: GAP 12 — ALTER TYPE ... ADD VALUE must run outside a transaction
         // The generate_delta_sql function emits AlterEnumAddValue ops as standalone
         // (non-BEGIN/COMMIT) artifacts to satisfy PostgreSQL's restriction.
-        ChangeKind::AlterEnumAddValue => format!(
-            "-- NOTE: run outside a transaction (no BEGIN/COMMIT)\n\
-             ALTER TYPE {}.{} ADD VALUE IF NOT EXISTS {};",
-            qi(&op.schema),
-            qi(&op.object_name),
-            ql(&op.column)
-        ),
+        //
+        // The added value (op.column) is embedded into a SQL string literal via
+        // ql() (single-quote escaping only). Validate it against the same rules
+        // CreateEnum/build.rs apply (reject backslash/dollar/NUL/newline) so a
+        // poisoned value can't break out of the literal — and unlike CreateEnum
+        // this artifact runs with no surrounding DO block / transaction.
+        ChangeKind::AlterEnumAddValue => {
+            if validate_enum_value(&op.column).is_err() {
+                format!(
+                    "-- skipped AlterEnumAddValue on {}.{}: enum value failed validation \
+                     (unsafe character)",
+                    qi(&op.schema),
+                    qi(&op.object_name)
+                )
+            } else {
+                format!(
+                    "-- NOTE: run outside a transaction (no BEGIN/COMMIT)\n\
+                     ALTER TYPE {}.{} ADD VALUE IF NOT EXISTS {};",
+                    qi(&op.schema),
+                    qi(&op.object_name),
+                    ql(&op.column)
+                )
+            }
+        }
         ChangeKind::DropEnum => format!(
             "DROP TYPE IF EXISTS {}.{};",
             qi(&op.schema),
@@ -478,7 +578,18 @@ pub(crate) fn render_create_extension(extension: &ManifestExtension) -> String {
     let mut sql = String::new();
     // Extensions installed outside the public schema require the schema to
     // exist first — PostgreSQL does NOT auto-create it during CREATE EXTENSION.
+    // Guard this bootstrap block because `CREATE SCHEMA IF NOT EXISTS` is not
+    // race-proof across concurrent migration runners: two sessions can both
+    // observe the schema missing and one loses on `pg_namespace_nspname_index`.
     if schema != "public" {
+        sql.push_str(&format!(
+            "SELECT pg_advisory_xact_lock(hashtext({}));\n",
+            ql(&format!(
+                "udb:create_extension:{}:{}",
+                extension.name.trim(),
+                schema
+            ))
+        ));
         sql.push_str(&format!("CREATE SCHEMA IF NOT EXISTS {};\n", qi(schema)));
     }
     sql.push_str(&format!(

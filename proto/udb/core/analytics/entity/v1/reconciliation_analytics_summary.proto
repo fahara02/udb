@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package udb.core.analytics.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+
+option csharp_namespace = "udb.core.Analytics.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/analytics/entity/v1;analyticsv1";
+option java_package = "com.udb.core.analytics.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Analytics\\Entity\\V1";
+
+// Daily reconciliation/conflict roll-up for projections, imports, replicated
+// stores, and project-defined resolution workflows.
+message ReconciliationAnalyticsSummary {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "reconciliation_analytics_summaries"
+    schema_name: "udb_analytics"
+    migration_order: 3
+    is_table: true
+    comment: "Daily reconciliation and conflict roll-up for UDB-managed workflows"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: false
+    partition_strategy: PARTITION_STRATEGY_RANGE_MONTH
+    partition_column: "summary_date"
+    retention_days: 365
+    replica_hint: "replica"
+  };
+
+  string summary_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "summary_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  google.protobuf.Timestamp summary_date = 2 [(udb.core.common.v1.pg_column) = { column_name: "summary_date" sql_type: "DATE" not_null: true unique: true }];
+
+  int64 total_reconciliations = 3 [(udb.core.common.v1.pg_column) = { column_name: "total_reconciliations" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  int64 exact_matches = 4 [(udb.core.common.v1.pg_column) = { column_name: "exact_matches" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  int64 partial_conflicts = 5 [(udb.core.common.v1.pg_column) = { column_name: "partial_conflicts" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  int64 hard_conflicts = 6 [(udb.core.common.v1.pg_column) = { column_name: "hard_conflicts" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  int64 low_confidence_flagged = 7 [(udb.core.common.v1.pg_column) = { column_name: "low_confidence_flagged" sql_type: "BIGINT" not_null: true default_value: "0" }];
+
+  double avg_reconciliation_ms = 8 [(udb.core.common.v1.pg_column) = { column_name: "avg_reconciliation_ms" sql_type: "DOUBLE PRECISION" }];
+  double resolution_rate = 9 [(udb.core.common.v1.pg_column) = { column_name: "resolution_rate" sql_type: "DOUBLE PRECISION" comment: "exact_matches / total_reconciliations" }];
+  double avg_record_confidence = 10 [(udb.core.common.v1.pg_column) = { column_name: "avg_record_confidence" sql_type: "DOUBLE PRECISION" }];
+
+  google.protobuf.Timestamp recorded_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "recorded_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+}

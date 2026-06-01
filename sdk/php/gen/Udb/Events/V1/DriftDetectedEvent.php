@@ -10,7 +10,7 @@ use Google\Protobuf\Internal\GPBUtil;
 use Google\Protobuf\RepeatedField;
 
 /**
- * Kafka topic: udb.migration.drift_detected.v1
+ * Kafka topic: udb.migration.drift.detected.v1
  *
  * Generated from protobuf message <code>udb.events.v1.DriftDetectedEvent</code>
  */
@@ -56,7 +56,7 @@ class DriftDetectedEvent extends \Google\Protobuf\Internal\Message
      * }
      */
     public function __construct($data = NULL) {
-        \GPBMetadata\Udb\Events\V1\UdbEvents::initOnce();
+        \Udb\GPBMetadata\Events\V1\UdbEvents::initOnce();
         parent::__construct($data);
     }
 

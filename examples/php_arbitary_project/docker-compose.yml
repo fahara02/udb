@@ -51,9 +51,9 @@ services:
       "
 
   udb-cli:
-    # glibc base — the released CLI is a gnu (glibc) binary; it will NOT run on
-    # Alpine/musl. run-udb-linux.sh installs curl when the base image lacks it.
-    image: debian:bookworm-slim
+    # glibc base with curl: the released CLI is a linux-gnu binary and will not
+    # run on Alpine/musl.
+    image: buildpack-deps:noble-curl
     profiles: ["cli"]
     user: "0:0"
     working_dir: /workspace
@@ -76,9 +76,9 @@ services:
       - ./:/workspace
 
   udb-broker:
-    # glibc base — the released CLI is a gnu (glibc) binary; it will NOT run on
-    # Alpine/musl. run-udb-linux.sh installs curl when the base image lacks it.
-    image: debian:bookworm-slim
+    # glibc base with curl: the released CLI is a linux-gnu binary and will not
+    # run on Alpine/musl.
+    image: buildpack-deps:noble-curl
     entrypoint: ["/bin/sh", "/workspace/scripts/run-udb-linux.sh"]
     command: ["serve", "/workspace/proto", "", "0.0.0.0:50051"]
     environment:
@@ -99,6 +99,7 @@ services:
       UDB_TLS_REQUIRED: "false"
       UDB_MTLS_REQUIRED: "false"
       UDB_ALLOW_DEGRADED_BACKENDS: "false"
+      UDB_RATE_LIMIT_ENABLED: "false"
       RUST_LOG: info
     ports:
       - "${UDB_GRPC_PORT:-50051}:50051"
@@ -116,7 +117,9 @@ services:
         condition: service_completed_successfully
 
   smoke:
-    image: php:8.4-cli-bookworm
+    build:
+      context: .
+      dockerfile: Dockerfile.smoke
     profiles: ["smoke"]
     working_dir: /workspace
     depends_on:
@@ -130,4 +133,5 @@ services:
       - /bin/sh
       - -lc
       - |
-        php acme_billing.php
+        if [ ! -d vendor ]; then php84 /usr/bin/composer.phar install; fi
+        php84 acme_billing.php

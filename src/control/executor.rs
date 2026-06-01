@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
-use crate::provisioning::{ProvisioningAction, ProvisioningPlan};
+use crate::provisioning::{ACTION_ENSURE, ProvisioningAction, ProvisioningPlan};
 
 pub trait ProvisioningExecutor {
     fn apply(&mut self, action: &ProvisioningAction) -> Result<(), String>;
@@ -67,7 +67,7 @@ impl FakeProvisioningExecutor {
 
 impl ProvisioningExecutor for FakeProvisioningExecutor {
     fn apply(&mut self, action: &ProvisioningAction) -> Result<(), String> {
-        if action.action != "ensure" {
+        if action.action != ACTION_ENSURE {
             return Err(format!("unsupported action '{}'", action.action));
         }
         self.resources.insert(action.resource_uri.clone());

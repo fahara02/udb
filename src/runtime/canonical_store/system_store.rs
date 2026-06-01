@@ -179,6 +179,7 @@ pub struct ProjectionTaskRow {
     pub last_error: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub next_retry_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
 }
 
@@ -197,6 +198,9 @@ pub struct ProjectionClaimFilter {
     /// Used by per-backend worker pools.
     pub target_backend: Option<String>,
     pub target_instance: Option<String>,
+    /// Restrict claims to one project. `None` preserves legacy any-project
+    /// worker behavior for deployments that have not split workers per project.
+    pub project_id: Option<String>,
 }
 
 impl Default for ProjectionClaimFilter {
@@ -206,6 +210,7 @@ impl Default for ProjectionClaimFilter {
             max_retries: 5,
             target_backend: None,
             target_instance: None,
+            project_id: None,
         }
     }
 }
@@ -501,6 +506,8 @@ pub enum SagaStatus {
     Compensated,
     /// Forward execution failed but compensation hasn't started.
     Failed,
+    /// Two-phase commit outcome is unknown.
+    InDoubt,
     /// Compensation itself failed. Recovery worker will retry up to
     /// the poison threshold.
     FailedCompensation,
@@ -518,6 +525,7 @@ impl SagaStatus {
             Self::Committed => "committed",
             Self::Compensated => "compensated",
             Self::Failed => "failed",
+            Self::InDoubt => "in_doubt",
             Self::FailedCompensation => "failed_compensation",
             Self::ManualReview => "manual_review",
         }
@@ -531,6 +539,7 @@ impl SagaStatus {
             "committed" => Some(Self::Committed),
             "compensated" => Some(Self::Compensated),
             "failed" => Some(Self::Failed),
+            "in_doubt" => Some(Self::InDoubt),
             "failed_compensation" => Some(Self::FailedCompensation),
             "manual_review" => Some(Self::ManualReview),
             _ => None,
@@ -547,6 +556,7 @@ impl SagaStatus {
             Self::Committed,
             Self::Compensated,
             Self::Failed,
+            Self::InDoubt,
             Self::FailedCompensation,
             Self::ManualReview,
         ]
@@ -556,7 +566,7 @@ impl SagaStatus {
     /// `indeterminate` (rebuild state) or stale `in_progress` (worker
     /// crashed mid-flight).
     pub fn is_recoverable(self) -> bool {
-        matches!(self, Self::Indeterminate | Self::InProgress)
+        matches!(self, Self::Indeterminate | Self::InProgress | Self::InDoubt)
     }
 
     /// `committed` / `compensated` / `manual_review` are terminal —
@@ -670,6 +680,7 @@ pub struct SagaSummary {
     pub committed: i64,
     pub compensated: i64,
     pub failed: i64,
+    pub in_doubt: i64,
     pub failed_compensation: i64,
     pub manual_review: i64,
 }
@@ -682,13 +693,14 @@ impl SagaSummary {
             + self.committed
             + self.compensated
             + self.failed
+            + self.in_doubt
             + self.failed_compensation
             + self.manual_review
     }
 
     /// What the recovery worker can still pick up.
     pub fn recoverable(&self) -> i64 {
-        self.indeterminate + self.in_progress + self.failed_compensation
+        self.indeterminate + self.in_progress + self.in_doubt + self.failed_compensation
     }
 }
 
@@ -721,6 +733,24 @@ pub trait SagaStore: Send + Sync {
         status: SagaStatus,
         compensation_status: CompensationStatus,
     ) -> SystemStoreResult<()>;
+
+    /// Batch variant of [`update_saga_status`]: apply one
+    /// `(status, compensation_status)` to many sagas in a single round-trip. The
+    /// recovery worker groups its terminal outcomes and flushes each group once
+    /// instead of writing per saga. The default loops over `update_saga_status`;
+    /// Postgres overrides it with a set-based `WHERE saga_id = ANY(...)`.
+    async fn update_saga_statuses_batch(
+        &self,
+        saga_ids: &[Uuid],
+        status: SagaStatus,
+        compensation_status: CompensationStatus,
+    ) -> SystemStoreResult<()> {
+        for &saga_id in saga_ids {
+            self.update_saga_status(saga_id, status, compensation_status)
+                .await?;
+        }
+        Ok(())
+    }
 
     /// Operator-driven: flag a saga for manual review. Recovery
     /// worker will skip it until [`request_saga_recompensation`].
@@ -1337,6 +1367,7 @@ mod tests {
         assert_eq!(SagaStatus::Committed.as_str(), "committed");
         assert_eq!(SagaStatus::Compensated.as_str(), "compensated");
         assert_eq!(SagaStatus::Failed.as_str(), "failed");
+        assert_eq!(SagaStatus::InDoubt.as_str(), "in_doubt");
         assert_eq!(
             SagaStatus::FailedCompensation.as_str(),
             "failed_compensation"
@@ -1348,7 +1379,7 @@ mod tests {
             assert_eq!(SagaStatus::parse(s.as_str()), Some(*s));
         }
         assert_eq!(SagaStatus::parse("garbage"), None);
-        assert_eq!(SagaStatus::all().len(), 8, "exactly 8 saga statuses");
+        assert_eq!(SagaStatus::all().len(), 9, "exactly 9 saga statuses");
     }
 
     /// Pin: recoverable + terminal sets. Recovery worker uses these.
@@ -1356,6 +1387,7 @@ mod tests {
     fn saga_recoverability_pinned() {
         assert!(SagaStatus::Indeterminate.is_recoverable());
         assert!(SagaStatus::InProgress.is_recoverable());
+        assert!(SagaStatus::InDoubt.is_recoverable());
         assert!(!SagaStatus::Pending.is_recoverable());
         assert!(!SagaStatus::Committed.is_recoverable());
 
@@ -1393,12 +1425,13 @@ mod tests {
             committed: 10,
             compensated: 5,
             failed: 1,
+            in_doubt: 6,
             failed_compensation: 2,
             manual_review: 4,
         };
-        assert_eq!(s.total(), 28);
-        // Recoverable = indeterminate + in_progress + failed_compensation.
-        assert_eq!(s.recoverable(), 1 + 2 + 2);
+        assert_eq!(s.total(), 34);
+        // Recoverable = indeterminate + in_progress + in_doubt + failed_compensation.
+        assert_eq!(s.recoverable(), 1 + 2 + 6 + 2);
     }
 
     fn sample_audit_row(audit_id: Uuid, previous_hash: &str) -> AdminAuditRow {
@@ -1624,7 +1657,7 @@ mod tests {
     /// triaging a failure rely on these.
     #[test]
     fn system_store_error_display_is_useful() {
-        let big_sql = "SELECT ".to_string() + &"x".repeat(500) + " FROM t";
+        let big_sql = format!("SELECT {} FROM t", "x".repeat(500));
         let e = SystemStoreError::query("postgres", big_sql.clone(), "syntax error at $1");
         let s = format!("{e}");
         assert!(s.contains("postgres"));

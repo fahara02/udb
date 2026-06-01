@@ -1,0 +1,504 @@
+syntax = "proto3";
+
+package udb.core.common.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option csharp_namespace = "udb.core.Common.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/common/v1;commonv1";
+option java_package = "com.udb.core.common.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Common\\V1";
+option php_namespace = "Udb\\Core\\Common\\V1";
+
+// ============================================================
+// Relational (PostgreSQL) schema annotations
+// ============================================================
+
+message TableOptions {
+  string table_name = 1;
+  string schema_name = 2;
+  int32 migration_order = 3;
+  bool is_table = 4;
+  string comment = 5;
+  // soft_delete: true → deleted_at / deleted_by columns must exist in the message.
+  bool soft_delete = 6;
+  bool audit_fields = 7;
+  // enable_rls: controls PostgreSQL Row-Level Security policy generation.
+  bool enable_rls = 8;
+  PartitionStrategy partition_strategy = 9;
+  string partition_column = 10;
+  int32 retention_days = 11;
+  // rls_policies: PostgreSQL RLS policy definitions applied when enable_rls=true.
+  repeated RlsPolicy rls_policies = 12;
+  // force_rls: also forces RLS for the table owner.
+  bool force_rls = 13;
+  // soft_delete_column: name of the soft-delete column (defaults to "deleted_at").
+  string soft_delete_column = 14;
+  // unlogged: create an UNLOGGED TABLE (no WAL; faster writes, no crash safety).
+  bool unlogged = 15;
+  // tablespace: override PostgreSQL tablespace for the table.
+  string tablespace = 16;
+  // indexes: table-level indexes for composite, partial, expression, or
+  // backend-specific indexes that do not belong to a single field.
+  repeated IndexOptions indexes = 17;
+  // foreign_keys: table-level foreign keys for composite relationships.
+  repeated TableForeignKey foreign_keys = 18;
+  // extensions: backend extensions required by this table's generated DDL.
+  repeated DbExtension extensions = 19;
+  // materialized_views: derived SQL views maintained through UDB migrations.
+  repeated MaterializedView materialized_views = 20;
+  // triggers: trigger bindings. Trigger functions should be declared through
+  // sql_artifacts so the proto manifest hints the custom SQL it depends on.
+  repeated DbTrigger triggers = 21;
+  // previous_table_name / allow_drop are migration hints used by UDB diffing.
+  string previous_table_name = 22;
+  bool allow_drop = 23;
+  // sql_artifacts: controlled backend-specific DDL. UDB should only apply
+  // artifacts declared here and should verify checksum_sha256 when present.
+  repeated SqlArtifact sql_artifacts = 24;
+  // partition_interval / premake / default are used by pg_partman-backed
+  // native partition management.
+  string partition_interval = 25; // MONTHLY | WEEKLY | DAILY | YEARLY
+  int32 partition_premake = 26; // number of future partitions
+  bool partition_default = 27; // create DEFAULT catch-all partition
+  int32 partition_retention_months = 28; // 0 = infinite
+  // replica_hint controls read routing: "primary", "replica", or empty for UDB default.
+  string replica_hint = 29;
+  // cdc_topic lets UDB generate outbox/CDC trigger wiring for high-change tables.
+  string cdc_topic = 30;
+  // required_scope seeds broker-level ABAC policy requirements for this table.
+  string required_scope = 31;
+  // Optional table-local vector projection; message-level vector_store remains supported.
+  VectorStoreOptions vector_store = 32;
+}
+
+// RlsPolicy defines a single PostgreSQL Row-Level Security policy.
+message RlsPolicy {
+  // policy_name: unique name for the policy within the table.
+  string policy_name = 1;
+  // command: ALL | SELECT | INSERT | UPDATE | DELETE (empty = ALL).
+  string command = 2;
+  // using: USING expression controlling which rows are visible/updatable.
+  string using = 3;
+  // with_check: WITH CHECK expression applied on INSERT/UPDATE.
+  string with_check = 4;
+  // permissive: true = PERMISSIVE (default), false = RESTRICTIVE.
+  bool permissive = 5;
+}
+
+message TableForeignKey {
+  repeated string columns = 1;
+  string references_table = 2;
+  repeated string references_column = 3;
+  string references_schema = 4;
+  ReferentialAction on_delete = 5;
+  ReferentialAction on_update = 6;
+  string constraint_name = 7;
+  bool not_valid = 8;
+  bool deferrable = 9;
+  bool initially_deferred = 10;
+}
+
+message DbExtension {
+  string name = 1;
+  string schema = 2;
+  string version = 3;
+}
+
+message MaterializedView {
+  string view_name = 1;
+  string schema_name = 2;
+  string query = 3;
+  bool with_data = 4;
+}
+
+message DbTrigger {
+  string trigger_name = 1;
+  // timing: BEFORE | AFTER | INSTEAD OF.
+  string timing = 2;
+  // event: INSERT | UPDATE | DELETE | TRUNCATE.
+  string event = 3;
+  // function_name: schema-qualified function invocation, e.g.
+  // "udb_authz.touch_updated_at()".
+  string function_name = 4;
+  // for_each: ROW | STATEMENT.
+  string for_each = 5;
+  string when_clause = 6;
+}
+
+message SqlArtifact {
+  string name = 1;
+  // backend: postgres, clickhouse, mongodb, redis, etc.
+  string backend = 2;
+  // phase: before_table, after_table, before_triggers, after_triggers.
+  string phase = 3;
+  // Inline SQL for small, stable artifacts.
+  string sql = 4;
+  // Optional repo-relative SQL file for larger artifacts.
+  string file = 5;
+  // Optional checksum for file/sql verification.
+  string checksum_sha256 = 6;
+  // requires_review lets migration planning block dangerous artifacts.
+  bool requires_review = 7;
+}
+
+enum PartitionStrategy {
+  PARTITION_STRATEGY_UNSPECIFIED = 0;
+  PARTITION_STRATEGY_NONE = 1;
+  PARTITION_STRATEGY_RANGE_YEAR = 2;
+  PARTITION_STRATEGY_RANGE_MONTH = 3;
+  PARTITION_STRATEGY_LIST = 4;
+  PARTITION_STRATEGY_HASH = 5;
+}
+
+message ColumnOptions {
+  string column_name = 1;
+  // sql_type examples: "UUID", "VARCHAR(255)", "TEXT", "BIGINT", "BOOLEAN",
+  //   "TIMESTAMPTZ", "JSONB", "DOUBLE PRECISION", "INTEGER", "SMALLINT"
+  string sql_type = 2;
+  bool not_null = 3;
+  bool unique = 4;
+  bool primary_key = 5;
+  bool auto_increment = 6;
+  // default_value is a raw SQL expression: "gen_random_uuid()", "'PENDING'", "CURRENT_TIMESTAMP"
+  string default_value = 7;
+  string check_constraint = 8;
+  ForeignKey foreign_key = 9;
+  IndexOptions index = 10;
+  string comment = 11;
+  // exclude_from_insert / exclude_from_update: used by code-gen to omit the
+  // column from INSERT / UPDATE statements (server-side defaults own it).
+  bool exclude_from_insert = 12;
+  bool exclude_from_update = 13;
+  // encrypted: column is encrypted at rest (application-level, Vault-managed).
+  bool encrypted = 14;
+  bool is_json = 15;
+  bool is_jsonb = 16;
+  bool json_path_ops = 17;
+  bool is_tsvector = 18;
+  string tsvector_language = 19;
+  repeated string tsvector_source_columns = 20;
+  bool trigram_index = 21;
+  string collation = 22;
+  repeated string enum_values = 23;
+  string previous_column_name = 24;
+  string backfill_sql = 25;
+  string using_expression = 26;
+  bool allow_drop = 27;
+  bool generated = 28;
+  string generated_expr = 29;
+  bool identity = 30;
+  string references = 31;
+  ReferentialAction on_delete = 32;
+  ReferentialAction on_update = 33;
+  // nullable is the SQL-facing inverse of not_null. UDB's parser accepts both
+  // styles; keep not_null for existing schemas and nullable for SQL-like ones.
+  bool nullable = 34;
+}
+
+message ForeignKey {
+  string references_table = 1;
+  string references_column = 2;
+  string references_schema = 3;
+  ReferentialAction on_delete = 4;
+  ReferentialAction on_update = 5;
+  string constraint_name = 6;
+}
+
+enum ReferentialAction {
+  REFERENTIAL_ACTION_UNSPECIFIED = 0;
+  REFERENTIAL_ACTION_NO_ACTION = 1;
+  REFERENTIAL_ACTION_RESTRICT = 2;
+  REFERENTIAL_ACTION_CASCADE = 3;
+  REFERENTIAL_ACTION_SET_NULL = 4;
+  REFERENTIAL_ACTION_SET_DEFAULT = 5;
+}
+
+message IndexOptions {
+  string index_name = 1;
+  // SQL index method, e.g. "BTREE", "GIN", "HASH", "HNSW".
+  string index_type = 2;
+  bool unique = 3;
+  repeated string composite_fields = 4;
+  repeated string include_columns = 5;
+  // index_method: override for vector indexes, e.g. "hnsw", "ivfflat"
+  string index_method = 6;
+  // where_clause: partial-index predicate, e.g. "deleted_at IS NULL"
+  string where_clause = 7;
+  // operator_class: e.g. "vector_cosine_ops", "vector_l2_ops" for pgvector
+  string operator_class = 8;
+  // index_params: key/value pairs for special index parameters,
+  //   e.g. m=16 ef_construction=64 for HNSW, lists=100 for IVFFlat
+  map<string, string> index_params = 9;
+  // concurrent: build with PostgreSQL CREATE INDEX CONCURRENTLY when legal.
+  bool concurrent = 10;
+  // SQL-facing alias for composite_fields.
+  repeated string columns = 11;
+}
+
+enum IndexType {
+  INDEX_TYPE_UNSPECIFIED = 0;
+  INDEX_TYPE_NONE = 1;
+  INDEX_TYPE_BTREE = 2;
+  INDEX_TYPE_HASH = 3;
+  INDEX_TYPE_GIN = 4;
+  INDEX_TYPE_GIST = 5;
+  INDEX_TYPE_BRIN = 6;
+  // Vector index types (pgvector extension or external vector DBs)
+  INDEX_TYPE_HNSW = 7; // Hierarchical Navigable Small World
+  INDEX_TYPE_IVF = 8; // Inverted File (IVFFlat)
+  INDEX_TYPE_IVFPQ = 9; // IVFFlat + Product Quantization
+}
+
+// ============================================================
+// Universal storage backend annotations
+// Mark any string field that holds an object-storage key/URI.
+// ============================================================
+
+message StorageFieldOptions {
+  StorageBackendType backend = 1; // Which backend owns this key
+  string bucket_env_key = 2; // Env var that resolves the bucket name
+  string key_prefix = 3; // Fixed path prefix, e.g. "udb-docs/{tenant_id}"
+  bool presigned_read = 4; // Generate pre-signed download URLs
+  bool presigned_write = 5; // Generate pre-signed upload URLs
+  int32 presigned_ttl_seconds = 6; // Default TTL for pre-signed URLs
+  bool server_side_encryption = 7; // SSE-S3 / SSE-KMS
+  string kms_key_id = 8; // Optional KMS key ARN / alias
+  string acl = 9; // "private" | "public-read" | "authenticated-read"
+}
+
+enum StorageBackendType {
+  STORAGE_BACKEND_UNSPECIFIED = 0;
+  STORAGE_BACKEND_S3 = 1; // AWS S3
+  STORAGE_BACKEND_MINIO = 2; // MinIO (self-hosted S3-compatible)
+  STORAGE_BACKEND_GCS = 3; // Google Cloud Storage
+  STORAGE_BACKEND_AZURE_BLOB = 4; // Azure Blob Storage
+  STORAGE_BACKEND_LOCAL = 5; // Local filesystem (dev/test only)
+}
+
+// ============================================================
+// Vector-DB annotations
+// Mark any message that is projected into a vector store.
+// ============================================================
+
+message VectorStoreOptions {
+  VectorBackendType backend = 1; // Which vector DB
+  string collection_name = 2; // Qdrant collection / Milvus collection
+  int32 dimension = 3; // Embedding dimension (e.g. 768, 1536)
+  VectorDistanceMetric distance = 4; // Similarity metric
+  // shard_count / replica_count for distributed setups (Qdrant / Milvus)
+  int32 shard_count = 5;
+  int32 replica_count = 6;
+  // on_disk: store vectors on disk instead of RAM (Qdrant memmap)
+  bool on_disk = 7;
+  // payload_schema: JSON describing filterable payload fields & their types
+  string payload_schema_json = 8;
+  // hnsw_m / hnsw_ef_construction: HNSW hyperparameters
+  int32 hnsw_m = 9;
+  int32 hnsw_ef_construction = 10;
+}
+
+enum VectorBackendType {
+  VECTOR_BACKEND_UNSPECIFIED = 0;
+  VECTOR_BACKEND_QDRANT = 1;
+  VECTOR_BACKEND_MILVUS = 2;
+  VECTOR_BACKEND_WEAVIATE = 3;
+  VECTOR_BACKEND_PGVECTOR = 4; // PostgreSQL pgvector extension
+  VECTOR_BACKEND_PINECONE = 5;
+  VECTOR_BACKEND_OPENSEARCH = 6; // OpenSearch k-NN
+}
+
+enum VectorDistanceMetric {
+  VECTOR_DISTANCE_UNSPECIFIED = 0;
+  VECTOR_DISTANCE_COSINE = 1;
+  VECTOR_DISTANCE_DOT = 2;
+  VECTOR_DISTANCE_EUCLIDEAN = 3;
+  VECTOR_DISTANCE_MANHATTAN = 4;
+}
+
+// ============================================================
+// Redis / cache annotations
+// Mark any message or field that is cached.
+// ============================================================
+
+message CacheOptions {
+  CacheBackendType backend = 1;
+  // key_pattern: Go template-style key, e.g. "udb:session:{session_id}"
+  string key_pattern = 2;
+  int32 ttl_seconds = 3; // 0 = no expiry
+  bool write_through = 4; // Synchronous write to cache on DB write
+  bool read_through = 5; // Read from cache before DB
+  // eviction: "lru" | "lfu" | "volatile-lru" | "allkeys-lru"
+  string eviction_policy = 6;
+  // redis_cluster_env: env var pointing to Redis cluster endpoint
+  string cluster_env_key = 7;
+  // namespace: logical keyspace prefix for multi-tenant isolation
+  string namespace = 8;
+}
+
+enum CacheBackendType {
+  CACHE_BACKEND_UNSPECIFIED = 0;
+  CACHE_BACKEND_REDIS = 1;
+  CACHE_BACKEND_MEMCACHED = 2;
+  CACHE_BACKEND_IN_PROCESS = 3; // Local in-memory (single-node dev)
+  CACHE_BACKEND_DRAGONFLY = 4; // DragonflyDB (Redis-compatible)
+}
+
+// ============================================================
+// Model-registry / artifact-repo annotations
+// Mark any message that represents a versioned model artefact.
+// ============================================================
+
+message ModelRegistryOptions {
+  ModelBackendType backend = 1;
+  string experiment_name = 2; // MLflow experiment / DVC project
+  string artifact_path = 3; // Relative path inside run
+  bool auto_register = 4; // Auto-register to model registry on log
+  string stage = 5; // "staging" | "production" | "archived"
+  // metric_keys: metrics that must be logged for this model artefact
+  repeated string metric_keys = 6;
+  repeated string param_keys = 7;
+  // storage_uri_env: env var for the artifact store root (s3://..., gs://..., etc.)
+  string storage_uri_env = 8;
+}
+
+message SecurityOptions {
+  string classification_level = 1;
+  bool audit_writes = 2;
+  bool audit_reads = 3;
+  int32 retention_days = 4;
+  bool encryption_required = 5;
+}
+
+message ColumnSecurityOptions {
+  bool is_pii = 1;
+  bool is_encrypted = 2;
+  bool is_blind_index = 3;
+  bool mask_in_logs = 4;
+  string data_class = 5;
+  bool consent_required = 6;
+  int32 retention_days = 7;
+}
+
+message GraphStoreOptions {
+  GraphBackendType backend = 1;
+  string graph_name = 2;
+  string node_label = 3;
+  string id_field = 4;
+  string tenant_field = 5;
+  string edge_source_field = 6;
+  string edge_target_field = 7;
+  string payload_schema_json = 8;
+}
+
+enum GraphBackendType {
+  GRAPH_BACKEND_UNSPECIFIED = 0;
+  GRAPH_BACKEND_NEO4J = 1;
+  GRAPH_BACKEND_MEMGRAPH = 2;
+  GRAPH_BACKEND_ARANGODB = 3;
+}
+
+message DocumentStoreOptions {
+  NoSqlBackendType backend = 1;
+  string database_name = 2;
+  string collection_name = 3;
+  string partition_key = 4;
+  string id_field = 5;
+  string tenant_field = 6;
+  int32 ttl_seconds = 7;
+  string payload_schema_json = 8;
+}
+
+enum NoSqlBackendType {
+  NOSQL_BACKEND_UNSPECIFIED = 0;
+  NOSQL_BACKEND_MONGODB = 1;
+  NOSQL_BACKEND_DYNAMODB = 2;
+  NOSQL_BACKEND_COSMOSDB = 3;
+}
+
+message TimeSeriesStoreOptions {
+  TimeSeriesBackendType backend = 1;
+  string database_name = 2;
+  string measurement_name = 3;
+  string time_field = 4;
+  string tenant_field = 5;
+  repeated string tag_fields = 6;
+  repeated string value_fields = 7;
+  int32 retention_days = 8;
+  string downsample_policy = 9;
+}
+
+enum TimeSeriesBackendType {
+  TIMESERIES_BACKEND_UNSPECIFIED = 0;
+  TIMESERIES_BACKEND_TIMESCALEDB = 1;
+  TIMESERIES_BACKEND_INFLUXDB = 2;
+  TIMESERIES_BACKEND_CLICKHOUSE = 3;
+}
+
+message ColumnStoreOptions {
+  ColumnBackendType backend = 1;
+  string database_name = 2;
+  string table_name = 3;
+  string partition_key = 4;
+  string sort_key = 5;
+  string compression = 6;
+  int32 ttl_seconds = 7;
+  string payload_schema_json = 8;
+}
+
+enum ColumnBackendType {
+  COLUMN_BACKEND_UNSPECIFIED = 0;
+  COLUMN_BACKEND_CLICKHOUSE = 1;
+  COLUMN_BACKEND_CASSANDRA = 2;
+  COLUMN_BACKEND_BIGTABLE = 3;
+}
+
+message GenericStoreOptions {
+  string store_kind = 1;
+  string backend = 2;
+  string logical_name = 3;
+  string database_name = 4;
+  string namespace = 5;
+  string resource_name = 6;
+  string dsn_env_key = 7;
+  string dsn = 8;
+  string payload_schema_json = 9;
+  map<string, string> options = 10;
+}
+
+enum ModelBackendType {
+  MODEL_BACKEND_UNSPECIFIED = 0;
+  MODEL_BACKEND_MLFLOW = 1;
+  MODEL_BACKEND_DVC = 2;
+  MODEL_BACKEND_HUGGINGFACE = 3;
+  MODEL_BACKEND_BENTOML = 4;
+  MODEL_BACKEND_TRITON = 5; // NVIDIA Triton Inference Server
+  MODEL_BACKEND_TORCHSERVE = 6;
+  MODEL_BACKEND_CUSTOM = 7;
+}
+
+// ============================================================
+// Proto extension registrations
+// ============================================================
+
+extend google.protobuf.MessageOptions {
+  TableOptions table = 50001;
+  TableOptions pg_table = 50031;
+  VectorStoreOptions vector_store = 50003;
+  CacheOptions cache = 50004;
+  ModelRegistryOptions model_registry = 50005;
+  GraphStoreOptions graph_store = 50007;
+  DocumentStoreOptions document_store = 50008;
+  DocumentStoreOptions nosql_store = 50009;
+  TimeSeriesStoreOptions timeseries_store = 50010;
+  ColumnStoreOptions column_store = 50011;
+  GenericStoreOptions data_store = 50012;
+  SecurityOptions security = 50013;
+}
+
+extend google.protobuf.FieldOptions {
+  ColumnOptions column = 50002;
+  ColumnOptions pg_column = 50032;
+  StorageFieldOptions storage = 50006;
+  ColumnSecurityOptions column_security = 50021;
+}

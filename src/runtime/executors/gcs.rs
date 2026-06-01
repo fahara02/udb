@@ -6,19 +6,21 @@
 
 use std::sync::Arc;
 
-use serde_json::Value as JsonValue;
-
 use google_cloud_storage::client::{Client, ClientConfig};
 use google_cloud_storage::http::buckets::{
     delete::DeleteBucketRequest,
     insert::{BucketCreationConfig, InsertBucketParam, InsertBucketRequest},
     list::ListBucketsRequest,
 };
+use google_cloud_storage::http::objects::delete::DeleteObjectRequest;
 use google_cloud_storage::http::objects::download::Range;
 use google_cloud_storage::http::objects::get::GetObjectRequest;
 use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, UploadType};
 
-use crate::runtime::backend_context::{AppliedContext, BackendContextEnforcer, ContextEffect};
+use crate::runtime::backend_context::{
+    AppliedContext, BackendContextEnforcer, ContextEffect, enforce_with_mechanism,
+};
+use crate::runtime::executor_utils::{build_probe, parse_object_dispatch, reject_oversized_object};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
@@ -44,17 +46,24 @@ impl GcsClient {
     /// `GOOGLE_APPLICATION_CREDENTIALS` or the workload-identity
     /// metadata server.
     pub async fn new(project: impl Into<String>) -> Result<Self, String> {
-        // ClientConfig's auth surface differs across crate versions.
-        // We construct with default config (anonymous TokenSource);
-        // operators wanting authenticated GCS access set
-        // `GOOGLE_APPLICATION_CREDENTIALS` and the SDK picks up the
-        // service account via its standard ADC chain. For
-        // anonymous-only deployments the default config is fine.
+        // Load Application Default Credentials (service-account JSON via
+        // `GOOGLE_APPLICATION_CREDENTIALS`, or the workload-identity metadata
+        // server). Only fall back to an anonymous client when no credentials
+        // are discoverable — otherwise authenticated buckets would silently
+        // 401 at request time instead of failing fast here.
         let project_id = project.into();
-        let config = ClientConfig {
-            project_id: Some(project_id.clone()),
-            ..Default::default()
+        let mut config = match ClientConfig::default().with_auth().await {
+            Ok(cfg) => cfg,
+            Err(err) => {
+                tracing::warn!(
+                    "GCS: no Application Default Credentials found ({err}); \
+                     using anonymous client (public-bucket access only)"
+                );
+                ClientConfig::default().anonymous()
+            }
         };
+        // The operator-supplied project ID wins over whatever ADC inferred.
+        config.project_id = Some(project_id.clone());
         let client = Client::new(config);
         Ok(Self {
             inner: Arc::new(client),
@@ -91,15 +100,10 @@ impl BackendContextEnforcer for GcsExecutor {
         "gcs"
     }
     fn enforce(&self, ctx: &AppliedContext) -> ContextEffect {
-        if ctx.is_empty() {
-            return ContextEffect::Advisory {
-                recorded_in: "no_context_to_apply".into(),
-            };
-        }
-        ContextEffect::Enforced {
-            mechanism: "key prefix t:<tenant>/p:<project>/ prepended by compile_read/write/delete"
-                .into(),
-        }
+        enforce_with_mechanism(
+            ctx,
+            "key prefix t:<tenant>/p:<project>/ prepended by compile_read/write/delete",
+        )
     }
 }
 
@@ -109,31 +113,10 @@ impl BackendHealth for GcsExecutor {
     }
 }
 
+/// GCS object-dispatch parse: bucket primary (`bucket`/`container`),
+/// object as `key`/`object`. Delegates to the shared object-store parser.
 fn parse_dispatch(req: &str) -> Result<(String, String, String, Option<String>), tonic::Status> {
-    let v: JsonValue = serde_json::from_str(req)
-        .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
-    let op = v
-        .get("op")
-        .and_then(|x| x.as_str())
-        .ok_or_else(|| tonic::Status::invalid_argument("missing `op`"))?
-        .to_string();
-    let bucket = v
-        .get("bucket")
-        .or_else(|| v.get("container"))
-        .and_then(|x| x.as_str())
-        .ok_or_else(|| tonic::Status::invalid_argument("missing `bucket`"))?
-        .to_string();
-    let object = v
-        .get("key")
-        .or_else(|| v.get("object"))
-        .and_then(|x| x.as_str())
-        .unwrap_or("")
-        .to_string();
-    let content_type = v
-        .get("content_type")
-        .and_then(|x| x.as_str())
-        .map(str::to_string);
-    Ok((op, bucket, object, content_type))
+    parse_object_dispatch(req, &["bucket", "container"], &["key", "object"], "bucket")
 }
 
 impl QueryExecutor for GcsExecutor {
@@ -193,6 +176,7 @@ impl ObjectExecutor for GcsExecutor {
                 "put_object expects op=\"put\", got '{op}'"
             )));
         }
+        reject_oversized_object(bytes.len())?;
         let upload_req = UploadObjectRequest {
             bucket: bucket.clone(),
             ..Default::default()
@@ -208,6 +192,21 @@ impl ObjectExecutor for GcsExecutor {
             .await
             .map_err(|e| tonic::Status::internal(format!("gcs upload failed: {e}")))?;
         Ok(serde_json::json!({ "ok": true, "bucket": bucket, "object": object }).to_string())
+    }
+
+    async fn delete_object(&self, request_json: &str) -> Result<(), tonic::Status> {
+        let (_op, bucket, object, _) = parse_dispatch(request_json)?;
+        let req = DeleteObjectRequest {
+            bucket,
+            object,
+            ..Default::default()
+        };
+        self.client
+            .inner
+            .delete_object(&req)
+            .await
+            .map(|_| ())
+            .map_err(|e| tonic::Status::internal(format!("gcs delete failed: {e}")))
     }
 }
 
@@ -268,20 +267,7 @@ impl BackendExecutor for GcsExecutor {
         ))
     }
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
-        match self.ping().await {
-            Ok(()) => Ok(BackendProbe {
-                backend: "gcs".to_string(),
-                instance: None,
-                ok: true,
-                error: None,
-            }),
-            Err(err) => Ok(BackendProbe {
-                backend: "gcs".to_string(),
-                instance: None,
-                ok: false,
-                error: Some(err),
-            }),
-        }
+        Ok(build_probe("gcs", self.ping().await))
     }
 }
 

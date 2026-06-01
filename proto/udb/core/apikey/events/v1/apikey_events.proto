@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package udb.core.apikey.events.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/apikey/entity/v1/enums.proto";
+
+option csharp_namespace = "udb.core.Apikey.Events.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/apikey/events/v1;apikeyeventsv1";
+option java_package = "com.udb.core.apikey.events.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Apikey\\Events\\V1";
+option php_namespace = "Udb\\Core\\Apikey\\Events\\V1";
+
+// Kafka topic: udb.apikey.created.v1
+message ApiKeyCreatedEvent {
+  string event_id = 1;
+  string key_id = 2;
+  string key_prefix = 3;
+  string name = 4;
+  udb.core.apikey.entity.v1.ApiKeyOwnerType owner_type = 5;
+  string owner_id = 6;
+  repeated string scopes = 7;
+  string created_by = 8;
+  string correlation_id = 9;
+  google.protobuf.Timestamp occurred_at = 10;
+  string tenant_id = 11;
+}
+
+// Kafka topic: udb.apikey.revoked.v1
+message ApiKeyRevokedEvent {
+  string event_id = 1;
+  string key_id = 2;
+  string key_prefix = 3;
+  string revoked_by = 4;
+  string revoke_reason = 5;
+  string correlation_id = 6;
+  google.protobuf.Timestamp occurred_at = 7;
+  string tenant_id = 8;
+}
+
+// Kafka topic: udb.apikey.rate.limited.v1
+// Emitted when a key exceeds its rate limit
+message ApiKeyRateLimitedEvent {
+  string event_id = 1;
+  string key_id = 2;
+  string key_prefix = 3;
+  string endpoint = 4;
+  string ip_address = 5;
+  int32 requests_in_window = 6;
+  int32 limit = 7;
+  string correlation_id = 8;
+  google.protobuf.Timestamp occurred_at = 9;
+  string tenant_id = 10;
+}

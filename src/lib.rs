@@ -19,8 +19,8 @@ pub mod schema;
 
 // ── Compatibility module aliases ─────────────────────────────────────────────
 pub use control::{
-    auto_alter, engine, executor, hooks, lifecycle, notification, plan_approval, status,
-    sync_config, tracker,
+    auto_alter, engine, executor, lifecycle, notification, plan_approval, status, sync_config,
+    tracker,
 };
 pub use parser::lexer;
 // `planning::registry` was folded into `crate::backend` in U2 step 6:
@@ -70,8 +70,9 @@ pub use generation::{
     ManifestStoreOption, ManifestTable, ManifestTrigger, ParsedUnifiedDsn, ResolvedUnifiedDsn,
     SqlGenerationConfig, UnifiedDsn, UnifiedDsnCatalog, build_drift_report, generate_bootstrap_sql,
     generate_clickhouse_artifacts, generate_delta_sql, generate_minio_artifacts,
-    generate_mongodb_artifacts, generate_neo4j_artifacts, generate_qdrant_artifacts,
-    generate_redis_artifacts, generate_unified_dsn_catalog, lint_catalog,
+    generate_mongodb_artifacts, generate_mssql_artifacts, generate_mysql_artifacts,
+    generate_neo4j_artifacts, generate_qdrant_artifacts, generate_redis_artifacts,
+    generate_sqlite_artifacts, generate_unified_dsn_catalog, lint_catalog,
     migrate_manifest_to_current, parse_unified_dsn, redact_dsn, resolve_unified_dsn,
     resolve_unified_dsn_catalog, validate_unified_dsn,
 };
@@ -111,7 +112,6 @@ pub use config::{
 pub use embedded::EmbeddedRuntime;
 pub use engine::{Engine, EngineError, FsmState, MAX_RETRIES, RuntimeStateSnapshot};
 pub use executor::{ExecutionReport, FakeProvisioningExecutor, ProvisioningExecutor};
-pub use hooks::{HookConfig, HookOutcome};
 pub use lifecycle::{StartupLifecycleReport, run_startup_lifecycle};
 pub use metrics::{MetricsRecorder, NoopMetrics, PrometheusMetrics, metrics_or_noop};
 pub use notification::{NotificationConfig, NotificationEvent, WebhookPayload};
@@ -122,6 +122,7 @@ pub use plan_approval::{
 };
 pub use provisioning::{
     ProvisioningAction, ProvisioningParameter, ProvisioningPlan, build_provisioning_plan,
+    try_build_provisioning_plan,
 };
 pub use runtime::core::{BackendProbeResult, EnqueueOutboxEventResult, PostgresPrivilegeReport};
 pub use runtime::{DataBrokerRuntime, RuntimeInitReport};
@@ -139,5 +140,6 @@ pub use system::{
 };
 pub use tracker::{
     DDL_MIGRATION_ERROR_LOG, DDL_MIGRATION_RUNTIME_STATE, DDL_PROTO_SCHEMA_VERSIONS,
-    DDL_SCHEMA_MIGRATIONS, all_tracker_ddl_sql,
+    DDL_SCHEMA_MIGRATIONS, DEFAULT_LEDGER_SCHEMA, all_tracker_ddl_sql,
+    all_tracker_ddl_sql_for_schema,
 };

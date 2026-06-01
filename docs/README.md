@@ -7,6 +7,7 @@ because they contradicted the current codebase.
 | Need | Read |
 |---|---|
 | Current architecture and backend inventory | [architecture.md](architecture.md) |
+| Native control plane (Authn/Authz/ApiKey/Tenant/Notification/Analytics) | [native-services.md](native-services.md) |
 | Proto annotation contract | [annotations.md](annotations.md) |
 | Service and SDK integration | [integration.md](integration.md) |
 | Deployment, operations, reload, backup, and incident drills | [operations.md](operations.md) |

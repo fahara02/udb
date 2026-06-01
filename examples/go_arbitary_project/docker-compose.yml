@@ -51,7 +51,9 @@ services:
       "
 
   udb-cli:
-    image: curlimages/curl:8.11.1
+    # glibc base with curl: the released CLI is a linux-gnu binary and will not
+    # run on Alpine/musl.
+    image: buildpack-deps:noble-curl
     profiles: ["cli"]
     user: "0:0"
     working_dir: /workspace
@@ -74,7 +76,9 @@ services:
       - ./:/workspace
 
   udb-broker:
-    image: curlimages/curl:8.11.1
+    # glibc base with curl: the released CLI is a linux-gnu binary and will not
+    # run on Alpine/musl.
+    image: buildpack-deps:noble-curl
     entrypoint: ["/bin/sh", "/workspace/scripts/run-udb-linux.sh"]
     command: ["serve", "/workspace/proto", "", "0.0.0.0:50051"]
     environment:
@@ -95,6 +99,7 @@ services:
       UDB_TLS_REQUIRED: "false"
       UDB_MTLS_REQUIRED: "false"
       UDB_ALLOW_DEGRADED_BACKENDS: "false"
+      UDB_RATE_LIMIT_ENABLED: "false"
       RUST_LOG: info
     ports:
       - "${UDB_GRPC_PORT:-50051}:50051"
@@ -127,7 +132,7 @@ services:
       - -lc
       - |
         for i in $(seq 1 30); do
-          go run . && exit 0
+          /usr/local/go/bin/go run . && exit 0
           sleep 2
         done
         exit 1

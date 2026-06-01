@@ -44,6 +44,10 @@ sdk/csharp/**/*.snupkg
 sdk/typescript/node_modules/
 sdk/typescript/dist/
 sdk/typescript/build/
+# proto assets copied into the package by `npm run build` (bundle-proto) to make
+# the published npm tarball self-contained — build artifacts, not source.
+sdk/typescript/proto/
+sdk/typescript/third_party/
 sdk/typescript/coverage/
 sdk/typescript/.turbo/
 sdk/typescript/.next/
@@ -85,13 +89,10 @@ sdk/php/coverage/
 sdk/php/build/
 
 # ── Generated SDK stubs ──────────────────────────────────────────────────────
-# Generated stubs for SDKs that ship as their own package (PHP /
-# TypeScript) ARE committed so `composer require` / `npm install`
-# work without buf being installed on the consumer side. Generated
-# stubs for Go / Python / C# stay out — those ecosystems regenerate
-# at build time via their respective package-manager hooks.
-sdk/python/udb/
-sdk/python/**/*.pyi
+# Generated stubs for SDKs that ship as their own package (PHP,
+# Python, TypeScript) ARE committed so `composer require`, `pip install`,
+# and `npm install` work without buf/protoc installed on the consumer side.
+# Go / C# regenerate through their respective package-manager workflows.
 sdk/csharp/Generated/
 
 # ── Docs ─────────────────────────────────────────────────────────────────────
@@ -124,6 +125,27 @@ udb_laravel_deploy_key.pub
 .vscode/
 *.swp
 *.swo
+
+# ── Example app build artifacts / vendored deps (source only) ────────────────
+# The example projects are checked in as source; their installed dependencies
+# and compiled output are not. `examples/native-services/` ships no own ignore.
+examples/**/node_modules/
+examples/**/__pycache__/
+examples/**/*.pyc
+examples/**/vendor/
+examples/**/dist/
+examples/**/build/
+examples/**/bin/
+examples/**/obj/
+examples/native-services/go/go.exe
+
+# ── Spark Structured Streaming runtime output (checkpoints / parquet) ────────
+# `analytics/spark/auth_events_streaming.py` writes windowed metrics + the
+# streaming checkpoint under these dirs; they are regenerated on every run and
+# must never be committed.
+analytics/spark/_out/
+analytics/spark/_spark_out/
+analytics/spark/**/_chk/
 
 # ── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store

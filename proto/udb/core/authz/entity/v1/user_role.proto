@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package udb.core.authz.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+
+option csharp_namespace = "udb.core.Authz.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
+option java_package = "com.udb.core.authz.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Entity\\V1";
+
+// User-to-role assignment scoped by an authorization domain such as
+// tenant:tenant_a, project:project_a, or resource:invoice/123.
+message UserRole {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "user_roles"
+    schema_name: "udb_authz"
+    migration_order: 3
+    is_table: true
+    comment: "Role assignments scoped by authorization domain"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    indexes: {
+      index_name: "uq_user_roles_user_role_domain"
+      index_type: "BTREE"
+      unique: true
+      columns: "user_id"
+      columns: "role_id"
+      columns: "domain"
+    }
+    sql_artifacts: {
+      name: "touch_updated_at_function"
+      backend: "postgres"
+      phase: "before_triggers"
+      sql:
+        "CREATE OR REPLACE FUNCTION udb_authz.touch_updated_at()\n"
+        "RETURNS trigger\n"
+        "LANGUAGE plpgsql\n"
+        "AS $$\n"
+        "BEGIN\n"
+        "  NEW.updated_at = CURRENT_TIMESTAMP;\n"
+        "  RETURN NEW;\n"
+        "END;\n"
+        "$$;"
+    }
+    triggers: {
+      trigger_name: "trg_user_roles_touch_updated_at"
+      timing: "BEFORE"
+      event: "UPDATE"
+      function_name: "udb_authz.touch_updated_at()"
+      for_each: "ROW"
+    }
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+  };
+
+  string user_role_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "user_role_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string user_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "user_id" sql_type: "UUID" not_null: true foreign_key: { references_table: "users" references_column: "user_id" references_schema: "udb_authn" on_delete: REFERENTIAL_ACTION_CASCADE constraint_name: "fk_user_roles_user_id" } index: { index_name: "idx_user_roles_user_domain" index_type: "BTREE" columns: "domain" } }];
+
+  string role_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "role_id" sql_type: "UUID" not_null: true foreign_key: { references_table: "roles" references_column: "role_id" references_schema: "udb_authz" on_delete: REFERENTIAL_ACTION_CASCADE constraint_name: "fk_user_roles_role_id" } index: { index_name: "idx_user_roles_role_id" index_type: "BTREE" } }];
+
+  string domain = 4 [(udb.core.common.v1.pg_column) = { column_name: "domain" sql_type: "VARCHAR(200)" not_null: true comment: "Authorization domain such as tenant:tenant_a or project:project_a" index: { index_name: "idx_user_roles_domain" index_type: "BTREE" } }];
+
+  string assigned_by = 5 [(udb.core.common.v1.pg_column) = { column_name: "assigned_by" sql_type: "UUID" }];
+
+  google.protobuf.Timestamp assigned_at = 6 [(udb.core.common.v1.pg_column) = { column_name: "assigned_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" }];
+
+  google.protobuf.Timestamp expires_at = 7 [(udb.core.common.v1.pg_column) = { column_name: "expires_at" sql_type: "TIMESTAMPTZ" comment: "Null means the assignment remains active until revoked" }];
+
+  google.protobuf.Timestamp created_at = 8 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  google.protobuf.Timestamp updated_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true }];
+
+  string created_by = 10 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "VARCHAR(120)" comment: "Identity that created this record." }];
+  string tenant_id = 11 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_userrole_tenant" index_type: "BTREE" } }];
+}

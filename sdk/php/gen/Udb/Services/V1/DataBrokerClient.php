@@ -193,6 +193,190 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
+     * ── Cache / KV ─────────────────────────────────────────────────────────────
+     * @param \Udb\Entity\V1\CacheGetRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\CacheGetResponse>
+     */
+    public function CacheGet(\Udb\Entity\V1\CacheGetRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/CacheGet',
+        $argument,
+        ['\Udb\Entity\V1\CacheGetResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Entity\V1\CacheSetRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\MutationResponse>
+     */
+    public function CacheSet(\Udb\Entity\V1\CacheSetRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/CacheSet',
+        $argument,
+        ['\Udb\Entity\V1\MutationResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Entity\V1\CacheDeleteRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\MutationResponse>
+     */
+    public function CacheDelete(\Udb\Entity\V1\CacheDeleteRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/CacheDelete',
+        $argument,
+        ['\Udb\Entity\V1\MutationResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Entity\V1\CacheScanRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\CacheScanResponse>
+     */
+    public function CacheScan(\Udb\Entity\V1\CacheScanRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/CacheScan',
+        $argument,
+        ['\Udb\Entity\V1\CacheScanResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * ── Document / Graph / Time-Series / Analytical Stores ────────────────────
+     * @param \Udb\Entity\V1\DocumentGetRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\DocumentSet>
+     */
+    public function DocumentGet(\Udb\Entity\V1\DocumentGetRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/DocumentGet',
+        $argument,
+        ['\Udb\Entity\V1\DocumentSet', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Entity\V1\DocumentFindRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\DocumentSet>
+     */
+    public function DocumentFind(\Udb\Entity\V1\DocumentFindRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/DocumentFind',
+        $argument,
+        ['\Udb\Entity\V1\DocumentSet', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Entity\V1\DocumentUpsertRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\MutationResponse>
+     */
+    public function DocumentUpsert(\Udb\Entity\V1\DocumentUpsertRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/DocumentUpsert',
+        $argument,
+        ['\Udb\Entity\V1\MutationResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Entity\V1\DocumentDeleteRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\MutationResponse>
+     */
+    public function DocumentDelete(\Udb\Entity\V1\DocumentDeleteRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/DocumentDelete',
+        $argument,
+        ['\Udb\Entity\V1\MutationResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Entity\V1\GraphQueryRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\GraphResultSet>
+     */
+    public function GraphQuery(\Udb\Entity\V1\GraphQueryRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/GraphQuery',
+        $argument,
+        ['\Udb\Entity\V1\GraphResultSet', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Entity\V1\GraphMutationRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\MutationResponse>
+     */
+    public function GraphMutate(\Udb\Entity\V1\GraphMutationRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/GraphMutate',
+        $argument,
+        ['\Udb\Entity\V1\MutationResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Entity\V1\TimeSeriesWriteRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\MutationResponse>
+     */
+    public function TimeSeriesWrite(\Udb\Entity\V1\TimeSeriesWriteRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/TimeSeriesWrite',
+        $argument,
+        ['\Udb\Entity\V1\MutationResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Entity\V1\TimeSeriesQueryRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\TimeSeriesQueryResponse>
+     */
+    public function TimeSeriesQuery(\Udb\Entity\V1\TimeSeriesQueryRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/TimeSeriesQuery',
+        $argument,
+        ['\Udb\Entity\V1\TimeSeriesQueryResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Entity\V1\AnalyticalQueryRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\AnalyticalQueryResponse>
+     */
+    public function AnalyticalQuery(\Udb\Entity\V1\AnalyticalQueryRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/AnalyticalQuery',
+        $argument,
+        ['\Udb\Entity\V1\AnalyticalQueryResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * ── Tx / CDC ───────────────────────────────────────────────────────────────
      * @param array $metadata metadata
      * @param array $options call options
@@ -459,8 +643,8 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
-     * Return migration runs for an operator console page.
-     * Requires scope: udb:admin or udb:portal:viewer
+     * Return migration runs for an admin console page.
+     * Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
      * @param \Udb\Entity\V1\MigrationRunListRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options
@@ -615,6 +799,20 @@ class DataBrokerClient extends \Grpc\BaseStub {
         return $this->_simpleRequest('/udb.services.v1.DataBroker/StepDownCdcLeader',
         $argument,
         ['\Udb\Entity\V1\CdcStatusResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Entity\V1\CdcRedactionPreviewRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\CdcRedactionPreviewResponse>
+     */
+    public function PreviewCdcRedaction(\Udb\Entity\V1\CdcRedactionPreviewRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/PreviewCdcRedaction',
+        $argument,
+        ['\Udb\Entity\V1\CdcRedactionPreviewResponse', 'decode'],
         $metadata, $options);
     }
 
@@ -852,9 +1050,9 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
-     * ── Unified Operator Admin Surface ────────────────────────────────────────
+     * ── Unified Admin Surface ────────────────────────────────────────────────
      * Returns a single snapshot covering catalog, CDC, saga, backend, and policy
-     * state for the operator console.  Requires scope: udb:admin
+     * state for the admin console. Requires scope: udb:admin.
      * @param \Udb\Entity\V1\AdminSummaryRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options
@@ -869,8 +1067,8 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
-     * Paginated admin audit log view for the operator console.
-     * Requires scope: udb:admin or udb:portal:viewer
+     * Paginated admin audit log view for the admin console.
+     * Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
      * @param \Udb\Entity\V1\AdminAuditLogRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options
@@ -886,7 +1084,7 @@ class DataBrokerClient extends \Grpc\BaseStub {
 
     /**
      * Verifies the admin audit log hash chain and reports the first broken link.
-     * Requires scope: udb:admin or udb:portal:viewer
+     * Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
      * @param \Udb\Entity\V1\AdminAuditVerifyRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options

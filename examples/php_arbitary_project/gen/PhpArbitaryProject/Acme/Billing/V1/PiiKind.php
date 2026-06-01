@@ -51,3 +51,4 @@ class PiiKind
         return constant($const);
     }
 }
+

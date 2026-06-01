@@ -10,6 +10,7 @@ fn default_migration_options() {
     assert_eq!(opts.max_retries, crate::engine::MAX_RETRIES);
     assert!(opts.generate_sql);
     assert!(!opts.emergency_auto_alter);
+    assert!(!opts.skip_unchanged_verify);
 }
 
 #[test]
@@ -33,6 +34,21 @@ fn migration_options_seeders_path_from_env() {
 }
 
 #[test]
+fn migration_options_skip_unchanged_verify_is_explicit_opt_out() {
+    let prior = std::env::var("UDB_SKIP_UNCHANGED_VERIFY").ok();
+    assert!(!MigrationOptions::default().skip_unchanged_verify);
+
+    #[allow(unused_unsafe)]
+    unsafe {
+        std::env::set_var("UDB_SKIP_UNCHANGED_VERIFY", "true");
+    }
+    let opts = MigrationOptions::from_env();
+    assert!(opts.skip_unchanged_verify);
+
+    restore_env("UDB_SKIP_UNCHANGED_VERIFY", prior);
+}
+
+#[test]
 fn saga_settings_merge_env_overrides_file_values() {
     let prior_enabled = std::env::var("UDB_SAGA_RECOVERY_ENABLED").ok();
     let prior_interval = std::env::var("UDB_SAGA_RECOVERY_INTERVAL_SECONDS").ok();
@@ -49,6 +65,7 @@ fn saga_settings_merge_env_overrides_file_values() {
             recovery_enabled: true,
             recovery_interval_secs: 60,
             stale_threshold_secs: 300,
+            ..SagaSettings::default()
         },
         ..UdbConfig::default()
     };

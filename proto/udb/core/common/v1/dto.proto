@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package udb.core.common.v1;
+
+import "google/protobuf/any.proto";
+
+option csharp_namespace = "udb.core.Common.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/common/v1;commonv1";
+option java_package = "com.udb.core.common.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Common\\V1";
+option php_namespace = "Udb\\Core\\Common\\V1";
+
+// -----------------------------------------------------------------------------
+// Core envelope types
+// -----------------------------------------------------------------------------
+
+message PageRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message PageResponse {
+  int32 page = 1;
+  int32 page_size = 2;
+  int64 total_items = 3;
+  int32 total_pages = 4;
+  string next_page_token = 5;
+  int64 total_count = 6;
+  bool has_next = 7;
+  bool has_previous = 8;
+}
+
+// ApiResponse is the top-level envelope returned for every endpoint.
+// Proto cannot express Go generics, so data is carried as Any for typed
+// messages. When data is already marshalled JSON, use RawJsonResponse.
+message ApiResponse {
+  bool success = 1;
+  google.protobuf.Any data = 2;
+  ApiError error = 3;
+  ResponseMeta meta = 4;
+}
+
+// ApiError holds structured error information for failed responses.
+message ApiError {
+  string code = 1;
+  string message = 2;
+  string error_id = 3;
+  int32 http_status_code = 4;
+  bool retryable = 5;
+  repeated FieldViolation field_violations = 6;
+}
+
+// FieldViolation describes a single field-level validation failure.
+message FieldViolation {
+  string field = 1;
+  string description = 2;
+}
+
+// ResponseMeta carries per-request metadata attached to every response.
+message ResponseMeta {
+  string request_id = 1;
+  string timestamp = 2;
+  PaginationMeta pagination = 3;
+}
+
+// PaginationMeta is included on list responses.
+message PaginationMeta {
+  int32 page = 1;
+  int32 page_size = 2;
+  int64 total_count = 3;
+  int32 total_pages = 4;
+  bool has_next = 5;
+  bool has_prev = 6;
+}
+
+// RawJsonResponse is used when data is already marshalled JSON, for example
+// from protojson, so handlers can avoid double-marshalling.
+message RawJsonResponse {
+  bool success = 1;
+  bytes data_json = 2;
+  ApiError error = 3;
+  ResponseMeta meta = 4;
+}
+
+message ErrorInfo {
+  int32 code = 1;
+  string message = 2;
+  map<string, string> metadata = 3;
+}

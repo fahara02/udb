@@ -19,13 +19,18 @@
 use std::sync::Arc;
 
 use serde_json::Value as JsonValue;
-use sqlx::Column;
 use sqlx::Row;
 use sqlx::SqlitePool;
 
 use crate::broker::RequestContext;
 use crate::runtime::backend_context::{
-    AppliedContext, BackendContextEnforcer, ContextEffect, SqlDialect, render_sql_session_settings,
+    AppliedContext, BackendContextEnforcer, ContextEffect, SqlDialect, enforce_with_mechanism,
+    render_sql_session_settings,
+};
+use crate::runtime::core::{validate_mutation_sql, validate_read_sql};
+use crate::runtime::executor_utils::{
+    apply_context_statements, bind_json_params, build_probe, parse_sql_dispatch, sqlx_row_to_json,
+    with_executor_timeout,
 };
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
@@ -76,13 +81,87 @@ impl SqliteExecutor {
         })?;
         let applied = AppliedContext::from_request(ctx);
         let stmts = render_sql_session_settings(&applied, SqlDialect::Sqlite);
-        for stmt in stmts {
-            sqlx::query(&stmt).execute(&mut **tx).await.map_err(|err| {
-                tonic::Status::internal(format!("sqlite context insert failed: {err}"))
-            })?;
-        }
-        Ok(())
+        apply_context_statements(tx, &stmts, "sqlite context insert failed").await
     }
+}
+
+fn validate_sqlite_ident(value: &str) -> Result<(), tonic::Status> {
+    if value.is_empty()
+        || !value
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+    {
+        return Err(tonic::Status::invalid_argument(format!(
+            "invalid SQLite identifier '{value}'"
+        )));
+    }
+    Ok(())
+}
+
+fn quote_sqlite_ident(value: &str) -> Result<String, tonic::Status> {
+    validate_sqlite_ident(value)?;
+    Ok(format!("\"{value}\""))
+}
+
+fn sqlite_create_table_sql(resource_name: &str, spec_json: &str) -> Result<String, tonic::Status> {
+    let spec: JsonValue = serde_json::from_str(spec_json)
+        .map_err(|e| tonic::Status::invalid_argument(format!("invalid resource spec: {e}")))?;
+    let columns = spec
+        .get("columns")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| tonic::Status::invalid_argument("table resource spec requires columns"))?;
+    if columns.is_empty() {
+        return Err(tonic::Status::invalid_argument(
+            "table resource spec requires at least one column",
+        ));
+    }
+    let mut defs = Vec::with_capacity(columns.len() + 1);
+    let mut pk_cols = Vec::new();
+    for column in columns {
+        let name = column
+            .get("name")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| tonic::Status::invalid_argument("column missing name"))?;
+        let ty = column
+            .get("type")
+            .and_then(|v| v.as_str())
+            .filter(|v| !v.trim().is_empty())
+            .ok_or_else(|| tonic::Status::invalid_argument("column missing type"))?;
+        if !ty
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '(' | ')' | ',' | ' '))
+        {
+            return Err(tonic::Status::invalid_argument(format!(
+                "invalid SQL type for column '{name}'"
+            )));
+        }
+        let quoted = quote_sqlite_ident(name)?;
+        if column
+            .get("primary_key")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        {
+            pk_cols.push(quoted.clone());
+        }
+        let null_clause = if column
+            .get("not_null")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        {
+            " NOT NULL"
+        } else {
+            ""
+        };
+        defs.push(format!("{quoted} {ty}{null_clause}"));
+    }
+    if !pk_cols.is_empty() {
+        defs.push(format!("PRIMARY KEY ({})", pk_cols.join(", ")));
+    }
+    Ok(format!(
+        "CREATE TABLE IF NOT EXISTS {} ({})",
+        quote_sqlite_ident(resource_name)?,
+        defs.join(", ")
+    ))
 }
 
 impl BackendContextEnforcer for SqliteExecutor {
@@ -91,14 +170,10 @@ impl BackendContextEnforcer for SqliteExecutor {
     }
 
     fn enforce(&self, ctx: &AppliedContext) -> ContextEffect {
-        if ctx.is_empty() {
-            return ContextEffect::Advisory {
-                recorded_in: "no_context_to_apply".into(),
-            };
-        }
-        ContextEffect::Enforced {
-            mechanism: "_udb_context temp table populated per request-scoped transaction".into(),
-        }
+        enforce_with_mechanism(
+            ctx,
+            "_udb_context temp table populated per request-scoped transaction",
+        )
     }
 }
 
@@ -112,139 +187,78 @@ impl BackendHealth for SqliteExecutor {
     }
 }
 
-fn row_to_json(row: &sqlx::sqlite::SqliteRow) -> JsonValue {
-    let mut obj = serde_json::Map::new();
-    for (i, col) in row.columns().iter().enumerate() {
-        let name = col.name().to_string();
-        let value: JsonValue = if let Ok(v) = row.try_get::<Option<i64>, _>(i) {
-            v.map(JsonValue::from).unwrap_or(JsonValue::Null)
-        } else if let Ok(v) = row.try_get::<Option<f64>, _>(i) {
-            v.map(JsonValue::from).unwrap_or(JsonValue::Null)
-        } else if let Ok(v) = row.try_get::<Option<bool>, _>(i) {
-            v.map(JsonValue::from).unwrap_or(JsonValue::Null)
-        } else if let Ok(v) = row.try_get::<Option<String>, _>(i) {
-            v.map(JsonValue::from).unwrap_or(JsonValue::Null)
-        } else if let Ok(v) = row.try_get::<Option<Vec<u8>>, _>(i) {
-            use base64::Engine as _;
-            v.map(|bytes| {
-                JsonValue::String(format!(
-                    "base64:{}",
-                    base64::engine::general_purpose::STANDARD.encode(bytes)
-                ))
-            })
-            .unwrap_or(JsonValue::Null)
-        } else {
-            JsonValue::Null
-        };
-        obj.insert(name, value);
-    }
-    JsonValue::Object(obj)
-}
-
-fn parse_dispatch(request_json: &str) -> Result<(String, Vec<JsonValue>), tonic::Status> {
-    let value: JsonValue = serde_json::from_str(request_json)
-        .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
-    let sql = value
-        .get("sql")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| tonic::Status::invalid_argument("missing `sql` in dispatch request"))?
-        .to_string();
-    let params = value
-        .get("params")
-        .and_then(|v| v.as_array())
-        .cloned()
-        .unwrap_or_default();
-    Ok((sql, params))
-}
-
-fn bind_params<'q>(
-    mut q: sqlx::query::Query<'q, sqlx::Sqlite, sqlx::sqlite::SqliteArguments<'q>>,
-    params: &'q [JsonValue],
-) -> sqlx::query::Query<'q, sqlx::Sqlite, sqlx::sqlite::SqliteArguments<'q>> {
-    for p in params {
-        q = match p {
-            JsonValue::Null => q.bind(Option::<i64>::None),
-            JsonValue::Bool(b) => q.bind(*b),
-            JsonValue::Number(n) => {
-                if let Some(i) = n.as_i64() {
-                    q.bind(i)
-                } else if let Some(f) = n.as_f64() {
-                    q.bind(f)
-                } else {
-                    q.bind(n.to_string())
-                }
-            }
-            JsonValue::String(s) => q.bind(s.clone()),
-            other => q.bind(other.to_string()),
-        };
-    }
-    q
-}
-
 impl QueryExecutor for SqliteExecutor {
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let (sql, params) = parse_dispatch(request_json)?;
-        let rows = if let Some(ctx) = &self.context {
-            let mut tx = self.pool.begin().await.map_err(|err| {
-                tonic::Status::internal(format!("sqlite transaction start failed: {err}"))
-            })?;
-            Self::apply_context_table(&mut tx, ctx).await?;
-            let q = bind_params(sqlx::query(&sql), &params);
-            let rows = q
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| tonic::Status::internal(format!("sqlite query failed: {e}")))?;
-            tx.commit().await.map_err(|err| {
-                tonic::Status::internal(format!("sqlite transaction commit failed: {err}"))
-            })?;
-            rows
-        } else {
-            let q = bind_params(sqlx::query(&sql), &params);
-            q.fetch_all(&self.pool)
-                .await
-                .map_err(|e| tonic::Status::internal(format!("sqlite query failed: {e}")))?
-        };
-        let json: Vec<JsonValue> = rows.iter().map(row_to_json).collect();
-        serde_json::to_string(&JsonValue::Array(json))
-            .map_err(|e| tonic::Status::internal(format!("response serialise failed: {e}")))
+        with_executor_timeout("SQLite", "query", async {
+            let (sql, params) = parse_sql_dispatch(request_json)?;
+            validate_read_sql(&sql)?;
+            let rows = if let Some(ctx) = &self.context {
+                let mut tx = self.pool.begin().await.map_err(|err| {
+                    tonic::Status::internal(format!("sqlite transaction start failed: {err}"))
+                })?;
+                Self::apply_context_table(&mut tx, ctx).await?;
+                let q = bind_json_params(sqlx::query(&sql), &params);
+                let rows = q
+                    .fetch_all(&mut *tx)
+                    .await
+                    .map_err(|e| tonic::Status::internal(format!("sqlite query failed: {e}")))?;
+                tx.commit().await.map_err(|err| {
+                    tonic::Status::internal(format!("sqlite transaction commit failed: {err}"))
+                })?;
+                rows
+            } else {
+                let q = bind_json_params(sqlx::query(&sql), &params);
+                q.fetch_all(&self.pool)
+                    .await
+                    .map_err(|e| tonic::Status::internal(format!("sqlite query failed: {e}")))?
+            };
+            let json: Vec<JsonValue> = rows.iter().map(sqlx_row_to_json).collect();
+            serde_json::to_string(&JsonValue::Array(json))
+                .map_err(|e| tonic::Status::internal(format!("response serialise failed: {e}")))
+        })
+        .await
     }
 }
 
 impl MutationExecutor for SqliteExecutor {
     async fn mutate(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let (sql, params) = parse_dispatch(request_json)?;
-        if let Some(ctx) = &self.context {
-            let mut tx = self.pool.begin().await.map_err(|err| {
-                tonic::Status::internal(format!("sqlite transaction start failed: {err}"))
-            })?;
-            Self::apply_context_table(&mut tx, ctx).await?;
-            let q = bind_params(sqlx::query(&sql), &params);
-            let result = q
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| tonic::Status::internal(format!("sqlite mutate failed: {e}")))?;
-            let rows_affected = result.rows_affected();
-            let last_insert_rowid = result.last_insert_rowid();
-            tx.commit().await.map_err(|err| {
-                tonic::Status::internal(format!("sqlite transaction commit failed: {err}"))
-            })?;
-            Ok(serde_json::json!({
-                "rows_affected": rows_affected,
-                "last_insert_rowid": last_insert_rowid,
-            })
-            .to_string())
-        } else {
-            let q = bind_params(sqlx::query(&sql), &params);
-            let result = q
-                .execute(&self.pool)
-                .await
-                .map_err(|e| tonic::Status::internal(format!("sqlite mutate failed: {e}")))?;
-            Ok(serde_json::json!({
-                "rows_affected": result.rows_affected(),
-                "last_insert_rowid": result.last_insert_rowid(),
-            })
-            .to_string())
-        }
+        with_executor_timeout("SQLite", "mutate", async {
+            let (sql, params) = parse_sql_dispatch(request_json)?;
+            validate_mutation_sql(&sql)?;
+            if let Some(ctx) = &self.context {
+                let mut tx = self.pool.begin().await.map_err(|err| {
+                    tonic::Status::internal(format!("sqlite transaction start failed: {err}"))
+                })?;
+                Self::apply_context_table(&mut tx, ctx).await?;
+                let q = bind_json_params(sqlx::query(&sql), &params);
+                let result = q
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| tonic::Status::internal(format!("sqlite mutate failed: {e}")))?;
+                let rows_affected = result.rows_affected();
+                let last_insert_rowid = result.last_insert_rowid();
+                tx.commit().await.map_err(|err| {
+                    tonic::Status::internal(format!("sqlite transaction commit failed: {err}"))
+                })?;
+                Ok(serde_json::json!({
+                    "rows_affected": rows_affected,
+                    "last_insert_rowid": last_insert_rowid,
+                })
+                .to_string())
+            } else {
+                let q = bind_json_params(sqlx::query(&sql), &params);
+                let result = q
+                    .execute(&self.pool)
+                    .await
+                    .map_err(|e| tonic::Status::internal(format!("sqlite mutate failed: {e}")))?;
+                Ok(serde_json::json!({
+                    "rows_affected": result.rows_affected(),
+                    "last_insert_rowid": result.last_insert_rowid(),
+                })
+                .to_string())
+            }
+        })
+        .await
     }
 }
 
@@ -280,20 +294,22 @@ impl ResourceAdminExecutor for SqliteExecutor {
         resource_name: &str,
         spec_json: &str,
     ) -> Result<(), tonic::Status> {
-        tracing::info!(
-            backend = "sqlite",
-            resource = resource_name,
-            spec = spec_json,
-            "SqliteExecutor::ensure_resource accepted; full lifecycle is a P2P follow-up"
-        );
+        let ddl = sqlite_create_table_sql(resource_name, spec_json)?;
+        sqlx::query(&ddl)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| tonic::Status::internal(format!("sqlite ensure_resource failed: {e}")))?;
         Ok(())
     }
     async fn drop_resource(&self, resource_name: &str) -> Result<(), tonic::Status> {
-        tracing::info!(
-            backend = "sqlite",
-            resource = resource_name,
-            "SqliteExecutor::drop_resource accepted; full lifecycle is a P2P follow-up"
+        let ddl = format!(
+            "DROP TABLE IF EXISTS {}",
+            quote_sqlite_ident(resource_name)?
         );
+        sqlx::query(&ddl)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| tonic::Status::internal(format!("sqlite drop_resource failed: {e}")))?;
         Ok(())
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
@@ -336,7 +352,7 @@ impl BackendExecutor for SqliteExecutor {
                 .and_then(|v| v.as_array())
                 .cloned()
                 .unwrap_or_default();
-            let q = bind_params(sqlx::query(sql), &params);
+            let q = bind_json_params(sqlx::query(sql), &params);
             let r = q
                 .execute(&mut *tx)
                 .await
@@ -350,20 +366,7 @@ impl BackendExecutor for SqliteExecutor {
     }
 
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
-        match self.ping().await {
-            Ok(()) => Ok(BackendProbe {
-                backend: "sqlite".to_string(),
-                instance: None,
-                ok: true,
-                error: None,
-            }),
-            Err(err) => Ok(BackendProbe {
-                backend: "sqlite".to_string(),
-                instance: None,
-                ok: false,
-                error: Some(err),
-            }),
-        }
+        Ok(build_probe("sqlite", self.ping().await))
     }
 }
 

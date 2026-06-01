@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package udb.core.notification.entity.v1;
+
+option csharp_namespace = "udb.core.Notification.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/notification/entity/v1;notificationv1";
+option java_package = "com.udb.core.notification.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Notification\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// NotificationChannel — Delivery channel for notifications.
+// ---------------------------------------------------------------------------
+
+enum NotificationChannel {
+  NOTIFICATION_CHANNEL_UNSPECIFIED = 0;
+  NOTIFICATION_CHANNEL_EMAIL = 1;
+  NOTIFICATION_CHANNEL_SMS = 2;
+  NOTIFICATION_CHANNEL_PUSH = 3; // Mobile push via FCM/APNs
+  NOTIFICATION_CHANNEL_IN_APP = 4; // In-app notification bell
+  NOTIFICATION_CHANNEL_WEBHOOK = 5; // Outbound HTTP webhook
+}
+
+enum NotificationStatus {
+  NOTIFICATION_STATUS_UNSPECIFIED = 0;
+  NOTIFICATION_STATUS_PENDING = 1;
+  NOTIFICATION_STATUS_SENT = 2;
+  NOTIFICATION_STATUS_DELIVERED = 3;
+  NOTIFICATION_STATUS_FAILED = 4;
+  NOTIFICATION_STATUS_SUPPRESSED = 5; // Rate-limited or user preference suppressed
+}
+
+enum NotificationType {
+  NOTIFICATION_TYPE_UNSPECIFIED = 0;
+  NOTIFICATION_TYPE_TRANSACTIONAL = 1; // Triggered by user actions
+  NOTIFICATION_TYPE_SYSTEM = 2; // System-generated
+  NOTIFICATION_TYPE_MARKETING = 3; // Promotional
+  NOTIFICATION_TYPE_ALERT = 4; // Security/urgent alerts
+}
+
+enum NotificationPriority {
+  NOTIFICATION_PRIORITY_UNSPECIFIED = 0;
+  NOTIFICATION_PRIORITY_LOW = 1;
+  NOTIFICATION_PRIORITY_NORMAL = 2;
+  NOTIFICATION_PRIORITY_HIGH = 3;
+  NOTIFICATION_PRIORITY_CRITICAL = 4;
+}

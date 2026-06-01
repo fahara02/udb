@@ -17,8 +17,6 @@
 //!
 //! Schema / table comes from the manifest like every other compiler.
 
-use std::collections::HashSet;
-
 use crate::backend::BackendKind;
 use crate::generation::ManifestTable;
 use crate::ir::filter::{ComparisonOp, LogicalFilter};
@@ -70,71 +68,27 @@ impl ClickHouseCompiler {
     /// not portable), so RLS is performed at the compiler layer:
     /// AND `_tenant_id = ?` (or `tenant_id` — whatever the
     /// manifest names it) into every read/delete/aggregate, and
-    /// stamp on writes. Either column name is accepted —
-    /// `_tenant_id` is the convention some users prefer to mark
-    /// "system" columns; `tenant_id` is the plain form. The first
-    /// match wins.
-    fn tenant_column<'a>(table: &'a ManifestTable) -> Option<&'a str> {
-        table
-            .columns
-            .iter()
-            .find(|c| {
-                let cn = c.column_name.as_str();
-                let fn_ = c.field_name.as_str();
-                cn.eq_ignore_ascii_case("tenant_id")
-                    || cn.eq_ignore_ascii_case("_tenant_id")
-                    || fn_.eq_ignore_ascii_case("tenant_id")
-                    || fn_.eq_ignore_ascii_case("_tenant_id")
-            })
-            .map(|c| c.column_name.as_str())
+    /// stamp on writes. Resolution policy is shared with the other
+    /// compiler-layer-RLS backends — see `util::resolve_tenant_column`.
+    fn tenant_column(table: &ManifestTable) -> Option<&str> {
+        super::util::resolve_tenant_column(table)
     }
 
-    fn project_column<'a>(table: &'a ManifestTable) -> Option<&'a str> {
-        table
-            .columns
-            .iter()
-            .find(|c| {
-                let cn = c.column_name.as_str();
-                let fn_ = c.field_name.as_str();
-                cn.eq_ignore_ascii_case("project_id")
-                    || cn.eq_ignore_ascii_case("_project_id")
-                    || fn_.eq_ignore_ascii_case("project_id")
-                    || fn_.eq_ignore_ascii_case("_project_id")
-            })
-            .map(|c| c.column_name.as_str())
+    fn project_column(table: &ManifestTable) -> Option<&str> {
+        super::util::resolve_project_column(table)
     }
 
     /// A2: append tenant/project predicates to a WHERE body. Returns
     /// None when nothing to inject AND no existing body. Each
-    /// injection adds one `?` placeholder to `params`.
+    /// injection adds one `?` placeholder to `params`. ClickHouse
+    /// quotes identifiers with backticks.
     fn append_context_predicates(
         body: Option<String>,
         table: &ManifestTable,
         ctx: &CompileContext<'_>,
         params: &mut Vec<LogicalValue>,
     ) -> Option<String> {
-        let mut parts: Vec<String> = body.into_iter().collect();
-        if let Some(tid) = ctx.tenant_id
-            && !tid.is_empty()
-            && let Some(col) = Self::tenant_column(table)
-        {
-            params.push(LogicalValue::String(tid.to_string()));
-            parts.push(format!("`{col}` = ?"));
-        }
-        if let Some(pid) = ctx.project_id
-            && !pid.is_empty()
-            && let Some(col) = Self::project_column(table)
-        {
-            params.push(LogicalValue::String(pid.to_string()));
-            parts.push(format!("`{col}` = ?"));
-        }
-        if parts.is_empty() {
-            None
-        } else if parts.len() == 1 {
-            parts.pop()
-        } else {
-            Some(parts.join(" AND "))
-        }
+        super::util::append_context_predicates(body, table, ctx, params, '`')
     }
 
     fn render_filter(
@@ -354,15 +308,23 @@ impl Compiler for ClickHouseCompiler {
             .and_then(|pid| Self::project_column(table).map(|col| (col, pid)));
         let mut records: Vec<crate::ir::operations::LogicalRecord> = op.records.clone();
         for rec in records.iter_mut() {
+            // Records are keyed by field names; a caller may supply the
+            // tenant/project value under any field alias that maps to the
+            // physical column. Resolve every existing key to its column so
+            // we never stamp a column that is already present — stamping
+            // by literal key would emit a duplicate column in the INSERT.
+            let existing_cols: std::collections::HashSet<String> = rec
+                .keys()
+                .filter_map(|k| self.column_for(table, k, &op.message_type).ok())
+                .map(|c| c.to_string())
+                .collect();
             if let Some((col, tid)) = stamp_tenant
-                && !rec.contains_key("tenant_id")
-                && !rec.contains_key(col)
+                && !existing_cols.contains(col)
             {
                 rec.insert(col.to_string(), LogicalValue::String(tid.to_string()));
             }
             if let Some((col, pid)) = stamp_project
-                && !rec.contains_key("project_id")
-                && !rec.contains_key(col)
+                && !existing_cols.contains(col)
             {
                 rec.insert(col.to_string(), LogicalValue::String(pid.to_string()));
             }
@@ -461,14 +423,7 @@ impl Compiler for ClickHouseCompiler {
                 reason: "LogicalAggregate::aggregates must be non-empty".into(),
             });
         }
-        let mut seen: HashSet<&str> = HashSet::new();
-        for agg in &op.aggregates {
-            if !seen.insert(agg.alias.as_str()) {
-                return Err(CompileError::Malformed {
-                    reason: format!("duplicate aggregate alias '{}'", agg.alias),
-                });
-            }
-        }
+        super::util::validate_aggregate_aliases(&op.aggregates)?;
         let table = self.resolve_table(&op.message_type, ctx)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 

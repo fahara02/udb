@@ -10,14 +10,13 @@ use aws_sdk_s3::Client;
 use aws_sdk_s3::primitives::ByteStream;
 use serde_json::Value as JsonValue;
 
-use crate::runtime::executor_utils::{json_required_str, object_bytes_from_json};
+use crate::runtime::executor_utils::{
+    json_required_str, object_bytes_from_json, reject_oversized_object,
+};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
 };
-
-/// Generic inline object writes are capped; larger uploads use presigned URLs.
-const INLINE_OBJECT_LIMIT_BYTES: usize = 1_048_576;
 
 pub(crate) struct S3Executor(pub(crate) Client);
 
@@ -120,17 +119,16 @@ impl ObjectExecutor for S3Executor {
         } else {
             bytes
         };
-        if body.len() > INLINE_OBJECT_LIMIT_BYTES {
-            return Err(tonic::Status::resource_exhausted(
-                "generic object writes are limited to 1MB; use presigned upload for larger files",
-            ));
-        }
+        // Capture the length before moving `body` into the stream, so the body is
+        // not cloned just to report its size in the response (#102).
+        let body_len = body.len();
+        reject_oversized_object(body_len)?;
         let mut request = self
             .0
             .put_object()
             .bucket(bucket)
             .key(object_key)
-            .body(ByteStream::from(body.clone()));
+            .body(ByteStream::from(body));
         if let Some(content_type) = spec
             .get("content_type")
             .and_then(JsonValue::as_str)
@@ -145,9 +143,27 @@ impl ObjectExecutor for S3Executor {
         Ok(serde_json::json!({
             "resource_uri": format!("s3://{bucket}/{object_key}"),
             "affected_rows": 1,
-            "bytes": body.len()
+            "bytes": body_len
         })
         .to_string())
+    }
+
+    /// `{"bucket","object_key"|"key"}` — deletes the object. S3 delete is
+    /// idempotent (deleting a missing key succeeds).
+    async fn delete_object(&self, request_json: &str) -> Result<(), tonic::Status> {
+        let spec: JsonValue = serde_json::from_str(request_json)
+            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let bucket = json_required_str(&spec, "bucket")?;
+        let object_key =
+            json_required_str(&spec, "object_key").or_else(|_| json_required_str(&spec, "key"))?;
+        self.0
+            .delete_object()
+            .bucket(bucket)
+            .key(object_key)
+            .send()
+            .await
+            .map(|_| ())
+            .map_err(|err| tonic::Status::unavailable(format!("S3 delete_object failed: {err}")))
     }
 }
 

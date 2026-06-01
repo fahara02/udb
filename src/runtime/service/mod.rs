@@ -11,13 +11,14 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio_stream::{Stream, StreamExt as _};
 use tonic::transport::{Certificate, Identity, ServerTlsConfig};
 use tonic::{Request, Response, Status};
+use uuid::Uuid;
 
 use crate::ast::ProtoSchema;
-use crate::cdc::CdcEngine;
+use crate::cdc::{CdcEngine, CdcRedactionMode};
 use crate::engine::FsmState;
 use crate::generation::CatalogManifest;
 use crate::lifecycle::run_startup_lifecycle;
-use crate::metrics::{MetricsRecorder, PrometheusMetrics};
+use crate::metrics::{MetricsRecorder, NoopMetrics, PrometheusMetrics};
 use crate::proto::data_broker_server::{DataBroker, DataBrokerServer};
 use crate::proto::{
     AdminAuditLogRecord, AdminAuditLogRequest, AdminAuditLogResponse, AdminAuditVerifyRequest,
@@ -25,29 +26,90 @@ use crate::proto::{
     AdminSagaSummary, AdminSummaryRequest, AdminSummaryResponse, BackendInstanceStatus,
     CapabilitiesRequest, CapabilitiesResponse, CatalogManifestRequest, CatalogManifestResponse,
     CatalogValidationResponse, CatalogVersionListResponse, CatalogVersionRequest,
-    CatalogVersionResponse, CdcControlRequest, CdcEnvelope, CdcStatusResponse,
-    CdcSubscriptionRequest, Chunk, DeleteRequest, DlqActionRequest, DlqEventRecord,
-    DlqEventRequest, DlqEventResponse, DlqListRequest, DlqListResponse, EnqueueOutboxEventRequest,
-    EnqueueOutboxEventResponse, EnsureProjectRequest, GenericDispatchRequest,
-    GenericDispatchResponse, HealthReportRequest, HealthReportResponse, MessageFieldDescriptor,
-    MessageSchemaDescriptor, MessageSchemaListRequest, MessageSchemaListResponse,
-    MessageSchemaLookupRequest, MessageSchemaLookupResponse, MigrationApplyRequest,
-    MigrationPlanRequest, MigrationPlanResponse, MigrationRunListRequest, MigrationRunListResponse,
-    MigrationRunRequest, MigrationStatusResponse, MultipartUploadRequest, MultipartUploadResponse,
-    Mutation, MutationResponse, PolicyLintResponse, PolicyListRequest, PolicyListResponse,
-    PolicyRecord, PolicyRequest, ProjectListRequest, ProjectListResponse, ProjectRecord,
-    PutPolicyRequest, RecordSet, ResourceAdminRequest, ResourceListResponse, SagaListRequest,
-    SagaListResponse, SagaRecord, SagaRequest, SagaResponse, SelectRequest, StageCatalogRequest,
-    TxStatus, UpsertRequest, UrlRequest, UrlResponse, VectorHybridSearchRequest,
-    VectorSearchRequest, VectorSet, VectorUpsertRequest, ViewDefinition,
+    CatalogVersionResponse, CdcControlRequest, CdcEnvelope, CdcRedactionPreviewRequest,
+    CdcRedactionPreviewResponse, CdcStatusResponse, CdcSubscriptionRequest, Chunk, DeleteRequest,
+    DlqActionRequest, DlqEventRecord, DlqEventRequest, DlqEventResponse, DlqListRequest,
+    DlqListResponse, EnqueueOutboxEventRequest, EnqueueOutboxEventResponse, EnsureProjectRequest,
+    GenericDispatchRequest, GenericDispatchResponse, HealthReportRequest, HealthReportResponse,
+    MessageFieldDescriptor, MessageSchemaDescriptor, MessageSchemaListRequest,
+    MessageSchemaListResponse, MessageSchemaLookupRequest, MessageSchemaLookupResponse,
+    MigrationApplyRequest, MigrationPlanRequest, MigrationPlanResponse, MigrationRunListRequest,
+    MigrationRunListResponse, MigrationRunRequest, MigrationStatusResponse, MultipartUploadRequest,
+    MultipartUploadResponse, Mutation, MutationResponse, PolicyLintResponse, PolicyListRequest,
+    PolicyListResponse, PolicyRecord, PolicyRequest, ProjectListRequest, ProjectListResponse,
+    ProjectRecord, ProjectionDriftDivergentRow, ProjectionDriftScanRequest,
+    ProjectionDriftScanResponse, ProjectionDriftTargetReport, PutPolicyRequest, RecordSet,
+    ResourceAdminRequest, ResourceListResponse, SagaListRequest, SagaListResponse, SagaRecord,
+    SagaRequest, SagaResponse, SelectRequest, StageCatalogRequest, TxStatus, UpsertRequest,
+    UrlRequest, UrlResponse, VectorHybridSearchRequest, VectorSearchRequest, VectorSet,
+    VectorUpsertRequest, ViewDefinition,
 };
 use crate::runtime::DataBrokerRuntime;
+use crate::runtime::authz::{Authorizer, AuthzQuery, AuthzSnapshot, Principal, ResourceRef};
 use crate::security::{
-    AbacPolicy, SecurityContext, enforce_select_export_controls, evaluate_abac,
-    ip_matches_allow_entry, security_from_request,
+    AbacPolicy, SecurityConfig, SecurityContext, enforce_select_export_controls, evaluate_abac,
+    ip_matches_allow_entry, security_from_request, validate_bearer_token,
 };
 
+mod analytics_service;
+mod auth_service;
+mod notification_service;
+mod tenant_service;
+
 const UDB_FILE_DESCRIPTOR_SET: &[u8] = tonic::include_file_descriptor_set!("udb_descriptor");
+
+fn build_abac_snapshot(
+    version: impl Into<String>,
+    policies: &[AbacPolicy],
+    default_allow: bool,
+) -> Arc<AuthzSnapshot> {
+    let mut snapshot = AuthzSnapshot::from_abac_policies(version, policies);
+    snapshot.default_allow = default_allow;
+    Arc::new(snapshot)
+}
+
+/// Whether the v2 authz decision engine is enabled for broker authorization.
+/// Read once (`UDB_AUTHZ_V2`). Default ON as of item 132 — parity with the
+/// legacy `evaluate_abac` path is asserted by `broker_v2_matches_legacy_abac_decisions`.
+/// Set `UDB_AUTHZ_V2=0|false|no|off` to fall back to the legacy path.
+fn authz_v2_enabled() -> bool {
+    use std::sync::OnceLock;
+    static FLAG: OnceLock<bool> = OnceLock::new();
+    *FLAG.get_or_init(|| {
+        std::env::var("UDB_AUTHZ_V2")
+            .map(|v| !matches!(v.as_str(), "0" | "false" | "no" | "off"))
+            .unwrap_or(true)
+    })
+}
+
+/// Fold the uniform RPC prologue shared by ~46 handlers: start the timing
+/// clock, extract the [`SecurityContext`] from request metadata, and run the
+/// standard `authorize(security, "*", method)` gate. On any failure it returns
+/// from the enclosing handler via `self.record_grpc(method, started, Err(..))`
+/// so per-method gRPC metrics stay accurate.
+///
+/// Binds `started` and `security` into the caller's scope:
+///
+/// ```ignore
+/// let (started, security) = authorized_call!(self, request, "ListPolicies");
+/// ```
+///
+/// Only applicable to handlers whose prologue is exactly this triple. Handlers
+/// that need the `authorize` decision id, a non-`"*"` message type, or other
+/// bespoke setup (e.g. `delete_inner`) must keep their hand-written prologue.
+macro_rules! authorized_call {
+    ($self:expr, $request:expr, $method:literal) => {{
+        let started = Instant::now();
+        let security = match security_from_request(&$request) {
+            Ok(s) => s,
+            Err(e) => return $self.record_grpc($method, started, Err(e)),
+        };
+        if let Err(err) = $self.authorize(&security, "*", $method).await {
+            return $self.record_grpc($method, started, Err(err));
+        }
+        (started, security)
+    }};
+}
 
 #[derive(Debug, Clone)]
 pub struct DataBrokerService {
@@ -56,10 +118,19 @@ pub struct DataBrokerService {
     pub runtime: Arc<ArcSwap<DataBrokerRuntime>>,
     lifecycle_state: Arc<RwLock<FsmState>>,
     abac_policies: Arc<RwLock<Vec<AbacPolicy>>>,
-    metrics: Arc<PrometheusMetrics>,
+    abac_snapshot: Arc<RwLock<Arc<AuthzSnapshot>>>,
+    metrics: Arc<dyn MetricsRecorder>,
     cdc_engine: Option<Arc<CdcEngine>>,
     projection_engine: Option<Arc<crate::runtime::projection::ProjectionEngine>>,
+    #[cfg(feature = "redis")]
+    rate_limit_redis: Arc<tokio::sync::Mutex<Option<redis::aio::MultiplexedConnection>>>,
     abac_default_allow: bool,
+    /// Per-instance override for the v2 authz decision engine. `None` falls back
+    /// to the process-wide `UDB_AUTHZ_V2` env flag (`authz_v2_enabled`); `Some(b)`
+    /// forces v2 on/off for this instance. Lets tests exercise the v2 broker gate
+    /// deterministically without racing on the global `OnceLock`, and is the seam
+    /// the staged rollout (item 132) flips once parity is proven.
+    abac_v2_override: Option<bool>,
 }
 
 pub(crate) const UDB_PROTOCOL_VERSION: &str = "1.0.0";
@@ -101,6 +172,8 @@ pub(crate) const SUPPORTED_RPC_NAMES: &[&str] = &[
     "PauseCdc",
     "ResumeCdc",
     "StepDownCdcLeader",
+    "PreviewCdcRedaction",
+    "ScanProjectionDrift",
     "ListSagas",
     "GetSaga",
     "RetrySagaCompensation",
@@ -138,10 +211,14 @@ impl DataBrokerService {
             runtime: Arc::new(ArcSwap::from_pointee(DataBrokerRuntime::planning_only())),
             lifecycle_state: Arc::new(RwLock::new(FsmState::Idle)),
             abac_policies: Arc::new(RwLock::new(Vec::new())),
-            metrics: Arc::new(PrometheusMetrics::new().expect("create prometheus metrics")),
+            abac_snapshot: Arc::new(RwLock::new(build_abac_snapshot("live-abac", &[], false))),
+            metrics: service_metrics_recorder(),
             cdc_engine: None,
             projection_engine: None,
+            #[cfg(feature = "redis")]
+            rate_limit_redis: Arc::new(tokio::sync::Mutex::new(None)),
             abac_default_allow: false,
+            abac_v2_override: None,
         }
     }
 
@@ -155,10 +232,14 @@ impl DataBrokerService {
             runtime: Arc::new(ArcSwap::from_pointee(runtime)),
             lifecycle_state: Arc::new(RwLock::new(FsmState::Completed)),
             abac_policies: Arc::new(RwLock::new(Vec::new())),
-            metrics: Arc::new(PrometheusMetrics::new().expect("create prometheus metrics")),
+            abac_snapshot: Arc::new(RwLock::new(build_abac_snapshot("live-abac", &[], false))),
+            metrics: service_metrics_recorder(),
             cdc_engine: None,
             projection_engine: None,
+            #[cfg(feature = "redis")]
+            rate_limit_redis: Arc::new(tokio::sync::Mutex::new(None)),
             abac_default_allow: false,
+            abac_v2_override: None,
         }
     }
 
@@ -167,28 +248,83 @@ impl DataBrokerService {
         runtime: DataBrokerRuntime,
         lifecycle_state: Arc<RwLock<FsmState>>,
         abac_policies: Arc<RwLock<Vec<AbacPolicy>>>,
-        metrics: Arc<PrometheusMetrics>,
+        metrics: Arc<dyn MetricsRecorder>,
         cdc_engine: Option<Arc<CdcEngine>>,
         abac_default_allow: bool,
     ) -> Self {
         let catalog = Arc::new(crate::runtime::catalog::CatalogManager::new(
             manifest.clone(),
         ));
+        let abac_snapshot = abac_policies
+            .read()
+            .map(|policies| build_abac_snapshot("live-abac", &policies, abac_default_allow))
+            .unwrap_or_else(|_| build_abac_snapshot("live-abac", &[], abac_default_allow));
         Self {
             catalog,
             manifest,
             runtime: Arc::new(ArcSwap::from_pointee(runtime)),
             lifecycle_state,
             abac_policies,
+            abac_snapshot: Arc::new(RwLock::new(abac_snapshot)),
             metrics,
             cdc_engine,
             projection_engine: None,
+            #[cfg(feature = "redis")]
+            rate_limit_redis: Arc::new(tokio::sync::Mutex::new(None)),
             abac_default_allow,
+            abac_v2_override: None,
         }
     }
 
-    pub fn runtime_snapshot(&self) -> DataBrokerRuntime {
-        self.runtime.load_full().as_ref().clone()
+    /// Force the v2 authz decision engine on/off for this instance, overriding
+    /// the process-wide `UDB_AUTHZ_V2` env flag. Used by broker authz tests to
+    /// exercise the v2 gate deterministically (the env flag is a cached
+    /// `OnceLock`, so it cannot vary per test).
+    #[cfg(test)]
+    pub(crate) fn set_authz_v2_override(&mut self, on: bool) {
+        self.abac_v2_override = Some(on);
+        self.refresh_abac_snapshot();
+    }
+
+    fn replace_abac_policies(&self, fresh: Vec<AbacPolicy>) {
+        let snapshot = build_abac_snapshot("live-abac", &fresh, self.abac_default_allow);
+        if let Ok(mut guard) = self.abac_policies.write() {
+            *guard = fresh;
+        }
+        if let Ok(mut guard) = self.abac_snapshot.write() {
+            *guard = snapshot;
+        }
+    }
+
+    fn refresh_abac_snapshot(&self) {
+        let snapshot = self
+            .abac_policies
+            .read()
+            .map(|policies| build_abac_snapshot("live-abac", &policies, self.abac_default_allow))
+            .unwrap_or_else(|_| build_abac_snapshot("live-abac", &[], self.abac_default_allow));
+        if let Ok(mut guard) = self.abac_snapshot.write() {
+            *guard = snapshot;
+        }
+    }
+
+    fn current_abac_snapshot(&self) -> Arc<AuthzSnapshot> {
+        if let Ok(snapshot_guard) = self.abac_snapshot.read() {
+            let snapshot = Arc::clone(&*snapshot_guard);
+            if let Ok(policy_guard) = self.abac_policies.read()
+                && snapshot.policies.len() == policy_guard.len()
+            {
+                return snapshot;
+            }
+        }
+        self.refresh_abac_snapshot();
+        self.abac_snapshot
+            .read()
+            .map(|snapshot| Arc::clone(&*snapshot))
+            .unwrap_or_else(|_| build_abac_snapshot("live-abac", &[], self.abac_default_allow))
+    }
+
+    pub fn runtime_snapshot(&self) -> Arc<DataBrokerRuntime> {
+        self.runtime.load_full()
     }
 
     pub async fn reload_runtime_from_config(
@@ -196,7 +332,7 @@ impl DataBrokerService {
         config: crate::runtime::config::UdbConfig,
         options: crate::runtime::ConfigReloadOptions,
     ) -> crate::runtime::ConfigReloadReport {
-        let mut next = self.runtime_snapshot();
+        let mut next = self.runtime.load_full().as_ref().clone();
         let report = next.reload_from_config(config, options).await;
         if report.applied {
             self.runtime.store(Arc::new(next));
@@ -236,12 +372,16 @@ impl DataBrokerService {
         }
     }
 
+    /// Authorize a broker RPC. On allow, returns the decision id (empty under
+    /// the legacy path) so callers can stamp it into the backend context
+    /// (`app.current_decision_id`) for row-level audit correlation. On deny,
+    /// returns a `permission_denied`/`unauthenticated` status.
     pub(crate) async fn authorize(
         &self,
         security: &SecurityContext,
         message_type: &str,
         operation: &str,
-    ) -> Result<(), Status> {
+    ) -> Result<String, Status> {
         self.ensure_ready()?;
 
         // Phase 4 - Catalog Version Compatibility
@@ -276,8 +416,11 @@ impl DataBrokerService {
 
         let safe = security.log_safe();
 
-        // GAP 40: Per-tenant sliding-window rate limiting
-        if !safe.tenant_id.is_empty() {
+        // GAP 40: Per-tenant fixed-window rate limiting (the key embeds
+        // `unix_epoch / window_secs`, so each window is a discrete bucket — not
+        // a true sliding window).
+        if self.runtime_snapshot().config().service.rate_limit_enabled && !safe.tenant_id.is_empty()
+        {
             self.check_rate_limit(&safe.tenant_id, operation).await?;
         }
 
@@ -291,18 +434,114 @@ impl DataBrokerService {
             operation = operation,
             "authorizing UDB request"
         );
-        let policies = self
-            .abac_policies
-            .read()
-            .map(|policies| policies.clone())
-            .unwrap_or_default();
-        evaluate_abac(
-            &policies,
-            security,
-            message_type,
-            operation,
-            self.abac_default_allow,
-        )
+        // Milestone 7: when UDB_AUTHZ_V2 is enabled, route the same loaded ABAC
+        // policies through the v2 decision engine (structured Decision +
+        // decision_id), preserving the mandatory tenant/purpose checks so
+        // behavior matches `evaluate_abac`. Default OFF → unchanged legacy path.
+        // A per-instance override wins over the env flag (deterministic tests;
+        // staged rollout seam for item 132).
+        if self.abac_v2_override.unwrap_or_else(authz_v2_enabled) {
+            if security.tenant_id.trim().is_empty() {
+                return Err(Status::unauthenticated("tenant_id is required"));
+            }
+            if security.purpose.trim().is_empty() {
+                return Err(Status::permission_denied("purpose is required"));
+            }
+            let principal = Principal::from_security_context(security, Vec::new());
+            let resource = ResourceRef::message(message_type);
+            let attributes = std::collections::BTreeMap::new();
+            let snapshot = self.current_abac_snapshot();
+            let decision = snapshot.authorize(&AuthzQuery {
+                principal: &principal,
+                resource: &resource,
+                action: operation,
+                purpose: &security.purpose,
+                attributes: &attributes,
+            });
+            tracing::debug!(
+                trace_id = security.trace_id,
+                decision_id = decision.decision_id,
+                allowed = decision.allowed,
+                "authz v2 decision"
+            );
+            return if decision.allowed {
+                Ok(decision.decision_id)
+            } else {
+                Err(Status::permission_denied(decision.deny_reason))
+            };
+        }
+
+        // Legacy (v2-off) path: `evaluate_abac` is synchronous, so borrow the
+        // policies under the read guard instead of cloning the whole Vec per
+        // request. The default v2 path above already serves the cached
+        // `current_abac_snapshot()` (built once per reload) — #83.
+        let result = match self.abac_policies.read() {
+            Ok(guard) => evaluate_abac(
+                &guard,
+                security,
+                message_type,
+                operation,
+                self.abac_default_allow,
+            ),
+            Err(_) => evaluate_abac(
+                &[],
+                security,
+                message_type,
+                operation,
+                self.abac_default_allow,
+            ),
+        };
+        result.map(|()| Uuid::new_v4().to_string())
+    }
+
+    /// #112: per-item ABAC authorization usable from inside a `'static` batch
+    /// stream. `authorize` itself borrows `&self` (catalog-compat + rate-limit
+    /// prologue) and can't be moved into the streaming closure, but its ABAC
+    /// decision core only needs cloneable inputs — the cached `Arc<AuthzSnapshot>`
+    /// (v2) or the `Arc<RwLock<Vec<AbacPolicy>>>` (legacy) — which the batch
+    /// handlers capture once and call this with per streamed item. Mirrors the
+    /// v2/legacy branch in `authorize` and returns the per-item `decision_id`.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn authorize_message_item(
+        abac_v2: bool,
+        snapshot: &AuthzSnapshot,
+        policies: &RwLock<Vec<AbacPolicy>>,
+        default_allow: bool,
+        security: &SecurityContext,
+        message_type: &str,
+        operation: &str,
+    ) -> Result<String, Status> {
+        if abac_v2 {
+            if security.tenant_id.trim().is_empty() {
+                return Err(Status::unauthenticated("tenant_id is required"));
+            }
+            if security.purpose.trim().is_empty() {
+                return Err(Status::permission_denied("purpose is required"));
+            }
+            let principal = Principal::from_security_context(security, Vec::new());
+            let resource = ResourceRef::message(message_type);
+            let attributes = std::collections::BTreeMap::new();
+            let decision = snapshot.authorize(&AuthzQuery {
+                principal: &principal,
+                resource: &resource,
+                action: operation,
+                purpose: &security.purpose,
+                attributes: &attributes,
+            });
+            if decision.allowed {
+                Ok(decision.decision_id)
+            } else {
+                Err(Status::permission_denied(decision.deny_reason))
+            }
+        } else {
+            let result = match policies.read() {
+                Ok(guard) => {
+                    evaluate_abac(&guard, security, message_type, operation, default_allow)
+                }
+                Err(_) => evaluate_abac(&[], security, message_type, operation, default_allow),
+            };
+            result.map(|()| Uuid::new_v4().to_string())
+        }
     }
 
     pub(crate) fn require_portal_permission(
@@ -381,25 +620,39 @@ impl DataBrokerService {
             unix_epoch / window_secs
         );
 
-        let mut conn = redis
-            .get_multiplexed_async_connection()
-            .await
-            .map_err(|e| Status::internal(format!("rate limit redis error: {}", e)))?;
+        let mut conn = {
+            let mut guard = self.rate_limit_redis.lock().await;
+            if guard.is_none() {
+                *guard = Some(
+                    redis
+                        .get_multiplexed_async_connection()
+                        .await
+                        .map_err(|e| Status::internal(format!("rate limit redis error: {}", e)))?,
+                );
+            }
+            guard
+                .as_ref()
+                .expect("rate limit redis connection just initialized")
+                .clone()
+        };
 
-        let count: u64 = redis::cmd("INCR")
-            .arg(&key)
-            .query_async(&mut conn)
+        // INCR + EXPIRE-on-first-hit must be atomic and fail-CLOSED:
+        //  - A bare INCR followed by a separate EXPIRE can orphan a key without
+        //    a TTL (crash/EXPIRE-error between the two), which then counts
+        //    forever and permanently blocks the tenant.
+        //  - `unwrap_or(0)` on errors fails OPEN (a Redis blip disables the
+        //    limiter entirely). A rate limiter that silently stops limiting is
+        //    worse than one that rejects on infra failure.
+        // A single Lua eval does both atomically and propagates errors.
+        const RATE_LIMIT_LUA: &str = "local c = redis.call('INCR', KEYS[1]) \
+             if c == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end \
+             return c";
+        let count: u64 = redis::Script::new(RATE_LIMIT_LUA)
+            .key(&key)
+            .arg(window_secs)
+            .invoke_async(&mut conn)
             .await
-            .unwrap_or(0);
-
-        if count == 1 {
-            let _: () = redis::cmd("EXPIRE")
-                .arg(&key)
-                .arg(window_secs)
-                .query_async(&mut conn)
-                .await
-                .unwrap_or(());
-        }
+            .map_err(|e| Status::internal(format!("rate limit redis error: {e}")))?;
 
         if count > u64::from(max_rps) {
             return Err(Status::resource_exhausted(format!(
@@ -639,6 +892,16 @@ impl DataBrokerService {
     }
 }
 
+fn service_metrics_recorder() -> Arc<dyn MetricsRecorder> {
+    match PrometheusMetrics::new() {
+        Ok(metrics) => Arc::new(metrics),
+        Err(err) => {
+            tracing::warn!("prometheus metrics disabled: {err}");
+            Arc::new(NoopMetrics)
+        }
+    }
+}
+
 fn check_backend_capability(
     backend: &str,
     operation: &str,
@@ -716,6 +979,72 @@ fn non_empty(value: &str) -> Option<&str> {
     (!value.is_empty()).then_some(value)
 }
 
+/// Require that the caller carries the `udb:admin` scope (or a matching
+/// wildcard) for admin-only RPCs. Delegates to [`SecurityContext::has_scope`],
+/// which honors the exact `udb:admin` scope as well as the `udb:*` and `*`
+/// wildcards. On failure returns a `permission_denied` `Status`; call sites map
+/// it through their own `record_grpc(...)` so per-method metrics stay accurate.
+fn require_admin_scope(security: &SecurityContext) -> Result<(), Status> {
+    if security.has_scope("udb:admin") {
+        Ok(())
+    } else {
+        Err(Status::permission_denied("scope udb:admin is required"))
+    }
+}
+
+#[derive(Clone)]
+struct NativeControlPlaneAuth {
+    security: SecurityConfig,
+}
+
+impl NativeControlPlaneAuth {
+    fn new() -> Self {
+        Self {
+            security: SecurityConfig::current(),
+        }
+    }
+}
+
+impl tonic::service::Interceptor for NativeControlPlaneAuth {
+    fn call(&mut self, request: Request<()>) -> Result<Request<()>, Status> {
+        let metadata = request.metadata();
+        let auth_header = metadata
+            .get("authorization")
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or_default();
+        let token = auth_header.strip_prefix("Bearer ").ok_or_else(|| {
+            Status::unauthenticated(
+                "missing or invalid authorization header (native control-plane bearer required)",
+            )
+        })?;
+        let claims =
+            validate_bearer_token(&self.security, token).map_err(Status::unauthenticated)?;
+        let scopes = claims.resolved_scopes();
+        let allowed = scopes.iter().any(|scope| {
+            matches!(
+                scope.as_str(),
+                "*" | "udb:*" | "udb:admin" | "udb:auth:admin"
+            )
+        });
+        if !allowed {
+            return Err(Status::permission_denied(
+                "scope udb:admin or udb:auth:admin is required",
+            ));
+        }
+        if let Some(header_tenant) = metadata
+            .get("x-tenant-id")
+            .and_then(|value| value.to_str().ok())
+            && !header_tenant.trim().is_empty()
+            && claims.tenant_id.as_deref().unwrap_or_default() != header_tenant
+        {
+            return Err(Status::permission_denied(
+                "x-tenant-id must match the bearer token tenant",
+            ));
+        }
+        Ok(request)
+    }
+}
+
 fn tenant_hash_label(tenant: &str) -> String {
     use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
@@ -784,6 +1113,8 @@ pub fn context_from_metadata(metadata: &tonic::metadata::MetadataMap) -> crate::
             "eventual" | "eventual_consistency"
         ),
         read_fence_json: header("x-udb-read-fence"),
+        service_identity: header("x-service-identity"),
+        decision_id: String::new(),
     }
 }
 
@@ -872,19 +1203,50 @@ pub async fn serve(
         statements_applied = system_report.statements_applied,
         "UDB internal system catalog is ready"
     );
-    let metrics = Arc::new(PrometheusMetrics::new()?);
+    let prometheus_metrics = match PrometheusMetrics::new() {
+        Ok(metrics) => Some(Arc::new(metrics)),
+        Err(err) => {
+            tracing::warn!("prometheus metrics disabled: {err}");
+            None
+        }
+    };
+    let metrics: Arc<dyn MetricsRecorder> = prometheus_metrics
+        .as_ref()
+        .map(|metrics| metrics.clone() as Arc<dyn MetricsRecorder>)
+        .unwrap_or_else(|| Arc::new(NoopMetrics));
     let metrics_socket: SocketAddr = runtime_config.service.metrics_addr.parse()?;
-    tokio::spawn(metrics_http_server(
-        metrics.clone(),
-        runtime.clone(),
-        metrics_socket,
-        runtime_config.service.metrics_allowed_cidr.clone(),
-    ));
+    if let Some(prometheus_metrics) = prometheus_metrics.clone() {
+        tokio::spawn(metrics_http_server(
+            prometheus_metrics,
+            runtime.clone(),
+            metrics_socket,
+            runtime_config.service.metrics_allowed_cidr.clone(),
+        ));
+    }
     tokio::spawn(cdc_metrics_poller(runtime.clone(), metrics.clone()));
 
     let lifecycle_state = Arc::new(RwLock::new(FsmState::Initialising));
+    // Item 8: time the startup migration run and emit the (now wired) migration
+    // metrics — run count by terminal status + run duration.
+    let lifecycle_started = Instant::now();
     match run_startup_lifecycle(&runtime, &manifest, &schemas, false, false).await {
         Ok(report) => {
+            let elapsed = lifecycle_started.elapsed().as_secs_f64();
+            metrics.inc_runs_total("completed");
+            metrics.observe_run_duration("completed", elapsed);
+            metrics.set_pending_files(report.pending_migration_files);
+            for op in &report.migration_metric_operations {
+                metrics.inc_operations_total(&op.kind, &op.schema, &op.safety);
+                if op.safety == "blocked" || op.safety == "requires_review" {
+                    metrics.set_blocked_operations(&op.schema, &op.kind, 1);
+                }
+            }
+            // Surface lint warnings the run accumulated (kind label is the
+            // recorder's coarse "startup" bucket — detailed kinds are emitted by
+            // the lint pass itself once instrumented).
+            for _ in &report.warnings {
+                metrics.inc_lint_warnings("startup");
+            }
             tracing::info!(
                 run_id = report.run_id,
                 applied_sql_artifacts = report.applied_sql_artifacts,
@@ -896,6 +1258,8 @@ pub async fn serve(
             }
         }
         Err(err) => {
+            metrics.inc_runs_total("error");
+            metrics.observe_run_duration("error", lifecycle_started.elapsed().as_secs_f64());
             if let Ok(mut state) = lifecycle_state.write() {
                 *state = FsmState::Error;
             }
@@ -903,6 +1267,33 @@ pub async fn serve(
         }
     }
     runtime.mark_indeterminate_sagas().await;
+    // Item 3: roll back PostgreSQL 2PC prepared transactions abandoned by a
+    // prior crashed process (presumed-abort recovery), so orphaned PREPAREs
+    // don't hold row locks forever. Grace window via UDB_XA_RECOVERY_GRACE_SECS
+    // (default 300s) leaves in-flight prepares untouched.
+    if let Some(pg_pool) = runtime.pg_pool_clone() {
+        let sys_config = crate::runtime::system::SystemCatalogConfig::current();
+        match crate::runtime::xa_recovery::recover_xa_ledger_indoubt(&pg_pool, &sys_config).await {
+            Ok(n) if n > 0 => {
+                tracing::warn!("XA recovery: drove {n} ledger in-doubt transaction(s) terminal")
+            }
+            Ok(_) => {}
+            Err(e) => tracing::warn!("XA ledger recovery sweep failed: {e}"),
+        }
+        let grace = std::env::var("UDB_XA_RECOVERY_GRACE_SECS")
+            .ok()
+            .and_then(|v| v.parse::<i64>().ok())
+            .unwrap_or(300);
+        match crate::runtime::xa_recovery::recover_abandoned_prepared_transactions(&pg_pool, grace)
+            .await
+        {
+            Ok(n) if n > 0 => {
+                tracing::warn!("XA recovery: rolled back {n} abandoned prepared transaction(s)")
+            }
+            Ok(_) => {}
+            Err(e) => tracing::warn!("XA recovery sweep failed: {e}"),
+        }
+    }
     if crate::runtime::saga::SagaRecoveryWorker::is_enabled_with_settings(&runtime_config.saga) {
         // NW1-3c: route through the SystemStores registry instead of
         // the bare PG pool. Slim deployments without a canonical
@@ -912,7 +1303,8 @@ pub async fn serve(
                 store,
                 &runtime_config.saga,
             )
-            .with_compensators(runtime.saga_compensator_registry());
+            .with_compensators(runtime.saga_compensator_registry())
+            .with_metrics(metrics.clone());
             tokio::spawn(async move { worker.run_forever().await });
             tracing::info!("saga recovery worker started");
         } else {
@@ -921,32 +1313,6 @@ pub async fn serve(
     }
     let abac_policies = Arc::new(RwLock::new(runtime.load_abac_policies().await));
 
-    // GAP 36: Background ABAC policy cache refresh — keeps the in-memory policy
-    // set current without requiring a service restart.  When the DB returns an
-    // empty set we retain the stale (non-empty) cache to avoid a silent deny-all.
-    {
-        let abac_refresh_secs = runtime_config.service.abac_refresh_secs;
-        let abac_policies_bg = abac_policies.clone();
-        let runtime_bg = runtime.clone();
-        tokio::spawn(async move {
-            let mut interval =
-                tokio::time::interval(std::time::Duration::from_secs(abac_refresh_secs));
-            loop {
-                interval.tick().await;
-                let fresh = runtime_bg.load_abac_policies().await;
-                if fresh.is_empty() {
-                    tracing::warn!(
-                        "ABAC policy refresh returned empty set — retaining stale policies \
-                         to avoid accidental deny-all"
-                    );
-                    continue;
-                }
-                if let Ok(mut guard) = abac_policies_bg.write() {
-                    *guard = fresh;
-                }
-            }
-        });
-    }
     let scheduled_views = runtime.start_materialized_view_refresh(&manifest);
     if scheduled_views > 0 {
         tracing::info!(
@@ -972,6 +1338,30 @@ pub async fn serve(
         abac_default_allow,
     );
     spawn_config_reload_watcher(service.clone());
+
+    // GAP 36 / F83: refresh the legacy policy vector and the v2 authz snapshot
+    // together so authorize() never rebuilds the ABAC snapshot per request.
+    {
+        let abac_refresh_secs = runtime_config.service.abac_refresh_secs;
+        let runtime_bg = service.runtime_snapshot();
+        let service_bg = service.clone();
+        tokio::spawn(async move {
+            let mut interval =
+                tokio::time::interval(std::time::Duration::from_secs(abac_refresh_secs));
+            loop {
+                interval.tick().await;
+                let fresh = runtime_bg.load_abac_policies().await;
+                if fresh.is_empty() {
+                    tracing::warn!(
+                        "ABAC policy refresh returned empty set - retaining stale policies \
+                         to avoid accidental deny-all"
+                    );
+                    continue;
+                }
+                service_bg.replace_abac_policies(fresh);
+            }
+        });
+    }
 
     // ── U3 + NW1-3b: Projection materialization engine ────────────────────
     // The engine needs a `SystemStores` trait object for the projection
@@ -1050,12 +1440,14 @@ pub async fn serve(
     let grpc_timeout = Duration::from_secs(runtime_config.service.grpc_timeout_secs);
     let grpc_max_concurrent: usize = runtime_config.service.grpc_max_concurrent;
 
-    let layer = tower::ServiceBuilder::new()
-        .timeout(grpc_timeout)
-        .concurrency_limit(grpc_max_concurrent)
-        .into_inner();
+    let make_layer = || {
+        tower::ServiceBuilder::new()
+            .timeout(grpc_timeout)
+            .concurrency_limit(grpc_max_concurrent)
+            .into_inner()
+    };
 
-    let mut server = tonic::transport::Server::builder().layer(layer);
+    let mut server = tonic::transport::Server::builder().layer(make_layer());
     if let Some(tls) = tls_config_from_settings(&runtime_config.service.tls)? {
         server = server.tls_config(tls)?;
     }
@@ -1063,19 +1455,90 @@ pub async fn serve(
         .register_encoded_file_descriptor_set(UDB_FILE_DESCRIPTOR_SET)
         .build_v1()?;
 
-    server
+    // Stage 1 native auth control plane, seeded from the broker's loaded policies.
+    let (authn_service, authz_service, api_key_service) = service.build_auth_services();
+    // Native tenant + notification + analytics control-plane services
+    // (proto-driven Postgres CRUD).
+    let tenant_service = service.build_tenant_service();
+    let notification_service = service.build_notification_service();
+    let analytics_service = service.build_analytics_service();
+
+    // Network-isolate the native auth control plane. `AuthnService` /
+    // `AuthzService` / `ApiKeyService` trust their caller — they are a policy
+    // decision point that accepts the subject principal as input, plus a
+    // verified-external-claims bridge — so they must NOT be exposed on the public
+    // `DataBroker` listener where any client could assert arbitrary identity,
+    // roles, or scopes. They bind to a separate address (`UDB_AUTH_GRPC_ADDR`),
+    // defaulting to loopback so only trusted same-host PEPs/gateways can reach
+    // them out of the box; operators set it to an internal interface for
+    // cross-host PEPs.
+    let auth_addr: SocketAddr = match std::env::var("UDB_AUTH_GRPC_ADDR") {
+        Ok(raw) if !raw.trim().is_empty() => raw
+            .trim()
+            .parse()
+            .map_err(|err| format!("invalid UDB_AUTH_GRPC_ADDR '{raw}': {err}"))?,
+        _ => SocketAddr::new(
+            std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST),
+            addr.port().wrapping_add(10),
+        ),
+    };
+    tracing::info!(
+        %auth_addr,
+        public_addr = %addr,
+        "native auth control plane (Authn/Authz/ApiKey) bound to an internal \
+         listener, isolated from the public DataBroker port; set \
+         UDB_AUTH_GRPC_ADDR to expose it on a trusted interface"
+    );
+
+    let mut auth_server = tonic::transport::Server::builder().layer(make_layer());
+    if let Some(tls) = tls_config_from_settings(&runtime_config.service.tls)? {
+        auth_server = auth_server.tls_config(tls)?;
+    }
+    let native_auth = NativeControlPlaneAuth::new();
+    let auth_fut = auth_server
+        .add_service(auth_service::AuthnServiceServer::with_interceptor(
+            authn_service,
+            native_auth.clone(),
+        ))
+        .add_service(auth_service::AuthzServiceServer::with_interceptor(
+            authz_service,
+            native_auth.clone(),
+        ))
+        .add_service(auth_service::ApiKeyServiceServer::with_interceptor(
+            api_key_service,
+            native_auth.clone(),
+        ))
+        .add_service(tenant_service::TenantServiceServer::with_interceptor(
+            tenant_service,
+            native_auth.clone(),
+        ))
+        .add_service(
+            notification_service::NotificationServiceServer::with_interceptor(
+                notification_service,
+                native_auth.clone(),
+            ),
+        )
+        .add_service(analytics_service::AnalyticsServiceServer::with_interceptor(
+            analytics_service,
+            native_auth,
+        ))
+        .serve_with_shutdown(auth_addr, shutdown_signal());
+
+    let main_fut = server
         .add_service(reflection_service)
         .add_service(health_service)
         .add_service(DataBrokerServer::new(service))
-        .serve_with_shutdown(addr, shutdown_signal())
-        .await?;
+        .serve_with_shutdown(addr, shutdown_signal());
+
+    // Run both listeners; if either exits (error or shutdown), bring down both.
+    tokio::try_join!(main_fut, auth_fut)?;
     Ok(())
 }
 
 #[cfg(feature = "kafka")]
 async fn start_cdc_engine(
     runtime: &DataBrokerRuntime,
-    metrics: Arc<PrometheusMetrics>,
+    metrics: Arc<dyn MetricsRecorder>,
 ) -> Option<Arc<CdcEngine>> {
     let Some(kafka_brokers) = runtime.config().kafka_brokers.clone() else {
         tracing::info!("CDC tailer disabled: kafka_brokers is not configured");
@@ -1095,7 +1558,6 @@ async fn start_cdc_engine(
         return None;
     };
 
-    let metrics: Arc<dyn MetricsRecorder> = metrics;
     #[cfg(feature = "redis")]
     let engine = CdcEngine::new(
         pg_pool,
@@ -1114,14 +1576,90 @@ async fn start_cdc_engine(
         runtime.config().cdc.clone(),
     );
     match engine {
-        Ok(engine) => {
+        Ok(mut engine) => {
+            // Phase 7: load the topic-policy allowlist into the engine before it
+            // starts tailing. Without this the allowlist stays empty and topic
+            // policy enforcement in process_outbox_event is dormant in prod.
+            if let Err(err) = engine.load_topic_policies().await {
+                tracing::warn!("CDC topic policy load failed: {err}");
+            }
             let engine = Arc::new(engine);
+            // U21: reset in-doubt `publishing` rows left by a prior process epoch
+            // before tailing (no-op outside KafkaTransactional mode).
+            if let Err(err) = engine.run_indoubt_recovery_on_startup().await {
+                tracing::warn!("CDC in-doubt recovery on startup failed: {err}");
+            }
             tokio::spawn({
                 let engine = engine.clone();
                 async move {
                     engine.run_advisory_lock_loop().await;
                 }
             });
+            // Item 6: wire the generic `CdcSource` path for configured native
+            // source adapters. Each source persists offsets through the same
+            // `tail_source` loop; operators opt in per backend with env config.
+            if let Ok(dsn) = std::env::var("UDB_CDC_POSTGRES_SOURCE_DSN") {
+                if !dsn.trim().is_empty() {
+                    let relation = std::env::var("UDB_CDC_POSTGRES_SOURCE_TABLE")
+                        .unwrap_or_else(|_| "udb_system.udb_cdc_outbox".to_string());
+                    let source: std::sync::Arc<dyn crate::runtime::cdc::CdcSource> =
+                        std::sync::Arc::new(crate::runtime::cdc::source::PostgresCdcSource {
+                            dsn,
+                            publication: relation,
+                            slot: "udb-postgres-source".to_string(),
+                        });
+                    let engine = engine.clone();
+                    tokio::spawn(async move {
+                        if let Err(err) = engine.tail_source(source).await {
+                            tracing::warn!("CDC Postgres source tailer exited: {err}");
+                        }
+                    });
+                    tracing::info!("CDC Postgres table source tailer started");
+                }
+            }
+            #[cfg(feature = "mysql")]
+            if let Ok(dsn) = std::env::var("UDB_CDC_MYSQL_SOURCE_DSN") {
+                if !dsn.trim().is_empty() {
+                    let server_id = std::env::var("UDB_CDC_MYSQL_SOURCE_SERVER_ID")
+                        .ok()
+                        .and_then(|v| v.parse::<u32>().ok())
+                        .unwrap_or(5401);
+                    let source: std::sync::Arc<dyn crate::runtime::cdc::CdcSource> =
+                        std::sync::Arc::new(crate::runtime::cdc::source::MysqlBinlogSource {
+                            dsn,
+                            server_id,
+                        });
+                    let engine = engine.clone();
+                    tokio::spawn(async move {
+                        if let Err(err) = engine.tail_source(source).await {
+                            tracing::warn!("CDC MySQL source tailer exited: {err}");
+                        }
+                    });
+                    tracing::info!("CDC MySQL table source tailer started");
+                }
+            }
+            #[cfg(feature = "mongodb-native")]
+            if let Ok(uri) = std::env::var("UDB_CDC_MONGO_SOURCE_URI") {
+                let database = std::env::var("UDB_CDC_MONGO_SOURCE_DB").unwrap_or_default();
+                if !uri.trim().is_empty() && !database.trim().is_empty() {
+                    let collection = std::env::var("UDB_CDC_MONGO_SOURCE_COLLECTION")
+                        .ok()
+                        .filter(|v| !v.trim().is_empty());
+                    let source: std::sync::Arc<dyn crate::runtime::cdc::CdcSource> =
+                        std::sync::Arc::new(crate::runtime::cdc::source::MongoCdcSource {
+                            uri,
+                            database,
+                            collection,
+                        });
+                    let engine = engine.clone();
+                    tokio::spawn(async move {
+                        if let Err(err) = engine.tail_source(source).await {
+                            tracing::warn!("CDC MongoDB source tailer exited: {err}");
+                        }
+                    });
+                    tracing::info!("CDC MongoDB change-stream source tailer started");
+                }
+            }
             Some(engine)
         }
         Err(err) => {
@@ -1166,7 +1704,11 @@ async fn metrics_http_server(
         let text = metrics.gather_text(&format!(
             "{}{}",
             runtime.cache_metrics_text(),
-            runtime.encryption_metrics_text() + &runtime.pg_pool_metrics_text()
+            format!(
+                "{}{}",
+                runtime.encryption_metrics_text(),
+                runtime.pg_pool_metrics_text()
+            )
         ));
         tokio::spawn(async move {
             // GAP 18: Read the incoming request with a 5-second deadline.
@@ -1190,7 +1732,7 @@ async fn metrics_http_server(
     }
 }
 
-async fn cdc_metrics_poller(runtime: DataBrokerRuntime, metrics: Arc<PrometheusMetrics>) {
+async fn cdc_metrics_poller(runtime: DataBrokerRuntime, metrics: Arc<dyn MetricsRecorder>) {
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
     loop {
         interval.tick().await;
@@ -1347,6 +1889,18 @@ fn insert_ascii_header(
         metadata.insert(key, parsed);
     }
 }
+
+// Phase G: service.rs split — inherent RPC handler bodies + tests.
+mod handlers_admin;
+mod handlers_catalog;
+mod handlers_data;
+mod handlers_meta;
+mod handlers_object;
+mod handlers_policy;
+mod handlers_resource;
+mod handlers_stores;
+mod handlers_tx;
+mod handlers_vector;
 
 #[tonic::async_trait]
 
@@ -1677,6 +2231,20 @@ impl DataBroker for DataBrokerService {
         self.step_down_cdc_leader_inner(request).await
     }
 
+    async fn preview_cdc_redaction(
+        &self,
+        request: Request<CdcRedactionPreviewRequest>,
+    ) -> Result<Response<CdcRedactionPreviewResponse>, Status> {
+        self.preview_cdc_redaction_inner(request).await
+    }
+
+    async fn scan_projection_drift(
+        &self,
+        request: Request<ProjectionDriftScanRequest>,
+    ) -> Result<Response<ProjectionDriftScanResponse>, Status> {
+        self.scan_projection_drift_inner(request).await
+    }
+
     async fn list_sagas(
         &self,
         request: Request<SagaListRequest>,
@@ -1774,17 +2342,102 @@ impl DataBroker for DataBrokerService {
     ) -> Result<Response<AdminAuditVerifyResponse>, Status> {
         self.verify_admin_audit_log_inner(request).await
     }
+
+    // ── Cache / Document / Graph / Time-series / Analytical ────────────────────
+    // Typed store RPCs added by the 2026-06 proto reorg. Each resolves the
+    // backend from its `StoreResource` and runs the real backend executor
+    // (`query`/`mutate`/`search`) — implementations in `handlers_stores.rs`.
+    async fn cache_get(
+        &self,
+        request: Request<crate::proto::CacheGetRequest>,
+    ) -> Result<Response<crate::proto::CacheGetResponse>, Status> {
+        self.cache_get_inner(request).await
+    }
+
+    async fn cache_set(
+        &self,
+        request: Request<crate::proto::CacheSetRequest>,
+    ) -> Result<Response<MutationResponse>, Status> {
+        self.cache_set_inner(request).await
+    }
+
+    async fn cache_delete(
+        &self,
+        request: Request<crate::proto::CacheDeleteRequest>,
+    ) -> Result<Response<MutationResponse>, Status> {
+        self.cache_delete_inner(request).await
+    }
+
+    async fn cache_scan(
+        &self,
+        request: Request<crate::proto::CacheScanRequest>,
+    ) -> Result<Response<crate::proto::CacheScanResponse>, Status> {
+        self.cache_scan_inner(request).await
+    }
+
+    async fn document_get(
+        &self,
+        request: Request<crate::proto::DocumentGetRequest>,
+    ) -> Result<Response<crate::proto::DocumentSet>, Status> {
+        self.document_get_inner(request).await
+    }
+
+    async fn document_find(
+        &self,
+        request: Request<crate::proto::DocumentFindRequest>,
+    ) -> Result<Response<crate::proto::DocumentSet>, Status> {
+        self.document_find_inner(request).await
+    }
+
+    async fn document_upsert(
+        &self,
+        request: Request<crate::proto::DocumentUpsertRequest>,
+    ) -> Result<Response<MutationResponse>, Status> {
+        self.document_upsert_inner(request).await
+    }
+
+    async fn document_delete(
+        &self,
+        request: Request<crate::proto::DocumentDeleteRequest>,
+    ) -> Result<Response<MutationResponse>, Status> {
+        self.document_delete_inner(request).await
+    }
+
+    async fn graph_query(
+        &self,
+        request: Request<crate::proto::GraphQueryRequest>,
+    ) -> Result<Response<crate::proto::GraphResultSet>, Status> {
+        self.graph_query_inner(request).await
+    }
+
+    async fn graph_mutate(
+        &self,
+        request: Request<crate::proto::GraphMutationRequest>,
+    ) -> Result<Response<MutationResponse>, Status> {
+        self.graph_mutate_inner(request).await
+    }
+
+    async fn time_series_write(
+        &self,
+        request: Request<crate::proto::TimeSeriesWriteRequest>,
+    ) -> Result<Response<MutationResponse>, Status> {
+        self.time_series_write_inner(request).await
+    }
+
+    async fn time_series_query(
+        &self,
+        request: Request<crate::proto::TimeSeriesQueryRequest>,
+    ) -> Result<Response<crate::proto::TimeSeriesQueryResponse>, Status> {
+        self.time_series_query_inner(request).await
+    }
+
+    async fn analytical_query(
+        &self,
+        request: Request<crate::proto::AnalyticalQueryRequest>,
+    ) -> Result<Response<crate::proto::AnalyticalQueryResponse>, Status> {
+        self.analytical_query_inner(request).await
+    }
 }
 
-// Phase G: service.rs split — inherent RPC handler bodies + tests.
-mod handlers_admin;
-mod handlers_catalog;
-mod handlers_data;
-mod handlers_meta;
-mod handlers_object;
-mod handlers_policy;
-mod handlers_resource;
-mod handlers_tx;
-mod handlers_vector;
 #[cfg(test)]
 mod tests;

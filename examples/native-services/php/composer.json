@@ -1,0 +1,19 @@
+{
+  "name": "udb/native-services-php-example",
+  "description": "Simplest→advanced UDB native auth services example (PHP).",
+  "type": "project",
+  "require": {
+    "php": ">=8.1",
+    "ext-grpc": "*",
+    "fahara02/udb-laravel": "*"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../../../sdk/php",
+      "options": { "symlink": false }
+    }
+  ],
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}

@@ -1,7 +1,8 @@
 //! MinIO / S3 bucket artifact generator.
 //!
-//! Produces one JSON artifact per `ManifestStore` whose `backend == "s3"` or
-//! `store_kind == "object"`, or whose options include `udb.bucket`.
+//! Produces one JSON artifact per `ManifestStore` whose `backend == "s3"` /
+//! `"minio"` or `store_kind == "object"`, or whose options include a non-empty
+//! `udb.bucket`.
 //!
 //! Each artifact is a UDB bucket-policy document that can be applied by the
 //! MinIO / S3 apply engine.  The `_udb_meta` block embeds the proto manifest
@@ -11,25 +12,26 @@
 //!
 //! | Key | Default | Description |
 //! |-----|---------|-------------|
-//! | `udb.bucket` | `<resource_name>` | Bucket name override |
+//! | `udb.bucket` | `<resource_name>` | Non-empty bucket name override |
 //! | `udb.bucket_versioning` | `true` | Enable object versioning |
 //! | `udb.bucket_lifecycle_days` | `7` | Expiry days for `tmp/` prefix |
 //! | `udb.bucket_region` | `us-east-1` | AWS / MinIO region |
 
 use serde_json::json;
-use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::ast::ProtoSchema;
+use crate::generation::backend_safety::{
+    generated_at_unix, store_opt_bool_any, store_opt_i64_any, store_opt_str_any,
+};
+
 use crate::generation::GeneratedArtifact;
 use crate::generation::manifest::{CatalogManifest, ManifestStore};
 use crate::generation::sql::SqlGenerationConfig;
 
 /// Generate MinIO / S3 bucket artifacts from the proto AST.
 pub fn generate_minio_artifacts(
-    schemas: &[ProtoSchema],
+    manifest: &CatalogManifest,
     _config: &SqlGenerationConfig,
 ) -> Result<Vec<GeneratedArtifact>, serde_json::Error> {
-    let manifest = CatalogManifest::from_schemas(schemas)?;
     let checksum = &manifest.checksum_sha256;
     let ts = generated_at_unix();
 
@@ -39,9 +41,9 @@ pub fn generate_minio_artifacts(
             continue;
         }
         let bucket = bucket_name(store);
-        let versioning = store_opt_bool(store, "udb.bucket_versioning", true);
-        let lifecycle_days = store_opt_i64(store, "udb.bucket_lifecycle_days", 7);
-        let region = store_opt_str(store, "udb.bucket_region", "us-east-1");
+        let versioning = store_opt_bool_any(store, &["udb.bucket_versioning"], true);
+        let lifecycle_days = store_opt_i64_any(store, &["udb.bucket_lifecycle_days"], 7);
+        let region = store_opt_str_any(store, &["udb.bucket_region"]).unwrap_or("us-east-1");
 
         let body = json!({
             "_udb_meta": {
@@ -86,16 +88,12 @@ fn is_minio_store(store: &ManifestStore) -> bool {
     store.backend == "s3"
         || store.backend == "minio"
         || store.store_kind == "object"
-        || store.options.iter().any(|o| o.key == "udb.bucket")
+        || store_opt_str_any(store, &["udb.bucket"]).is_some()
 }
 
 fn bucket_name(store: &ManifestStore) -> String {
-    store
-        .options
-        .iter()
-        .find(|o| o.key == "udb.bucket")
-        .map(|o| o.value.clone())
-        .filter(|v| !v.is_empty())
+    store_opt_str_any(store, &["udb.bucket"])
+        .map(ToString::to_string)
         .unwrap_or_else(|| {
             if !store.resource_name.is_empty() {
                 store.resource_name.clone()
@@ -105,40 +103,6 @@ fn bucket_name(store: &ManifestStore) -> String {
                     .to_string()
             }
         })
-}
-
-fn store_opt_str<'a>(store: &'a ManifestStore, key: &str, default: &'a str) -> &'a str {
-    store
-        .options
-        .iter()
-        .find(|o| o.key == key)
-        .map(|o| o.value.as_str())
-        .unwrap_or(default)
-}
-
-fn store_opt_i64(store: &ManifestStore, key: &str, default: i64) -> i64 {
-    store
-        .options
-        .iter()
-        .find(|o| o.key == key)
-        .and_then(|o| o.value.parse::<i64>().ok())
-        .unwrap_or(default)
-}
-
-fn store_opt_bool(store: &ManifestStore, key: &str, default: bool) -> bool {
-    store
-        .options
-        .iter()
-        .find(|o| o.key == key)
-        .map(|o| !matches!(o.value.to_ascii_lowercase().as_str(), "false" | "0" | "no"))
-        .unwrap_or(default)
-}
-
-fn generated_at_unix() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or_default()
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -186,6 +150,18 @@ mod tests {
     }
 
     #[test]
+    fn minio_blank_bucket_option_does_not_classify_store() {
+        let store = ManifestStore {
+            options: vec![ManifestStoreOption {
+                key: "udb.bucket".to_string(),
+                value: "  ".to_string(),
+            }],
+            ..Default::default()
+        };
+        assert!(!is_minio_store(&store));
+    }
+
+    #[test]
     fn minio_bucket_name_from_option() {
         let store = make_store("documents", "s3", &[("udb.bucket", "prime-docs")]);
         assert_eq!(bucket_name(&store), "prime-docs");
@@ -194,12 +170,15 @@ mod tests {
     #[test]
     fn minio_artifact_lifecycle_days() {
         let store = make_store("exports", "minio", &[("udb.bucket_lifecycle_days", "30")]);
-        assert_eq!(store_opt_i64(&store, "udb.bucket_lifecycle_days", 7), 30);
+        assert_eq!(
+            store_opt_i64_any(&store, &["udb.bucket_lifecycle_days"], 7),
+            30
+        );
     }
 
     #[test]
     fn minio_versioning_default_true() {
         let store = make_store("raw", "s3", &[]);
-        assert!(store_opt_bool(&store, "udb.bucket_versioning", true));
+        assert!(store_opt_bool_any(&store, &["udb.bucket_versioning"], true));
     }
 }

@@ -25,6 +25,15 @@ impl Backend for SqlitePlugin {
     async fn register(&self, ctx: &mut RegisterCtx<'_>) {
         crate::runtime::core::setup_data::register_sqlite(ctx).await;
     }
+
+    fn generate_artifacts(
+        &self,
+        manifest: &crate::generation::CatalogManifest,
+        sql_config: &crate::generation::sql::SqlGenerationConfig,
+    ) -> Result<Vec<crate::generation::GeneratedArtifact>, String> {
+        crate::generation::backends::generate_sqlite_artifacts(manifest, sql_config)
+            .map_err(|err| err.to_string())
+    }
 }
 
 impl crate::runtime::executors::handle::DispatchFactory for SqlitePlugin {
@@ -33,7 +42,7 @@ impl crate::runtime::executors::handle::DispatchFactory for SqlitePlugin {
         runtime: &crate::runtime::core::DataBrokerRuntime,
         instance: Option<&str>,
         _write: bool,
-        _context: Option<&crate::broker::RequestContext>,
+        context: Option<&crate::broker::RequestContext>,
     ) -> Result<crate::runtime::executors::handle::DispatchExecutor, tonic::Status> {
         let instance_name = instance.unwrap_or("primary");
         let pool = runtime
@@ -44,7 +53,15 @@ impl crate::runtime::executors::handle::DispatchFactory for SqlitePlugin {
                 ))
             })?
             .clone();
-        let executor = crate::runtime::executors::sqlite::SqliteExecutor::with_pool(pool);
+        // Thread the request context so generic-dispatch populates the
+        // `_udb_context` table the RLS-style views read. Mirrors the PG plugin.
+        let executor = match context {
+            Some(ctx) => crate::runtime::executors::sqlite::SqliteExecutor::with_context(
+                pool,
+                std::sync::Arc::new(ctx.clone()),
+            ),
+            None => crate::runtime::executors::sqlite::SqliteExecutor::with_pool(pool),
+        };
         Ok(crate::runtime::executors::handle::DispatchExecutor::Sqlite(
             executor,
         ))

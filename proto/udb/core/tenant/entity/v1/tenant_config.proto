@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package udb.core.tenant.entity.v1;
+
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/types.proto";
+import "udb/core/tenant/entity/v1/enums.proto";
+
+option csharp_namespace = "udb.core.Tenant.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/tenant/entity/v1;tenantv1";
+option java_package = "com.udb.core.tenant.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Tenant\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Tenant\\Entity\\V1";
+
+// Tenant configuration
+message TenantConfig {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "tenant_configs"
+    schema_name: "udb_tenant"
+    migration_order: 2
+    is_table: true
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true))"
+      with_check: "(tenant_id::text = current_setting('app.current_tenant_id', true))"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_tenant_configs_key"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "config_key"
+      unique: true
+    }
+    cdc_topic: "udb.tenant.configs.cdc"
+    required_scope: "tenant:config:read"
+    comment: "Tenant-specific configurations"
+    sql_artifacts: {
+      name: "touch_updated_at_function"
+      backend: "postgres"
+      phase: "before_triggers"
+      sql:
+        "CREATE OR REPLACE FUNCTION udb_tenant.touch_updated_at()\n"
+        "RETURNS trigger\n"
+        "LANGUAGE plpgsql\n"
+        "AS $$\n"
+        "BEGIN\n"
+        "  NEW.updated_at = CURRENT_TIMESTAMP;\n"
+        "  RETURN NEW;\n"
+        "END;\n"
+        "$$;"
+    }
+    triggers: {
+      trigger_name: "trg_tenant_configs_touch_updated_at"
+      timing: "BEFORE"
+      event: "UPDATE"
+      function_name: "udb_tenant.touch_updated_at()"
+      for_each: "ROW"
+    }
+  };
+
+  string id = 1 [(udb.core.common.v1.pg_column) = { column_name: "config_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  // @inject_tag: gorm:"primaryKey;column:config_id;not null"
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "UUID" not_null: true foreign_key: { references_table: "tenants" references_column: "tenant_id" references_schema: "udb_tenant" on_delete: REFERENTIAL_ACTION_CASCADE } index: { index_name: "idx_tenant_configs_tenant_id" index_type: "BTREE" } }];
+  // @inject_tag: gorm:"column:tenant_id;not null"
+
+  string config_key = 3 [(udb.core.common.v1.pg_column) = { column_name: "config_key" sql_type: "VARCHAR(100)" not_null: true }];
+  // @inject_tag: gorm:"column:config_key;not null"
+
+  string config_value = 4 [(udb.core.common.v1.pg_column) = { column_name: "config_value" sql_type: "TEXT" not_null: true }];
+  // @inject_tag: gorm:"column:config_value;not null"
+
+  ConfigType type = 5 [(udb.core.common.v1.pg_column) = { column_name: "type" sql_type: "VARCHAR(20)" not_null: true comment: "STRING, NUMBER, BOOLEAN, JSON" }];
+  // @inject_tag: gorm:"column:type;not null;serializer:proto_enum"
+
+  string description = 6 [(udb.core.common.v1.pg_column) = { column_name: "description" sql_type: "TEXT" }];
+  // @inject_tag: gorm:"column:description"
+
+  udb.core.common.v1.AuditInfo audit_info = 7 [(udb.core.common.v1.pg_column) = { column_name: "audit_info" sql_type: "JSONB" not_null: true default_value: "'{}'::jsonb" is_json: true comment: "Audit trail stored as JSON" }];
+  // @inject_tag: gorm:"column:audit_info;not null"
+}

@@ -1,6 +1,9 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    build:
+      context: .
+      dockerfile: docker/postgres-pg-partman/Dockerfile
+    image: udb-postgres-pg-partman:16
     command:
       - postgres
       - -c
@@ -27,17 +30,23 @@ services:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://kafka:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      # Two broker listeners: INTERNAL (kafka:9092) for in-Docker clients (the udb
+      # broker), EXTERNAL (localhost:59192) advertised so host clients — the
+      # integration tests + Spark on the host — can both bootstrap AND reach the
+      # advertised address. Single-advertised-listener setups break host clients
+      # because the broker advertises its Docker-internal name.
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,CONTROLLER://kafka:9093,EXTERNAL://0.0.0.0:59192
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:59192
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
       KAFKA_COMPRESSION_TYPE: lz4
     ports:
-      - "59192:9092"
+      - "59192:59192"
     healthcheck:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
       interval: 10s
@@ -114,3 +123,35 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+
+  # Apache Spark consumer of the native auth event stream (Kafka → Spark).
+  # `--profile spark` runs the Structured Streaming job in `analytics/spark`
+  # against the integration Kafka, materializing per-tenant auth metrics. Use
+  # SPARK_RUN_ONCE=1 (Trigger.AvailableNow) for a bounded end-to-end test run.
+  spark:
+    profiles: ["spark"]
+    image: apache/spark:3.5.1-scala2.12-java17-python3-ubuntu
+    user: root
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      UDB_KAFKA_BOOTSTRAP: kafka:9092
+      UDB_SPARK_OUTPUT: /opt/udb/out/auth_metrics
+      UDB_SPARK_CHECKPOINT: /opt/udb/out/_chk
+      SPARK_RUN_ONCE: ${SPARK_RUN_ONCE:-0}
+    volumes:
+      - ./analytics/spark:/opt/udb/spark:ro
+      - ./analytics/spark/_out:/opt/udb/out
+    command:
+      - /opt/spark/bin/spark-submit
+      - --packages
+      - org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1
+      - /opt/udb/spark/auth_events_streaming.py
+      - --bootstrap
+      - kafka:9092
+      - --output
+      - /opt/udb/out/auth_metrics
+      - --checkpoint
+      - /opt/udb/out/_chk
+      - --console

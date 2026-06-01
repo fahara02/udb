@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package udb.core.analytics.events.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "udb.core.Analytics.Events.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/analytics/events/v1;analyticseventsv1";
+option java_package = "com.udb.core.analytics.events.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Analytics\\Events\\V1";
+option php_namespace = "Udb\\Core\\Analytics\\Events\\V1";
+
+// Emitted when a pipeline metric snapshot batch is committed (hourly cron).
+// Kafka topic: udb.analytics.pipeline.snapshot.v1
+message PipelineSnapshotCommittedEvent {
+  string event_id = 1;
+  string stage_name = 2;
+  string snapshot_hour = 3; // ISO 8601 hour string
+  int64 total_requests = 4;
+  double error_rate = 5;
+  double p99_latency_ms = 6;
+  string correlation_id = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+  string tenant_id = 9;
+}
+
+// Emitted when SLA breach is detected (p99 > threshold or error_rate > threshold).
+// Kafka topic: udb.analytics.sla.breach.v1
+message SlaBreachDetectedEvent {
+  string event_id = 1;
+  string stage_name = 2;
+  string breach_type = 3; // "latency_p99" | "error_rate" | "throughput"
+  double observed_value = 4;
+  double threshold = 5;
+  string severity = 6; // "WARNING" | "CRITICAL"
+  string correlation_id = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+  string tenant_id = 9;
+}
+
+// Emitted when daily executor and reconciliation summaries are generated.
+// Kafka topic: udb.analytics.daily.summary.v1
+message DailySummaryGeneratedEvent {
+  string event_id = 1;
+  string summary_date = 2; // ISO 8601 date string
+  int32 executor_summaries_count = 3;
+  bool reconciliation_summary_ready = 4;
+  string correlation_id = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+  string tenant_id = 7;
+}

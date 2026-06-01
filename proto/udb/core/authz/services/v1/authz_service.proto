@@ -1,0 +1,371 @@
+syntax = "proto3";
+
+package udb.core.authz.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/authz/services/v1/core.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authz.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/services/v1;authzservicev1";
+option java_package = "com.udb.core.authz.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Services\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Services\\V1";
+
+// UDB-owned authorization service for RBAC, ABAC, ReBAC, tenant/project
+// domains, and audit-ready access decisions.
+service AuthzService {
+  rpc Authorize(AuthzRequest) returns (AuthzResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/authz/authorize"
+      body: "*"
+    };
+  }
+
+  rpc CheckAccess(CheckAccessRequest) returns (CheckAccessResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/authz/checks"
+      body: "*"
+    };
+  }
+
+  rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/authz/roles"
+      body: "*"
+    };
+  }
+
+  rpc AssignRole(AssignRoleRequest) returns (AssignRoleResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/authz/users/{user_id}/roles"
+      body: "*"
+    };
+  }
+
+  rpc CreatePolicyRule(CreatePolicyRuleRequest) returns (CreatePolicyRuleResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/authz/policies"
+      body: "*"
+    };
+  }
+
+  rpc ListUserPermissions(ListUserPermissionsRequest) returns (ListUserPermissionsResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/authz/users/{user_id}/permissions"};
+  }
+
+  rpc ListAccessDecisionAudits(ListAccessDecisionAuditsRequest) returns (ListAccessDecisionAuditsResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/authz/audits"};
+  }
+
+  // Revoke a role from a user.
+  rpc RevokeRole(RevokeRoleRequest) returns (RevokeRoleResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/authz/users/{user_id}/roles/{user_role_id}:revoke"
+      body: "*"
+    };
+  }
+
+  // List all role assignments for a user.
+  rpc ListUserRoles(ListUserRolesRequest) returns (ListUserRolesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/authz/users/{user_id}/roles"};
+  }
+
+  // Get a role by ID.
+  rpc GetRole(GetRoleRequest) returns (GetRoleResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/authz/roles/{role_id}"};
+  }
+
+  // List all roles for a domain/tenant.
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/authz/roles"};
+  }
+
+  // Batch check multiple permissions at once.
+  rpc BatchCheckPermissions(BatchCheckPermissionsRequest) returns (BatchCheckPermissionsResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/authz/checks:batch"
+      body: "*"
+    };
+  }
+
+  // Update a role's name, description, or active status.
+  rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      patch: "/v1/authz/roles/{role_id}"
+      body: "*"
+    };
+  }
+
+  // Delete a role (soft-delete; existing assignments are revoked).
+  rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {delete: "/v1/authz/roles/{role_id}"};
+  }
+
+  // Get a single policy rule by ID.
+  rpc GetPolicyRule(GetPolicyRuleRequest) returns (GetPolicyRuleResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/authz/policies/{policy_id}"};
+  }
+
+  // List policy rules with optional domain/subject/object filters.
+  rpc ListPolicyRules(ListPolicyRulesRequest) returns (ListPolicyRulesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/authz/policies"};
+  }
+
+  // Delete a policy rule.
+  rpc DeletePolicyRule(DeletePolicyRuleRequest) returns (DeletePolicyRuleResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {delete: "/v1/authz/policies/{policy_id}"};
+  }
+
+  rpc PutRoleBinding(PutRoleBindingRequest) returns (AuthMutationResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      put: "/v1/authz/role-bindings"
+      body: "*"
+    };
+  }
+
+  rpc PutRelationship(PutRelationshipRequest) returns (AuthMutationResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      put: "/v1/authz/relationships"
+      body: "*"
+    };
+  }
+
+  rpc PutAuthzPolicy(PutAuthzPolicyRequest) returns (AuthMutationResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      put: "/v1/authz/policies"
+      body: "*"
+    };
+  }
+
+  rpc LintAuthzPolicies(LintAuthzPoliciesRequest) returns (LintAuthzPoliciesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/authz/policies:lint"
+      body: "*"
+    };
+  }
+
+  // Stage 2: authorize and, when allowed, mint a short-lived native-access
+  // contract (restricted role + scoped DSN + RLS session variables).
+  rpc GetNativeAccess(NativeAccessRequest) returns (NativeAccessResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/authz/native-access"
+      body: "*"
+    };
+  }
+
+  // Stage 2: return a signed policy bundle for local SDK authorization caches.
+  rpc GetPolicyBundle(PolicyBundleRequest) returns (PolicyBundleResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/authz/policy-bundle"
+      body: "*"
+    };
+  }
+}

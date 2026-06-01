@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package udb.entity.v1;
+
+option go_package = "github.com/udb-project/udb/gen/go/udb/entity/v1;entityv1";
+option java_package      = "com.udb.entity.v1";
+option csharp_namespace = "Udb.Entity.V1";
+option php_namespace = "Udb\\Entity\\V1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
+
+import "google/protobuf/struct.proto";
+import "udb/entity/v1/context.proto";
+
+message Sort {
+  string field = 1;
+  bool descending = 2;
+}
+
+message CacheOptions {
+  bool bypass_read = 1;
+  bool bypass_write = 2;
+  int32 ttl_seconds = 3;
+}
+
+message Row {
+  map<string, google.protobuf.Value> fields = 1;
+}
+
+message RecordSet {
+  repeated bytes records_json = 1;
+  repeated Row rows = 2;
+  string next_page_token = 3;
+  int32 total_count = 4;
+}
+
+message SelectRequest {
+  RequestContext context = 1;
+  string message_type = 2;
+  google.protobuf.Struct filter = 3;
+  repeated string fields = 4;
+  int32 limit = 5;
+  string page_token = 6;
+  repeated Sort sort = 7;
+  CacheOptions cache = 8;
+}
+
+message UpsertRequest {
+  RequestContext context = 1;
+  string message_type = 2;
+  bytes record_json = 3;
+  google.protobuf.Struct payload = 4;
+  repeated string conflict_fields = 5;
+  bool return_record = 6;
+  CacheOptions cache = 7;
+  string idempotency_key = 8;
+}
+
+message DeleteRequest {
+  RequestContext context = 1;
+  string message_type = 2;
+  google.protobuf.Struct filter = 3;
+  string idempotency_key = 4;
+}
+
+message ViewDefinition {
+  RequestContext context = 1;
+  string schema = 2;
+  string name = 3;
+  string query = 4;
+  bool with_data = 5;
+  int32 ttl_days = 6;
+}

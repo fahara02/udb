@@ -35,6 +35,7 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 use uuid::Uuid;
 
+use super::dialect::apply_projection_summary_bucket;
 use super::sqlite::SqliteCanonicalStore;
 use super::system_store::{
     DeadLetterGroup, PendingTaskMetric, ProjectionClaimFilter, ProjectionOperation,
@@ -69,6 +70,11 @@ fn parse_iso(s: &str) -> DateTime<Utc> {
 
 /// Required SQLite version for `RETURNING` (3.35).
 const REQUIRED_SQLITE_VERSION: &str = "3.35";
+
+fn projection_retry_delay_secs(retry_count: i32) -> i64 {
+    let attempt = retry_count.max(1).min(12) as u32;
+    (1_i64 << (attempt - 1)).min(3600)
+}
 
 /// Parse the row sqlx returns from claim / status queries. The
 /// SELECT clause is constant so the column order is stable; we read
@@ -133,6 +139,11 @@ fn row_to_projection_task(row: sqlx::sqlite::SqliteRow) -> SystemStoreResult<Pro
             .try_get::<String, _>("updated_at")
             .map(|s| parse_iso(&s))
             .unwrap_or_else(|_| Utc::now()),
+        next_retry_at: row
+            .try_get::<Option<String>, _>("next_retry_at")
+            .ok()
+            .flatten()
+            .map(|s| parse_iso(&s)),
         completed_at: row
             .try_get::<Option<String>, _>("completed_at")
             .ok()
@@ -176,6 +187,7 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
                                      CHECK (status IN ('PENDING','IN_PROGRESS','COMPLETED','FAILED','DEAD_LETTER')),
                     retry_count      INTEGER NOT NULL DEFAULT 0,
                     last_error       TEXT NOT NULL DEFAULT '',
+                    next_retry_at    TEXT,
                     created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
                     updated_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
                     completed_at     TEXT
@@ -187,17 +199,28 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
                 "CREATE INDEX IF NOT EXISTS idx_{TABLE}_status_created_at \
                  ON {TABLE} (status, created_at)"
             ),
+            format!(
+                "CREATE INDEX IF NOT EXISTS idx_{TABLE}_project_status_created_at \
+                 ON {TABLE} (project_id, status, created_at)"
+            ),
             // Index: per-backend filter for worker pools.
             format!(
                 "CREATE INDEX IF NOT EXISTS idx_{TABLE}_backend_status \
                  ON {TABLE} (target_backend, target_instance, status)"
             ),
+            format!("ALTER TABLE {TABLE} ADD COLUMN next_retry_at TEXT"),
+            format!(
+                "CREATE INDEX IF NOT EXISTS idx_{TABLE}_next_retry \
+                 ON {TABLE} (status, next_retry_at)"
+            ),
         ];
         for sql in stmts.iter() {
-            sqlx::query(sql)
-                .execute(self.pool_ref())
-                .await
-                .map_err(|e| SystemStoreError::query("sqlite", sql.clone(), e))?;
+            if let Err(e) = sqlx::query(sql).execute(self.pool_ref()).await {
+                let msg = e.to_string();
+                if !msg.contains("duplicate column name") {
+                    return Err(SystemStoreError::query("sqlite", sql.clone(), e));
+                }
+            }
         }
         Ok(())
     }
@@ -304,6 +327,8 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
                  SELECT task_id FROM {TABLE}
                  WHERE status IN ('PENDING', 'FAILED')
                    AND retry_count < ?1
+                   AND (?3 = '' OR project_id = ?3)
+                   AND (next_retry_at IS NULL OR next_retry_at <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
                    {target_clause}
                  ORDER BY created_at
                  LIMIT ?2
@@ -312,11 +337,12 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
                        target_backend, target_instance, projection_kind, resource_name,
                        operation, source_row_key, target_options, source_payload,
                        source_checksum, status, retry_count, last_error,
-                       created_at, updated_at, completed_at"
+                       created_at, updated_at, next_retry_at, completed_at"
         );
         let rows = sqlx::query(&sql)
             .bind(filter.max_retries)
             .bind(filter.batch_size)
+            .bind(filter.project_id.as_deref().unwrap_or(""))
             .fetch_all(self.pool_ref())
             .await
             .map_err(|e| SystemStoreError::query("sqlite", sql.clone(), e))?;
@@ -332,6 +358,7 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
             "UPDATE {TABLE}
              SET status = 'COMPLETED',
                  completed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+                 next_retry_at = NULL,
                  updated_at  = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
              WHERE task_id = ?1"
         );
@@ -366,17 +393,23 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
         }
         let sql = format!(
             "UPDATE {TABLE}
-             SET status = ?1,
-                 retry_count = ?2,
-                 last_error = ?3,
+             SET status = ?,
+                 retry_count = ?,
+                 last_error = ?,
+                 next_retry_at = CASE
+                    WHEN ? = 'FAILED' THEN strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '+' || ? || ' seconds')
+                    ELSE NULL
+                 END,
                  updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-             WHERE task_id = ?4"
+             WHERE task_id = ?"
         );
         let task_id_text = task_id.to_string();
         sqlx::query(&sql)
             .bind(new_status.as_str())
             .bind(new_retry_count)
             .bind(error)
+            .bind(new_status.as_str())
+            .bind(projection_retry_delay_secs(new_retry_count))
             .bind(&task_id_text)
             .execute(self.pool_ref())
             .await
@@ -397,6 +430,7 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
              SET status = 'PENDING',
                  retry_count = 0,
                  last_error = '',
+                 next_retry_at = NULL,
                  updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
              WHERE status = 'DEAD_LETTER' {where_clause}"
         );
@@ -556,21 +590,7 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
         for row in rows {
             let status: String = row.try_get("status").unwrap_or_default();
             let n: i64 = row.try_get("n").unwrap_or(0);
-            match status.as_str() {
-                "PENDING" => s.pending = n,
-                "IN_PROGRESS" => s.in_progress = n,
-                "COMPLETED" => s.completed = n,
-                "FAILED" => s.failed = n,
-                "DEAD_LETTER" => s.dead_letter = n,
-                _ => {
-                    return Err(SystemStoreError::SchemaMismatch {
-                        backend: "sqlite",
-                        detail: format!(
-                            "unexpected status '{status}' in {TABLE} (CHECK constraint should prevent this)"
-                        ),
-                    });
-                }
-            }
+            apply_projection_summary_bucket(&mut s, "sqlite", &status, n)?;
         }
         Ok(s)
     }

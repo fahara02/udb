@@ -919,6 +919,9 @@ mod tests {
         let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let runtime_dir = manifest_dir.join("src/runtime");
         let allowed = [
+            // Stage 1 auth config — `AuthnConfig::from_env` reads `UDB_SESSION_*`
+            // at construction, the same startup-config category as `security.rs`.
+            "src/runtime/authn/",
             "src/runtime/cdc/mod.rs",
             "src/runtime/cdc/engine_tail.rs",
             "src/runtime/channels.rs",
@@ -939,11 +942,19 @@ mod tests {
             "src/runtime/executors/http.rs",
             "src/runtime/executors/mongodb.rs",
             "src/runtime/executors/neo4j.rs",
+            // Native-service catalog reads `UDB_NATIVE_AUTH` (native services
+            // on/off) at startup — same startup-config category as `authn/`.
+            "src/runtime/native_catalog.rs",
             "src/runtime/observability.rs",
             "src/runtime/projection/mod.rs",
             "src/runtime/replica.rs",
             "src/runtime/security.rs",
             "src/runtime/service/mod.rs",
+            // Auth service handlers construct config via `AuthnConfig::from_env`
+            // (in their inline tests) — same startup-config category as
+            // `service/mod.rs` and `security.rs`. Folder-module prefix so it
+            // covers `auth_service/mod.rs` and submodules.
+            "src/runtime/service/auth_service/",
         ];
         let mut stack = vec![runtime_dir];
         let mut violations = Vec::new();

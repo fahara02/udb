@@ -14,8 +14,6 @@
 
 use serde_json::{Map, Value as Json, json};
 
-use std::collections::HashSet;
-
 use crate::backend::BackendKind;
 use crate::generation::ManifestTable;
 use crate::ir::filter::{ComparisonOp, LogicalFilter};
@@ -25,6 +23,7 @@ use crate::ir::operations::{
 };
 use crate::ir::value::LogicalValue;
 
+use super::util::{like_to_regex, regex_escape, value_to_json};
 use super::{CompileContext, CompileError, CompiledRendering, Compiler, HttpMethod};
 
 /// MongoDB (Atlas Data API) compiler.
@@ -177,7 +176,7 @@ impl Compiler for MongoDbCompiler {
         // `_tenant_id` / `_project_id` predicate so cross-tenant reads
         // are protocol-blocked. The compiler is now Enforced (not
         // Advisory) — manifest scoping was the previous best.
-        let filter = and_with_context(user_filter, ctx);
+        let filter = and_with_context(user_filter, table, ctx);
 
         // Projection (Mongo: { field: 1 }).
         let projection = match &op.projection {
@@ -269,7 +268,7 @@ impl Compiler for MongoDbCompiler {
                 if op.records.len() == 1 {
                     let body = json!({
                         "collection": table.table,
-                        "document": record_to_json_with_context(&op.records[0], ctx),
+                        "document": record_to_json_with_context(&op.records[0], table, ctx),
                     });
                     Ok(CompiledRendering::Json {
                         backend: BackendKind::Mongodb,
@@ -281,7 +280,7 @@ impl Compiler for MongoDbCompiler {
                     let docs: Vec<Json> = op
                         .records
                         .iter()
-                        .map(|r| record_to_json_with_context(r, ctx))
+                        .map(|r| record_to_json_with_context(r, table, ctx))
                         .collect();
                     let body = json!({
                         "collection": table.table,
@@ -324,19 +323,21 @@ impl Compiler for MongoDbCompiler {
                 // can't read or update that document.
                 if let Some(tid) = ctx.tenant_id
                     && !tid.is_empty()
+                    && let Some(column) = Some(super::util::tenant_system_field(table))
                 {
-                    filter.insert("_tenant_id".into(), json!(tid));
+                    filter.insert(column.to_string(), json!(tid));
                 }
                 if let Some(pid) = ctx.project_id
                     && !pid.is_empty()
+                    && let Some(column) = Some(super::util::project_system_field(table))
                 {
-                    filter.insert("_project_id".into(), json!(pid));
+                    filter.insert(column.to_string(), json!(pid));
                 }
 
                 let (path, update) = match &op.conflict {
                     ConflictStrategy::Replace => (
                         "/action/replaceOne",
-                        json!(record_to_json_with_context(record, ctx)),
+                        json!(record_to_json_with_context(record, table, ctx)),
                     ),
                     ConflictStrategy::Update { fields } => {
                         let mut set = Map::new();
@@ -398,7 +399,7 @@ impl Compiler for MongoDbCompiler {
         }
         // C7/C8: tenant predicate ANDed in so a cross-tenant DELETE
         // can't be issued even with a permissive user filter.
-        let filter = and_with_context(user_filter, ctx);
+        let filter = and_with_context(user_filter, table, ctx);
         let body = json!({
             "collection": table.table,
             "filter": filter,
@@ -421,14 +422,7 @@ impl Compiler for MongoDbCompiler {
                 reason: "LogicalAggregate::aggregates must be non-empty".into(),
             });
         }
-        let mut seen: HashSet<&str> = HashSet::new();
-        for agg in &op.aggregates {
-            if !seen.insert(agg.alias.as_str()) {
-                return Err(CompileError::Malformed {
-                    reason: format!("duplicate aggregate alias '{}'", agg.alias),
-                });
-            }
-        }
+        super::util::validate_aggregate_aliases(&op.aggregates)?;
         let table = self.resolve_table(&op.message_type, ctx)?;
 
         // Build a Mongo aggregation pipeline:
@@ -881,17 +875,19 @@ fn resolve_mongo_field<'a>(
 /// field names match the broker's write-time injection (every
 /// `compile_write` payload carries them) so a tenant boundary is
 /// genuinely enforced at the document level.
-fn and_with_context(user_filter: Json, ctx: &CompileContext<'_>) -> Json {
+fn and_with_context(user_filter: Json, table: &ManifestTable, ctx: &CompileContext<'_>) -> Json {
     let mut ctx_pred = Map::new();
     if let Some(tid) = ctx.tenant_id
         && !tid.is_empty()
+        && let Some(column) = Some(super::util::tenant_system_field(table))
     {
-        ctx_pred.insert("_tenant_id".into(), json!(tid));
+        ctx_pred.insert(column.to_string(), json!(tid));
     }
     if let Some(pid) = ctx.project_id
         && !pid.is_empty()
+        && let Some(column) = Some(super::util::project_system_field(table))
     {
-        ctx_pred.insert("_project_id".into(), json!(pid));
+        ctx_pred.insert(column.to_string(), json!(pid));
     }
     if ctx_pred.is_empty() {
         return user_filter;
@@ -918,6 +914,7 @@ fn record_to_json(record: &crate::ir::operations::LogicalRecord) -> Json {
 /// `and_with_context` filter injection.
 fn record_to_json_with_context(
     record: &crate::ir::operations::LogicalRecord,
+    table: &ManifestTable,
     ctx: &CompileContext<'_>,
 ) -> Json {
     let mut map = Map::new();
@@ -926,75 +923,17 @@ fn record_to_json_with_context(
     }
     if let Some(tid) = ctx.tenant_id
         && !tid.is_empty()
+        && let Some(column) = Some(super::util::tenant_system_field(table))
     {
-        map.insert("_tenant_id".into(), json!(tid));
+        map.insert(column.to_string(), json!(tid));
     }
     if let Some(pid) = ctx.project_id
         && !pid.is_empty()
+        && let Some(column) = Some(super::util::project_system_field(table))
     {
-        map.insert("_project_id".into(), json!(pid));
+        map.insert(column.to_string(), json!(pid));
     }
     Json::Object(map)
-}
-
-fn value_to_json(v: &LogicalValue) -> Json {
-    match v {
-        LogicalValue::Null => Json::Null,
-        LogicalValue::Bool(b) => Json::Bool(*b),
-        LogicalValue::Int(i) => Json::Number((*i).into()),
-        LogicalValue::Float(f) => serde_json::Number::from_f64(*f)
-            .map(Json::Number)
-            .unwrap_or(Json::Null),
-        LogicalValue::String(s) => Json::String(s.clone()),
-        LogicalValue::Bytes(b) => {
-            use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
-            // Atlas Data API accepts `{ "$binary": { "base64": …, "subType": "00" } }`.
-            json!({ "$binary": { "base64": B64.encode(b), "subType": "00" } })
-        }
-        LogicalValue::Timestamp(t) => {
-            // EJSON `$date` format keeps it parseable round-trip.
-            json!({ "$date": t.to_rfc3339() })
-        }
-        LogicalValue::Json(j) => j.clone(),
-        LogicalValue::Array(values) => Json::Array(values.iter().map(value_to_json).collect()),
-    }
-}
-
-/// Convert a SQL LIKE pattern (`%`, `_`) to an anchored regex. Mongo
-/// `$regex` is not anchored by default, so we add `^…$` for parity with
-/// SQL `LIKE`.
-fn like_to_regex(pattern: &str) -> String {
-    let mut out = String::from("^");
-    for ch in pattern.chars() {
-        match ch {
-            '%' => out.push_str(".*"),
-            '_' => out.push('.'),
-            // Escape regex metacharacters.
-            '.' | '\\' | '^' | '$' | '*' | '+' | '?' | '(' | ')' | '[' | ']' | '{' | '}' | '|' => {
-                out.push('\\');
-                out.push(ch);
-            }
-            other => out.push(other),
-        }
-    }
-    out.push('$');
-    out
-}
-
-/// Escape regex metacharacters in a substring (for `Contains`/`StartsWith`/
-/// `EndsWith` which don't accept wildcards).
-fn regex_escape(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for ch in s.chars() {
-        if matches!(
-            ch,
-            '.' | '\\' | '^' | '$' | '*' | '+' | '?' | '(' | ')' | '[' | ']' | '{' | '}' | '|'
-        ) {
-            out.push('\\');
-        }
-        out.push(ch);
-    }
-    out
 }
 
 #[cfg(test)]

@@ -35,13 +35,18 @@
 use std::sync::Arc;
 
 use serde_json::Value as JsonValue;
-use sqlx::Column;
 use sqlx::MySqlPool;
 use sqlx::Row;
 
 use crate::broker::RequestContext;
 use crate::runtime::backend_context::{
-    AppliedContext, BackendContextEnforcer, ContextEffect, SqlDialect, render_sql_session_settings,
+    AppliedContext, BackendContextEnforcer, ContextEffect, SqlDialect, enforce_with_mechanism,
+    render_sql_session_settings,
+};
+use crate::runtime::core::{validate_mutation_sql, validate_read_sql};
+use crate::runtime::executor_utils::{
+    apply_context_statements, bind_json_params, build_probe, parse_sql_dispatch, sqlx_row_to_json,
+    with_executor_timeout,
 };
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
@@ -86,13 +91,94 @@ impl MysqlExecutor {
     ) -> Result<(), tonic::Status> {
         let applied = AppliedContext::from_request(ctx);
         let stmts = render_sql_session_settings(&applied, SqlDialect::Mysql);
-        for stmt in stmts {
-            sqlx::query(&stmt).execute(&mut **tx).await.map_err(|err| {
-                tonic::Status::internal(format!("mysql session var set failed: {err}"))
-            })?;
-        }
-        Ok(())
+        apply_context_statements(tx, &stmts, "mysql session var set failed").await
     }
+}
+
+fn validate_mysql_ident(value: &str) -> Result<(), tonic::Status> {
+    if value.is_empty()
+        || value.len() > 64
+        || !value
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+    {
+        return Err(tonic::Status::invalid_argument(format!(
+            "invalid MySQL identifier '{value}'"
+        )));
+    }
+    Ok(())
+}
+
+fn quote_mysql_ident(value: &str) -> Result<String, tonic::Status> {
+    validate_mysql_ident(value)?;
+    Ok(format!("`{value}`"))
+}
+
+fn mysql_create_table_sql(resource_name: &str, spec_json: &str) -> Result<String, tonic::Status> {
+    let spec: JsonValue = serde_json::from_str(spec_json)
+        .map_err(|e| tonic::Status::invalid_argument(format!("invalid resource spec: {e}")))?;
+    let columns = spec
+        .get("columns")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| tonic::Status::invalid_argument("table resource spec requires columns"))?;
+    if columns.is_empty() {
+        return Err(tonic::Status::invalid_argument(
+            "table resource spec requires at least one column",
+        ));
+    }
+    let mut defs = Vec::with_capacity(columns.len() + 1);
+    let mut pk_cols = Vec::new();
+    for column in columns {
+        let name = column
+            .get("name")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| tonic::Status::invalid_argument("column missing name"))?;
+        let ty = column
+            .get("type")
+            .and_then(|v| v.as_str())
+            .filter(|v| !v.trim().is_empty())
+            .ok_or_else(|| tonic::Status::invalid_argument("column missing type"))?;
+        if !ty
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '(' | ')' | ',' | ' '))
+        {
+            return Err(tonic::Status::invalid_argument(format!(
+                "invalid SQL type for column '{name}'"
+            )));
+        }
+        let quoted = quote_mysql_ident(name)?;
+        if column
+            .get("primary_key")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        {
+            pk_cols.push(quoted.clone());
+        }
+        let null_clause = if column
+            .get("not_null")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        {
+            " NOT NULL"
+        } else {
+            ""
+        };
+        defs.push(format!("{quoted} {ty}{null_clause}"));
+    }
+    if !pk_cols.is_empty() {
+        defs.push(format!("PRIMARY KEY ({})", pk_cols.join(", ")));
+    }
+    let engine = spec
+        .get("engine")
+        .and_then(|v| v.as_str())
+        .filter(|v| !v.trim().is_empty())
+        .unwrap_or("InnoDB");
+    validate_mysql_ident(engine)?;
+    Ok(format!(
+        "CREATE TABLE IF NOT EXISTS {} ({}) ENGINE={engine} DEFAULT CHARSET=utf8mb4",
+        quote_mysql_ident(resource_name)?,
+        defs.join(", ")
+    ))
 }
 
 impl BackendContextEnforcer for MysqlExecutor {
@@ -101,18 +187,14 @@ impl BackendContextEnforcer for MysqlExecutor {
     }
 
     fn enforce(&self, ctx: &AppliedContext) -> ContextEffect {
-        if ctx.is_empty() {
-            return ContextEffect::Advisory {
-                recorded_in: "no_context_to_apply".into(),
-            };
-        }
         // Effect classification — actual application happens inside
         // the per-request transaction via `apply_session_vars`. We
         // report Enforced because the executor is wired to honour
         // `with_context` and emit the SETs.
-        ContextEffect::Enforced {
-            mechanism: "SET @app_current_* session variables in request-scoped transaction".into(),
-        }
+        enforce_with_mechanism(
+            ctx,
+            "SET @app_current_* session variables in request-scoped transaction",
+        )
     }
 }
 
@@ -126,152 +208,82 @@ impl BackendHealth for MysqlExecutor {
     }
 }
 
-/// Render a sqlx-mysql row into a JSON object. Each column becomes a
-/// key; types are coerced into JSON-friendly variants.
-fn row_to_json(row: &sqlx::mysql::MySqlRow) -> JsonValue {
-    let mut obj = serde_json::Map::new();
-    for (i, col) in row.columns().iter().enumerate() {
-        let name = col.name().to_string();
-        // Try common types; fall back to NULL.
-        let value: JsonValue = if let Ok(v) = row.try_get::<Option<i64>, _>(i) {
-            v.map(JsonValue::from).unwrap_or(JsonValue::Null)
-        } else if let Ok(v) = row.try_get::<Option<f64>, _>(i) {
-            v.map(JsonValue::from).unwrap_or(JsonValue::Null)
-        } else if let Ok(v) = row.try_get::<Option<bool>, _>(i) {
-            v.map(JsonValue::from).unwrap_or(JsonValue::Null)
-        } else if let Ok(v) = row.try_get::<Option<String>, _>(i) {
-            v.map(JsonValue::from).unwrap_or(JsonValue::Null)
-        } else if let Ok(v) = row.try_get::<Option<Vec<u8>>, _>(i) {
-            // Bytes → base64-encoded JSON string. base64::Engine is
-            // already a crate-wide dep.
-            use base64::Engine as _;
-            v.map(|bytes| {
-                JsonValue::String(format!(
-                    "base64:{}",
-                    base64::engine::general_purpose::STANDARD.encode(bytes)
-                ))
-            })
-            .unwrap_or(JsonValue::Null)
-        } else {
-            JsonValue::Null
-        };
-        obj.insert(name, value);
-    }
-    JsonValue::Object(obj)
-}
-
-/// Parse `{"sql": "...", "params": [...]}` out of a dispatch request.
-fn parse_dispatch(request_json: &str) -> Result<(String, Vec<JsonValue>), tonic::Status> {
-    let value: JsonValue = serde_json::from_str(request_json)
-        .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
-    let sql = value
-        .get("sql")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| tonic::Status::invalid_argument("missing `sql` in dispatch request"))?
-        .to_string();
-    let params = value
-        .get("params")
-        .and_then(|v| v.as_array())
-        .cloned()
-        .unwrap_or_default();
-    Ok((sql, params))
-}
-
-/// Bind one JSON value as a MySQL parameter. Numbers go to i64/f64,
-/// strings stay as strings, bool, null. Objects/arrays serialize to
-/// JSON-text so MySQL stores them in a `JSON` column.
-fn bind_params<'q>(
-    mut q: sqlx::query::Query<'q, sqlx::MySql, sqlx::mysql::MySqlArguments>,
-    params: &'q [JsonValue],
-) -> sqlx::query::Query<'q, sqlx::MySql, sqlx::mysql::MySqlArguments> {
-    for p in params {
-        q = match p {
-            JsonValue::Null => q.bind(Option::<i64>::None),
-            JsonValue::Bool(b) => q.bind(*b),
-            JsonValue::Number(n) => {
-                if let Some(i) = n.as_i64() {
-                    q.bind(i)
-                } else if let Some(f) = n.as_f64() {
-                    q.bind(f)
-                } else {
-                    q.bind(n.to_string())
-                }
-            }
-            JsonValue::String(s) => q.bind(s.clone()),
-            other => q.bind(other.to_string()),
-        };
-    }
-    q
-}
-
 impl QueryExecutor for MysqlExecutor {
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let (sql, params) = parse_dispatch(request_json)?;
+        with_executor_timeout("MySQL", "query", async {
+            let (sql, params) = parse_sql_dispatch(request_json)?;
+            validate_read_sql(&sql)?;
 
-        let rows = if let Some(ctx) = &self.context {
-            let mut tx = self.pool.begin().await.map_err(|err| {
-                tonic::Status::internal(format!("mysql transaction start failed: {err}"))
-            })?;
-            Self::apply_session_vars(&mut tx, ctx).await?;
-            let q = bind_params(sqlx::query(&sql), &params);
-            let rows = q
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| tonic::Status::internal(format!("mysql query failed: {e}")))?;
-            tx.commit().await.map_err(|err| {
-                tonic::Status::internal(format!("mysql transaction commit failed: {err}"))
-            })?;
-            rows
-        } else {
-            let q = bind_params(sqlx::query(&sql), &params);
-            q.fetch_all(&self.pool)
-                .await
-                .map_err(|e| tonic::Status::internal(format!("mysql query failed: {e}")))?
-        };
-        let json: Vec<JsonValue> = rows.iter().map(row_to_json).collect();
-        serde_json::to_string(&JsonValue::Array(json))
-            .map_err(|e| tonic::Status::internal(format!("response serialise failed: {e}")))
+            let rows = if let Some(ctx) = &self.context {
+                let mut tx = self.pool.begin().await.map_err(|err| {
+                    tonic::Status::internal(format!("mysql transaction start failed: {err}"))
+                })?;
+                Self::apply_session_vars(&mut tx, ctx).await?;
+                let q = bind_json_params(sqlx::query(&sql), &params);
+                let rows = q
+                    .fetch_all(&mut *tx)
+                    .await
+                    .map_err(|e| tonic::Status::internal(format!("mysql query failed: {e}")))?;
+                tx.commit().await.map_err(|err| {
+                    tonic::Status::internal(format!("mysql transaction commit failed: {err}"))
+                })?;
+                rows
+            } else {
+                let q = bind_json_params(sqlx::query(&sql), &params);
+                q.fetch_all(&self.pool)
+                    .await
+                    .map_err(|e| tonic::Status::internal(format!("mysql query failed: {e}")))?
+            };
+            let json: Vec<JsonValue> = rows.iter().map(sqlx_row_to_json).collect();
+            serde_json::to_string(&JsonValue::Array(json))
+                .map_err(|e| tonic::Status::internal(format!("response serialise failed: {e}")))
+        })
+        .await
     }
 }
 
 impl MutationExecutor for MysqlExecutor {
     async fn mutate(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let (sql, params) = parse_dispatch(request_json)?;
+        with_executor_timeout("MySQL", "mutate", async {
+            let (sql, params) = parse_sql_dispatch(request_json)?;
+            validate_mutation_sql(&sql)?;
 
-        if let Some(ctx) = &self.context {
-            let mut tx = self.pool.begin().await.map_err(|err| {
-                tonic::Status::internal(format!("mysql transaction start failed: {err}"))
-            })?;
-            Self::apply_session_vars(&mut tx, ctx).await?;
-            let q = bind_params(sqlx::query(&sql), &params);
-            let result = q
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| tonic::Status::internal(format!("mysql mutate failed: {e}")))?;
-            // last_insert_id captured before commit (sqlx zeros it on
-            // transaction close otherwise).
-            let last_insert_id = result.last_insert_id();
-            let rows_affected = result.rows_affected();
-            tx.commit().await.map_err(|err| {
-                tonic::Status::internal(format!("mysql transaction commit failed: {err}"))
-            })?;
-            Ok(serde_json::json!({
-                "rows_affected": rows_affected,
-                "last_insert_id": last_insert_id,
-            })
-            .to_string())
-        } else {
-            let q = bind_params(sqlx::query(&sql), &params);
-            let result = q
-                .execute(&self.pool)
-                .await
-                .map_err(|e| tonic::Status::internal(format!("mysql mutate failed: {e}")))?;
-            Ok(serde_json::json!({
-                "rows_affected": result.rows_affected(),
-                "last_insert_id": result.last_insert_id(),
-            })
-            .to_string())
-        }
+            if let Some(ctx) = &self.context {
+                let mut tx = self.pool.begin().await.map_err(|err| {
+                    tonic::Status::internal(format!("mysql transaction start failed: {err}"))
+                })?;
+                Self::apply_session_vars(&mut tx, ctx).await?;
+                let q = bind_json_params(sqlx::query(&sql), &params);
+                let result = q
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| tonic::Status::internal(format!("mysql mutate failed: {e}")))?;
+                // last_insert_id captured before commit (sqlx zeros it on
+                // transaction close otherwise).
+                let last_insert_id = result.last_insert_id();
+                let rows_affected = result.rows_affected();
+                tx.commit().await.map_err(|err| {
+                    tonic::Status::internal(format!("mysql transaction commit failed: {err}"))
+                })?;
+                Ok(serde_json::json!({
+                    "rows_affected": rows_affected,
+                    "last_insert_id": last_insert_id,
+                })
+                .to_string())
+            } else {
+                let q = bind_json_params(sqlx::query(&sql), &params);
+                let result = q
+                    .execute(&self.pool)
+                    .await
+                    .map_err(|e| tonic::Status::internal(format!("mysql mutate failed: {e}")))?;
+                Ok(serde_json::json!({
+                    "rows_affected": result.rows_affected(),
+                    "last_insert_id": result.last_insert_id(),
+                })
+                .to_string())
+            }
+        })
+        .await
     }
 }
 
@@ -307,23 +319,19 @@ impl ResourceAdminExecutor for MysqlExecutor {
         resource_name: &str,
         spec_json: &str,
     ) -> Result<(), tonic::Status> {
-        // For now: log + accept. The full resource lifecycle for MySQL
-        // (CREATE TABLE / CREATE INDEX from JSON spec) is the P2P
-        // executor follow-up.
-        tracing::info!(
-            backend = "mysql",
-            resource = resource_name,
-            spec = spec_json,
-            "MysqlExecutor::ensure_resource accepted; full lifecycle is a P2P follow-up"
-        );
+        let ddl = mysql_create_table_sql(resource_name, spec_json)?;
+        sqlx::query(&ddl)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| tonic::Status::internal(format!("mysql ensure_resource failed: {e}")))?;
         Ok(())
     }
     async fn drop_resource(&self, resource_name: &str) -> Result<(), tonic::Status> {
-        tracing::info!(
-            backend = "mysql",
-            resource = resource_name,
-            "MysqlExecutor::drop_resource accepted; full lifecycle is a P2P follow-up"
-        );
+        let ddl = format!("DROP TABLE IF EXISTS {}", quote_mysql_ident(resource_name)?);
+        sqlx::query(&ddl)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| tonic::Status::internal(format!("mysql drop_resource failed: {e}")))?;
         Ok(())
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
@@ -369,7 +377,7 @@ impl BackendExecutor for MysqlExecutor {
                 .and_then(|v| v.as_array())
                 .cloned()
                 .unwrap_or_default();
-            let q = bind_params(sqlx::query(sql), &params);
+            let q = bind_json_params(sqlx::query(sql), &params);
             let r = q
                 .execute(&mut *tx)
                 .await
@@ -383,19 +391,6 @@ impl BackendExecutor for MysqlExecutor {
     }
 
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
-        match self.ping().await {
-            Ok(()) => Ok(BackendProbe {
-                backend: "mysql".to_string(),
-                instance: None,
-                ok: true,
-                error: None,
-            }),
-            Err(err) => Ok(BackendProbe {
-                backend: "mysql".to_string(),
-                instance: None,
-                ok: false,
-                error: Some(err),
-            }),
-        }
+        Ok(build_probe("mysql", self.ping().await))
     }
 }

@@ -2,10 +2,13 @@ syntax = "proto3";
 
 package udb.events.v1;
 
-option go_package = "github.com/udb-project/udb/gen/go/udb/events/v1;udbeventsv1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/events/v1;eventsv1";
 option java_package      = "com.udb.events.v1";
 option csharp_namespace = "Udb.Events.V1";
+option php_namespace = "Udb\\Events\\V1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Events\\V1";
 
+import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
 // Kafka topic: udb.cdc.envelope.v1
@@ -17,7 +20,26 @@ message CDCEnvelope {
   google.protobuf.Timestamp published_at = 5;
 }
 
-// Kafka topic: udb.migration.drift_detected.v1
+// Canonical inner envelope wrapping every native domain event stored in the
+// transactional outbox `payload` column. The CDC engine relays this as JSON on
+// the per-domain Kafka topic (e.g. `udb.authn.user.registered.v1`); downstream
+// Apache Spark streaming jobs decode it. The concrete domain event (authn,
+// authz, or apikey) is carried as a JSON object under `payload`.
+//
+// This formalizes the shape produced by the native auth services'
+// outbox event sink and by the broker's `prepare_outbox_envelope`, so producers
+// and Spark consumers share one contract.
+message EventEnvelope {
+  string event_id = 1; // UUID; also the outbox row's event_id
+  string event_type = 2; // event type / Kafka topic, e.g. udb.authn.user.registered.v1
+  google.protobuf.Timestamp timestamp = 3; // envelope event time (CDC EventEnvelope.timestamp)
+  string correlation_id = 4;
+  string document_id = 5; // aggregate id; equals the outbox / Kafka partition key
+  string schema_uri = 6; // optional schema-registry reference
+  google.protobuf.Struct payload = 7; // the domain event fields (incl. tenant_id)
+}
+
+// Kafka topic: udb.migration.drift.detected.v1
 message DriftDetectedEvent {
   string event_id = 1;
   string schema_checksum_sha256 = 2;

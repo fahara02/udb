@@ -23,10 +23,10 @@ impl Backend for Neo4jPlugin {
 
     fn generate_artifacts(
         &self,
-        schemas: &[crate::ast::ProtoSchema],
+        manifest: &crate::generation::CatalogManifest,
         sql_config: &crate::generation::sql::SqlGenerationConfig,
     ) -> Result<Vec<crate::generation::GeneratedArtifact>, String> {
-        crate::generation::backends::generate_neo4j_artifacts(schemas, sql_config)
+        crate::generation::backends::generate_neo4j_artifacts(manifest, sql_config)
             .map_err(|err| err.to_string())
     }
 }

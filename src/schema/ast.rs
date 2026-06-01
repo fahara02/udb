@@ -2,6 +2,8 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+pub const DEFAULT_MIGRATION_ORDER: i32 = 9999;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct SourceSpan {
     pub file: String,
@@ -158,13 +160,32 @@ pub struct ProtoSchema {
     /// field that reuses an old name slot.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub reserved_names: Vec<String>,
+    /// Enum types declared *inside* this message. Captured for codegen/metadata;
+    /// they have no direct relational projection. Skipped in serialization when
+    /// empty so messages without nested enums keep their existing checksum.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub nested_enums: Vec<ProtoNestedEnum>,
+}
+
+/// An enum declared inside a message (proto3 nested enum).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct ProtoNestedEnum {
+    pub name: String,
+    pub values: Vec<ProtoNestedEnumValue>,
+}
+
+/// A single `NAME = NUMBER;` entry of a nested enum.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct ProtoNestedEnumValue {
+    pub name: String,
+    pub number: i32,
 }
 
 impl ProtoSchema {
     pub fn new(message_name: impl Into<String>) -> Self {
         Self {
             message_name: message_name.into(),
-            migration_order: 9999,
+            migration_order: DEFAULT_MIGRATION_ORDER,
             ..Self::default()
         }
     }
@@ -333,6 +354,15 @@ pub struct ProtoColumn {
     pub column_name: String,
     pub proto_type: String,
     pub sql_type: String,
+    /// For `map<K, V>` fields, the proto key/value type names (e.g. "string",
+    /// "int32"). Empty for non-map fields. The column itself stores as JSONB;
+    /// these preserve the original proto types for codegen/metadata. Skipped in
+    /// serialization when empty so non-map columns and existing checksums stay
+    /// unchanged.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub map_key_type: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub map_value_type: String,
     pub not_null: bool,
     pub unique: bool,
     pub is_primary: bool,
@@ -375,6 +405,16 @@ pub struct ProtoColumn {
     pub generated: bool,
     pub generated_expr: String,
     pub is_identity: bool,
+    /// Marks this column as the tenant-isolation key (proto `tenant_column: true`).
+    /// Drives query-plan tenant enforcement instead of a hardcoded `tenant_id`
+    /// column-name match. Not part of the DDL checksum (no schema effect).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub is_tenant: bool,
+    /// Marks this column as the project-isolation key (proto `project_column: true`).
+    /// Drives query-plan project enforcement instead of a hardcoded `project_id`
+    /// column-name match. Not part of the DDL checksum (no schema effect).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub is_project: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -624,6 +664,10 @@ pub struct ProtoMessageAst {
     pub nested: Vec<ProtoDefinition>,
     pub reserved_numbers: Vec<ProtoReservedRange>,
     pub reserved_names: Vec<String>,
+    /// Proto `extensions` declarations are not represented in UDB's relational
+    /// schema model. Preserve their locations so callers can surface diagnostics
+    /// instead of silently dropping the declaration.
+    pub unsupported_extensions: Vec<SourceSpan>,
     pub span: SourceSpan,
 }
 

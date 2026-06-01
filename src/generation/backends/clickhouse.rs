@@ -16,9 +16,8 @@
 //! | `udb.ch_partition_by` | `toYYYYMM(created_at)` | Partition expression |
 //! | `udb.ch_database` | `default` | ClickHouse database name |
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use crate::generation::backend_safety::generated_at_unix;
 
-use crate::ast::ProtoSchema;
 use crate::generation::GeneratedArtifact;
 use crate::generation::backend_safety::{
     quote_clickhouse_identifier, safe_comment_value, safe_identifier, safe_resource_name,
@@ -49,10 +48,9 @@ const ALLOWED_ENGINES: &[&str] = &[
 /// when available; otherwise a minimal `(id UUID, tenant_id String, created_at DateTime64(3))`
 /// scaffold is emitted.
 pub fn generate_clickhouse_artifacts(
-    schemas: &[ProtoSchema],
+    manifest: &CatalogManifest,
     config: &SqlGenerationConfig,
 ) -> Result<Vec<GeneratedArtifact>, serde_json::Error> {
-    let manifest = CatalogManifest::from_schemas(schemas)?;
     let checksum = &manifest.checksum_sha256;
     let ts = generated_at_unix();
 
@@ -380,13 +378,6 @@ fn safe_clickhouse_partition_expr(raw: &str) -> Option<String> {
         func.trim(),
         quote_clickhouse_identifier(&ident)
     ))
-}
-
-fn generated_at_unix() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or_default()
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

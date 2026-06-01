@@ -12,12 +12,13 @@ impl DataBrokerService {
             Err(e) => return self.record_grpc("Select", started, Err(e)),
         };
         let request = request.into_inner();
-        if let Err(err) = self
+        let decision_id = match self
             .authorize(&security, &request.message_type, "Select")
             .await
         {
-            return self.record_grpc("Select", started, Err(err));
-        }
+            Ok(id) => id,
+            Err(err) => return self.record_grpc("Select", started, Err(err)),
+        };
         if let Err(err) = enforce_select_export_controls(
             &self.catalog.active_for(&security.project_id).manifest,
             &security,
@@ -28,15 +29,16 @@ impl DataBrokerService {
         }
         let manifest = &self.catalog.active_for(&security.project_id).manifest;
         let runtime = self.runtime_snapshot();
-        let metadata_context = security.request_context();
-        let admission_context = metadata_context.clone();
-        let response_context = metadata_context.clone();
+        let metadata_context = security.request_context_with_decision(&decision_id);
+        // One clone for the moved closure; the original is borrowed for admission
+        // (before) and the response headers (after) — was two clones (#100).
+        let exec_context = metadata_context.clone();
         let result = self
             .execute_with_channel_scoped(
                 crate::runtime::channels::OperationChannel::Read,
-                Some(&admission_context),
+                Some(&metadata_context),
                 Some("postgres"),
-                || async move { runtime.select(manifest, request, metadata_context).await },
+                || async move { runtime.select(manifest, request, exec_context).await },
             )
             .await;
 
@@ -44,7 +46,7 @@ impl DataBrokerService {
             Ok(res) => self.record_grpc(
                 "Select",
                 started,
-                Ok(self.with_catalog_response_headers(Response::new(res), &response_context)),
+                Ok(self.with_catalog_response_headers(Response::new(res), &metadata_context)),
             ),
             Err(err) => self.record_grpc("Select", started, Err(err)),
         }
@@ -54,25 +56,53 @@ impl DataBrokerService {
         &self,
         request: Request<tonic::Streaming<SelectRequest>>,
     ) -> Result<Response<ResponseStream<RecordSet>>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("BatchSelect", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "BatchSelect").await {
-            return self.record_grpc("BatchSelect", started, Err(err));
-        }
+        let (started, security) = authorized_call!(self, request, "BatchSelect");
         let metadata_context = security.request_context();
         let response_context = metadata_context.clone();
-        let manifest = (*self.catalog.active_for(&security.project_id).manifest).clone();
+        // Arc::clone — share the active manifest into the stream instead of a deep
+        // copy of the whole CatalogManifest per batch (#99).
+        let manifest = self
+            .catalog
+            .active_for(&security.project_id)
+            .manifest
+            .clone();
         let runtime = self.runtime_snapshot().clone();
         let security_for_stream = security.clone();
         let mut stream = request.into_inner();
         let metrics = self.metrics.clone();
-        let channels = self.runtime_snapshot().channels().clone();
+        let channels = runtime.channels().clone();
+        // #112: capture the (cloneable) ABAC authz inputs so each streamed item's
+        // own `message_type` is authorized inside the stream — the batch RPC's
+        // `authorized_call!` only authorized `BatchSelect`, not the per-item types.
+        let abac_v2 = self
+            .abac_v2_override
+            .unwrap_or_else(super::authz_v2_enabled);
+        let abac_snapshot = self.current_abac_snapshot();
+        let abac_policies = self.abac_policies.clone();
+        let abac_default_allow = self.abac_default_allow;
+        // #155: batch items are admitted and executed ONE AT A TIME on purpose.
+        // The fair-admission permit is acquired PER ITEM (it drops at the end of
+        // each loop iteration, not held across the whole batch) so every item
+        // pays its own backpressure/cost, and each execute is bounded by a
+        // per-item `deadline_secs` timeout below — a slow item can't stall the
+        // channel indefinitely. This is bounded-concurrency admission for a
+        // streaming RPC, not a permit-held-across-batch serialization bug.
         let out = async_stream::try_stream! {
             while let Some(item) = stream.message().await? {
                 enforce_select_export_controls(&manifest, &security_for_stream, &item.message_type, &item.fields)?;
+                // #112: authorize THIS item's message_type and stamp its own
+                // decision id (the batch-level grant covered only "BatchSelect").
+                let item_decision_id = DataBrokerService::authorize_message_item(
+                    abac_v2,
+                    &abac_snapshot,
+                    &abac_policies,
+                    abac_default_allow,
+                    &security_for_stream,
+                    &item.message_type,
+                    "Select",
+                )?;
+                let item_context =
+                    security_for_stream.request_context_with_decision(&item_decision_id);
                 let op = crate::runtime::channels::OperationChannel::Read;
                 let project = non_empty(&metadata_context.project_id).unwrap_or("default");
                 let tenant_hash = tenant_hash_label(&metadata_context.tenant_id);
@@ -102,7 +132,7 @@ impl DataBrokerService {
 
                 let res = tokio::time::timeout(
                     Duration::from_secs(channels.deadline_secs(crate::runtime::channels::OperationChannel::Read, Some("postgres"))),
-                    runtime.select(&manifest, item, metadata_context.clone())
+                    runtime.select(&manifest, item, item_context)
                 ).await;
 
                 metrics.dec_channel_inflight("read");
@@ -138,23 +168,25 @@ impl DataBrokerService {
             Err(e) => return self.record_grpc("Upsert", started, Err(e)),
         };
         let request = request.into_inner();
-        if let Err(err) = self
+        let decision_id = match self
             .authorize(&security, &request.message_type, "Upsert")
             .await
         {
-            return self.record_grpc("Upsert", started, Err(err));
-        }
+            Ok(id) => id,
+            Err(err) => return self.record_grpc("Upsert", started, Err(err)),
+        };
         let manifest = &self.catalog.active_for(&security.project_id).manifest;
         let runtime = self.runtime_snapshot();
-        let metadata_context = security.request_context();
-        let admission_context = metadata_context.clone();
-        let response_context = metadata_context.clone();
+        let metadata_context = security.request_context_with_decision(&decision_id);
+        // One clone for the moved closure; the original is borrowed for admission
+        // and the response headers — was two clones (#100).
+        let exec_context = metadata_context.clone();
         let result = self
             .execute_with_channel_scoped(
                 crate::runtime::channels::OperationChannel::Write,
-                Some(&admission_context),
+                Some(&metadata_context),
                 Some("postgres"),
-                || async move { runtime.upsert(manifest, request, metadata_context).await },
+                || async move { runtime.upsert(manifest, request, exec_context).await },
             )
             .await;
 
@@ -163,7 +195,7 @@ impl DataBrokerService {
                 "Upsert",
                 started,
                 Ok(self
-                    .with_mutation_response_headers(res, &response_context)
+                    .with_mutation_response_headers(res, &metadata_context)
                     .await),
             ),
             Err(err) => self.record_grpc("Upsert", started, Err(err)),
@@ -174,23 +206,46 @@ impl DataBrokerService {
         &self,
         request: Request<tonic::Streaming<UpsertRequest>>,
     ) -> Result<Response<ResponseStream<MutationResponse>>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("BatchUpsert", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "BatchUpsert").await {
-            return self.record_grpc("BatchUpsert", started, Err(err));
-        }
+        let (started, security) = authorized_call!(self, request, "BatchUpsert");
         let metadata_context = security.request_context();
         let response_context = metadata_context.clone();
-        let manifest = (*self.catalog.active_for(&security.project_id).manifest).clone();
+        // Arc::clone — share the active manifest into the stream instead of a deep
+        // copy of the whole CatalogManifest per batch (#99).
+        let manifest = self
+            .catalog
+            .active_for(&security.project_id)
+            .manifest
+            .clone();
         let runtime = self.runtime_snapshot().clone();
         let mut stream = request.into_inner();
         let metrics = self.metrics.clone();
-        let channels = self.runtime_snapshot().channels().clone();
+        let channels = runtime.channels().clone();
+        let security_for_stream = security.clone();
+        // #112: capture ABAC authz inputs so each streamed item's own
+        // `message_type` is authorized (batch grant covered only "BatchUpsert").
+        let abac_v2 = self
+            .abac_v2_override
+            .unwrap_or_else(super::authz_v2_enabled);
+        let abac_snapshot = self.current_abac_snapshot();
+        let abac_policies = self.abac_policies.clone();
+        let abac_default_allow = self.abac_default_allow;
+        // #155: per-item fair-admission permit (dropped each iteration) + per-item
+        // timeout below — intentional bounded-concurrency admission for the
+        // streaming RPC, not a permit-held-across-batch serialization bug.
         let out = async_stream::try_stream! {
             while let Some(item) = stream.message().await? {
+                // #112: authorize THIS item's message_type + stamp its decision id.
+                let item_decision_id = DataBrokerService::authorize_message_item(
+                    abac_v2,
+                    &abac_snapshot,
+                    &abac_policies,
+                    abac_default_allow,
+                    &security_for_stream,
+                    &item.message_type,
+                    "Upsert",
+                )?;
+                let item_context =
+                    security_for_stream.request_context_with_decision(&item_decision_id);
                 let op = crate::runtime::channels::OperationChannel::Write;
                 let project = non_empty(&metadata_context.project_id).unwrap_or("default");
                 let tenant_hash = tenant_hash_label(&metadata_context.tenant_id);
@@ -219,7 +274,7 @@ impl DataBrokerService {
 
                 let res = tokio::time::timeout(
                     Duration::from_secs(channels.deadline_secs(crate::runtime::channels::OperationChannel::Write, Some("postgres"))),
-                    runtime.upsert(&manifest, item, metadata_context.clone())
+                    runtime.upsert(&manifest, item, item_context)
                 ).await;
 
                 metrics.dec_channel_inflight("write");
@@ -254,13 +309,16 @@ impl DataBrokerService {
             Ok(s) => s,
             Err(e) => return self.record_grpc("Delete", started, Err(e)),
         };
-        if let Err(err) = self.authorize(&security, "*", "Delete").await {
-            return self.record_grpc("Delete", started, Err(err));
-        }
-        let context = security.request_context();
-        let response_context = context.clone();
         let req = request.into_inner();
         let message_type = req.message_type.clone();
+        // Authorize against the concrete target table (not "*"), so per-table
+        // ABAC Allow/Deny policies actually match — matching Select/Upsert.
+        let decision_id = match self.authorize(&security, &message_type, "Delete").await {
+            Ok(id) => id,
+            Err(err) => return self.record_grpc("Delete", started, Err(err)),
+        };
+        let context = security.request_context_with_decision(&decision_id);
+        let response_context = context.clone();
         let filter = req
             .filter
             .as_ref()
@@ -295,14 +353,7 @@ impl DataBrokerService {
         &self,
         request: Request<GenericDispatchRequest>,
     ) -> Result<Response<GenericDispatchResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("GenericDispatch", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "GenericDispatch").await {
-            return self.record_grpc("GenericDispatch", started, Err(err));
-        }
+        let (started, security) = authorized_call!(self, request, "GenericDispatch");
         if !security
             .scopes
             .iter()
@@ -323,19 +374,14 @@ impl DataBrokerService {
         if let Err(err) = check_generic_dispatch_operation(&req.backend, &req.operation) {
             return self.record_grpc("GenericDispatch", started, Err(err));
         }
-        let runtime = self.runtime_snapshot();
-        let backend = req.backend.clone();
-        let resolved_backend = match runtime
-            .resolve_backend_selector_for_project(&backend, &metadata_context.project_id)
-        {
-            Ok(resolved) => resolved,
-            Err(err) => return self.record_grpc("GenericDispatch", started, Err(err)),
-        };
-        let breaker_backend = resolved_backend.backend.clone();
-        let resource_name = req.resource_name.clone();
-        let spec_json = req.spec_json.clone();
-        let operation = req.operation.clone();
         if req.dry_run {
+            let runtime = self.runtime_snapshot();
+            let resolved_backend = match runtime
+                .resolve_backend_selector_for_project(&req.backend, &metadata_context.project_id)
+            {
+                Ok(resolved) => resolved,
+                Err(err) => return self.record_grpc("GenericDispatch", started, Err(err)),
+            };
             return self.record_grpc(
                 "GenericDispatch",
                 started,
@@ -357,12 +403,12 @@ impl DataBrokerService {
                             ],
                             "backend": resolved_backend.backend,
                             "instance": resolved_backend.instance,
-                            "operation": operation,
+                            "operation": req.operation,
                             "resource_kind": req.resource_kind,
                             "resource_name": req.resource_name,
                             "resource_uri": req.resource_uri,
                             "write_like": matches!(
-                                operation.as_str(),
+                                req.operation.as_str(),
                                 "ensure_resource" | "drop_resource" | "mutate" | "transaction" | "put_object"
                             ),
                             "requires_scope": "udb:dispatch or udb:admin",
@@ -376,38 +422,77 @@ impl DataBrokerService {
                 })),
             );
         }
-        // U2 step 6: resolve metadata (registry/connectivity/circuit-breaker)
-        // first, then build the live `DispatchExecutor` via the plugin-keyed
-        // resolver. Replaces the former `DefaultBackendExecutor` adapter.
-        let target = match runtime.backend_executor_for_project(
+        // Run through the single shared backend-dispatch core (also used by the
+        // typed cache/document/graph/time-series/analytical RPCs).
+        // Route write-like operations to a write instance (mirrors the dry-run
+        // `write_like` above); read-only ops stay on read instances.
+        let write_like = matches!(
+            req.operation.as_str(),
+            "ensure_resource" | "drop_resource" | "mutate" | "transaction" | "put_object"
+        );
+        let result: Result<String, tonic::Status> = self
+            .execute_backend_operation(
+                &metadata_context,
+                &req.backend,
+                write_like,
+                req.operation.clone(),
+                req.resource_name.clone(),
+                req.spec_json.clone(),
+            )
+            .await;
+        let response = match result {
+            Ok(result_json) => GenericDispatchResponse {
+                backend: req.backend,
+                operation: req.operation,
+                result_json,
+                ..Default::default()
+            },
+            Err(err) => return self.record_grpc("GenericDispatch", started, Err(err)),
+        };
+        self.record_grpc("GenericDispatch", started, Ok(Response::new(response)))
+            .map(|response| self.with_catalog_response_headers(response, &response_context))
+    }
+
+    /// Single shared backend-dispatch core. Resolves the executor for `backend`
+    /// in the request's project, then runs `operation` (`query`/`mutate`/
+    /// `search`/`ensure_resource`/… with `resource_name`/`spec_json` as needed)
+    /// through it, scoped to the GenericDispatch channel + circuit breaker, and
+    /// returns the executor's raw JSON result.
+    ///
+    /// `generic_dispatch_inner` and the typed cache/document/graph/time-series/
+    /// analytical RPC handlers all funnel through this — there is no second
+    /// dispatch implementation. Callers do their own auth/scope checks and map
+    /// the returned JSON into their response type.
+    pub(crate) async fn execute_backend_operation(
+        &self,
+        context: &crate::RequestContext,
+        backend: &str,
+        write: bool,
+        operation: String,
+        resource_name: String,
+        spec_json: String,
+    ) -> Result<String, tonic::Status> {
+        let runtime = self.runtime_snapshot();
+        let resolved_backend =
+            runtime.resolve_backend_selector_for_project(backend, &context.project_id)?;
+        let target = runtime.backend_executor_for_project(
             &resolved_backend.backend,
             resolved_backend.instance.as_deref(),
-            &metadata_context.project_id,
-        ) {
-            Ok(target) => target,
-            Err(err) => return self.record_grpc("GenericDispatch", started, Err(err)),
-        };
+            &context.project_id,
+        )?;
+        let breaker_backend = target.backend.clone();
         let breaker_instance = target.instance.clone();
-        // U7: build the request context BEFORE resolving the executor so the
-        // Postgres factory can bake it into the dispatch executor and
-        // `set_request_local_settings` runs inside the request-scoped
-        // transaction. RLS now sees tenant/project/purpose on the generic
-        // path, not just the typed Select/Upsert RPCs.
-        let mut admission_context = metadata_context.clone();
+        let mut admission_context = context.clone();
         admission_context.target_backend = target.backend.clone();
         admission_context.target_instance = target.instance.clone().unwrap_or_default();
-        let executor = match runtime.resolve_dispatch_executor(
+        let executor = runtime.resolve_dispatch_executor(
             &target.backend,
             target.instance.as_deref(),
-            /* write */ false,
+            write,
             tonic::Code::FailedPrecondition,
             Some(&admission_context),
-        ) {
-            Ok(executor) => executor,
-            Err(err) => return self.record_grpc("GenericDispatch", started, Err(err)),
-        };
-
-        let result: Result<String, tonic::Status> = self
+        )?;
+        let result = self
             .execute_with_channel_scoped(
                 crate::runtime::channels::OperationChannel::GenericDispatch,
                 Some(&admission_context),
@@ -453,7 +538,17 @@ impl DataBrokerService {
                             })
                             .to_string()
                         }),
-                        "put_object" => executor.put_object(&spec_json, vec![]).await,
+                        "put_object" => {
+                            let spec_value: serde_json::Value =
+                                serde_json::from_str(&spec_json).map_err(|err| {
+                                    tonic::Status::invalid_argument(format!(
+                                        "put_object spec_json must be valid JSON: {err}"
+                                    ))
+                                })?;
+                            let bytes =
+                                crate::runtime::executor_utils::object_bytes_from_json(&spec_value)?;
+                            executor.put_object(&spec_json, bytes).await
+                        }
                         other => Err(tonic::Status::invalid_argument(format!(
                             "unknown operation '{other}'; allowed: ping, probe, ensure_resource, drop_resource, list_resources, query, mutate, transaction, search, get_object, put_object"
                         ))),
@@ -466,16 +561,6 @@ impl DataBrokerService {
             breaker_instance.as_deref(),
             result.is_ok(),
         );
-        let response = match result {
-            Ok(result_json) => GenericDispatchResponse {
-                backend: req.backend,
-                operation: req.operation,
-                result_json,
-                ..Default::default()
-            },
-            Err(err) => return self.record_grpc("GenericDispatch", started, Err(err)),
-        };
-        self.record_grpc("GenericDispatch", started, Ok(Response::new(response)))
-            .map(|response| self.with_catalog_response_headers(response, &response_context))
+        result
     }
 }

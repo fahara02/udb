@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package udb.core.tenant.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/types.proto";
+import "udb/core/tenant/entity/v1/enums.proto";
+
+option csharp_namespace = "udb.core.Tenant.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/tenant/entity/v1;tenantv1";
+option java_package = "com.udb.core.tenant.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Tenant\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Tenant\\Entity\\V1";
+
+// Tenant (FR-016)
+message Tenant {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "tenants"
+    schema_name: "udb_tenant"
+    migration_order: 1
+    is_table: true
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "tenant_self_or_platform"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_tenants_parent_status"
+      index_type: "BTREE"
+      columns: "parent_tenant_id"
+      columns: "status"
+    }
+    cdc_topic: "udb.tenant.tenants.cdc"
+    required_scope: "tenant:read"
+    comment: "Multi-tenancy support for organizations, workspaces, accounts, and projects"
+    sql_artifacts: {
+      name: "touch_updated_at_function"
+      backend: "postgres"
+      phase: "before_triggers"
+      sql:
+        "CREATE OR REPLACE FUNCTION udb_tenant.touch_updated_at()\n"
+        "RETURNS trigger\n"
+        "LANGUAGE plpgsql\n"
+        "AS $$\n"
+        "BEGIN\n"
+        "  NEW.updated_at = CURRENT_TIMESTAMP;\n"
+        "  RETURN NEW;\n"
+        "END;\n"
+        "$$;"
+    }
+    triggers: {
+      trigger_name: "trg_tenants_touch_updated_at"
+      timing: "BEFORE"
+      event: "UPDATE"
+      function_name: "udb_tenant.touch_updated_at()"
+      for_each: "ROW"
+    }
+  };
+
+  string tenant_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  // @inject_tag: gorm:"primaryKey;column:tenant_id;not null"
+
+  string code = 2 [(udb.core.common.v1.pg_column) = { column_name: "code" sql_type: "VARCHAR(50)" not_null: true unique: true index: { index_name: "idx_tenants_code_unique" index_type: "BTREE" unique: true } }];
+  // @inject_tag: gorm:"column:code;not null"
+
+  string name = 3 [(udb.core.common.v1.pg_column) = { column_name: "name" sql_type: "VARCHAR(255)" not_null: true }];
+  // @inject_tag: gorm:"column:name;not null"
+
+  TenantType type = 4 [(udb.core.common.v1.pg_column) = { column_name: "type" sql_type: "VARCHAR(20)" not_null: true }];
+  // @inject_tag: gorm:"column:type;not null;serializer:proto_enum"
+
+  TenantStatus status = 5 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'ACTIVE'" index: { index_name: "idx_tenants_status" index_type: "BTREE" } }];
+  // @inject_tag: gorm:"column:status;not null;serializer:proto_enum"
+
+  string parent_tenant_id = 6 [(udb.core.common.v1.pg_column) = { column_name: "parent_tenant_id" sql_type: "UUID" foreign_key: { references_table: "tenants" references_column: "tenant_id" references_schema: "udb_tenant" on_delete: REFERENTIAL_ACTION_SET_NULL } comment: "For hierarchical tenants" }];
+  // @inject_tag: gorm:"column:parent_tenant_id"
+
+  string config = 7 [(udb.core.common.v1.pg_column) = { column_name: "config" sql_type: "JSONB" is_json: true comment: "Tenant-specific configuration" }];
+  // @inject_tag: gorm:"column:config"
+
+  string branding = 8 [(udb.core.common.v1.pg_column) = { column_name: "branding" sql_type: "JSONB" is_json: true comment: "Logo, colors, etc." }];
+  // @inject_tag: gorm:"column:branding"
+
+  udb.core.common.v1.AuditInfo audit_info = 9 [(udb.core.common.v1.pg_column) = { column_name: "audit_info" sql_type: "JSONB" not_null: true default_value: "'{}'::jsonb" is_json: true comment: "Audit trail stored as JSON" }];
+  // @inject_tag: gorm:"column:audit_info;not null"
+  google.protobuf.Timestamp deleted_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" comment: "Soft delete timestamp" }];
+  string deleted_by = 11 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" comment: "Soft delete actor" }];
+}

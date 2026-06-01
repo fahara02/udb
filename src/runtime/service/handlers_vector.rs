@@ -158,24 +158,44 @@ impl DataBrokerService {
         &self,
         request: Request<tonic::Streaming<VectorUpsertRequest>>,
     ) -> Result<Response<ResponseStream<MutationResponse>>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("VectorBatchUpsert", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "VectorBatchUpsert").await {
-            return self.record_grpc("VectorBatchUpsert", started, Err(err));
-        }
+        let (started, security) = authorized_call!(self, request, "VectorBatchUpsert");
         let metadata_context = security.request_context();
         let response_context = metadata_context.clone();
-        let manifest = (*self.catalog.active_for(&security.project_id).manifest).clone();
+        // Arc::clone the active manifest into the stream instead of deep-copying
+        // the whole CatalogManifest (matches the data batch handlers) — #137.
+        let manifest = self
+            .catalog
+            .active_for(&security.project_id)
+            .manifest
+            .clone();
         let runtime = self.runtime_snapshot().clone();
         let mut stream = request.into_inner();
         let metrics = self.metrics.clone();
         let channels = self.runtime_snapshot().channels().clone();
+        let security_for_stream = security.clone();
+        // #112: per-item authorization — the batch grant covered only
+        // "VectorBatchUpsert", not each streamed item's target collection.
+        let abac_v2 = self
+            .abac_v2_override
+            .unwrap_or_else(super::authz_v2_enabled);
+        let abac_snapshot = self.current_abac_snapshot();
+        let abac_policies = self.abac_policies.clone();
+        let abac_default_allow = self.abac_default_allow;
         let out = async_stream::try_stream! {
             while let Some(item) = stream.message().await? {
                 metrics.inc_vector_op(&item.collection, "batch_upsert");
+                // #112: authorize THIS item's collection + stamp its decision id.
+                let item_decision_id = DataBrokerService::authorize_message_item(
+                    abac_v2,
+                    &abac_snapshot,
+                    &abac_policies,
+                    abac_default_allow,
+                    &security_for_stream,
+                    &item.collection,
+                    "VectorUpsert",
+                )?;
+                let item_context =
+                    security_for_stream.request_context_with_decision(&item_decision_id);
                 let op = crate::runtime::channels::OperationChannel::Vector;
                 let project = non_empty(&metadata_context.project_id).unwrap_or("default");
                 let tenant_hash = tenant_hash_label(&metadata_context.tenant_id);
@@ -204,7 +224,7 @@ impl DataBrokerService {
 
                 let res = tokio::time::timeout(
                     Duration::from_secs(channels.deadline_secs(crate::runtime::channels::OperationChannel::Vector, Some("qdrant"))),
-                    runtime.vector_upsert(&manifest, item, metadata_context.clone())
+                    runtime.vector_upsert(&manifest, item, item_context)
                 ).await;
 
                 metrics.dec_channel_inflight("vector");

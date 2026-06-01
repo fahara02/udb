@@ -39,8 +39,8 @@ use super::s3::S3Executor;
 #[cfg(feature = "weaviate")]
 use super::weaviate::WeaviateExecutor;
 use super::{
-    BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
-    ResourceAdminExecutor, SearchExecutor,
+    BackendExecutor, BackendHealth, BackendProbe, ExecutorByteStream, MutationExecutor,
+    ObjectExecutor, QueryExecutor, ResourceAdminExecutor, SearchExecutor,
 };
 use crate::backend::BackendKind;
 use crate::runtime::core::DataBrokerRuntime;
@@ -135,6 +135,10 @@ impl QueryExecutor for DispatchExecutor {
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
         on_variant!(self, e => QueryExecutor::query(e, request_json).await)
     }
+
+    async fn query_stream(&self, request_json: &str) -> Result<ExecutorByteStream, tonic::Status> {
+        on_variant!(self, e => QueryExecutor::query_stream(e, request_json).await)
+    }
 }
 
 impl MutationExecutor for DispatchExecutor {
@@ -153,12 +157,21 @@ impl ObjectExecutor for DispatchExecutor {
     async fn get_object(&self, request_json: &str) -> Result<Vec<u8>, tonic::Status> {
         on_variant!(self, e => ObjectExecutor::get_object(e, request_json).await)
     }
+    async fn get_object_stream(
+        &self,
+        request_json: &str,
+    ) -> Result<ExecutorByteStream, tonic::Status> {
+        on_variant!(self, e => ObjectExecutor::get_object_stream(e, request_json).await)
+    }
     async fn put_object(
         &self,
         request_json: &str,
         bytes: Vec<u8>,
     ) -> Result<String, tonic::Status> {
         on_variant!(self, e => ObjectExecutor::put_object(e, request_json, bytes).await)
+    }
+    async fn delete_object(&self, request_json: &str) -> Result<(), tonic::Status> {
+        on_variant!(self, e => ObjectExecutor::delete_object(e, request_json).await)
     }
 }
 
@@ -184,6 +197,23 @@ impl BackendExecutor for DispatchExecutor {
     }
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
         on_variant!(self, e => BackendExecutor::probe(e).await)
+    }
+}
+
+// Item 4: expose the per-backend RequestContext enforcer on the resolved enum so
+// the generic-dispatch path can record each backend's ContextEffect (RLS posture)
+// for the request it just resolved. Delegates to the active variant.
+impl crate::runtime::backend_context::BackendContextEnforcer for DispatchExecutor {
+    fn backend_label(&self) -> &str {
+        use crate::runtime::backend_context::BackendContextEnforcer;
+        on_variant!(self, e => BackendContextEnforcer::backend_label(e))
+    }
+    fn enforce(
+        &self,
+        ctx: &crate::runtime::backend_context::AppliedContext,
+    ) -> crate::runtime::backend_context::ContextEffect {
+        use crate::runtime::backend_context::BackendContextEnforcer;
+        on_variant!(self, e => BackendContextEnforcer::enforce(e, ctx))
     }
 }
 

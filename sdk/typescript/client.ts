@@ -2,6 +2,8 @@ import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 import path from "path";
 
+import { defaultProtoRoot } from "./protoRoot";
+
 export const UDB_PROTOCOL_VERSION = "1.0.0";
 
 export interface UdbMetadata {
@@ -28,7 +30,7 @@ export function metadata(meta: UdbMetadata): grpc.Metadata {
   return headers;
 }
 
-export function dataBrokerClient(target: string, protoRoot = path.resolve(__dirname, "../../proto")): any {
+export function dataBrokerClient(target: string, protoRoot = defaultProtoRoot()): any {
   const protoPath = path.join(protoRoot, "udb/services/v1/data_broker.proto");
   const definition = protoLoader.loadSync(protoPath, {
     keepCase: true,

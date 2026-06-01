@@ -15,10 +15,9 @@
 //! | `udb.mongo_database` | `example` | Database name override |
 //! | `udb.mongo_json_schema` | `true` | Emit `$jsonSchema` validator |
 
+use crate::generation::backend_safety::generated_at_unix;
 use serde_json::{Value as Json, json};
-use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::ast::ProtoSchema;
 use crate::generation::GeneratedArtifact;
 use crate::generation::backend_safety::{
     safe_comment_value, safe_resource_name, store_opt_bool_any, store_opt_i64_any,
@@ -29,10 +28,9 @@ use crate::generation::sql::SqlGenerationConfig;
 
 /// Generate MongoDB collection artifacts from the proto AST.
 pub fn generate_mongodb_artifacts(
-    schemas: &[ProtoSchema],
+    manifest: &CatalogManifest,
     _config: &SqlGenerationConfig,
 ) -> Result<Vec<GeneratedArtifact>, serde_json::Error> {
-    let manifest = CatalogManifest::from_schemas(schemas)?;
     let checksum = &manifest.checksum_sha256;
     let ts = generated_at_unix();
 
@@ -202,13 +200,6 @@ fn safe_mongo_field(value: &str, fallback: &str) -> String {
     } else {
         out
     }
-}
-
-fn generated_at_unix() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or_default()
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

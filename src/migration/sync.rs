@@ -75,6 +75,8 @@ use crate::generation::{
 // `Backend::generate_artifacts` override (U2 step 4) rather than direct imports.
 use crate::migration::diff::diff_manifests;
 
+const ARTIFACT_EXTENSIONS: &[&str] = &["sql", "json", "yaml", "cypher"];
+
 // ── Backend selector ─────────────────────────────────────────────────────────
 
 /// Which backend(s) to sync during a `sync_db_ops` / `sync_all_backends` run.
@@ -94,11 +96,35 @@ pub enum BackendSyncTarget {
     Neo4j,
     /// ClickHouse DDL SQL.
     Clickhouse,
+    /// Any backend known to the plugin inventory / BackendKind parser.
+    Other(crate::backend::BackendKind),
     /// All backends that have at least one relevant `ManifestStore` entry.
     All,
 }
 
 impl BackendSyncTarget {
+    pub fn from_token(token: &str) -> Option<Self> {
+        let token = token.trim();
+        if token.eq_ignore_ascii_case("all") {
+            return Some(Self::All);
+        }
+        let kind = crate::backend::BackendKind::from_token(token).or_else(|| match token {
+            "mongo" => Some(crate::backend::BackendKind::Mongodb),
+            "mssql" => Some(crate::backend::BackendKind::Mssql),
+            _ => None,
+        })?;
+        Some(match kind {
+            crate::backend::BackendKind::Postgres => Self::Postgres,
+            crate::backend::BackendKind::Qdrant => Self::Qdrant,
+            crate::backend::BackendKind::Minio => Self::Minio,
+            crate::backend::BackendKind::Redis => Self::Redis,
+            crate::backend::BackendKind::Mongodb => Self::Mongodb,
+            crate::backend::BackendKind::Neo4j => Self::Neo4j,
+            crate::backend::BackendKind::Clickhouse => Self::Clickhouse,
+            other => Self::Other(other),
+        })
+    }
+
     /// True when this target includes the given backend kind. `All` includes
     /// every backend that has a matching variant; other targets match only
     /// their named kind. Used by `sync_all_backends` to drive the plugin loop.
@@ -113,6 +139,7 @@ impl BackendSyncTarget {
             (Self::Mongodb, K::Mongodb) => true,
             (Self::Neo4j, K::Neo4j) => true,
             (Self::Clickhouse, K::Clickhouse) => true,
+            (Self::Other(target), kind) if target == kind => true,
             _ => false,
         }
     }
@@ -217,23 +244,12 @@ impl DbOpsSyncConfig {
     ///
     /// - `UDB_DB_OPS_ROOT` → `db_ops_root`
     /// - `UDB_DB_OPS_FORCE_BOOTSTRAP=1` → `force_bootstrap`
-    /// - `UDB_DB_OPS_BACKEND` → `backend` (`postgres`, `qdrant`, `minio`, `redis`,
-    ///   `mongodb`, `neo4j`, `clickhouse`, `all`)
+    /// - `UDB_DB_OPS_BACKEND` → `backend` (any `BackendKind::from_token` value or `all`)
     pub fn from_env() -> Self {
-        let backend = match env::var("UDB_DB_OPS_BACKEND")
-            .unwrap_or_default()
-            .to_ascii_lowercase()
-            .as_str()
-        {
-            "qdrant" => BackendSyncTarget::Qdrant,
-            "minio" | "s3" => BackendSyncTarget::Minio,
-            "redis" => BackendSyncTarget::Redis,
-            "mongodb" | "mongo" => BackendSyncTarget::Mongodb,
-            "neo4j" => BackendSyncTarget::Neo4j,
-            "clickhouse" => BackendSyncTarget::Clickhouse,
-            "all" => BackendSyncTarget::All,
-            _ => BackendSyncTarget::Postgres,
-        };
+        let backend = env::var("UDB_DB_OPS_BACKEND")
+            .ok()
+            .and_then(|raw| BackendSyncTarget::from_token(&raw))
+            .unwrap_or(BackendSyncTarget::Postgres);
         Self {
             db_ops_root: env::var("UDB_DB_OPS_ROOT").ok().map(PathBuf::from),
             sql_config: SqlGenerationConfig::default(),
@@ -363,9 +379,19 @@ pub fn sync_all_backends(
             continue;
         }
         let artifacts = plugin
-            .generate_artifacts(schemas, &config.sql_config)
+            .generate_artifacts(&manifest, &config.sql_config)
             .map_err(SyncError::SqlGeneration)?;
         if artifacts.is_empty() {
+            // A backend that advertises schema-migration support but produces no
+            // artifacts has an unimplemented generator — surface it rather than
+            // silently skipping, which reads as "nothing to migrate".
+            if kind.capabilities().supports_schema_migration {
+                tracing::warn!(
+                    backend = %kind.as_str(),
+                    "backend advertises schema-migration support but generated zero artifacts; \
+                     no DDL was synced (generate_artifacts is not implemented for this backend)"
+                );
+            }
             continue;
         }
         let subdir = plugin.sync_subdir();
@@ -461,7 +487,7 @@ fn sync_backend_artifacts(
                         artifact.rel_path
                     ));
                     FileSyncStatus::NoHeader
-                } else if embedded == proto_checksum && content == artifact.content {
+                } else if embedded == proto_checksum {
                     FileSyncStatus::Verified
                 } else {
                     stale_schemas.insert(artifact.schema.clone());
@@ -715,7 +741,11 @@ fn collect_artifacts_filtered(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), 
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(()),
         Err(e) => return Err(SyncError::Io(dir.to_path_buf(), e)),
     };
-    for entry in entries.flatten() {
+    for entry in entries {
+        // Fail closed: a per-entry `read_dir` error must abort the scan, not be
+        // silently dropped by `.flatten()` — otherwise a sync could miss
+        // artifacts and report success (#135).
+        let entry = entry.map_err(|e| SyncError::Io(dir.to_path_buf(), e))?;
         let path = entry.path();
         if path.is_dir() {
             collect_artifacts_filtered(&path, out)?;
@@ -729,7 +759,7 @@ fn collect_artifacts_filtered(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), 
         } else if path
             .extension()
             .and_then(|s| s.to_str())
-            .is_some_and(|ext| matches!(ext, "sql" | "json" | "yaml" | "cypher"))
+            .is_some_and(|ext| ARTIFACT_EXTENSIONS.contains(&ext))
         {
             out.push(path);
         }

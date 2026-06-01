@@ -1,0 +1,39 @@
+from udb.core.notification.entity.v1 import enums_pb2 as _enums_pb2
+from udb.core.notification.entity.v1 import notification_pb2 as _notification_pb2
+from udb.core.notification.entity.v1 import notification_log_pb2 as _notification_log_pb2
+from udb.core.notification.entity.v1 import notification_preference_pb2 as _notification_preference_pb2
+from udb.core.notification.entity.v1 import notification_template_pb2 as _notification_template_pb2
+from google.protobuf import descriptor as _descriptor
+from typing import ClassVar as _ClassVar
+from udb.core.notification.entity.v1.enums_pb2 import NotificationChannel as NotificationChannel
+from udb.core.notification.entity.v1.enums_pb2 import NotificationStatus as NotificationStatus
+from udb.core.notification.entity.v1.enums_pb2 import NotificationType as NotificationType
+from udb.core.notification.entity.v1.enums_pb2 import NotificationPriority as NotificationPriority
+from udb.core.notification.entity.v1.notification_pb2 import Notification as Notification
+from udb.core.notification.entity.v1.notification_log_pb2 import NotificationLog as NotificationLog
+from udb.core.notification.entity.v1.notification_preference_pb2 import NotificationPreference as NotificationPreference
+from udb.core.notification.entity.v1.notification_template_pb2 import NotificationTemplate as NotificationTemplate
+
+DESCRIPTOR: _descriptor.FileDescriptor
+NOTIFICATION_CHANNEL_UNSPECIFIED: _enums_pb2.NotificationChannel
+NOTIFICATION_CHANNEL_EMAIL: _enums_pb2.NotificationChannel
+NOTIFICATION_CHANNEL_SMS: _enums_pb2.NotificationChannel
+NOTIFICATION_CHANNEL_PUSH: _enums_pb2.NotificationChannel
+NOTIFICATION_CHANNEL_IN_APP: _enums_pb2.NotificationChannel
+NOTIFICATION_CHANNEL_WEBHOOK: _enums_pb2.NotificationChannel
+NOTIFICATION_STATUS_UNSPECIFIED: _enums_pb2.NotificationStatus
+NOTIFICATION_STATUS_PENDING: _enums_pb2.NotificationStatus
+NOTIFICATION_STATUS_SENT: _enums_pb2.NotificationStatus
+NOTIFICATION_STATUS_DELIVERED: _enums_pb2.NotificationStatus
+NOTIFICATION_STATUS_FAILED: _enums_pb2.NotificationStatus
+NOTIFICATION_STATUS_SUPPRESSED: _enums_pb2.NotificationStatus
+NOTIFICATION_TYPE_UNSPECIFIED: _enums_pb2.NotificationType
+NOTIFICATION_TYPE_TRANSACTIONAL: _enums_pb2.NotificationType
+NOTIFICATION_TYPE_SYSTEM: _enums_pb2.NotificationType
+NOTIFICATION_TYPE_MARKETING: _enums_pb2.NotificationType
+NOTIFICATION_TYPE_ALERT: _enums_pb2.NotificationType
+NOTIFICATION_PRIORITY_UNSPECIFIED: _enums_pb2.NotificationPriority
+NOTIFICATION_PRIORITY_LOW: _enums_pb2.NotificationPriority
+NOTIFICATION_PRIORITY_NORMAL: _enums_pb2.NotificationPriority
+NOTIFICATION_PRIORITY_HIGH: _enums_pb2.NotificationPriority
+NOTIFICATION_PRIORITY_CRITICAL: _enums_pb2.NotificationPriority

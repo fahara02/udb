@@ -12,139 +12,69 @@
 //! `ManifestTable.columns`. Unknown fields surface `CompileError::UnknownField`
 //! before any SQL is emitted.
 
-use std::collections::HashSet;
-
 use crate::backend::BackendKind;
 use crate::generation::ManifestTable;
 use crate::ir::filter::{ComparisonOp, LogicalFilter};
 use crate::ir::operations::{
-    AggregateExpr, AggregateFunc, ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead,
-    LogicalResourceOp, LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
+    ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead, LogicalResourceOp,
+    LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
 };
 use crate::ir::value::LogicalValue;
 
+use super::sql_dialect::{SqlCompiler, SqlDialect};
 use super::{CompileContext, CompileError, CompiledRendering, Compiler};
+
+/// Postgres dialect marker for the generic [`SqlCompiler`]. Captures the
+/// only axes that differ from the other relational backends: `"x"` quoting,
+/// `$N` placeholders, `FALSE` false-literal, and the `|| … ESCAPE '\'`
+/// LIKE-concat idiom.
+struct Postgres;
+
+impl SqlDialect for Postgres {
+    fn backend() -> BackendKind {
+        BackendKind::Postgres
+    }
+    fn quote(ident: &str) -> String {
+        format!("\"{ident}\"")
+    }
+    fn placeholder(index: usize) -> String {
+        format!("${index}")
+    }
+    fn false_literal() -> &'static str {
+        "FALSE"
+    }
+    fn having_true_literal() -> &'static str {
+        "TRUE"
+    }
+    fn having_false_literal() -> &'static str {
+        "FALSE"
+    }
+    /// Some operators want the value transformed before binding (`Contains` →
+    /// `'%' || $N || '%'`). Returns the rendered RHS using `placeholder`.
+    ///
+    /// For substring matches the bound user value has its LIKE metacharacters
+    /// (`\`, `%`, `_`) escaped in-SQL via `replace()` and the predicate is
+    /// closed with `ESCAPE '\'`, so a value like `50%` matches the literal text
+    /// rather than over-matching every row. (Backslashes are doubled first,
+    /// then `%`/`_` prefixed, relying on `standard_conforming_strings=on`.)
+    fn wrap_value_for_op(op: ComparisonOp, placeholder: &str) -> String {
+        let escaped = format!(
+            "replace(replace(replace({placeholder}, '\\', '\\\\'), '%', '\\%'), '_', '\\_')"
+        );
+        match op {
+            ComparisonOp::Contains => format!("'%' || {escaped} || '%' ESCAPE '\\'"),
+            ComparisonOp::StartsWith => format!("{escaped} || '%' ESCAPE '\\'"),
+            ComparisonOp::EndsWith => format!("'%' || {escaped} ESCAPE '\\'"),
+            _ => placeholder.to_string(),
+        }
+    }
+}
+
+type Pg = SqlCompiler<Postgres>;
 
 /// Postgres / postgres-compatible SQL compiler.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct PostgresCompiler;
-
-impl PostgresCompiler {
-    fn resolve_table<'a>(
-        &self,
-        op_message: &str,
-        ctx: &'a CompileContext<'_>,
-    ) -> Result<&'a ManifestTable, CompileError> {
-        crate::broker::table_for_message(ctx.manifest, op_message).ok_or_else(|| {
-            CompileError::UnknownMessageType {
-                message_type: op_message.to_string(),
-            }
-        })
-    }
-
-    /// Map an IR field name to the manifest column name.
-    fn column_for<'a>(
-        &self,
-        table: &'a ManifestTable,
-        field: &str,
-        message_type: &str,
-    ) -> Result<&'a str, CompileError> {
-        table
-            .columns
-            .iter()
-            .find(|c| c.field_name.eq_ignore_ascii_case(field) || c.column_name == field)
-            .map(|c| c.column_name.as_str())
-            .ok_or_else(|| CompileError::UnknownField {
-                message_type: message_type.to_string(),
-                field: field.to_string(),
-            })
-    }
-
-    /// Render the `WHERE ...` body. Returns `None` for empty filters so the
-    /// caller can decide whether to emit `WHERE` at all.
-    fn render_where(
-        &self,
-        filter: &LogicalFilter,
-        table: &ManifestTable,
-        message_type: &str,
-        params: &mut Vec<LogicalValue>,
-    ) -> Result<Option<String>, CompileError> {
-        match filter {
-            LogicalFilter::And(clauses) if clauses.is_empty() => Ok(None),
-            LogicalFilter::Or(clauses) if clauses.is_empty() => Ok(Some("FALSE".to_string())),
-            _ => Ok(Some(self.render_filter(
-                filter,
-                table,
-                message_type,
-                params,
-            )?)),
-        }
-    }
-
-    /// Render a filter expression. Always non-empty; callers must dispatch
-    /// to `render_where` if they want to handle the empty-filter case.
-    fn render_filter(
-        &self,
-        filter: &LogicalFilter,
-        table: &ManifestTable,
-        message_type: &str,
-        params: &mut Vec<LogicalValue>,
-    ) -> Result<String, CompileError> {
-        match filter {
-            LogicalFilter::And(clauses) => {
-                let parts = clauses
-                    .iter()
-                    .map(|c| self.render_filter(c, table, message_type, params))
-                    .collect::<Result<Vec<_>, _>>()?;
-                Ok(format!("({})", parts.join(" AND ")))
-            }
-            LogicalFilter::Or(clauses) => {
-                let parts = clauses
-                    .iter()
-                    .map(|c| self.render_filter(c, table, message_type, params))
-                    .collect::<Result<Vec<_>, _>>()?;
-                Ok(format!("({})", parts.join(" OR ")))
-            }
-            LogicalFilter::Not(inner) => {
-                let rendered = self.render_filter(inner, table, message_type, params)?;
-                Ok(format!("(NOT {rendered})"))
-            }
-            LogicalFilter::Comparison { field, op, value } => {
-                let column = self.column_for(table, field, message_type)?;
-                // SQL surprise: `col = NULL` is always UNKNOWN. Reject it
-                // here so callers explicitly use `IsNull`.
-                if value.is_null() {
-                    return Err(CompileError::Malformed {
-                        reason: format!(
-                            "comparison with NULL on field '{field}' must use IsNull, not {}",
-                            op.token()
-                        ),
-                    });
-                }
-                let placeholder = push_param(params, value.clone());
-                let sql_op = sql_op_for(*op);
-                let rhs = wrap_value_for_op(*op, &placeholder);
-                Ok(format!("\"{column}\" {sql_op} {rhs}"))
-            }
-            LogicalFilter::IsNull(field) => {
-                let column = self.column_for(table, field, message_type)?;
-                Ok(format!("\"{column}\" IS NULL"))
-            }
-            LogicalFilter::InList { field, values } => {
-                if values.is_empty() {
-                    return Ok("FALSE".to_string());
-                }
-                let column = self.column_for(table, field, message_type)?;
-                let placeholders = values
-                    .iter()
-                    .map(|v| push_param(params, v.clone()))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                Ok(format!("\"{column}\" IN ({placeholders})"))
-            }
-        }
-    }
-}
 
 impl Compiler for PostgresCompiler {
     fn kind(&self) -> BackendKind {
@@ -156,7 +86,7 @@ impl Compiler for PostgresCompiler {
         op: &LogicalRead,
         ctx: &CompileContext<'_>,
     ) -> Result<CompiledRendering, CompileError> {
-        let table = self.resolve_table(&op.message_type, ctx)?;
+        let table = Pg::resolve_table(&op.message_type, ctx.manifest)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
         // Projection.
@@ -165,7 +95,7 @@ impl Compiler for PostgresCompiler {
                 .fields
                 .iter()
                 .map(|f| {
-                    let col = self.column_for(table, f, &op.message_type)?;
+                    let col = Pg::column_for(table, f, &op.message_type)?;
                     Ok(format!("\"{col}\""))
                 })
                 .collect::<Result<Vec<_>, CompileError>>()?
@@ -181,7 +111,7 @@ impl Compiler for PostgresCompiler {
 
         // WHERE.
         if let Some(filter) = &op.filter
-            && let Some(body) = self.render_where(filter, table, &op.message_type, &mut params)?
+            && let Some(body) = Pg::render_where(filter, table, &op.message_type, &mut params)?
         {
             sql.push_str(&format!(" WHERE {body}"));
         }
@@ -192,7 +122,7 @@ impl Compiler for PostgresCompiler {
                 .sort
                 .iter()
                 .map(|s| {
-                    let col = self.column_for(table, &s.field, &op.message_type)?;
+                    let col = Pg::column_for(table, &s.field, &op.message_type)?;
                     let direction = s.direction.token().to_uppercase();
                     let nulls = match s.nulls {
                         crate::ir::projection::NullOrder::First => " NULLS FIRST",
@@ -240,7 +170,7 @@ impl Compiler for PostgresCompiler {
                 reason: "LogicalWrite::records must be non-empty".into(),
             });
         }
-        let table = self.resolve_table(&op.message_type, ctx)?;
+        let table = Pg::resolve_table(&op.message_type, ctx.manifest)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
         // Use the first record's keys as the column set — every record must
@@ -248,7 +178,7 @@ impl Compiler for PostgresCompiler {
         let first = &op.records[0];
         let columns: Vec<&str> = first
             .keys()
-            .map(|k| self.column_for(table, k, &op.message_type))
+            .map(|k| Pg::column_for(table, k, &op.message_type))
             .collect::<Result<Vec<_>, _>>()?;
         let column_list = columns
             .iter()
@@ -256,8 +186,10 @@ impl Compiler for PostgresCompiler {
             .collect::<Vec<_>>()
             .join(", ");
 
-        // Bind every record's values in column order.
-        let mut value_rows = Vec::with_capacity(op.records.len());
+        // Bind every record's values in column order, writing the VALUES list in a
+        // single pass into one preallocated String — no intermediate per-row
+        // `Vec<String>` and no per-row `format!` allocation (#106).
+        let mut value_rows = String::with_capacity(op.records.len() * columns.len() * 6);
         for (idx, record) in op.records.iter().enumerate() {
             if record.len() != first.len() || !first.keys().all(|k| record.contains_key(k)) {
                 return Err(CompileError::Malformed {
@@ -267,19 +199,24 @@ impl Compiler for PostgresCompiler {
                     ),
                 });
             }
-            let row = first
-                .keys()
-                .map(|k| push_param(&mut params, record[k].clone()))
-                .collect::<Vec<_>>()
-                .join(", ");
-            value_rows.push(format!("({row})"));
+            if idx > 0 {
+                value_rows.push_str(", ");
+            }
+            value_rows.push('(');
+            for (col_idx, k) in first.keys().enumerate() {
+                if col_idx > 0 {
+                    value_rows.push_str(", ");
+                }
+                value_rows.push_str(&Pg::push_param(&mut params, record[k].clone()));
+            }
+            value_rows.push(')');
         }
 
         let mut sql = format!(
             "INSERT INTO \"{schema}\".\"{table}\" ({column_list}) VALUES {values}",
             schema = table.schema,
             table = table.table,
-            values = value_rows.join(", "),
+            values = value_rows,
         );
 
         // ON CONFLICT.
@@ -299,7 +236,7 @@ impl Compiler for PostgresCompiler {
                     .primary_key
                     .iter()
                     .map(|f| {
-                        let c = self.column_for(table, f, &op.message_type)?;
+                        let c = Pg::column_for(table, f, &op.message_type)?;
                         Ok(format!("\"{c}\""))
                     })
                     .collect::<Result<Vec<_>, CompileError>>()?;
@@ -307,7 +244,7 @@ impl Compiler for PostgresCompiler {
                 let target_cols: Vec<&str> = match &op.conflict {
                     ConflictStrategy::Update { fields } => fields
                         .iter()
-                        .map(|f| self.column_for(table, f, &op.message_type))
+                        .map(|f| Pg::column_for(table, f, &op.message_type))
                         .collect::<Result<Vec<_>, _>>()?,
                     ConflictStrategy::Replace => columns.clone(),
                     _ => unreachable!(),
@@ -330,7 +267,7 @@ impl Compiler for PostgresCompiler {
                 .return_fields
                 .iter()
                 .map(|f| {
-                    let c = self.column_for(table, f, &op.message_type)?;
+                    let c = Pg::column_for(table, f, &op.message_type)?;
                     Ok(format!("\"{c}\""))
                 })
                 .collect::<Result<Vec<_>, CompileError>>()?;
@@ -349,16 +286,16 @@ impl Compiler for PostgresCompiler {
         op: &LogicalDelete,
         ctx: &CompileContext<'_>,
     ) -> Result<CompiledRendering, CompileError> {
-        let table = self.resolve_table(&op.message_type, ctx)?;
+        let table = Pg::resolve_table(&op.message_type, ctx.manifest)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
         // DELETE without a real WHERE is forbidden by the IR contract.
-        let body = self
-            .render_where(&op.filter, table, &op.message_type, &mut params)?
-            .ok_or_else(|| CompileError::Malformed {
+        let body = Pg::render_where(&op.filter, table, &op.message_type, &mut params)?.ok_or_else(
+            || CompileError::Malformed {
                 reason: "LogicalDelete::filter cannot be empty; use Drop resource to truncate"
                     .into(),
-            })?;
+            },
+        )?;
         if body == "FALSE" {
             // Empty Or — refuse rather than emit a guaranteed-no-op DELETE
             // that callers might mistake for a successful one.
@@ -377,7 +314,7 @@ impl Compiler for PostgresCompiler {
                 .return_fields
                 .iter()
                 .map(|f| {
-                    let c = self.column_for(table, f, &op.message_type)?;
+                    let c = Pg::column_for(table, f, &op.message_type)?;
                     Ok(format!("\"{c}\""))
                 })
                 .collect::<Result<Vec<_>, CompileError>>()?;
@@ -405,16 +342,17 @@ impl Compiler for PostgresCompiler {
             });
         }
         // Aliases must be unique so the result row has unambiguous keys.
-        let mut seen_aliases: HashSet<&str> = HashSet::new();
-        for agg in &op.aggregates {
-            if !seen_aliases.insert(agg.alias.as_str()) {
-                return Err(CompileError::Malformed {
-                    reason: format!("duplicate aggregate alias '{}'", agg.alias),
-                });
-            }
-        }
+        super::util::validate_aggregate_aliases(&op.aggregates)?;
 
-        let table = self.resolve_table(&op.message_type, ctx)?;
+        let table = Pg::resolve_table(&op.message_type, ctx.manifest)?;
+        // #151: a GROUP BY column resolving to the same name as an aggregate
+        // alias would emit two identically-keyed result columns. Reject it.
+        let group_names: Vec<&str> = op
+            .group_by
+            .iter()
+            .map(|f| Pg::column_for(table, f, &op.message_type))
+            .collect::<Result<Vec<_>, _>>()?;
+        super::util::validate_no_groupby_alias_collision(&group_names, &op.aggregates)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
         // Render every aggregate expression. The group-by columns come
@@ -426,7 +364,7 @@ impl Compiler for PostgresCompiler {
             .group_by
             .iter()
             .map(|f| {
-                let col = self.column_for(table, f, &op.message_type)?;
+                let col = Pg::column_for(table, f, &op.message_type)?;
                 Ok::<_, CompileError>(format!("\"{col}\""))
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -437,7 +375,7 @@ impl Compiler for PostgresCompiler {
             select_parts.push(col.clone());
         }
         for agg in &op.aggregates {
-            select_parts.push(render_aggregate(agg, table, &op.message_type)?);
+            select_parts.push(Pg::render_aggregate(agg, table, &op.message_type)?);
         }
         let mut sql = format!(
             "SELECT {sel} FROM \"{schema}\".\"{table}\"",
@@ -449,7 +387,7 @@ impl Compiler for PostgresCompiler {
         // WHERE — applied before grouping, so it references manifest
         // columns just like a normal read.
         if let Some(filter) = &op.filter
-            && let Some(body) = self.render_where(filter, table, &op.message_type, &mut params)?
+            && let Some(body) = Pg::render_where(filter, table, &op.message_type, &mut params)?
         {
             sql.push_str(&format!(" WHERE {body}"));
         }
@@ -464,7 +402,7 @@ impl Compiler for PostgresCompiler {
         // Render via a small dedicated walker so we don't accidentally
         // route through `column_for` (which would reject the alias).
         if let Some(having) = &op.having {
-            let body = render_having(having, op, &mut params)?;
+            let body = Pg::render_having(having, op, table, &mut params)?;
             sql.push_str(&format!(" HAVING {body}"));
         }
 
@@ -477,7 +415,7 @@ impl Compiler for PostgresCompiler {
                 .sort
                 .iter()
                 .map(|s| {
-                    let column_token = resolve_sort_field(s.field.as_str(), op, table)?;
+                    let column_token = Pg::resolve_sort_field(s.field.as_str(), op, table)?;
                     let direction = s.direction.token().to_uppercase();
                     let nulls = match s.nulls {
                         crate::ir::projection::NullOrder::First => " NULLS FIRST",
@@ -524,7 +462,7 @@ impl Compiler for PostgresCompiler {
         // `<->` L2, `<#>` inner product), tsvector for lexical text.
         // Convention: pgvector column is `_vector`, tsvector column is
         // `_search_tsv` (matches what the migration generator emits).
-        let table = self.resolve_table(&op.message_type, ctx)?;
+        let table = Pg::resolve_table(&op.message_type, ctx.manifest)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
         let has_vec_col = table
@@ -555,7 +493,7 @@ impl Compiler for PostgresCompiler {
                     .collect::<Vec<_>>()
                     .join(",")
             );
-            push_param(&mut params, LogicalValue::String(literal));
+            Pg::push_param(&mut params, LogicalValue::String(literal));
             let mut sql = format!(
                 "SELECT *, (\"_vector\" <=> $1::vector) AS _score FROM \"{schema}\".\"{table}\"",
                 schema = table.schema,
@@ -565,7 +503,7 @@ impl Compiler for PostgresCompiler {
             if let Some(threshold) = op.score_threshold {
                 // pgvector returns distance; lower = closer. Convert
                 // threshold (caller's "min similarity") to "max distance".
-                push_param(&mut params, LogicalValue::Float((1.0 - threshold) as f64));
+                Pg::push_param(&mut params, LogicalValue::Float((1.0 - threshold) as f64));
                 where_parts.push(format!("(\"_vector\" <=> $1::vector) <= ${}", params.len()));
             }
             if op.require_hybrid {
@@ -583,15 +521,14 @@ impl Compiler for PostgresCompiler {
                     });
                 }
                 let text = op.text_query.as_deref().unwrap();
-                push_param(&mut params, LogicalValue::String(text.to_string()));
+                Pg::push_param(&mut params, LogicalValue::String(text.to_string()));
                 where_parts.push(format!(
                     "\"_search_tsv\" @@ plainto_tsquery(${})",
                     params.len()
                 ));
             }
             if let Some(filter) = &op.filter
-                && let Some(body) =
-                    self.render_where(filter, table, &op.message_type, &mut params)?
+                && let Some(body) = Pg::render_where(filter, table, &op.message_type, &mut params)?
             {
                 where_parts.push(body);
             }
@@ -629,7 +566,7 @@ impl Compiler for PostgresCompiler {
                 ),
             });
         }
-        push_param(&mut params, LogicalValue::String(text.to_string()));
+        Pg::push_param(&mut params, LogicalValue::String(text.to_string()));
         let mut sql = format!(
             "SELECT *, ts_rank_cd(\"_search_tsv\", plainto_tsquery($1)) AS _score \
              FROM \"{schema}\".\"{table}\" \
@@ -638,14 +575,14 @@ impl Compiler for PostgresCompiler {
             table = table.table,
         );
         if let Some(threshold) = op.score_threshold {
-            push_param(&mut params, LogicalValue::Float(threshold as f64));
+            Pg::push_param(&mut params, LogicalValue::Float(threshold as f64));
             sql.push_str(&format!(
                 " AND ts_rank_cd(\"_search_tsv\", plainto_tsquery($1)) >= ${}",
                 params.len()
             ));
         }
         if let Some(filter) = &op.filter
-            && let Some(body) = self.render_where(filter, table, &op.message_type, &mut params)?
+            && let Some(body) = Pg::render_where(filter, table, &op.message_type, &mut params)?
         {
             sql.push_str(&format!(" AND {body}"));
         }
@@ -809,203 +746,6 @@ impl Compiler for PostgresCompiler {
             statement: sql,
             params: Vec::new(),
         })
-    }
-}
-
-/// Render one aggregate expression as `FUNC(arg) AS "alias"`. Picks the
-/// right `DISTINCT` / `*` shape depending on the function.
-fn render_aggregate(
-    agg: &AggregateExpr,
-    table: &ManifestTable,
-    message_type: &str,
-) -> Result<String, CompileError> {
-    let token = agg.func.sql_token();
-    let body = match agg.func {
-        AggregateFunc::Count if agg.field == "*" => "*".to_string(),
-        AggregateFunc::Count => {
-            let col = resolve_column(table, &agg.field, message_type)?;
-            format!("\"{col}\"")
-        }
-        AggregateFunc::CountDistinct => {
-            if agg.field == "*" {
-                return Err(CompileError::Malformed {
-                    reason: "COUNT(DISTINCT *) is not allowed; specify a field".into(),
-                });
-            }
-            let col = resolve_column(table, &agg.field, message_type)?;
-            format!("DISTINCT \"{col}\"")
-        }
-        AggregateFunc::Sum | AggregateFunc::Avg | AggregateFunc::Min | AggregateFunc::Max => {
-            if agg.field == "*" {
-                return Err(CompileError::Malformed {
-                    reason: format!("{} requires a field name, not '*'", agg.func.sql_token()),
-                });
-            }
-            let col = resolve_column(table, &agg.field, message_type)?;
-            format!("\"{col}\"")
-        }
-    };
-    Ok(format!("{token}({body}) AS \"{}\"", agg.alias))
-}
-
-/// Resolve a field-or-alias for ORDER BY: aggregate aliases win, then
-/// group-by manifest fields, then a final fallback to a raw manifest
-/// column (rejected — sorting by a non-grouped column violates SQL's
-/// single-group rule).
-fn resolve_sort_field(
-    field: &str,
-    op: &LogicalAggregate,
-    table: &ManifestTable,
-) -> Result<String, CompileError> {
-    // Aggregate alias — emit as a quoted identifier.
-    if op.aggregates.iter().any(|a| a.alias == field) {
-        return Ok(format!("\"{field}\""));
-    }
-    // Group-by column — emit the resolved manifest column name.
-    if op.group_by.iter().any(|f| f == field) {
-        let col = resolve_column(table, field, &op.message_type)?;
-        return Ok(format!("\"{col}\""));
-    }
-    // Anything else is invalid in an aggregated query.
-    Err(CompileError::Malformed {
-        reason: format!(
-            "ORDER BY field '{field}' is neither an aggregate alias nor a GROUP BY column; \
-             aggregated queries can only sort by grouped or computed values"
-        ),
-    })
-}
-
-/// Render a HAVING filter — like `render_filter` but field references
-/// resolve to aggregate aliases or group-by manifest columns rather than
-/// raw columns. Comparison/IsNull only — Boolean combinators recurse.
-fn render_having(
-    filter: &LogicalFilter,
-    op: &LogicalAggregate,
-    params: &mut Vec<LogicalValue>,
-) -> Result<String, CompileError> {
-    match filter {
-        LogicalFilter::And(clauses) if clauses.is_empty() => Ok("TRUE".to_string()),
-        LogicalFilter::Or(clauses) if clauses.is_empty() => Ok("FALSE".to_string()),
-        LogicalFilter::And(clauses) => {
-            let parts = clauses
-                .iter()
-                .map(|c| render_having(c, op, params))
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(format!("({})", parts.join(" AND ")))
-        }
-        LogicalFilter::Or(clauses) => {
-            let parts = clauses
-                .iter()
-                .map(|c| render_having(c, op, params))
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(format!("({})", parts.join(" OR ")))
-        }
-        LogicalFilter::Not(inner) => {
-            let rendered = render_having(inner, op, params)?;
-            Ok(format!("(NOT {rendered})"))
-        }
-        LogicalFilter::Comparison {
-            field,
-            op: cmp,
-            value,
-        } => {
-            if value.is_null() {
-                return Err(CompileError::Malformed {
-                    reason: format!(
-                        "HAVING comparison with NULL on '{field}' must use IsNull, not {}",
-                        cmp.token()
-                    ),
-                });
-            }
-            let token = resolve_having_field(field, op)?;
-            let placeholder = push_param(params, value.clone());
-            let sql_op = sql_op_for(*cmp);
-            let rhs = wrap_value_for_op(*cmp, &placeholder);
-            Ok(format!("{token} {sql_op} {rhs}"))
-        }
-        LogicalFilter::IsNull(field) => {
-            let token = resolve_having_field(field, op)?;
-            Ok(format!("{token} IS NULL"))
-        }
-        LogicalFilter::InList { field, values } => {
-            if values.is_empty() {
-                return Ok("FALSE".to_string());
-            }
-            let token = resolve_having_field(field, op)?;
-            let placeholders = values
-                .iter()
-                .map(|v| push_param(params, v.clone()))
-                .collect::<Vec<_>>()
-                .join(", ");
-            Ok(format!("{token} IN ({placeholders})"))
-        }
-    }
-}
-
-fn resolve_having_field(field: &str, op: &LogicalAggregate) -> Result<String, CompileError> {
-    if op.aggregates.iter().any(|a| a.alias == field) {
-        return Ok(format!("\"{field}\""));
-    }
-    if op.group_by.iter().any(|f| f == field) {
-        // Postgres allows referencing the column expression in HAVING,
-        // not the alias, so re-emit the raw column.
-        return Ok(format!("\"{field}\""));
-    }
-    Err(CompileError::Malformed {
-        reason: format!(
-            "HAVING field '{field}' is neither an aggregate alias nor a GROUP BY column"
-        ),
-    })
-}
-
-/// Standalone column resolver — same logic as `PostgresCompiler::column_for`
-/// but usable from the free functions above (which don't have a `&self`).
-fn resolve_column<'a>(
-    table: &'a ManifestTable,
-    field: &str,
-    message_type: &str,
-) -> Result<&'a str, CompileError> {
-    table
-        .columns
-        .iter()
-        .find(|c| c.field_name.eq_ignore_ascii_case(field) || c.column_name == field)
-        .map(|c| c.column_name.as_str())
-        .ok_or_else(|| CompileError::UnknownField {
-            message_type: message_type.to_string(),
-            field: field.to_string(),
-        })
-}
-
-/// Push a parameter and return the `$N` placeholder for it.
-fn push_param(params: &mut Vec<LogicalValue>, v: LogicalValue) -> String {
-    params.push(v);
-    format!("${}", params.len())
-}
-
-fn sql_op_for(op: ComparisonOp) -> &'static str {
-    match op {
-        ComparisonOp::Eq => "=",
-        ComparisonOp::Ne => "<>",
-        ComparisonOp::Lt => "<",
-        ComparisonOp::Le => "<=",
-        ComparisonOp::Gt => ">",
-        ComparisonOp::Ge => ">=",
-        ComparisonOp::Like
-        | ComparisonOp::Contains
-        | ComparisonOp::StartsWith
-        | ComparisonOp::EndsWith => "LIKE",
-        ComparisonOp::ILike => "ILIKE",
-    }
-}
-
-/// Some operators want the value transformed before binding (`Contains` →
-/// `'%' || $N || '%'`). Returns the rendered RHS using `placeholder`.
-fn wrap_value_for_op(op: ComparisonOp, placeholder: &str) -> String {
-    match op {
-        ComparisonOp::Contains => format!("'%' || {placeholder} || '%'"),
-        ComparisonOp::StartsWith => format!("{placeholder} || '%'"),
-        ComparisonOp::EndsWith => format!("'%' || {placeholder}"),
-        _ => placeholder.to_string(),
     }
 }
 

@@ -2,13 +2,90 @@
 use super::*;
 
 pub(crate) fn output_json<T: Serialize>(value: &T, label: &str) {
-    match serde_json::to_string_pretty(value) {
-        Ok(json) => println!("{json}"),
+    use std::io::Write;
+    let mut value = match serde_json::to_value(value) {
+        Ok(value) => value,
         Err(err) => {
             eprintln!("failed to serialize {label} JSON: {err}");
             process::exit(1);
         }
+    };
+    redact_sensitive_json(&mut value);
+    // #216: stream the pretty JSON straight into a buffered stdout handle
+    // instead of building a throwaway `String` per call.
+    let stdout = std::io::stdout();
+    let mut writer = std::io::BufWriter::new(stdout.lock());
+    if serde_json::to_writer_pretty(&mut writer, &value)
+        .map_err(|e| e.to_string())
+        .and_then(|()| writeln!(writer).map_err(|e| e.to_string()))
+        .and_then(|()| writer.flush().map_err(|e| e.to_string()))
+        .is_err()
+    {
+        eprintln!("failed to write {label} JSON to stdout");
+        process::exit(1);
     }
+}
+
+pub(crate) fn redact_sensitive_json(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(map) => {
+            // A one-time key reveal (UDB_SHOW_SECRET=1) stamps `secret_revealed:
+            // true` on the result object. In that case the one-time secret in
+            // the SAME object must pass through — otherwise the "store this key
+            // now" note prints but the key itself is redacted and unrecoverable.
+            let revealed = map
+                .get("secret_revealed")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false);
+            for (key, child) in map.iter_mut() {
+                if is_sensitive_output_key(key) && !(revealed && is_revealable_secret_key(key)) {
+                    *child = serde_json::Value::String("[REDACTED]".to_string());
+                } else {
+                    redact_sensitive_json(child);
+                }
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for item in items {
+                redact_sensitive_json(item);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn is_sensitive_output_key(key: &str) -> bool {
+    matches!(
+        key.to_ascii_lowercase().as_str(),
+        "token"
+            | "access_token"
+            | "refresh_token"
+            | "bearer_token"
+            | "session_id"
+            | "session_token"
+            | "csrf_token"
+            | "plain_key"
+            | "api_key"
+            // NOTE: `key_id` / `key_prefix` are public identifiers used in REST
+            // paths and the admin UI, and `key` is the generic identifier field
+            // of an api-key create result — redacting them made the create
+            // output unusable for later get/delete/patch. The actual secret is
+            // `plain_key` / `key_hash`, which remain redacted.
+            | "key_hash"
+            | "secret"
+            | "totp_secret"
+            | "totp_qr_uri"
+            | "otp_id"
+            | "mfa_otp_id"
+            | "operation_id"
+    )
+}
+
+/// Keys whose value is a one-time secret that the user explicitly asked to
+/// reveal (via `secret_revealed: true`). Only these are exempt from redaction
+/// on a reveal — long-lived secrets (`key_hash`, `token`, …) stay redacted.
+fn is_revealable_secret_key(key: &str) -> bool {
+    matches!(key.to_ascii_lowercase().as_str(), "plain_key" | "api_key")
 }
 
 pub(crate) fn print_startup_lifecycle_human(report: &StartupLifecycleReport) {

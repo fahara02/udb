@@ -6,14 +6,7 @@ impl DataBrokerService {
         &self,
         request: Request<tonic::Streaming<Mutation>>,
     ) -> Result<Response<ResponseStream<TxStatus>>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("BeginTx", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "BeginTx").await {
-            return self.record_grpc("BeginTx", started, Err(err));
-        }
+        let (started, security) = authorized_call!(self, request, "BeginTx");
         let manifest = &self.catalog.active_for(&security.project_id).manifest;
         let runtime = self.runtime_snapshot();
         let metadata_context = security.request_context();

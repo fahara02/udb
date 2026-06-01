@@ -118,10 +118,10 @@ pub struct ChannelManager {
     vector_sem: Arc<Semaphore>,
     object_sem: Arc<Semaphore>,
     generic_sem: Arc<Semaphore>,
-    tenant_sems: Arc<Mutex<HashMap<String, Arc<Semaphore>>>>,
-    project_sems: Arc<Mutex<HashMap<String, Arc<Semaphore>>>>,
-    instance_sems: Arc<Mutex<HashMap<String, Arc<Semaphore>>>>,
-    backend_instance_sems: Arc<Mutex<HashMap<String, Arc<Semaphore>>>>,
+    tenant_sems: ScopeSemMap,
+    project_sems: ScopeSemMap,
+    instance_sems: ScopeSemMap,
+    backend_instance_sems: ScopeSemMap,
     fairness: Arc<Mutex<HashMap<String, TokenBucket>>>,
     controls: Arc<Mutex<HashMap<String, ScopeControl>>>,
 
@@ -149,6 +149,42 @@ pub struct ChannelManager {
 struct TokenBucket {
     tokens: f64,
     last_refill: Instant,
+}
+
+/// Per-scope semaphore map value: the semaphore plus its last-access instant
+/// (the latter drives idle-TTL eviction). (#206)
+type ScopeSemMap = Arc<Mutex<HashMap<String, (Arc<Semaphore>, Instant)>>>;
+
+/// Max live entries in any per-scope map before idle/over-cap eviction kicks in.
+const SCOPE_MAP_MAX_ENTRIES: usize = 10_000;
+/// Entries idle longer than this are evicted on the next eviction sweep.
+const SCOPE_MAP_IDLE_TTL: std::time::Duration = std::time::Duration::from_secs(3600);
+
+/// Bound a per-scope map (#206/#211): evict idle (> `ttl`) entries, then the
+/// oldest entries until below `cap`. Lazy — only scans once the map has reached
+/// `cap`, so the common small-map path stays O(1). `last` reads each value's
+/// last-access instant (the sidecar `Instant` for semaphores, `last_refill`
+/// for token buckets, the staged-at instant for catalogs).
+fn evict_scope_map<V>(
+    map: &mut HashMap<String, V>,
+    cap: usize,
+    ttl: std::time::Duration,
+    last: impl Fn(&V) -> Instant,
+) {
+    if map.len() < cap {
+        return;
+    }
+    let now = Instant::now();
+    map.retain(|_, v| now.saturating_duration_since(last(v)) < ttl);
+    if map.len() >= cap {
+        let mut ages: Vec<(String, Instant)> =
+            map.iter().map(|(k, v)| (k.clone(), last(v))).collect();
+        ages.sort_by_key(|(_, t)| *t);
+        let to_remove = map.len() + 1 - cap;
+        for (k, _) in ages.into_iter().take(to_remove) {
+            map.remove(&k);
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -526,17 +562,21 @@ impl ChannelManager {
         }
     }
 
-    fn scoped_sem(
-        &self,
-        map: &Arc<Mutex<HashMap<String, Arc<Semaphore>>>>,
-        key: String,
-        limit: usize,
-    ) -> Arc<Semaphore> {
+    fn scoped_sem(&self, map: &ScopeSemMap, key: String, limit: usize) -> Arc<Semaphore> {
         let mut guard = map.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-        guard
+        // #206: bound the map before inserting a new scope's semaphore.
+        evict_scope_map(
+            &mut guard,
+            SCOPE_MAP_MAX_ENTRIES,
+            SCOPE_MAP_IDLE_TTL,
+            |(_, t)| *t,
+        );
+        let now = Instant::now();
+        let entry = guard
             .entry(key)
-            .or_insert_with(|| Arc::new(Semaphore::new(limit)))
-            .clone()
+            .or_insert_with(|| (Arc::new(Semaphore::new(limit)), now));
+        entry.1 = now; // touch last-access for idle-TTL tracking
+        Arc::clone(&entry.0)
     }
 
     fn tenant_limit(&self, op: OperationChannel, tenant: &str) -> usize {
@@ -729,6 +769,14 @@ impl ChannelManager {
             .fairness
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
+        // #206: bound the fairness map (token buckets carry their own
+        // `last_refill` instant, which doubles as the last-access time).
+        evict_scope_map(
+            &mut guard,
+            SCOPE_MAP_MAX_ENTRIES,
+            SCOPE_MAP_IDLE_TTL,
+            |b: &TokenBucket| b.last_refill,
+        );
         let bucket = guard.entry(key).or_insert_with(|| TokenBucket {
             tokens: burst,
             last_refill: Instant::now(),

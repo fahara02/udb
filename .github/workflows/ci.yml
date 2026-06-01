@@ -257,24 +257,32 @@ jobs:
           fetch-depth: 0
       - uses: bufbuild/buf-setup-action@v1
         with:
+          # Pin to the exact buf version that produced the committed
+          # stubs so the drift check below is a real, hard-fail gate
+          # (header re-rendering / whitespace skew across buf versions
+          # is what previously forced a soft-fail).
+          version: 1.65.0
           buf_api_token: ${{ secrets.BUF_TOKEN }}
       - run: buf lint
       - run: buf build
       - name: buf breaking (against origin/main)
         if: github.event_name == 'pull_request'
         run: buf breaking --against ".git#branch=origin/main"
-      - name: Verify committed stubs are current (advisory)
-        # Soft-fail because the CI buf version often differs from
-        # the local one and the diff is just header re-rendering /
-        # newline whitespace. Promote to hard-fail after pinning
-        # buf to an exact version with `bufbuild/buf-setup-action`'s
-        # `version:` input.
-        continue-on-error: true
+      - name: Verify committed stubs are current
+        # `--include-imports` emits the vendored `google/api/*` annotation
+        # stubs alongside the UDB stubs into every SDK's `gen/` tree, so
+        # published SDKs are self-contained (no external googleapis dep).
+        # The committed stubs MUST match this output exactly — drift is a
+        # hard failure: regenerate locally with the same command and commit.
         run: |
-          buf generate
-          if ! git diff --quiet -- sdk/php/gen sdk/go/gen sdk/typescript/gen api; then
-            echo "::warning::Generated stubs differ from CI 'buf generate' output. Likely buf-version drift, not a real source change."
-            git diff --stat -- sdk/php/gen sdk/go/gen sdk/typescript/gen api
+          buf generate --include-imports
+          # Deterministic OpenAPI metadata fixup (title/version/scope) so the
+          # committed swagger matches generation output (TODO_PASS2 #144/#145).
+          node scripts/openapi-postprocess.mjs
+          if ! git diff --quiet -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api; then
+            echo "::error::Committed SDK stubs are stale. Run 'buf generate --include-imports' and commit the result."
+            git diff --stat -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api
+            exit 1
           fi
 
   # ── PHP / Laravel SDK: composer + pest ────────────────────────────
@@ -320,3 +328,125 @@ jobs:
           go-version: '1.22'
       - run: go vet ./...
       - run: go build ./...
+
+  # ── TypeScript SDK: typecheck + build (matches the npm-publish build) ──
+  ts-sdk:
+    name: TypeScript SDK (typecheck + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: sdk/typescript
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build
+
+  # ── C# SDK: build the committed buf gen surface + handwritten client ──
+  csharp-sdk:
+    name: C# SDK (build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: sdk/csharp/Udb.Client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet build -c Release
+
+  # ── Java SDK: compile the committed buf gen surface + handwritten client ──
+  java-sdk:
+    name: Java SDK (compile)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: sdk/java
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - run: mvn -B -ntp compile
+
+  # ── Version consistency: every manifest + protocol constant matches ──
+  # versions.json (the single source of truth). Fails the PR on drift so a
+  # bump in one place can't silently desync the crate, the six SDKs, and the
+  # wire protocol version. See VERSIONING.md / scripts/check-versions.mjs.
+  versions:
+    name: Version consistency
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node scripts/check-versions.mjs
+
+  # ── Native control-plane live tests (Postgres + Kafka + Redis) ────
+  # Brings up the integration compose stack and runs the live-DB tests
+  # for the native authn/authz/apikey/tenant/notification/analytics
+  # services plus the CDC→Kafka outbox pipeline. These are `#[ignore]`d
+  # so the fast `rust` job skips them; this job is the only place they
+  # run, gated on real infrastructure (no in-memory fakes).
+  native-integration:
+    name: Native services (live Postgres + Kafka)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Start integration stack
+        # postgres/kafka/redis/qdrant/minio only — the `udb` and `spark`
+        # services are profile-gated and not needed for the live tests.
+        run: docker compose -f docker-compose.integration.yml up -d --wait postgres kafka redis qdrant minio
+
+      - name: Create native-event Kafka topics
+        # Auto-create is disabled on the broker; the event tests assert on
+        # these exact dot-namespaced topics existing up front.
+        run: |
+          for topic in udb.authn.user.registered.v1 udb.notification.sent.v1; do
+            docker compose -f docker-compose.integration.yml exec -T kafka \
+              /opt/kafka/bin/kafka-topics.sh --create --if-not-exists \
+              --bootstrap-server localhost:9092 \
+              --topic "$topic" --partitions 1 --replication-factor 1
+          done
+
+      - name: Compile native + integration tests
+        run: cargo test --locked --no-run --lib --test integration_tests
+
+      - name: Native service live tests
+        # --test-threads=1: the live tests share Postgres schemas and
+        # serialize their setup; run them serially to avoid cross-talk.
+        env:
+          UDB_LIVE_AUTH_TESTS: "1"
+          UDB_INTEGRATION_PG_DSN: postgres://udb:udb@localhost:55432/udb
+          UDB_INTEGRATION_KAFKA_BROKERS: localhost:59192
+          UDB_INTEGRATION_REDIS_URL: redis://localhost:56379
+        run: cargo test --locked --lib -- --ignored --nocapture --test-threads=1
+
+      - name: Integration harness (CDC, sagas, backends)
+        env:
+          UDB_INTEGRATION_TESTS: "1"
+          UDB_INTEGRATION_PG_DSN: postgres://udb:udb@localhost:55432/udb
+          UDB_INTEGRATION_KAFKA_BROKERS: localhost:59192
+          UDB_INTEGRATION_REDIS_URL: redis://localhost:56379
+          UDB_INTEGRATION_QDRANT_URL: http://localhost:56333
+          UDB_INTEGRATION_MINIO_ENDPOINT: http://localhost:59000
+        run: cargo test --locked --test integration_tests -- --nocapture
+
+      - name: Dump stack logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.integration.yml logs --no-color --tail=200

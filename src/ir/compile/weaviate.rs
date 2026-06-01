@@ -172,23 +172,30 @@ impl WeaviateCompiler {
     }
 
     /// AND the active context (tenant/project) into a where filter.
-    fn and_with_context(&self, user_where: Json, ctx: &CompileContext<'_>) -> Json {
+    fn and_with_context(
+        &self,
+        user_where: Json,
+        table: &ManifestTable,
+        ctx: &CompileContext<'_>,
+    ) -> Json {
         let mut ctx_operands: Vec<Json> = Vec::new();
         if let Some(tid) = ctx.tenant_id
             && !tid.is_empty()
+            && let Some(column) = Some(super::util::tenant_system_field(table))
         {
             ctx_operands.push(json!({
                 "operator": "Equal",
-                "path": ["_tenant_id"],
+                "path": [column],
                 "valueText": tid
             }));
         }
         if let Some(pid) = ctx.project_id
             && !pid.is_empty()
+            && let Some(column) = Some(super::util::project_system_field(table))
         {
             ctx_operands.push(json!({
                 "operator": "Equal",
-                "path": ["_project_id"],
+                "path": [column],
                 "valueText": pid
             }));
         }
@@ -217,7 +224,7 @@ impl Compiler for WeaviateCompiler {
             Some(f) => self.render_where(f, table, &op.message_type)?,
             None => json!({}),
         };
-        let where_clause = self.and_with_context(user_where, ctx);
+        let where_clause = self.and_with_context(user_where, table, ctx);
 
         // Build the GraphQL Get query. We use the GraphQL endpoint
         // because it handles filter + sort + pagination uniformly.
@@ -304,13 +311,15 @@ impl Compiler for WeaviateCompiler {
             // C7/C8: stamp tenant + project.
             if let Some(tid) = ctx.tenant_id
                 && !tid.is_empty()
+                && let Some(column) = Some(super::util::tenant_system_field(table))
             {
-                properties.insert("_tenant_id".into(), json!(tid));
+                properties.insert(column.to_string(), json!(tid));
             }
             if let Some(pid) = ctx.project_id
                 && !pid.is_empty()
+                && let Some(column) = Some(super::util::project_system_field(table))
             {
-                properties.insert("_project_id".into(), json!(pid));
+                properties.insert(column.to_string(), json!(pid));
             }
             let mut body = json!({
                 "class": class,
@@ -340,13 +349,15 @@ impl Compiler for WeaviateCompiler {
             }
             if let Some(tid) = ctx.tenant_id
                 && !tid.is_empty()
+                && let Some(column) = Some(super::util::tenant_system_field(table))
             {
-                properties.insert("_tenant_id".into(), json!(tid));
+                properties.insert(column.to_string(), json!(tid));
             }
             if let Some(pid) = ctx.project_id
                 && !pid.is_empty()
+                && let Some(column) = Some(super::util::project_system_field(table))
             {
-                properties.insert("_project_id".into(), json!(pid));
+                properties.insert(column.to_string(), json!(pid));
             }
             let mut obj = json!({
                 "class": class,
@@ -378,7 +389,7 @@ impl Compiler for WeaviateCompiler {
                 reason: "LogicalDelete::filter cannot be empty".into(),
             });
         }
-        let where_clause = self.and_with_context(user_where, ctx);
+        let where_clause = self.and_with_context(user_where, table, ctx);
         // Weaviate's batch delete shape:
         Ok(CompiledRendering::Json {
             backend: BackendKind::Weaviate,
@@ -402,7 +413,7 @@ impl Compiler for WeaviateCompiler {
             Some(f) => self.render_where(f, table, &op.message_type)?,
             None => json!({}),
         };
-        let where_clause = self.and_with_context(user_where, ctx);
+        let where_clause = self.and_with_context(user_where, table, ctx);
 
         // Build the GraphQL Get query with nearVector / bm25 args.
         let mut args = vec![format!("limit: {}", op.top_k)];

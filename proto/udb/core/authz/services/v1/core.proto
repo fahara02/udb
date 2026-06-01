@@ -1,0 +1,444 @@
+syntax = "proto3";
+
+package udb.core.authz.services.v1;
+
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+import "udb/core/authz/entity/v1/access_decision_audit.proto";
+import "udb/core/authz/entity/v1/enums.proto";
+import "udb/core/authz/entity/v1/policy_rule.proto";
+import "udb/core/authz/entity/v1/role.proto";
+import "udb/core/authz/entity/v1/user_role.proto";
+import "udb/core/common/v1/dto.proto";
+
+option csharp_namespace = "udb.core.Authz.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/services/v1;authzservicev1";
+option java_package = "com.udb.core.authz.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Services\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Services\\V1";
+
+// Authenticated caller claims copied from the UDB auth control plane and kept
+// local so authorization can be used by any project without importing broker
+// service protos.
+message Principal {
+  string principal_id = 1;
+  string subject = 2;
+  string user_id = 3;
+  string service_identity = 4;
+  string tenant_id = 5;
+  string project_id = 6;
+  repeated string scopes = 7;
+  repeated string roles = 8;
+  string provider_id = 9;
+  string auth_method = 10;
+  int64 expires_at_unix = 11;
+  string account_kind = 12;
+  string domain = 13;
+  map<string, string> attributes = 14;
+}
+
+message ResourceRef {
+  string resource_type = 1;
+  string resource_name = 2;
+  string message_type = 3;
+  string schema = 4;
+  string table = 5;
+  string backend = 6;
+  string instance = 7;
+  string resource_id = 8;
+  string collection = 9;
+  string bucket = 10;
+  string path = 11;
+  string service = 12;
+  string api = 13;
+  string tenant_id = 14;
+  string project_id = 15;
+  map<string, string> attributes = 16;
+}
+
+message Decision {
+  string decision_id = 1;
+  bool allowed = 2;
+  string effect = 3;
+  string deny_reason = 4;
+  repeated string matched_policy_ids = 5;
+  repeated string required_scopes = 6;
+  string policy_version = 7;
+  string relationship_version = 8;
+  uint64 cache_ttl_seconds = 9;
+  bool audit_required = 10;
+}
+
+message AccessContext {
+  string ip_address = 1;
+  string user_agent = 2;
+  string device_id = 3;
+  string token_id = 4;
+  string session_id = 5;
+  map<string, string> attributes = 6;
+}
+
+message CheckAccessRequest {
+  string user_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string domain = 2 [(google.api.field_behavior) = REQUIRED];
+  string object = 3 [(google.api.field_behavior) = REQUIRED];
+  string action = 4 [(google.api.field_behavior) = REQUIRED];
+  AccessContext context = 5 [(google.api.field_behavior) = OPTIONAL];
+  Principal principal = 6 [(google.api.field_behavior) = OPTIONAL];
+  ResourceRef resource = 7 [(google.api.field_behavior) = OPTIONAL];
+  string purpose = 8 [(google.api.field_behavior) = OPTIONAL];
+  string tenant_id = 9 [(google.api.field_behavior) = OPTIONAL];
+  string project_id = 10 [(google.api.field_behavior) = OPTIONAL];
+  map<string, string> attributes = 11;
+}
+
+message CheckAccessResponse {
+  bool allowed = 1;
+  udb.core.authz.entity.v1.PolicyEffect effect = 2;
+  string matched_rule = 3;
+  string reason = 4;
+  Decision decision = 5;
+}
+
+message AuthzRequest {
+  Principal principal = 1;
+  string session_id = 2;
+  string tenant_id = 3;
+  string project_id = 4;
+  ResourceRef resource = 5;
+  string action = 6;
+  string purpose = 7;
+  map<string, string> attributes = 8;
+  AccessContext context = 9;
+  repeated string requested_scopes = 10;
+  string domain = 11;
+}
+
+message AuthzResponse {
+  Decision decision = 1;
+}
+
+message CreateRoleRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string description = 2 [(google.api.field_behavior) = OPTIONAL];
+  string created_by = 3 [(google.api.field_behavior) = REQUIRED];
+  string role_code = 4 [(google.api.field_behavior) = OPTIONAL];
+  string domain = 5 [(google.api.field_behavior) = OPTIONAL];
+  string tenant_id = 6 [(google.api.field_behavior) = OPTIONAL];
+  string project_id = 7 [(google.api.field_behavior) = OPTIONAL];
+  udb.core.authz.entity.v1.RoleScopeType scope_type = 8 [(google.api.field_behavior) = OPTIONAL];
+  string access_surface = 9 [(google.api.field_behavior) = OPTIONAL];
+  map<string, string> metadata = 10;
+}
+
+message CreateRoleResponse {
+  udb.core.authz.entity.v1.Role role = 1;
+}
+
+message AssignRoleRequest {
+  string user_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string role_id = 2 [(google.api.field_behavior) = REQUIRED];
+  string domain = 3 [(google.api.field_behavior) = REQUIRED];
+  string assigned_by = 4 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp expires_at = 5 [(google.api.field_behavior) = OPTIONAL];
+  string principal_id = 6 [(google.api.field_behavior) = OPTIONAL];
+  udb.core.authz.entity.v1.PrincipalKind principal_kind = 7 [(google.api.field_behavior) = OPTIONAL];
+  string tenant_id = 8 [(google.api.field_behavior) = OPTIONAL];
+  string project_id = 9 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message AssignRoleResponse {
+  udb.core.authz.entity.v1.UserRole user_role = 1;
+}
+
+message CreatePolicyRuleRequest {
+  string subject = 1 [(google.api.field_behavior) = REQUIRED];
+  string domain = 2 [(google.api.field_behavior) = REQUIRED];
+  string object = 3 [(google.api.field_behavior) = REQUIRED];
+  string action = 4 [(google.api.field_behavior) = REQUIRED];
+  udb.core.authz.entity.v1.PolicyEffect effect = 5 [(google.api.field_behavior) = REQUIRED];
+  string condition = 6 [(google.api.field_behavior) = OPTIONAL];
+  string description = 7 [(google.api.field_behavior) = OPTIONAL];
+  string created_by = 8 [(google.api.field_behavior) = REQUIRED];
+  string tenant_id = 9 [(google.api.field_behavior) = OPTIONAL];
+  string project_id = 10 [(google.api.field_behavior) = OPTIONAL];
+  string resource_type = 11 [(google.api.field_behavior) = OPTIONAL];
+  map<string, string> attributes = 12;
+}
+
+message CreatePolicyRuleResponse {
+  udb.core.authz.entity.v1.PolicyRule policy = 1;
+}
+
+message ListUserPermissionsRequest {
+  string user_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string domain = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message EffectivePermission {
+  string object = 1;
+  string action = 2;
+  string via_role = 3;
+  string resource_type = 4;
+  string domain = 5;
+}
+
+message ListUserPermissionsResponse {
+  repeated EffectivePermission permissions = 1;
+}
+
+message ListAccessDecisionAuditsRequest {
+  string user_id = 1 [(google.api.field_behavior) = OPTIONAL];
+  string domain = 2 [(google.api.field_behavior) = OPTIONAL];
+  string correlation_id = 3 [(google.api.field_behavior) = OPTIONAL];
+  udb.core.common.v1.PageRequest page = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListAccessDecisionAuditsResponse {
+  repeated udb.core.authz.entity.v1.AccessDecisionAudit audits = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+message RevokeRoleRequest {
+  string user_id = 1;
+  string user_role_id = 2;
+  string reason = 3;
+  string revoked_by = 4;
+}
+
+message RevokeRoleResponse {
+  bool revoked = 1;
+}
+
+message ListUserRolesRequest {
+  string user_id = 1;
+  string domain = 2;
+  bool active_only = 3;
+}
+
+message ListUserRolesResponse {
+  repeated udb.core.authz.entity.v1.UserRole user_roles = 1;
+}
+
+message GetRoleRequest {
+  string role_id = 1;
+  string role_code = 2; // Alternative lookup
+  string domain = 3;
+}
+
+message GetRoleResponse {
+  udb.core.authz.entity.v1.Role role = 1;
+}
+
+message ListRolesRequest {
+  string domain = 1;
+  bool active_only = 2;
+  udb.core.common.v1.PageRequest page = 3;
+}
+
+message ListRolesResponse {
+  repeated udb.core.authz.entity.v1.Role roles = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+message PermissionCheck {
+  string object = 1;
+  string action = 2;
+}
+
+message BatchCheckPermissionsRequest {
+  string user_id = 1;
+  string domain = 2;
+  repeated PermissionCheck checks = 3;
+  AccessContext context = 4;
+}
+
+message BatchCheckPermissionsResponse {
+  map<string, bool> results = 1; // "object:action" → allowed
+}
+
+message UpdateRoleRequest {
+  string role_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string name = 2 [(google.api.field_behavior) = OPTIONAL];
+  string description = 3 [(google.api.field_behavior) = OPTIONAL];
+  optional bool is_active = 4 [(google.api.field_behavior) = OPTIONAL];
+  string updated_by = 5 [(google.api.field_behavior) = REQUIRED];
+}
+
+message UpdateRoleResponse {
+  udb.core.authz.entity.v1.Role role = 1;
+}
+
+message DeleteRoleRequest {
+  string role_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string deleted_by = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteRoleResponse {
+  bool deleted = 1;
+}
+
+message GetPolicyRuleRequest {
+  string policy_id = 1;
+}
+
+message GetPolicyRuleResponse {
+  udb.core.authz.entity.v1.PolicyRule policy = 1;
+}
+
+message ListPolicyRulesRequest {
+  string domain = 1;
+  string subject = 2;
+  string object = 3;
+  bool active_only = 4;
+  udb.core.common.v1.PageRequest page = 5;
+}
+
+message ListPolicyRulesResponse {
+  repeated udb.core.authz.entity.v1.PolicyRule policies = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+message DeletePolicyRuleRequest {
+  string policy_id = 1;
+  string deleted_by = 2;
+}
+
+message DeletePolicyRuleResponse {
+  bool deleted = 1;
+}
+
+message AuthMutationResponse {
+  bool ok = 1;
+  string message = 2;
+}
+
+// RBAC binding scoped to a tenant/project domain.
+message RoleBinding {
+  string subject = 1;
+  string role = 2;
+  string tenant = 3;
+  string project = 4;
+  int64 expires_at_unix = 5;
+  string source = 6;
+}
+
+// ReBAC tuple scoped to a tenant/project domain.
+message RelationshipTuple {
+  string subject = 1;
+  string relation = 2;
+  string object = 3;
+  string tenant = 4;
+  string project = 5;
+  int64 version = 6;
+  int64 expires_at_unix = 7;
+  string source = 8;
+}
+
+message AuthzPolicyRecord {
+  string id = 1;
+  int32 priority = 2;
+  bool enabled = 3;
+  string effect = 4;
+  string tenant = 5;
+  string project = 6;
+  string subject = 7;
+  string role = 8;
+  string action = 9;
+  string resource = 10;
+  string purpose = 11;
+  string relationship = 12;
+  map<string, string> conditions = 13;
+  repeated string required_scopes = 14;
+}
+
+message PutRoleBindingRequest {
+  RoleBinding binding = 1;
+}
+message PutRelationshipRequest {
+  RelationshipTuple tuple = 1;
+}
+message PutAuthzPolicyRequest {
+  AuthzPolicyRecord policy = 1;
+}
+message LintAuthzPoliciesRequest {}
+message LintAuthzPoliciesResponse {
+  repeated string findings = 1;
+}
+
+// ── Stage 2: native database fast-path access ──────────────────────────────
+//
+// `GetNativeAccess` runs the same `Authorize` decision and, when allowed,
+// mints a short-lived contract for the caller to talk to the backend
+// directly: a restricted role, a scoped DSN, and the exact set of
+// `app.current_*` session variables the SDK must `SET LOCAL` so the
+// broker-generated RLS policies still apply. UDB stays the source of the
+// authorization decision; the native grant only carries it forward.
+message NativeAccessRequest {
+  Principal principal = 1;
+  string session_id = 2;
+  string tenant_id = 3;
+  string project_id = 4;
+  ResourceRef resource = 5;
+  string action = 6;
+  string purpose = 7;
+  repeated string requested_scopes = 8;
+  AccessContext context = 9;
+  // Requested backend (default "postgres"); other backends are reserved.
+  string backend = 10;
+  map<string, string> attributes = 11;
+}
+
+// The minted native-access contract. Present only when the embedded
+// `Decision` allowed the request.
+message NativeAccessGrant {
+  // Connection string scoped to the restricted role. Secret — redact in logs.
+  string dsn = 1;
+  // Restricted database role the DSN authenticates as.
+  string role = 2;
+  string backend = 3;
+  string database = 4;
+  string schema = 5;
+  // `app.current_*` session variables the caller must apply per transaction
+  // (`SET LOCAL`) so broker RLS policies see the same context the broker did.
+  map<string, string> session_variables = 6;
+  int64 expires_at_unix = 7;
+  uint64 ttl_seconds = 8;
+}
+
+message NativeAccessResponse {
+  Decision decision = 1;
+  NativeAccessGrant grant = 2;
+}
+
+// ── Stage 2: signed policy bundles for local SDK authorization caches ───────
+//
+// `GetPolicyBundle` serializes the live authorization snapshot (policies,
+// role bindings, relationship tuples) and signs it so an SDK can cache it
+// and answer `can()` locally without a round-trip, while still being able
+// to verify the bundle was issued by UDB and has not expired.
+message PolicyBundleRequest {
+  string tenant_id = 1;
+  string project_id = 2;
+  string domain = 3;
+}
+
+message SignedPolicyBundle {
+  // Serialized snapshot payload (canonical JSON). Opaque to transport.
+  bytes bundle = 1;
+  // Base64 signature over `bundle`.
+  string signature = 2;
+  // Identifier of the signing key so callers can rotate/verify.
+  string key_id = 3;
+  // Signature algorithm, e.g. "HMAC-SHA256".
+  string algorithm = 4;
+  string policy_version = 5;
+  string relationship_version = 6;
+  int64 issued_at_unix = 7;
+  int64 expires_at_unix = 8;
+  uint64 ttl_seconds = 9;
+}
+
+message PolicyBundleResponse {
+  SignedPolicyBundle bundle = 1;
+}

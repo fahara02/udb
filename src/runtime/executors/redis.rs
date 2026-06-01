@@ -3,13 +3,26 @@
 use redis::AsyncCommands;
 use serde_json::{Value as Json, json};
 
+use crate::runtime::executor_utils::build_probe;
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
 };
 
-#[derive(Debug, Clone)]
-pub(crate) struct RedisExecutor(pub(crate) redis::Client);
+#[derive(Clone)]
+pub(crate) struct RedisExecutor {
+    client: redis::Client,
+    // Lazily-established multiplexed connection, shared across requests and clones.
+    // Cloning a `MultiplexedConnection` is cheap (one shared actor/socket), so each
+    // call clones the cached handle instead of opening a fresh connection (#76).
+    conn: std::sync::Arc<tokio::sync::OnceCell<redis::aio::MultiplexedConnection>>,
+}
+
+impl std::fmt::Debug for RedisExecutor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RedisExecutor").finish_non_exhaustive()
+    }
+}
 
 impl crate::runtime::backend_context::BackendContextEnforcer for RedisExecutor {
     fn backend_label(&self) -> &str {
@@ -20,38 +33,39 @@ impl crate::runtime::backend_context::BackendContextEnforcer for RedisExecutor {
         &self,
         ctx: &crate::runtime::backend_context::AppliedContext,
     ) -> crate::runtime::backend_context::ContextEffect {
-        if ctx.is_empty() {
-            return crate::runtime::backend_context::ContextEffect::Advisory {
-                recorded_in: "no_context_to_apply".into(),
-            };
-        }
         // The Redis IR compiler emits keys of the form
         // `udb:{project}:{tenant}:<message>:<pk>`. The active context
         // is therefore enforced at key-construction time — a request
         // can't read or delete another tenant's key without going
         // around the broker.
-        crate::runtime::backend_context::ContextEffect::Enforced {
-            mechanism: "key namespace prefix udb:{project}:{tenant}:".into(),
-        }
+        crate::runtime::backend_context::enforce_with_mechanism(
+            ctx,
+            "key namespace prefix udb:{project}:{tenant}:",
+        )
     }
 }
 
 impl RedisExecutor {
+    pub(crate) fn new(client: redis::Client) -> Self {
+        Self {
+            client,
+            conn: std::sync::Arc::new(tokio::sync::OnceCell::new()),
+        }
+    }
+
     async fn connection(&self) -> Result<redis::aio::MultiplexedConnection, tonic::Status> {
-        self.0
-            .get_multiplexed_async_connection()
+        let conn = self
+            .conn
+            .get_or_try_init(|| self.client.get_multiplexed_async_connection())
             .await
-            .map_err(|err| tonic::Status::unavailable(format!("redis connection failed: {err}")))
+            .map_err(|err| tonic::Status::unavailable(format!("redis connection failed: {err}")))?;
+        Ok(conn.clone())
     }
 }
 
 impl BackendHealth for RedisExecutor {
     async fn ping(&self) -> Result<(), String> {
-        let mut conn = self
-            .0
-            .get_multiplexed_async_connection()
-            .await
-            .map_err(|err| err.to_string())?;
+        let mut conn = self.connection().await.map_err(|err| err.to_string())?;
         redis::cmd("PING")
             .query_async::<String>(&mut conn)
             .await
@@ -246,15 +260,9 @@ impl BackendExecutor for RedisExecutor {
     }
 
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
-        let (ok, error) = match <Self as BackendHealth>::ping(self).await {
-            Ok(()) => (true, None),
-            Err(err) => (false, Some(err)),
-        };
-        Ok(BackendProbe {
-            backend: "redis".to_string(),
-            instance: None,
-            ok,
-            error,
-        })
+        Ok(build_probe(
+            "redis",
+            <Self as BackendHealth>::ping(self).await,
+        ))
     }
 }

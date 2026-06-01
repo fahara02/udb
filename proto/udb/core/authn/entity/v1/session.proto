@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package udb.core.authn.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/authn/entity/v1/enums.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authn.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";
+option java_package = "com.udb.core.authn.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// Session — Authenticated session for a user, service account, workload, or
+// external identity mapped into UDB.
+//
+// Hybrid model:
+//   SERVER_SIDE: cookie-based; session_token_lookup (keyed HMAC) → hash verify
+//   JWT:         access_token_jti + refresh_token_jti tracked for revocation
+//
+// Migration order 2. RLS scopes rows to the current tenant.
+// ---------------------------------------------------------------------------
+message Session {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "sessions"
+    schema_name: "udb_authn"
+    migration_order: 2
+    is_table: true
+    comment: "Active sessions across web, API, workload, and external identity flows"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: true
+    partition_strategy: PARTITION_STRATEGY_RANGE_MONTH
+    partition_column: "created_at"
+    partition_interval: "MONTHLY"
+    partition_premake: 3
+    partition_default: true
+    partition_retention_months: 6
+    retention_days: 180
+    extensions: {
+      name: "pg_partman"
+      schema: "partman"
+    }
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_sessions_tenant_user_session_type"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "user_id"
+      columns: "session_type"
+    }
+    cdc_topic: "udb.authn.sessions.cdc"
+    required_scope: "authn:sessions:read"
+    replica_hint: "primary"
+  };
+  option (udb.core.common.v1.cache) = {
+    backend: CACHE_BACKEND_REDIS
+    key_pattern: "udb:session:{session_id}"
+    ttl_seconds: 1800 // 30 minutes — validated on every authenticated request
+    write_through: true
+    read_through: true
+    namespace: "session"
+    cluster_env_key: "REDIS_CLUSTER_ADDR"
+  };
+
+  string session_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "session_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string user_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "user_id" sql_type: "UUID" not_null: true comment: "FK to udb_authn.users.user_id" foreign_key: { references_table: "users" references_column: "user_id" references_schema: "udb_authn" on_delete: REFERENTIAL_ACTION_CASCADE } index: { index_name: "idx_sessions_user_id" index_type: "BTREE" } }];
+
+  SessionType session_type = 3 [(udb.core.common.v1.pg_column) = { column_name: "session_type" sql_type: "VARCHAR(20)" not_null: true index: { index_name: "idx_sessions_type" index_type: "BTREE" } }];
+
+  // ── SERVER-SIDE fields ──────────────────────────────────────────────────
+  // Keyed lookup digest of the opaque session token (for fast index lookup).
+  string session_token_lookup = 4 [(udb.core.common.v1.pg_column) = { column_name: "session_token_lookup" sql_type: "VARCHAR(128)" comment: "Keyed HMAC lookup digest of the plain session token" index: { index_name: "idx_sessions_token_lookup" index_type: "HASH" where_clause: "session_type = 'SERVER_SIDE'" } }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true];
+
+  // bcrypt hash of the session token (for secure verify after lookup).
+  string session_token_hash = 5 [(udb.core.common.v1.pg_column) = { column_name: "session_token_hash" sql_type: "VARCHAR(128)" comment: "bcrypt hash of session token (server-side sessions only)" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true];
+
+  // CSRF token hash (double-submit cookie pattern).
+  string csrf_token_hash = 6 [(udb.core.common.v1.pg_column) = { column_name: "csrf_token_hash" sql_type: "VARCHAR(128)" comment: "SHA-256 of CSRF token; rotated on each mutation" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true];
+
+  // ── JWT fields ──────────────────────────────────────────────────────────
+  // JWT ID of the currently-valid access token (for revocation check).
+  string access_token_jti = 7 [(udb.core.common.v1.pg_column) = { column_name: "access_token_jti" sql_type: "VARCHAR(36)" comment: "JWT jti for access token revocation (JWT sessions only)" index: { index_name: "idx_sessions_access_jti" index_type: "HASH" where_clause: "session_type = 'JWT'" } }];
+
+  string refresh_token_jti = 8 [(udb.core.common.v1.pg_column) = { column_name: "refresh_token_jti" sql_type: "VARCHAR(36)" comment: "JWT jti for refresh token revocation" index: { index_name: "idx_sessions_refresh_jti" index_type: "HASH" where_clause: "session_type = 'JWT'" } }];
+
+  // ── Common fields ───────────────────────────────────────────────────────
+  DeviceType device_type = 9 [(udb.core.common.v1.pg_column) = { column_name: "device_type" sql_type: "VARCHAR(20)" not_null: true default_value: "'WEB'" }];
+
+  string device_name = 10 [(udb.core.common.v1.pg_column) = { column_name: "device_name" sql_type: "VARCHAR(150)" comment: "Human-readable: browser/OS string or API client name" }];
+
+  string ip_address = 11 [(udb.core.common.v1.pg_column) = { column_name: "ip_address" sql_type: "INET" comment: "Client IP at login time" }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.data_purpose) = "Security audit trail"];
+
+  string user_agent = 12 [(udb.core.common.v1.pg_column) = { column_name: "user_agent" sql_type: "TEXT" }];
+
+  bool is_active = 13 [(udb.core.common.v1.pg_column) = { column_name: "is_active" sql_type: "BOOLEAN" not_null: true default_value: "TRUE" index: { index_name: "idx_sessions_active_user" index_type: "BTREE" columns: "user_id" where_clause: "is_active = true" } }];
+
+  google.protobuf.Timestamp expires_at = 14 [(udb.core.common.v1.pg_column) = { column_name: "expires_at" sql_type: "TIMESTAMPTZ" not_null: true index: { index_name: "idx_sessions_expires_at" index_type: "BTREE" } }];
+
+  google.protobuf.Timestamp last_active_at = 15 [(udb.core.common.v1.pg_column) = { column_name: "last_active_at" sql_type: "TIMESTAMPTZ" comment: "Updated on each authenticated request (for sliding expiry)" }];
+
+  string revoked_by = 16 [(udb.core.common.v1.pg_column) = { column_name: "revoked_by" sql_type: "UUID" comment: "FK to users.user_id — who revoked this session (self or admin)" foreign_key: { references_table: "users" references_schema: "udb_authn" references_column: "user_id" on_delete: REFERENTIAL_ACTION_SET_NULL constraint_name: "fk_sessions_revoked_by" } index: { index_name: "idx_sessions_revoked_by" index_type: "BTREE" } }];
+
+  string revoke_reason = 17 [(udb.core.common.v1.pg_column) = { column_name: "revoke_reason" sql_type: "VARCHAR(80)" comment: "logout | admin_revoke | password_change | expired | security_event" }];
+
+  google.protobuf.Timestamp created_at = 18 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  string tenant_id = 19 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_session_tenant" index_type: "BTREE" } }];
+
+  string project_id = 20 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" comment: "Optional project/application namespace for this session" index: { index_name: "idx_sessions_project_id" index_type: "BTREE" } }];
+
+  string principal_id = 21 [(udb.core.common.v1.pg_column) = { column_name: "principal_id" sql_type: "VARCHAR(160)" comment: "Canonical UDB principal id resolved for the session" index: { index_name: "idx_sessions_principal_id" index_type: "BTREE" } }];
+
+  string provider_id = 22 [(udb.core.common.v1.pg_column) = { column_name: "provider_id" sql_type: "VARCHAR(120)" comment: "Identity provider that authenticated this session" }];
+
+  string auth_method = 23 [(udb.core.common.v1.pg_column) = { column_name: "auth_method" sql_type: "VARCHAR(40)" comment: "jwt, session, api_key, mtls, oidc, saml, or provider-defined method" }];
+
+  string scopes_json = 24 [(udb.core.common.v1.pg_column) = { column_name: "scopes_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" comment: "Scopes resolved at authentication time" }];
+
+  string metadata_json = 25 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Non-secret session metadata for audit and routing" }];
+}

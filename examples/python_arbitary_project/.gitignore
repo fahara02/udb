@@ -1,0 +1,9 @@
+*.pyc
+__pycache__/
+.pytest_cache/
+.pyrefly/
+.venv/
+.udb/
+dist/
+build/
+*.egg-info/

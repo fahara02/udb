@@ -1,0 +1,133 @@
+syntax = "proto3";
+
+package udb.core.analytics.services.v1;
+
+import "udb/core/analytics/entity/v1/executor_performance_summary.proto";
+import "udb/core/analytics/entity/v1/pipeline_metric_snapshot.proto";
+import "udb/core/analytics/entity/v1/reconciliation_analytics_summary.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/types.proto";
+
+option csharp_namespace = "udb.core.Analytics.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/analytics/services/v1;analyticsservicev1";
+option java_package = "com.udb.core.analytics.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Analytics\\Services\\V1";
+option php_namespace = "Udb\\Core\\Analytics\\Services\\V1";
+
+// ============================================================
+// Pipeline metrics ingestion
+// ============================================================
+
+message RecordPipelineMetricRequest {
+  string stage_name = 1;
+  string tenant_id = 2;
+  // Raw observation for a single request (will be aggregated hourly).
+  double latency_ms = 3;
+  bool is_success = 4;
+  udb.core.common.v1.RequestContext context = 5;
+}
+
+message RecordPipelineMetricResponse {
+  bool accepted = 1;
+}
+
+// ============================================================
+// Pipeline summary queries
+// ============================================================
+
+message GetPipelineSummaryRequest {
+  string stage_name = 1; // Empty = all stages
+  string tenant_id = 2;
+  string hour_from = 3; // ISO 8601 hour string
+  string hour_to = 4;
+  udb.core.common.v1.PageRequest page = 5;
+}
+
+message GetPipelineSummaryResponse {
+  repeated udb.core.analytics.entity.v1.PipelineMetricSnapshot snapshots = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+// ============================================================
+// Executor performance
+// ============================================================
+
+message GetExecutorPerformanceRequest {
+  string executor_identity = 1; // Empty = all executors
+  string workload_kind = 2;
+  string date_from = 3;
+  string date_to = 4;
+}
+
+message GetExecutorPerformanceResponse {
+  repeated udb.core.analytics.entity.v1.ExecutorPerformanceSummary summaries = 1;
+}
+
+// ============================================================
+// Reconciliation analytics
+// ============================================================
+
+message GetReconciliationAnalyticsRequest {
+  string date_from = 1;
+  string date_to = 2;
+}
+
+message GetReconciliationAnalyticsResponse {
+  repeated udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary summaries = 1;
+  double overall_resolution_rate = 2;
+  double avg_reconciliation_ms = 3;
+}
+
+// ============================================================
+// Throughput and SLA
+// ============================================================
+
+message GetThroughputRequest {
+  string tenant_id = 1;
+  string hour_from = 2;
+  string hour_to = 3;
+}
+
+message GetThroughputResponse {
+  double avg_rps = 1;
+  double peak_rps = 2;
+  int64 total_requests = 3;
+  double overall_success_rate = 4;
+}
+
+message GetSlaComplianceRequest {
+  string stage_name = 1;
+  string date_from = 2;
+  string date_to = 3;
+  double p99_threshold_ms = 4;
+  double error_rate_threshold = 5;
+}
+
+message SlaComplianceEntry {
+  string stage_name = 1;
+  string period = 2;
+  double p99_latency_ms = 3;
+  double error_rate = 4;
+  bool p99_sla_met = 5;
+  bool error_rate_sla_met = 6;
+}
+
+message GetSlaComplianceResponse {
+  repeated SlaComplianceEntry entries = 1;
+  double overall_p99_compliance_rate = 2;
+  double overall_error_rate_compliance_rate = 3;
+}
+
+// ============================================================
+// Snapshot management
+// ============================================================
+
+message TriggerSnapshotRequest {
+  string stage_name = 1; // Empty = all stages
+  string hour = 2; // ISO 8601 hour; empty = previous complete hour
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message TriggerSnapshotResponse {
+  int32 snapshots_written = 1;
+}

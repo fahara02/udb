@@ -121,6 +121,78 @@ pub async fn run_contract(store: Arc<dyn CanonicalStore>) {
         cleared,
         "wait_for_token against own current token must clear immediately"
     );
+
+    // 9. Advisory leases obey the portable worker contract across
+    // canonical-store backends: idempotent DDL, same-owner refresh,
+    // contention denial, owner-scoped release, and expired takeover.
+    store
+        .ensure_advisory_lease_table()
+        .await
+        .expect("ensure_advisory_lease_table (first call)");
+    store
+        .ensure_advisory_lease_table()
+        .await
+        .expect("ensure_advisory_lease_table must be idempotent");
+    let lease = format!("conformance-lease-{}", uuid::Uuid::new_v4());
+    assert!(
+        store
+            .try_acquire_advisory_lease(&lease, "owner-a", Duration::from_secs(60))
+            .await
+            .expect("owner-a initial acquire"),
+        "first owner should acquire a fresh lease"
+    );
+    assert!(
+        !store
+            .try_acquire_advisory_lease(&lease, "owner-b", Duration::from_secs(60))
+            .await
+            .expect("owner-b contended acquire"),
+        "different owner must not take a live lease"
+    );
+    assert!(
+        store
+            .try_acquire_advisory_lease(&lease, "owner-a", Duration::from_secs(60))
+            .await
+            .expect("owner-a refresh"),
+        "same owner should refresh a live lease"
+    );
+    store
+        .release_advisory_lease(&lease, "owner-b")
+        .await
+        .expect("wrong-owner release should be a no-op");
+    assert!(
+        !store
+            .try_acquire_advisory_lease(&lease, "owner-b", Duration::from_secs(60))
+            .await
+            .expect("owner-b after wrong-owner release"),
+        "wrong-owner release must not unlock the lease"
+    );
+    store
+        .release_advisory_lease(&lease, "owner-a")
+        .await
+        .expect("owner-a release");
+    assert!(
+        store
+            .try_acquire_advisory_lease(&lease, "owner-b", Duration::from_secs(60))
+            .await
+            .expect("owner-b after release"),
+        "released lease should be acquirable by a different owner"
+    );
+
+    let expired_lease = format!("conformance-expired-lease-{}", uuid::Uuid::new_v4());
+    assert!(
+        store
+            .try_acquire_advisory_lease(&expired_lease, "expired-owner", Duration::from_secs(0))
+            .await
+            .expect("expired-owner acquire"),
+        "zero-ttl lease should be insertable"
+    );
+    assert!(
+        store
+            .try_acquire_advisory_lease(&expired_lease, "fresh-owner", Duration::from_secs(60))
+            .await
+            .expect("fresh-owner expired takeover"),
+        "expired lease should be acquirable by a different owner"
+    );
 }
 
 /// NW1-1a — Projection task contract every `ProjectionTaskStore` impl

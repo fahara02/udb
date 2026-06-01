@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+package udb.core.notification.events.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "udb.core.Notification.Events.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/notification/events/v1;notificationeventsv1";
+option java_package = "com.udb.core.notification.events.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Notification\\Events\\V1";
+option php_namespace = "Udb\\Core\\Notification\\Events\\V1";
+
+// ---------------------------------------------------------------------------
+// Notification Domain Events
+//
+// Kafka topics follow: udb.core.notification.<noun>.<verb>.v1
+// ---------------------------------------------------------------------------
+
+// Emitted when a notification has been dispatched to a delivery channel.
+// Kafka topic: udb.notification.sent.v1
+message NotificationSentEvent {
+  string event_id = 1;
+  string log_id = 2; // NotificationLog.notification_log_id
+  string template_id = 3;
+  string event_type = 4; // e.g. RESOURCE_CREATED, SLA_BREACH_WARNING
+  string channel = 5; // EMAIL | SMS | PUSH | IN_APP | WEBHOOK
+  string recipient_ref = 6; // User ID or external address (hashed for PII)
+  string tenant_id = 7;
+  string correlation_id = 8;
+  google.protobuf.Timestamp occurred_at = 9;
+}
+
+// Emitted when a notification delivery attempt fails (may be retried).
+// Kafka topic: udb.notification.failed.v1
+message NotificationFailedEvent {
+  string event_id = 1;
+  string log_id = 2;
+  string template_id = 3;
+  string event_type = 4;
+  string channel = 5;
+  string tenant_id = 6;
+  string error_code = 7;
+  string error_detail = 8;
+  int32 retry_attempt = 9; // 0 = first attempt
+  bool will_retry = 10;
+  string correlation_id = 11;
+  google.protobuf.Timestamp occurred_at = 12;
+}
+
+// Emitted when a notification is suppressed due to rate limiting or user opt-out.
+// Kafka topic: udb.notification.suppressed.v1
+message NotificationSuppressedEvent {
+  string event_id = 1;
+  string template_id = 2;
+  string event_type = 3;
+  string channel = 4;
+  string recipient_ref = 5;
+  string tenant_id = 6;
+  string suppression_reason = 7; // RATE_LIMITED | USER_OPT_OUT | DUPLICATE
+  string correlation_id = 8;
+  google.protobuf.Timestamp occurred_at = 9;
+}
+
+// Emitted when delivery is confirmed (e.g. email open, webhook 2xx).
+// Kafka topic: udb.notification.delivered.v1
+message NotificationDeliveredEvent {
+  string event_id = 1;
+  string log_id = 2;
+  string channel = 3;
+  string tenant_id = 4;
+  string correlation_id = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+}
+
+// Emitted when a notification template is created or updated.
+// Kafka topic: udb.notification.template.changed.v1
+message NotificationTemplateChangedEvent {
+  string event_id = 1;
+  string template_id = 2;
+  string event_type = 3;
+  string channel = 4;
+  string change_type = 5; // CREATED | UPDATED | DEACTIVATED
+  string changed_by = 6;
+  string correlation_id = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+  string tenant_id = 9;
+}
+
+// Emitted when an upload or attachment changes ingest status so project
+// services can fan out completion or failure to connected clients.
+// Kafka topic: udb.notification.resource.ingest.status.v1
+message ResourceIngestStatusEvent {
+  string event_id = 1;
+  string resource_id = 2;
+  string tenant_id = 3;
+  string project_id = 4;
+  // pending | running | completed | failed | cancelled
+  string status = 5;
+  string filename = 6;
+  string mime_type = 7;
+  int64 size_bytes = 8;
+  string sha256 = 9;
+  string error_message = 10;
+  string ingest_job_id = 11;
+  string correlation_id = 12;
+  google.protobuf.Timestamp occurred_at = 13;
+  string resource_type = 14;
+  string resource_name = 15;
+}

@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package udb.core.authn.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/authn/entity/v1/enums.proto";
+import "udb/core/common/v1/db.proto";
+
+option csharp_namespace = "udb.core.Authn.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";
+option java_package = "com.udb.core.authn.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// OTP — One-time password record for email 2FA, account verification,
+// password reset, and sensitive operation approval.
+//
+// Migration order 3.  OTPs are never updated — a new row is inserted on each
+// send (including resend, which sets superseded_by_id on the previous row).
+// ---------------------------------------------------------------------------
+message OTP {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "otps"
+    schema_name: "udb_authn"
+    migration_order: 3
+    is_table: true
+    comment: "Email OTP records for 2FA, verification, password reset, and sensitive operations"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: false
+    replica_hint: "primary"
+  };
+
+  string otp_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "otp_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string user_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "user_id" sql_type: "UUID" not_null: true comment: "FK to udb_authn.users.user_id" foreign_key: { references_table: "users" references_schema: "udb_authn" references_column: "user_id" on_delete: REFERENTIAL_ACTION_CASCADE constraint_name: "fk_otps_user_id" } index: { index_name: "idx_otps_user_otp_type" index_type: "BTREE" columns: "otp_type" } }];
+
+  OTPType otp_type = 3 [(udb.core.common.v1.pg_column) = { column_name: "otp_type" sql_type: "VARCHAR(30)" not_null: true }];
+
+  // Keyed digest of the OTP code; never stored in plaintext.
+  string code_hash = 4 [(udb.core.common.v1.pg_column) = { column_name: "code_hash" sql_type: "VARCHAR(128)" not_null: true comment: "Keyed HMAC digest of the OTP code" }];
+
+  string delivery_channel = 5 [(udb.core.common.v1.pg_column) = { column_name: "delivery_channel" sql_type: "VARCHAR(10)" not_null: true default_value: "'email'" comment: "Delivery channel such as email, sms, push, or voice" }];
+
+  string delivery_address = 6 [(udb.core.common.v1.pg_column) = { column_name: "delivery_address" sql_type: "VARCHAR(255)" comment: "Redacted email address used for delivery (audit trail)" }];
+
+  OTPStatus status = 7 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(15)" not_null: true default_value: "'PENDING'" index: { index_name: "idx_otps_status_expires" index_type: "BTREE" columns: "expires_at" } }];
+
+  // Number of failed verification attempts (max 5 before EXPIRED).
+  int32 attempt_count = 8 [(udb.core.common.v1.pg_column) = { column_name: "attempt_count" sql_type: "INTEGER" not_null: true default_value: "0" }];
+
+  // Resend chain: points to the OTP that was created in its place.
+  string superseded_by_id = 9 [(udb.core.common.v1.pg_column) = { column_name: "superseded_by_id" sql_type: "UUID" comment: "FK to otps.otp_id; set when this OTP is invalidated by a resend" foreign_key: { references_table: "otps" references_schema: "udb_authn" references_column: "otp_id" on_delete: REFERENTIAL_ACTION_SET_NULL constraint_name: "fk_otps_superseded_by_id" } index: { index_name: "idx_otps_superseded_by_id" index_type: "BTREE" } }];
+
+  google.protobuf.Timestamp expires_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "expires_at" sql_type: "TIMESTAMPTZ" not_null: true }];
+
+  google.protobuf.Timestamp used_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "used_at" sql_type: "TIMESTAMPTZ" comment: "Timestamp of successful verification" }];
+
+  google.protobuf.Timestamp created_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  string correlation_id = 13 [(udb.core.common.v1.pg_column) = { column_name: "correlation_id" sql_type: "VARCHAR(120)" comment: "Request or workflow correlation id that issued this OTP" index: { index_name: "idx_otps_correlation_id" index_type: "BTREE" } }];
+}

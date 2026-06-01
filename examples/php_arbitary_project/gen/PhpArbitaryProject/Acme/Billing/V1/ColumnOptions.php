@@ -240,3 +240,4 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
+

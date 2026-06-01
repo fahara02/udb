@@ -17,140 +17,78 @@
 //!   We ignore the manifest's `schema` and emit unqualified table names
 //!   so a freshly attached database works without rewrites.
 
-use std::collections::HashSet;
-
 use crate::backend::BackendKind;
 use crate::generation::ManifestTable;
 use crate::ir::filter::{ComparisonOp, LogicalFilter};
 use crate::ir::operations::{
-    AggregateExpr, AggregateFunc, ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead,
-    LogicalResourceOp, LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
+    ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead, LogicalResourceOp,
+    LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
 };
 use crate::ir::value::LogicalValue;
 
+use super::sql_dialect::{SqlCompiler, SqlDialect};
 use super::{CompileContext, CompileError, CompiledRendering, Compiler};
+
+/// SQLite dialect marker for the generic [`SqlCompiler`]: double-quote
+/// quoting, positional `?` placeholders, `0` false-literal, and the
+/// `|| … ESCAPE '\'` LIKE idiom. `ILike` folds to plain `LIKE`.
+struct Sqlite;
+
+impl SqlDialect for Sqlite {
+    fn backend() -> BackendKind {
+        BackendKind::Sqlite
+    }
+    fn quote(ident: &str) -> String {
+        format!("\"{ident}\"")
+    }
+    fn placeholder(_index: usize) -> String {
+        "?".to_string()
+    }
+    fn false_literal() -> &'static str {
+        "0"
+    }
+    fn having_true_literal() -> &'static str {
+        "1"
+    }
+    fn having_false_literal() -> &'static str {
+        "0"
+    }
+    fn sql_op_for(op: ComparisonOp) -> &'static str {
+        match op {
+            ComparisonOp::Eq => "=",
+            ComparisonOp::Ne => "<>",
+            ComparisonOp::Lt => "<",
+            ComparisonOp::Le => "<=",
+            ComparisonOp::Gt => ">",
+            ComparisonOp::Ge => ">=",
+            ComparisonOp::Like
+            | ComparisonOp::Contains
+            | ComparisonOp::StartsWith
+            | ComparisonOp::EndsWith
+            | ComparisonOp::ILike => "LIKE",
+        }
+    }
+    fn wrap_value_for_op(op: ComparisonOp, _placeholder: &str) -> String {
+        // Escape LIKE metacharacters (`\`, `%`, `_`) so a literal %/_ in a
+        // substring term matches literally rather than as a wildcard. SQLite has
+        // no default LIKE escape and does NOT process backslash escapes inside
+        // string literals, so `'\'` is one literal backslash: double it, prefix
+        // `%`/`_`, and close the predicate with `ESCAPE '\'`.
+        let escaped = r"REPLACE(REPLACE(REPLACE(?, '\', '\\'), '%', '\%'), '_', '\_')";
+        match op {
+            ComparisonOp::Contains => format!(r"('%' || {escaped} || '%') ESCAPE '\'"),
+            ComparisonOp::StartsWith => format!(r"({escaped} || '%') ESCAPE '\'"),
+            ComparisonOp::EndsWith => format!(r"('%' || {escaped}) ESCAPE '\'"),
+            _ => "?".to_string(),
+        }
+    }
+}
+
+type Sl = SqlCompiler<Sqlite>;
 
 /// SQLite SQL compiler (3.24+, FTS5-aware).
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SqliteCompiler;
-
-impl SqliteCompiler {
-    fn resolve_table<'a>(
-        &self,
-        message_type: &str,
-        ctx: &'a CompileContext<'_>,
-    ) -> Result<&'a ManifestTable, CompileError> {
-        crate::broker::table_for_message(ctx.manifest, message_type).ok_or_else(|| {
-            CompileError::UnknownMessageType {
-                message_type: message_type.to_string(),
-            }
-        })
-    }
-
-    fn column_for<'a>(
-        &self,
-        table: &'a ManifestTable,
-        field: &str,
-        message_type: &str,
-    ) -> Result<&'a str, CompileError> {
-        table
-            .columns
-            .iter()
-            .find(|c| c.field_name.eq_ignore_ascii_case(field) || c.column_name == field)
-            .map(|c| c.column_name.as_str())
-            .ok_or_else(|| CompileError::UnknownField {
-                message_type: message_type.to_string(),
-                field: field.to_string(),
-            })
-    }
-
-    fn render_where(
-        &self,
-        filter: &LogicalFilter,
-        table: &ManifestTable,
-        message_type: &str,
-        params: &mut Vec<LogicalValue>,
-    ) -> Result<Option<String>, CompileError> {
-        match filter {
-            LogicalFilter::And(c) if c.is_empty() => Ok(None),
-            LogicalFilter::Or(c) if c.is_empty() => Ok(Some("0".to_string())),
-            _ => Ok(Some(self.render_filter(
-                filter,
-                table,
-                message_type,
-                params,
-            )?)),
-        }
-    }
-
-    fn render_filter(
-        &self,
-        filter: &LogicalFilter,
-        table: &ManifestTable,
-        message_type: &str,
-        params: &mut Vec<LogicalValue>,
-    ) -> Result<String, CompileError> {
-        match filter {
-            LogicalFilter::And(clauses) => {
-                let parts = clauses
-                    .iter()
-                    .map(|c| self.render_filter(c, table, message_type, params))
-                    .collect::<Result<Vec<_>, _>>()?;
-                Ok(format!("({})", parts.join(" AND ")))
-            }
-            LogicalFilter::Or(clauses) => {
-                let parts = clauses
-                    .iter()
-                    .map(|c| self.render_filter(c, table, message_type, params))
-                    .collect::<Result<Vec<_>, _>>()?;
-                Ok(format!("({})", parts.join(" OR ")))
-            }
-            LogicalFilter::Not(inner) => {
-                let r = self.render_filter(inner, table, message_type, params)?;
-                Ok(format!("(NOT {r})"))
-            }
-            LogicalFilter::Comparison { field, op, value } => {
-                let column = self.column_for(table, field, message_type)?;
-                if value.is_null() {
-                    return Err(CompileError::Malformed {
-                        reason: format!(
-                            "comparison with NULL on field '{field}' must use IsNull, not {}",
-                            op.token()
-                        ),
-                    });
-                }
-                params.push(value.clone());
-                let sql_op = sql_op_for(*op);
-                let rhs = wrap_value_for_op(*op);
-                // SQLite's LIKE is case-insensitive ASCII by default; for
-                // case-sensitive needs the pragma `case_sensitive_like=ON`
-                // must be set. We don't pretend to a different default
-                // — `ILIKE` lowers to plain `LIKE` and the operator
-                // controls the pragma.
-                Ok(format!("\"{column}\" {sql_op} {rhs}"))
-            }
-            LogicalFilter::IsNull(field) => {
-                let column = self.column_for(table, field, message_type)?;
-                Ok(format!("\"{column}\" IS NULL"))
-            }
-            LogicalFilter::InList { field, values } => {
-                if values.is_empty() {
-                    return Ok("0".to_string());
-                }
-                let column = self.column_for(table, field, message_type)?;
-                let placeholders = values
-                    .iter()
-                    .map(|v| {
-                        params.push(v.clone());
-                        "?".to_string()
-                    })
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                Ok(format!("\"{column}\" IN ({placeholders})"))
-            }
-        }
-    }
-}
 
 impl Compiler for SqliteCompiler {
     fn kind(&self) -> BackendKind {
@@ -162,7 +100,7 @@ impl Compiler for SqliteCompiler {
         op: &LogicalRead,
         ctx: &CompileContext<'_>,
     ) -> Result<CompiledRendering, CompileError> {
-        let table = self.resolve_table(&op.message_type, ctx)?;
+        let table = Sl::resolve_table(&op.message_type, ctx.manifest)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
         let select = match &op.projection {
@@ -170,7 +108,7 @@ impl Compiler for SqliteCompiler {
                 .fields
                 .iter()
                 .map(|f| {
-                    let col = self.column_for(table, f, &op.message_type)?;
+                    let col = Sl::column_for(table, f, &op.message_type)?;
                     Ok(format!("\"{col}\""))
                 })
                 .collect::<Result<Vec<_>, CompileError>>()?
@@ -182,7 +120,7 @@ impl Compiler for SqliteCompiler {
         let mut sql = format!("SELECT {select} FROM \"{table}\"", table = table.table);
 
         if let Some(filter) = &op.filter
-            && let Some(body) = self.render_where(filter, table, &op.message_type, &mut params)?
+            && let Some(body) = Sl::render_where(filter, table, &op.message_type, &mut params)?
         {
             sql.push_str(&format!(" WHERE {body}"));
         }
@@ -192,7 +130,7 @@ impl Compiler for SqliteCompiler {
                 .sort
                 .iter()
                 .map(|s| {
-                    let col = self.column_for(table, &s.field, &op.message_type)?;
+                    let col = Sl::column_for(table, &s.field, &op.message_type)?;
                     let direction = s.direction.token().to_uppercase();
                     let nulls = match s.nulls {
                         crate::ir::projection::NullOrder::First => " NULLS FIRST",
@@ -212,13 +150,19 @@ impl Compiler for SqliteCompiler {
                     op: "keyset_cursor",
                 });
             }
-            if let Some(limit) = pag.limit {
-                sql.push_str(&format!(" LIMIT {limit}"));
-            }
-            if let Some(offset) = pag.offset
-                && offset > 0
-            {
-                sql.push_str(&format!(" OFFSET {offset}"));
+            let offset = pag.offset.filter(|&o| o > 0);
+            match (pag.limit, offset) {
+                (Some(limit), Some(offset)) => {
+                    sql.push_str(&format!(" LIMIT {limit} OFFSET {offset}"));
+                }
+                (Some(limit), None) => {
+                    sql.push_str(&format!(" LIMIT {limit}"));
+                }
+                // SQLite requires LIMIT before OFFSET; `LIMIT -1` means "no limit".
+                (None, Some(offset)) => {
+                    sql.push_str(&format!(" LIMIT -1 OFFSET {offset}"));
+                }
+                (None, None) => {}
             }
         }
 
@@ -239,13 +183,13 @@ impl Compiler for SqliteCompiler {
                 reason: "LogicalWrite::records must be non-empty".into(),
             });
         }
-        let table = self.resolve_table(&op.message_type, ctx)?;
+        let table = Sl::resolve_table(&op.message_type, ctx.manifest)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
         let first = &op.records[0];
         let columns: Vec<&str> = first
             .keys()
-            .map(|k| self.column_for(table, k, &op.message_type))
+            .map(|k| Sl::column_for(table, k, &op.message_type))
             .collect::<Result<Vec<_>, _>>()?;
         let column_list = columns
             .iter()
@@ -296,14 +240,14 @@ impl Compiler for SqliteCompiler {
                     .primary_key
                     .iter()
                     .map(|f| {
-                        let c = self.column_for(table, f, &op.message_type)?;
+                        let c = Sl::column_for(table, f, &op.message_type)?;
                         Ok(format!("\"{c}\""))
                     })
                     .collect::<Result<Vec<_>, CompileError>>()?;
                 let target_cols: Vec<&str> = match &op.conflict {
                     ConflictStrategy::Update { fields } => fields
                         .iter()
-                        .map(|f| self.column_for(table, f, &op.message_type))
+                        .map(|f| Sl::column_for(table, f, &op.message_type))
                         .collect::<Result<Vec<_>, _>>()?,
                     ConflictStrategy::Replace => columns.clone(),
                     _ => unreachable!(),
@@ -327,7 +271,7 @@ impl Compiler for SqliteCompiler {
                 .return_fields
                 .iter()
                 .map(|f| {
-                    let c = self.column_for(table, f, &op.message_type)?;
+                    let c = Sl::column_for(table, f, &op.message_type)?;
                     Ok(format!("\"{c}\""))
                 })
                 .collect::<Result<Vec<_>, CompileError>>()?;
@@ -346,15 +290,15 @@ impl Compiler for SqliteCompiler {
         op: &LogicalDelete,
         ctx: &CompileContext<'_>,
     ) -> Result<CompiledRendering, CompileError> {
-        let table = self.resolve_table(&op.message_type, ctx)?;
+        let table = Sl::resolve_table(&op.message_type, ctx.manifest)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
-        let body = self
-            .render_where(&op.filter, table, &op.message_type, &mut params)?
-            .ok_or_else(|| CompileError::Malformed {
+        let body = Sl::render_where(&op.filter, table, &op.message_type, &mut params)?.ok_or_else(
+            || CompileError::Malformed {
                 reason: "LogicalDelete::filter cannot be empty; use Drop resource to truncate"
                     .into(),
-            })?;
+            },
+        )?;
         if body == "0" {
             return Err(CompileError::Malformed {
                 reason: "LogicalDelete::filter resolves to FALSE; refusing no-op delete".into(),
@@ -366,7 +310,7 @@ impl Compiler for SqliteCompiler {
                 .return_fields
                 .iter()
                 .map(|f| {
-                    let c = self.column_for(table, f, &op.message_type)?;
+                    let c = Sl::column_for(table, f, &op.message_type)?;
                     Ok(format!("\"{c}\""))
                 })
                 .collect::<Result<Vec<_>, CompileError>>()?;
@@ -389,15 +333,15 @@ impl Compiler for SqliteCompiler {
                 reason: "LogicalAggregate::aggregates must be non-empty".into(),
             });
         }
-        let mut seen: HashSet<&str> = HashSet::new();
-        for agg in &op.aggregates {
-            if !seen.insert(agg.alias.as_str()) {
-                return Err(CompileError::Malformed {
-                    reason: format!("duplicate aggregate alias '{}'", agg.alias),
-                });
-            }
-        }
-        let table = self.resolve_table(&op.message_type, ctx)?;
+        super::util::validate_aggregate_aliases(&op.aggregates)?;
+        let table = Sl::resolve_table(&op.message_type, ctx.manifest)?;
+        // #151: reject a GROUP BY column colliding with an aggregate alias.
+        let group_names: Vec<&str> = op
+            .group_by
+            .iter()
+            .map(|f| Sl::column_for(table, f, &op.message_type))
+            .collect::<Result<Vec<_>, _>>()?;
+        super::util::validate_no_groupby_alias_collision(&group_names, &op.aggregates)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
         let mut select_parts: Vec<String> = Vec::new();
@@ -405,7 +349,7 @@ impl Compiler for SqliteCompiler {
             .group_by
             .iter()
             .map(|f| {
-                let col = self.column_for(table, f, &op.message_type)?;
+                let col = Sl::column_for(table, f, &op.message_type)?;
                 Ok::<_, CompileError>(format!("\"{col}\""))
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -413,7 +357,7 @@ impl Compiler for SqliteCompiler {
             select_parts.push(col.clone());
         }
         for agg in &op.aggregates {
-            select_parts.push(render_aggregate(agg, table, &op.message_type)?);
+            select_parts.push(Sl::render_aggregate(agg, table, &op.message_type)?);
         }
         let mut sql = format!(
             "SELECT {sel} FROM \"{table}\"",
@@ -422,7 +366,7 @@ impl Compiler for SqliteCompiler {
         );
 
         if let Some(filter) = &op.filter
-            && let Some(body) = self.render_where(filter, table, &op.message_type, &mut params)?
+            && let Some(body) = Sl::render_where(filter, table, &op.message_type, &mut params)?
         {
             sql.push_str(&format!(" WHERE {body}"));
         }
@@ -432,7 +376,7 @@ impl Compiler for SqliteCompiler {
         }
 
         if let Some(having) = &op.having {
-            let body = render_having(having, op, &mut params)?;
+            let body = Sl::render_having(having, op, table, &mut params)?;
             sql.push_str(&format!(" HAVING {body}"));
         }
 
@@ -441,7 +385,7 @@ impl Compiler for SqliteCompiler {
                 .sort
                 .iter()
                 .map(|s| {
-                    let token = resolve_sort_field(&s.field, op, table)?;
+                    let token = Sl::resolve_sort_field(&s.field, op, table)?;
                     let direction = s.direction.token().to_uppercase();
                     Ok::<_, CompileError>(format!("{token} {direction}"))
                 })
@@ -456,13 +400,19 @@ impl Compiler for SqliteCompiler {
                     op: "keyset_cursor",
                 });
             }
-            if let Some(limit) = pag.limit {
-                sql.push_str(&format!(" LIMIT {limit}"));
-            }
-            if let Some(offset) = pag.offset
-                && offset > 0
-            {
-                sql.push_str(&format!(" OFFSET {offset}"));
+            let offset = pag.offset.filter(|&o| o > 0);
+            match (pag.limit, offset) {
+                (Some(limit), Some(offset)) => {
+                    sql.push_str(&format!(" LIMIT {limit} OFFSET {offset}"));
+                }
+                (Some(limit), None) => {
+                    sql.push_str(&format!(" LIMIT {limit}"));
+                }
+                // SQLite requires LIMIT before OFFSET; `LIMIT -1` means "no limit".
+                (None, Some(offset)) => {
+                    sql.push_str(&format!(" LIMIT -1 OFFSET {offset}"));
+                }
+                (None, None) => {}
             }
         }
 
@@ -495,7 +445,7 @@ impl Compiler for SqliteCompiler {
                 reason: "text_query must be non-empty for SQLite FTS5 search".into(),
             });
         }
-        let table = self.resolve_table(&op.message_type, ctx)?;
+        let table = Sl::resolve_table(&op.message_type, ctx.manifest)?;
         let mut params: Vec<LogicalValue> = Vec::new();
         params.push(LogicalValue::String(text.to_string()));
 
@@ -508,7 +458,7 @@ impl Compiler for SqliteCompiler {
         );
 
         if let Some(filter) = &op.filter
-            && let Some(body) = self.render_where(filter, table, &op.message_type, &mut params)?
+            && let Some(body) = Sl::render_where(filter, table, &op.message_type, &mut params)?
         {
             // The base-table columns are quoted via `t.<col>` for the
             // join — re-render with a base alias.
@@ -520,7 +470,10 @@ impl Compiler for SqliteCompiler {
             // Surface threshold semantically: callers pass "minimum
             // relevance" which we interpret as max bm25 score.
             params.push(LogicalValue::Float(threshold as f64));
-            sql.push_str(" AND bm25(\"{table}_fts\") <= ?");
+            sql.push_str(&format!(
+                " AND bm25(\"{table}_fts\") <= ?",
+                table = table.table
+            ));
         }
 
         sql.push_str(&format!(
@@ -658,181 +611,6 @@ impl Compiler for SqliteCompiler {
             params: Vec::new(),
         })
     }
-}
-
-fn sql_op_for(op: ComparisonOp) -> &'static str {
-    match op {
-        ComparisonOp::Eq => "=",
-        ComparisonOp::Ne => "<>",
-        ComparisonOp::Lt => "<",
-        ComparisonOp::Le => "<=",
-        ComparisonOp::Gt => ">",
-        ComparisonOp::Ge => ">=",
-        ComparisonOp::Like
-        | ComparisonOp::Contains
-        | ComparisonOp::StartsWith
-        | ComparisonOp::EndsWith
-        | ComparisonOp::ILike => "LIKE",
-    }
-}
-
-fn wrap_value_for_op(op: ComparisonOp) -> String {
-    match op {
-        ComparisonOp::Contains => "('%' || ? || '%')".to_string(),
-        ComparisonOp::StartsWith => "(? || '%')".to_string(),
-        ComparisonOp::EndsWith => "('%' || ?)".to_string(),
-        _ => "?".to_string(),
-    }
-}
-
-fn render_aggregate(
-    agg: &AggregateExpr,
-    table: &ManifestTable,
-    message_type: &str,
-) -> Result<String, CompileError> {
-    let token = agg.func.sql_token();
-    let body = match agg.func {
-        AggregateFunc::Count if agg.field == "*" => "*".to_string(),
-        AggregateFunc::Count => {
-            let col = resolve_column(table, &agg.field, message_type)?;
-            format!("\"{col}\"")
-        }
-        AggregateFunc::CountDistinct => {
-            if agg.field == "*" {
-                return Err(CompileError::Malformed {
-                    reason: "COUNT(DISTINCT *) is not allowed; specify a field".into(),
-                });
-            }
-            let col = resolve_column(table, &agg.field, message_type)?;
-            format!("DISTINCT \"{col}\"")
-        }
-        AggregateFunc::Sum | AggregateFunc::Avg | AggregateFunc::Min | AggregateFunc::Max => {
-            if agg.field == "*" {
-                return Err(CompileError::Malformed {
-                    reason: format!("{} requires a field name, not '*'", agg.func.sql_token()),
-                });
-            }
-            let col = resolve_column(table, &agg.field, message_type)?;
-            format!("\"{col}\"")
-        }
-    };
-    Ok(format!("{token}({body}) AS \"{}\"", agg.alias))
-}
-
-fn resolve_sort_field(
-    field: &str,
-    op: &LogicalAggregate,
-    table: &ManifestTable,
-) -> Result<String, CompileError> {
-    if op.aggregates.iter().any(|a| a.alias == field) {
-        return Ok(format!("\"{field}\""));
-    }
-    if op.group_by.iter().any(|f| f == field) {
-        let col = resolve_column(table, field, &op.message_type)?;
-        return Ok(format!("\"{col}\""));
-    }
-    Err(CompileError::Malformed {
-        reason: format!(
-            "ORDER BY field '{field}' is neither an aggregate alias nor a GROUP BY column"
-        ),
-    })
-}
-
-fn render_having(
-    filter: &LogicalFilter,
-    op: &LogicalAggregate,
-    params: &mut Vec<LogicalValue>,
-) -> Result<String, CompileError> {
-    match filter {
-        LogicalFilter::And(c) if c.is_empty() => Ok("1".to_string()),
-        LogicalFilter::Or(c) if c.is_empty() => Ok("0".to_string()),
-        LogicalFilter::And(clauses) => {
-            let parts = clauses
-                .iter()
-                .map(|c| render_having(c, op, params))
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(format!("({})", parts.join(" AND ")))
-        }
-        LogicalFilter::Or(clauses) => {
-            let parts = clauses
-                .iter()
-                .map(|c| render_having(c, op, params))
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(format!("({})", parts.join(" OR ")))
-        }
-        LogicalFilter::Not(inner) => {
-            let r = render_having(inner, op, params)?;
-            Ok(format!("(NOT {r})"))
-        }
-        LogicalFilter::Comparison {
-            field,
-            op: cmp,
-            value,
-        } => {
-            if value.is_null() {
-                return Err(CompileError::Malformed {
-                    reason: format!(
-                        "HAVING comparison with NULL on '{field}' must use IsNull, not {}",
-                        cmp.token()
-                    ),
-                });
-            }
-            let token = resolve_having_field(field, op)?;
-            params.push(value.clone());
-            let sql_op = sql_op_for(*cmp);
-            let rhs = wrap_value_for_op(*cmp);
-            Ok(format!("{token} {sql_op} {rhs}"))
-        }
-        LogicalFilter::IsNull(field) => {
-            let token = resolve_having_field(field, op)?;
-            Ok(format!("{token} IS NULL"))
-        }
-        LogicalFilter::InList { field, values } => {
-            if values.is_empty() {
-                return Ok("0".to_string());
-            }
-            let token = resolve_having_field(field, op)?;
-            let placeholders = values
-                .iter()
-                .map(|v| {
-                    params.push(v.clone());
-                    "?".to_string()
-                })
-                .collect::<Vec<_>>()
-                .join(", ");
-            Ok(format!("{token} IN ({placeholders})"))
-        }
-    }
-}
-
-fn resolve_having_field(field: &str, op: &LogicalAggregate) -> Result<String, CompileError> {
-    if op.aggregates.iter().any(|a| a.alias == field) {
-        return Ok(format!("\"{field}\""));
-    }
-    if op.group_by.iter().any(|f| f == field) {
-        return Ok(format!("\"{field}\""));
-    }
-    Err(CompileError::Malformed {
-        reason: format!(
-            "HAVING field '{field}' is neither an aggregate alias nor a GROUP BY column"
-        ),
-    })
-}
-
-fn resolve_column<'a>(
-    table: &'a ManifestTable,
-    field: &str,
-    message_type: &str,
-) -> Result<&'a str, CompileError> {
-    table
-        .columns
-        .iter()
-        .find(|c| c.field_name.eq_ignore_ascii_case(field) || c.column_name == field)
-        .map(|c| c.column_name.as_str())
-        .ok_or_else(|| CompileError::UnknownField {
-            message_type: message_type.to_string(),
-            field: field.to_string(),
-        })
 }
 
 #[cfg(test)]

@@ -93,6 +93,33 @@ impl StaticKeyResolver {
         Self::default()
     }
 
+    /// Build a resolver from the operator environment, or `None` when no key is
+    /// configured. Reads `UDB_CDC_ENCRYPTION_KEY_B64` (base64-encoded 32 bytes),
+    /// `UDB_CDC_ENCRYPTION_KEY_ID` (default `udb-cdc-v1`), and
+    /// `UDB_CDC_ENCRYPTION_KEY_VERSION` (default 1). A malformed key returns
+    /// `None` so callers fail safe (mask) rather than emitting plaintext.
+    pub fn from_env() -> Option<Self> {
+        let raw = std::env::var("UDB_CDC_ENCRYPTION_KEY_B64")
+            .ok()
+            .filter(|v| !v.trim().is_empty())?;
+        let bytes = BASE64_STANDARD.decode(raw.trim()).ok()?;
+        if bytes.len() != 32 {
+            return None;
+        }
+        let mut key_bytes = [0u8; 32];
+        key_bytes.copy_from_slice(&bytes);
+        let key_id = std::env::var("UDB_CDC_ENCRYPTION_KEY_ID")
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+            .unwrap_or_else(|| "udb-cdc-v1".to_string());
+        let key_version = std::env::var("UDB_CDC_ENCRYPTION_KEY_VERSION")
+            .ok()
+            .and_then(|v| v.trim().parse::<u32>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(1);
+        Some(Self::new().with_key(CdcEncryptionKey::new(key_id, key_version, key_bytes)))
+    }
+
     pub fn with_key(mut self, key: CdcEncryptionKey) -> Self {
         self.keys.push(key);
         if self.active_index.is_none() {
@@ -227,9 +254,9 @@ impl std::fmt::Display for CdcEncryptionError {
 impl std::error::Error for CdcEncryptionError {}
 
 /// Encrypt one JSON value (serialised to a UTF-8 byte string) and
-/// produce the envelope. The caller supplies an entropy source for
-/// the nonce; `[0u8;12]` is allowed in tests but production paths
-/// pass a fresh random nonce per call (see `random_nonce_12`).
+/// produce the envelope. The caller supplies the 12-byte nonce; tests
+/// use a fixed nonce ([`FixedNonceProvider`]) while production paths
+/// pull one per call from a [`CounterNonceProvider`].
 pub fn encrypt_field_value(
     plaintext: &JsonValue,
     key: &CdcEncryptionKey,
@@ -303,6 +330,16 @@ pub fn encrypt_cdc_payload_fields(
     resolver: &dyn CdcKeyResolver,
     nonce_provider: &dyn NonceProvider,
 ) -> Result<JsonValue, CdcEncryptionError> {
+    encrypt_cdc_payload_fields_in_place(&mut payload, sensitive_fields, resolver, nonce_provider)?;
+    Ok(payload)
+}
+
+pub fn encrypt_cdc_payload_fields_in_place(
+    payload: &mut JsonValue,
+    sensitive_fields: &[String],
+    resolver: &dyn CdcKeyResolver,
+    nonce_provider: &dyn NonceProvider,
+) -> Result<(), CdcEncryptionError> {
     let active = resolver
         .active_key()
         .ok_or(CdcEncryptionError::NoActiveKey)?;
@@ -310,8 +347,8 @@ pub fn encrypt_cdc_payload_fields(
         .iter()
         .map(|f| f.to_ascii_lowercase())
         .collect();
-    encrypt_value_recursive(&mut payload, &keys, &active, nonce_provider);
-    Ok(payload)
+    encrypt_value_recursive(payload, &keys, &active, nonce_provider);
+    Ok(())
 }
 
 fn encrypt_value_recursive(
@@ -359,7 +396,7 @@ fn encrypt_value_recursive(
 
 // ── NonceProvider ─────────────────────────────────────────────────────────────
 
-/// Pluggable nonce source. Production uses [`RandomNonceProvider`];
+/// Pluggable nonce source. Production uses [`CounterNonceProvider`];
 /// tests use [`FixedNonceProvider`] so encrypt outputs are deterministic.
 pub trait NonceProvider: Send + Sync {
     fn next_nonce(&self) -> [u8; 12];
@@ -379,18 +416,26 @@ impl NonceProvider for FixedNonceProvider {
     }
 }
 
-/// Production nonce source backed by `rand`. NOT used in this module's
-/// tests; left here so the production CDC engine has a single, named
-/// entry point. Falls back to a process-local counter if entropy is
-/// unavailable (still deterministic per-(key,plaintext) under GCM-SIV).
+/// Production nonce source: a monotonic process-local counter packed
+/// into the low 8 bytes of the 12-byte nonce. AES-GCM-SIV is
+/// nonce-misuse resistant, so even a counter restart (new process)
+/// only risks revealing equality of identical plaintexts under the same
+/// key — never key/plaintext recovery. Seed with a non-zero base so two
+/// freshly-started processes don't both begin at 0.
 pub struct CounterNonceProvider {
     counter: std::sync::atomic::AtomicU64,
 }
 
 impl CounterNonceProvider {
     pub fn new() -> Self {
+        Self::seeded(0)
+    }
+
+    /// Construct with an explicit starting counter (e.g. seeded from the
+    /// wall clock) so distinct processes don't share the same nonce run.
+    pub fn seeded(start: u64) -> Self {
         Self {
-            counter: std::sync::atomic::AtomicU64::new(0),
+            counter: std::sync::atomic::AtomicU64::new(start),
         }
     }
 }

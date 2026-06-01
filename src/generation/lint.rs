@@ -3,7 +3,9 @@ use std::collections::BTreeMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::generation::manifest::{
-    CatalogManifest, ManifestColumn, ManifestProjection, ManifestTable,
+    CatalogManifest, ManifestColumn, ManifestProjection, ManifestTable, POLICY_ASYNC_PROJECTION,
+    POLICY_CACHE_FIRST, POLICY_EVENTUAL, POLICY_PRIMARY, POLICY_PRIMARY_ONLY, POLICY_PROJECTION,
+    POLICY_REPLICA, POLICY_STRONG,
 };
 
 // ── Severity ─────────────────────────────────────────────────────────────────
@@ -571,9 +573,9 @@ const SUPPORTED_PROJECTION_KINDS: &[&str] = &[
     "object",
 ];
 const SUPPORTED_READ_POLICIES: &[&str] = &[
-    "primary",
-    "replica",
-    "cache_first",
+    POLICY_PRIMARY,
+    POLICY_REPLICA,
+    POLICY_CACHE_FIRST,
     "cache-first",
     "vector",
     "document",
@@ -582,35 +584,35 @@ const SUPPORTED_READ_POLICIES: &[&str] = &[
     "object",
     "fallback_chain",
     "fallback-chain",
-    "projection",
+    POLICY_PROJECTION,
 ];
 const SUPPORTED_WRITE_POLICIES: &[&str] = &[
-    "primary",
-    "projection",
+    POLICY_PRIMARY,
+    POLICY_PROJECTION,
     "readonly",
     "read_only",
     "read-only",
     "dual_write",
     "dual-write",
     "outbox",
-    "async_projection",
+    POLICY_ASYNC_PROJECTION,
     "async-projection",
     "saga",
 ];
 const SUPPORTED_FANOUT_POLICIES: &[&str] = &[
-    "primary_only",
+    POLICY_PRIMARY_ONLY,
     "primary-only",
     "dual_write",
     "dual-write",
     "outbox",
-    "async_projection",
+    POLICY_ASYNC_PROJECTION,
     "async-projection",
     "saga",
-    "projection",
+    POLICY_PROJECTION,
 ];
 const SUPPORTED_CONSISTENCY_MODELS: &[&str] = &[
-    "strong",
-    "eventual",
+    POLICY_STRONG,
+    POLICY_EVENTUAL,
     "read_your_writes",
     "read-your-writes",
     "bounded_staleness",

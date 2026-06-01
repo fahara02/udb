@@ -1,0 +1,78 @@
+name: Release TypeScript SDK
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Expected sdk/typescript package.json version, for example 0.1.0"
+        required: true
+  push:
+    tags:
+      - "typescript-v*"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build and publish @udb_plus/sdk
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          # Wires NODE_AUTH_TOKEN into a temp .npmrc for `npm publish`.
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Versions consistent with versions.json
+        run: node scripts/check-versions.mjs
+
+      - name: Check version
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          version="$(node -p "require('./sdk/typescript/package.json').version")"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            tag="${GITHUB_REF_NAME#typescript-v}"
+            if [[ "${tag}" != "${version}" ]]; then
+              echo "Tag ${GITHUB_REF_NAME} does not match sdk/typescript version ${version}" >&2
+              exit 1
+            fi
+          fi
+          if [[ -n "${INPUT_VERSION}" && "${INPUT_VERSION}" != "${version}" ]]; then
+            echo "Input version ${INPUT_VERSION} does not match sdk/typescript version ${version}" >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        working-directory: sdk/typescript
+        run: npm install --no-audit --no-fund
+
+      - name: Type check
+        working-directory: sdk/typescript
+        run: npm run typecheck
+
+      # `build` bundles the runtime proto assets into the package (bundle-proto)
+      # and emits dist/*.js + *.d.ts. The committed `gen/` tree is hard-verified
+      # against `buf generate --include-imports` by the CI `buf` job, so no
+      # codegen runs here. `prepublishOnly` re-runs build during publish too.
+      - name: Build package
+        working-directory: sdk/typescript
+        run: npm run build
+
+      - name: Publish dry run
+        working-directory: sdk/typescript
+        run: npm publish --dry-run --access public
+
+      - name: Publish to npm
+        working-directory: sdk/typescript
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public

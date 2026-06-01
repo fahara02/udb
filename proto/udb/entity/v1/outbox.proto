@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package udb.entity.v1;
+
+option go_package = "github.com/udb-project/udb/gen/go/udb/entity/v1;entityv1";
+option java_package      = "com.udb.entity.v1";
+option csharp_namespace = "Udb.Entity.V1";
+option php_namespace = "Udb\\Entity\\V1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
+
+import "google/protobuf/struct.proto";
+import "udb/entity/v1/context.proto";
+
+// ── First-Class Event API ─────────────────────────────────────────────────────
+
+message EnqueueOutboxEventRequest {
+  RequestContext context = 1;
+  // The canonical topic name, e.g. "document.uploaded.v1".
+  string topic = 2;
+  // The partition key for the event (must equal document_id for pipeline events).
+  string partition_key = 3;
+  // Full EventEnvelope payload as a Struct. Required fields: event_id, event_type,
+  // correlation_id, document_id.
+  google.protobuf.Struct payload = 4;
+  // Optional schema_uri injected into the envelope if absent.
+  string schema_uri = 5;
+  // Caller-supplied idempotency key. If provided and a recent matching key exists
+  // in Redis, the event is not re-enqueued and was_duplicate = true is returned.
+  string idempotency_key = 6;
+}
+
+message EnqueueOutboxEventResponse {
+  // UUID of the enqueued (or pre-existing duplicate) event.
+  string event_id = 1;
+  // True if the event was inserted into the outbox; false if it was a duplicate.
+  bool enqueued = 2;
+  // True when idempotency_key matched a previously enqueued event.
+  bool was_duplicate = 3;
+}

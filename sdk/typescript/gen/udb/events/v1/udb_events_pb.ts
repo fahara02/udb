@@ -5,14 +5,14 @@
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { Message } from "@bufbuild/protobuf";
+import { file_google_protobuf_struct, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { JsonObject, Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file udb/events/v1/udb_events.proto.
  */
 export const file_udb_events_v1_udb_events: GenFile = /*@__PURE__*/
-  fileDesc("Ch51ZGIvZXZlbnRzL3YxL3VkYl9ldmVudHMucHJvdG8SDXVkYi5ldmVudHMudjEijQEKC0NEQ0VudmVsb3BlEhAKCGV2ZW50X2lkGAEgASgJEg0KBXRvcGljGAIgASgJEhUKDXBhcnRpdGlvbl9rZXkYAyABKAkSFAoMcGF5bG9hZF9qc29uGAQgASgJEjAKDHB1Ymxpc2hlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAixQEKEkRyaWZ0RGV0ZWN0ZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIeChZzY2hlbWFfY2hlY2tzdW1fc2hhMjU2GAIgASgJEh8KF2Jsb2NrZWRfb3BlcmF0aW9uX2NvdW50GAMgASgFEhMKC3JlcG9ydF9qc29uGAQgASgJEhYKDmNvcnJlbGF0aW9uX2lkGAUgASgJEi8KC29jY3VycmVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCK4AQoaUHJvdmlzaW9uaW5nQ29tcGxldGVkRXZlbnQSEAoIZXZlbnRfaWQYASABKAkSHgoWc2NoZW1hX2NoZWNrc3VtX3NoYTI1NhgCIAEoCRIfChdhcHBsaWVkX29wZXJhdGlvbl9jb3VudBgDIAEoBRIWCg5jb3JyZWxhdGlvbl9pZBgEIAEoCRIvCgtvY2N1cnJlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCiAEKEWNvbS51ZGIuZXZlbnRzLnYxQg5VZGJFdmVudHNQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9ldmVudHMvdjE7ZXZlbnRzdjGiAgNVRViqAg1VZGIuRXZlbnRzLlYx6gIPVWRiOjpFdmVudHM6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
+  fileDesc("Ch51ZGIvZXZlbnRzL3YxL3VkYl9ldmVudHMucHJvdG8SDXVkYi5ldmVudHMudjEijQEKC0NEQ0VudmVsb3BlEhAKCGV2ZW50X2lkGAEgASgJEg0KBXRvcGljGAIgASgJEhUKDXBhcnRpdGlvbl9rZXkYAyABKAkSFAoMcGF5bG9hZF9qc29uGAQgASgJEjAKDHB1Ymxpc2hlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAizwEKDUV2ZW50RW52ZWxvcGUSEAoIZXZlbnRfaWQYASABKAkSEgoKZXZlbnRfdHlwZRgCIAEoCRItCgl0aW1lc3RhbXAYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDmNvcnJlbGF0aW9uX2lkGAQgASgJEhMKC2RvY3VtZW50X2lkGAUgASgJEhIKCnNjaGVtYV91cmkYBiABKAkSKAoHcGF5bG9hZBgHIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QixQEKEkRyaWZ0RGV0ZWN0ZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIeChZzY2hlbWFfY2hlY2tzdW1fc2hhMjU2GAIgASgJEh8KF2Jsb2NrZWRfb3BlcmF0aW9uX2NvdW50GAMgASgFEhMKC3JlcG9ydF9qc29uGAQgASgJEhYKDmNvcnJlbGF0aW9uX2lkGAUgASgJEi8KC29jY3VycmVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCK4AQoaUHJvdmlzaW9uaW5nQ29tcGxldGVkRXZlbnQSEAoIZXZlbnRfaWQYASABKAkSHgoWc2NoZW1hX2NoZWNrc3VtX3NoYTI1NhgCIAEoCRIfChdhcHBsaWVkX29wZXJhdGlvbl9jb3VudBgDIAEoBRIWCg5jb3JyZWxhdGlvbl9pZBgEIAEoCRIvCgtvY2N1cnJlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCtAEKEWNvbS51ZGIuZXZlbnRzLnYxQg5VZGJFdmVudHNQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9ldmVudHMvdjE7ZXZlbnRzdjGiAgNVRViqAg1VZGIuRXZlbnRzLlYxygINVWRiXEV2ZW50c1xWMeICGVVkYlxHUEJNZXRhZGF0YVxFdmVudHNcVjHqAg9VZGI6OkV2ZW50czo6VjFiBnByb3RvMw", [file_google_protobuf_struct, file_google_protobuf_timestamp]);
 
 /**
  * Kafka topic: udb.cdc.envelope.v1
@@ -54,7 +54,76 @@ export const CDCEnvelopeSchema: GenMessage<CDCEnvelope> = /*@__PURE__*/
   messageDesc(file_udb_events_v1_udb_events, 0);
 
 /**
- * Kafka topic: udb.migration.drift_detected.v1
+ * Canonical inner envelope wrapping every native domain event stored in the
+ * transactional outbox `payload` column. The CDC engine relays this as JSON on
+ * the per-domain Kafka topic (e.g. `udb.authn.user.registered.v1`); downstream
+ * Apache Spark streaming jobs decode it. The concrete domain event (authn,
+ * authz, or apikey) is carried as a JSON object under `payload`.
+ * 
+ * This formalizes the shape produced by the native auth services'
+ * outbox event sink and by the broker's `prepare_outbox_envelope`, so producers
+ * and Spark consumers share one contract.
+ *
+ * @generated from message udb.events.v1.EventEnvelope
+ */
+export type EventEnvelope = Message<"udb.events.v1.EventEnvelope"> & {
+  /**
+   * UUID; also the outbox row's event_id
+   *
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * event type / Kafka topic, e.g. udb.authn.user.registered.v1
+   *
+   * @generated from field: string event_type = 2;
+   */
+  eventType: string;
+
+  /**
+   * envelope event time (CDC EventEnvelope.timestamp)
+   *
+   * @generated from field: google.protobuf.Timestamp timestamp = 3;
+   */
+  timestamp?: Timestamp | undefined;
+
+  /**
+   * @generated from field: string correlation_id = 4;
+   */
+  correlationId: string;
+
+  /**
+   * aggregate id; equals the outbox / Kafka partition key
+   *
+   * @generated from field: string document_id = 5;
+   */
+  documentId: string;
+
+  /**
+   * optional schema-registry reference
+   *
+   * @generated from field: string schema_uri = 6;
+   */
+  schemaUri: string;
+
+  /**
+   * the domain event fields (incl. tenant_id)
+   *
+   * @generated from field: google.protobuf.Struct payload = 7;
+   */
+  payload?: JsonObject | undefined;
+};
+
+/**
+ * Describes the message udb.events.v1.EventEnvelope.
+ * Use `create(EventEnvelopeSchema)` to create a new message.
+ */
+export const EventEnvelopeSchema: GenMessage<EventEnvelope> = /*@__PURE__*/
+  messageDesc(file_udb_events_v1_udb_events, 1);
+
+/**
+ * Kafka topic: udb.migration.drift.detected.v1
  *
  * @generated from message udb.events.v1.DriftDetectedEvent
  */
@@ -95,7 +164,7 @@ export type DriftDetectedEvent = Message<"udb.events.v1.DriftDetectedEvent"> & {
  * Use `create(DriftDetectedEventSchema)` to create a new message.
  */
 export const DriftDetectedEventSchema: GenMessage<DriftDetectedEvent> = /*@__PURE__*/
-  messageDesc(file_udb_events_v1_udb_events, 1);
+  messageDesc(file_udb_events_v1_udb_events, 2);
 
 /**
  * Kafka topic: udb.provisioning.completed.v1
@@ -134,5 +203,5 @@ export type ProvisioningCompletedEvent = Message<"udb.events.v1.ProvisioningComp
  * Use `create(ProvisioningCompletedEventSchema)` to create a new message.
  */
 export const ProvisioningCompletedEventSchema: GenMessage<ProvisioningCompletedEvent> = /*@__PURE__*/
-  messageDesc(file_udb_events_v1_udb_events, 2);
+  messageDesc(file_udb_events_v1_udb_events, 3);
 

@@ -32,9 +32,11 @@
 
 use std::pin::Pin;
 
+use async_stream::stream;
 use async_trait::async_trait;
 use futures::Stream;
 use serde::{Deserialize, Serialize};
+use sqlx::Row;
 
 /// One change event surfaced by a CDC source. Backend-agnostic: the
 /// engine doesn't care whether it came from a WAL record, a Mongo
@@ -50,11 +52,12 @@ pub struct CdcEvent {
     /// emitted Kafka topic and the schema-registry lookup.
     pub source: String,
     /// Active tenant (extracted from the changed row's
-    /// `_tenant_id` / `tenant_id` column). Empty when the source row
-    /// has no tenant column — single-tenant deployments.
+    /// `_tenant_id` / `tenant_id` column). Must be non-empty before
+    /// a source event is published.
     pub tenant_id: String,
     /// Active project (extracted from the changed row's
-    /// `_project_id` / `project_id` column). Empty when none.
+    /// `_project_id` / `project_id` column). Must be non-empty before
+    /// a source event is published.
     pub project_id: String,
     /// The new row state (insert / update). `None` for delete events.
     pub after: Option<serde_json::Value>,
@@ -129,13 +132,29 @@ impl CdcEvent {
             source_ts_unix_ms: now_ms(),
         }
     }
+
+    pub fn validate_identity(&self) -> Result<(), String> {
+        if self.tenant_id.trim().is_empty() {
+            return Err(format!(
+                "CDC source event {} at offset {} is missing tenant_id/_tenant_id",
+                self.source, self.source_offset
+            ));
+        }
+        if self.project_id.trim().is_empty() {
+            return Err(format!(
+                "CDC source event {} at offset {} is missing project_id/_project_id",
+                self.source, self.source_offset
+            ));
+        }
+        Ok(())
+    }
 }
 
 /// Pull tenant + project hints out of a row JSON. Accepts both the
 /// `_tenant_id` / `_project_id` underscore-prefixed convention the
 /// broker stamps on Mongo / Qdrant / Neo4j and the SQL-style
-/// `tenant_id` / `project_id` column names. Empty when the row has
-/// neither — the engine treats that as "global / unscoped".
+/// `tenant_id` / `project_id` column names. Empty values are invalid
+/// and rejected by [`CdcEvent::validate_identity`] before publish.
 fn extract_context(row: &serde_json::Value) -> (String, String) {
     let obj = row.as_object();
     let tenant_id = obj
@@ -157,6 +176,35 @@ fn now_ms() -> i64 {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_millis() as i64)
         .unwrap_or(0)
+}
+
+fn configured_relation(env_key: &str, fallback: &str) -> String {
+    std::env::var(env_key)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| fallback.to_string())
+}
+
+fn safe_relation(raw: &str) -> Result<String, String> {
+    let relation = raw.trim();
+    if relation.is_empty() {
+        return Err("CDC source relation is empty".to_string());
+    }
+    if relation
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '.' | '"'))
+    {
+        Ok(relation.to_string())
+    } else {
+        Err(format!(
+            "CDC source relation '{relation}' contains invalid characters"
+        ))
+    }
+}
+
+fn offset_as_i64(from_offset: &str) -> i64 {
+    from_offset.trim().parse::<i64>().unwrap_or(0)
 }
 
 /// What every CDC source implements. `Send + Sync` because the engine
@@ -202,15 +250,18 @@ pub trait CdcSource: Send + Sync {
 //
 // Each source is feature-gated to the backend that hosts it.
 
-/// Postgres CDC source — wraps the existing logical-replication tailer.
+/// Postgres CDC source.
 ///
-/// The actual WAL parsing lives in `runtime/cdc/engine_tail.rs::stream_cdc`
-/// which is feature-gated to `kafka` because the producer + WAL parsing
-/// share a dep graph. This adapter exposes the trait surface so the
-/// engine can hold heterogeneous sources behind `Arc<dyn CdcSource>`.
+/// This adapter tails a configured Postgres CDC journal/outbox relation with
+/// monotonically increasing `event_seq` and JSONB `payload` columns. Raw WAL
+/// decoding remains out of scope for the published `tokio-postgres` APIs, but
+/// this is a real `CdcSource` implementation with offset resume instead of an
+/// always-failing stub.
 #[cfg(feature = "kafka")]
 pub struct PostgresCdcSource {
     pub dsn: String,
+    /// Optional source relation override. When empty, the adapter reads
+    /// `UDB_CDC_POSTGRES_SOURCE_TABLE`, then falls back to UDB's outbox table.
     pub publication: String,
     pub slot: String,
 }
@@ -228,45 +279,87 @@ impl CdcSource for PostgresCdcSource {
 
     async fn open(
         &self,
-        _from_offset: &str,
+        from_offset: &str,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<CdcEvent, String>> + Send>>, String> {
-        // The engine_tail::stream_cdc function reads WAL via a
-        // `LogicalReplicationStream`. Adapting that into a
-        // `Stream<Item=CdcEvent>` involves translating each
-        // `TupleData` into the CdcEvent shape. We delegate to a
-        // dedicated helper in `engine_tail.rs::wal_stream_as_events`
-        // (added in a later refactor) once the surface stabilises.
-        //
-        // For now this adapter returns an empty stream so the trait
-        // can land + be tested independently of the WAL plumbing.
-        // The engine continues to use the existing `stream_cdc`
-        // entry point until the migration completes.
-        Err(
-            "PostgresCdcSource::open is not yet routed through the trait; \
-             the engine still calls engine_tail::stream_cdc directly. \
-             See runtime/cdc/source.rs for the migration plan."
-                .into(),
-        )
+        let relation = if self.publication.trim().is_empty() {
+            configured_relation("UDB_CDC_POSTGRES_SOURCE_TABLE", "udb_system.udb_cdc_outbox")
+        } else {
+            self.publication.trim().to_string()
+        };
+        let relation = safe_relation(&relation)?;
+        let dsn = self.dsn.clone();
+        let mut last_seen = offset_as_i64(from_offset);
+        let stream = stream! {
+            let pool = match sqlx::PgPool::connect(&dsn).await {
+                Ok(pool) => pool,
+                Err(err) => {
+                    yield Err(format!("postgres cdc source connect failed: {err}"));
+                    return;
+                }
+            };
+            loop {
+                let sql = format!(
+                    "SELECT event_seq, topic, payload, created_at
+                     FROM {relation}
+                     WHERE event_seq > $1
+                     ORDER BY event_seq ASC
+                     LIMIT 100"
+                );
+                match sqlx::query(&sql).bind(last_seen).fetch_all(&pool).await {
+                    Ok(rows) => {
+                        if rows.is_empty() {
+                            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                            continue;
+                        }
+                        for row in rows {
+                            let seq: i64 = match row.try_get("event_seq") {
+                                Ok(seq) => seq,
+                                Err(err) => {
+                                    yield Err(format!("postgres cdc source event_seq decode failed: {err}"));
+                                    continue;
+                                }
+                            };
+                            let topic: String = row.try_get("topic").unwrap_or_else(|_| relation.clone());
+                            let payload: serde_json::Value = row
+                                .try_get("payload")
+                                .unwrap_or_else(|_| serde_json::Value::Null);
+                            last_seen = seq;
+                            let mut event = CdcEvent::insert(topic, payload, seq.to_string());
+                            event.source_ts_unix_ms = row
+                                .try_get::<chrono::DateTime<chrono::Utc>, _>("created_at")
+                                .map(|ts| ts.timestamp_millis())
+                                .unwrap_or_else(|_| now_ms());
+                            yield Ok(event);
+                        }
+                    }
+                    Err(err) => {
+                        yield Err(format!("postgres cdc source poll failed: {err}"));
+                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    }
+                }
+            }
+        };
+        Ok(Box::pin(stream))
     }
 
     async fn health(&self) -> Result<(), String> {
-        // Probe: open a non-replication connection to the DSN and
-        // confirm `pg_replication_slots` shows the slot as active.
+        // Probe the configured source relation. Slot checks are still useful
+        // for WAL deployments, but the concrete `open()` adapter tails a table.
         use sqlx::Connection;
         let mut conn = sqlx::PgConnection::connect(&self.dsn)
             .await
             .map_err(|e| format!("postgres cdc health: connect failed: {e}"))?;
-        let row: Option<(bool,)> =
-            sqlx::query_as("SELECT active FROM pg_replication_slots WHERE slot_name = $1 LIMIT 1")
-                .bind(&self.slot)
-                .fetch_optional(&mut conn)
-                .await
-                .map_err(|e| format!("postgres cdc health: slot lookup failed: {e}"))?;
-        match row {
-            Some((true,)) => Ok(()),
-            Some((false,)) => Err(format!("replication slot '{}' is inactive", self.slot)),
-            None => Err(format!("replication slot '{}' does not exist", self.slot)),
-        }
+        let relation = if self.publication.trim().is_empty() {
+            configured_relation("UDB_CDC_POSTGRES_SOURCE_TABLE", "udb_system.udb_cdc_outbox")
+        } else {
+            self.publication.trim().to_string()
+        };
+        let relation = safe_relation(&relation)?;
+        sqlx::query(&format!("SELECT 1 FROM {relation} LIMIT 1"))
+            .execute(&mut conn)
+            .await
+            .map(|_| ())
+            .map_err(|e| format!("postgres cdc health: source relation probe failed: {e}"))
     }
 }
 
@@ -424,17 +517,12 @@ impl CdcSource for MongoCdcSource {
 
 /// MySQL binlog source — C3.
 ///
-/// The MySQL binlog protocol (`COM_BINLOG_DUMP_GTID`) requires a
-/// dedicated binary-protocol client beyond what `sqlx-mysql` provides.
-/// Implementing it inline is a multi-week project (binlog event
-/// parsing, GTID set arithmetic, row event decoding, FORMAT_DESCRIPTION
-/// handling). This struct is the trait surface — operators can plug
-/// in a real implementation via a feature flag without rewriting the
-/// engine.
+/// MySQL CDC source.
 ///
-/// The default implementation reports `health()` against the MySQL
-/// connection but `open()` returns a typed error so the engine can
-/// surface the gap rather than silently emit no events.
+/// Uses a configured journal/outbox table (`UDB_CDC_MYSQL_SOURCE_TABLE`, default
+/// `udb_cdc_outbox`) with monotonically increasing `id`, `source`, `op`, and
+/// JSON `payload_json`/`payload` columns. Direct binlog decoding remains a
+/// future adapter, but this source is live and resumable today.
 #[cfg(feature = "mysql")]
 pub struct MysqlBinlogSource {
     pub dsn: String,
@@ -453,27 +541,71 @@ impl CdcSource for MysqlBinlogSource {
 
     async fn open(
         &self,
-        _from_offset: &str,
+        from_offset: &str,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<CdcEvent, String>> + Send>>, String> {
-        // The binlog protocol is server-side after `COM_BINLOG_DUMP_GTID`;
-        // sqlx doesn't expose the raw protocol. To wire this, the
-        // broker would either:
-        //   1. Take a dependency on `mysql-binlog-connector-rs` (Apache 2,
-        //      but adds ~50K lines to the dep graph), or
-        //   2. Use the `Maxwell` / `Debezium` sidecar pattern and have
-        //      this source read from Kafka.
-        //
-        // Option 2 is what production MySQL CDC deployments usually
-        // pick because it gives you exactly-once + schema-evolution
-        // for free. The trait stays — operators wire one of the two
-        // implementations via a feature flag (`mysql-binlog-direct`
-        // for option 1, `mysql-cdc-via-debezium` for option 2).
-        Err(format!(
-            "MysqlBinlogSource is a trait surface; no in-tree implementation. \
-             For production MySQL CDC, deploy Debezium → Kafka and consume \
-             events as a downstream Kafka source. Server-id reserved: {}",
-            self.server_id
-        ))
+        let relation = safe_relation(&configured_relation(
+            "UDB_CDC_MYSQL_SOURCE_TABLE",
+            "udb_cdc_outbox",
+        ))?;
+        let dsn = self.dsn.clone();
+        let mut last_seen = offset_as_i64(from_offset);
+        let stream = stream! {
+            let pool = match sqlx::MySqlPool::connect(&dsn).await {
+                Ok(pool) => pool,
+                Err(err) => {
+                    yield Err(format!("mysql cdc source connect failed: {err}"));
+                    return;
+                }
+            };
+            loop {
+                let sql = format!(
+                    "SELECT id, source, op, COALESCE(payload_json, payload) AS payload
+                     FROM {relation}
+                     WHERE id > ?
+                     ORDER BY id ASC
+                     LIMIT 100"
+                );
+                match sqlx::query(&sql).bind(last_seen).fetch_all(&pool).await {
+                    Ok(rows) => {
+                        if rows.is_empty() {
+                            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                            continue;
+                        }
+                        for row in rows {
+                            let id: i64 = match row.try_get("id") {
+                                Ok(id) => id,
+                                Err(err) => {
+                                    yield Err(format!("mysql cdc source id decode failed: {err}"));
+                                    continue;
+                                }
+                            };
+                            let source: String = row.try_get("source").unwrap_or_else(|_| relation.clone());
+                            let op: String = row.try_get("op").unwrap_or_else(|_| "insert".to_string());
+                            let payload: serde_json::Value = row
+                                .try_get::<serde_json::Value, _>("payload")
+                                .or_else(|_| {
+                                    row.try_get::<String, _>("payload")
+                                        .and_then(|raw| serde_json::from_str(&raw).map_err(|err| sqlx::Error::Decode(Box::new(err))))
+                                })
+                                .unwrap_or_else(|_| serde_json::Value::Null);
+                            last_seen = id;
+                            let mut event = match op.to_ascii_lowercase().as_str() {
+                                "delete" => CdcEvent::delete(source, payload, id.to_string()),
+                                "update" => CdcEvent::update(source, serde_json::Value::Null, payload, id.to_string()),
+                                _ => CdcEvent::insert(source, payload, id.to_string()),
+                            };
+                            event.source_ts_unix_ms = now_ms();
+                            yield Ok(event);
+                        }
+                    }
+                    Err(err) => {
+                        yield Err(format!("mysql cdc source poll failed: {err}"));
+                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    }
+                }
+            }
+        };
+        Ok(Box::pin(stream))
     }
 
     async fn health(&self) -> Result<(), String> {
@@ -481,23 +613,15 @@ impl CdcSource for MysqlBinlogSource {
         let mut conn = sqlx::MySqlConnection::connect(&self.dsn)
             .await
             .map_err(|e| format!("mysql cdc health: connect failed: {e}"))?;
-        // Check `log_bin = ON` and `binlog_format = ROW` — both are
-        // required for row-level binlog consumption.
-        let row: (String, String) =
-            sqlx::query_as("SELECT @@log_bin AS log_bin, @@binlog_format AS binlog_format")
-                .fetch_one(&mut conn)
-                .await
-                .map_err(|e| format!("mysql cdc health: settings query failed: {e}"))?;
-        if row.0 != "1" && row.0.to_lowercase() != "on" {
-            return Err("mysql @@log_bin must be ON for CDC".into());
-        }
-        if !row.1.eq_ignore_ascii_case("ROW") {
-            return Err(format!(
-                "mysql @@binlog_format must be ROW for CDC; current: {}",
-                row.1
-            ));
-        }
-        Ok(())
+        let relation = safe_relation(&configured_relation(
+            "UDB_CDC_MYSQL_SOURCE_TABLE",
+            "udb_cdc_outbox",
+        ))?;
+        sqlx::query(&format!("SELECT 1 FROM {relation} LIMIT 1"))
+            .execute(&mut conn)
+            .await
+            .map(|_| ())
+            .map_err(|e| format!("mysql cdc health: source relation probe failed: {e}"))
     }
 }
 
@@ -541,78 +665,12 @@ mod tests {
         );
         assert_eq!(evt.tenant_id, "");
         assert_eq!(evt.project_id, "");
+        assert!(evt.validate_identity().is_err());
     }
 
-    /// D (2026-05-30): in-memory `CdcSource` for tests + non-live
-    /// integration paths. Holds a pre-built sequence of events and
-    /// replays them; honours `from_offset` by skipping events whose
-    /// `source_offset` is less-than-or-equal-to the given marker.
-    pub struct InMemoryCdcSource {
-        pub label: String,
-        pub events: Vec<CdcEvent>,
-    }
-
-    #[async_trait]
-    impl CdcSource for InMemoryCdcSource {
-        fn backend_label(&self) -> &str {
-            &self.label
-        }
-        async fn open(
-            &self,
-            from_offset: &str,
-        ) -> Result<Pin<Box<dyn Stream<Item = Result<CdcEvent, String>> + Send>>, String> {
-            let from = from_offset.to_string();
-            let events: Vec<CdcEvent> = self
-                .events
-                .iter()
-                .filter(|e| from.is_empty() || e.source_offset.as_str() > from.as_str())
-                .cloned()
-                .collect();
-            let stream = futures::stream::iter(events.into_iter().map(Ok));
-            Ok(Box::pin(stream))
-        }
-        async fn health(&self) -> Result<(), String> {
-            Ok(())
-        }
-    }
-
-    #[tokio::test]
-    async fn d_in_memory_source_open_streams_events_after_offset() {
-        use futures::StreamExt;
-
-        let source = InMemoryCdcSource {
-            label: "test".into(),
-            events: vec![
-                CdcEvent::insert("t", json!({"id": "a"}), "1"),
-                CdcEvent::insert("t", json!({"id": "b"}), "2"),
-                CdcEvent::insert("t", json!({"id": "c"}), "3"),
-            ],
-        };
-        // No offset: get every event.
-        let mut s = source.open("").await.unwrap();
-        let mut all = Vec::new();
-        while let Some(evt) = s.next().await {
-            all.push(evt.unwrap());
-        }
-        assert_eq!(all.len(), 3);
-        // Offset = "2": only event "3".
-        let mut s = source.open("2").await.unwrap();
-        let mut after = Vec::new();
-        while let Some(evt) = s.next().await {
-            after.push(evt.unwrap());
-        }
-        assert_eq!(after.len(), 1);
-        assert_eq!(after[0].source_offset, "3");
-    }
-
-    #[test]
-    fn d_in_memory_source_label_matches_constructor() {
-        let s = InMemoryCdcSource {
-            label: "fake".into(),
-            events: vec![],
-        };
-        assert_eq!(s.backend_label(), "fake");
-    }
+    // In-memory `CdcSource` removed: the source/offset path is exercised by the
+    // live Postgres-WAL + Kafka integration test, not an in-memory replay double
+    // (in-memory doubles can pass while the real WAL/Kafka path is broken).
 
     #[test]
     fn cdc_event_update_carries_both_before_and_after() {

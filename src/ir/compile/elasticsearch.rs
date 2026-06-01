@@ -26,8 +26,6 @@
 //! has something to match. Mirrors the Mongo / Neo4j / Qdrant
 //! enforcement model — Elasticsearch is `Enforced` from day one.
 
-use std::collections::HashSet;
-
 use serde_json::{Map, Value as Json, json};
 
 use crate::backend::BackendKind;
@@ -128,6 +126,13 @@ impl ElasticsearchCompiler {
             }
             LogicalFilter::InList { field, values } => {
                 let f = self.field_for(table, field, message_type)?;
+                if values.iter().any(LogicalValue::is_null) {
+                    return Err(CompileError::Malformed {
+                        reason: format!(
+                            "Elasticsearch terms filter for field '{field}' cannot contain NULL; use IsNull explicitly"
+                        ),
+                    });
+                }
                 let arr: Vec<Json> = values.iter().map(value_to_es_json).collect();
                 Ok(json!({ "terms": { f: arr } }))
             }
@@ -188,17 +193,24 @@ impl ElasticsearchCompiler {
     /// AND the active request context (tenant/project) into a query.
     /// C7/C8: tenant boundary protocol-enforced at the ES layer; reads
     /// can't cross tenants even with a permissive user filter.
-    fn and_with_context(&self, user_query: Json, ctx: &CompileContext<'_>) -> Json {
+    fn and_with_context(
+        &self,
+        user_query: Json,
+        table: &ManifestTable,
+        ctx: &CompileContext<'_>,
+    ) -> Json {
         let mut ctx_terms: Vec<Json> = Vec::new();
         if let Some(tid) = ctx.tenant_id
             && !tid.is_empty()
+            && let Some(column) = Some(super::util::tenant_system_field(table))
         {
-            ctx_terms.push(json!({ "term": { "_tenant_id": tid } }));
+            ctx_terms.push(json!({ "term": { column: tid } }));
         }
         if let Some(pid) = ctx.project_id
             && !pid.is_empty()
+            && let Some(column) = Some(super::util::project_system_field(table))
         {
-            ctx_terms.push(json!({ "term": { "_project_id": pid } }));
+            ctx_terms.push(json!({ "term": { column: pid } }));
         }
         if ctx_terms.is_empty() {
             return user_query;
@@ -227,7 +239,7 @@ impl Compiler for ElasticsearchCompiler {
             Some(f) => self.render_filter(f, table, &op.message_type)?,
             None => json!({ "match_all": {} }),
         };
-        let query = self.and_with_context(user_query, ctx);
+        let query = self.and_with_context(user_query, table, ctx);
         let mut body = json!({ "query": query });
 
         // _source projection.
@@ -355,7 +367,7 @@ impl Compiler for ElasticsearchCompiler {
 
             // Document line. C7/C8: stamp tenant + project so reads
             // can scope.
-            let doc = record_to_es_json_with_context(record, ctx);
+            let doc = record_to_es_json_with_context(record, table, ctx);
             bulk.push_str(&serde_json::to_string(&doc).map_err(|e| {
                 CompileError::BackendSpecific {
                     backend: BackendKind::Elasticsearch,
@@ -393,7 +405,7 @@ impl Compiler for ElasticsearchCompiler {
         }
         // C7/C8: AND the tenant predicate so a permissive caller
         // filter can't delete another tenant's documents.
-        let query = self.and_with_context(user_query, ctx);
+        let query = self.and_with_context(user_query, table, ctx);
         Ok(CompiledRendering::Json {
             backend: BackendKind::Elasticsearch,
             method: HttpMethod::Post,
@@ -412,14 +424,7 @@ impl Compiler for ElasticsearchCompiler {
                 reason: "LogicalAggregate::aggregates must be non-empty".into(),
             });
         }
-        let mut seen: HashSet<&str> = HashSet::new();
-        for agg in &op.aggregates {
-            if !seen.insert(agg.alias.as_str()) {
-                return Err(CompileError::Malformed {
-                    reason: format!("duplicate aggregate alias '{}'", agg.alias),
-                });
-            }
-        }
+        super::util::validate_aggregate_aliases(&op.aggregates)?;
         let table = self.resolve_table(&op.message_type, ctx)?;
         let index = Self::index_for(table);
 
@@ -428,7 +433,7 @@ impl Compiler for ElasticsearchCompiler {
             Some(f) => self.render_filter(f, table, &op.message_type)?,
             None => json!({ "match_all": {} }),
         };
-        let query = self.and_with_context(user_query, ctx);
+        let query = self.and_with_context(user_query, table, ctx);
 
         // Build the `aggs` block. When `group_by` is non-empty, wrap
         // every aggregate inside a `terms` bucket over the first
@@ -529,6 +534,7 @@ impl Compiler for ElasticsearchCompiler {
         };
         let filter_with_ctx = self.and_with_context(
             user_query.unwrap_or_else(|| json!({ "match_all": {} })),
+            table,
             ctx,
         );
 
@@ -741,6 +747,7 @@ fn value_to_es_json(v: &LogicalValue) -> Json {
 
 fn record_to_es_json_with_context(
     record: &crate::ir::operations::LogicalRecord,
+    table: &ManifestTable,
     ctx: &CompileContext<'_>,
 ) -> Json {
     let mut map = Map::new();
@@ -749,13 +756,15 @@ fn record_to_es_json_with_context(
     }
     if let Some(tid) = ctx.tenant_id
         && !tid.is_empty()
+        && let Some(column) = Some(super::util::tenant_system_field(table))
     {
-        map.insert("_tenant_id".into(), json!(tid));
+        map.insert(column.to_string(), json!(tid));
     }
     if let Some(pid) = ctx.project_id
         && !pid.is_empty()
+        && let Some(column) = Some(super::util::project_system_field(table))
     {
-        map.insert("_project_id".into(), json!(pid));
+        map.insert(column.to_string(), json!(pid));
     }
     Json::Object(map)
 }

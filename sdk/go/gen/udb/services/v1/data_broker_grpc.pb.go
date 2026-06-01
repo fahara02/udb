@@ -34,6 +34,19 @@ const (
 	DataBroker_GetObject_FullMethodName               = "/udb.services.v1.DataBroker/GetObject"
 	DataBroker_GeneratePresignedUrl_FullMethodName    = "/udb.services.v1.DataBroker/GeneratePresignedUrl"
 	DataBroker_InitiateMultipartUpload_FullMethodName = "/udb.services.v1.DataBroker/InitiateMultipartUpload"
+	DataBroker_CacheGet_FullMethodName                = "/udb.services.v1.DataBroker/CacheGet"
+	DataBroker_CacheSet_FullMethodName                = "/udb.services.v1.DataBroker/CacheSet"
+	DataBroker_CacheDelete_FullMethodName             = "/udb.services.v1.DataBroker/CacheDelete"
+	DataBroker_CacheScan_FullMethodName               = "/udb.services.v1.DataBroker/CacheScan"
+	DataBroker_DocumentGet_FullMethodName             = "/udb.services.v1.DataBroker/DocumentGet"
+	DataBroker_DocumentFind_FullMethodName            = "/udb.services.v1.DataBroker/DocumentFind"
+	DataBroker_DocumentUpsert_FullMethodName          = "/udb.services.v1.DataBroker/DocumentUpsert"
+	DataBroker_DocumentDelete_FullMethodName          = "/udb.services.v1.DataBroker/DocumentDelete"
+	DataBroker_GraphQuery_FullMethodName              = "/udb.services.v1.DataBroker/GraphQuery"
+	DataBroker_GraphMutate_FullMethodName             = "/udb.services.v1.DataBroker/GraphMutate"
+	DataBroker_TimeSeriesWrite_FullMethodName         = "/udb.services.v1.DataBroker/TimeSeriesWrite"
+	DataBroker_TimeSeriesQuery_FullMethodName         = "/udb.services.v1.DataBroker/TimeSeriesQuery"
+	DataBroker_AnalyticalQuery_FullMethodName         = "/udb.services.v1.DataBroker/AnalyticalQuery"
 	DataBroker_BeginTx_FullMethodName                 = "/udb.services.v1.DataBroker/BeginTx"
 	DataBroker_PublishCDC_FullMethodName              = "/udb.services.v1.DataBroker/PublishCDC"
 	DataBroker_CreateMaterializedView_FullMethodName  = "/udb.services.v1.DataBroker/CreateMaterializedView"
@@ -62,6 +75,7 @@ const (
 	DataBroker_PauseCdc_FullMethodName                = "/udb.services.v1.DataBroker/PauseCdc"
 	DataBroker_ResumeCdc_FullMethodName               = "/udb.services.v1.DataBroker/ResumeCdc"
 	DataBroker_StepDownCdcLeader_FullMethodName       = "/udb.services.v1.DataBroker/StepDownCdcLeader"
+	DataBroker_PreviewCdcRedaction_FullMethodName     = "/udb.services.v1.DataBroker/PreviewCdcRedaction"
 	DataBroker_ListSagas_FullMethodName               = "/udb.services.v1.DataBroker/ListSagas"
 	DataBroker_GetSaga_FullMethodName                 = "/udb.services.v1.DataBroker/GetSaga"
 	DataBroker_RetrySagaCompensation_FullMethodName   = "/udb.services.v1.DataBroker/RetrySagaCompensation"
@@ -107,6 +121,21 @@ type DataBrokerClient interface {
 	GetObject(ctx context.Context, in *v1.ObjectRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.Chunk], error)
 	GeneratePresignedUrl(ctx context.Context, in *v1.UrlRequest, opts ...grpc.CallOption) (*v1.UrlResponse, error)
 	InitiateMultipartUpload(ctx context.Context, in *v1.MultipartUploadRequest, opts ...grpc.CallOption) (*v1.MultipartUploadResponse, error)
+	// ── Cache / KV ─────────────────────────────────────────────────────────────
+	CacheGet(ctx context.Context, in *v1.CacheGetRequest, opts ...grpc.CallOption) (*v1.CacheGetResponse, error)
+	CacheSet(ctx context.Context, in *v1.CacheSetRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	CacheDelete(ctx context.Context, in *v1.CacheDeleteRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	CacheScan(ctx context.Context, in *v1.CacheScanRequest, opts ...grpc.CallOption) (*v1.CacheScanResponse, error)
+	// ── Document / Graph / Time-Series / Analytical Stores ────────────────────
+	DocumentGet(ctx context.Context, in *v1.DocumentGetRequest, opts ...grpc.CallOption) (*v1.DocumentSet, error)
+	DocumentFind(ctx context.Context, in *v1.DocumentFindRequest, opts ...grpc.CallOption) (*v1.DocumentSet, error)
+	DocumentUpsert(ctx context.Context, in *v1.DocumentUpsertRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	DocumentDelete(ctx context.Context, in *v1.DocumentDeleteRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	GraphQuery(ctx context.Context, in *v1.GraphQueryRequest, opts ...grpc.CallOption) (*v1.GraphResultSet, error)
+	GraphMutate(ctx context.Context, in *v1.GraphMutationRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	TimeSeriesWrite(ctx context.Context, in *v1.TimeSeriesWriteRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	TimeSeriesQuery(ctx context.Context, in *v1.TimeSeriesQueryRequest, opts ...grpc.CallOption) (*v1.TimeSeriesQueryResponse, error)
+	AnalyticalQuery(ctx context.Context, in *v1.AnalyticalQueryRequest, opts ...grpc.CallOption) (*v1.AnalyticalQueryResponse, error)
 	// ── Tx / CDC ───────────────────────────────────────────────────────────────
 	BeginTx(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[v1.Mutation, v1.TxStatus], error)
 	PublishCDC(ctx context.Context, in *v1.CDCSubscriptionRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v11.CDCEnvelope], error)
@@ -155,8 +184,8 @@ type DataBrokerClient interface {
 	// Return the status of a migration run.
 	// Requires scope: udb:admin
 	GetMigrationStatus(ctx context.Context, in *v1.MigrationRunRequest, opts ...grpc.CallOption) (*v1.MigrationStatusResponse, error)
-	// Return migration runs for an operator console page.
-	// Requires scope: udb:admin or udb:portal:viewer
+	// Return migration runs for an admin console page.
+	// Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
 	ListMigrationRuns(ctx context.Context, in *v1.MigrationRunListRequest, opts ...grpc.CallOption) (*v1.MigrationRunListResponse, error)
 	// Approve a migration plan that requires review.
 	// Requires scope: udb:admin
@@ -172,6 +201,7 @@ type DataBrokerClient interface {
 	PauseCdc(ctx context.Context, in *v1.CdcControlRequest, opts ...grpc.CallOption) (*v1.CdcStatusResponse, error)
 	ResumeCdc(ctx context.Context, in *v1.CdcControlRequest, opts ...grpc.CallOption) (*v1.CdcStatusResponse, error)
 	StepDownCdcLeader(ctx context.Context, in *v1.CdcControlRequest, opts ...grpc.CallOption) (*v1.CdcStatusResponse, error)
+	PreviewCdcRedaction(ctx context.Context, in *v1.CdcRedactionPreviewRequest, opts ...grpc.CallOption) (*v1.CdcRedactionPreviewResponse, error)
 	// Saga administration.
 	ListSagas(ctx context.Context, in *v1.SagaListRequest, opts ...grpc.CallOption) (*v1.SagaListResponse, error)
 	GetSaga(ctx context.Context, in *v1.SagaRequest, opts ...grpc.CallOption) (*v1.SagaResponse, error)
@@ -197,15 +227,15 @@ type DataBrokerClient interface {
 	// List all registered project namespaces.
 	// Requires scope: udb:admin
 	ListProjects(ctx context.Context, in *v1.ProjectListRequest, opts ...grpc.CallOption) (*v1.ProjectListResponse, error)
-	// ── Unified Operator Admin Surface ────────────────────────────────────────
+	// ── Unified Admin Surface ────────────────────────────────────────────────
 	// Returns a single snapshot covering catalog, CDC, saga, backend, and policy
-	// state for the operator console.  Requires scope: udb:admin
+	// state for the admin console. Requires scope: udb:admin.
 	GetAdminSummary(ctx context.Context, in *v1.AdminSummaryRequest, opts ...grpc.CallOption) (*v1.AdminSummaryResponse, error)
-	// Paginated admin audit log view for the operator console.
-	// Requires scope: udb:admin or udb:portal:viewer
+	// Paginated admin audit log view for the admin console.
+	// Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
 	ListAdminAuditLogs(ctx context.Context, in *v1.AdminAuditLogRequest, opts ...grpc.CallOption) (*v1.AdminAuditLogResponse, error)
 	// Verifies the admin audit log hash chain and reports the first broken link.
-	// Requires scope: udb:admin or udb:portal:viewer
+	// Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
 	VerifyAdminAuditLog(ctx context.Context, in *v1.AdminAuditVerifyRequest, opts ...grpc.CallOption) (*v1.AdminAuditVerifyResponse, error)
 }
 
@@ -362,6 +392,136 @@ func (c *dataBrokerClient) InitiateMultipartUpload(ctx context.Context, in *v1.M
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.MultipartUploadResponse)
 	err := c.cc.Invoke(ctx, DataBroker_InitiateMultipartUpload_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) CacheGet(ctx context.Context, in *v1.CacheGetRequest, opts ...grpc.CallOption) (*v1.CacheGetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.CacheGetResponse)
+	err := c.cc.Invoke(ctx, DataBroker_CacheGet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) CacheSet(ctx context.Context, in *v1.CacheSetRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.MutationResponse)
+	err := c.cc.Invoke(ctx, DataBroker_CacheSet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) CacheDelete(ctx context.Context, in *v1.CacheDeleteRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.MutationResponse)
+	err := c.cc.Invoke(ctx, DataBroker_CacheDelete_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) CacheScan(ctx context.Context, in *v1.CacheScanRequest, opts ...grpc.CallOption) (*v1.CacheScanResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.CacheScanResponse)
+	err := c.cc.Invoke(ctx, DataBroker_CacheScan_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) DocumentGet(ctx context.Context, in *v1.DocumentGetRequest, opts ...grpc.CallOption) (*v1.DocumentSet, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.DocumentSet)
+	err := c.cc.Invoke(ctx, DataBroker_DocumentGet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) DocumentFind(ctx context.Context, in *v1.DocumentFindRequest, opts ...grpc.CallOption) (*v1.DocumentSet, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.DocumentSet)
+	err := c.cc.Invoke(ctx, DataBroker_DocumentFind_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) DocumentUpsert(ctx context.Context, in *v1.DocumentUpsertRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.MutationResponse)
+	err := c.cc.Invoke(ctx, DataBroker_DocumentUpsert_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) DocumentDelete(ctx context.Context, in *v1.DocumentDeleteRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.MutationResponse)
+	err := c.cc.Invoke(ctx, DataBroker_DocumentDelete_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) GraphQuery(ctx context.Context, in *v1.GraphQueryRequest, opts ...grpc.CallOption) (*v1.GraphResultSet, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.GraphResultSet)
+	err := c.cc.Invoke(ctx, DataBroker_GraphQuery_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) GraphMutate(ctx context.Context, in *v1.GraphMutationRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.MutationResponse)
+	err := c.cc.Invoke(ctx, DataBroker_GraphMutate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) TimeSeriesWrite(ctx context.Context, in *v1.TimeSeriesWriteRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.MutationResponse)
+	err := c.cc.Invoke(ctx, DataBroker_TimeSeriesWrite_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) TimeSeriesQuery(ctx context.Context, in *v1.TimeSeriesQueryRequest, opts ...grpc.CallOption) (*v1.TimeSeriesQueryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.TimeSeriesQueryResponse)
+	err := c.cc.Invoke(ctx, DataBroker_TimeSeriesQuery_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) AnalyticalQuery(ctx context.Context, in *v1.AnalyticalQueryRequest, opts ...grpc.CallOption) (*v1.AnalyticalQueryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.AnalyticalQueryResponse)
+	err := c.cc.Invoke(ctx, DataBroker_AnalyticalQuery_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -660,6 +820,16 @@ func (c *dataBrokerClient) StepDownCdcLeader(ctx context.Context, in *v1.CdcCont
 	return out, nil
 }
 
+func (c *dataBrokerClient) PreviewCdcRedaction(ctx context.Context, in *v1.CdcRedactionPreviewRequest, opts ...grpc.CallOption) (*v1.CdcRedactionPreviewResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.CdcRedactionPreviewResponse)
+	err := c.cc.Invoke(ctx, DataBroker_PreviewCdcRedaction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dataBrokerClient) ListSagas(ctx context.Context, in *v1.SagaListRequest, opts ...grpc.CallOption) (*v1.SagaListResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.SagaListResponse)
@@ -874,6 +1044,21 @@ type DataBrokerServer interface {
 	GetObject(*v1.ObjectRequest, grpc.ServerStreamingServer[v1.Chunk]) error
 	GeneratePresignedUrl(context.Context, *v1.UrlRequest) (*v1.UrlResponse, error)
 	InitiateMultipartUpload(context.Context, *v1.MultipartUploadRequest) (*v1.MultipartUploadResponse, error)
+	// ── Cache / KV ─────────────────────────────────────────────────────────────
+	CacheGet(context.Context, *v1.CacheGetRequest) (*v1.CacheGetResponse, error)
+	CacheSet(context.Context, *v1.CacheSetRequest) (*v1.MutationResponse, error)
+	CacheDelete(context.Context, *v1.CacheDeleteRequest) (*v1.MutationResponse, error)
+	CacheScan(context.Context, *v1.CacheScanRequest) (*v1.CacheScanResponse, error)
+	// ── Document / Graph / Time-Series / Analytical Stores ────────────────────
+	DocumentGet(context.Context, *v1.DocumentGetRequest) (*v1.DocumentSet, error)
+	DocumentFind(context.Context, *v1.DocumentFindRequest) (*v1.DocumentSet, error)
+	DocumentUpsert(context.Context, *v1.DocumentUpsertRequest) (*v1.MutationResponse, error)
+	DocumentDelete(context.Context, *v1.DocumentDeleteRequest) (*v1.MutationResponse, error)
+	GraphQuery(context.Context, *v1.GraphQueryRequest) (*v1.GraphResultSet, error)
+	GraphMutate(context.Context, *v1.GraphMutationRequest) (*v1.MutationResponse, error)
+	TimeSeriesWrite(context.Context, *v1.TimeSeriesWriteRequest) (*v1.MutationResponse, error)
+	TimeSeriesQuery(context.Context, *v1.TimeSeriesQueryRequest) (*v1.TimeSeriesQueryResponse, error)
+	AnalyticalQuery(context.Context, *v1.AnalyticalQueryRequest) (*v1.AnalyticalQueryResponse, error)
 	// ── Tx / CDC ───────────────────────────────────────────────────────────────
 	BeginTx(grpc.BidiStreamingServer[v1.Mutation, v1.TxStatus]) error
 	PublishCDC(*v1.CDCSubscriptionRequest, grpc.ServerStreamingServer[v11.CDCEnvelope]) error
@@ -922,8 +1107,8 @@ type DataBrokerServer interface {
 	// Return the status of a migration run.
 	// Requires scope: udb:admin
 	GetMigrationStatus(context.Context, *v1.MigrationRunRequest) (*v1.MigrationStatusResponse, error)
-	// Return migration runs for an operator console page.
-	// Requires scope: udb:admin or udb:portal:viewer
+	// Return migration runs for an admin console page.
+	// Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
 	ListMigrationRuns(context.Context, *v1.MigrationRunListRequest) (*v1.MigrationRunListResponse, error)
 	// Approve a migration plan that requires review.
 	// Requires scope: udb:admin
@@ -939,6 +1124,7 @@ type DataBrokerServer interface {
 	PauseCdc(context.Context, *v1.CdcControlRequest) (*v1.CdcStatusResponse, error)
 	ResumeCdc(context.Context, *v1.CdcControlRequest) (*v1.CdcStatusResponse, error)
 	StepDownCdcLeader(context.Context, *v1.CdcControlRequest) (*v1.CdcStatusResponse, error)
+	PreviewCdcRedaction(context.Context, *v1.CdcRedactionPreviewRequest) (*v1.CdcRedactionPreviewResponse, error)
 	// Saga administration.
 	ListSagas(context.Context, *v1.SagaListRequest) (*v1.SagaListResponse, error)
 	GetSaga(context.Context, *v1.SagaRequest) (*v1.SagaResponse, error)
@@ -964,15 +1150,15 @@ type DataBrokerServer interface {
 	// List all registered project namespaces.
 	// Requires scope: udb:admin
 	ListProjects(context.Context, *v1.ProjectListRequest) (*v1.ProjectListResponse, error)
-	// ── Unified Operator Admin Surface ────────────────────────────────────────
+	// ── Unified Admin Surface ────────────────────────────────────────────────
 	// Returns a single snapshot covering catalog, CDC, saga, backend, and policy
-	// state for the operator console.  Requires scope: udb:admin
+	// state for the admin console. Requires scope: udb:admin.
 	GetAdminSummary(context.Context, *v1.AdminSummaryRequest) (*v1.AdminSummaryResponse, error)
-	// Paginated admin audit log view for the operator console.
-	// Requires scope: udb:admin or udb:portal:viewer
+	// Paginated admin audit log view for the admin console.
+	// Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
 	ListAdminAuditLogs(context.Context, *v1.AdminAuditLogRequest) (*v1.AdminAuditLogResponse, error)
 	// Verifies the admin audit log hash chain and reports the first broken link.
-	// Requires scope: udb:admin or udb:portal:viewer
+	// Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
 	VerifyAdminAuditLog(context.Context, *v1.AdminAuditVerifyRequest) (*v1.AdminAuditVerifyResponse, error)
 }
 
@@ -1021,6 +1207,45 @@ func (UnimplementedDataBrokerServer) GeneratePresignedUrl(context.Context, *v1.U
 }
 func (UnimplementedDataBrokerServer) InitiateMultipartUpload(context.Context, *v1.MultipartUploadRequest) (*v1.MultipartUploadResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method InitiateMultipartUpload not implemented")
+}
+func (UnimplementedDataBrokerServer) CacheGet(context.Context, *v1.CacheGetRequest) (*v1.CacheGetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CacheGet not implemented")
+}
+func (UnimplementedDataBrokerServer) CacheSet(context.Context, *v1.CacheSetRequest) (*v1.MutationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CacheSet not implemented")
+}
+func (UnimplementedDataBrokerServer) CacheDelete(context.Context, *v1.CacheDeleteRequest) (*v1.MutationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CacheDelete not implemented")
+}
+func (UnimplementedDataBrokerServer) CacheScan(context.Context, *v1.CacheScanRequest) (*v1.CacheScanResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CacheScan not implemented")
+}
+func (UnimplementedDataBrokerServer) DocumentGet(context.Context, *v1.DocumentGetRequest) (*v1.DocumentSet, error) {
+	return nil, status.Error(codes.Unimplemented, "method DocumentGet not implemented")
+}
+func (UnimplementedDataBrokerServer) DocumentFind(context.Context, *v1.DocumentFindRequest) (*v1.DocumentSet, error) {
+	return nil, status.Error(codes.Unimplemented, "method DocumentFind not implemented")
+}
+func (UnimplementedDataBrokerServer) DocumentUpsert(context.Context, *v1.DocumentUpsertRequest) (*v1.MutationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DocumentUpsert not implemented")
+}
+func (UnimplementedDataBrokerServer) DocumentDelete(context.Context, *v1.DocumentDeleteRequest) (*v1.MutationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DocumentDelete not implemented")
+}
+func (UnimplementedDataBrokerServer) GraphQuery(context.Context, *v1.GraphQueryRequest) (*v1.GraphResultSet, error) {
+	return nil, status.Error(codes.Unimplemented, "method GraphQuery not implemented")
+}
+func (UnimplementedDataBrokerServer) GraphMutate(context.Context, *v1.GraphMutationRequest) (*v1.MutationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GraphMutate not implemented")
+}
+func (UnimplementedDataBrokerServer) TimeSeriesWrite(context.Context, *v1.TimeSeriesWriteRequest) (*v1.MutationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TimeSeriesWrite not implemented")
+}
+func (UnimplementedDataBrokerServer) TimeSeriesQuery(context.Context, *v1.TimeSeriesQueryRequest) (*v1.TimeSeriesQueryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TimeSeriesQuery not implemented")
+}
+func (UnimplementedDataBrokerServer) AnalyticalQuery(context.Context, *v1.AnalyticalQueryRequest) (*v1.AnalyticalQueryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AnalyticalQuery not implemented")
 }
 func (UnimplementedDataBrokerServer) BeginTx(grpc.BidiStreamingServer[v1.Mutation, v1.TxStatus]) error {
 	return status.Error(codes.Unimplemented, "method BeginTx not implemented")
@@ -1105,6 +1330,9 @@ func (UnimplementedDataBrokerServer) ResumeCdc(context.Context, *v1.CdcControlRe
 }
 func (UnimplementedDataBrokerServer) StepDownCdcLeader(context.Context, *v1.CdcControlRequest) (*v1.CdcStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method StepDownCdcLeader not implemented")
+}
+func (UnimplementedDataBrokerServer) PreviewCdcRedaction(context.Context, *v1.CdcRedactionPreviewRequest) (*v1.CdcRedactionPreviewResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PreviewCdcRedaction not implemented")
 }
 func (UnimplementedDataBrokerServer) ListSagas(context.Context, *v1.SagaListRequest) (*v1.SagaListResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSagas not implemented")
@@ -1362,6 +1590,240 @@ func _DataBroker_InitiateMultipartUpload_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DataBrokerServer).InitiateMultipartUpload(ctx, req.(*v1.MultipartUploadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_CacheGet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.CacheGetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).CacheGet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_CacheGet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).CacheGet(ctx, req.(*v1.CacheGetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_CacheSet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.CacheSetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).CacheSet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_CacheSet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).CacheSet(ctx, req.(*v1.CacheSetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_CacheDelete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.CacheDeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).CacheDelete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_CacheDelete_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).CacheDelete(ctx, req.(*v1.CacheDeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_CacheScan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.CacheScanRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).CacheScan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_CacheScan_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).CacheScan(ctx, req.(*v1.CacheScanRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_DocumentGet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.DocumentGetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).DocumentGet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_DocumentGet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).DocumentGet(ctx, req.(*v1.DocumentGetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_DocumentFind_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.DocumentFindRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).DocumentFind(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_DocumentFind_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).DocumentFind(ctx, req.(*v1.DocumentFindRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_DocumentUpsert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.DocumentUpsertRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).DocumentUpsert(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_DocumentUpsert_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).DocumentUpsert(ctx, req.(*v1.DocumentUpsertRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_DocumentDelete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.DocumentDeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).DocumentDelete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_DocumentDelete_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).DocumentDelete(ctx, req.(*v1.DocumentDeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_GraphQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GraphQueryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).GraphQuery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_GraphQuery_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).GraphQuery(ctx, req.(*v1.GraphQueryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_GraphMutate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.GraphMutationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).GraphMutate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_GraphMutate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).GraphMutate(ctx, req.(*v1.GraphMutationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_TimeSeriesWrite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.TimeSeriesWriteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).TimeSeriesWrite(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_TimeSeriesWrite_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).TimeSeriesWrite(ctx, req.(*v1.TimeSeriesWriteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_TimeSeriesQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.TimeSeriesQueryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).TimeSeriesQuery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_TimeSeriesQuery_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).TimeSeriesQuery(ctx, req.(*v1.TimeSeriesQueryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_AnalyticalQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.AnalyticalQueryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).AnalyticalQuery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_AnalyticalQuery_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).AnalyticalQuery(ctx, req.(*v1.AnalyticalQueryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1852,6 +2314,24 @@ func _DataBroker_StepDownCdcLeader_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DataBroker_PreviewCdcRedaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.CdcRedactionPreviewRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).PreviewCdcRedaction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_PreviewCdcRedaction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).PreviewCdcRedaction(ctx, req.(*v1.CdcRedactionPreviewRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DataBroker_ListSagas_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1.SagaListRequest)
 	if err := dec(in); err != nil {
@@ -2234,6 +2714,58 @@ var DataBroker_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DataBroker_InitiateMultipartUpload_Handler,
 		},
 		{
+			MethodName: "CacheGet",
+			Handler:    _DataBroker_CacheGet_Handler,
+		},
+		{
+			MethodName: "CacheSet",
+			Handler:    _DataBroker_CacheSet_Handler,
+		},
+		{
+			MethodName: "CacheDelete",
+			Handler:    _DataBroker_CacheDelete_Handler,
+		},
+		{
+			MethodName: "CacheScan",
+			Handler:    _DataBroker_CacheScan_Handler,
+		},
+		{
+			MethodName: "DocumentGet",
+			Handler:    _DataBroker_DocumentGet_Handler,
+		},
+		{
+			MethodName: "DocumentFind",
+			Handler:    _DataBroker_DocumentFind_Handler,
+		},
+		{
+			MethodName: "DocumentUpsert",
+			Handler:    _DataBroker_DocumentUpsert_Handler,
+		},
+		{
+			MethodName: "DocumentDelete",
+			Handler:    _DataBroker_DocumentDelete_Handler,
+		},
+		{
+			MethodName: "GraphQuery",
+			Handler:    _DataBroker_GraphQuery_Handler,
+		},
+		{
+			MethodName: "GraphMutate",
+			Handler:    _DataBroker_GraphMutate_Handler,
+		},
+		{
+			MethodName: "TimeSeriesWrite",
+			Handler:    _DataBroker_TimeSeriesWrite_Handler,
+		},
+		{
+			MethodName: "TimeSeriesQuery",
+			Handler:    _DataBroker_TimeSeriesQuery_Handler,
+		},
+		{
+			MethodName: "AnalyticalQuery",
+			Handler:    _DataBroker_AnalyticalQuery_Handler,
+		},
+		{
 			MethodName: "CreateMaterializedView",
 			Handler:    _DataBroker_CreateMaterializedView_Handler,
 		},
@@ -2336,6 +2868,10 @@ var DataBroker_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "StepDownCdcLeader",
 			Handler:    _DataBroker_StepDownCdcLeader_Handler,
+		},
+		{
+			MethodName: "PreviewCdcRedaction",
+			Handler:    _DataBroker_PreviewCdcRedaction_Handler,
 		},
 		{
 			MethodName: "ListSagas",

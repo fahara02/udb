@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+package udb.core.analytics.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/analytics/services/v1/core.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Analytics.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/analytics/services/v1;analyticsservicev1";
+option java_package = "com.udb.core.analytics.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Analytics\\Services\\V1";
+option php_namespace = "Udb\\Core\\Analytics\\Services\\V1";
+
+// ---------------------------------------------------------------------------
+// AnalyticsService - pipeline statistics, performance dashboards, Prometheus
+// metric backing, SLA compliance reporting, and executor/reconciliation analytics.
+//
+// HTTP prefix: /v1/analytics
+// ---------------------------------------------------------------------------
+
+service AnalyticsService {
+  // Record a single pipeline stage request observation (called per-request).
+  rpc RecordPipelineMetric(RecordPipelineMetricRequest) returns (RecordPipelineMetricResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/analytics/pipeline_metrics"
+      body: "*"
+    };
+  }
+
+  // Query aggregated pipeline stage performance snapshots.
+  rpc GetPipelineSummary(GetPipelineSummaryRequest) returns (GetPipelineSummaryResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/analytics/pipeline_summaries"};
+  }
+
+  // Query daily executor performance roll-ups.
+  rpc GetExecutorPerformance(GetExecutorPerformanceRequest) returns (GetExecutorPerformanceResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/analytics/executor_performance"};
+  }
+
+  // Query daily reconciliation and conflict analytics.
+  rpc GetReconciliationAnalytics(GetReconciliationAnalyticsRequest) returns (GetReconciliationAnalyticsResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/analytics/reconciliation_stats"};
+  }
+
+  // Get throughput statistics over a time window.
+  rpc GetThroughput(GetThroughputRequest) returns (GetThroughputResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/analytics/throughput"};
+  }
+
+  // Get SLA compliance report for a stage and time period.
+  rpc GetSlaCompliance(GetSlaComplianceRequest) returns (GetSlaComplianceResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/analytics/sla_compliance"};
+  }
+
+  // Manually trigger hourly snapshot aggregation (normally a cron job).
+  rpc TriggerSnapshot(TriggerSnapshotRequest) returns (TriggerSnapshotResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/analytics/snapshots:trigger"
+      body: "*"
+    };
+  }
+}

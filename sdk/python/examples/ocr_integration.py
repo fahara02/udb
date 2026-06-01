@@ -1,11 +1,10 @@
 import asyncio
 
-from udb.entity.v1 import types_pb2
 from udb_client import Metadata, UdbAsyncClient
 
 
 async def main() -> None:
-    client = UdbAsyncClient(
+    async with UdbAsyncClient(
         "localhost:50051",
         Metadata(
             tenant_id="tenant-1",
@@ -16,18 +15,13 @@ async def main() -> None:
             project_id="default",
             client_catalog_version="1.0.0",
         ),
-    )
-    try:
+    ) as client:
         await client.upsert(
-            types_pb2.UpsertRequest(
-                message_type="example.processing.v1.ExtractionResult",
-                record_json=b'{"tenant_id":"tenant-1","result_id":"res-1","status":"done"}',
-                conflict_fields=["result_id"],
-                return_record=True,
-            )
+            message_type="example.processing.v1.ExtractionResult",
+            record={"tenant_id": "tenant-1", "result_id": "res-1", "status": "done"},
+            conflict_fields=["result_id"],
+            return_record=True,
         )
-    finally:
-        await client.close()
 
 
 if __name__ == "__main__":

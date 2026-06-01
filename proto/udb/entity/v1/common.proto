@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package udb.entity.v1;
+
+option go_package = "github.com/udb-project/udb/gen/go/udb/entity/v1;entityv1";
+option java_package      = "com.udb.entity.v1";
+option csharp_namespace = "Udb.Entity.V1";
+option php_namespace = "Udb\\Entity\\V1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
+
+import public "udb/entity/v1/context.proto";
+import public "udb/entity/v1/mutation.proto";
+import public "udb/entity/v1/relational.proto";
+
+// Compatibility import target for older clients. New files should import the
+// purpose-specific proto that owns the message they need.

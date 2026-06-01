@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package udb.core.authz.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/authz/entity/v1/enums.proto";
+import "udb/core/common/v1/db.proto";
+
+option csharp_namespace = "udb.core.Authz.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
+option java_package = "com.udb.core.authz.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Entity\\V1";
+
+// Managed permission rule mapped into UDB authorization policy rows.
+message PolicyRule {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "policy_rules"
+    schema_name: "udb_authz"
+    migration_order: 4
+    is_table: true
+    comment: "Managed authorization rules mapped to policy rows"
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    indexes: {
+      index_name: "idx_policy_rules_active_subject_domain"
+      index_type: "BTREE"
+      columns: "subject"
+      columns: "domain"
+      where_clause: "deleted_at IS NULL AND is_active = true"
+    }
+    sql_artifacts: {
+      name: "touch_updated_at_function"
+      backend: "postgres"
+      phase: "before_triggers"
+      sql:
+        "CREATE OR REPLACE FUNCTION udb_authz.touch_updated_at()\n"
+        "RETURNS trigger\n"
+        "LANGUAGE plpgsql\n"
+        "AS $$\n"
+        "BEGIN\n"
+        "  NEW.updated_at = CURRENT_TIMESTAMP;\n"
+        "  RETURN NEW;\n"
+        "END;\n"
+        "$$;"
+    }
+    triggers: {
+      trigger_name: "trg_policy_rules_touch_updated_at"
+      timing: "BEFORE"
+      event: "UPDATE"
+      function_name: "udb_authz.touch_updated_at()"
+      for_each: "ROW"
+    }
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+  };
+
+  string policy_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "policy_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string subject = 2 [(udb.core.common.v1.pg_column) = { column_name: "subject" sql_type: "VARCHAR(200)" not_null: true comment: "Principal selector such as role:<name>, user:<id>, group:<id>, service:<id>, or *" }];
+
+  string domain = 3 [(udb.core.common.v1.pg_column) = { column_name: "domain" sql_type: "VARCHAR(200)" not_null: true comment: "Authorization domain such as tenant:<id>, project:<id>, resource:<type>/<id>, or *" index: { index_name: "idx_policy_rules_domain_object" index_type: "BTREE" columns: "object" } }];
+
+  string object = 4 [(udb.core.common.v1.pg_column) = { column_name: "object" sql_type: "VARCHAR(200)" not_null: true comment: "Protected object or resource pattern such as table:orders, bucket:invoices/*, or service:billing" }];
+
+  string action = 5 [(udb.core.common.v1.pg_column) = { column_name: "action" sql_type: "VARCHAR(80)" not_null: true comment: "Operation such as read, write, delete, data.select, object.presign, or project-defined action" }];
+
+  PolicyEffect effect = 6 [(udb.core.common.v1.pg_column) = { column_name: "effect" sql_type: "VARCHAR(20)" not_null: true default_value: "'ALLOW'" }];
+
+  string condition = 7 [(udb.core.common.v1.pg_column) = { column_name: "condition" sql_type: "TEXT" comment: "Reserved for contextual or ABAC-like matcher expressions" }];
+
+  string description = 8 [(udb.core.common.v1.pg_column) = { column_name: "description" sql_type: "TEXT" }];
+
+  bool is_active = 9 [(udb.core.common.v1.pg_column) = { column_name: "is_active" sql_type: "BOOLEAN" not_null: true default_value: "true" }];
+
+  string created_by = 10 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "UUID" }];
+
+  google.protobuf.Timestamp created_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  google.protobuf.Timestamp updated_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true }];
+
+  google.protobuf.Timestamp deleted_at = 13 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" comment: "Soft-delete tombstone. Non-NULL means the row is logically deleted." }];
+
+  string tenant_id = 14 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true backfill_sql: "COALESCE(NULLIF(split_part(domain, ':', 2), ''), domain)" index: { index_name: "idx_policy_rules_tenant" index_type: "BTREE" } }];
+  string deleted_by = 15 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" comment: "Soft delete actor" }];
+  string project_id = 16 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" comment: "Optional project/application namespace" index: { index_name: "idx_policy_rules_project_id" index_type: "BTREE" } }];
+  string resource_type = 17 [(udb.core.common.v1.pg_column) = { column_name: "resource_type" sql_type: "VARCHAR(80)" comment: "Optional normalized resource type for indexing and filtering" index: { index_name: "idx_policy_rules_resource_type" index_type: "BTREE" } }];
+  string attributes_json = 18 [(udb.core.common.v1.pg_column) = { column_name: "attributes_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Policy metadata and matcher attributes" }];
+}

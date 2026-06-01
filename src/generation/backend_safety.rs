@@ -1,5 +1,18 @@
 use crate::generation::manifest::ManifestStore;
 
+/// Wall-clock seconds since the Unix epoch, for the `generated_at` metadata
+/// field embedded in non-SQL backend artifacts (#210). Single-sourced here so
+/// the six backend generators don't each carry an identical copy. Note: this
+/// value is intentionally NOT part of any artifact checksum/dedup decision —
+/// `sync` keys on the embedded `proto_manifest_checksum` header — so a changing
+/// timestamp never triggers a spurious re-migration.
+pub(super) fn generated_at_unix() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or_default()
+}
+
 pub(super) fn store_opt_str_any<'a>(store: &'a ManifestStore, keys: &[&str]) -> Option<&'a str> {
     keys.iter().find_map(|key| {
         store

@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package udb.core.authz.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+
+option csharp_namespace = "udb.core.Authz.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
+option java_package = "com.udb.core.authz.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Entity\\V1";
+
+message RolePermission {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "role_permissions"
+    schema_name: "udb_authz"
+    migration_order: 6
+    is_table: true
+    comment: "Many-to-many map from roles to permission codes used by ABAC and UI authorization"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_role_permissions_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "role_id"
+      columns: "permission_code"
+    }
+    foreign_keys: {
+      columns: "role_id"
+      references_table: "roles"
+      references_schema: "udb_authz"
+      references_column: "role_id"
+      on_delete: REFERENTIAL_ACTION_CASCADE
+      constraint_name: "fk_role_permissions_role_id"
+    }
+    foreign_keys: {
+      columns: "granted_by"
+      references_table: "users"
+      references_schema: "udb_authn"
+      references_column: "user_id"
+      on_delete: REFERENTIAL_ACTION_SET_NULL
+      constraint_name: "fk_role_permissions_granted_by"
+    }
+    materialized_views: {
+      view_name: "mv_effective_permissions"
+      schema_name: "udb_authz"
+      with_data: true
+      query:
+        "SELECT ur.user_id, ur.domain, ur.role_id, rp.permission_code "
+        "FROM udb_authz.user_roles ur "
+        "JOIN udb_authz.role_permissions rp ON rp.role_id = ur.role_id"
+    }
+  };
+
+  string role_permission_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "role_permission_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string role_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "role_id" sql_type: "UUID" not_null: true }];
+
+  string permission_code = 3 [(udb.core.common.v1.pg_column) = { column_name: "permission_code" sql_type: "VARCHAR(120)" not_null: true }];
+
+  string granted_by = 4 [(udb.core.common.v1.pg_column) = { column_name: "granted_by" sql_type: "UUID" }];
+
+  google.protobuf.Timestamp granted_at = 5 [(udb.core.common.v1.pg_column) = { column_name: "granted_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  string tenant_id = 6 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_rolepermission_tenant" index_type: "BTREE" } }];
+}

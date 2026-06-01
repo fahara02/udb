@@ -34,6 +34,14 @@ pub use source::{CdcEvent, CdcSource};
 
 static INSTALLED_CDC_CONFIG: OnceLock<Mutex<CdcConfig>> = OnceLock::new();
 
+pub(crate) const DEFAULT_CDC_IDEMPOTENCY_TTL_SECS: u64 = 604_800;
+pub(crate) const DEFAULT_CDC_BROADCAST_CAPACITY: usize = 1024;
+pub(crate) const DEFAULT_CDC_POLL_INTERVAL_MS: u64 = 250;
+pub(crate) const DEFAULT_CDC_POLL_BATCH: i64 = 200;
+pub(crate) const DEFAULT_CDC_PRODUCER_LINGER_MS: u64 = 20;
+pub(crate) const DEFAULT_CDC_PRODUCER_BATCH_MESSAGES: u64 = 10_000;
+pub(crate) const DEFAULT_CDC_IDEMPOTENCY_KEY_PREFIX: &str = "idempotency:udb";
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct CdcConfig {
@@ -64,6 +72,13 @@ pub struct CdcConfig {
     pub kafka_tx_timeout_secs: u64,
     pub redaction_mode: CdcRedactionMode,
     pub redaction_version: u32,
+    pub idempotency_ttl_secs: u64,
+    pub broadcast_capacity: usize,
+    pub poll_interval_ms: u64,
+    pub poll_batch: i64,
+    pub producer_linger_ms: u64,
+    pub producer_batch_messages: u64,
+    pub idempotency_key_prefix: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -128,6 +143,10 @@ pub enum CdcRedactionMode {
     Mask,
     Drop,
     Hash,
+    /// Reversible AES-256-GCM-SIV field encryption (U22). Sensitive fields are
+    /// replaced with an `EncryptedField` envelope an authorised consumer can
+    /// later decrypt, instead of being irreversibly masked/dropped/hashed.
+    Encrypt,
 }
 
 impl Default for CdcRedactionMode {
@@ -141,6 +160,7 @@ impl CdcRedactionMode {
         match value.trim().to_ascii_lowercase().as_str() {
             "drop" | "remove" => Self::Drop,
             "hash" | "sha256" => Self::Hash,
+            "encrypt" | "reversible" => Self::Encrypt,
             _ => Self::Mask,
         }
     }
@@ -150,6 +170,7 @@ impl CdcRedactionMode {
             Self::Mask => "mask",
             Self::Drop => "drop",
             Self::Hash => "hash",
+            Self::Encrypt => "encrypt",
         }
     }
 }
@@ -181,6 +202,13 @@ impl Default for CdcConfig {
             kafka_tx_timeout_secs: 30,
             redaction_mode: CdcRedactionMode::default(),
             redaction_version: 1,
+            idempotency_ttl_secs: DEFAULT_CDC_IDEMPOTENCY_TTL_SECS,
+            broadcast_capacity: DEFAULT_CDC_BROADCAST_CAPACITY,
+            poll_interval_ms: DEFAULT_CDC_POLL_INTERVAL_MS,
+            poll_batch: DEFAULT_CDC_POLL_BATCH,
+            producer_linger_ms: DEFAULT_CDC_PRODUCER_LINGER_MS,
+            producer_batch_messages: DEFAULT_CDC_PRODUCER_BATCH_MESSAGES,
+            idempotency_key_prefix: DEFAULT_CDC_IDEMPOTENCY_KEY_PREFIX.to_string(),
         }
     }
 }
@@ -279,6 +307,32 @@ impl CdcConfig {
                 .ok()
                 .and_then(|value| value.parse::<u32>().ok())
                 .unwrap_or(defaults.redaction_version),
+            idempotency_ttl_secs: std::env::var("UDB_CDC_IDEMPOTENCY_TTL_SECS")
+                .ok()
+                .and_then(|value| value.parse::<u64>().ok())
+                .unwrap_or(defaults.idempotency_ttl_secs),
+            broadcast_capacity: std::env::var("UDB_CDC_BROADCAST_CAPACITY")
+                .ok()
+                .and_then(|value| value.parse::<usize>().ok())
+                .unwrap_or(defaults.broadcast_capacity),
+            poll_interval_ms: std::env::var("UDB_CDC_POLL_INTERVAL_MS")
+                .ok()
+                .and_then(|value| value.parse::<u64>().ok())
+                .unwrap_or(defaults.poll_interval_ms),
+            poll_batch: std::env::var("UDB_CDC_POLL_BATCH")
+                .ok()
+                .and_then(|value| value.parse::<i64>().ok())
+                .unwrap_or(defaults.poll_batch),
+            producer_linger_ms: std::env::var("UDB_CDC_PRODUCER_LINGER_MS")
+                .ok()
+                .and_then(|value| value.parse::<u64>().ok())
+                .unwrap_or(defaults.producer_linger_ms),
+            producer_batch_messages: std::env::var("UDB_CDC_PRODUCER_BATCH_MESSAGES")
+                .ok()
+                .and_then(|value| value.parse::<u64>().ok())
+                .unwrap_or(defaults.producer_batch_messages),
+            idempotency_key_prefix: std::env::var("UDB_CDC_IDEMPOTENCY_KEY_PREFIX")
+                .unwrap_or(defaults.idempotency_key_prefix),
         };
         config.normalize();
         config
@@ -369,6 +423,39 @@ impl CdcConfig {
         {
             self.redaction_version = parsed;
         }
+        if let Ok(value) = std::env::var("UDB_CDC_IDEMPOTENCY_TTL_SECS")
+            && let Ok(parsed) = value.parse::<u64>()
+        {
+            self.idempotency_ttl_secs = parsed;
+        }
+        if let Ok(value) = std::env::var("UDB_CDC_BROADCAST_CAPACITY")
+            && let Ok(parsed) = value.parse::<usize>()
+        {
+            self.broadcast_capacity = parsed;
+        }
+        if let Ok(value) = std::env::var("UDB_CDC_POLL_INTERVAL_MS")
+            && let Ok(parsed) = value.parse::<u64>()
+        {
+            self.poll_interval_ms = parsed;
+        }
+        if let Ok(value) = std::env::var("UDB_CDC_POLL_BATCH")
+            && let Ok(parsed) = value.parse::<i64>()
+        {
+            self.poll_batch = parsed;
+        }
+        if let Ok(value) = std::env::var("UDB_CDC_PRODUCER_LINGER_MS")
+            && let Ok(parsed) = value.parse::<u64>()
+        {
+            self.producer_linger_ms = parsed;
+        }
+        if let Ok(value) = std::env::var("UDB_CDC_PRODUCER_BATCH_MESSAGES")
+            && let Ok(parsed) = value.parse::<u64>()
+        {
+            self.producer_batch_messages = parsed;
+        }
+        if let Ok(value) = std::env::var("UDB_CDC_IDEMPOTENCY_KEY_PREFIX") {
+            self.idempotency_key_prefix = value;
+        }
         self.normalize();
     }
 
@@ -388,10 +475,46 @@ impl CdcConfig {
         if self.kafka_tx_timeout_secs == 0 {
             self.kafka_tx_timeout_secs = Self::default().kafka_tx_timeout_secs;
         }
+        if self.idempotency_ttl_secs == 0 {
+            self.idempotency_ttl_secs = Self::default().idempotency_ttl_secs;
+        }
+        if self.broadcast_capacity == 0 {
+            self.broadcast_capacity = Self::default().broadcast_capacity;
+        }
+        if self.poll_interval_ms == 0 {
+            self.poll_interval_ms = Self::default().poll_interval_ms;
+        }
+        if self.poll_batch <= 0 {
+            self.poll_batch = Self::default().poll_batch;
+        }
+        if self.producer_batch_messages == 0 {
+            self.producer_batch_messages = Self::default().producer_batch_messages;
+        }
+        if self.idempotency_key_prefix.trim().is_empty() {
+            self.idempotency_key_prefix = Self::default().idempotency_key_prefix;
+        }
     }
 
     pub fn outbox_relation(&self) -> String {
         format!("{}.{}", qi(&self.system_schema), qi(&self.outbox_table))
+    }
+
+    /// #115: dialect-specific outbox identifiers. The Postgres
+    /// [`outbox_relation`](Self::outbox_relation) double-quotes a
+    /// `schema.table` pair, which MySQL (backtick identifiers, database-as-schema)
+    /// and SQLite (no schemas; identifier validator rejects dots/quotes) cannot
+    /// accept. These return engine-correct identifiers for the connected database.
+    ///
+    /// Bare, unquoted outbox table name (SQLite operates on a single attached
+    /// database and its canonical store validates `[A-Za-z0-9_]+`).
+    pub fn outbox_table_bare(&self) -> String {
+        self.outbox_table.clone()
+    }
+
+    /// Backtick-quoted outbox table for MySQL, resolved within the database the
+    /// pool is connected to (MySQL's "schema" is the connected database).
+    pub fn outbox_relation_mysql(&self) -> String {
+        format!("`{}`", self.outbox_table.replace('`', "``"))
     }
 
     pub fn offsets_relation(&self) -> String {
@@ -408,10 +531,17 @@ impl CdcConfig {
 
     #[cfg(feature = "kafka")]
     fn schema_uri_for(&self, event_type: &str) -> Option<String> {
-        let domain = event_type.split('.').next().unwrap_or_default();
-        if domain.is_empty() {
-            return None;
-        }
+        // Native event types are `udb.<domain>.<entity>.<verb>.vN`; the
+        // meaningful domain is the segment AFTER the `udb` namespace prefix
+        // (e.g. `udb.authn.user.registered.v1` → `authn`), not the literal
+        // `udb`. Fall back to the first segment for non-namespaced types.
+        let mut parts = event_type.split('.').filter(|segment| !segment.is_empty());
+        let first = parts.next()?;
+        let domain = if first == "udb" {
+            parts.next().unwrap_or(first)
+        } else {
+            first
+        };
         Some(
             self.schema_uri_template
                 .replace("{domain}", domain)
@@ -456,6 +586,14 @@ pub struct EventEnvelope {
     pub redacted_fields: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub redaction_mode: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct CdcRedactionPreview {
+    pub payload: serde_json::Value,
+    pub redacted_fields: Vec<String>,
+    pub redaction_mode: CdcRedactionMode,
+    pub redaction_version: u32,
 }
 
 fn is_zero_u32(value: &u32) -> bool {
@@ -519,8 +657,64 @@ pub fn apply_manifest_cdc_redaction(
     mode: CdcRedactionMode,
     redaction_version: u32,
 ) -> serde_json::Value {
-    let mut sensitive_fields = Vec::new();
-    for candidate in [
+    preview_manifest_cdc_redaction(
+        manifest,
+        message_type,
+        topic,
+        schema_uri,
+        payload,
+        mode,
+        redaction_version,
+    )
+    .payload
+}
+
+/// Recursively decrypt `EncryptedField` envelopes in CDC/admin JSON payloads.
+///
+/// Used by DLQ replay (`DecryptScope::Replay`) and by privileged admin audit
+/// reads (`DecryptScope::Audit`). Failures leave the original envelope in place
+/// so a bad key never corrupts the stored audit/DLQ data.
+pub fn decrypt_encrypted_json_fields(
+    value: serde_json::Value,
+    resolver: &dyn encryption::CdcKeyResolver,
+    scope: encryption::DecryptScope,
+) -> serde_json::Value {
+    use encryption::{EncryptedField, decrypt_field_value};
+    match value {
+        serde_json::Value::Object(map) => {
+            let mut out = serde_json::Map::with_capacity(map.len());
+            for (key, nested) in map {
+                if EncryptedField::is_envelope(&nested) {
+                    let restored = serde_json::from_value::<EncryptedField>(nested.clone())
+                        .ok()
+                        .and_then(|env| decrypt_field_value(&env, resolver, scope).ok());
+                    out.insert(key, restored.unwrap_or(nested));
+                } else {
+                    out.insert(key, decrypt_encrypted_json_fields(nested, resolver, scope));
+                }
+            }
+            serde_json::Value::Object(out)
+        }
+        serde_json::Value::Array(items) => serde_json::Value::Array(
+            items
+                .into_iter()
+                .map(|item| decrypt_encrypted_json_fields(item, resolver, scope))
+                .collect(),
+        ),
+        other => other,
+    }
+}
+
+pub fn preview_manifest_cdc_redaction(
+    manifest: &CatalogManifest,
+    message_type: &str,
+    topic: &str,
+    schema_uri: Option<&str>,
+    payload: serde_json::Value,
+    mode: CdcRedactionMode,
+    redaction_version: u32,
+) -> CdcRedactionPreview {
+    let candidates = [
         message_type,
         topic,
         schema_uri.unwrap_or_default(),
@@ -528,17 +722,115 @@ pub fn apply_manifest_cdc_redaction(
             .get("event_type")
             .and_then(|value| value.as_str())
             .unwrap_or_default(),
-    ] {
-        sensitive_fields.extend(cdc_sensitive_fields_for_manifest(manifest, candidate));
+    ];
+    let sensitive_fields = sensitive_fields_for_candidates(manifest, &candidates);
+    if sensitive_fields.is_empty() {
+        return CdcRedactionPreview {
+            payload,
+            redacted_fields: Vec::new(),
+            redaction_mode: mode,
+            redaction_version: redaction_version.max(1),
+        };
+    }
+
+    let redacted = if mode == CdcRedactionMode::Encrypt {
+        // U22: reversible field encryption. Build the key resolver from the
+        // operator environment; if no key is configured (or encryption fails)
+        // fall back to irreversible Mask so plaintext is NEVER emitted.
+        match crate::runtime::cdc::encryption::StaticKeyResolver::from_env() {
+            Some(resolver) => {
+                let seed = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_nanos() as u64)
+                    .unwrap_or(0);
+                let nonce = crate::runtime::cdc::encryption::CounterNonceProvider::seeded(seed);
+                let mut encrypted = payload;
+                match crate::runtime::cdc::encryption::encrypt_cdc_payload_fields_in_place(
+                    &mut encrypted,
+                    &sensitive_fields,
+                    &resolver,
+                    &nonce,
+                ) {
+                    Ok(()) => encrypted,
+                    Err(err) => {
+                        tracing::warn!(
+                            "CDC field encryption failed ({err}); masking instead to avoid \
+                             leaking plaintext"
+                        );
+                        redact_cdc_payload_fields(
+                            encrypted,
+                            &sensitive_fields,
+                            CdcRedactionMode::Mask,
+                        )
+                    }
+                }
+            }
+            None => {
+                tracing::warn!(
+                    "CDC redaction_mode=encrypt but no encryption key is configured \
+                     (set UDB_CDC_ENCRYPTION_KEY_B64); masking sensitive fields instead"
+                );
+                redact_cdc_payload_fields(payload, &sensitive_fields, CdcRedactionMode::Mask)
+            }
+        }
+    } else {
+        redact_cdc_payload_fields(payload, &sensitive_fields, mode)
+    };
+    let payload = annotate_redaction(redacted, &sensitive_fields, mode, redaction_version);
+    CdcRedactionPreview {
+        payload,
+        redacted_fields: sensitive_fields,
+        redaction_mode: mode,
+        redaction_version: redaction_version.max(1),
+    }
+}
+
+fn sensitive_fields_for_candidates(manifest: &CatalogManifest, candidates: &[&str]) -> Vec<String> {
+    let normalized_candidates = candidates
+        .iter()
+        .filter(|candidate| !candidate.trim().is_empty())
+        .map(|candidate| normalize_manifest_match_key(candidate.trim()))
+        .collect::<Vec<_>>();
+    let mut sensitive_fields = Vec::new();
+    for table in &manifest.tables {
+        let table_candidates = [
+            table.message_name.as_str(),
+            table.table.as_str(),
+            table.cdc_topic.as_str(),
+        ];
+        let matches_table = table_candidates.iter().any(|candidate| {
+            let candidate = candidate.trim();
+            if candidate.is_empty() {
+                return false;
+            }
+            let normalized_table = normalize_manifest_match_key(candidate);
+            normalized_candidates.iter().any(|needle| {
+                &normalized_table == needle
+                    || needle.ends_with(&format!(".{normalized_table}"))
+                    || normalized_table.ends_with(&format!(".{needle}"))
+            })
+        });
+        if !matches_table {
+            continue;
+        }
+        for column in &table.columns {
+            if column.encrypted
+                || column.security.is_pii
+                || column.security.is_encrypted
+                || column.security.mask_in_logs
+            {
+                if !column.field_name.trim().is_empty() {
+                    sensitive_fields.push(column.field_name.clone());
+                }
+                if !column.column_name.trim().is_empty() {
+                    sensitive_fields.push(column.column_name.clone());
+                }
+            }
+        }
     }
     sensitive_fields.sort();
     sensitive_fields.dedup();
-    if sensitive_fields.is_empty() {
-        return payload;
-    }
-
-    let redacted = redact_cdc_payload_fields(payload, &sensitive_fields, mode);
-    annotate_redaction(redacted, &sensitive_fields, mode, redaction_version)
+    sensitive_fields
 }
 
 pub fn redact_cdc_payload_fields(
@@ -577,6 +869,12 @@ fn redact_value(
                                 .map(hash_json_value)
                                 .unwrap_or_else(|| "sha256:".to_string());
                             obj.insert(key, serde_json::Value::String(hash));
+                        }
+                        // Encrypt is dispatched in apply_manifest_cdc_redaction
+                        // (it needs a key resolver this pure fn lacks). If it
+                        // ever reaches here, mask — never leak plaintext.
+                        CdcRedactionMode::Encrypt => {
+                            obj.insert(key, serde_json::Value::String("***MASKED***".to_string()));
                         }
                     }
                 } else if let Some(child) = obj.get_mut(&key) {

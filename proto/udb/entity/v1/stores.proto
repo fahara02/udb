@@ -1,0 +1,188 @@
+syntax = "proto3";
+
+package udb.entity.v1;
+
+option go_package = "github.com/udb-project/udb/gen/go/udb/entity/v1;entityv1";
+option java_package      = "com.udb.entity.v1";
+option csharp_namespace = "Udb.Entity.V1";
+option php_namespace = "Udb\\Entity\\V1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "udb/entity/v1/context.proto";
+import "udb/entity/v1/operation.proto";
+import "udb/entity/v1/relational.proto";
+
+message CacheGetRequest {
+  RequestContext context = 1;
+  StoreResource resource = 2;
+  string key = 3;
+  bool touch = 4;
+}
+
+message CacheGetResponse {
+  bool found = 1;
+  bytes value = 2;
+  string content_type = 3;
+  int64 ttl_seconds = 4;
+  google.protobuf.Struct metadata = 5;
+}
+
+message CacheSetRequest {
+  RequestContext context = 1;
+  StoreResource resource = 2;
+  string key = 3;
+  bytes value = 4;
+  string content_type = 5;
+  int64 ttl_seconds = 6;
+  bool only_if_absent = 7;
+  bool only_if_present = 8;
+  string idempotency_key = 9;
+  google.protobuf.Struct metadata = 10;
+}
+
+message CacheDeleteRequest {
+  RequestContext context = 1;
+  StoreResource resource = 2;
+  string key = 3;
+  string idempotency_key = 4;
+}
+
+message CacheScanRequest {
+  RequestContext context = 1;
+  StoreResource resource = 2;
+  string key_pattern = 3;
+  int32 limit = 4;
+  string page_token = 5;
+}
+
+message CacheEntry {
+  string key = 1;
+  bytes value = 2;
+  string content_type = 3;
+  int64 ttl_seconds = 4;
+  google.protobuf.Struct metadata = 5;
+}
+
+message CacheScanResponse {
+  repeated CacheEntry entries = 1;
+  string next_page_token = 2;
+  OperationStats stats = 3;
+}
+
+message DocumentGetRequest {
+  RequestContext context = 1;
+  StoreResource resource = 2;
+  string document_id = 3;
+  repeated string fields = 4;
+}
+
+message DocumentFindRequest {
+  RequestContext context = 1;
+  StoreResource resource = 2;
+  google.protobuf.Struct filter = 3;
+  repeated string fields = 4;
+  int32 limit = 5;
+  string page_token = 6;
+  repeated Sort sort = 7;
+}
+
+message DocumentUpsertRequest {
+  RequestContext context = 1;
+  StoreResource resource = 2;
+  string document_id = 3;
+  google.protobuf.Struct document = 4;
+  repeated string merge_fields = 5;
+  bool replace = 6;
+  string idempotency_key = 7;
+}
+
+message DocumentDeleteRequest {
+  RequestContext context = 1;
+  StoreResource resource = 2;
+  string document_id = 3;
+  google.protobuf.Struct filter = 4;
+  string idempotency_key = 5;
+}
+
+message DocumentSet {
+  repeated google.protobuf.Struct documents = 1;
+  string next_page_token = 2;
+  OperationStats stats = 3;
+}
+
+message GraphQueryRequest {
+  RequestContext context = 1;
+  StoreResource resource = 2;
+  string query = 3;
+  google.protobuf.Struct parameters = 4;
+  int32 limit = 5;
+  string page_token = 6;
+  bool read_only = 7;
+}
+
+message GraphMutationRequest {
+  RequestContext context = 1;
+  StoreResource resource = 2;
+  string query = 3;
+  google.protobuf.Struct parameters = 4;
+  string idempotency_key = 5;
+}
+
+message GraphResultSet {
+  repeated google.protobuf.Struct records = 1;
+  string next_page_token = 2;
+  OperationStats stats = 3;
+}
+
+message TimeSeriesPoint {
+  google.protobuf.Timestamp timestamp = 1;
+  map<string, string> tags = 2;
+  map<string, double> values = 3;
+  google.protobuf.Struct fields = 4;
+}
+
+message TimeSeriesWriteRequest {
+  RequestContext context = 1;
+  StoreResource resource = 2;
+  repeated TimeSeriesPoint points = 3;
+  string idempotency_key = 4;
+}
+
+message TimeSeriesQueryRequest {
+  RequestContext context = 1;
+  StoreResource resource = 2;
+  google.protobuf.Timestamp from = 3;
+  google.protobuf.Timestamp to = 4;
+  google.protobuf.Struct filter = 5;
+  repeated string fields = 6;
+  string group_by = 7;
+  string aggregate = 8;
+  string window = 9;
+  int32 limit = 10;
+  string page_token = 11;
+}
+
+message TimeSeriesQueryResponse {
+  repeated TimeSeriesPoint points = 1;
+  string next_page_token = 2;
+  OperationStats stats = 3;
+}
+
+message AnalyticalQueryRequest {
+  RequestContext context = 1;
+  StoreResource resource = 2;
+  string query = 3;
+  google.protobuf.Struct parameters = 4;
+  int32 limit = 5;
+  string page_token = 6;
+  bool dry_run = 7;
+}
+
+message AnalyticalQueryResponse {
+  repeated Row rows = 1;
+  string next_page_token = 2;
+  OperationStats stats = 3;
+  repeated OperationWarning warnings = 4;
+}

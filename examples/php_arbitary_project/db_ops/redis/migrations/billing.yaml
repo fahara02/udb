@@ -1,0 +1,16 @@
+# UDB:migration_kind: bootstrap
+# UDB:backend: redis
+# UDB:namespace: billing
+# UDB:proto_manifest_checksum: sha256:c404ea5faae33c700b4d7da77831ce24fabbb6203e972e6e73a99bdd1cbe2b06
+# UDB:generator: udb
+# UDB:generated_at: 1780229737
+namespace: "billing"
+key_patterns:
+  - pattern: "billing:session:{user_id}"
+    type: hash
+    ttl_seconds: 86400
+    description: "User session data"
+  - pattern: "billing:invoice:{invoice_id}"
+    type: string
+    ttl_seconds: 600
+    description: "Request idempotency key"

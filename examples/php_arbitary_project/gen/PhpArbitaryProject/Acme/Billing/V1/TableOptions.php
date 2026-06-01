@@ -216,3 +216,4 @@ class TableOptions extends \Google\Protobuf\Internal\Message
     }
 
 }
+

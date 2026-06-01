@@ -26,6 +26,15 @@ impl Backend for MysqlPlugin {
     async fn register(&self, ctx: &mut RegisterCtx<'_>) {
         crate::runtime::core::setup_data::register_mysql(ctx).await;
     }
+
+    fn generate_artifacts(
+        &self,
+        manifest: &crate::generation::CatalogManifest,
+        sql_config: &crate::generation::sql::SqlGenerationConfig,
+    ) -> Result<Vec<crate::generation::GeneratedArtifact>, String> {
+        crate::generation::backends::generate_mysql_artifacts(manifest, sql_config)
+            .map_err(|err| err.to_string())
+    }
 }
 
 impl crate::runtime::executors::handle::DispatchFactory for MysqlPlugin {
@@ -34,7 +43,7 @@ impl crate::runtime::executors::handle::DispatchFactory for MysqlPlugin {
         runtime: &crate::runtime::core::DataBrokerRuntime,
         instance: Option<&str>,
         _write: bool,
-        _context: Option<&crate::broker::RequestContext>,
+        context: Option<&crate::broker::RequestContext>,
     ) -> Result<crate::runtime::executors::handle::DispatchExecutor, tonic::Status> {
         // Resolve the MySQL pool for the requested instance. `None`
         // falls back to "primary"; the runtime registers `primary`
@@ -48,7 +57,16 @@ impl crate::runtime::executors::handle::DispatchFactory for MysqlPlugin {
                 ))
             })?
             .clone();
-        let executor = crate::runtime::executors::mysql::MysqlExecutor::with_pool(pool);
+        // Thread the request context so generic-dispatch `query`/`mutate` set the
+        // `app.current_*` session vars (matching the typed RPC path); otherwise a
+        // pooled connection runs tenant-blind. Mirrors the Postgres plugin.
+        let executor = match context {
+            Some(ctx) => crate::runtime::executors::mysql::MysqlExecutor::with_context(
+                pool,
+                std::sync::Arc::new(ctx.clone()),
+            ),
+            None => crate::runtime::executors::mysql::MysqlExecutor::with_pool(pool),
+        };
         Ok(crate::runtime::executors::handle::DispatchExecutor::Mysql(
             executor,
         ))

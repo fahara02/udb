@@ -242,6 +242,50 @@ pub(crate) fn validate_pg_mutation_sql(sql: &str) -> Result<(), tonic::Status> {
     }
 }
 
+/// Backend-neutral read-SQL guard for generic dispatch on MySQL/SQLite/MSSQL.
+/// Mirrors [`validate_pg_read_sql`] (single statement + read-only leading verb)
+/// without the Postgres-specific wording so the other SQL backends enforce the
+/// same statement-type allowlist Postgres does.
+pub(crate) fn validate_read_sql(sql: &str) -> Result<(), tonic::Status> {
+    validate_single_statement(sql)?;
+    let first = sql
+        .split_whitespace()
+        .next()
+        .unwrap_or_default()
+        .trim_end_matches(';')
+        .to_ascii_lowercase();
+    if matches!(
+        first.as_str(),
+        "select" | "with" | "show" | "explain" | "pragma"
+    ) {
+        Ok(())
+    } else {
+        Err(tonic::Status::failed_precondition(
+            "generic query allows only SELECT, WITH, SHOW, EXPLAIN, or PRAGMA",
+        ))
+    }
+}
+
+/// Backend-neutral mutation-SQL guard for generic dispatch on MySQL/SQLite/MSSQL.
+/// Mirrors [`validate_pg_mutation_sql`] but also accepts `REPLACE` (MySQL/SQLite
+/// upsert verb).
+pub(crate) fn validate_mutation_sql(sql: &str) -> Result<(), tonic::Status> {
+    validate_single_statement(sql)?;
+    let first = sql
+        .split_whitespace()
+        .next()
+        .unwrap_or_default()
+        .trim_end_matches(';')
+        .to_ascii_lowercase();
+    if matches!(first.as_str(), "insert" | "update" | "delete" | "replace") {
+        Ok(())
+    } else {
+        Err(tonic::Status::failed_precondition(
+            "generic mutate allows only INSERT, UPDATE, DELETE, or REPLACE",
+        ))
+    }
+}
+
 pub(crate) fn bind_generic_pg_params<'q>(
     mut query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
     params: &'q [JsonValue],
@@ -295,28 +339,28 @@ pub(crate) async fn connect_pg_pool_from_config(
     let acquire_timeout = Duration::from_secs(if config.acquire_timeout_secs > 0 {
         config.acquire_timeout_secs
     } else {
-        10
+        crate::runtime::config::DEFAULT_DB_ACQUIRE_TIMEOUT_SECS
     });
     let idle_timeout = Duration::from_secs(if config.conn_max_idle_secs > 0 {
         config.conn_max_idle_secs
     } else {
-        600
+        crate::runtime::config::DEFAULT_DB_IDLE_TIMEOUT_SECS
     });
     let max_lifetime = Duration::from_secs(if config.conn_max_lifetime_secs > 0 {
         config.conn_max_lifetime_secs
     } else {
-        1800
+        crate::runtime::config::DEFAULT_DB_MAX_LIFETIME_SECS
     });
     let connection_string = append_application_name(dsn, app_name);
     let min_connections = if config.min_connections > 0 {
         config.min_connections as u32
     } else {
-        5
+        crate::runtime::config::DEFAULT_DB_MIN_CONNECTIONS as u32
     };
     let max_connections = if config.max_open_conns > 0 {
         config.max_open_conns as u32
     } else {
-        50
+        crate::runtime::config::DEFAULT_DB_MAX_OPEN_CONNS as u32
     };
     PgPoolOptions::new()
         .min_connections(min_connections)

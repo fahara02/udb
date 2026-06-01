@@ -20,7 +20,16 @@ pub fn init_observability() {
     // JSON mode: opt-in via UDB_LOG_JSON=1 (e.g. in production / log aggregation).
     // Default: human-readable pretty output.
     let json = std::env::var("UDB_LOG_JSON")
-        .map(|v| matches!(v.as_str(), "1" | "true" | "TRUE" | "yes"))
+        .map(|v| match v.to_ascii_lowercase().as_str() {
+            "1" | "true" | "yes" | "on" => true,
+            "0" | "false" | "no" | "off" => false,
+            other => {
+                eprintln!(
+                    "unrecognized UDB_LOG_JSON value '{other}'; expected 1/0, true/false, yes/no, or on/off"
+                );
+                false
+            }
+        })
         .unwrap_or(false);
 
     if json {
@@ -31,7 +40,16 @@ pub fn init_observability() {
     } else {
         let colors = std::env::var("NO_COLOR").is_err()
             && std::env::var("UDB_NO_COLOR")
-                .map(|v| !matches!(v.as_str(), "1" | "true"))
+                .map(|v| match v.to_ascii_lowercase().as_str() {
+                    "1" | "true" | "yes" | "on" => false,
+                    "0" | "false" | "no" | "off" => true,
+                    other => {
+                        eprintln!(
+                            "unrecognized UDB_NO_COLOR value '{other}'; expected 1/0, true/false, yes/no, or on/off"
+                        );
+                        true
+                    }
+                })
                 .unwrap_or(true);
         let _ = tracing_subscriber::fmt()
             .with_env_filter(filter)
@@ -52,7 +70,14 @@ impl TraceContext {
     }
 
     pub fn is_present(&self) -> bool {
-        !self.trace_id.is_empty() || !self.correlation_id.is_empty()
+        !self.trace_id.is_empty()
+            || !self.span_id.is_empty()
+            || !self.parent_span_id.is_empty()
+            || !self.correlation_id.is_empty()
+    }
+
+    pub fn is_complete(&self) -> bool {
+        !self.trace_id.is_empty() && !self.span_id.is_empty()
     }
 }
 

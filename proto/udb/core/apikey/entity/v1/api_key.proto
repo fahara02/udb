@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+package udb.core.apikey.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/apikey/entity/v1/enums.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Apikey.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/apikey/entity/v1;apikeyv1";
+option java_package = "com.udb.core.apikey.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Apikey\\Entity\\V1";
+
+message ApiKey {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "api_keys"
+    schema_name: "udb_authn"
+    migration_order: 4
+    is_table: true
+    comment: "Machine-to-machine API keys for integration accounts"
+    soft_delete: true
+    audit_fields: true
+    enable_rls: false
+    sql_artifacts: {
+      name: "touch_updated_at_function"
+      backend: "postgres"
+      phase: "before_triggers"
+      sql:
+        "CREATE OR REPLACE FUNCTION udb_authn.touch_updated_at()\n"
+        "RETURNS trigger\n"
+        "LANGUAGE plpgsql\n"
+        "AS $$\n"
+        "BEGIN\n"
+        "  NEW.updated_at = CURRENT_TIMESTAMP;\n"
+        "  RETURN NEW;\n"
+        "END;\n"
+        "$$;"
+    }
+    triggers: {
+      trigger_name: "trg_api_keys_touch_updated_at"
+      timing: "BEFORE"
+      event: "UPDATE"
+      function_name: "udb_authn.touch_updated_at()"
+      for_each: "ROW"
+    }
+    indexes: {
+      index_name: "idx_apikey_hash"
+      index_type: "BTREE"
+      where_clause: "deleted_at IS NULL"
+      columns: "key_hash"
+    }
+    extensions: {
+      name: "pg_trgm"
+      schema: "public"
+    }
+    sql_artifacts: {
+      name: "apikey_hash_required_function"
+      backend: "postgres"
+      phase: "before_triggers"
+      sql:
+        "CREATE OR REPLACE FUNCTION udb_authn.assert_api_key_hash()\n"
+        "RETURNS trigger\n"
+        "LANGUAGE plpgsql\n"
+        "AS $$\n"
+        "BEGIN\n"
+        "  IF NEW.key_hash IS NULL OR length(NEW.key_hash) > 128 THEN\n"
+        "    RAISE EXCEPTION 'api_keys.key_hash must be a keyed digest no longer than 128 characters';\n"
+        "  END IF;\n"
+        "  RETURN NEW;\n"
+        "END;\n"
+        "$$;"
+    }
+    triggers: {
+      trigger_name: "trg_apikey_hash_required"
+      timing: "BEFORE"
+      event: "INSERT"
+      function_name: "udb_authn.assert_api_key_hash()"
+      for_each: "ROW"
+    }
+    replica_hint: "primary"
+    required_scope: "apikey:revoke"
+  };
+
+  string key_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "key_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  // Prefix stored for display (for example "udb_ab1c"). Not secret; only for UX.
+  string key_prefix = 2 [(udb.core.common.v1.pg_column) = { column_name: "key_prefix" sql_type: "VARCHAR(20)" not_null: true trigram_index: true comment: "First 8 chars of plain key: prefix_XXXXXXXX — shown in admin UI" }];
+
+  // Keyed digest of the full plain key — used for lookup + equality check.
+  string key_hash = 3 [(udb.core.common.v1.pg_column) = { column_name: "key_hash" sql_type: "VARCHAR(128)" not_null: true unique: true index: { index_name: "idx_api_keys_key_hash" index_type: "HASH" unique: true } }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.encrypted_security) = true, (udb.core.common.v1.log_masked) = true];
+
+  string name = 4 [(udb.core.common.v1.pg_column) = { column_name: "name" sql_type: "VARCHAR(150)" not_null: true comment: "Human-readable key name" }];
+
+  string description = 5 [(udb.core.common.v1.pg_column) = { column_name: "description" sql_type: "TEXT" }];
+
+  ApiKeyOwnerType owner_type = 6 [(udb.core.common.v1.pg_column) = { column_name: "owner_type" sql_type: "VARCHAR(20)" not_null: true index: { index_name: "idx_api_keys_owner" index_type: "BTREE" columns: "owner_id" } }];
+
+  // Owning principal, tenant, project, integration, service account, or workload id.
+  string owner_id = 7 [(udb.core.common.v1.pg_column) = { column_name: "owner_id" sql_type: "VARCHAR(160)" not_null: true }];
+
+  // JSON array of scopes granted to this key.
+  string scopes_json = 8 [(udb.core.common.v1.pg_column) = { column_name: "scopes_json" sql_type: "JSONB" not_null: true is_json: true default_value: "'[]'" comment: "Array of granted scope strings" }];
+
+  ApiKeyStatus status = 9 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(15)" not_null: true default_value: "'ACTIVE'" index: { index_name: "idx_api_keys_status" index_type: "BTREE" } }];
+
+  // IP allowlist — JSON array of CIDR strings. Empty = unrestricted.
+  string ip_allowlist_json = 10 [(udb.core.common.v1.pg_column) = { column_name: "ip_allowlist_json" sql_type: "JSONB" is_json: true default_value: "'[]'" comment: "Allowed source CIDRs: [\"10.0.0.0/8\"]. Empty = any IP." }];
+
+  // Rate limits (0 = unlimited)
+  int32 rate_limit_per_minute = 11 [(udb.core.common.v1.pg_column) = { column_name: "rate_limit_per_minute" sql_type: "INTEGER" not_null: true default_value: "60" }];
+
+  int64 rate_limit_per_day = 12 [(udb.core.common.v1.pg_column) = { column_name: "rate_limit_per_day" sql_type: "BIGINT" not_null: true default_value: "10000" }];
+
+  string created_by = 13 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "VARCHAR(160)" not_null: true comment: "Principal that created this key" index: { index_name: "idx_api_keys_created_by" index_type: "BTREE" } }];
+
+  string revoked_by = 14 [(udb.core.common.v1.pg_column) = { column_name: "revoked_by" sql_type: "VARCHAR(160)" comment: "Principal that revoked this key" index: { index_name: "idx_api_keys_revoked_by" index_type: "BTREE" } }];
+
+  string revoke_reason = 15 [(udb.core.common.v1.pg_column) = { column_name: "revoke_reason" sql_type: "VARCHAR(255)" }];
+
+  google.protobuf.Timestamp expires_at = 16 [(udb.core.common.v1.pg_column) = { column_name: "expires_at" sql_type: "TIMESTAMPTZ" comment: "NULL = never expires" }];
+
+  google.protobuf.Timestamp last_used_at = 17 [(udb.core.common.v1.pg_column) = { column_name: "last_used_at" sql_type: "TIMESTAMPTZ" }];
+
+  google.protobuf.Timestamp created_at = 18 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  google.protobuf.Timestamp updated_at = 19 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true }];
+
+  google.protobuf.Timestamp deleted_at = 20 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" index: { index_name: "idx_api_keys_active" index_type: "BTREE" where_clause: "deleted_at IS NULL AND status = 'ACTIVE'" } }];
+  string deleted_by = 21 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "VARCHAR(160)" comment: "Soft delete actor" }];
+  string tenant_id = 22 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" comment: "Optional tenant boundary for this key" index: { index_name: "idx_api_keys_tenant_id" index_type: "BTREE" } }];
+  string project_id = 23 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" comment: "Optional project/application namespace for this key" index: { index_name: "idx_api_keys_project_id" index_type: "BTREE" } }];
+  string allowed_resources_json = 24 [(udb.core.common.v1.pg_column) = { column_name: "allowed_resources_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" comment: "Optional resource allowlist; empty delegates to policy engine only" }];
+  string metadata_json = 25 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Non-secret key metadata" }];
+}

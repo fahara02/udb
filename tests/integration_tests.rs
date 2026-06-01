@@ -112,7 +112,7 @@ integration_test!(system_catalog_bootstrap_with_custom_schema, async {
         "udb_cdc_event_journal",
         "udb_cdc_lock_log",
         "udb_cdc_offsets",
-        "udb_outbox_events",
+        "outbox_events",
         "udb_saga_coordinator",
     ] {
         assert!(
@@ -140,7 +140,7 @@ integration_test!(cdc_outbox_to_kafka_delivery, async {
     let topic = "document.uploaded.v1";
 
     // Bootstrap a minimal outbox table.
-    sqlx::query(&format!(
+    sqlx::raw_sql(&format!(
         "CREATE SCHEMA IF NOT EXISTS {schema};
              CREATE TABLE {schema}.udb_outbox_events (
                event_id UUID PRIMARY KEY,
@@ -157,7 +157,7 @@ integration_test!(cdc_outbox_to_kafka_delivery, async {
     // Insert an event.
     sqlx::query(&format!(
         "INSERT INTO {schema}.udb_outbox_events (event_id, topic, partition_key, payload)
-             VALUES ($1, $2, $3, $4::jsonb)"
+             VALUES ($1::uuid, $2, $3, $4::jsonb)"
     ))
     .bind(&event_id)
     .bind(topic)
@@ -208,13 +208,91 @@ integration_test!(cdc_outbox_to_kafka_delivery, async {
         .expect("drop test schema");
 });
 
+integration_test!(kafka_period_topic_publish_consume_roundtrip, async {
+    use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
+    use rdkafka::consumer::{BaseConsumer, Consumer};
+    use rdkafka::producer::{FutureProducer, FutureRecord};
+    use rdkafka::{ClientConfig, Message};
+
+    let brokers = kafka_brokers();
+    let topic = format!("udb.integration.{}.v1", Uuid::new_v4().simple());
+    assert!(
+        !topic.contains('_'),
+        "integration Kafka topics must use periods, not underscores"
+    );
+    let admin: AdminClient<_> = ClientConfig::new()
+        .set("bootstrap.servers", &brokers)
+        .create()
+        .expect("create Kafka admin client");
+    admin
+        .create_topics(
+            &[NewTopic::new(&topic, 1, TopicReplication::Fixed(1))],
+            &AdminOptions::new(),
+        )
+        .await
+        .expect("create Kafka topic request");
+
+    let producer: FutureProducer = ClientConfig::new()
+        .set("bootstrap.servers", &brokers)
+        .set("message.timeout.ms", "5000")
+        .create()
+        .expect("create Kafka producer");
+    let event_id = Uuid::new_v4().to_string();
+    let payload = serde_json::json!({
+        "event_id": event_id,
+        "event_type": topic,
+        "document_id": event_id,
+        "payload": {
+            "backend": "kafka",
+            "mode": "live"
+        }
+    })
+    .to_string();
+    producer
+        .send(
+            FutureRecord::to(&topic).key(&event_id).payload(&payload),
+            Duration::from_secs(10),
+        )
+        .await
+        .expect("publish Kafka record");
+
+    let consumer: BaseConsumer = ClientConfig::new()
+        .set("bootstrap.servers", &brokers)
+        .set(
+            "group.id",
+            format!("udb-integration-{}", Uuid::new_v4().simple()),
+        )
+        .set("auto.offset.reset", "earliest")
+        .set("enable.auto.commit", "false")
+        .create()
+        .expect("create Kafka consumer");
+    consumer.subscribe(&[&topic]).expect("subscribe to topic");
+
+    let mut found = false;
+    for _ in 0..20 {
+        if let Some(result) = consumer.poll(Duration::from_millis(500)) {
+            let msg = result.expect("Kafka message");
+            if let Some(bytes) = msg.payload() {
+                let value: serde_json::Value =
+                    serde_json::from_slice(bytes).expect("Kafka JSON payload");
+                if value["event_id"] == event_id {
+                    assert_eq!(value["event_type"], topic);
+                    found = true;
+                    break;
+                }
+            }
+        }
+    }
+    assert!(found, "published event must be consumable from {topic}");
+});
+
 // ── Test 3: DLQ routing — unknown topic produces DLQ envelope ─────────────────
 
 integration_test!(cdc_dlq_routing_for_unknown_topic, async {
     let pool = pg_pool().await;
     let schema = format!("udb_dlq_{}", Uuid::new_v4().simple());
 
-    sqlx::query(&format!(
+    sqlx::raw_sql(&format!(
         "CREATE SCHEMA IF NOT EXISTS {schema};
              CREATE TABLE {schema}.udb_cdc_dlq_events (
                dlq_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -272,7 +350,7 @@ integration_test!(cdc_journal_replay_after_outbox_delete, async {
     let schema = format!("udb_jrn_{}", Uuid::new_v4().simple());
     let event_id = Uuid::new_v4();
 
-    sqlx::query(&format!(
+    sqlx::raw_sql(&format!(
         "CREATE SCHEMA IF NOT EXISTS {schema};
              CREATE TABLE {schema}.udb_outbox_events (
                event_id UUID PRIMARY KEY,
@@ -359,7 +437,7 @@ integration_test!(saga_stale_in_progress_detection, async {
     let pool = pg_pool().await;
     let schema = format!("udb_saga_{}", Uuid::new_v4().simple());
 
-    sqlx::query(&format!(
+    sqlx::raw_sql(&format!(
         "CREATE SCHEMA IF NOT EXISTS {schema};
              CREATE TABLE {schema}.udb_saga_coordinator (
                saga_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -439,7 +517,7 @@ integration_test!(saga_stale_in_progress_detection, async {
 #[cfg(feature = "qdrant")]
 integration_test!(qdrant_health_probe, async {
     let client = reqwest::Client::new();
-    let url = format!("{}/health", qdrant_url());
+    let url = format!("{}/collections", qdrant_url());
     let resp = client
         .get(&url)
         .timeout(Duration::from_secs(5))
@@ -448,9 +526,79 @@ integration_test!(qdrant_health_probe, async {
         .unwrap_or_else(|e| panic!("Qdrant health check failed: {e}"));
     assert!(
         resp.status().is_success(),
-        "Qdrant /health returned {}",
+        "Qdrant /collections returned {}",
         resp.status()
     );
+});
+
+#[cfg(feature = "qdrant")]
+integration_test!(qdrant_collection_vector_roundtrip, async {
+    let client = reqwest::Client::new();
+    let collection = format!("udb_integration_{}", Uuid::new_v4().simple());
+    let base = qdrant_url();
+    let create = client
+        .put(format!("{base}/collections/{collection}"))
+        .json(&serde_json::json!({
+            "vectors": {
+                "size": 3,
+                "distance": "Cosine"
+            }
+        }))
+        .send()
+        .await
+        .expect("create qdrant collection");
+    assert!(
+        create.status().is_success(),
+        "Qdrant create collection returned {}: {}",
+        create.status(),
+        create.text().await.unwrap_or_default()
+    );
+
+    let point_id = 1;
+    let upsert = client
+        .put(format!("{base}/collections/{collection}/points?wait=true"))
+        .json(&serde_json::json!({
+            "points": [{
+                "id": point_id,
+                "vector": [0.1, 0.2, 0.3],
+                "payload": {
+                    "backend": "qdrant",
+                    "mode": "live"
+                }
+            }]
+        }))
+        .send()
+        .await
+        .expect("upsert qdrant point");
+    assert!(
+        upsert.status().is_success(),
+        "Qdrant upsert returned {}: {}",
+        upsert.status(),
+        upsert.text().await.unwrap_or_default()
+    );
+
+    let retrieve = client
+        .post(format!("{base}/collections/{collection}/points"))
+        .json(&serde_json::json!({
+            "ids": [point_id],
+            "with_payload": true,
+            "with_vector": true
+        }))
+        .send()
+        .await
+        .expect("retrieve qdrant point");
+    assert!(
+        retrieve.status().is_success(),
+        "Qdrant retrieve returned {}",
+        retrieve.status()
+    );
+    let body: serde_json::Value = retrieve.json().await.expect("qdrant retrieve JSON");
+    assert_eq!(body["result"][0]["payload"]["backend"], "qdrant");
+
+    let _ = client
+        .delete(format!("{base}/collections/{collection}"))
+        .send()
+        .await;
 });
 
 // ── Test 7: Redis connectivity ────────────────────────────────────────────────
@@ -466,6 +614,39 @@ integration_test!(redis_connectivity, async {
         .await
         .expect("redis PING");
     assert_eq!(pong, "PONG");
+});
+
+integration_test!(redis_live_read_write_delete_roundtrip, async {
+    let client = redis::Client::open(redis_url()).expect("create redis client");
+    let mut conn = client
+        .get_multiplexed_async_connection()
+        .await
+        .expect("connect to redis");
+    let key = format!("udb:integration:{}", Uuid::new_v4().simple());
+    let value = serde_json::json!({
+        "backend": "redis",
+        "mode": "live",
+        "id": Uuid::new_v4().to_string(),
+    })
+    .to_string();
+    let _: () = redis::cmd("SET")
+        .arg(&key)
+        .arg(&value)
+        .query_async(&mut conn)
+        .await
+        .expect("redis SET");
+    let got: String = redis::cmd("GET")
+        .arg(&key)
+        .query_async(&mut conn)
+        .await
+        .expect("redis GET");
+    assert_eq!(got, value);
+    let deleted: i64 = redis::cmd("DEL")
+        .arg(&key)
+        .query_async(&mut conn)
+        .await
+        .expect("redis DEL");
+    assert_eq!(deleted, 1);
 });
 
 // ── Test 8: PostgreSQL logical replication slot creation ──────────────────────
@@ -541,13 +722,80 @@ integration_test!(minio_bucket_probe, async {
     );
 });
 
+integration_test!(minio_object_put_get_delete_roundtrip, async {
+    use aws_config::BehaviorVersion;
+    use aws_sdk_s3::config::{Credentials, Region};
+    use aws_sdk_s3::primitives::ByteStream;
+
+    let creds = Credentials::new(
+        env::var("UDB_INTEGRATION_MINIO_ACCESS_KEY").unwrap_or_else(|_| "minio".into()),
+        env::var("UDB_INTEGRATION_MINIO_SECRET_KEY").unwrap_or_else(|_| "minio123".into()),
+        None,
+        None,
+        "integration-test",
+    );
+    let s3_conf = aws_sdk_s3::Config::builder()
+        .behavior_version(BehaviorVersion::latest())
+        .credentials_provider(creds)
+        .region(Region::new("us-east-1"))
+        .endpoint_url(minio_endpoint())
+        .force_path_style(true)
+        .build();
+    let s3 = aws_sdk_s3::Client::from_conf(s3_conf);
+    let bucket = format!("udb-integration-{}", Uuid::new_v4().simple());
+    let key = "live/object.json";
+    let payload = serde_json::json!({
+        "backend": "minio",
+        "mode": "live",
+        "id": Uuid::new_v4().to_string(),
+    })
+    .to_string();
+
+    s3.create_bucket()
+        .bucket(&bucket)
+        .send()
+        .await
+        .expect("create MinIO bucket");
+    s3.put_object()
+        .bucket(&bucket)
+        .key(key)
+        .body(ByteStream::from(payload.clone().into_bytes()))
+        .send()
+        .await
+        .expect("put MinIO object");
+    let got = s3
+        .get_object()
+        .bucket(&bucket)
+        .key(key)
+        .send()
+        .await
+        .expect("get MinIO object")
+        .body
+        .collect()
+        .await
+        .expect("read MinIO body")
+        .into_bytes();
+    assert_eq!(String::from_utf8(got.to_vec()).expect("utf8 body"), payload);
+    s3.delete_object()
+        .bucket(&bucket)
+        .key(key)
+        .send()
+        .await
+        .expect("delete MinIO object");
+    s3.delete_bucket()
+        .bucket(&bucket)
+        .send()
+        .await
+        .expect("delete MinIO bucket");
+});
+
 // ── Test 10: Catalog version tables round-trip ─────────────────────────────────
 
 integration_test!(catalog_version_tables_round_trip, async {
     let pool = pg_pool().await;
     let schema = format!("udb_cat_{}", Uuid::new_v4().simple());
 
-    sqlx::query(&format!(
+    sqlx::raw_sql(&format!(
         "CREATE SCHEMA IF NOT EXISTS {schema};
              CREATE TABLE {schema}.udb_catalog_versions (
                catalog_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -1,10 +1,10 @@
 syntax = "proto3";
 package example.udb.compat.v1;
 
-import "example/examplecore/common/v1/db.proto";
+import "udb/core/common/v1/db.proto";
 
 message legacy_sqlCompatAccount {
-  option (example.examplecore.common.v1.table) = {
+  option (udb.core.common.v1.table) = {
     table_name: "accounts"
     schema_name: "billing"
     migration_order: 10
@@ -14,7 +14,7 @@ message legacy_sqlCompatAccount {
     enable_rls: true
   };
 
-  string account_id = 1 [(example.examplecore.common.v1.column) = {
+  string account_id = 1 [(udb.core.common.v1.column) = {
     column_name: "account_id"
     sql_type: "UUID"
     primary_key: true
@@ -22,7 +22,7 @@ message legacy_sqlCompatAccount {
     default_value: "gen_random_uuid()"
   }];
 
-  string tenant_id = 2 [(example.examplecore.common.v1.column) = {
+  string tenant_id = 2 [(udb.core.common.v1.column) = {
     column_name: "tenant_id"
     sql_type: "UUID"
     not_null: true
@@ -32,7 +32,7 @@ message legacy_sqlCompatAccount {
     }
   }];
 
-  string owner_user_id = 3 [(example.examplecore.common.v1.column) = {
+  string owner_user_id = 3 [(udb.core.common.v1.column) = {
     column_name: "owner_user_id"
     sql_type: "UUID"
     not_null: true

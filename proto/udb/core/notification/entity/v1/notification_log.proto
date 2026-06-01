@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package udb.core.notification.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/notification/entity/v1/enums.proto";
+
+option csharp_namespace = "udb.core.Notification.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/notification/entity/v1;notificationv1";
+option java_package = "com.udb.core.notification.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Notification\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// NotificationLog — Immutable delivery record for each sent notification.
+// ---------------------------------------------------------------------------
+
+message NotificationLog {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "notification_logs"
+    schema_name: "udb_notification"
+    migration_order: 2
+    is_table: true
+    comment: "Delivery audit log for every notification sent by the system"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: true
+    partition_strategy: PARTITION_STRATEGY_RANGE_MONTH
+    partition_column: "created_at"
+    retention_days: 90 // 90 days — notification delivery logs; short operational window
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_nlog_tenant_channel_status"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "channel"
+      columns: "status"
+    }
+    indexes: {
+      index_name: "idx_nlog_sent_at"
+      index_type: "BRIN"
+      columns: "sent_at"
+    }
+    cdc_topic: "notification.failed.v1"
+  };
+
+  string log_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "log_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string template_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "template_id" sql_type: "UUID" foreign_key: { references_table: "notification_templates" references_schema: "udb_notification" references_column: "template_id" on_delete: REFERENTIAL_ACTION_SET_NULL constraint_name: "fk_notification_logs_template_id" } index: { index_name: "idx_notification_logs_template_id" index_type: "BTREE" } }];
+  string event_type = 3 [(udb.core.common.v1.pg_column) = { column_name: "event_type" sql_type: "VARCHAR(80)" not_null: true }];
+
+  NotificationChannel channel = 4 [(udb.core.common.v1.pg_column) = { column_name: "channel" sql_type: "VARCHAR(20)" not_null: true }];
+
+  string recipient_id = 5 [(udb.core.common.v1.pg_column) = { column_name: "recipient_id" sql_type: "UUID" foreign_key: { references_table: "users" references_schema: "udb_authn" references_column: "user_id" on_delete: REFERENTIAL_ACTION_SET_NULL constraint_name: "fk_notification_logs_recipient_id" } index: { index_name: "idx_notification_logs_recipient_id" index_type: "BTREE" } }];
+  string recipient_address = 6 [(udb.core.common.v1.pg_column) = { column_name: "recipient_address" sql_type: "VARCHAR(320)" comment: "Email, phone, or device token" }];
+  string tenant_id = 7 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" }];
+  string project_id = 8 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" index: { index_name: "idx_notification_logs_project_id" index_type: "BTREE" } }];
+  string resource_type = 9 [(udb.core.common.v1.pg_column) = { column_name: "resource_type" sql_type: "VARCHAR(80)" comment: "Project-defined resource type that triggered the notification" index: { index_name: "idx_notification_logs_resource_type" index_type: "BTREE" } }];
+  string resource_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "resource_id" sql_type: "VARCHAR(160)" comment: "Project-defined resource id that triggered the notification" index: { index_name: "idx_notification_logs_resource_id" index_type: "BTREE" } }];
+  string resource_name = 11 [(udb.core.common.v1.pg_column) = { column_name: "resource_name" sql_type: "VARCHAR(255)" comment: "Optional display name for the notification resource" }];
+  string correlation_id = 12 [(udb.core.common.v1.pg_column) = { column_name: "correlation_id" sql_type: "VARCHAR(120)" }];
+
+  NotificationStatus status = 13 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'PENDING'" index: { index_name: "idx_notif_logs_status" index_type: "BTREE" } }];
+
+  string error_message = 14 [(udb.core.common.v1.pg_column) = { column_name: "error_message" sql_type: "TEXT" }];
+  string provider_message_id = 15 [(udb.core.common.v1.pg_column) = { column_name: "provider_message_id" sql_type: "VARCHAR(255)" comment: "Delivery provider's message ID (SES, Twilio, etc.)" }];
+  int32 retry_count = 16 [(udb.core.common.v1.pg_column) = { column_name: "retry_count" sql_type: "INTEGER" not_null: true default_value: "0" }];
+
+  google.protobuf.Timestamp sent_at = 17 [(udb.core.common.v1.pg_column) = { column_name: "sent_at" sql_type: "TIMESTAMPTZ" }];
+  google.protobuf.Timestamp delivered_at = 18 [(udb.core.common.v1.pg_column) = { column_name: "delivered_at" sql_type: "TIMESTAMPTZ" }];
+
+  google.protobuf.Timestamp created_at = 19 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+}

@@ -15,11 +15,10 @@
 //! | `udb.hnsw_m` | `16` | HNSW `m` parameter |
 //! | `udb.hnsw_ef_construct` | `100` | HNSW `ef_construct` parameter |
 
+use crate::generation::backend_safety::generated_at_unix;
 use serde_json::{Value as Json, json};
 use std::collections::BTreeMap;
-use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::ast::ProtoSchema;
 use crate::generation::GeneratedArtifact;
 use crate::generation::backend_safety::{
     safe_comment_value, safe_resource_name, store_opt_i64_any, store_opt_str_any,
@@ -32,10 +31,9 @@ use crate::generation::sql::SqlGenerationConfig;
 /// Returns one `GeneratedArtifact` per Qdrant store, with `rel_path` set to
 /// `<collection_name>.json` and `kind` set to `"bootstrap_qdrant"`.
 pub fn generate_qdrant_artifacts(
-    schemas: &[ProtoSchema],
-    _config: &SqlGenerationConfig,
+    manifest: &CatalogManifest,
+    config: &SqlGenerationConfig,
 ) -> Result<Vec<GeneratedArtifact>, serde_json::Error> {
-    let manifest = CatalogManifest::from_schemas(schemas)?;
     let checksum = &manifest.checksum_sha256;
     let ts = generated_at_unix();
 
@@ -45,16 +43,18 @@ pub fn generate_qdrant_artifacts(
             continue;
         }
         let collection = safe_resource_name(&collection_name(store), "collection");
-        let dimension = store_opt_i64_any(store, &["udb.vector_dimension", "dimension"], 1536);
-        let distance = match store_opt_str_any(store, &["udb.vector_distance", "distance"])
-            .unwrap_or("Cosine")
-        {
-            "Cosine" | "Euclid" | "Dot" | "Manhattan" => {
-                store_opt_str_any(store, &["udb.vector_distance", "distance"]).unwrap_or("Cosine")
-            }
-            _ => "Cosine",
-        };
-        let hnsw_m = store_opt_i64_any(store, &["udb.hnsw_m", "hnsw_m"], 16);
+        let qdrant = &config.qdrant;
+        let dimension = store_opt_i64_any(
+            store,
+            &["udb.vector_dimension", "dimension"],
+            qdrant.default_vector_dimension,
+        );
+        let distance = normalize_distance(
+            store_opt_str_any(store, &["udb.vector_distance", "distance"])
+                .unwrap_or(&qdrant.default_distance),
+            &collection,
+        );
+        let hnsw_m = store_opt_i64_any(store, &["udb.hnsw_m", "hnsw_m"], qdrant.default_hnsw_m);
         let hnsw_ef = store_opt_i64_any(
             store,
             &[
@@ -62,7 +62,7 @@ pub fn generate_qdrant_artifacts(
                 "udb.hnsw_ef_construction",
                 "hnsw_ef_construction",
             ],
-            100,
+            qdrant.default_hnsw_ef_construct,
         );
 
         let payload_fields: Vec<&str> = store
@@ -143,11 +143,18 @@ fn collection_name(store: &ManifestStore) -> String {
     }
 }
 
-fn generated_at_unix() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or_default()
+fn normalize_distance(raw: &str, collection: &str) -> String {
+    match raw.trim() {
+        "Cosine" | "Euclid" | "Dot" | "Manhattan" => raw.trim().to_string(),
+        other => {
+            tracing::warn!(
+                collection,
+                distance = other,
+                "invalid Qdrant distance metric; falling back to Cosine"
+            );
+            "Cosine".to_string()
+        }
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -188,7 +195,9 @@ mod tests {
         let checksum = "abc123".to_string();
         manifest.checksum_sha256 = checksum.clone();
 
-        let artifacts = generate_qdrant_artifacts(&[], &SqlGenerationConfig::default()).unwrap();
+        let artifacts =
+            generate_qdrant_artifacts(&CatalogManifest::default(), &SqlGenerationConfig::default())
+                .unwrap();
         // No schemas → no tables → no Qdrant stores from schemas; use direct.
         // Test the render function directly instead.
         let _ = artifacts; // empty — expected

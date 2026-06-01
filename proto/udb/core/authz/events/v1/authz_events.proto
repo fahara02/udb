@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package udb.core.authz.events.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "udb.core.Authz.Events.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/events/v1;authzeventsv1";
+option java_package = "com.udb.core.authz.events.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Events\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Events\\V1";
+
+// ---------------------------------------------------------------------------
+// Authz Domain Events
+// Topics: udb.core.authz.<noun>.<verb>.v1
+// ---------------------------------------------------------------------------
+
+// Kafka topic: udb.authz.role.assigned.v1
+message RoleAssignedEvent {
+  string event_id = 1;
+  string user_role_id = 2;
+  string user_id = 3;
+  string role_id = 4;
+  string role_code = 5;
+  string tenant_id = 6;
+  string assigned_by = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+  string domain = 9;
+  string project_id = 10;
+  string access_surface = 11;
+}
+
+// Kafka topic: udb.authz.role.revoked.v1
+message RoleRevokedEvent {
+  string event_id = 1;
+  string user_role_id = 2;
+  string user_id = 3;
+  string role_code = 4;
+  string tenant_id = 5;
+  string revoked_by = 6;
+  string reason = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+}
+
+// Kafka topic: udb.authz.access.denied.v1
+message AccessDeniedEvent {
+  string event_id = 1;
+  string user_id = 2;
+  string tenant_id = 3;
+  string resource = 4;
+  string action = 5;
+  string deny_reason = 6;
+  google.protobuf.Timestamp occurred_at = 7;
+}
+
+// Kafka topic: udb.authz.role.created.v1
+message RoleCreatedEvent {
+  string event_id = 1;
+  string role_id = 2;
+  string role_code = 3;
+  string tenant_id = 4;
+  string created_by = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+}
+
+// Kafka topic: udb.authz.role.updated.v1
+message RoleUpdatedEvent {
+  string event_id = 1;
+  string role_id = 2;
+  string role_code = 3;
+  string tenant_id = 4;
+  string updated_by = 5;
+  repeated string added_permissions = 6;
+  repeated string removed_permissions = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+}
+
+// RoleRemovedEvent mirrors RoleRevokedEvent for compatibility with consumer code.
+message RoleRemovedEvent {
+  string event_id = 1;
+  string user_role_id = 2;
+  string user_id = 3;
+  string role_id = 4;
+  string role_code = 5;
+  string tenant_id = 6;
+  string removed_by = 7;
+  string reason = 8;
+  google.protobuf.Timestamp occurred_at = 9;
+}
+
+// Kafka topic: udb.authz.access.surface.updated.v1
+message AccessSurfaceUpdatedEvent {
+  string event_id = 1;
+  string principal_id = 2;
+  string old_access_surface = 3;
+  string new_access_surface = 4;
+  string tenant_id = 5;
+  string project_id = 6;
+  string updated_by = 7;
+  string correlation_id = 8;
+  google.protobuf.Timestamp occurred_at = 9;
+}

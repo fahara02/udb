@@ -139,17 +139,24 @@ impl QdrantCompiler {
     /// so the tenant + project predicate ANDs together with the user
     /// filter. Tenant boundary is enforced at protocol level — a
     /// Qdrant search can no longer leak points across tenants.
-    fn and_with_context(&self, user_filter: Json, ctx: &CompileContext<'_>) -> Json {
+    fn and_with_context(
+        &self,
+        user_filter: Json,
+        table: &ManifestTable,
+        ctx: &CompileContext<'_>,
+    ) -> Json {
         let mut ctx_must: Vec<Json> = Vec::new();
         if let Some(tid) = ctx.tenant_id
             && !tid.is_empty()
+            && let Some(column) = Some(super::util::tenant_system_field(table))
         {
-            ctx_must.push(json!({"key": "_tenant_id", "match": {"value": tid}}));
+            ctx_must.push(json!({"key": column, "match": {"value": tid}}));
         }
         if let Some(pid) = ctx.project_id
             && !pid.is_empty()
+            && let Some(column) = Some(super::util::project_system_field(table))
         {
-            ctx_must.push(json!({"key": "_project_id", "match": {"value": pid}}));
+            ctx_must.push(json!({"key": column, "match": {"value": pid}}));
         }
         if ctx_must.is_empty() {
             return user_filter;
@@ -181,7 +188,7 @@ impl Compiler for QdrantCompiler {
             Some(f) => self.render_filter(f, table, &op.message_type)?,
             None => Json::Object(Map::new()),
         };
-        let merged = self.and_with_context(user_rendered, ctx);
+        let merged = self.and_with_context(user_rendered, table, ctx);
         if !merged.as_object().is_some_and(|m| m.is_empty()) {
             body.insert("filter".into(), merged);
         }
@@ -232,7 +239,7 @@ impl Compiler for QdrantCompiler {
             Some(f) => self.render_filter(f, table, &op.message_type)?,
             None => Json::Object(Map::new()),
         };
-        let merged = self.and_with_context(user_rendered, ctx);
+        let merged = self.and_with_context(user_rendered, table, ctx);
         if !merged.as_object().is_some_and(|m| m.is_empty()) {
             body["filter"] = merged;
         }
@@ -296,13 +303,15 @@ impl Compiler for QdrantCompiler {
             // the read-side filter actually has something to match on.
             if let Some(tid) = ctx.tenant_id
                 && !tid.is_empty()
+                && let Some(column) = Some(super::util::tenant_system_field(table))
             {
-                payload.insert("_tenant_id".into(), json!(tid));
+                payload.insert(column.to_string(), json!(tid));
             }
             if let Some(pid) = ctx.project_id
                 && !pid.is_empty()
+                && let Some(column) = Some(super::util::project_system_field(table))
             {
-                payload.insert("_project_id".into(), json!(pid));
+                payload.insert(column.to_string(), json!(pid));
             }
 
             let mut point = json!({ "id": id, "payload": Json::Object(payload) });
@@ -333,7 +342,7 @@ impl Compiler for QdrantCompiler {
         }
         // C7/C8: tenant AND so a permissive user filter can't delete
         // another tenant's points.
-        let filter = self.and_with_context(user_filter, ctx);
+        let filter = self.and_with_context(user_filter, table, ctx);
         Ok(CompiledRendering::Json {
             backend: BackendKind::Qdrant,
             method: HttpMethod::Post,

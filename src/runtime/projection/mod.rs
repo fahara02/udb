@@ -67,7 +67,34 @@ pub struct ProjectionTarget {
 
 impl ProjectionPlan {
     /// Derive plans for every message type that has at least one projection.
+    ///
+    /// #213: memoized by manifest checksum. `from_manifest` is called on every
+    /// write enqueue (tx_object, setup_data, the projection worker), but the
+    /// plan set only changes when the manifest does. A single-entry cache keyed
+    /// by `checksum_sha256` skips the per-call table/projection rebuild; the
+    /// cache holds one entry (the current manifest) so it cannot grow.
     pub fn from_manifest(manifest: &CatalogManifest) -> Vec<ProjectionPlan> {
+        static PLAN_CACHE: std::sync::Mutex<Option<(String, std::sync::Arc<Vec<ProjectionPlan>>)>> =
+            std::sync::Mutex::new(None);
+        let checksum = manifest.checksum_sha256.clone();
+        if !checksum.is_empty()
+            && let Ok(guard) = PLAN_CACHE.lock()
+            && let Some((cached_sum, plans)) = guard.as_ref()
+            && *cached_sum == checksum
+        {
+            return (**plans).clone();
+        }
+        let plans = Self::build_from_manifest(manifest);
+        if !checksum.is_empty()
+            && let Ok(mut guard) = PLAN_CACHE.lock()
+        {
+            *guard = Some((checksum, std::sync::Arc::new(plans.clone())));
+        }
+        plans
+    }
+
+    /// Pure builder for [`from_manifest`] (un-memoized).
+    fn build_from_manifest(manifest: &CatalogManifest) -> Vec<ProjectionPlan> {
         let checksum = manifest.checksum_sha256.clone();
         manifest
             .tables
@@ -228,8 +255,14 @@ impl ProjectionEngine {
         hasher.update(target_instance.as_bytes());
         hasher.update(b"|");
         hasher.update(manifest_checksum.as_bytes());
-        hasher.update(b"|");
-        hasher.update(source_checksum.as_bytes());
+        // #166: source_checksum is intentionally NOT hashed. Including it minted a
+        // NEW task for every source-row version, so FAILED/DEAD tasks for prior
+        // versions accumulated forever under churn. The key now identifies one
+        // task per (project, source row, operation, target, manifest); the
+        // checksum is still stored on the task row for change detection, and a
+        // re-projection of an updated row updates that one task instead of
+        // creating a new one.
+        let _ = source_checksum;
         format!("{:x}", hasher.finalize())
     }
 
@@ -312,6 +345,60 @@ impl ProjectionEngine {
             .await
     }
 
+    /// Replay projection tasks for many primary-key JSON objects in bounded
+    /// enqueue transactions. `resume_after` is the last successfully checkpointed
+    /// row key from a previous run; processing resumes after that key.
+    pub async fn replay_batch_rows(
+        &self,
+        manifest: &CatalogManifest,
+        project_id: &str,
+        message_type: &str,
+        row_keys: &[serde_json::Value],
+        batch_size: usize,
+        resume_after: Option<&serde_json::Value>,
+    ) -> Result<(u64, Option<serde_json::Value>), String> {
+        let batch_size = batch_size.max(1);
+        let mut enqueued = 0u64;
+        let mut checkpoint = resume_after.cloned();
+        let mut rows = Vec::new();
+        let mut batch_last_key: Option<serde_json::Value> = None;
+        let mut skipping = resume_after.is_some();
+
+        for row_key in row_keys {
+            if skipping {
+                if Some(row_key) == resume_after {
+                    skipping = false;
+                }
+                continue;
+            }
+            let mut loaded = self
+                .load_source_rows(manifest, message_type, Some(row_key), None, None, 1)
+                .await?;
+            rows.append(&mut loaded);
+            batch_last_key = Some(row_key.clone());
+
+            if rows.len() >= batch_size {
+                enqueued += self
+                    .enqueue_replay_rows(
+                        manifest,
+                        project_id,
+                        message_type,
+                        std::mem::take(&mut rows),
+                    )
+                    .await?;
+                checkpoint = batch_last_key.clone();
+            }
+        }
+
+        if !rows.is_empty() {
+            enqueued += self
+                .enqueue_replay_rows(manifest, project_id, message_type, rows)
+                .await?;
+            checkpoint = batch_last_key;
+        }
+        Ok((enqueued, checkpoint))
+    }
+
     /// Replay projection tasks by first primary-key column range. Empty bounds
     /// are treated as open-ended. Values are compared through PostgreSQL text
     /// casts so the method can operate generically across scalar key types.
@@ -329,6 +416,34 @@ impl ProjectionEngine {
             .await?;
         self.enqueue_replay_rows(manifest, project_id, message_type, rows)
             .await
+    }
+
+    /// Load canonical source rows as drift-scanner samples. This is the
+    /// production source side for projection drift checks: rows come from the
+    /// proto-derived canonical table mapping, and row keys come from the
+    /// same `ProjectionPlan` extraction used by replay.
+    pub async fn load_source_samples(
+        &self,
+        manifest: &CatalogManifest,
+        message_type: &str,
+        limit: i64,
+    ) -> Result<Vec<crate::runtime::drift_reconciliation::SourceSample>, String> {
+        let plan = ProjectionPlan::from_manifest(manifest)
+            .into_iter()
+            .find(|plan| plan.message_type == message_type)
+            .ok_or_else(|| format!("unknown projection message_type {message_type}"))?;
+        let rows = self
+            .load_source_rows(manifest, message_type, None, None, None, limit.max(1))
+            .await?;
+        Ok(rows
+            .into_iter()
+            .map(|row| {
+                crate::runtime::drift_reconciliation::SourceSample::new(
+                    plan.extract_row_key(&row),
+                    row,
+                )
+            })
+            .collect())
     }
 
     async fn enqueue_replay_rows(
@@ -429,65 +544,6 @@ impl ProjectionEngine {
                     .map_err(|err| format!("projection replay source row decode failed: {err}"))
             })
             .collect()
-    }
-
-    /// Fire-and-forget projection task enqueue.
-    ///
-    /// Spawns a Tokio task so the write-path RPC is never blocked.  Any errors
-    /// are logged as warnings; they do not affect the caller's response.
-    pub fn enqueue_write_tasks_spawn(
-        self: Arc<Self>,
-        project_id: String,
-        message_type: String,
-        operation: String,
-        source_payload: serde_json::Value,
-        plans: Arc<Vec<ProjectionPlan>>,
-    ) {
-        tokio::spawn(async move {
-            for plan in plans.iter().filter(|p| p.message_type == message_type) {
-                let source_row_key = plan.extract_row_key(&source_payload);
-                let source_checksum = Self::source_checksum(&source_payload);
-                for target in &plan.targets {
-                    let idempotency_key = Self::idempotency_key(
-                        &project_id,
-                        &plan.source_table,
-                        &source_row_key,
-                        &operation,
-                        &target.backend,
-                        &target.instance,
-                        &plan.manifest_checksum,
-                        &source_checksum,
-                    );
-                    if let Err(err) = self
-                        .insert_task_if_absent(
-                            &idempotency_key,
-                            &project_id,
-                            &plan.manifest_checksum,
-                            &message_type,
-                            &plan.source_schema,
-                            &plan.source_table,
-                            &source_row_key,
-                            &operation,
-                            &target.backend,
-                            &target.instance,
-                            &target.projection_kind,
-                            &target.resource_name,
-                            &target.options,
-                            &source_payload,
-                            &source_checksum,
-                        )
-                        .await
-                    {
-                        tracing::warn!(
-                            error = %err,
-                            message_type = %message_type,
-                            backend = %target.backend,
-                            "projection task enqueue failed",
-                        );
-                    }
-                }
-            }
-        });
     }
 
     async fn insert_task_if_absent(
@@ -619,6 +675,7 @@ pub struct ProjectionWorkerSettings {
     pub poll_interval_secs: u64,
     pub batch_size: i64,
     pub max_retries: i32,
+    pub project_id: Option<String>,
 }
 
 impl Default for ProjectionWorkerSettings {
@@ -628,6 +685,7 @@ impl Default for ProjectionWorkerSettings {
             poll_interval_secs: 5,
             batch_size: 50,
             max_retries: 5,
+            project_id: None,
         }
     }
 }
@@ -656,6 +714,11 @@ impl ProjectionWorkerSettings {
                 s.max_retries = n.max(0);
             }
         }
+        s.project_id = std::env::var("UDB_PROJECTION_PROJECT_ID")
+            .or_else(|_| std::env::var("UDB_PROJECT_ID"))
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
         s
     }
 }
@@ -665,7 +728,7 @@ impl ProjectionWorkerSettings {
 pub struct ProjectionWorker {
     /// NW1-3b: replaced raw `PgPool` with `Arc<dyn SystemStores>`.
     store: Arc<dyn crate::runtime::canonical_store::SystemStores>,
-    runtime: crate::runtime::DataBrokerRuntime,
+    runtime: Arc<crate::runtime::DataBrokerRuntime>,
     config: SystemCatalogConfig,
     settings: ProjectionWorkerSettings,
     metrics: Arc<dyn MetricsRecorder>,
@@ -674,7 +737,7 @@ pub struct ProjectionWorker {
 impl ProjectionWorker {
     pub fn new(
         store: Arc<dyn crate::runtime::canonical_store::SystemStores>,
-        runtime: crate::runtime::DataBrokerRuntime,
+        runtime: Arc<crate::runtime::DataBrokerRuntime>,
         metrics: Arc<dyn MetricsRecorder>,
     ) -> Self {
         Self {
@@ -693,14 +756,43 @@ impl ProjectionWorker {
 
     /// Run the worker loop forever.  Call from a dedicated `tokio::spawn`.
     pub async fn run_forever(self) {
+        self.run_loop(None::<std::future::Pending<()>>).await;
+    }
+
+    /// Run the worker loop until `shutdown` resolves.
+    pub async fn run_until_cancelled<F>(self, shutdown: F)
+    where
+        F: std::future::Future<Output = ()>,
+    {
+        self.run_loop(Some(shutdown)).await;
+    }
+
+    async fn run_loop<F>(self, shutdown: Option<F>)
+    where
+        F: std::future::Future<Output = ()>,
+    {
         let interval = Duration::from_secs(self.settings.poll_interval_secs.max(1));
         let mut ticker = tokio::time::interval(interval);
-        loop {
-            ticker.tick().await;
-            let (completed, failed) = self.run_once().await;
-            if completed + failed > 0 {
-                tracing::info!(completed, failed, "projection worker pass");
+        if let Some(shutdown) = shutdown {
+            tokio::pin!(shutdown);
+            loop {
+                tokio::select! {
+                    _ = &mut shutdown => break,
+                    _ = ticker.tick() => self.run_and_log_once().await,
+                }
             }
+        } else {
+            loop {
+                ticker.tick().await;
+                self.run_and_log_once().await;
+            }
+        }
+    }
+
+    async fn run_and_log_once(&self) {
+        let (completed, failed) = self.run_once().await;
+        if completed + failed > 0 {
+            tracing::info!(completed, failed, "projection worker pass");
         }
     }
 
@@ -724,6 +816,7 @@ impl ProjectionWorker {
             max_retries: self.settings.max_retries,
             target_backend: None,
             target_instance: None,
+            project_id: self.settings.project_id.clone(),
         };
         let claimed =
             match ProjectionTaskStore::claim_projection_tasks(self.store.as_ref(), &filter).await {
@@ -737,16 +830,18 @@ impl ProjectionWorker {
         let mut completed = 0usize;
         let mut failed = 0usize;
 
-        for row in &claimed {
+        // Consume the claimed tasks and move each field into its local — `claimed`
+        // is not used after this loop, so the per-field clones are unnecessary (#107).
+        for row in claimed {
             let task_id = row.task_id;
-            let target_backend = row.target_backend.clone();
-            let target_instance = row.target_instance.clone();
-            let projection_kind = row.projection_kind.clone();
-            let resource_name = row.resource_name.clone();
+            let target_backend = row.target_backend;
+            let target_instance = row.target_instance;
+            let projection_kind = row.projection_kind;
+            let resource_name = row.resource_name;
             let operation = row.operation.as_str().to_string();
-            let source_row_key = row.source_row_key.clone();
-            let target_options = row.target_options.clone();
-            let source_payload = row.source_payload.clone();
+            let source_row_key = row.source_row_key;
+            let target_options = row.target_options;
+            let source_payload = row.source_payload;
             let retry_count = row.retry_count;
             let created_at = Some(row.created_at);
 
@@ -950,6 +1045,19 @@ impl ProjectionWorker {
         } else {
             format!("{}/{}.json", key_prefix.trim_matches('/'), id)
         };
+        if operation.eq_ignore_ascii_case("delete") {
+            // A projected delete must remove the object, not write a tombstone
+            // body that leaves the stale object readable.
+            let request = serde_json::json!({
+                "bucket": resource_name,
+                "object_key": object_key,
+            });
+            return self
+                .runtime
+                .delete_object_backend_target(backend, instance, &request.to_string())
+                .await
+                .map_err(|s| s.message().to_string());
+        }
         let body = serde_json::to_vec(&serde_json::json!({
             "operation": operation,
             "source_row_key": source_row_key,
@@ -1580,7 +1688,11 @@ mod tests {
     }
 
     #[test]
-    fn idempotency_key_changes_when_source_checksum_changes() {
+    fn idempotency_key_stable_across_source_checksum() {
+        // #166: the idempotency key must NOT change when only the source-row
+        // value (and thus its checksum) changes — otherwise every update mints a
+        // new task and stale FAILED/DEAD tasks accumulate. Re-projecting an
+        // updated row reuses the one task per (source row, target).
         let key = json!({"id":"p1"});
         let first = ProjectionEngine::idempotency_key(
             "tenant",
@@ -1602,6 +1714,6 @@ mod tests {
             "catalog1",
             &ProjectionEngine::source_checksum(&json!({"id":"p1","name":"Grace"})),
         );
-        assert_ne!(first, second);
+        assert_eq!(first, second);
     }
 }

@@ -20,7 +20,10 @@ use scylla::frame::response::result::CqlValue;
 use scylla::{Session, SessionBuilder};
 use serde_json::Value as JsonValue;
 
-use crate::runtime::backend_context::{AppliedContext, BackendContextEnforcer, ContextEffect};
+use crate::runtime::backend_context::{
+    AppliedContext, BackendContextEnforcer, ContextEffect, enforce_with_mechanism,
+};
+use crate::runtime::executor_utils::{build_probe, parse_sql_dispatch};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
@@ -94,11 +97,6 @@ impl BackendContextEnforcer for CassandraExecutor {
         "cassandra"
     }
     fn enforce(&self, ctx: &AppliedContext) -> ContextEffect {
-        if ctx.is_empty() {
-            return ContextEffect::Advisory {
-                recorded_in: "no_context_to_apply".into(),
-            };
-        }
         // A1 (2026-05-30): Cassandra has no native session context,
         // BUT the CQL compiler now AND-injects `tenant_id = ?` and
         // `project_id = ?` into every read/delete/aggregate when
@@ -108,9 +106,7 @@ impl BackendContextEnforcer for CassandraExecutor {
         // boundaries. Tables whose manifest omits tenant_id
         // columns are not tenant-scoped by design and the compiler
         // is a no-op for them, which is correct.
-        ContextEffect::Enforced {
-            mechanism: "cql_compiler_tenant_predicate_injection".into(),
-        }
+        enforce_with_mechanism(ctx, "cql_compiler_tenant_predicate_injection")
     }
 }
 
@@ -118,22 +114,6 @@ impl BackendHealth for CassandraExecutor {
     async fn ping(&self) -> Result<(), String> {
         self.client.ping().await
     }
-}
-
-fn parse_dispatch(req: &str) -> Result<(String, Vec<JsonValue>), tonic::Status> {
-    let v: JsonValue = serde_json::from_str(req)
-        .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
-    let sql = v
-        .get("sql")
-        .and_then(|x| x.as_str())
-        .ok_or_else(|| tonic::Status::invalid_argument("missing `sql`"))?
-        .to_string();
-    let params = v
-        .get("params")
-        .and_then(|x| x.as_array())
-        .cloned()
-        .unwrap_or_default();
-    Ok((sql, params))
 }
 
 /// Convert a JSON parameter to a CQL value. Cassandra's typing is
@@ -185,9 +165,36 @@ fn cql_to_json(v: &CqlValue) -> JsonValue {
     }
 }
 
+fn cql_leading_keyword(cql: &str) -> String {
+    cql.trim_start()
+        .split(|ch: char| ch.is_whitespace() || ch == '(')
+        .next()
+        .unwrap_or_default()
+        .to_ascii_uppercase()
+}
+
+fn validate_cassandra_query(cql: &str) -> Result<(), tonic::Status> {
+    match cql_leading_keyword(cql).as_str() {
+        "SELECT" => Ok(()),
+        other => Err(tonic::Status::invalid_argument(format!(
+            "cassandra query accepts SELECT only, got '{other}'"
+        ))),
+    }
+}
+
+fn validate_cassandra_mutation(cql: &str) -> Result<(), tonic::Status> {
+    match cql_leading_keyword(cql).as_str() {
+        "INSERT" | "UPDATE" | "DELETE" | "BEGIN" => Ok(()),
+        other => Err(tonic::Status::invalid_argument(format!(
+            "cassandra mutate accepts INSERT/UPDATE/DELETE/BATCH only, got '{other}'"
+        ))),
+    }
+}
+
 impl QueryExecutor for CassandraExecutor {
     async fn query(&self, req: &str) -> Result<String, tonic::Status> {
-        let (cql, params_json) = parse_dispatch(req)?;
+        let (cql, params_json) = parse_sql_dispatch(req)?;
+        validate_cassandra_query(&cql)?;
         let params: Vec<CqlValue> = params_json.iter().map(json_to_cql).collect();
         let result = self
             .client
@@ -217,7 +224,8 @@ impl QueryExecutor for CassandraExecutor {
 
 impl MutationExecutor for CassandraExecutor {
     async fn mutate(&self, req: &str) -> Result<String, tonic::Status> {
-        let (cql, params_json) = parse_dispatch(req)?;
+        let (cql, params_json) = parse_sql_dispatch(req)?;
+        validate_cassandra_mutation(&cql)?;
         let params: Vec<CqlValue> = params_json.iter().map(json_to_cql).collect();
         self.client
             .session
@@ -297,20 +305,7 @@ impl BackendExecutor for CassandraExecutor {
         ))
     }
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
-        match self.ping().await {
-            Ok(()) => Ok(BackendProbe {
-                backend: "cassandra".to_string(),
-                instance: None,
-                ok: true,
-                error: None,
-            }),
-            Err(err) => Ok(BackendProbe {
-                backend: "cassandra".to_string(),
-                instance: None,
-                ok: false,
-                error: Some(err),
-            }),
-        }
+        Ok(build_probe("cassandra", self.ping().await))
     }
 }
 
@@ -322,7 +317,7 @@ mod tests {
     #[test]
     fn parse_dispatch_extracts_sql_and_params() {
         let req = r#"{"sql":"SELECT * FROM ks.t WHERE pk = ?","params":["abc"]}"#;
-        let (sql, params) = parse_dispatch(req).unwrap();
+        let (sql, params) = parse_sql_dispatch(req).unwrap();
         assert_eq!(sql, "SELECT * FROM ks.t WHERE pk = ?");
         assert_eq!(params, vec![json!("abc")]);
     }

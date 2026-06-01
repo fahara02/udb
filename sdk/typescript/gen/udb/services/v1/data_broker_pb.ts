@@ -4,8 +4,24 @@
 
 import type { GenFile, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { AdminAuditLogRequestSchema, AdminAuditLogResponseSchema, AdminAuditVerifyRequestSchema, AdminAuditVerifyResponseSchema, AdminSummaryRequestSchema, AdminSummaryResponseSchema, CapabilitiesRequestSchema, CapabilitiesResponseSchema, CatalogManifestRequestSchema, CatalogManifestResponseSchema, CatalogValidationResponseSchema, CatalogVersionListResponseSchema, CatalogVersionRequestSchema, CatalogVersionResponseSchema, CdcControlRequestSchema, CdcStatusResponseSchema, CDCSubscriptionRequestSchema, ChunkSchema, DeleteRequestSchema, DlqActionRequestSchema, DlqEventRequestSchema, DlqEventResponseSchema, DlqListRequestSchema, DlqListResponseSchema, EnqueueOutboxEventRequestSchema, EnqueueOutboxEventResponseSchema, EnsureProjectRequestSchema, GenericDispatchRequestSchema, GenericDispatchResponseSchema, HealthReportRequestSchema, HealthReportResponseSchema, MessageSchemaListRequestSchema, MessageSchemaListResponseSchema, MessageSchemaLookupRequestSchema, MessageSchemaLookupResponseSchema, MigrationApplyRequestSchema, MigrationPlanRequestSchema, MigrationPlanResponseSchema, MigrationRunListRequestSchema, MigrationRunListResponseSchema, MigrationRunRequestSchema, MigrationStatusResponseSchema, MultipartUploadRequestSchema, MultipartUploadResponseSchema, MutationResponseSchema, MutationSchema, ObjectRequestSchema, PolicyLintResponseSchema, PolicyListRequestSchema, PolicyListResponseSchema, PolicyRequestSchema, ProjectListRequestSchema, ProjectListResponseSchema, PutPolicyRequestSchema, RecordSetSchema, ResourceAdminRequestSchema, ResourceListResponseSchema, SagaListRequestSchema, SagaListResponseSchema, SagaRequestSchema, SagaResponseSchema, SelectRequestSchema, StageCatalogRequestSchema, TxStatusSchema, UpsertRequestSchema, UrlRequestSchema, UrlResponseSchema, VectorHybridSearchRequestSchema, VectorSearchRequestSchema, VectorSetSchema, VectorUpsertRequestSchema, ViewDefinitionSchema } from "../../entity/v1/types_pb";
-import { file_udb_entity_v1_types } from "../../entity/v1/types_pb";
+import type { AdminAuditLogRequestSchema, AdminAuditLogResponseSchema, AdminAuditVerifyRequestSchema, AdminAuditVerifyResponseSchema, AdminSummaryRequestSchema, AdminSummaryResponseSchema, CapabilitiesRequestSchema, CapabilitiesResponseSchema, CatalogManifestRequestSchema, CatalogManifestResponseSchema, CatalogValidationResponseSchema, CatalogVersionListResponseSchema, CatalogVersionRequestSchema, CatalogVersionResponseSchema, CdcRedactionPreviewRequestSchema, CdcRedactionPreviewResponseSchema, DlqActionRequestSchema, DlqEventRequestSchema, DlqEventResponseSchema, DlqListRequestSchema, DlqListResponseSchema, EnsureProjectRequestSchema, GenericDispatchRequestSchema, GenericDispatchResponseSchema, HealthReportRequestSchema, HealthReportResponseSchema, MessageSchemaListRequestSchema, MessageSchemaListResponseSchema, MessageSchemaLookupRequestSchema, MessageSchemaLookupResponseSchema, MigrationApplyRequestSchema, MigrationPlanRequestSchema, MigrationPlanResponseSchema, MigrationRunListRequestSchema, MigrationRunListResponseSchema, MigrationRunRequestSchema, MigrationStatusResponseSchema, PolicyLintResponseSchema, PolicyListRequestSchema, PolicyListResponseSchema, PolicyRequestSchema, ProjectListRequestSchema, ProjectListResponseSchema, PutPolicyRequestSchema, ResourceAdminRequestSchema, ResourceListResponseSchema, SagaListRequestSchema, SagaListResponseSchema, SagaRequestSchema, SagaResponseSchema, StageCatalogRequestSchema } from "../../entity/v1/admin_pb";
+import { file_udb_entity_v1_admin } from "../../entity/v1/admin_pb";
+import type { ChunkSchema, MultipartUploadRequestSchema, MultipartUploadResponseSchema, ObjectRequestSchema, UrlRequestSchema, UrlResponseSchema } from "../../entity/v1/blob_pb";
+import { file_udb_entity_v1_blob } from "../../entity/v1/blob_pb";
+import type { CdcControlRequestSchema, CdcStatusResponseSchema, CDCSubscriptionRequestSchema } from "../../entity/v1/cdc_pb";
+import { file_udb_entity_v1_cdc } from "../../entity/v1/cdc_pb";
+import type { MutationResponseSchema } from "../../entity/v1/mutation_pb";
+import { file_udb_entity_v1_mutation } from "../../entity/v1/mutation_pb";
+import type { EnqueueOutboxEventRequestSchema, EnqueueOutboxEventResponseSchema } from "../../entity/v1/outbox_pb";
+import { file_udb_entity_v1_outbox } from "../../entity/v1/outbox_pb";
+import type { DeleteRequestSchema, RecordSetSchema, SelectRequestSchema, UpsertRequestSchema, ViewDefinitionSchema } from "../../entity/v1/relational_pb";
+import { file_udb_entity_v1_relational } from "../../entity/v1/relational_pb";
+import type { AnalyticalQueryRequestSchema, AnalyticalQueryResponseSchema, CacheDeleteRequestSchema, CacheGetRequestSchema, CacheGetResponseSchema, CacheScanRequestSchema, CacheScanResponseSchema, CacheSetRequestSchema, DocumentDeleteRequestSchema, DocumentFindRequestSchema, DocumentGetRequestSchema, DocumentSetSchema, DocumentUpsertRequestSchema, GraphMutationRequestSchema, GraphQueryRequestSchema, GraphResultSetSchema, TimeSeriesQueryRequestSchema, TimeSeriesQueryResponseSchema, TimeSeriesWriteRequestSchema } from "../../entity/v1/stores_pb";
+import { file_udb_entity_v1_stores } from "../../entity/v1/stores_pb";
+import type { MutationSchema, TxStatusSchema } from "../../entity/v1/tx_pb";
+import { file_udb_entity_v1_tx } from "../../entity/v1/tx_pb";
+import type { VectorHybridSearchRequestSchema, VectorSearchRequestSchema, VectorSetSchema, VectorUpsertRequestSchema } from "../../entity/v1/vector_pb";
+import { file_udb_entity_v1_vector } from "../../entity/v1/vector_pb";
 import type { CDCEnvelopeSchema } from "../../events/v1/udb_events_pb";
 import { file_udb_events_v1_udb_events } from "../../events/v1/udb_events_pb";
 
@@ -13,7 +29,7 @@ import { file_udb_events_v1_udb_events } from "../../events/v1/udb_events_pb";
  * Describes the file udb/services/v1/data_broker.proto.
  */
 export const file_udb_services_v1_data_broker: GenFile = /*@__PURE__*/
-  fileDesc("CiF1ZGIvc2VydmljZXMvdjEvZGF0YV9icm9rZXIucHJvdG8SD3VkYi5zZXJ2aWNlcy52MTKMKgoKRGF0YUJyb2tlchJCCgZTZWxlY3QSHC51ZGIuZW50aXR5LnYxLlNlbGVjdFJlcXVlc3QaGC51ZGIuZW50aXR5LnYxLlJlY29yZFNldCIAEksKC0JhdGNoU2VsZWN0EhwudWRiLmVudGl0eS52MS5TZWxlY3RSZXF1ZXN0GhgudWRiLmVudGl0eS52MS5SZWNvcmRTZXQiACgBMAESSQoGVXBzZXJ0EhwudWRiLmVudGl0eS52MS5VcHNlcnRSZXF1ZXN0Gh8udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlIgASUgoLQmF0Y2hVcHNlcnQSHC51ZGIuZW50aXR5LnYxLlVwc2VydFJlcXVlc3QaHy51ZGIuZW50aXR5LnYxLk11dGF0aW9uUmVzcG9uc2UiACgBMAESSQoGRGVsZXRlEhwudWRiLmVudGl0eS52MS5EZWxldGVSZXF1ZXN0Gh8udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlIgASTgoMVmVjdG9yU2VhcmNoEiIudWRiLmVudGl0eS52MS5WZWN0b3JTZWFyY2hSZXF1ZXN0GhgudWRiLmVudGl0eS52MS5WZWN0b3JTZXQiABJaChJWZWN0b3JIeWJyaWRTZWFyY2gSKC51ZGIuZW50aXR5LnYxLlZlY3Rvckh5YnJpZFNlYXJjaFJlcXVlc3QaGC51ZGIuZW50aXR5LnYxLlZlY3RvclNldCIAElUKDFZlY3RvclVwc2VydBIiLnVkYi5lbnRpdHkudjEuVmVjdG9yVXBzZXJ0UmVxdWVzdBofLnVkYi5lbnRpdHkudjEuTXV0YXRpb25SZXNwb25zZSIAEl4KEVZlY3RvckJhdGNoVXBzZXJ0EiIudWRiLmVudGl0eS52MS5WZWN0b3JVcHNlcnRSZXF1ZXN0Gh8udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlIgAoATABEkYKCVB1dE9iamVjdBIULnVkYi5lbnRpdHkudjEuQ2h1bmsaHy51ZGIuZW50aXR5LnYxLk11dGF0aW9uUmVzcG9uc2UiACgBEkMKCUdldE9iamVjdBIcLnVkYi5lbnRpdHkudjEuT2JqZWN0UmVxdWVzdBoULnVkYi5lbnRpdHkudjEuQ2h1bmsiADABEk8KFEdlbmVyYXRlUHJlc2lnbmVkVXJsEhkudWRiLmVudGl0eS52MS5VcmxSZXF1ZXN0GhoudWRiLmVudGl0eS52MS5VcmxSZXNwb25zZSIAEmoKF0luaXRpYXRlTXVsdGlwYXJ0VXBsb2FkEiUudWRiLmVudGl0eS52MS5NdWx0aXBhcnRVcGxvYWRSZXF1ZXN0GiYudWRiLmVudGl0eS52MS5NdWx0aXBhcnRVcGxvYWRSZXNwb25zZSIAEkEKB0JlZ2luVHgSFy51ZGIuZW50aXR5LnYxLk11dGF0aW9uGhcudWRiLmVudGl0eS52MS5UeFN0YXR1cyIAKAEwARJTCgpQdWJsaXNoQ0RDEiUudWRiLmVudGl0eS52MS5DRENTdWJzY3JpcHRpb25SZXF1ZXN0GhoudWRiLmV2ZW50cy52MS5DRENFbnZlbG9wZSIAMAESWgoWQ3JlYXRlTWF0ZXJpYWxpemVkVmlldxIdLnVkYi5lbnRpdHkudjEuVmlld0RlZmluaXRpb24aHy51ZGIuZW50aXR5LnYxLk11dGF0aW9uUmVzcG9uc2UiABJrChJFbnF1ZXVlT3V0Ym94RXZlbnQSKC51ZGIuZW50aXR5LnYxLkVucXVldWVPdXRib3hFdmVudFJlcXVlc3QaKS51ZGIuZW50aXR5LnYxLkVucXVldWVPdXRib3hFdmVudFJlc3BvbnNlIgASYgoPR2VuZXJpY0Rpc3BhdGNoEiUudWRiLmVudGl0eS52MS5HZW5lcmljRGlzcGF0Y2hSZXF1ZXN0GiYudWRiLmVudGl0eS52MS5HZW5lcmljRGlzcGF0Y2hSZXNwb25zZSIAElgKDkVuc3VyZVJlc291cmNlEiMudWRiLmVudGl0eS52MS5SZXNvdXJjZUFkbWluUmVxdWVzdBofLnVkYi5lbnRpdHkudjEuTXV0YXRpb25SZXNwb25zZSIAElYKDERyb3BSZXNvdXJjZRIjLnVkYi5lbnRpdHkudjEuUmVzb3VyY2VBZG1pblJlcXVlc3QaHy51ZGIuZW50aXR5LnYxLk11dGF0aW9uUmVzcG9uc2UiABJbCg1MaXN0UmVzb3VyY2VzEiMudWRiLmVudGl0eS52MS5SZXNvdXJjZUFkbWluUmVxdWVzdBojLnVkYi5lbnRpdHkudjEuUmVzb3VyY2VMaXN0UmVzcG9uc2UiABJbCgxTdGFnZUNhdGFsb2cSIi51ZGIuZW50aXR5LnYxLlN0YWdlQ2F0YWxvZ1JlcXVlc3QaJS51ZGIuZW50aXR5LnYxLkNhdGFsb2dWZXJzaW9uUmVzcG9uc2UiABJgCg9BY3RpdmF0ZUNhdGFsb2cSJC51ZGIuZW50aXR5LnYxLkNhdGFsb2dWZXJzaW9uUmVxdWVzdBolLnVkYi5lbnRpdHkudjEuQ2F0YWxvZ1ZlcnNpb25SZXNwb25zZSIAEmAKD1JvbGxiYWNrQ2F0YWxvZxIkLnVkYi5lbnRpdHkudjEuQ2F0YWxvZ1ZlcnNpb25SZXF1ZXN0GiUudWRiLmVudGl0eS52MS5DYXRhbG9nVmVyc2lvblJlc3BvbnNlIgASYQoPVmFsaWRhdGVDYXRhbG9nEiIudWRiLmVudGl0eS52MS5TdGFnZUNhdGFsb2dSZXF1ZXN0GigudWRiLmVudGl0eS52MS5DYXRhbG9nVmFsaWRhdGlvblJlc3BvbnNlIgASaAoSR2V0Q2F0YWxvZ1ZlcnNpb25zEiUudWRiLmVudGl0eS52MS5DYXRhbG9nTWFuaWZlc3RSZXF1ZXN0GikudWRiLmVudGl0eS52MS5DYXRhbG9nVmVyc2lvbkxpc3RSZXNwb25zZSIAEmIKEUdldENhdGFsb2dWZXJzaW9uEiQudWRiLmVudGl0eS52MS5DYXRhbG9nVmVyc2lvblJlcXVlc3QaJS51ZGIuZW50aXR5LnYxLkNhdGFsb2dWZXJzaW9uUmVzcG9uc2UiABJcCg1QbGFuTWlncmF0aW9uEiMudWRiLmVudGl0eS52MS5NaWdyYXRpb25QbGFuUmVxdWVzdBokLnVkYi5lbnRpdHkudjEuTWlncmF0aW9uUGxhblJlc3BvbnNlIgASYAoOQXBwbHlNaWdyYXRpb24SJC51ZGIuZW50aXR5LnYxLk1pZ3JhdGlvbkFwcGx5UmVxdWVzdBomLnVkYi5lbnRpdHkudjEuTWlncmF0aW9uU3RhdHVzUmVzcG9uc2UiABJiChJHZXRNaWdyYXRpb25TdGF0dXMSIi51ZGIuZW50aXR5LnYxLk1pZ3JhdGlvblJ1blJlcXVlc3QaJi51ZGIuZW50aXR5LnYxLk1pZ3JhdGlvblN0YXR1c1Jlc3BvbnNlIgASZgoRTGlzdE1pZ3JhdGlvblJ1bnMSJi51ZGIuZW50aXR5LnYxLk1pZ3JhdGlvblJ1bkxpc3RSZXF1ZXN0GicudWRiLmVudGl0eS52MS5NaWdyYXRpb25SdW5MaXN0UmVzcG9uc2UiABJkChRBcHByb3ZlTWlncmF0aW9uUGxhbhIiLnVkYi5lbnRpdHkudjEuTWlncmF0aW9uUnVuUmVxdWVzdBomLnVkYi5lbnRpdHkudjEuTWlncmF0aW9uU3RhdHVzUmVzcG9uc2UiABJQCg1MaXN0RGxxRXZlbnRzEh0udWRiLmVudGl0eS52MS5EbHFMaXN0UmVxdWVzdBoeLnVkYi5lbnRpdHkudjEuRGxxTGlzdFJlc3BvbnNlIgASUAoLR2V0RGxxRXZlbnQSHi51ZGIuZW50aXR5LnYxLkRscUV2ZW50UmVxdWVzdBofLnVkYi5lbnRpdHkudjEuRGxxRXZlbnRSZXNwb25zZSIAElQKDlJlcGxheURscUV2ZW50Eh8udWRiLmVudGl0eS52MS5EbHFBY3Rpb25SZXF1ZXN0Gh8udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlIgASVQoPRGlzbWlzc0RscUV2ZW50Eh8udWRiLmVudGl0eS52MS5EbHFBY3Rpb25SZXF1ZXN0Gh8udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlIgASWAoSUXVhcmFudGluZURscUV2ZW50Eh8udWRiLmVudGl0eS52MS5EbHFBY3Rpb25SZXF1ZXN0Gh8udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlIgASVAoMR2V0Q2RjU3RhdHVzEiAudWRiLmVudGl0eS52MS5DZGNDb250cm9sUmVxdWVzdBogLnVkYi5lbnRpdHkudjEuQ2RjU3RhdHVzUmVzcG9uc2UiABJQCghQYXVzZUNkYxIgLnVkYi5lbnRpdHkudjEuQ2RjQ29udHJvbFJlcXVlc3QaIC51ZGIuZW50aXR5LnYxLkNkY1N0YXR1c1Jlc3BvbnNlIgASUQoJUmVzdW1lQ2RjEiAudWRiLmVudGl0eS52MS5DZGNDb250cm9sUmVxdWVzdBogLnVkYi5lbnRpdHkudjEuQ2RjU3RhdHVzUmVzcG9uc2UiABJZChFTdGVwRG93bkNkY0xlYWRlchIgLnVkYi5lbnRpdHkudjEuQ2RjQ29udHJvbFJlcXVlc3QaIC51ZGIuZW50aXR5LnYxLkNkY1N0YXR1c1Jlc3BvbnNlIgASTgoJTGlzdFNhZ2FzEh4udWRiLmVudGl0eS52MS5TYWdhTGlzdFJlcXVlc3QaHy51ZGIuZW50aXR5LnYxLlNhZ2FMaXN0UmVzcG9uc2UiABJECgdHZXRTYWdhEhoudWRiLmVudGl0eS52MS5TYWdhUmVxdWVzdBobLnVkYi5lbnRpdHkudjEuU2FnYVJlc3BvbnNlIgASUgoVUmV0cnlTYWdhQ29tcGVuc2F0aW9uEhoudWRiLmVudGl0eS52MS5TYWdhUmVxdWVzdBobLnVkYi5lbnRpdHkudjEuU2FnYVJlc3BvbnNlIgASTQoQTWFya1NhZ2FSZXZpZXdlZBIaLnVkYi5lbnRpdHkudjEuU2FnYVJlcXVlc3QaGy51ZGIuZW50aXR5LnYxLlNhZ2FSZXNwb25zZSIAElUKDExpc3RQb2xpY2llcxIgLnVkYi5lbnRpdHkudjEuUG9saWN5TGlzdFJlcXVlc3QaIS51ZGIuZW50aXR5LnYxLlBvbGljeUxpc3RSZXNwb25zZSIAEk8KCVB1dFBvbGljeRIfLnVkYi5lbnRpdHkudjEuUHV0UG9saWN5UmVxdWVzdBofLnVkYi5lbnRpdHkudjEuTXV0YXRpb25SZXNwb25zZSIAEk8KDERlbGV0ZVBvbGljeRIcLnVkYi5lbnRpdHkudjEuUG9saWN5UmVxdWVzdBofLnVkYi5lbnRpdHkudjEuTXV0YXRpb25SZXNwb25zZSIAElcKDlJlbG9hZFBvbGljaWVzEiIudWRiLmVudGl0eS52MS5DYXBhYmlsaXRpZXNSZXF1ZXN0Gh8udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlIgASVwoMTGludFBvbGljaWVzEiIudWRiLmVudGl0eS52MS5DYXBhYmlsaXRpZXNSZXF1ZXN0GiEudWRiLmVudGl0eS52MS5Qb2xpY3lMaW50UmVzcG9uc2UiABJcCg9HZXRDYXBhYmlsaXRpZXMSIi51ZGIuZW50aXR5LnYxLkNhcGFiaWxpdGllc1JlcXVlc3QaIy51ZGIuZW50aXR5LnYxLkNhcGFiaWxpdGllc1Jlc3BvbnNlIgASZQoSR2V0Q2F0YWxvZ01hbmlmZXN0EiUudWRiLmVudGl0eS52MS5DYXRhbG9nTWFuaWZlc3RSZXF1ZXN0GiYudWRiLmVudGl0eS52MS5DYXRhbG9nTWFuaWZlc3RSZXNwb25zZSIAEm4KE0xvb2t1cE1lc3NhZ2VTY2hlbWESKS51ZGIuZW50aXR5LnYxLk1lc3NhZ2VTY2hlbWFMb29rdXBSZXF1ZXN0GioudWRiLmVudGl0eS52MS5NZXNzYWdlU2NoZW1hTG9va3VwUmVzcG9uc2UiABJpChJMaXN0TWVzc2FnZVNjaGVtYXMSJy51ZGIuZW50aXR5LnYxLk1lc3NhZ2VTY2hlbWFMaXN0UmVxdWVzdBooLnVkYi5lbnRpdHkudjEuTWVzc2FnZVNjaGVtYUxpc3RSZXNwb25zZSIAElwKD0dldEhlYWx0aFJlcG9ydBIiLnVkYi5lbnRpdHkudjEuSGVhbHRoUmVwb3J0UmVxdWVzdBojLnVkYi5lbnRpdHkudjEuSGVhbHRoUmVwb3J0UmVzcG9uc2UiABJXCg1FbnN1cmVQcm9qZWN0EiMudWRiLmVudGl0eS52MS5FbnN1cmVQcm9qZWN0UmVxdWVzdBofLnVkYi5lbnRpdHkudjEuTXV0YXRpb25SZXNwb25zZSIAElcKDExpc3RQcm9qZWN0cxIhLnVkYi5lbnRpdHkudjEuUHJvamVjdExpc3RSZXF1ZXN0GiIudWRiLmVudGl0eS52MS5Qcm9qZWN0TGlzdFJlc3BvbnNlIgASXAoPR2V0QWRtaW5TdW1tYXJ5EiIudWRiLmVudGl0eS52MS5BZG1pblN1bW1hcnlSZXF1ZXN0GiMudWRiLmVudGl0eS52MS5BZG1pblN1bW1hcnlSZXNwb25zZSIAEmEKEkxpc3RBZG1pbkF1ZGl0TG9ncxIjLnVkYi5lbnRpdHkudjEuQWRtaW5BdWRpdExvZ1JlcXVlc3QaJC51ZGIuZW50aXR5LnYxLkFkbWluQXVkaXRMb2dSZXNwb25zZSIAEmgKE1ZlcmlmeUFkbWluQXVkaXRMb2cSJi51ZGIuZW50aXR5LnYxLkFkbWluQXVkaXRWZXJpZnlSZXF1ZXN0GicudWRiLmVudGl0eS52MS5BZG1pbkF1ZGl0VmVyaWZ5UmVzcG9uc2UiAEKTAQoTY29tLnVkYi5zZXJ2aWNlcy52MUIPRGF0YUJyb2tlclByb3RvUAFaPWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL3NlcnZpY2VzL3YxO3NlcnZpY2VzdjGiAgNVU1iqAg9VZGIuU2VydmljZXMuVjHqAhFVZGI6OlNlcnZpY2VzOjpWMWIGcHJvdG8z", [file_udb_entity_v1_types, file_udb_events_v1_udb_events]);
+  fileDesc("CiF1ZGIvc2VydmljZXMvdjEvZGF0YV9icm9rZXIucHJvdG8SD3VkYi5zZXJ2aWNlcy52MTLmMwoKRGF0YUJyb2tlchJCCgZTZWxlY3QSHC51ZGIuZW50aXR5LnYxLlNlbGVjdFJlcXVlc3QaGC51ZGIuZW50aXR5LnYxLlJlY29yZFNldCIAEksKC0JhdGNoU2VsZWN0EhwudWRiLmVudGl0eS52MS5TZWxlY3RSZXF1ZXN0GhgudWRiLmVudGl0eS52MS5SZWNvcmRTZXQiACgBMAESSQoGVXBzZXJ0EhwudWRiLmVudGl0eS52MS5VcHNlcnRSZXF1ZXN0Gh8udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlIgASUgoLQmF0Y2hVcHNlcnQSHC51ZGIuZW50aXR5LnYxLlVwc2VydFJlcXVlc3QaHy51ZGIuZW50aXR5LnYxLk11dGF0aW9uUmVzcG9uc2UiACgBMAESSQoGRGVsZXRlEhwudWRiLmVudGl0eS52MS5EZWxldGVSZXF1ZXN0Gh8udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlIgASTgoMVmVjdG9yU2VhcmNoEiIudWRiLmVudGl0eS52MS5WZWN0b3JTZWFyY2hSZXF1ZXN0GhgudWRiLmVudGl0eS52MS5WZWN0b3JTZXQiABJaChJWZWN0b3JIeWJyaWRTZWFyY2gSKC51ZGIuZW50aXR5LnYxLlZlY3Rvckh5YnJpZFNlYXJjaFJlcXVlc3QaGC51ZGIuZW50aXR5LnYxLlZlY3RvclNldCIAElUKDFZlY3RvclVwc2VydBIiLnVkYi5lbnRpdHkudjEuVmVjdG9yVXBzZXJ0UmVxdWVzdBofLnVkYi5lbnRpdHkudjEuTXV0YXRpb25SZXNwb25zZSIAEl4KEVZlY3RvckJhdGNoVXBzZXJ0EiIudWRiLmVudGl0eS52MS5WZWN0b3JVcHNlcnRSZXF1ZXN0Gh8udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlIgAoATABEkYKCVB1dE9iamVjdBIULnVkYi5lbnRpdHkudjEuQ2h1bmsaHy51ZGIuZW50aXR5LnYxLk11dGF0aW9uUmVzcG9uc2UiACgBEkMKCUdldE9iamVjdBIcLnVkYi5lbnRpdHkudjEuT2JqZWN0UmVxdWVzdBoULnVkYi5lbnRpdHkudjEuQ2h1bmsiADABEk8KFEdlbmVyYXRlUHJlc2lnbmVkVXJsEhkudWRiLmVudGl0eS52MS5VcmxSZXF1ZXN0GhoudWRiLmVudGl0eS52MS5VcmxSZXNwb25zZSIAEmoKF0luaXRpYXRlTXVsdGlwYXJ0VXBsb2FkEiUudWRiLmVudGl0eS52MS5NdWx0aXBhcnRVcGxvYWRSZXF1ZXN0GiYudWRiLmVudGl0eS52MS5NdWx0aXBhcnRVcGxvYWRSZXNwb25zZSIAEk0KCENhY2hlR2V0Eh4udWRiLmVudGl0eS52MS5DYWNoZUdldFJlcXVlc3QaHy51ZGIuZW50aXR5LnYxLkNhY2hlR2V0UmVzcG9uc2UiABJNCghDYWNoZVNldBIeLnVkYi5lbnRpdHkudjEuQ2FjaGVTZXRSZXF1ZXN0Gh8udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlIgASUwoLQ2FjaGVEZWxldGUSIS51ZGIuZW50aXR5LnYxLkNhY2hlRGVsZXRlUmVxdWVzdBofLnVkYi5lbnRpdHkudjEuTXV0YXRpb25SZXNwb25zZSIAElAKCUNhY2hlU2NhbhIfLnVkYi5lbnRpdHkudjEuQ2FjaGVTY2FuUmVxdWVzdBogLnVkYi5lbnRpdHkudjEuQ2FjaGVTY2FuUmVzcG9uc2UiABJOCgtEb2N1bWVudEdldBIhLnVkYi5lbnRpdHkudjEuRG9jdW1lbnRHZXRSZXF1ZXN0GhoudWRiLmVudGl0eS52MS5Eb2N1bWVudFNldCIAElAKDERvY3VtZW50RmluZBIiLnVkYi5lbnRpdHkudjEuRG9jdW1lbnRGaW5kUmVxdWVzdBoaLnVkYi5lbnRpdHkudjEuRG9jdW1lbnRTZXQiABJZCg5Eb2N1bWVudFVwc2VydBIkLnVkYi5lbnRpdHkudjEuRG9jdW1lbnRVcHNlcnRSZXF1ZXN0Gh8udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlIgASWQoORG9jdW1lbnREZWxldGUSJC51ZGIuZW50aXR5LnYxLkRvY3VtZW50RGVsZXRlUmVxdWVzdBofLnVkYi5lbnRpdHkudjEuTXV0YXRpb25SZXNwb25zZSIAEk8KCkdyYXBoUXVlcnkSIC51ZGIuZW50aXR5LnYxLkdyYXBoUXVlcnlSZXF1ZXN0Gh0udWRiLmVudGl0eS52MS5HcmFwaFJlc3VsdFNldCIAElUKC0dyYXBoTXV0YXRlEiMudWRiLmVudGl0eS52MS5HcmFwaE11dGF0aW9uUmVxdWVzdBofLnVkYi5lbnRpdHkudjEuTXV0YXRpb25SZXNwb25zZSIAElsKD1RpbWVTZXJpZXNXcml0ZRIlLnVkYi5lbnRpdHkudjEuVGltZVNlcmllc1dyaXRlUmVxdWVzdBofLnVkYi5lbnRpdHkudjEuTXV0YXRpb25SZXNwb25zZSIAEmIKD1RpbWVTZXJpZXNRdWVyeRIlLnVkYi5lbnRpdHkudjEuVGltZVNlcmllc1F1ZXJ5UmVxdWVzdBomLnVkYi5lbnRpdHkudjEuVGltZVNlcmllc1F1ZXJ5UmVzcG9uc2UiABJiCg9BbmFseXRpY2FsUXVlcnkSJS51ZGIuZW50aXR5LnYxLkFuYWx5dGljYWxRdWVyeVJlcXVlc3QaJi51ZGIuZW50aXR5LnYxLkFuYWx5dGljYWxRdWVyeVJlc3BvbnNlIgASQQoHQmVnaW5UeBIXLnVkYi5lbnRpdHkudjEuTXV0YXRpb24aFy51ZGIuZW50aXR5LnYxLlR4U3RhdHVzIgAoATABElMKClB1Ymxpc2hDREMSJS51ZGIuZW50aXR5LnYxLkNEQ1N1YnNjcmlwdGlvblJlcXVlc3QaGi51ZGIuZXZlbnRzLnYxLkNEQ0VudmVsb3BlIgAwARJaChZDcmVhdGVNYXRlcmlhbGl6ZWRWaWV3Eh0udWRiLmVudGl0eS52MS5WaWV3RGVmaW5pdGlvbhofLnVkYi5lbnRpdHkudjEuTXV0YXRpb25SZXNwb25zZSIAEmsKEkVucXVldWVPdXRib3hFdmVudBIoLnVkYi5lbnRpdHkudjEuRW5xdWV1ZU91dGJveEV2ZW50UmVxdWVzdBopLnVkYi5lbnRpdHkudjEuRW5xdWV1ZU91dGJveEV2ZW50UmVzcG9uc2UiABJiCg9HZW5lcmljRGlzcGF0Y2gSJS51ZGIuZW50aXR5LnYxLkdlbmVyaWNEaXNwYXRjaFJlcXVlc3QaJi51ZGIuZW50aXR5LnYxLkdlbmVyaWNEaXNwYXRjaFJlc3BvbnNlIgASWAoORW5zdXJlUmVzb3VyY2USIy51ZGIuZW50aXR5LnYxLlJlc291cmNlQWRtaW5SZXF1ZXN0Gh8udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlIgASVgoMRHJvcFJlc291cmNlEiMudWRiLmVudGl0eS52MS5SZXNvdXJjZUFkbWluUmVxdWVzdBofLnVkYi5lbnRpdHkudjEuTXV0YXRpb25SZXNwb25zZSIAElsKDUxpc3RSZXNvdXJjZXMSIy51ZGIuZW50aXR5LnYxLlJlc291cmNlQWRtaW5SZXF1ZXN0GiMudWRiLmVudGl0eS52MS5SZXNvdXJjZUxpc3RSZXNwb25zZSIAElsKDFN0YWdlQ2F0YWxvZxIiLnVkYi5lbnRpdHkudjEuU3RhZ2VDYXRhbG9nUmVxdWVzdBolLnVkYi5lbnRpdHkudjEuQ2F0YWxvZ1ZlcnNpb25SZXNwb25zZSIAEmAKD0FjdGl2YXRlQ2F0YWxvZxIkLnVkYi5lbnRpdHkudjEuQ2F0YWxvZ1ZlcnNpb25SZXF1ZXN0GiUudWRiLmVudGl0eS52MS5DYXRhbG9nVmVyc2lvblJlc3BvbnNlIgASYAoPUm9sbGJhY2tDYXRhbG9nEiQudWRiLmVudGl0eS52MS5DYXRhbG9nVmVyc2lvblJlcXVlc3QaJS51ZGIuZW50aXR5LnYxLkNhdGFsb2dWZXJzaW9uUmVzcG9uc2UiABJhCg9WYWxpZGF0ZUNhdGFsb2cSIi51ZGIuZW50aXR5LnYxLlN0YWdlQ2F0YWxvZ1JlcXVlc3QaKC51ZGIuZW50aXR5LnYxLkNhdGFsb2dWYWxpZGF0aW9uUmVzcG9uc2UiABJoChJHZXRDYXRhbG9nVmVyc2lvbnMSJS51ZGIuZW50aXR5LnYxLkNhdGFsb2dNYW5pZmVzdFJlcXVlc3QaKS51ZGIuZW50aXR5LnYxLkNhdGFsb2dWZXJzaW9uTGlzdFJlc3BvbnNlIgASYgoRR2V0Q2F0YWxvZ1ZlcnNpb24SJC51ZGIuZW50aXR5LnYxLkNhdGFsb2dWZXJzaW9uUmVxdWVzdBolLnVkYi5lbnRpdHkudjEuQ2F0YWxvZ1ZlcnNpb25SZXNwb25zZSIAElwKDVBsYW5NaWdyYXRpb24SIy51ZGIuZW50aXR5LnYxLk1pZ3JhdGlvblBsYW5SZXF1ZXN0GiQudWRiLmVudGl0eS52MS5NaWdyYXRpb25QbGFuUmVzcG9uc2UiABJgCg5BcHBseU1pZ3JhdGlvbhIkLnVkYi5lbnRpdHkudjEuTWlncmF0aW9uQXBwbHlSZXF1ZXN0GiYudWRiLmVudGl0eS52MS5NaWdyYXRpb25TdGF0dXNSZXNwb25zZSIAEmIKEkdldE1pZ3JhdGlvblN0YXR1cxIiLnVkYi5lbnRpdHkudjEuTWlncmF0aW9uUnVuUmVxdWVzdBomLnVkYi5lbnRpdHkudjEuTWlncmF0aW9uU3RhdHVzUmVzcG9uc2UiABJmChFMaXN0TWlncmF0aW9uUnVucxImLnVkYi5lbnRpdHkudjEuTWlncmF0aW9uUnVuTGlzdFJlcXVlc3QaJy51ZGIuZW50aXR5LnYxLk1pZ3JhdGlvblJ1bkxpc3RSZXNwb25zZSIAEmQKFEFwcHJvdmVNaWdyYXRpb25QbGFuEiIudWRiLmVudGl0eS52MS5NaWdyYXRpb25SdW5SZXF1ZXN0GiYudWRiLmVudGl0eS52MS5NaWdyYXRpb25TdGF0dXNSZXNwb25zZSIAElAKDUxpc3REbHFFdmVudHMSHS51ZGIuZW50aXR5LnYxLkRscUxpc3RSZXF1ZXN0Gh4udWRiLmVudGl0eS52MS5EbHFMaXN0UmVzcG9uc2UiABJQCgtHZXREbHFFdmVudBIeLnVkYi5lbnRpdHkudjEuRGxxRXZlbnRSZXF1ZXN0Gh8udWRiLmVudGl0eS52MS5EbHFFdmVudFJlc3BvbnNlIgASVAoOUmVwbGF5RGxxRXZlbnQSHy51ZGIuZW50aXR5LnYxLkRscUFjdGlvblJlcXVlc3QaHy51ZGIuZW50aXR5LnYxLk11dGF0aW9uUmVzcG9uc2UiABJVCg9EaXNtaXNzRGxxRXZlbnQSHy51ZGIuZW50aXR5LnYxLkRscUFjdGlvblJlcXVlc3QaHy51ZGIuZW50aXR5LnYxLk11dGF0aW9uUmVzcG9uc2UiABJYChJRdWFyYW50aW5lRGxxRXZlbnQSHy51ZGIuZW50aXR5LnYxLkRscUFjdGlvblJlcXVlc3QaHy51ZGIuZW50aXR5LnYxLk11dGF0aW9uUmVzcG9uc2UiABJUCgxHZXRDZGNTdGF0dXMSIC51ZGIuZW50aXR5LnYxLkNkY0NvbnRyb2xSZXF1ZXN0GiAudWRiLmVudGl0eS52MS5DZGNTdGF0dXNSZXNwb25zZSIAElAKCFBhdXNlQ2RjEiAudWRiLmVudGl0eS52MS5DZGNDb250cm9sUmVxdWVzdBogLnVkYi5lbnRpdHkudjEuQ2RjU3RhdHVzUmVzcG9uc2UiABJRCglSZXN1bWVDZGMSIC51ZGIuZW50aXR5LnYxLkNkY0NvbnRyb2xSZXF1ZXN0GiAudWRiLmVudGl0eS52MS5DZGNTdGF0dXNSZXNwb25zZSIAElkKEVN0ZXBEb3duQ2RjTGVhZGVyEiAudWRiLmVudGl0eS52MS5DZGNDb250cm9sUmVxdWVzdBogLnVkYi5lbnRpdHkudjEuQ2RjU3RhdHVzUmVzcG9uc2UiABJuChNQcmV2aWV3Q2RjUmVkYWN0aW9uEikudWRiLmVudGl0eS52MS5DZGNSZWRhY3Rpb25QcmV2aWV3UmVxdWVzdBoqLnVkYi5lbnRpdHkudjEuQ2RjUmVkYWN0aW9uUHJldmlld1Jlc3BvbnNlIgASTgoJTGlzdFNhZ2FzEh4udWRiLmVudGl0eS52MS5TYWdhTGlzdFJlcXVlc3QaHy51ZGIuZW50aXR5LnYxLlNhZ2FMaXN0UmVzcG9uc2UiABJECgdHZXRTYWdhEhoudWRiLmVudGl0eS52MS5TYWdhUmVxdWVzdBobLnVkYi5lbnRpdHkudjEuU2FnYVJlc3BvbnNlIgASUgoVUmV0cnlTYWdhQ29tcGVuc2F0aW9uEhoudWRiLmVudGl0eS52MS5TYWdhUmVxdWVzdBobLnVkYi5lbnRpdHkudjEuU2FnYVJlc3BvbnNlIgASTQoQTWFya1NhZ2FSZXZpZXdlZBIaLnVkYi5lbnRpdHkudjEuU2FnYVJlcXVlc3QaGy51ZGIuZW50aXR5LnYxLlNhZ2FSZXNwb25zZSIAElUKDExpc3RQb2xpY2llcxIgLnVkYi5lbnRpdHkudjEuUG9saWN5TGlzdFJlcXVlc3QaIS51ZGIuZW50aXR5LnYxLlBvbGljeUxpc3RSZXNwb25zZSIAEk8KCVB1dFBvbGljeRIfLnVkYi5lbnRpdHkudjEuUHV0UG9saWN5UmVxdWVzdBofLnVkYi5lbnRpdHkudjEuTXV0YXRpb25SZXNwb25zZSIAEk8KDERlbGV0ZVBvbGljeRIcLnVkYi5lbnRpdHkudjEuUG9saWN5UmVxdWVzdBofLnVkYi5lbnRpdHkudjEuTXV0YXRpb25SZXNwb25zZSIAElcKDlJlbG9hZFBvbGljaWVzEiIudWRiLmVudGl0eS52MS5DYXBhYmlsaXRpZXNSZXF1ZXN0Gh8udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlIgASVwoMTGludFBvbGljaWVzEiIudWRiLmVudGl0eS52MS5DYXBhYmlsaXRpZXNSZXF1ZXN0GiEudWRiLmVudGl0eS52MS5Qb2xpY3lMaW50UmVzcG9uc2UiABJcCg9HZXRDYXBhYmlsaXRpZXMSIi51ZGIuZW50aXR5LnYxLkNhcGFiaWxpdGllc1JlcXVlc3QaIy51ZGIuZW50aXR5LnYxLkNhcGFiaWxpdGllc1Jlc3BvbnNlIgASZQoSR2V0Q2F0YWxvZ01hbmlmZXN0EiUudWRiLmVudGl0eS52MS5DYXRhbG9nTWFuaWZlc3RSZXF1ZXN0GiYudWRiLmVudGl0eS52MS5DYXRhbG9nTWFuaWZlc3RSZXNwb25zZSIAEm4KE0xvb2t1cE1lc3NhZ2VTY2hlbWESKS51ZGIuZW50aXR5LnYxLk1lc3NhZ2VTY2hlbWFMb29rdXBSZXF1ZXN0GioudWRiLmVudGl0eS52MS5NZXNzYWdlU2NoZW1hTG9va3VwUmVzcG9uc2UiABJpChJMaXN0TWVzc2FnZVNjaGVtYXMSJy51ZGIuZW50aXR5LnYxLk1lc3NhZ2VTY2hlbWFMaXN0UmVxdWVzdBooLnVkYi5lbnRpdHkudjEuTWVzc2FnZVNjaGVtYUxpc3RSZXNwb25zZSIAElwKD0dldEhlYWx0aFJlcG9ydBIiLnVkYi5lbnRpdHkudjEuSGVhbHRoUmVwb3J0UmVxdWVzdBojLnVkYi5lbnRpdHkudjEuSGVhbHRoUmVwb3J0UmVzcG9uc2UiABJXCg1FbnN1cmVQcm9qZWN0EiMudWRiLmVudGl0eS52MS5FbnN1cmVQcm9qZWN0UmVxdWVzdBofLnVkYi5lbnRpdHkudjEuTXV0YXRpb25SZXNwb25zZSIAElcKDExpc3RQcm9qZWN0cxIhLnVkYi5lbnRpdHkudjEuUHJvamVjdExpc3RSZXF1ZXN0GiIudWRiLmVudGl0eS52MS5Qcm9qZWN0TGlzdFJlc3BvbnNlIgASXAoPR2V0QWRtaW5TdW1tYXJ5EiIudWRiLmVudGl0eS52MS5BZG1pblN1bW1hcnlSZXF1ZXN0GiMudWRiLmVudGl0eS52MS5BZG1pblN1bW1hcnlSZXNwb25zZSIAEmEKEkxpc3RBZG1pbkF1ZGl0TG9ncxIjLnVkYi5lbnRpdHkudjEuQWRtaW5BdWRpdExvZ1JlcXVlc3QaJC51ZGIuZW50aXR5LnYxLkFkbWluQXVkaXRMb2dSZXNwb25zZSIAEmgKE1ZlcmlmeUFkbWluQXVkaXRMb2cSJi51ZGIuZW50aXR5LnYxLkFkbWluQXVkaXRWZXJpZnlSZXF1ZXN0GicudWRiLmVudGl0eS52MS5BZG1pbkF1ZGl0VmVyaWZ5UmVzcG9uc2UiAELDAQoTY29tLnVkYi5zZXJ2aWNlcy52MUIPRGF0YUJyb2tlclByb3RvUAFaPWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL3NlcnZpY2VzL3YxO3NlcnZpY2VzdjGiAgNVU1iqAg9VZGIuU2VydmljZXMuVjHKAg9VZGJcU2VydmljZXNcVjHiAhtVZGJcR1BCTWV0YWRhdGFcU2VydmljZXNcVjHqAhFVZGI6OlNlcnZpY2VzOjpWMWIGcHJvdG8z", [file_udb_entity_v1_admin, file_udb_entity_v1_blob, file_udb_entity_v1_cdc, file_udb_entity_v1_mutation, file_udb_entity_v1_outbox, file_udb_entity_v1_relational, file_udb_entity_v1_stores, file_udb_entity_v1_tx, file_udb_entity_v1_vector, file_udb_events_v1_udb_events]);
 
 /**
  * DataBroker is the UDB-owned wire protocol. Project protos are parsed only as
@@ -133,6 +149,114 @@ export const DataBroker: GenService<{
     methodKind: "unary";
     input: typeof MultipartUploadRequestSchema;
     output: typeof MultipartUploadResponseSchema;
+  },
+  /**
+   * ── Cache / KV ─────────────────────────────────────────────────────────────
+   *
+   * @generated from rpc udb.services.v1.DataBroker.CacheGet
+   */
+  cacheGet: {
+    methodKind: "unary";
+    input: typeof CacheGetRequestSchema;
+    output: typeof CacheGetResponseSchema;
+  },
+  /**
+   * @generated from rpc udb.services.v1.DataBroker.CacheSet
+   */
+  cacheSet: {
+    methodKind: "unary";
+    input: typeof CacheSetRequestSchema;
+    output: typeof MutationResponseSchema;
+  },
+  /**
+   * @generated from rpc udb.services.v1.DataBroker.CacheDelete
+   */
+  cacheDelete: {
+    methodKind: "unary";
+    input: typeof CacheDeleteRequestSchema;
+    output: typeof MutationResponseSchema;
+  },
+  /**
+   * @generated from rpc udb.services.v1.DataBroker.CacheScan
+   */
+  cacheScan: {
+    methodKind: "unary";
+    input: typeof CacheScanRequestSchema;
+    output: typeof CacheScanResponseSchema;
+  },
+  /**
+   * ── Document / Graph / Time-Series / Analytical Stores ────────────────────
+   *
+   * @generated from rpc udb.services.v1.DataBroker.DocumentGet
+   */
+  documentGet: {
+    methodKind: "unary";
+    input: typeof DocumentGetRequestSchema;
+    output: typeof DocumentSetSchema;
+  },
+  /**
+   * @generated from rpc udb.services.v1.DataBroker.DocumentFind
+   */
+  documentFind: {
+    methodKind: "unary";
+    input: typeof DocumentFindRequestSchema;
+    output: typeof DocumentSetSchema;
+  },
+  /**
+   * @generated from rpc udb.services.v1.DataBroker.DocumentUpsert
+   */
+  documentUpsert: {
+    methodKind: "unary";
+    input: typeof DocumentUpsertRequestSchema;
+    output: typeof MutationResponseSchema;
+  },
+  /**
+   * @generated from rpc udb.services.v1.DataBroker.DocumentDelete
+   */
+  documentDelete: {
+    methodKind: "unary";
+    input: typeof DocumentDeleteRequestSchema;
+    output: typeof MutationResponseSchema;
+  },
+  /**
+   * @generated from rpc udb.services.v1.DataBroker.GraphQuery
+   */
+  graphQuery: {
+    methodKind: "unary";
+    input: typeof GraphQueryRequestSchema;
+    output: typeof GraphResultSetSchema;
+  },
+  /**
+   * @generated from rpc udb.services.v1.DataBroker.GraphMutate
+   */
+  graphMutate: {
+    methodKind: "unary";
+    input: typeof GraphMutationRequestSchema;
+    output: typeof MutationResponseSchema;
+  },
+  /**
+   * @generated from rpc udb.services.v1.DataBroker.TimeSeriesWrite
+   */
+  timeSeriesWrite: {
+    methodKind: "unary";
+    input: typeof TimeSeriesWriteRequestSchema;
+    output: typeof MutationResponseSchema;
+  },
+  /**
+   * @generated from rpc udb.services.v1.DataBroker.TimeSeriesQuery
+   */
+  timeSeriesQuery: {
+    methodKind: "unary";
+    input: typeof TimeSeriesQueryRequestSchema;
+    output: typeof TimeSeriesQueryResponseSchema;
+  },
+  /**
+   * @generated from rpc udb.services.v1.DataBroker.AnalyticalQuery
+   */
+  analyticalQuery: {
+    methodKind: "unary";
+    input: typeof AnalyticalQueryRequestSchema;
+    output: typeof AnalyticalQueryResponseSchema;
   },
   /**
    * ── Tx / CDC ───────────────────────────────────────────────────────────────
@@ -317,8 +441,8 @@ export const DataBroker: GenService<{
     output: typeof MigrationStatusResponseSchema;
   },
   /**
-   * Return migration runs for an operator console page.
-   * Requires scope: udb:admin or udb:portal:viewer
+   * Return migration runs for an admin console page.
+   * Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
    *
    * @generated from rpc udb.services.v1.DataBroker.ListMigrationRuns
    */
@@ -413,6 +537,14 @@ export const DataBroker: GenService<{
     methodKind: "unary";
     input: typeof CdcControlRequestSchema;
     output: typeof CdcStatusResponseSchema;
+  },
+  /**
+   * @generated from rpc udb.services.v1.DataBroker.PreviewCdcRedaction
+   */
+  previewCdcRedaction: {
+    methodKind: "unary";
+    input: typeof CdcRedactionPreviewRequestSchema;
+    output: typeof CdcRedactionPreviewResponseSchema;
   },
   /**
    * Saga administration.
@@ -558,9 +690,9 @@ export const DataBroker: GenService<{
     output: typeof ProjectListResponseSchema;
   },
   /**
-   * ── Unified Operator Admin Surface ────────────────────────────────────────
+   * ── Unified Admin Surface ────────────────────────────────────────────────
    * Returns a single snapshot covering catalog, CDC, saga, backend, and policy
-   * state for the operator console.  Requires scope: udb:admin
+   * state for the admin console. Requires scope: udb:admin.
    *
    * @generated from rpc udb.services.v1.DataBroker.GetAdminSummary
    */
@@ -570,8 +702,8 @@ export const DataBroker: GenService<{
     output: typeof AdminSummaryResponseSchema;
   },
   /**
-   * Paginated admin audit log view for the operator console.
-   * Requires scope: udb:admin or udb:portal:viewer
+   * Paginated admin audit log view for the admin console.
+   * Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
    *
    * @generated from rpc udb.services.v1.DataBroker.ListAdminAuditLogs
    */
@@ -582,7 +714,7 @@ export const DataBroker: GenService<{
   },
   /**
    * Verifies the admin audit log hash chain and reports the first broken link.
-   * Requires scope: udb:admin or udb:portal:viewer
+   * Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
    *
    * @generated from rpc udb.services.v1.DataBroker.VerifyAdminAuditLog
    */

@@ -37,7 +37,10 @@ use std::sync::Arc;
 
 use serde_json::Value as JsonValue;
 
-use crate::runtime::backend_context::{AppliedContext, BackendContextEnforcer, ContextEffect};
+use crate::runtime::backend_context::{
+    AppliedContext, BackendContextEnforcer, ContextEffect, enforce_with_mechanism,
+};
+use crate::runtime::executor_utils::{build_probe, executor_timeout_duration};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
@@ -113,10 +116,14 @@ impl MemcachedExecutor {
         R: Send + 'static,
     {
         let inner = self.client.inner.clone();
-        tokio::task::spawn_blocking(move || f(inner))
-            .await
-            .map_err(|e| tonic::Status::internal(format!("memcached blocking task join: {e}")))?
-            .map_err(|e| tonic::Status::unavailable(format!("memcached: {e}")))
+        tokio::time::timeout(
+            executor_timeout_duration(),
+            tokio::task::spawn_blocking(move || f(inner)),
+        )
+        .await
+        .map_err(|_| tonic::Status::deadline_exceeded("memcached operation deadline exceeded"))?
+        .map_err(|e| tonic::Status::internal(format!("memcached blocking task join: {e}")))?
+        .map_err(|e| tonic::Status::unavailable(format!("memcached: {e}")))
     }
 }
 
@@ -126,18 +133,11 @@ impl BackendContextEnforcer for MemcachedExecutor {
     }
 
     fn enforce(&self, ctx: &AppliedContext) -> ContextEffect {
-        if ctx.is_empty() {
-            return ContextEffect::Advisory {
-                recorded_in: "no_context_to_apply".into(),
-            };
-        }
         // C7/C8: the Memcached compiler's key template namespaces by
         // tenant + project (`udb:{project}:{tenant}:<msg>:{pk}`), so
         // a cross-tenant `get` can't return another tenant's value —
         // it would have to know the full prefixed key.
-        ContextEffect::Enforced {
-            mechanism: "key namespace prefix udb:{project}:{tenant}:".into(),
-        }
+        enforce_with_mechanism(ctx, "key namespace prefix udb:{project}:{tenant}:")
     }
 }
 
@@ -306,20 +306,7 @@ impl BackendExecutor for MemcachedExecutor {
     }
 
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
-        match self.ping().await {
-            Ok(()) => Ok(BackendProbe {
-                backend: "memcached".to_string(),
-                instance: None,
-                ok: true,
-                error: None,
-            }),
-            Err(err) => Ok(BackendProbe {
-                backend: "memcached".to_string(),
-                instance: None,
-                ok: false,
-                error: Some(err),
-            }),
-        }
+        Ok(build_probe("memcached", self.ping().await))
     }
 }
 

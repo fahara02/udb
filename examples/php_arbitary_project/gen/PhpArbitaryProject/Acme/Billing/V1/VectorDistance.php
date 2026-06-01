@@ -46,3 +46,4 @@ class VectorDistance
         return constant($const);
     }
 }
+

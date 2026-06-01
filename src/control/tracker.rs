@@ -12,6 +12,8 @@
 
 // ── Ledger 1: Applied migration file tracker ──────────────────────────────────
 
+pub const DEFAULT_LEDGER_SCHEMA: &str = "public";
+
 /// DDL for `public.schema_migrations`.
 ///
 /// Tracks every SQL file that has been applied, its SHA-256 checksum, timing,
@@ -156,7 +158,23 @@ pub const ALL_TRACKER_DDL: &[&str] = &[
 /// Returns all tracker DDL joined by a blank line separator, ready for
 /// output by the `tracker-ddl` CLI command or for direct `psql` execution.
 pub fn all_tracker_ddl_sql() -> String {
-    ALL_TRACKER_DDL.join("\n")
+    all_tracker_ddl_sql_for_schema(DEFAULT_LEDGER_SCHEMA)
+}
+
+pub fn all_tracker_ddl_sql_for_schema(schema: &str) -> String {
+    let schema = if schema.trim().is_empty() {
+        DEFAULT_LEDGER_SCHEMA
+    } else {
+        schema.trim()
+    };
+    let escaped = schema.replace('"', "\"\"");
+    let mut ddl = format!("CREATE SCHEMA IF NOT EXISTS \"{escaped}\";\n\n");
+    ddl.push_str(
+        &ALL_TRACKER_DDL
+            .join("\n")
+            .replace("public.", &format!("\"{escaped}\".")),
+    );
+    ddl
 }
 
 #[cfg(test)]

@@ -64,6 +64,26 @@ jobs:
           fi
           count=$(find gen -type f | wc -l)
           echo "Generated stubs present: $count files"
+      # Version guard: PHP is tag-driven (Composer/VCS), so the `v<x.y.z>` tag is
+      # the package version — assert it equals versions.json `sdk-php`, and that
+      # every manifest/protocol constant is consistent. See VERSIONING.md.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Versions consistent with versions.json
+        working-directory: ${{ github.workspace }}
+        run: node scripts/check-versions.mjs
+      - name: Tag matches sdk-php version
+        working-directory: ${{ github.workspace }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          want="$(node -p "require('./versions.json').components['sdk-php'].version")"
+          tag="${GITHUB_REF_NAME#v}"
+          if [[ "${tag}" != "${want}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match versions.json sdk-php ${want}" >&2
+            exit 1
+          fi
 
   # ── 2. Split sdk/php into the satellite repo + mirror the tag ─────
   push-satellite:

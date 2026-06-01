@@ -84,25 +84,52 @@ pub async fn reset_indoubt_publishing_rows(
             "reset_indoubt_publishing_rows: grace_secs must be >= 0 (got {grace_secs})"
         ));
     }
-    let sql = format!(
+
+    // Step 1: a 'publishing' row that already carries a `kafka_offset` had its
+    // Kafka transaction COMMIT acknowledged (the offset is only recorded after
+    // a successful commit) — the crash happened before the ack/delete. These
+    // are NOT in-doubt: re-publishing them would duplicate. Finalize them as
+    // 'acked' instead of resetting to 'pending'.
+    let ack_sql = format!(
+        "UPDATE {outbox_relation} SET \
+            delivery_state = 'acked', \
+            acked_at = NOW(), \
+            last_error = COALESCE(last_error, '') || \
+                ' | udb-cdc-indoubt-recovery: commit confirmed by recorded offset; acking' \
+         WHERE delivery_state = 'publishing' \
+           AND kafka_offset IS NOT NULL"
+    );
+    let acked = sqlx::query(&ack_sql)
+        .execute(pool)
+        .await
+        .map(|res| res.rows_affected())
+        .map_err(|e| format!("reset_indoubt_publishing_rows (ack) failed: {e}"))?;
+
+    // Step 2: a 'publishing' row WITHOUT an offset never had a confirmed commit
+    // (the prior epoch's transaction was fenced/aborted by init_transactions).
+    // Reset these to 'pending' so the normal loop re-publishes in a fresh tx.
+    let reset_sql = format!(
         "UPDATE {outbox_relation} SET \
             delivery_state = 'pending', \
             last_error = COALESCE(last_error, '') || \
                 ' | udb-cdc-indoubt-recovery: previous epoch fenced; re-publishing', \
             publishing_started_at = NULL \
          WHERE delivery_state = 'publishing' \
+           AND kafka_offset IS NULL \
            AND ( \
                producer_epoch < $1 \
                OR publishing_started_at < NOW() - make_interval(secs => $2::double precision) \
            )"
     );
-    sqlx::query(&sql)
+    let reset = sqlx::query(&reset_sql)
         .bind(current_epoch)
         .bind(grace_secs as f64)
         .execute(pool)
         .await
         .map(|res| res.rows_affected())
-        .map_err(|e| format!("reset_indoubt_publishing_rows failed: {e}"))
+        .map_err(|e| format!("reset_indoubt_publishing_rows failed: {e}"))?;
+
+    Ok(acked + reset)
 }
 
 #[cfg(test)]

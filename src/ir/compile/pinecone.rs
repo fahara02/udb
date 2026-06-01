@@ -44,8 +44,6 @@
 //! when a tenant is set. Every write stamps `_tenant_id` /
 //! `_project_id` into vector metadata.
 
-use std::collections::HashSet;
-
 use serde_json::{Map, Value as Json, json};
 
 use crate::backend::BackendKind;
@@ -185,12 +183,24 @@ impl PineconeCompiler {
     }
 
     /// AND the active tenant context into a metadata filter.
-    fn and_with_context(&self, user_filter: Json, ctx: &CompileContext<'_>) -> Json {
+    fn and_with_context(
+        &self,
+        user_filter: Json,
+        table: &ManifestTable,
+        ctx: &CompileContext<'_>,
+    ) -> Json {
         let mut ctx_parts: Vec<Json> = Vec::new();
         if let Some(tid) = ctx.tenant_id
             && !tid.is_empty()
+            && let Some(column) = Some(super::util::tenant_system_field(table))
         {
-            ctx_parts.push(json!({ "_tenant_id": { "$eq": tid } }));
+            ctx_parts.push(json!({ column: { "$eq": tid } }));
+        }
+        if let Some(pid) = ctx.project_id
+            && !pid.is_empty()
+            && let Some(column) = Some(super::util::project_system_field(table))
+        {
+            ctx_parts.push(json!({ column: { "$eq": pid } }));
         }
         if ctx_parts.is_empty() {
             return user_filter;
@@ -461,13 +471,15 @@ impl Compiler for PineconeCompiler {
             }
             if let Some(tid) = ctx.tenant_id
                 && !tid.is_empty()
+                && let Some(column) = Some(super::util::tenant_system_field(table))
             {
-                metadata.insert("_tenant_id".into(), json!(tid));
+                metadata.insert(column.to_string(), json!(tid));
             }
             if let Some(pid) = ctx.project_id
                 && !pid.is_empty()
+                && let Some(column) = Some(super::util::project_system_field(table))
             {
-                metadata.insert("_project_id".into(), json!(pid));
+                metadata.insert(column.to_string(), json!(pid));
             }
             let mut vec_obj = json!({
                 "id": id,
@@ -538,7 +550,7 @@ impl Compiler for PineconeCompiler {
                     .into(),
             });
         }
-        let filter = self.and_with_context(user_filter, ctx);
+        let filter = self.and_with_context(user_filter, table, ctx);
         body.insert("filter".into(), filter);
         Ok(CompiledRendering::Json {
             backend: BackendKind::Pinecone,
@@ -563,7 +575,7 @@ impl Compiler for PineconeCompiler {
             Some(f) => self.render_filter(f, table, &op.message_type)?,
             None => json!({}),
         };
-        let filter = self.and_with_context(user_filter, ctx);
+        let filter = self.and_with_context(user_filter, table, ctx);
         let mut body = Map::new();
         body.insert("vector".into(), json!(vector));
         body.insert("topK".into(), json!(op.top_k));
@@ -612,14 +624,7 @@ impl Compiler for PineconeCompiler {
                 reason: "LogicalAggregate::aggregates must be non-empty".into(),
             });
         }
-        let mut seen: HashSet<&str> = HashSet::new();
-        for agg in &op.aggregates {
-            if !seen.insert(agg.alias.as_str()) {
-                return Err(CompileError::Malformed {
-                    reason: format!("duplicate aggregate alias '{}'", agg.alias),
-                });
-            }
-        }
+        super::util::validate_aggregate_aliases(&op.aggregates)?;
         // Pinecone supports ONLY `COUNT(*)` (and group-by namespace)
         // via `/describe_index_stats`. Anything else is a clean
         // refusal so callers know to route elsewhere.
@@ -651,13 +656,13 @@ impl Compiler for PineconeCompiler {
         let mut body = Map::new();
         if let Some(f) = &op.filter {
             let user = self.render_filter(f, table, &op.message_type)?;
-            let filter = self.and_with_context(user, ctx);
+            let filter = self.and_with_context(user, table, ctx);
             if !filter.as_object().is_some_and(|m| m.is_empty()) {
                 body.insert("filter".into(), filter);
             }
         } else {
             // Apply tenant filter only.
-            let filter = self.and_with_context(json!({}), ctx);
+            let filter = self.and_with_context(json!({}), table, ctx);
             if !filter.as_object().is_some_and(|m| m.is_empty()) {
                 body.insert("filter".into(), filter);
             }

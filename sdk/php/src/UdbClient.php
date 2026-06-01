@@ -9,6 +9,8 @@ use Fahara02\UdbLaravel\Exceptions\UdbRpcException;
 use Grpc\BaseStub;
 use Grpc\ChannelCredentials;
 use Grpc\Timeval;
+use Udb\Entity\V1\CapabilitiesRequest;
+use Udb\Entity\V1\CapabilitiesResponse;
 use Udb\Entity\V1\DeleteRequest;
 use Udb\Entity\V1\MutationResponse;
 use Udb\Entity\V1\RecordSet;
@@ -146,6 +148,24 @@ class UdbClient
     }
 
     /**
+     * Warm the underlying gRPC channel with a cheap metadata RPC.
+     *
+     * Call this once when a long-lived PHP worker starts (Laravel
+     * Octane, queues, or PHP-FPM worker bootstrapping) to move the
+     * first-call channel setup cost out of the first user-facing CRUD
+     * request.
+     */
+    public function warmup(?UdbMetadata $metadata = null): CapabilitiesResponse
+    {
+        return $this->invokeUnary(
+            'GetCapabilities',
+            fn (array $md, array $opts) => $this->stub()->GetCapabilities(new CapabilitiesRequest(), $md, $opts),
+            $metadata,
+            CapabilitiesResponse::class,
+        );
+    }
+
+    /**
      * Direct access to the underlying generated stub for RPCs the
      * convenience methods above don't wrap (BatchSelect, Vector*,
      * BeginTx, PublishCDC, etc.). Callers are responsible for
@@ -237,7 +257,8 @@ class UdbClient
         $result = $call->wait();
         [$response, $status] = $result;
 
-        if (($status['code'] ?? -1) !== 0) {
+        $statusCode = is_object($status) ? ($status->code ?? -1) : ($status['code'] ?? -1);
+        if ($statusCode !== 0) {
             throw UdbRpcException::fromGrpcStatus($status, $rpcName);
         }
 

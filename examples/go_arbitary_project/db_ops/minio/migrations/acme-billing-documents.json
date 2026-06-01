@@ -1,0 +1,24 @@
+{
+  "_udb_meta": {
+    "backend": "minio",
+    "bucket": "acme-billing-documents",
+    "generated_at": 1780229629,
+    "generator": "udb",
+    "migration_kind": "bootstrap",
+    "proto_manifest_checksum": "sha256:d260e5340ef90c3fefeae64d58c1226cef2b53c696b032950b8d2310ffd7e37d"
+  },
+  "bucket": "acme-billing-documents",
+  "lifecycle_rules": [
+    {
+      "expiration_days": 7,
+      "id": "expire-temp",
+      "prefix": "tmp/"
+    }
+  ],
+  "public_access_block": true,
+  "region": "us-east-1",
+  "tags": {
+    "udb_managed": "true"
+  },
+  "versioning": true
+}

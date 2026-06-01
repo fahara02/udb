@@ -4,6 +4,8 @@ use crate::backend::{BackendCapability, BackendKind};
 use crate::generation::{CatalogManifest, ManifestStore, ManifestTable, UnifiedDsn};
 use crate::observability::{MetricLabels, TraceContext};
 
+pub const ACTION_ENSURE: &str = "ensure";
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ProvisioningPlan {
     pub actions: Vec<ProvisioningAction>,
@@ -27,6 +29,11 @@ pub struct ProvisioningAction {
     pub dsn: String,
     pub capability: BackendCapability,
     pub parameters: Vec<ProvisioningParameter>,
+    /// Dependency-ordering key (proto `migration_order`). Within a tier, actions
+    /// are provisioned in ascending `migration_order` so an FK target table is
+    /// created before the table that references it. Stores default high so they
+    /// follow their owning tables.
+    pub migration_order: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -39,6 +46,13 @@ pub fn build_provisioning_plan(
     manifest: &CatalogManifest,
     dsn_entries: &[UnifiedDsn],
 ) -> ProvisioningPlan {
+    try_build_provisioning_plan(manifest, dsn_entries).expect("provisioning plan requires DSNs")
+}
+
+pub fn try_build_provisioning_plan(
+    manifest: &CatalogManifest,
+    dsn_entries: &[UnifiedDsn],
+) -> Result<ProvisioningPlan, String> {
     let mut actions = Vec::new();
 
     for table in &manifest.tables {
@@ -46,13 +60,17 @@ pub fn build_provisioning_plan(
     }
 
     for store in &manifest.stores {
-        actions.push(store_action(store, dsn_entries));
+        actions.push(store_action(store, dsn_entries)?);
     }
 
+    // Order by migration_order (within tier+backend) FIRST so dependency targets
+    // are provisioned before dependents (e.g. an FK target table before the table
+    // that references it); the remaining keys keep the ordering deterministic.
     actions.sort_by(|a, b| {
         (
             a.tier.as_str(),
             a.backend.as_str(),
+            a.migration_order,
             a.owner_schema.as_str(),
             a.owner_table.as_str(),
             a.resource_kind.as_str(),
@@ -61,16 +79,17 @@ pub fn build_provisioning_plan(
             .cmp(&(
                 b.tier.as_str(),
                 b.backend.as_str(),
+                b.migration_order,
                 b.owner_schema.as_str(),
                 b.owner_table.as_str(),
                 b.resource_kind.as_str(),
                 b.resource_name.as_str(),
             ))
     });
-    ProvisioningPlan {
+    Ok(ProvisioningPlan {
         actions,
         trace: TraceContext::default(),
-    }
+    })
 }
 
 fn sql_table_action(table: &ManifestTable, dsn_entries: &[UnifiedDsn]) -> ProvisioningAction {
@@ -93,14 +112,14 @@ fn sql_table_action(table: &ManifestTable, dsn_entries: &[UnifiedDsn]) -> Provis
         });
 
     ProvisioningAction {
-        action: "ensure".to_string(),
+        action: ACTION_ENSURE.to_string(),
         rollback_action: "drop_table_requires_review".to_string(),
         trace: TraceContext::default(),
         metric_labels: MetricLabels {
             tier: backend.tier().as_str().to_string(),
             backend: backend.as_str().to_string(),
             resource_kind: "table".to_string(),
-            operation: "ensure".to_string(),
+            operation: ACTION_ENSURE.to_string(),
         },
         tier: backend.tier().as_str().to_string(),
         store_kind: "sql".to_string(),
@@ -119,10 +138,14 @@ fn sql_table_action(table: &ManifestTable, dsn_entries: &[UnifiedDsn]) -> Provis
             param("soft_delete", table.soft_delete.to_string()),
             param("audit_fields", table.audit_fields.to_string()),
         ],
+        migration_order: table.migration_order,
     }
 }
 
-fn store_action(store: &ManifestStore, dsn_entries: &[UnifiedDsn]) -> ProvisioningAction {
+fn store_action(
+    store: &ManifestStore,
+    dsn_entries: &[UnifiedDsn],
+) -> Result<ProvisioningAction, String> {
     let backend = BackendKind::from_store_kind(&store.store_kind, &store.backend);
     let backend_label = backend
         .as_ref()
@@ -149,25 +172,46 @@ fn store_action(store: &ManifestStore, dsn_entries: &[UnifiedDsn]) -> Provisioni
                 && entry.backend == backend_label
                 && entry.owner_schema == store.owner_schema
                 && entry.owner_table == store.owner_table
-                && entry.resource_uri.contains(&store.resource_name)
+                // Exact final-path-segment match, not substring: a substring
+                // `.contains("bucket")` also matches "bucket_data", binding the
+                // wrong DSN unpredictably. Empty resource_name keeps the prior
+                // "owner_schema/owner_table already pin it" passthrough.
+                && (store.resource_name.is_empty()
+                    || entry
+                        .resource_uri
+                        .rsplit('/')
+                        .next()
+                        .map(|seg| seg == store.resource_name)
+                        .unwrap_or(false)
+                    || entry.resource_uri == store.resource_name)
         })
         .map(|entry| entry.dsn.clone())
-        .unwrap_or_default();
+        .ok_or_else(|| {
+            format!(
+                "missing DSN for store {} backend {} resource {} owned by {}.{}",
+                store.store_kind,
+                backend_label,
+                store.resource_name,
+                store.owner_schema,
+                store.owner_table
+            )
+        })?;
 
-    ProvisioningAction {
-        action: "ensure".to_string(),
+    let resource_kind = resource_kind(store);
+    Ok(ProvisioningAction {
+        action: ACTION_ENSURE.to_string(),
         rollback_action: rollback_action(store),
         trace: TraceContext::default(),
         metric_labels: MetricLabels {
             tier: tier.clone(),
             backend: backend_label.clone(),
-            resource_kind: resource_kind(store),
-            operation: "ensure".to_string(),
+            resource_kind: resource_kind.clone(),
+            operation: ACTION_ENSURE.to_string(),
         },
         tier,
         store_kind: store.store_kind.clone(),
         backend: backend_label.clone(),
-        resource_kind: resource_kind(store),
+        resource_kind,
         resource_name: store.resource_name.clone(),
         resource_uri: format!(
             "{}://{}/{}",
@@ -184,7 +228,10 @@ fn store_action(store: &ManifestStore, dsn_entries: &[UnifiedDsn]) -> Provisioni
             .iter()
             .map(|option| param(&option.key, option.value.clone()))
             .collect(),
-    }
+        // Stores follow their owning tables; default high so SQL-tier tables
+        // (ordered by their real migration_order) provision first.
+        migration_order: crate::ast::DEFAULT_MIGRATION_ORDER,
+    })
 }
 
 fn rollback_action(store: &ManifestStore) -> String {

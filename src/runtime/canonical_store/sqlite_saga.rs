@@ -12,6 +12,9 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 use uuid::Uuid;
 
+use super::dialect::{
+    SqlDialect, apply_saga_summary_bucket, build_eq_where, normalize_limit_offset,
+};
 use super::sqlite::SqliteCanonicalStore;
 use super::system_store::{
     CompensationStatus, SagaInsert, SagaListFilter, SagaRow, SagaStatus, SagaStore, SagaSummary,
@@ -20,10 +23,10 @@ use super::system_store::{
 
 const TABLE: &str = "udb_sagas";
 
-fn parse_iso(s: &str) -> DateTime<Utc> {
+fn parse_iso(field: &'static str, s: &str) -> SystemStoreResult<DateTime<Utc>> {
     DateTime::parse_from_rfc3339(s)
         .map(|dt| dt.with_timezone(&Utc))
-        .unwrap_or_else(|_| Utc::now())
+        .map_err(|e| SystemStoreError::InvalidInput(format!("field '{field}' is not RFC3339: {e}")))
 }
 
 fn row_to_saga(row: sqlx::sqlite::SqliteRow) -> SystemStoreResult<SagaRow> {
@@ -39,7 +42,9 @@ fn row_to_saga(row: sqlx::sqlite::SqliteRow) -> SystemStoreResult<SagaRow> {
     let status = SagaStatus::parse(&status_str).ok_or_else(|| {
         SystemStoreError::InvalidInput(format!("unknown saga status '{status_str}' in SQLite row"))
     })?;
-    let comp_status_str: String = row.try_get("compensation_status").unwrap_or_default();
+    let comp_status_str: String = row
+        .try_get("compensation_status")
+        .map_err(|e| SystemStoreError::query("sqlite", "SELECT compensation_status", e))?;
     let compensation_status = CompensationStatus::parse(&comp_status_str).ok_or_else(|| {
         SystemStoreError::InvalidInput(format!(
             "unknown compensation_status '{comp_status_str}' in SQLite row"
@@ -56,32 +61,54 @@ fn row_to_saga(row: sqlx::sqlite::SqliteRow) -> SystemStoreResult<SagaRow> {
             ))
         })
     };
-    let steps_text: String = row.try_get("steps").unwrap_or_default();
-    let compensations_text: String = row.try_get("compensations").unwrap_or_default();
+    let steps_text: String = row
+        .try_get("steps")
+        .map_err(|e| SystemStoreError::query("sqlite", "SELECT steps", e))?;
+    let compensations_text: String = row
+        .try_get("compensations")
+        .map_err(|e| SystemStoreError::query("sqlite", "SELECT compensations", e))?;
 
     Ok(SagaRow {
         saga_id,
-        tx_id: row.try_get("tx_id").unwrap_or_default(),
-        tenant_id: row.try_get("tenant_id").unwrap_or_default(),
-        correlation_id: row.try_get("correlation_id").unwrap_or_default(),
+        tx_id: row
+            .try_get("tx_id")
+            .map_err(|e| SystemStoreError::query("sqlite", "SELECT tx_id", e))?,
+        tenant_id: row
+            .try_get("tenant_id")
+            .map_err(|e| SystemStoreError::query("sqlite", "SELECT tenant_id", e))?,
+        correlation_id: row
+            .try_get("correlation_id")
+            .map_err(|e| SystemStoreError::query("sqlite", "SELECT correlation_id", e))?,
         status,
-        backend_instance: row.try_get("backend_instance").unwrap_or_default(),
-        operation: row.try_get("operation").unwrap_or_default(),
-        current_step: row.try_get("current_step").unwrap_or(0),
-        retry_count: row.try_get("retry_count").unwrap_or(0),
-        recovery_attempts: row.try_get("recovery_attempts").unwrap_or(0),
+        backend_instance: row
+            .try_get("backend_instance")
+            .map_err(|e| SystemStoreError::query("sqlite", "SELECT backend_instance", e))?,
+        operation: row
+            .try_get("operation")
+            .map_err(|e| SystemStoreError::query("sqlite", "SELECT operation", e))?,
+        current_step: row
+            .try_get("current_step")
+            .map_err(|e| SystemStoreError::query("sqlite", "SELECT current_step", e))?,
+        retry_count: row
+            .try_get("retry_count")
+            .map_err(|e| SystemStoreError::query("sqlite", "SELECT retry_count", e))?,
+        recovery_attempts: row
+            .try_get("recovery_attempts")
+            .map_err(|e| SystemStoreError::query("sqlite", "SELECT recovery_attempts", e))?,
         compensation_status,
         steps: parse_json(&steps_text, "steps")?,
         compensations: parse_json(&compensations_text, "compensations")?,
-        last_error: row.try_get("last_error").unwrap_or_default(),
+        last_error: row
+            .try_get("last_error")
+            .map_err(|e| SystemStoreError::query("sqlite", "SELECT last_error", e))?,
         created_at: row
             .try_get::<String, _>("created_at")
-            .map(|s| parse_iso(&s))
-            .unwrap_or_else(|_| Utc::now()),
+            .map_err(|e| SystemStoreError::query("sqlite", "SELECT created_at", e))
+            .and_then(|s| parse_iso("created_at", &s))?,
         updated_at: row
             .try_get::<String, _>("updated_at")
-            .map(|s| parse_iso(&s))
-            .unwrap_or_else(|_| Utc::now()),
+            .map_err(|e| SystemStoreError::query("sqlite", "SELECT updated_at", e))
+            .and_then(|s| parse_iso("updated_at", &s))?,
     })
 }
 
@@ -100,7 +127,7 @@ impl SagaStore for SqliteCanonicalStore {
                 tenant_id            TEXT NOT NULL DEFAULT '',
                 correlation_id       TEXT NOT NULL DEFAULT '',
                 status               TEXT NOT NULL DEFAULT 'pending'
-                                     CHECK (status IN ('indeterminate','in_progress','pending','committed','compensated','failed','failed_compensation','manual_review')),
+                                     CHECK (status IN ('indeterminate','in_progress','pending','committed','compensated','failed','in_doubt','failed_compensation','manual_review')),
                 backend_instance     TEXT NOT NULL DEFAULT '',
                 operation            TEXT NOT NULL DEFAULT '',
                 current_step         INTEGER NOT NULL DEFAULT 0,
@@ -181,26 +208,19 @@ impl SagaStore for SqliteCanonicalStore {
         // Build the WHERE clause dynamically — only include columns
         // the caller filtered on. All values are bound; no string
         // interpolation of caller input.
-        let mut clauses: Vec<&str> = Vec::with_capacity(4);
-        if filter.tenant_id.is_some() {
-            clauses.push("tenant_id = ?");
-        }
-        if filter.status.is_some() {
-            clauses.push("status = ?");
-        }
-        if filter.tx_id.is_some() {
-            clauses.push("tx_id = ?");
-        }
-        if filter.correlation_id.is_some() {
-            clauses.push("correlation_id = ?");
-        }
-        let where_sql = if clauses.is_empty() {
-            String::new()
-        } else {
-            format!("WHERE {}", clauses.join(" AND "))
-        };
-        let limit = if filter.limit <= 0 { 100 } else { filter.limit };
-        let offset = filter.offset.max(0);
+        let w = build_eq_where(
+            SqlDialect::SQLITE,
+            &[
+                ("tenant_id", filter.tenant_id.is_some()),
+                ("status", filter.status.is_some()),
+                ("tx_id", filter.tx_id.is_some()),
+                ("correlation_id", filter.correlation_id.is_some()),
+            ],
+        );
+        let where_sql = &w.where_sql;
+        let limit_placeholder = &w.limit_placeholder;
+        let offset_placeholder = &w.offset_placeholder;
+        let (limit, offset) = normalize_limit_offset(filter.limit, filter.offset);
         let sql = format!(
             "SELECT saga_id, tx_id, tenant_id, correlation_id, status,
                     backend_instance, operation, current_step, retry_count,
@@ -209,7 +229,7 @@ impl SagaStore for SqliteCanonicalStore {
              FROM {TABLE}
              {where_sql}
              ORDER BY updated_at DESC
-             LIMIT ? OFFSET ?"
+             LIMIT {limit_placeholder} OFFSET {offset_placeholder}"
         );
         let mut q = sqlx::query(&sql);
         if let Some(t) = &filter.tenant_id {
@@ -352,7 +372,7 @@ impl SagaStore for SqliteCanonicalStore {
                     recovery_attempts, compensation_status, steps, compensations,
                     last_error, created_at, updated_at
              FROM {TABLE}
-             WHERE status = 'indeterminate'
+             WHERE status IN ('indeterminate', 'in_doubt')
                 OR (status = 'in_progress' AND updated_at < ?1)
              ORDER BY updated_at ASC
              LIMIT ?2"
@@ -401,24 +421,7 @@ impl SagaStore for SqliteCanonicalStore {
         for row in rows {
             let status: String = row.try_get("status").unwrap_or_default();
             let n: i64 = row.try_get("n").unwrap_or(0);
-            match SagaStatus::parse(&status) {
-                Some(SagaStatus::Indeterminate) => s.indeterminate = n,
-                Some(SagaStatus::InProgress) => s.in_progress = n,
-                Some(SagaStatus::Pending) => s.pending = n,
-                Some(SagaStatus::Committed) => s.committed = n,
-                Some(SagaStatus::Compensated) => s.compensated = n,
-                Some(SagaStatus::Failed) => s.failed = n,
-                Some(SagaStatus::FailedCompensation) => s.failed_compensation = n,
-                Some(SagaStatus::ManualReview) => s.manual_review = n,
-                None => {
-                    return Err(SystemStoreError::SchemaMismatch {
-                        backend: "sqlite",
-                        detail: format!(
-                            "unexpected saga status '{status}' (CHECK constraint should prevent this)"
-                        ),
-                    });
-                }
-            }
+            apply_saga_summary_bucket(&mut s, "sqlite", &status, n)?;
         }
         Ok(s)
     }

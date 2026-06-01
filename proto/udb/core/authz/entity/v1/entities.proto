@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package udb.core.authz.entity.v1;
+
+import public "udb/core/authz/entity/v1/access_decision_audit.proto";
+import public "udb/core/authz/entity/v1/enums.proto";
+import public "udb/core/authz/entity/v1/policy_rule.proto";
+import public "udb/core/authz/entity/v1/policy_tuple.proto";
+import public "udb/core/authz/entity/v1/role.proto";
+import public "udb/core/authz/entity/v1/role_permission.proto";
+import public "udb/core/authz/entity/v1/user_role.proto";
+
+option csharp_namespace = "udb.core.Authz.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
+option java_package = "com.udb.core.authz.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Entity\\V1";

@@ -96,6 +96,13 @@ impl DataBrokerRuntime {
 
         crate::runtime::cdc::CdcConfig::install_global(config.cdc.clone());
         crate::runtime::security::SecurityConfig::install_global(config.security.clone());
+        if config.security.allow_header_scopes {
+            tracing::warn!(
+                "UDB_ALLOW_HEADER_SCOPES is enabled: request scopes are trusted from the \
+                 x-scopes header. This is a DEV-ONLY fallback and is rejected by production \
+                 validation — do not enable it in production."
+            );
+        }
         crate::runtime::system::SystemCatalogConfig::install_global(
             crate::runtime::system::SystemCatalogConfig::from_udb_config(&config),
         );
@@ -351,6 +358,10 @@ impl DataBrokerRuntime {
         set_request_local_settings(&mut tx, &context).await?;
         let table = table_for_message(manifest, &request.message_type)
             .ok_or_else(|| tonic::Status::invalid_argument("unknown message_type"))?;
+        // #117: rewrite proto `field_name` record keys to physical `column_name`s
+        // so encryption + binding (keyed by `plan.parameter_columns`, which the
+        // planner already resolved) find each value.
+        let record = crate::broker::normalize_record_keys(table, &record);
         let encrypted_record = self.encrypt_record_for_table(table, &record)?;
         let values = record_values(&encrypted_record, &plan.parameter_columns)?;
         let query = bind_values(
@@ -439,6 +450,7 @@ impl DataBrokerRuntime {
             affected_rows,
             was_duplicate: false,
             write_receipt_json: serde_json::to_string(&receipt).unwrap_or_default(),
+            ..MutationResponse::default()
         })
     }
 
@@ -561,6 +573,7 @@ impl DataBrokerRuntime {
                 },
             );
             reject_plan(&plan.errors)?;
+            ensure_typed_vector_backend(&plan.backend)?;
             let target_instance = if context.target_instance.trim().is_empty() {
                 self.choose_instance_name_for_project("qdrant", false, &context.project_id)
             } else {
@@ -605,6 +618,7 @@ impl DataBrokerRuntime {
                 },
             );
             reject_plan(&plan.errors)?;
+            ensure_typed_vector_backend(&plan.backend)?;
             let target_instance = if context.target_instance.trim().is_empty() {
                 self.choose_instance_name_for_project("qdrant", false, &context.project_id)
             } else {
@@ -677,6 +691,7 @@ impl DataBrokerRuntime {
                 },
             );
             reject_plan(&plan.errors)?;
+            ensure_typed_vector_backend(&plan.backend)?;
             let target_instance = if context.target_instance.trim().is_empty() {
                 self.choose_instance_name_for_project("qdrant", true, &context.project_id)
             } else {
@@ -743,6 +758,7 @@ impl DataBrokerRuntime {
                 },
             );
             reject_plan(&plan.errors)?;
+            ensure_typed_object_backend(&plan.backend)?;
             let target_instance = if context.target_instance.trim().is_empty() {
                 self.choose_instance_name_for_project("minio", true, &context.project_id)
                     .or_else(|| {
@@ -780,7 +796,12 @@ impl DataBrokerRuntime {
         manifest: &CatalogManifest,
         request: crate::proto::ObjectRequest,
         metadata_context: RequestContext,
-    ) -> Result<Vec<Chunk>, tonic::Status> {
+    ) -> Result<
+        std::pin::Pin<
+            Box<dyn tokio_stream::Stream<Item = Result<Chunk, tonic::Status>> + Send + 'static>,
+        >,
+        tonic::Status,
+    > {
         #[cfg(not(feature = "s3"))]
         {
             let _ = (manifest, request, metadata_context);
@@ -804,6 +825,7 @@ impl DataBrokerRuntime {
                 },
             );
             reject_plan(&plan.errors)?;
+            ensure_typed_object_backend(&plan.backend)?;
             let target_instance = if context.target_instance.trim().is_empty() {
                 self.choose_instance_name_for_project("minio", false, &context.project_id)
                     .or_else(|| {
@@ -813,36 +835,60 @@ impl DataBrokerRuntime {
                 Some(context.target_instance.as_str())
             };
             let s3 = self.s3_for_instance_for_project(target_instance, &context.project_id)?;
+            let bucket = request.bucket.clone();
+            let object_key = request.object_key.clone();
             let output = s3
                 .get_object()
-                .bucket(&request.bucket)
-                .key(&request.object_key)
+                .bucket(&bucket)
+                .key(&object_key)
                 .send()
                 .await
                 .map_err(|err| {
                     tonic::Status::unavailable(format!("S3 get_object failed: {err}"))
                 })?;
-            let data = output
-                .body
-                .collect()
-                .await
-                .map_err(|err| tonic::Status::unavailable(format!("S3 body read failed: {err}")))?
-                .into_bytes();
-            let last_index = data
-                .chunks(GET_OBJECT_CHUNK_BYTES)
-                .count()
-                .saturating_sub(1);
-            Ok(data
-                .chunks(GET_OBJECT_CHUNK_BYTES)
-                .enumerate()
-                .map(|(idx, chunk)| Chunk {
-                    bucket: request.bucket.clone(),
-                    object_key: request.object_key.clone(),
-                    data: chunk.to_vec(),
-                    final_chunk: idx == last_index,
-                    ..Chunk::default()
-                })
-                .collect())
+            let stream = async_stream::try_stream! {
+                use tokio::io::AsyncReadExt;
+
+                let mut reader = output.body.into_async_read();
+                let mut buf = vec![0u8; GET_OBJECT_CHUNK_BYTES];
+                let mut pending: Option<Vec<u8>> = None;
+                loop {
+                    let read = reader
+                        .read(&mut buf)
+                        .await
+                        .map_err(|err| tonic::Status::unavailable(format!("S3 body read failed: {err}")))?;
+                    if read == 0 {
+                        if let Some(data) = pending.take() {
+                            yield Chunk {
+                                bucket: bucket.clone(),
+                                object_key: object_key.clone(),
+                                data,
+                                final_chunk: true,
+                                ..Chunk::default()
+                            };
+                        }
+                        break;
+                    }
+                    let current = buf[..read].to_vec();
+                    if let Some(data) = pending.replace(current) {
+                        yield Chunk {
+                            bucket: bucket.clone(),
+                            object_key: object_key.clone(),
+                            data,
+                            final_chunk: false,
+                            ..Chunk::default()
+                        };
+                    }
+                }
+            };
+            Ok(Box::pin(stream)
+                as std::pin::Pin<
+                    Box<
+                        dyn tokio_stream::Stream<Item = Result<Chunk, tonic::Status>>
+                            + Send
+                            + 'static,
+                    >,
+                >)
         }
     }
 
@@ -1245,7 +1291,9 @@ pub(crate) async fn register_mysql(ctx: &mut RegisterCtx<'_>) {
                 use crate::runtime::canonical_store::SystemStores;
                 use crate::runtime::canonical_store::mysql::MysqlCanonicalStore;
                 use crate::runtime::cdc::CdcConfig;
-                let outbox_relation = CdcConfig::current().outbox_relation();
+                // #115: MySQL uses backtick identifiers within the connected
+                // database — not the Postgres double-quoted `schema.table`.
+                let outbox_relation = CdcConfig::current().outbox_relation_mysql();
                 let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(
                     MysqlCanonicalStore::new(pool.clone(), "primary", outbox_relation),
                 );
@@ -1310,9 +1358,11 @@ pub(crate) async fn register_sqlite(ctx: &mut RegisterCtx<'_>) {
                 use crate::runtime::canonical_store::SystemStores;
                 use crate::runtime::canonical_store::sqlite::SqliteCanonicalStore;
                 use crate::runtime::cdc::CdcConfig;
-                let outbox_relation = CdcConfig::current().outbox_relation();
+                // #115: SQLite has no schemas and its store validates a bare
+                // `[A-Za-z0-9_]+` table name — pass the unquoted table.
+                let outbox_table = CdcConfig::current().outbox_table_bare();
                 let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(
-                    SqliteCanonicalStore::new(pool.clone(), "primary", outbox_relation),
+                    SqliteCanonicalStore::new(pool.clone(), "primary", outbox_table),
                 );
                 runtime.register_full_canonical_store(store);
             }
@@ -1968,4 +2018,41 @@ fn instance_labels(instance: &BackendInstance) -> HashMap<String, String> {
         .iter()
         .map(|(key, value)| (key.clone(), value.clone()))
         .collect()
+}
+
+/// #126: typed vector RPCs (`VectorSearch`/`VectorUpsert`/`VectorHybridSearch`)
+/// are served by Qdrant only. Weaviate/Pinecone/Elasticsearch advertise vector
+/// support but are reachable through `GenericDispatch` (vector REST), not these
+/// typed RPCs. Reject a collection whose manifest declares a different backend
+/// instead of silently serving it from Qdrant (which would query an unrelated /
+/// empty collection). An empty/`qdrant` backend is accepted.
+#[cfg(feature = "qdrant")]
+fn ensure_typed_vector_backend(backend: &str) -> Result<(), tonic::Status> {
+    let normalized = backend.trim().to_ascii_lowercase();
+    if normalized.is_empty() || normalized == "qdrant" {
+        Ok(())
+    } else {
+        Err(tonic::Status::failed_precondition(format!(
+            "vector collection is configured for backend '{backend}', but typed vector RPCs are \
+             served by Qdrant only; use GenericDispatch (vector REST) to reach '{backend}'"
+        )))
+    }
+}
+
+/// #127: typed object RPCs (`GetObject`/`PutObject`/`GeneratePresignedUrl`) are
+/// served by the S3/MinIO client only. Azure Blob / GCS advertise object-store
+/// support but are reachable through `GenericDispatch` / their executors, not
+/// these typed RPCs. Reject a store whose manifest declares a different backend
+/// instead of silently using S3/MinIO. Empty / `s3` / `minio` are accepted.
+#[cfg(feature = "s3")]
+fn ensure_typed_object_backend(backend: &str) -> Result<(), tonic::Status> {
+    let normalized = backend.trim().to_ascii_lowercase();
+    if matches!(normalized.as_str(), "" | "s3" | "minio") {
+        Ok(())
+    } else {
+        Err(tonic::Status::failed_precondition(format!(
+            "object store is configured for backend '{backend}', but typed object RPCs are served \
+             by S3/MinIO only; use GenericDispatch / the object executor to reach '{backend}'"
+        )))
+    }
 }

@@ -1,0 +1,171 @@
+syntax = "proto3";
+
+package udb.core.notification.services.v1;
+
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/types.proto";
+import "udb/core/notification/entity/v1/enums.proto";
+import "udb/core/notification/entity/v1/notification_log.proto";
+import "udb/core/notification/entity/v1/notification_preference.proto";
+import "udb/core/notification/entity/v1/notification_template.proto";
+
+option csharp_namespace = "udb.core.Notification.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/notification/services/v1;notificationservicev1";
+option java_package = "com.udb.core.notification.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Notification\\Services\\V1";
+option php_namespace = "Udb\\Core\\Notification\\Services\\V1";
+
+message SendNotificationRequest {
+  string event_type = 1; // Must match a template event_type
+  string recipient_id = 2;
+  string recipient_address = 3; // Resolved by caller or looked up in User service
+  string tenant_id = 4;
+  string project_id = 5;
+  string resource_type = 6;
+  string resource_id = 7;
+  string resource_name = 8;
+  string correlation_id = 9;
+  string locale = 10; // Defaults to 'en'
+  map<string, string> variables = 11; // Template variable substitutions
+  repeated udb.core.notification.entity.v1.NotificationChannel channels = 12; // Empty = use template-default channels
+  udb.core.common.v1.RequestContext context = 13;
+}
+
+message SendNotificationResponse {
+  repeated udb.core.notification.entity.v1.NotificationLog logs = 1;
+}
+
+message GetNotificationRequest {
+  string log_id = 1;
+}
+
+message GetNotificationResponse {
+  udb.core.notification.entity.v1.NotificationLog log = 1;
+}
+
+message ListNotificationsRequest {
+  string recipient_id = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+  string resource_type = 4;
+  string resource_id = 5;
+  string event_type = 6;
+  udb.core.notification.entity.v1.NotificationChannel channel = 7;
+  udb.core.notification.entity.v1.NotificationStatus status = 8;
+  udb.core.common.v1.PageRequest page = 9;
+}
+
+message ListNotificationsResponse {
+  repeated udb.core.notification.entity.v1.NotificationLog logs = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+message RetryNotificationRequest {
+  string log_id = 1;
+  udb.core.common.v1.RequestContext context = 2;
+}
+
+message RetryNotificationResponse {
+  udb.core.notification.entity.v1.NotificationLog log = 1;
+}
+
+// ── Template management ─────────────────────────────────────────────────────
+
+message UpsertTemplateRequest {
+  string event_type = 1;
+  udb.core.notification.entity.v1.NotificationChannel channel = 2;
+  string locale = 3;
+  string subject_template = 4;
+  string body_template = 5;
+  bool is_active = 6;
+  udb.core.common.v1.RequestContext context = 7;
+}
+
+message UpsertTemplateResponse {
+  udb.core.notification.entity.v1.NotificationTemplate template = 1;
+}
+
+message GetTemplateRequest {
+  string event_type = 1;
+  udb.core.notification.entity.v1.NotificationChannel channel = 2;
+  string locale = 3;
+}
+
+message GetTemplateResponse {
+  udb.core.notification.entity.v1.NotificationTemplate template = 1;
+}
+
+message ListTemplatesRequest {
+  string event_type = 1;
+  udb.core.notification.entity.v1.NotificationChannel channel = 2;
+  bool active_only = 3;
+  udb.core.common.v1.PageRequest page = 4;
+}
+
+message ListTemplatesResponse {
+  repeated udb.core.notification.entity.v1.NotificationTemplate templates = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+// ── Delivery stats ──────────────────────────────────────────────────────────
+
+message GetDeliveryStatsRequest {
+  string tenant_id = 1;
+  string event_type = 2;
+  string date_from = 3; // YYYY-MM-DD
+  string date_to = 4;
+}
+
+message ChannelStats {
+  udb.core.notification.entity.v1.NotificationChannel channel = 1;
+  int64 sent = 2;
+  int64 delivered = 3;
+  int64 failed = 4;
+  int64 suppressed = 5;
+  double delivery_rate = 6;
+}
+
+message GetDeliveryStatsResponse {
+  int64 total_sent = 1;
+  int64 total_delivered = 2;
+  int64 total_failed = 3;
+  double overall_delivery_rate = 4;
+  repeated ChannelStats by_channel = 5;
+}
+
+// ── User notification preferences ──────────────────────────────────────────
+
+message SetPreferenceRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  udb.core.notification.entity.v1.NotificationChannel channel = 3;
+  string event_type = 4; // Empty = channel-wide opt-out
+  bool is_opted_out = 5;
+  udb.core.common.v1.RequestContext context = 6;
+}
+
+message SetPreferenceResponse {
+  udb.core.notification.entity.v1.NotificationPreference preference = 1;
+}
+
+message GetPreferenceRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  udb.core.notification.entity.v1.NotificationChannel channel = 3;
+  string event_type = 4;
+}
+
+message GetPreferenceResponse {
+  udb.core.notification.entity.v1.NotificationPreference preference = 1;
+}
+
+message ListPreferencesRequest {
+  string user_id = 1;
+  string tenant_id = 2;
+  udb.core.common.v1.PageRequest page = 3;
+}
+
+message ListPreferencesResponse {
+  repeated udb.core.notification.entity.v1.NotificationPreference preferences = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}

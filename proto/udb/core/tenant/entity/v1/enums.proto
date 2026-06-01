@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package udb.core.tenant.entity.v1;
+
+option csharp_namespace = "udb.core.Tenant.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/tenant/entity/v1;tenantv1";
+option java_package = "com.udb.core.tenant.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Tenant\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Tenant\\Entity\\V1";
+
+enum ConfigType {
+  CONFIG_TYPE_UNSPECIFIED = 0;
+  CONFIG_TYPE_STRING = 1;
+  CONFIG_TYPE_NUMBER = 2;
+  CONFIG_TYPE_BOOLEAN = 3;
+  CONFIG_TYPE_JSON = 4;
+}
+
+enum TenantType {
+  TENANT_TYPE_UNSPECIFIED = 0;
+  TENANT_TYPE_PLATFORM = 1;
+  TENANT_TYPE_PARTNER = 2;
+  TENANT_TYPE_ORGANIZATION = 3;
+  TENANT_TYPE_WORKSPACE = 4;
+  TENANT_TYPE_CUSTOMER_ACCOUNT = 5;
+  TENANT_TYPE_DEPARTMENT = 6;
+  TENANT_TYPE_SANDBOX = 7;
+}
+
+enum TenantStatus {
+  TENANT_STATUS_UNSPECIFIED = 0;
+  TENANT_STATUS_ACTIVE = 1;
+  TENANT_STATUS_SUSPENDED = 2;
+  TENANT_STATUS_INACTIVE = 3;
+}

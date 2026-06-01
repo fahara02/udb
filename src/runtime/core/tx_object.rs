@@ -1,6 +1,72 @@
 //! Continuation `impl DataBrokerRuntime` block (Phase F split of core.rs).
 use super::*;
 
+const COMPENSATION_RETRY_MAX_ATTEMPTS: u32 = 3;
+const COMPENSATION_RETRY_BASE_DELAY_MS: u64 = 200;
+/// Cap on in-memory qdrant/s3 compensation entries per transaction (#208). Past
+/// this, compensations are NOT buffered in memory — every step already persists
+/// its compensation as a durable saga step (`saga_record_step`), so the saga
+/// recovery worker compensates the overflow from the ledger. Bounds memory for
+/// pathologically large batches without losing rollback coverage.
+const MAX_COMPENSATIONS_PER_TX: usize = 1000;
+
+#[derive(Debug, Clone)]
+struct PendingSagaStep {
+    step_index: usize,
+    operation: String,
+    message_type: String,
+    compensation_json: String,
+}
+
+fn compensation_retry_delay(attempt: u32) -> std::time::Duration {
+    std::time::Duration::from_millis(COMPENSATION_RETRY_BASE_DELAY_MS * u64::from(attempt))
+}
+
+fn saga_compensation_for_mutation(operation: &str, mutation: &Mutation) -> String {
+    let compensation = match operation {
+        "vector_upsert" => serde_json::json!({
+            "backend": "qdrant",
+            "operation": "delete_points",
+            "resource_uri": format!("qdrant://{}", mutation.collection),
+            "payload": {
+                "collection": mutation.collection,
+                "point_ids": mutation.vector_points.iter()
+                    .map(|point| point.id.clone())
+                    .filter(|id| !id.is_empty())
+                    .collect::<Vec<_>>()
+            }
+        }),
+        "put_object" => serde_json::json!({
+            "backend": "s3",
+            "operation": "delete_object",
+            "resource_uri": format!("s3://{}/{}", mutation.bucket, mutation.object_key),
+            "payload": {
+                "bucket": mutation.bucket,
+                "key": mutation.object_key,
+            }
+        }),
+        "enqueue_outbox_event" => serde_json::json!({
+            "backend": "postgres",
+            "operation": "delete_outbox_event",
+            "resource_uri": "udb://outbox/event",
+            "payload": {
+                "idempotency_key": mutation.idempotency_key,
+                "message_type": mutation.message_type,
+            }
+        }),
+        _ => serde_json::json!({
+            "backend": "postgres",
+            "operation": "rollback_sql_tx",
+            "resource_uri": format!("postgres://{}", mutation.message_type),
+            "payload": {
+                "message_type": mutation.message_type,
+                "note": "rolled back by PostgreSQL transaction boundary"
+            }
+        }),
+    };
+    compensation.to_string()
+}
+
 impl DataBrokerRuntime {
     pub async fn begin_tx(
         &self,
@@ -79,76 +145,85 @@ impl DataBrokerRuntime {
         };
         let mut statuses = Vec::new();
         let mut qdrant_compensations: Vec<(String, Vec<String>)> = Vec::new();
-        let mut s3_compensations: Vec<(String, String)> = Vec::new();
+        // (bucket, object_key, resolved_instance, project_id) — the instance and
+        // project are captured so rollback deletes from the SAME store the PUT
+        // landed in, not the default S3 client.
+        let mut s3_compensations: Vec<(String, String, Option<String>, String)> = Vec::new();
+        // #208: once the in-memory compensation buffers hit the cap, overflow
+        // spills to the durable saga ledger (recorded per-step below). Logged
+        // once so the cap isn't a silent truncation.
+        let mut compensations_spilled = false;
         let projection_plans = crate::runtime::projection::ProjectionPlan::from_manifest(manifest);
-        let projection_config = crate::runtime::system::SystemCatalogConfig::current();
-        let mut step_index: usize = 0;
-        for mutation in mutations.iter().filter(|mutation| !mutation.commit) {
+        let projection_config = crate::runtime::system::SystemCatalogConfig::current_arc();
+        let tx_mutations: Vec<&Mutation> = mutations
+            .iter()
+            .filter(|mutation| !mutation.commit)
+            .collect();
+        let mut pending_saga_steps: Vec<PendingSagaStep> = Vec::new();
+        for (mutation_index, mutation) in tx_mutations.iter().enumerate() {
             let context = merge_context(mutation.context.as_ref(), metadata_context.clone());
             let operation = mutation.operation.to_ascii_lowercase();
             let result = if operation == "upsert" {
                 let record = mutation_record_json(mutation);
                 match record {
                     Ok(record) => {
-                        let Some(table) = table_for_message(manifest, &mutation.message_type)
-                        else {
-                            if let Some(ref sid) = saga_id {
-                                self.saga_set_status(sid, "failed").await;
-                            }
-                            return vec![Err(tonic::Status::invalid_argument(
-                                "unknown message_type",
-                            ))];
-                        };
-                        let encrypted_record = match self.encrypt_record_for_table(table, &record) {
-                            Ok(record) => record,
-                            Err(err) => {
-                                let _ = tx.rollback().await;
-                                if let Some(ref sid) = saga_id {
-                                    self.saga_set_status(sid, "failed").await;
+                        let encrypted_record =
+                            match table_for_message(manifest, &mutation.message_type) {
+                                Some(table) => {
+                                    // #117: resolve proto field_name record keys to
+                                    // physical column_names before encrypt + bind.
+                                    let record =
+                                        crate::broker::normalize_record_keys(table, &record);
+                                    self.encrypt_record_for_table(table, &record)
                                 }
-                                statuses.push(Err(err));
-                                return statuses;
-                            }
-                        };
-                        let plan = build_upsert_plan(
-                            manifest,
-                            &UpsertPlanRequest {
-                                context: context.clone(),
-                                message_type: mutation.message_type.clone(),
-                                record: record.clone(),
-                                ..UpsertPlanRequest::default()
-                            },
-                        );
-                        let affected = execute_tx_plan(
-                            &mut tx,
-                            manifest,
-                            &mutation.message_type,
-                            &plan.sql,
-                            &plan.parameter_columns,
-                            &record_values(&encrypted_record, &plan.parameter_columns)
-                                .unwrap_or_default(),
-                            &plan.errors,
-                        )
-                        .await;
-                        match affected {
-                            Ok(affected) => {
-                                if affected > 0
-                                    && let Err(err) = crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
-                                        &mut tx,
-                                        &projection_config,
-                                        &context.tenant_id,
-                                        &mutation.message_type,
-                                        "upsert",
-                                        &record,
-                                        &projection_plans,
-                                    )
-                                    .await
-                                {
-                                    Err(tonic::Status::internal(format!(
-                                        "projection task enqueue failed: {err}"
-                                    )))
-                                } else {
-                                    Ok(affected)
+                                None => {
+                                    Err(tonic::Status::invalid_argument("unknown message_type"))
+                                }
+                            };
+                        match encrypted_record {
+                            Ok(encrypted_record) => {
+                                let plan = build_upsert_plan(
+                                    manifest,
+                                    &UpsertPlanRequest {
+                                        context: context.clone(),
+                                        message_type: mutation.message_type.clone(),
+                                        record: record.clone(),
+                                        ..UpsertPlanRequest::default()
+                                    },
+                                );
+                                let affected = execute_tx_plan(
+                                    &mut tx,
+                                    manifest,
+                                    &mutation.message_type,
+                                    &plan.sql,
+                                    &plan.parameter_columns,
+                                    &record_values(&encrypted_record, &plan.parameter_columns)
+                                        .unwrap_or_default(),
+                                    &plan.errors,
+                                )
+                                .await;
+                                match affected {
+                                    Ok(affected) => {
+                                        if affected > 0
+                                            && let Err(err) = crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
+                                                &mut tx,
+                                                &projection_config,
+                                                &context.tenant_id,
+                                                &mutation.message_type,
+                                                "upsert",
+                                                &record,
+                                                &projection_plans,
+                                            )
+                                            .await
+                                        {
+                                            Err(tonic::Status::internal(format!(
+                                                "projection task enqueue failed: {err}"
+                                            )))
+                                        } else {
+                                            Ok(affected)
+                                        }
+                                    }
+                                    Err(err) => Err(err),
                                 }
                             }
                             Err(err) => Err(err),
@@ -222,7 +297,16 @@ impl DataBrokerRuntime {
                 {
                     Ok(response) => {
                         if !point_ids.is_empty() {
-                            qdrant_compensations.push((mutation.collection.clone(), point_ids));
+                            if qdrant_compensations.len() < MAX_COMPENSATIONS_PER_TX {
+                                qdrant_compensations.push((mutation.collection.clone(), point_ids));
+                            } else if !compensations_spilled {
+                                compensations_spilled = true;
+                                tracing::warn!(
+                                    tx_id = %tx_id,
+                                    cap = MAX_COMPENSATIONS_PER_TX,
+                                    "compensation buffer cap reached; overflow spills to the durable saga ledger for recovery-worker compensation"
+                                );
+                            }
                         }
                         Ok(response.affected_rows as u64)
                     }
@@ -233,9 +317,22 @@ impl DataBrokerRuntime {
                     .put_tx_object(manifest, mutation, metadata_context.clone())
                     .await
                 {
-                    Ok(affected) => {
-                        s3_compensations
-                            .push((mutation.bucket.clone(), mutation.object_key.clone()));
+                    Ok((affected, instance, project_id)) => {
+                        if s3_compensations.len() < MAX_COMPENSATIONS_PER_TX {
+                            s3_compensations.push((
+                                mutation.bucket.clone(),
+                                mutation.object_key.clone(),
+                                instance,
+                                project_id,
+                            ));
+                        } else if !compensations_spilled {
+                            compensations_spilled = true;
+                            tracing::warn!(
+                                tx_id = %tx_id,
+                                cap = MAX_COMPENSATIONS_PER_TX,
+                                "compensation buffer cap reached; overflow spills to the durable saga ledger for recovery-worker compensation"
+                            );
+                        }
                         Ok(affected)
                     }
                     Err(err) => Err(err),
@@ -247,80 +344,78 @@ impl DataBrokerRuntime {
                 } else {
                     mutation.collection.as_str()
                 };
-                let policy_decision = match self
+                match self
                     .topic_policy_allows(topic, &context.project_id, &context.tenant_id)
                     .await
                 {
-                    Ok(decision) => decision,
-                    Err(err) => return vec![Err(err)],
-                };
-                if policy_decision == Some(false)
-                    || (!cdc_config.valid_topics.is_empty()
-                        && !cdc_config.valid_topics.iter().any(|t| t == topic)
-                        && policy_decision.is_none())
-                {
-                    Err(tonic::Status::invalid_argument(format!(
-                        "topic '{topic}' is not in the registered topic registry; \
-                         configure UDB_CDC_VALID_TOPICS or use an allowed topic"
-                    )))
-                } else {
-                    let payload = mutation
-                        .payload
-                        .as_ref()
-                        .map(struct_to_json)
-                        .ok_or_else(|| {
-                            tonic::Status::invalid_argument(
-                                "enqueue_outbox_event transaction mutation requires payload",
-                            )
-                        });
-                    match payload {
-                        Ok(payload) => {
-                            let schema_uri = if mutation.content_type.trim().is_empty() {
-                                None
-                            } else {
-                                Some(mutation.content_type.as_str())
-                            };
-                            let payload = crate::runtime::cdc::apply_manifest_cdc_redaction(
-                                manifest,
-                                &mutation.message_type,
-                                topic,
-                                schema_uri,
-                                payload,
-                                cdc_config.redaction_mode,
-                                cdc_config.redaction_version,
-                            );
-                            match prepare_outbox_envelope(
-                                topic,
-                                &mutation.object_key,
-                                payload,
-                                schema_uri,
-                            ) {
-                                Ok((event_id_uuid, _, enriched)) => {
-                                    let outbox_relation = cdc_config.outbox_relation();
-                                    let sql = format!(
-                                        "INSERT INTO {outbox_relation} \
-                                         (event_id, topic, partition_key, payload, created_at) \
-                                         VALUES ($1::UUID, $2, $3, $4::JSONB, NOW())"
+                    Ok(policy_decision) => {
+                        if policy_decision == Some(false)
+                            || (!cdc_config.valid_topics.is_empty()
+                                && !cdc_config.valid_topics.iter().any(|t| t == topic)
+                                && policy_decision.is_none())
+                        {
+                            Err(tonic::Status::invalid_argument(format!(
+                                "topic '{topic}' is not in the registered topic registry; \
+                                 configure UDB_CDC_VALID_TOPICS or use an allowed topic"
+                            )))
+                        } else {
+                            let payload =
+                                mutation.payload.as_ref().map(struct_to_json).ok_or_else(|| {
+                                    tonic::Status::invalid_argument(
+                                        "enqueue_outbox_event transaction mutation requires payload",
+                                    )
+                                });
+                            match payload {
+                                Ok(payload) => {
+                                    let schema_uri = if mutation.content_type.trim().is_empty() {
+                                        None
+                                    } else {
+                                        Some(mutation.content_type.as_str())
+                                    };
+                                    let payload = crate::runtime::cdc::apply_manifest_cdc_redaction(
+                                        manifest,
+                                        &mutation.message_type,
+                                        topic,
+                                        schema_uri,
+                                        payload,
+                                        cdc_config.redaction_mode,
+                                        cdc_config.redaction_version,
                                     );
-                                    sqlx::query(&sql)
-                                        .bind(event_id_uuid)
-                                        .bind(topic)
-                                        .bind(&mutation.object_key)
-                                        .bind(enriched.to_string())
-                                        .execute(&mut *tx)
-                                        .await
-                                        .map(|result| result.rows_affected())
-                                        .map_err(|err| {
-                                            tonic::Status::internal(format!(
-                                                "failed to enqueue tx event: {err}"
-                                            ))
-                                        })
+                                    match prepare_outbox_envelope(
+                                        topic,
+                                        &mutation.object_key,
+                                        payload,
+                                        schema_uri,
+                                    ) {
+                                        Ok((event_id_uuid, _, enriched)) => {
+                                            let outbox_relation = cdc_config.outbox_relation();
+                                            let sql = format!(
+                                                "INSERT INTO {outbox_relation} \
+                                                 (event_id, topic, partition_key, payload, created_at) \
+                                                 VALUES ($1::UUID, $2, $3, $4::JSONB, NOW())"
+                                            );
+                                            sqlx::query(&sql)
+                                                .bind(event_id_uuid)
+                                                .bind(topic)
+                                                .bind(&mutation.object_key)
+                                                .bind(enriched.to_string())
+                                                .execute(&mut *tx)
+                                                .await
+                                                .map(|result| result.rows_affected())
+                                                .map_err(|err| {
+                                                    tonic::Status::internal(format!(
+                                                        "failed to enqueue tx event: {err}"
+                                                    ))
+                                                })
+                                        }
+                                        Err(err) => Err(err),
+                                    }
                                 }
                                 Err(err) => Err(err),
                             }
                         }
-                        Err(err) => Err(err),
                     }
+                    Err(err) => Err(err),
                 }
             } else {
                 Err(tonic::Status::invalid_argument(format!(
@@ -330,59 +425,12 @@ impl DataBrokerRuntime {
             };
             match result {
                 Ok(affected) => {
-                    // Record the successful step in the saga.
-                    if let Some(ref sid) = saga_id {
-                        let compensation = match operation.as_str() {
-                            "vector_upsert" => serde_json::json!({
-                                "backend": "qdrant",
-                                "operation": "delete_points",
-                                "resource_uri": format!("qdrant://{}", mutation.collection),
-                                "payload": {
-                                    "collection": mutation.collection,
-                                    "point_ids": mutation.vector_points.iter()
-                                        .map(|point| point.id.clone())
-                                        .filter(|id| !id.is_empty())
-                                        .collect::<Vec<_>>()
-                                }
-                            }),
-                            "put_object" => serde_json::json!({
-                                "backend": "s3",
-                                "operation": "delete_object",
-                                "resource_uri": format!("s3://{}/{}", mutation.bucket, mutation.object_key),
-                                "payload": {
-                                    "bucket": mutation.bucket,
-                                    "key": mutation.object_key,
-                                }
-                            }),
-                            "enqueue_outbox_event" => serde_json::json!({
-                                "backend": "postgres",
-                                "operation": "delete_outbox_event",
-                                "resource_uri": "udb://outbox/event",
-                                "payload": {
-                                    "idempotency_key": mutation.idempotency_key,
-                                    "message_type": mutation.message_type,
-                                }
-                            }),
-                            _ => serde_json::json!({
-                                "backend": "postgres",
-                                "operation": "rollback_sql_tx",
-                                "resource_uri": format!("postgres://{}", mutation.message_type),
-                                "payload": {
-                                    "message_type": mutation.message_type,
-                                    "note": "rolled back by PostgreSQL transaction boundary"
-                                }
-                            }),
-                        };
-                        self.saga_record_step(
-                            sid,
-                            step_index,
-                            &operation,
-                            &mutation.message_type,
-                            &compensation.to_string(),
-                        )
-                        .await;
-                    }
-                    step_index += 1;
+                    pending_saga_steps.push(PendingSagaStep {
+                        step_index: pending_saga_steps.len(),
+                        operation: operation.clone(),
+                        message_type: mutation.message_type.clone(),
+                        compensation_json: saga_compensation_for_mutation(&operation, mutation),
+                    });
                     statuses.push(Ok(TxStatus {
                         state: crate::proto::tx_status::State::TxStateOpen as i32,
                         tx_id: tx_id.clone(),
@@ -397,85 +445,137 @@ impl DataBrokerRuntime {
                         .await
                         .unwrap_or_else(|| "no external compensation was needed".to_string());
                     if let Some(ref sid) = saga_id {
-                        self.saga_set_status(sid, "compensated").await;
+                        if compensations_spilled {
+                            self.saga_record_pending_steps(sid, &pending_saga_steps)
+                                .await;
+                            self.saga_set_status(sid, "in_doubt").await;
+                        } else {
+                            self.saga_set_status(sid, "compensated").await;
+                        }
                     }
                     statuses.push(Err(tonic::Status::internal(format!(
                         "{}; {}",
                         err.message(),
                         compensation_message
                     ))));
+                    for skipped in tx_mutations.iter().skip(mutation_index + 1) {
+                        statuses.push(Ok(TxStatus {
+                            state: crate::proto::tx_status::State::TxStateRolledBack as i32,
+                            tx_id: tx_id.clone(),
+                            mutation_id: Uuid::new_v4().to_string(),
+                            message: format!(
+                                "not executed because an earlier mutation failed: {} {}",
+                                skipped.operation, skipped.message_type
+                            ),
+                        }));
+                    }
                     return statuses;
                 }
             }
         }
         if commit {
-            // B (2026-05-30): live 2PC path — when the caller asked
-            // for `tx_strategy=two_phase` AND the operator enabled
-            // `UDB_2PC_ENABLED=true`, replace the plain COMMIT with
-            // the prepared-transaction protocol so the PG
-            // participant is durably PREPARED before any visible
-            // commit. The actual second-phase COMMIT PREPARED runs
-            // on a fresh connection from the pool — the prepared
-            // state survives PG client disconnects, which is the
-            // whole point of 2PC.
             if strategy == TxStrategy::TwoPhase && super::two_phase_runtime_enabled() {
-                // PHASE 1: PREPARE TRANSACTION 'xid'. This consumes
-                // the in-flight tx and leaves the row locks held in
-                // PostgreSQL's prepared_xacts catalog. The xid is
-                // generated locally; we use the request's tx_id for
-                // traceability, sanitised to PG's 200-char ASCII
-                // identifier limit.
-                let xid = format!("udb_{}", tx_id.replace('-', ""));
-                let xid_quoted = xid.replace('\'', "''");
-                let prepare_sql = format!("PREPARE TRANSACTION '{xid_quoted}'");
-                if let Err(err) = sqlx::query(&prepare_sql).execute(&mut *tx).await {
+                let sys_config = crate::runtime::system::SystemCatalogConfig::current_arc();
+                if let Err(err) =
+                    crate::runtime::xa_recovery::ensure_xa_ledger_table(pool, &sys_config).await
+                {
                     let _ = tx.rollback().await;
-                    let comp_msg = self
-                        .compensate_external_side_effects(&qdrant_compensations, &s3_compensations)
-                        .await
-                        .unwrap_or_else(|| "no external compensation was needed".to_string());
                     if let Some(ref sid) = saga_id {
-                        self.saga_set_status(sid, "compensated").await;
+                        self.saga_set_status(sid, "failed").await;
                     }
                     statuses.push(Err(tonic::Status::internal(format!(
-                        "PostgreSQL PREPARE TRANSACTION failed: {err}; {comp_msg}"
+                        "XA ledger is unavailable: {err}"
                     ))));
                     return statuses;
                 }
-                // After PREPARE TRANSACTION, the tx handle is
-                // detached from the connection. Drop it without
-                // calling commit/rollback — both would error.
-                drop(tx);
-
-                // PHASE 2: COMMIT PREPARED on a fresh connection.
-                // If this fails, the transaction is IN-DOUBT: the
-                // prepared state is durable but uncommitted. The
-                // recovery worker (`XaInDoubtParticipant` for
-                // Postgres) drives stragglers. Surface InDoubt so
-                // the operator knows.
-                let commit_sql = format!("COMMIT PREPARED '{xid_quoted}'");
-                match sqlx::query(&commit_sql).execute(pool).await {
-                    Ok(_) => {
+                let participant = crate::runtime::xa_postgres::ActivePostgresXaParticipant::new(
+                    "primary",
+                    pool.clone(),
+                    tx,
+                );
+                let xa_request = crate::runtime::xa::XaRequest {
+                    tenant_id: metadata_context.tenant_id.clone(),
+                    project_id: metadata_context.project_id.clone(),
+                    origin_rpc: "BeginTx".to_string(),
+                    correlation_id: metadata_context.correlation_id.clone(),
+                };
+                let xa_result = crate::runtime::xa::XaCoordinator::execute(
+                    xa_request,
+                    vec![Box::new(participant)],
+                    &crate::backend::capability_matrix(),
+                )
+                .await;
+                match xa_result {
+                    Ok(outcome) => {
+                        if let Err(err) = crate::runtime::xa_recovery::record_xa_ledger_entry(
+                            pool,
+                            &sys_config,
+                            &outcome.ledger,
+                        )
+                        .await
+                        {
+                            if let Some(ref sid) = saga_id {
+                                self.saga_set_status(sid, "in_doubt").await;
+                            }
+                            statuses.push(Err(tonic::Status::internal(format!(
+                                "XA committed but ledger write failed for xid {}: {err}",
+                                outcome.ledger.xid
+                            ))));
+                            return statuses;
+                        }
                         if let Some(ref sid) = saga_id {
+                            self.saga_record_pending_steps(sid, &pending_saga_steps)
+                                .await;
                             self.saga_set_status(sid, "committed").await;
                         }
                         statuses.push(Ok(TxStatus {
                             state: crate::proto::tx_status::State::TxStateCommitted as i32,
                             tx_id,
-                            message: format!("committed (2pc xid={xid})"),
+                            message: format!("committed (2pc xid={})", outcome.ledger.xid),
                             ..TxStatus::default()
                         }));
                     }
-                    Err(err) => {
+                    Err(crate::runtime::xa::XaError::CapabilityRefused { unsupported }) => {
                         if let Some(ref sid) = saga_id {
-                            // IN-DOUBT — don't mark compensated, the
-                            // tx is half-committed at the RM. The
-                            // recovery worker will drive resolution.
-                            self.saga_set_status(sid, "in_doubt").await;
+                            self.saga_set_status(sid, "failed").await;
+                        }
+                        statuses.push(Err(tonic::Status::failed_precondition(format!(
+                            "2PC refused before side effects: unsupported participants {}",
+                            unsupported.join(", ")
+                        ))));
+                    }
+                    Err(crate::runtime::xa::XaError::PrepareFailed { ledger, .. }) => {
+                        let _ = crate::runtime::xa_recovery::record_xa_ledger_entry(
+                            pool,
+                            &sys_config,
+                            &ledger,
+                        )
+                        .await;
+                        if let Some(ref sid) = saga_id {
+                            self.saga_set_status(sid, "failed").await;
                         }
                         statuses.push(Err(tonic::Status::aborted(format!(
-                            "PostgreSQL COMMIT PREPARED failed for xid {xid}: {err}; \
-                             transaction is IN-DOUBT and will be resolved by the XA recovery worker"
+                            "2PC PREPARE failed for xid {}: {}",
+                            ledger.xid, ledger.reason
+                        ))));
+                    }
+                    Err(crate::runtime::xa::XaError::InDoubt { ledger }) => {
+                        let ledger_err = crate::runtime::xa_recovery::record_xa_ledger_entry(
+                            pool,
+                            &sys_config,
+                            &ledger,
+                        )
+                        .await
+                        .err();
+                        if let Some(ref sid) = saga_id {
+                            self.saga_set_status(sid, "in_doubt").await;
+                        }
+                        let ledger_note = ledger_err
+                            .map(|err| format!("; additionally XA ledger write failed: {err}"))
+                            .unwrap_or_default();
+                        statuses.push(Err(tonic::Status::aborted(format!(
+                            "2PC xid {} is IN-DOUBT and will be resolved by XA recovery{}",
+                            ledger.xid, ledger_note
                         ))));
                     }
                 }
@@ -483,6 +583,8 @@ impl DataBrokerRuntime {
                 match tx.commit().await {
                     Ok(()) => {
                         if let Some(ref sid) = saga_id {
+                            self.saga_record_pending_steps(sid, &pending_saga_steps)
+                                .await;
                             self.saga_set_status(sid, "committed").await;
                         }
                         statuses.push(Ok(TxStatus {
@@ -501,7 +603,13 @@ impl DataBrokerRuntime {
                             .await
                             .unwrap_or_else(|| "no external compensation was needed".to_string());
                         if let Some(ref sid) = saga_id {
-                            self.saga_set_status(sid, "compensated").await;
+                            if compensations_spilled {
+                                self.saga_record_pending_steps(sid, &pending_saga_steps)
+                                    .await;
+                                self.saga_set_status(sid, "in_doubt").await;
+                            } else {
+                                self.saga_set_status(sid, "compensated").await;
+                            }
                         }
                         statuses.push(Err(tonic::Status::internal(format!(
                             "PostgreSQL commit failed: {err}; {comp_msg}"
@@ -510,12 +618,20 @@ impl DataBrokerRuntime {
                 }
             }
         } else {
-            let _ = tx.rollback().await;
+            if let Err(err) = tx.rollback().await {
+                tracing::warn!("PostgreSQL rollback failed after stream close: {err}");
+            }
             let compensation_message = self
                 .compensate_external_side_effects(&qdrant_compensations, &s3_compensations)
                 .await;
             if let Some(ref sid) = saga_id {
-                self.saga_set_status(sid, "compensated").await;
+                if compensations_spilled {
+                    self.saga_record_pending_steps(sid, &pending_saga_steps)
+                        .await;
+                    self.saga_set_status(sid, "in_doubt").await;
+                } else {
+                    self.saga_set_status(sid, "compensated").await;
+                }
             }
             statuses.push(Ok(TxStatus {
                 state: crate::proto::tx_status::State::TxStateRolledBack as i32,
@@ -527,6 +643,19 @@ impl DataBrokerRuntime {
             }));
         }
         statuses
+    }
+
+    async fn saga_record_pending_steps(&self, saga_id: &str, steps: &[PendingSagaStep]) {
+        for step in steps {
+            self.saga_record_step(
+                saga_id,
+                step.step_index,
+                &step.operation,
+                &step.message_type,
+                &step.compensation_json,
+            )
+            .await;
+        }
     }
 
     pub fn publish_cdc(&self, _request: CdcSubscriptionRequest) -> Vec<CdcEnvelope> {
@@ -572,7 +701,7 @@ impl DataBrokerRuntime {
         };
         let with_data = request.with_data || declared.with_data;
         let sql = format!(
-            "CREATE MATERIALIZED VIEW IF NOT EXISTS \"{}\"{}\" AS {} {}",
+            "CREATE MATERIALIZED VIEW IF NOT EXISTS \"{}\".\"{}\" AS {} {}",
             request.schema.replace('"', "\"\""),
             request.name.replace('"', "\"\""),
             query,
@@ -630,16 +759,42 @@ impl DataBrokerRuntime {
         let runtime = self.clone();
         let seconds = (ttl_days as u64).saturating_mul(86_400).max(60);
         tokio::spawn(async move {
+            // Supervised refresh loop: a single warn per failure hid persistent
+            // staling. Track consecutive failures and escalate to ERROR after a
+            // threshold so operators are alerted that the view is serving stale
+            // data (rather than discovering it manually).
+            const STALE_ALERT_THRESHOLD: u32 = 3;
             let mut interval = tokio::time::interval(Duration::from_secs(seconds));
+            let mut consecutive_failures: u32 = 0;
+            tracing::info!(
+                schema = %schema,
+                view = %name,
+                interval_secs = seconds,
+                "materialized view refresh scheduler started"
+            );
             loop {
                 interval.tick().await;
-                if let Err(err) = runtime.refresh_materialized_view(&schema, &name).await {
-                    tracing::warn!(
-                        schema = schema,
-                        view = name,
-                        error = %err,
-                        "materialized view refresh failed"
-                    );
+                match runtime.refresh_materialized_view(&schema, &name).await {
+                    Ok(()) => consecutive_failures = 0,
+                    Err(err) => {
+                        consecutive_failures = consecutive_failures.saturating_add(1);
+                        if consecutive_failures >= STALE_ALERT_THRESHOLD {
+                            tracing::error!(
+                                schema = %schema,
+                                view = %name,
+                                consecutive_failures,
+                                error = %err,
+                                "materialized view is staling: refresh has failed repeatedly — operator attention required"
+                            );
+                        } else {
+                            tracing::warn!(
+                                schema = %schema,
+                                view = %name,
+                                error = %err,
+                                "materialized view refresh failed"
+                            );
+                        }
+                    }
                 }
             }
         });
@@ -947,7 +1102,7 @@ impl DataBrokerRuntime {
         manifest: &CatalogManifest,
         mutation: &Mutation,
         metadata_context: RequestContext,
-    ) -> Result<u64, tonic::Status> {
+    ) -> Result<(u64, Option<String>, String), tonic::Status> {
         #[cfg(not(feature = "s3"))]
         {
             let _ = (manifest, mutation, metadata_context);
@@ -966,7 +1121,7 @@ impl DataBrokerRuntime {
             let plan = build_object_stream_plan(
                 manifest,
                 &ObjectStreamPlanRequest {
-                    context,
+                    context: context.clone(),
                     bucket: mutation.bucket.clone(),
                     object_key: mutation.object_key.clone(),
                     method: "PUT".to_string(),
@@ -976,7 +1131,18 @@ impl DataBrokerRuntime {
                 },
             );
             reject_plan(&plan.errors)?;
-            let s3 = self.s3()?;
+            // Honor target_instance routing (and per-project instance selection)
+            // exactly like setup_data.rs, instead of always using the default S3
+            // client — otherwise a transaction PUT lands in the wrong instance.
+            let target_instance = if context.target_instance.trim().is_empty() {
+                self.choose_instance_name_for_project("minio", true, &context.project_id)
+                    .or_else(|| {
+                        self.choose_instance_name_for_project("s3", true, &context.project_id)
+                    })
+            } else {
+                Some(context.target_instance.as_str())
+            };
+            let s3 = self.s3_for_instance_for_project(target_instance, &context.project_id)?;
             s3.put_object()
                 .bucket(&mutation.bucket)
                 .key(&mutation.object_key)
@@ -991,7 +1157,11 @@ impl DataBrokerRuntime {
                 .map_err(|err| {
                     tonic::Status::unavailable(format!("S3 put_object failed: {err}"))
                 })?;
-            Ok(1)
+            Ok((
+                1,
+                target_instance.map(str::to_string),
+                context.project_id.clone(),
+            ))
         }
     }
 
@@ -1026,11 +1196,10 @@ impl DataBrokerRuntime {
         };
         let mut deleted = 0usize;
         let mut failures = Vec::new();
-        const MAX_ATTEMPTS: u32 = 3;
         for (collection, point_ids) in compensations.iter().rev() {
             let mut last_err = String::new();
             let mut succeeded = false;
-            for attempt in 1..=MAX_ATTEMPTS {
+            for attempt in 1..=COMPENSATION_RETRY_MAX_ATTEMPTS {
                 match qdrant.delete_points(collection, point_ids).await {
                     Ok(()) => {
                         deleted += point_ids.len();
@@ -1039,24 +1208,21 @@ impl DataBrokerRuntime {
                     }
                     Err(err) => {
                         last_err = format!("{err}");
-                        if attempt < MAX_ATTEMPTS {
+                        if attempt < COMPENSATION_RETRY_MAX_ATTEMPTS {
                             tracing::warn!(
                                 collection = %collection,
                                 attempt,
                                 error = %err,
                                 "Qdrant compensation failed; retrying"
                             );
-                            tokio::time::sleep(std::time::Duration::from_millis(
-                                200 * u64::from(attempt),
-                            ))
-                            .await;
+                            tokio::time::sleep(compensation_retry_delay(attempt)).await;
                         }
                     }
                 }
             }
             if !succeeded {
                 failures.push(format!(
-                    "{collection}: {last_err} (after {MAX_ATTEMPTS} attempts)"
+                    "{collection}: {last_err} (after {COMPENSATION_RETRY_MAX_ATTEMPTS} attempts)"
                 ));
             }
         }
@@ -1075,7 +1241,7 @@ impl DataBrokerRuntime {
     #[cfg(not(feature = "s3"))]
     pub(crate) async fn compensate_s3_puts(
         &self,
-        _compensations: &[(String, String)],
+        _compensations: &[(String, String, Option<String>, String)],
     ) -> Option<String> {
         None
     }
@@ -1083,21 +1249,29 @@ impl DataBrokerRuntime {
     #[cfg(feature = "s3")]
     pub(crate) async fn compensate_s3_puts(
         &self,
-        compensations: &[(String, String)],
+        compensations: &[(String, String, Option<String>, String)],
     ) -> Option<String> {
         if compensations.is_empty() {
             return None;
         }
-        let Some(s3) = &self.s3 else {
+        if self.s3.is_none() && self.s3_instances.is_empty() {
             return Some("S3 compensation skipped because S3/MinIO is not configured".to_string());
-        };
+        }
         let mut deleted = 0usize;
         let mut failures = Vec::new();
-        const MAX_ATTEMPTS: u32 = 3;
-        for (bucket, object_key) in compensations.iter().rev() {
+        for (bucket, object_key, instance, project_id) in compensations.iter().rev() {
+            // Resolve the SAME instance the PUT used so we delete from the right
+            // store; fall back to default resolution when none was recorded.
+            let s3 = match self.s3_for_instance_for_project(instance.as_deref(), project_id) {
+                Ok(client) => client,
+                Err(err) => {
+                    failures.push(format!("s3://{bucket}/{object_key}: {err}"));
+                    continue;
+                }
+            };
             let mut last_err = String::new();
             let mut succeeded = false;
-            for attempt in 1..=MAX_ATTEMPTS {
+            for attempt in 1..=COMPENSATION_RETRY_MAX_ATTEMPTS {
                 match s3
                     .delete_object()
                     .bucket(bucket)
@@ -1112,7 +1286,7 @@ impl DataBrokerRuntime {
                     }
                     Err(err) => {
                         last_err = format!("{err}");
-                        if attempt < MAX_ATTEMPTS {
+                        if attempt < COMPENSATION_RETRY_MAX_ATTEMPTS {
                             tracing::warn!(
                                 bucket = %bucket,
                                 key = %object_key,
@@ -1120,17 +1294,14 @@ impl DataBrokerRuntime {
                                 error = %err,
                                 "S3 compensation failed; retrying"
                             );
-                            tokio::time::sleep(std::time::Duration::from_millis(
-                                200 * u64::from(attempt),
-                            ))
-                            .await;
+                            tokio::time::sleep(compensation_retry_delay(attempt)).await;
                         }
                     }
                 }
             }
             if !succeeded {
                 failures.push(format!(
-                    "s3://{bucket}/{object_key}: {last_err} (after {MAX_ATTEMPTS} attempts)"
+                    "s3://{bucket}/{object_key}: {last_err} (after {COMPENSATION_RETRY_MAX_ATTEMPTS} attempts)"
                 ));
             }
         }
@@ -1147,7 +1318,7 @@ impl DataBrokerRuntime {
     pub(crate) async fn compensate_external_side_effects(
         &self,
         qdrant_compensations: &[(String, Vec<String>)],
-        s3_compensations: &[(String, String)],
+        s3_compensations: &[(String, String, Option<String>, String)],
     ) -> Option<String> {
         let mut parts = Vec::new();
         if let Some(message) = self.compensate_qdrant_upserts(qdrant_compensations).await {

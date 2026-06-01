@@ -4,11 +4,13 @@
 //! `https://<index>-<project>.svc.<env>.pinecone.io`. The operator
 //! pastes the index host as the DSN. Auth is via the `Api-Key` header.
 
-use std::time::Duration;
-
 use serde_json::Value as JsonValue;
 
-use crate::runtime::backend_context::{AppliedContext, BackendContextEnforcer, ContextEffect};
+use crate::runtime::backend_context::{
+    AppliedContext, BackendContextEnforcer, ContextEffect, enforce_with_mechanism,
+};
+use crate::runtime::executor_utils::{build_probe, http_status_to_tonic, parse_rest_dispatch};
+use crate::runtime::executors::http::{HttpClientSpec, env_timeout};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
@@ -24,8 +26,7 @@ pub struct PineconeHttpClient {
 impl PineconeHttpClient {
     pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Self {
         let http =
-            crate::runtime::executors::http::HttpClientSpec::with_timeout(Duration::from_secs(30))
-                .build();
+            HttpClientSpec::with_timeout(env_timeout("UDB_PINECONE_HTTP_TIMEOUT_SECS", 30)).build();
         Self {
             base_url: base_url.into().trim_end_matches('/').to_string(),
             api_key: api_key.into(),
@@ -86,19 +87,7 @@ impl PineconeHttpClient {
 
 fn pinecone_status_to_tonic(status: reqwest::StatusCode, body: &str) -> tonic::Status {
     let detail = body.chars().take(200).collect::<String>();
-    match status.as_u16() {
-        400 | 422 => {
-            tonic::Status::invalid_argument(format!("pinecone {}: {detail}", status.as_u16()))
-        }
-        401 | 403 => {
-            tonic::Status::permission_denied(format!("pinecone {}: {detail}", status.as_u16()))
-        }
-        404 => tonic::Status::not_found(format!("pinecone 404: {detail}")),
-        409 => tonic::Status::already_exists(format!("pinecone 409: {detail}")),
-        429 => tonic::Status::resource_exhausted(format!("pinecone 429: {detail}")),
-        500..=599 => tonic::Status::unavailable(format!("pinecone {}: {detail}", status.as_u16())),
-        _ => tonic::Status::internal(format!("pinecone {}: {detail}", status.as_u16())),
-    }
+    http_status_to_tonic(status, &detail, "pinecone")
 }
 
 #[derive(Debug, Clone)]
@@ -117,14 +106,10 @@ impl BackendContextEnforcer for PineconeExecutor {
         "pinecone"
     }
     fn enforce(&self, ctx: &AppliedContext) -> ContextEffect {
-        if ctx.is_empty() {
-            return ContextEffect::Advisory {
-                recorded_in: "no_context_to_apply".into(),
-            };
-        }
-        ContextEffect::Enforced {
-            mechanism: "_tenant_id / _project_id stamped in vector metadata; AND'd into query/delete filters".into(),
-        }
+        enforce_with_mechanism(
+            ctx,
+            "_tenant_id / _project_id stamped in vector metadata; AND'd into query/delete filters",
+        )
     }
 }
 
@@ -134,27 +119,9 @@ impl BackendHealth for PineconeExecutor {
     }
 }
 
-fn parse_dispatch(req: &str) -> Result<(reqwest::Method, String, JsonValue), tonic::Status> {
-    let v: JsonValue = serde_json::from_str(req)
-        .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
-    let path = v
-        .get("path")
-        .and_then(|x| x.as_str())
-        .ok_or_else(|| tonic::Status::invalid_argument("missing `path`"))?
-        .to_string();
-    let method = v
-        .get("method")
-        .and_then(|x| x.as_str())
-        .unwrap_or("POST")
-        .parse::<reqwest::Method>()
-        .map_err(|e| tonic::Status::invalid_argument(format!("bad method: {e}")))?;
-    let body = v.get("body").cloned().unwrap_or(JsonValue::Null);
-    Ok((method, path, body))
-}
-
 impl QueryExecutor for PineconeExecutor {
     async fn query(&self, req: &str) -> Result<String, tonic::Status> {
-        let (m, p, b) = parse_dispatch(req)?;
+        let (m, p, b) = parse_rest_dispatch(req)?;
         let r = self.client.request_json(m, &p, &b).await?;
         serde_json::to_string(&r).map_err(|e| tonic::Status::internal(e.to_string()))
     }
@@ -162,7 +129,7 @@ impl QueryExecutor for PineconeExecutor {
 
 impl MutationExecutor for PineconeExecutor {
     async fn mutate(&self, req: &str) -> Result<String, tonic::Status> {
-        let (m, p, b) = parse_dispatch(req)?;
+        let (m, p, b) = parse_rest_dispatch(req)?;
         let r = self.client.request_json(m, &p, &b).await?;
         serde_json::to_string(&r).map_err(|e| tonic::Status::internal(e.to_string()))
     }
@@ -170,7 +137,7 @@ impl MutationExecutor for PineconeExecutor {
 
 impl SearchExecutor for PineconeExecutor {
     async fn search(&self, req: &str) -> Result<String, tonic::Status> {
-        let (m, p, b) = parse_dispatch(req)?;
+        let (m, p, b) = parse_rest_dispatch(req)?;
         let r = self.client.request_json(m, &p, &b).await?;
         serde_json::to_string(&r).map_err(|e| tonic::Status::internal(e.to_string()))
     }
@@ -244,20 +211,7 @@ impl BackendExecutor for PineconeExecutor {
         ))
     }
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
-        match self.ping().await {
-            Ok(()) => Ok(BackendProbe {
-                backend: "pinecone".to_string(),
-                instance: None,
-                ok: true,
-                error: None,
-            }),
-            Err(err) => Ok(BackendProbe {
-                backend: "pinecone".to_string(),
-                instance: None,
-                ok: false,
-                error: Some(err),
-            }),
-        }
+        Ok(build_probe("pinecone", self.ping().await))
     }
 }
 
@@ -268,7 +222,7 @@ mod tests {
     #[test]
     fn parse_dispatch_works() {
         let req = r#"{"path":"/query","method":"POST","body":{"vector":[0.1]}}"#;
-        let (m, p, _) = parse_dispatch(req).unwrap();
+        let (m, p, _) = parse_rest_dispatch(req).unwrap();
         assert_eq!(m, reqwest::Method::POST);
         assert_eq!(p, "/query");
     }

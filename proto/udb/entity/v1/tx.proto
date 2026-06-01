@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package udb.entity.v1;
+
+option go_package = "github.com/udb-project/udb/gen/go/udb/entity/v1;entityv1";
+option java_package      = "com.udb.entity.v1";
+option csharp_namespace = "Udb.Entity.V1";
+option php_namespace = "Udb\\Entity\\V1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
+
+import "google/protobuf/struct.proto";
+import "udb/entity/v1/context.proto";
+import "udb/entity/v1/vector.proto";
+
+message Mutation {
+  RequestContext context = 1;
+  string tx_id = 2;
+  string operation = 3;
+  string message_type = 4;
+  bytes record_json = 5;
+  google.protobuf.Struct payload = 6;
+  google.protobuf.Struct filter = 7;
+  string collection = 8;
+  repeated VectorPointMutation vector_points = 9;
+  bool commit = 10;
+  bool rollback = 11;
+  string bucket = 12;
+  string object_key = 13;
+  bytes object_data = 14;
+  string content_type = 15;
+  string idempotency_key = 16;
+}
+
+message TxStatus {
+  enum State {
+    TX_STATE_UNSPECIFIED = 0;
+    TX_STATE_OPEN = 1;
+    TX_STATE_COMMITTED = 2;
+    TX_STATE_ROLLED_BACK = 3;
+    TX_STATE_ERROR = 4;
+  }
+
+  State state = 1;
+  string tx_id = 2;
+  string mutation_id = 3;
+  string message = 4;
+}

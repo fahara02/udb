@@ -7,6 +7,15 @@
 // The Rust library exposes the configuration and result types so the CLI tool
 // can validate sync settings and display sync status without a live DB connection.
 //
+// STATUS (#139): these are **legacy-compat data contracts only** — the
+// primary→backup sync *worker* is NOT implemented in the Rust runtime (it was the
+// legacy Go service's responsibility). `SyncConfig`/`SyncResult`/`SyncStatus`
+// remain so configs and externally-produced status can be parsed/validated/
+// displayed; no Rust runtime path drives a sync loop. A native worker (open
+// primary+backup pools, diff per-table row counts, copy with
+// `ON CONFLICT DO NOTHING`, publish a `SyncResult`) is a deliberate future
+// feature, tracked separately rather than removed as dead code.
+//
 // Aligned with:
 //   - legacy_sql  legacycore/db/sync.go   (StartSyncWorker, SyncResult, SyncConfig)
 

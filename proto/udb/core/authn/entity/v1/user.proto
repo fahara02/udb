@@ -1,0 +1,134 @@
+syntax = "proto3";
+
+package udb.core.authn.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/authn/entity/v1/enums.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authn.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";
+option java_package = "com.udb.core.authn.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// User — a human, service, workload, or externally-mapped account that can be
+// authenticated by UDB and authorized by the UDB policy engine.
+//
+// Migration order 1 in schema udb_authn.
+// The password_hash uses bcrypt (cost ≥ 12).
+// All PII fields are masked in application logs via (pii) + (log_masked).
+// ---------------------------------------------------------------------------
+message User {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "users"
+    schema_name: "udb_authn"
+    migration_order: 1
+    is_table: true
+    comment: "Accounts authenticated by UDB or mapped from external identity providers"
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    sql_artifacts: {
+      name: "touch_updated_at_function"
+      backend: "postgres"
+      phase: "before_triggers"
+      sql:
+        "CREATE OR REPLACE FUNCTION udb_authn.touch_updated_at()\n"
+        "RETURNS trigger\n"
+        "LANGUAGE plpgsql\n"
+        "AS $$\n"
+        "BEGIN\n"
+        "  NEW.updated_at = CURRENT_TIMESTAMP;\n"
+        "  RETURN NEW;\n"
+        "END;\n"
+        "$$;"
+    }
+    triggers: {
+      trigger_name: "trg_users_touch_updated_at"
+      timing: "BEFORE"
+      event: "UPDATE"
+      function_name: "udb_authn.touch_updated_at()"
+      for_each: "ROW"
+    }
+    extensions: {
+      name: "pgcrypto"
+      schema: "public"
+    }
+    extensions: {
+      name: "pg_trgm"
+      schema: "public"
+    }
+    replica_hint: "primary"
+    required_scope: "authn:admin"
+  };
+  option (udb.core.common.v1.cache) = {
+    backend: CACHE_BACKEND_REDIS
+    key_pattern: "udb:user:{user_id}"
+    ttl_seconds: 300 // 5 minutes — read on every authenticated request for role/permission checks
+    write_through: true
+    read_through: true
+    namespace: "user"
+    cluster_env_key: "REDIS_CLUSTER_ADDR"
+  };
+
+  string user_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "user_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string username = 2 [(udb.core.common.v1.pg_column) = { column_name: "username" sql_type: "VARCHAR(80)" not_null: true unique: true trigram_index: true check_constraint: "username ~ '^[a-z][a-z0-9._-]{2,79}$'" comment: "Lowercase alphanumeric; used as login identifier" index: { index_name: "idx_users_username" index_type: "BTREE" unique: true } }, (udb.core.common.v1.log_masked) = true];
+
+  string email = 3 [(udb.core.common.v1.pg_column) = { column_name: "email" sql_type: "VARCHAR(255)" not_null: true unique: true trigram_index: true comment: "Primary email used for OTP delivery and account recovery" index: { index_name: "idx_users_email" index_type: "BTREE" unique: true } }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.data_purpose) = "Authentication and communication"];
+
+  string password_hash = 4 [(udb.core.common.v1.pg_column) = { column_name: "password_hash" sql_type: "VARCHAR(255)" not_null: true comment: "bcrypt hash (cost >= 12)" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.encrypted_security) = true, (udb.core.common.v1.log_masked) = true];
+
+  AccountKind account_kind = 5 [(udb.core.common.v1.pg_column) = { column_name: "account_kind" sql_type: "VARCHAR(40)" not_null: true default_value: "'PERSON'" index: { index_name: "idx_users_account_kind" index_type: "BTREE" } }];
+
+  UserStatus status = 6 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(30)" not_null: true default_value: "'PENDING_VERIFICATION'" }];
+
+  string tenant_id = 7 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" not_null: true comment: "Tenant/account boundary for this principal" index: { index_name: "idx_users_tenant_id" index_type: "BTREE" } }];
+
+  string full_name = 8 [(udb.core.common.v1.pg_column) = { column_name: "full_name" sql_type: "VARCHAR(255)" not_null: true }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.data_purpose) = "Display and audit trail"];
+
+  // MFA: totp_secret populated only when MFA is enrolled (TOTP authenticator app)
+  string totp_secret_enc = 9 [(udb.core.common.v1.pg_column) = { column_name: "totp_secret_enc" sql_type: "TEXT" comment: "AES-256-GCM encrypted TOTP secret; null if MFA not enrolled" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true];
+
+  bool mfa_enabled = 10 [(udb.core.common.v1.pg_column) = { column_name: "mfa_enabled" sql_type: "BOOLEAN" not_null: true default_value: "FALSE" }];
+
+  // Failed login tracking
+  int32 failed_login_count = 11 [(udb.core.common.v1.pg_column) = { column_name: "failed_login_count" sql_type: "INTEGER" not_null: true default_value: "0" }];
+
+  google.protobuf.Timestamp locked_until = 12 [(udb.core.common.v1.pg_column) = { column_name: "locked_until" sql_type: "TIMESTAMPTZ" comment: "Account locked until this timestamp (exponential backoff)" }];
+
+  google.protobuf.Timestamp email_verified_at = 13 [(udb.core.common.v1.pg_column) = { column_name: "email_verified_at" sql_type: "TIMESTAMPTZ" }];
+
+  google.protobuf.Timestamp last_login_at = 14 [(udb.core.common.v1.pg_column) = { column_name: "last_login_at" sql_type: "TIMESTAMPTZ" }];
+
+  string created_by = 15 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "UUID" comment: "FK to users.user_id — which admin created this account" foreign_key: { references_table: "users" references_schema: "udb_authn" references_column: "user_id" on_delete: REFERENTIAL_ACTION_SET_NULL constraint_name: "fk_users_created_by" } index: { index_name: "idx_users_created_by" index_type: "BTREE" } }];
+
+  google.protobuf.Timestamp created_at = 16 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  google.protobuf.Timestamp updated_at = 17 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true }];
+
+  google.protobuf.Timestamp deleted_at = 18 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" comment: "Soft delete" }];
+  string deleted_by = 19 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" comment: "Soft delete actor" }];
+
+  string project_id = 20 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" comment: "Optional default project/application namespace for this account" index: { index_name: "idx_users_project_id" index_type: "BTREE" } }];
+
+  string external_provider_id = 21 [(udb.core.common.v1.pg_column) = { column_name: "external_provider_id" sql_type: "VARCHAR(120)" comment: "Identity provider id when the account is mapped from an external provider" index: { index_name: "idx_users_external_provider" index_type: "BTREE" } }];
+
+  string external_subject = 22 [(udb.core.common.v1.pg_column) = { column_name: "external_subject" sql_type: "VARCHAR(255)" comment: "Subject from an external identity provider" index: { index_name: "idx_users_external_subject" index_type: "BTREE" } }];
+
+  string locale = 23 [(udb.core.common.v1.pg_column) = { column_name: "locale" sql_type: "VARCHAR(32)" comment: "BCP 47 locale hint for notifications and display" }];
+
+  string timezone = 24 [(udb.core.common.v1.pg_column) = { column_name: "timezone" sql_type: "VARCHAR(80)" comment: "IANA timezone hint for user-facing timestamps" }];
+
+  string profile_attributes_json = 25 [(udb.core.common.v1.pg_column) = { column_name: "profile_attributes_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Project-defined non-secret profile attributes" }];
+
+  string external_references_json = 26 [(udb.core.common.v1.pg_column) = { column_name: "external_references_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" comment: "External system references for this account" }];
+}

@@ -159,11 +159,55 @@ impl<'a> Lexer<'a> {
         while self.pos < self.src.len() && is_ident_continue(self.src[self.pos]) {
             self.advance();
         }
+        let mut value = String::from_utf8_lossy(&self.src[start..self.pos]).to_string();
+        // Capture a proto `map<K, V>` type as a single token (e.g.
+        // "map<string,int32>") so the parser can record the key/value types.
+        // Without this, the generic `<...>` skip in next_token() would discard
+        // the type arguments. Scoped to the `map` keyword followed by `<` so the
+        // option-aggregate `<...>` syntax (preceded by `=`) is unaffected.
+        if value == "map" {
+            let saved = (self.pos, self.line, self.col);
+            while self.pos < self.src.len() && is_ws(self.src[self.pos]) {
+                self.advance();
+            }
+            if self.pos < self.src.len() && self.src[self.pos] == b'<' {
+                let angle_start = self.pos;
+                self.consume_angle_block();
+                let angle = String::from_utf8_lossy(&self.src[angle_start..self.pos]);
+                // Normalise out interior whitespace: "< string, int32 >" → "<string,int32>".
+                value.push_str(&angle.split_whitespace().collect::<String>());
+            } else {
+                // A bare `map` (e.g. a field literally named `map`) — restore.
+                self.pos = saved.0;
+                self.line = saved.1;
+                self.col = saved.2;
+            }
+        }
         Token {
             kind: TokenKind::Ident,
-            value: String::from_utf8_lossy(&self.src[start..self.pos]).to_string(),
+            value,
             line,
             column,
+        }
+    }
+
+    /// Consume a balanced `<...>` block starting at the current `<`, leaving
+    /// `pos` just past the matching `>`. Used to capture `map<K, V>` types.
+    fn consume_angle_block(&mut self) {
+        let mut depth = 0usize;
+        while self.pos < self.src.len() {
+            let ch = self.src[self.pos];
+            self.advance();
+            match ch {
+                b'<' => depth += 1,
+                b'>' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        break;
+                    }
+                }
+                _ => {}
+            }
         }
     }
 
@@ -198,21 +242,90 @@ impl<'a> Lexer<'a> {
         while self.pos < self.src.len() {
             let ch = self.src[self.pos];
             if ch == b'\\' && self.pos + 1 < self.src.len() {
-                self.advance();
+                let escape_line = self.line;
+                let escape_column = self.col;
+                self.advance(); // consume backslash
                 let escaped = self.src[self.pos];
+                self.advance(); // consume the escape selector itself
                 match escaped {
                     b'n' => out.push(b'\n'),
                     b't' => out.push(b'\t'),
                     b'r' => out.push(b'\r'),
+                    b'a' => out.push(0x07),
+                    b'b' => out.push(0x08),
+                    b'f' => out.push(0x0C),
+                    b'v' => out.push(0x0B),
                     b'"' => out.push(b'"'),
                     b'\'' => out.push(b'\''),
                     b'\\' => out.push(b'\\'),
+                    // `\xHH` — hex byte escape (1–2 hex digits), proto/C style.
+                    b'x' | b'X' => {
+                        let mut val: u32 = 0;
+                        let mut n = 0;
+                        while n < 2
+                            && self.pos < self.src.len()
+                            && let Some(h) = hex_digit(self.src[self.pos])
+                        {
+                            val = val * 16 + h as u32;
+                            self.advance();
+                            n += 1;
+                        }
+                        if n == 0 {
+                            out.push(b'\\');
+                            out.push(escaped);
+                        } else {
+                            out.push(val as u8);
+                        }
+                    }
+                    // `\0`–`\377` — octal byte escape (selector is the 1st digit).
+                    b'0'..=b'7' => {
+                        let mut val: u32 = (escaped - b'0') as u32;
+                        let mut n = 1;
+                        while n < 3
+                            && self.pos < self.src.len()
+                            && (b'0'..=b'7').contains(&self.src[self.pos])
+                        {
+                            val = val * 8 + (self.src[self.pos] - b'0') as u32;
+                            self.advance();
+                            n += 1;
+                        }
+                        out.push(val as u8);
+                    }
+                    // `\uHHHH` / `\UHHHHHHHH` — Unicode code point, encoded UTF-8.
+                    b'u' | b'U' => {
+                        let width = if escaped == b'u' { 4 } else { 8 };
+                        let mut val: u32 = 0;
+                        let mut n = 0;
+                        while n < width
+                            && self.pos < self.src.len()
+                            && let Some(h) = hex_digit(self.src[self.pos])
+                        {
+                            val = val * 16 + h as u32;
+                            self.advance();
+                            n += 1;
+                        }
+                        if n == width
+                            && let Some(c) = char::from_u32(val)
+                        {
+                            let mut buf = [0u8; 4];
+                            out.extend_from_slice(c.encode_utf8(&mut buf).as_bytes());
+                        } else {
+                            return Err(self.error_at(
+                                escape_line,
+                                escape_column,
+                                &format!(
+                                    "malformed unicode escape: expected \\{}{}",
+                                    escaped as char,
+                                    "H".repeat(width)
+                                ),
+                            ));
+                        }
+                    }
                     other => {
                         out.push(b'\\');
                         out.push(other);
                     }
                 }
-                self.advance();
                 continue;
             }
             if ch == quote {
@@ -297,6 +410,16 @@ fn is_ws(ch: u8) -> bool {
 
 fn is_digit(ch: u8) -> bool {
     ch.is_ascii_digit()
+}
+
+/// Hex digit value for `\x` / `\u` / `\U` string-escape decoding.
+fn hex_digit(ch: u8) -> Option<u8> {
+    match ch {
+        b'0'..=b'9' => Some(ch - b'0'),
+        b'a'..=b'f' => Some(ch - b'a' + 10),
+        b'A'..=b'F' => Some(ch - b'A' + 10),
+        _ => None,
+    }
 }
 
 fn is_ident_start(ch: u8) -> bool {

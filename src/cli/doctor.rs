@@ -8,6 +8,9 @@ pub(crate) struct DoctorReport {
     redis_configured: bool,
     qdrant_configured: bool,
     s3_configured: bool,
+    mongodb_configured: bool,
+    neo4j_configured: bool,
+    clickhouse_configured: bool,
     encryption_configured: bool,
     tls_configured: bool,
     tls_cert_exists: bool,
@@ -19,6 +22,33 @@ pub(crate) struct DoctorReport {
     backend_capabilities: Vec<BackendCapabilityMatrixEntry>,
     errors: Vec<String>,
     warnings: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DoctorStatus {
+    Clean,
+    Warnings,
+    Failed,
+}
+
+impl DoctorStatus {
+    pub(crate) fn exit_code(self) -> i32 {
+        match self {
+            Self::Clean => 0,
+            Self::Warnings => 2,
+            Self::Failed => 1,
+        }
+    }
+}
+
+pub(crate) fn doctor_status(report: &DoctorReport) -> DoctorStatus {
+    if !report.passed {
+        DoctorStatus::Failed
+    } else if !report.warnings.is_empty() {
+        DoctorStatus::Warnings
+    } else {
+        DoctorStatus::Clean
+    }
 }
 
 pub(crate) async fn run_doctor(with_probes: bool) -> DoctorReport {
@@ -115,6 +145,17 @@ pub(crate) async fn run_doctor(with_probes: bool) -> DoctorReport {
     if !init.s3_configured {
         warnings.push("S3/MinIO is not configured; object RPCs will be unavailable".to_string());
     }
+    if !init.mongodb_configured {
+        warnings.push("MongoDB is not configured; document RPCs will be unavailable".to_string());
+    }
+    if !init.neo4j_configured {
+        warnings.push("Neo4j is not configured; graph RPCs will be unavailable".to_string());
+    }
+    if !init.clickhouse_configured {
+        warnings.push(
+            "ClickHouse is not configured; analytics/column RPCs will be unavailable".to_string(),
+        );
+    }
 
     // Optional live backend probes (--probe flag or when all backends are configured).
     if with_probes {
@@ -155,6 +196,9 @@ pub(crate) async fn run_doctor(with_probes: bool) -> DoctorReport {
         redis_configured: init.redis_configured,
         qdrant_configured: init.qdrant_configured,
         s3_configured: init.s3_configured,
+        mongodb_configured: init.mongodb_configured,
+        neo4j_configured: init.neo4j_configured,
+        clickhouse_configured: init.clickhouse_configured,
         encryption_configured: init.encryption_configured,
         tls_configured,
         tls_cert_exists,
@@ -287,6 +331,9 @@ pub(crate) fn print_doctor_human(report: &DoctorReport) {
     println!("  Redis      : {}", bool_icon(report.redis_configured));
     println!("  Qdrant     : {}", bool_icon(report.qdrant_configured));
     println!("  S3/MinIO   : {}", bool_icon(report.s3_configured));
+    println!("  MongoDB    : {}", bool_icon(report.mongodb_configured));
+    println!("  Neo4j      : {}", bool_icon(report.neo4j_configured));
+    println!("  ClickHouse : {}", bool_icon(report.clickhouse_configured));
     println!("  Encryption : {}", bool_icon(report.encryption_configured));
     println!();
     println!("mTLS:");

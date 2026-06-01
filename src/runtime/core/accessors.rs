@@ -1,6 +1,94 @@
 //! Continuation `impl DataBrokerRuntime` block (Phase F split of core.rs).
 use super::*;
 
+/// Generate the `<backend>_for_instance` / `<backend>_for_instance_for_project`
+/// resolver pair for a labelled-instance backend (MongoDB/Neo4j/ClickHouse/
+/// Qdrant/S3). Every resolver shares the exact same control flow:
+///
+/// 1. When a non-blank instance label is supplied: enforce the per-project
+///    instance allow-list, reject if any of the backend's circuit breakers are
+///    open, then look the instance up in the instances map (with the `"default"`
+///    fallback to the unlabelled single client).
+/// 2. Otherwise: enforce the unlabelled-default policy, then pick via
+///    `choose_instance_name` → instances map → single client → first available.
+///
+/// Per-backend variation is expressed as macro arguments: the struct fields, the
+/// allow-list / circuit-breaker / choose names (S3 spans `minio`+`s3`), the
+/// display labels, and the final not-configured `Status` constructor + message
+/// (Qdrant uses `unavailable`, the rest `failed_precondition`). Behavior is
+/// byte-for-byte identical to the previous hand-written methods.
+macro_rules! impl_instance_resolver {
+    (
+        feature = $feature:literal,
+        simple = $simple:ident,
+        project = $project:ident,
+        ret = $ret:ty,
+        single = $single:ident,
+        instances = $instances:ident,
+        allow = [$($allow:literal),+ $(,)?],
+        breakers = [$($breaker:literal),+ $(,)?],
+        unlabeled = $unlabeled:literal,
+        choose = [$($choose:literal),+ $(,)?],
+        cb_label = $cb_label:literal,
+        not_connected_label = $nc_label:literal,
+        not_configured = $not_configured:ident($not_configured_msg:literal) $(,)?
+    ) => {
+        #[cfg(feature = $feature)]
+        pub(crate) fn $simple(
+            &self,
+            instance: Option<&str>,
+        ) -> Result<$ret, tonic::Status> {
+            self.$project(instance, "")
+        }
+
+        #[cfg(feature = $feature)]
+        pub(crate) fn $project(
+            &self,
+            instance: Option<&str>,
+            project_id: &str,
+        ) -> Result<$ret, tonic::Status> {
+            if let Some(instance) = instance.filter(|value| !value.trim().is_empty()) {
+                self.ensure_backend_instance_name_allowed_for_project(
+                    &[$($allow),+],
+                    instance,
+                    project_id,
+                )?;
+                if $(!self.circuit_breaker_allows($breaker, Some(instance)))||+ {
+                    return Err(tonic::Status::unavailable(format!(
+                        "{} instance '{}' circuit breaker is open",
+                        $cb_label,
+                        instance
+                    )));
+                }
+                return self
+                    .$instances
+                    .get(instance)
+                    .or_else(|| {
+                        if instance == "default" {
+                            self.$single.as_ref()
+                        } else {
+                            None
+                        }
+                    })
+                    .ok_or_else(|| {
+                        tonic::Status::failed_precondition(format!(
+                            "{} instance '{}' is not connected",
+                            $nc_label,
+                            instance
+                        ))
+                    });
+            }
+            self.ensure_unlabeled_default_allowed_for_project($unlabeled, project_id)?;
+            None
+                $(.or_else(|| self.choose_instance_name($choose, false)))+
+                .and_then(|name| self.$instances.get(name))
+                .or(self.$single.as_ref())
+                .or_else(|| self.$instances.values().next())
+                .ok_or_else(|| tonic::Status::$not_configured($not_configured_msg))
+        }
+    };
+}
+
 impl DataBrokerRuntime {
     pub fn planning_only() -> Self {
         Self::default()
@@ -974,252 +1062,84 @@ impl DataBrokerRuntime {
             .ok_or_else(|| tonic::Status::failed_precondition("redis not configured"))
     }
 
-    #[cfg(feature = "qdrant")]
-    pub(crate) fn qdrant_for_instance(
-        &self,
-        instance: Option<&str>,
-    ) -> Result<&QdrantHttpClient, tonic::Status> {
-        self.qdrant_for_instance_for_project(instance, "")
+    impl_instance_resolver! {
+        feature = "qdrant",
+        simple = qdrant_for_instance,
+        project = qdrant_for_instance_for_project,
+        ret = &QdrantHttpClient,
+        single = qdrant,
+        instances = qdrant_instances,
+        allow = ["qdrant"],
+        breakers = ["qdrant"],
+        unlabeled = "qdrant",
+        choose = ["qdrant"],
+        cb_label = "qdrant",
+        not_connected_label = "qdrant",
+        not_configured = unavailable("Qdrant backend is not configured"),
     }
 
-    #[cfg(feature = "qdrant")]
-    pub(crate) fn qdrant_for_instance_for_project(
-        &self,
-        instance: Option<&str>,
-        project_id: &str,
-    ) -> Result<&QdrantHttpClient, tonic::Status> {
-        if let Some(instance) = instance.filter(|value| !value.trim().is_empty()) {
-            self.ensure_backend_instance_name_allowed_for_project(
-                &["qdrant"],
-                instance,
-                project_id,
-            )?;
-            if !self.circuit_breaker_allows("qdrant", Some(instance)) {
-                return Err(tonic::Status::unavailable(format!(
-                    "qdrant instance '{instance}' circuit breaker is open"
-                )));
-            }
-            return self
-                .qdrant_instances
-                .get(instance)
-                .or_else(|| {
-                    if instance == "default" {
-                        self.qdrant.as_ref()
-                    } else {
-                        None
-                    }
-                })
-                .ok_or_else(|| {
-                    tonic::Status::failed_precondition(format!(
-                        "qdrant instance '{instance}' is not connected"
-                    ))
-                });
-        }
-        self.ensure_unlabeled_default_allowed_for_project("qdrant", project_id)?;
-        self.choose_instance_name("qdrant", false)
-            .and_then(|name| self.qdrant_instances.get(name))
-            .or(self.qdrant.as_ref())
-            .or_else(|| self.qdrant_instances.values().next())
-            .ok_or_else(|| tonic::Status::unavailable("Qdrant backend is not configured"))
+    impl_instance_resolver! {
+        feature = "s3",
+        simple = s3_for_instance,
+        project = s3_for_instance_for_project,
+        ret = &aws_sdk_s3::Client,
+        single = s3,
+        instances = s3_instances,
+        allow = ["minio", "s3"],
+        breakers = ["minio", "s3"],
+        unlabeled = "s3",
+        choose = ["minio", "s3"],
+        cb_label = "s3/minio",
+        not_connected_label = "s3/minio",
+        not_configured = failed_precondition("s3/minio not configured"),
     }
 
-    #[cfg(feature = "s3")]
-    pub(crate) fn s3_for_instance(
-        &self,
-        instance: Option<&str>,
-    ) -> Result<&aws_sdk_s3::Client, tonic::Status> {
-        self.s3_for_instance_for_project(instance, "")
+    impl_instance_resolver! {
+        feature = "mongodb",
+        simple = mongodb_for_instance,
+        project = mongodb_for_instance_for_project,
+        ret = &MongoDbExecutor,
+        single = mongodb,
+        instances = mongodb_instances,
+        allow = ["mongodb"],
+        breakers = ["mongodb"],
+        unlabeled = "mongodb",
+        choose = ["mongodb"],
+        cb_label = "mongodb",
+        not_connected_label = "mongodb",
+        not_configured = failed_precondition("mongodb not configured"),
     }
 
-    #[cfg(feature = "s3")]
-    pub(crate) fn s3_for_instance_for_project(
-        &self,
-        instance: Option<&str>,
-        project_id: &str,
-    ) -> Result<&aws_sdk_s3::Client, tonic::Status> {
-        if let Some(instance) = instance.filter(|value| !value.trim().is_empty()) {
-            self.ensure_backend_instance_name_allowed_for_project(
-                &["minio", "s3"],
-                instance,
-                project_id,
-            )?;
-            if !self.circuit_breaker_allows("minio", Some(instance))
-                || !self.circuit_breaker_allows("s3", Some(instance))
-            {
-                return Err(tonic::Status::unavailable(format!(
-                    "s3/minio instance '{instance}' circuit breaker is open"
-                )));
-            }
-            return self
-                .s3_instances
-                .get(instance)
-                .or_else(|| {
-                    if instance == "default" {
-                        self.s3.as_ref()
-                    } else {
-                        None
-                    }
-                })
-                .ok_or_else(|| {
-                    tonic::Status::failed_precondition(format!(
-                        "s3/minio instance '{instance}' is not connected"
-                    ))
-                });
-        }
-        self.ensure_unlabeled_default_allowed_for_project("s3", project_id)?;
-        self.choose_instance_name("minio", false)
-            .or_else(|| self.choose_instance_name("s3", false))
-            .and_then(|name| self.s3_instances.get(name))
-            .or(self.s3.as_ref())
-            .or_else(|| self.s3_instances.values().next())
-            .ok_or_else(|| tonic::Status::failed_precondition("s3/minio not configured"))
+    impl_instance_resolver! {
+        feature = "neo4j",
+        simple = neo4j_for_instance,
+        project = neo4j_for_instance_for_project,
+        ret = &Neo4jExecutor,
+        single = neo4j,
+        instances = neo4j_instances,
+        allow = ["neo4j"],
+        breakers = ["neo4j"],
+        unlabeled = "neo4j",
+        choose = ["neo4j"],
+        cb_label = "neo4j",
+        not_connected_label = "neo4j",
+        not_configured = failed_precondition("neo4j not configured"),
     }
 
-    #[cfg(feature = "mongodb")]
-    pub(crate) fn mongodb_for_instance(
-        &self,
-        instance: Option<&str>,
-    ) -> Result<&MongoDbExecutor, tonic::Status> {
-        self.mongodb_for_instance_for_project(instance, "")
-    }
-
-    #[cfg(feature = "mongodb")]
-    pub(crate) fn mongodb_for_instance_for_project(
-        &self,
-        instance: Option<&str>,
-        project_id: &str,
-    ) -> Result<&MongoDbExecutor, tonic::Status> {
-        if let Some(instance) = instance.filter(|value| !value.trim().is_empty()) {
-            self.ensure_backend_instance_name_allowed_for_project(
-                &["mongodb"],
-                instance,
-                project_id,
-            )?;
-            if !self.circuit_breaker_allows("mongodb", Some(instance)) {
-                return Err(tonic::Status::unavailable(format!(
-                    "mongodb instance '{instance}' circuit breaker is open"
-                )));
-            }
-            return self
-                .mongodb_instances
-                .get(instance)
-                .or_else(|| {
-                    if instance == "default" {
-                        self.mongodb.as_ref()
-                    } else {
-                        None
-                    }
-                })
-                .ok_or_else(|| {
-                    tonic::Status::failed_precondition(format!(
-                        "mongodb instance '{instance}' is not connected"
-                    ))
-                });
-        }
-        self.ensure_unlabeled_default_allowed_for_project("mongodb", project_id)?;
-        self.choose_instance_name("mongodb", false)
-            .and_then(|name| self.mongodb_instances.get(name))
-            .or(self.mongodb.as_ref())
-            .or_else(|| self.mongodb_instances.values().next())
-            .ok_or_else(|| tonic::Status::failed_precondition("mongodb not configured"))
-    }
-
-    #[cfg(feature = "neo4j")]
-    pub(crate) fn neo4j_for_instance(
-        &self,
-        instance: Option<&str>,
-    ) -> Result<&Neo4jExecutor, tonic::Status> {
-        self.neo4j_for_instance_for_project(instance, "")
-    }
-
-    #[cfg(feature = "neo4j")]
-    pub(crate) fn neo4j_for_instance_for_project(
-        &self,
-        instance: Option<&str>,
-        project_id: &str,
-    ) -> Result<&Neo4jExecutor, tonic::Status> {
-        if let Some(instance) = instance.filter(|value| !value.trim().is_empty()) {
-            self.ensure_backend_instance_name_allowed_for_project(
-                &["neo4j"],
-                instance,
-                project_id,
-            )?;
-            if !self.circuit_breaker_allows("neo4j", Some(instance)) {
-                return Err(tonic::Status::unavailable(format!(
-                    "neo4j instance '{instance}' circuit breaker is open"
-                )));
-            }
-            return self
-                .neo4j_instances
-                .get(instance)
-                .or_else(|| {
-                    if instance == "default" {
-                        self.neo4j.as_ref()
-                    } else {
-                        None
-                    }
-                })
-                .ok_or_else(|| {
-                    tonic::Status::failed_precondition(format!(
-                        "neo4j instance '{instance}' is not connected"
-                    ))
-                });
-        }
-        self.ensure_unlabeled_default_allowed_for_project("neo4j", project_id)?;
-        self.choose_instance_name("neo4j", false)
-            .and_then(|name| self.neo4j_instances.get(name))
-            .or(self.neo4j.as_ref())
-            .or_else(|| self.neo4j_instances.values().next())
-            .ok_or_else(|| tonic::Status::failed_precondition("neo4j not configured"))
-    }
-
-    #[cfg(feature = "clickhouse")]
-    pub(crate) fn clickhouse_for_instance(
-        &self,
-        instance: Option<&str>,
-    ) -> Result<&ClickHouseExecutor, tonic::Status> {
-        self.clickhouse_for_instance_for_project(instance, "")
-    }
-
-    #[cfg(feature = "clickhouse")]
-    pub(crate) fn clickhouse_for_instance_for_project(
-        &self,
-        instance: Option<&str>,
-        project_id: &str,
-    ) -> Result<&ClickHouseExecutor, tonic::Status> {
-        if let Some(instance) = instance.filter(|value| !value.trim().is_empty()) {
-            self.ensure_backend_instance_name_allowed_for_project(
-                &["clickhouse"],
-                instance,
-                project_id,
-            )?;
-            if !self.circuit_breaker_allows("clickhouse", Some(instance)) {
-                return Err(tonic::Status::unavailable(format!(
-                    "clickhouse instance '{instance}' circuit breaker is open"
-                )));
-            }
-            return self
-                .clickhouse_instances
-                .get(instance)
-                .or_else(|| {
-                    if instance == "default" {
-                        self.clickhouse.as_ref()
-                    } else {
-                        None
-                    }
-                })
-                .ok_or_else(|| {
-                    tonic::Status::failed_precondition(format!(
-                        "clickhouse instance '{instance}' is not connected"
-                    ))
-                });
-        }
-        self.ensure_unlabeled_default_allowed_for_project("clickhouse", project_id)?;
-        self.choose_instance_name("clickhouse", false)
-            .and_then(|name| self.clickhouse_instances.get(name))
-            .or(self.clickhouse.as_ref())
-            .or_else(|| self.clickhouse_instances.values().next())
-            .ok_or_else(|| tonic::Status::failed_precondition("clickhouse not configured"))
+    impl_instance_resolver! {
+        feature = "clickhouse",
+        simple = clickhouse_for_instance,
+        project = clickhouse_for_instance_for_project,
+        ret = &ClickHouseExecutor,
+        single = clickhouse,
+        instances = clickhouse_instances,
+        allow = ["clickhouse"],
+        breakers = ["clickhouse"],
+        unlabeled = "clickhouse",
+        choose = ["clickhouse"],
+        cb_label = "clickhouse",
+        not_connected_label = "clickhouse",
+        not_configured = failed_precondition("clickhouse not configured"),
     }
 
     #[cfg(feature = "redis")]

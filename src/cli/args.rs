@@ -62,8 +62,11 @@ pub(crate) enum Command {
     },
     /// Drop all UDB-managed schemas and ledger tables.
     ///
-    /// Schema names are discovered dynamically from `public.schema_migrations.source_schema`
-    /// — UDB never hardcodes any proto-specific schema name here.
+    /// Schemas are discovered from the live catalog (`pg_namespace`): every
+    /// non-system schema (excluding `public`, `information_schema`, and `pg_*`)
+    /// is dropped, then the UDB ledger tables in `public` are removed. This is
+    /// authoritative even when the UDB ledger was already dropped, and assumes
+    /// the single-DB-per-UDB ownership model (every non-system schema is UDB's).
     /// Requires explicit `--yes` flag to guard against accidental runs.
     AdminResetDb {
         /// Must be true (pass `--yes`) or the command exits 1 without touching the DB.
@@ -82,6 +85,52 @@ pub(crate) enum Command {
         /// Defaults to the `UDB_DB_OPS_BACKEND` env var, or "postgres" if unset.
         backend: Option<String>,
     },
+    /// Native auth control-plane CLI over generated authn/authz/apikey RPCs.
+    Auth(AuthCommand),
+}
+
+pub(crate) enum AuthCommand {
+    PrincipalList {
+        tenant_id: String,
+    },
+    IdentityLink {
+        user_id: String,
+        provider_id: String,
+        subject: String,
+    },
+    SessionRevoke {
+        session_id: String,
+        principal_id: String,
+        all_for_principal: bool,
+    },
+    ApiKeyCreate {
+        owner_id: String,
+        name: String,
+        scopes: Vec<String>,
+    },
+    RoleBind {
+        user_id: String,
+        role_id: String,
+        domain: String,
+        assigned_by: String,
+    },
+    RelationPut {
+        subject: String,
+        relation: String,
+        object: String,
+        tenant: String,
+        project: String,
+    },
+    PolicyPut {
+        subject: String,
+        role: String,
+        action: String,
+        resource: String,
+        effect: String,
+        tenant: String,
+        project: String,
+    },
+    PolicyLint,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -108,6 +157,74 @@ impl DevAction {
     }
 }
 
+/// Parse the `auth …` subcommand grammar.
+///
+/// Returns the parsed [`AuthCommand`] together with the number of leading
+/// positional tokens consumed (always 3: `auth <noun> <verb>`), so the caller
+/// can advance its `offset` exactly as the inline match used to. Returns `None`
+/// for any unrecognized `auth …` shape, letting the caller fall through to the
+/// default command.
+fn parse_auth_subcommand(args: &[String]) -> Option<(AuthCommand, usize)> {
+    let has_flag = |flag: &str| -> bool { args.iter().any(|a| a == flag) };
+    let flag_value = |flag: &str| -> Option<String> {
+        args.windows(2).find(|w| w[0] == flag).map(|w| w[1].clone())
+    };
+    let flag_values = |flag: &str| -> Vec<String> {
+        args.windows(2)
+            .filter(|w| w[0] == flag)
+            .map(|w| w[1].clone())
+            .collect()
+    };
+
+    let noun = args.get(1).map(|value| value.as_str());
+    let verb = args.get(2).map(|value| value.as_str());
+    let command = match (noun, verb) {
+        (Some("principal"), Some("list")) => AuthCommand::PrincipalList {
+            tenant_id: flag_value("--tenant").unwrap_or_default(),
+        },
+        (Some("identity"), Some("link")) => AuthCommand::IdentityLink {
+            user_id: flag_value("--user").unwrap_or_default(),
+            provider_id: flag_value("--provider").unwrap_or_default(),
+            subject: flag_value("--subject").unwrap_or_default(),
+        },
+        (Some("session"), Some("revoke")) => AuthCommand::SessionRevoke {
+            session_id: flag_value("--session").unwrap_or_default(),
+            principal_id: flag_value("--principal").unwrap_or_default(),
+            all_for_principal: has_flag("--all-for-principal"),
+        },
+        (Some("api-key"), Some("create")) => AuthCommand::ApiKeyCreate {
+            owner_id: flag_value("--owner").unwrap_or_default(),
+            name: flag_value("--name").unwrap_or_default(),
+            scopes: flag_values("--scope"),
+        },
+        (Some("role"), Some("bind")) => AuthCommand::RoleBind {
+            user_id: flag_value("--user").unwrap_or_default(),
+            role_id: flag_value("--role").unwrap_or_default(),
+            domain: flag_value("--domain").unwrap_or_default(),
+            assigned_by: flag_value("--by").unwrap_or_default(),
+        },
+        (Some("relation"), Some("put")) => AuthCommand::RelationPut {
+            subject: flag_value("--subject").unwrap_or_default(),
+            relation: flag_value("--relation").unwrap_or_default(),
+            object: flag_value("--object").unwrap_or_default(),
+            tenant: flag_value("--tenant").unwrap_or_default(),
+            project: flag_value("--project").unwrap_or_default(),
+        },
+        (Some("policy"), Some("put")) => AuthCommand::PolicyPut {
+            subject: flag_value("--subject").unwrap_or_default(),
+            role: flag_value("--role").unwrap_or_default(),
+            action: flag_value("--action").unwrap_or_default(),
+            resource: flag_value("--resource").unwrap_or_default(),
+            effect: flag_value("--effect").unwrap_or_else(|| "ALLOW".to_string()),
+            tenant: flag_value("--tenant").unwrap_or_default(),
+            project: flag_value("--project").unwrap_or_default(),
+        },
+        (Some("policy"), Some("lint")) => AuthCommand::PolicyLint,
+        _ => return None,
+    };
+    Some((command, 3))
+}
+
 pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
     let mut offset = 0usize;
 
@@ -115,6 +232,12 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
     let has_flag = |flag: &str| -> bool { args.iter().any(|a| a == flag) };
     let flag_value = |flag: &str| -> Option<String> {
         args.windows(2).find(|w| w[0] == flag).map(|w| w[1].clone())
+    };
+    let flag_values = |flag: &str| -> Vec<String> {
+        args.windows(2)
+            .filter(|w| w[0] == flag)
+            .map(|w| w[1].clone())
+            .collect()
     };
     let doctor_output_mode = if has_flag("--human") {
         DoctorOutputMode::Human
@@ -208,6 +331,15 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                 backend: flag_value("--backend"),
             }
         }
+        // The 8-variant `auth …` subcommand grammar lives in
+        // `parse_auth_subcommand`. The guard ensures an unrecognized `auth …`
+        // shape falls through to `_ => Command::Catalog` exactly as before.
+        Some("auth") if parse_auth_subcommand(args).is_some() => {
+            let (auth_command, consumed) =
+                parse_auth_subcommand(args).expect("guard guarantees Some");
+            offset = consumed;
+            Command::Auth(auth_command)
+        }
         Some("serve") => {
             offset = 1;
             Command::Serve
@@ -277,7 +409,27 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
             if index > offset
                 && matches!(
                     args[index - 1].as_str(),
-                    "--prior" | "--backend" | "--config"
+                    "--prior"
+                        | "--backend"
+                        | "--config"
+                        | "--tenant"
+                        | "--project"
+                        | "--user"
+                        | "--provider"
+                        | "--subject"
+                        | "--session"
+                        | "--principal"
+                        | "--owner"
+                        | "--name"
+                        | "--scope"
+                        | "--role"
+                        | "--domain"
+                        | "--by"
+                        | "--relation"
+                        | "--object"
+                        | "--action"
+                        | "--resource"
+                        | "--effect"
                 )
             {
                 return None;
@@ -289,8 +441,27 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                     | "--probe"
                     | "--force-bootstrap"
                     | "--yes"
+                    | "--all-for-principal"
                     | "--prior"
                     | "--backend"
+                    | "--tenant"
+                    | "--project"
+                    | "--user"
+                    | "--provider"
+                    | "--subject"
+                    | "--session"
+                    | "--principal"
+                    | "--owner"
+                    | "--name"
+                    | "--scope"
+                    | "--role"
+                    | "--domain"
+                    | "--by"
+                    | "--relation"
+                    | "--object"
+                    | "--action"
+                    | "--resource"
+                    | "--effect"
                     | "--config"
             ) {
                 None
@@ -314,7 +485,8 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
     let serve_addr = positional_args
         .get(2)
         .cloned()
+        .or_else(|| env::var("UDB_GRPC_BIND_ADDR").ok())
         .or_else(|| env::var("UDB_GRPC_ADDR").ok())
-        .unwrap_or_else(|| "0.0.0.0:50051".to_string());
+        .unwrap_or_else(|| DEFAULT_GRPC_BIND_ADDR.to_string());
     (command, proto_root, namespace, serve_addr)
 }

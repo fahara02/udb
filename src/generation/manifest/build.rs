@@ -25,6 +25,57 @@ pub(crate) fn migrate_v2_to_v3(manifest: &mut CatalogManifest) {
     }
 }
 
+fn validate_rls_expression(value: &str) -> Result<(), &'static str> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Ok(());
+    }
+    if trimmed.contains('\0') {
+        return Err("contains a NUL byte");
+    }
+    if trimmed.contains("$$")
+        || trimmed.contains(';')
+        || trimmed.contains("--")
+        || trimmed.contains("/*")
+        || trimmed.contains("*/")
+    {
+        return Err("contains SQL block/comment/statement separator tokens");
+    }
+    let mut single_quote_open = false;
+    let mut double_quote_open = false;
+    let mut paren_depth = 0i32;
+    let mut chars = trimmed.chars().peekable();
+    while let Some(ch) = chars.next() {
+        match ch {
+            '\'' if !double_quote_open => {
+                if single_quote_open && matches!(chars.peek(), Some('\'')) {
+                    chars.next();
+                } else {
+                    single_quote_open = !single_quote_open;
+                }
+            }
+            '"' if !single_quote_open => {
+                double_quote_open = !double_quote_open;
+            }
+            '(' if !single_quote_open && !double_quote_open => paren_depth += 1,
+            ')' if !single_quote_open && !double_quote_open => {
+                paren_depth -= 1;
+                if paren_depth < 0 {
+                    return Err("has unbalanced parentheses");
+                }
+            }
+            _ => {}
+        }
+    }
+    if single_quote_open || double_quote_open {
+        return Err("has an unterminated quoted string or identifier");
+    }
+    if paren_depth != 0 {
+        return Err("has unbalanced parentheses");
+    }
+    Ok(())
+}
+
 pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
     let mut columns: Vec<_> = schema.columns.iter().map(column_from_proto).collect();
     columns.sort_by_key(|col| col.field_number);
@@ -56,6 +107,7 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
     foreign_keys.sort_by_key(fk_key);
     foreign_keys.dedup_by(|a, b| fk_key(a) == fk_key(b));
 
+    let mut warnings = Vec::new();
     let mut checks: Vec<_> = columns
         .iter()
         .filter(|col| !col.check_constraint.trim().is_empty())
@@ -69,17 +121,68 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
             let mut values = column.enum_values.clone();
             values.sort();
             values.dedup();
+            // Same guard as render_enum_types (GAP 31): drop any value that
+            // could break out of the SQL literal or a surrounding DO $$…$$
+            // block (quote, backslash, dollar, null, newline, over-length).
+            // The bare `replace('\'', "''")` here only handled single quotes.
+            let literals = values
+                .iter()
+                .filter(
+                    |value| match crate::generation::sql::validate_enum_value(value) {
+                        Ok(()) => true,
+                        Err(reason) => {
+                            warnings.push(format!(
+                                "{}.{} enum value '{}' omitted from generated CHECK: {}",
+                                schema.table_name, column.column_name, value, reason
+                            ));
+                            tracing::warn!(
+                                table = %schema.table_name,
+                                column = %column.column_name,
+                                value = %value,
+                                reason = %reason,
+                                "skipping unsafe enum value in CHECK constraint generation"
+                            );
+                            false
+                        }
+                    },
+                )
+                .map(|value| format!("'{}'", value.replace('\'', "''")))
+                .collect::<Vec<_>>();
+            // Only emit the CHECK when at least one safe value remains;
+            // an empty `IN ()` is invalid SQL.
+            if !literals.is_empty() {
+                checks.push(ManifestCheck {
+                    name: format!("chk_{}_{}_enum", schema.table_name, column.column_name),
+                    expression: format!("{} IN ({})", column.column_name, literals.join(",")),
+                });
+            }
+        }
+    }
+    // oneof XOR enforcement: each member of a proto `oneof` maps to a nullable
+    // column, so emit one CHECK per group asserting at most one member is set.
+    // Flows through bootstrap (CREATE TABLE constraint), delta (AddCheck), and
+    // the checksum via the manifest, using the existing check machinery.
+    {
+        let mut groups: std::collections::BTreeMap<String, Vec<String>> =
+            std::collections::BTreeMap::new();
+        for column in &columns {
+            let group = column.oneof_group.trim();
+            if !group.is_empty() {
+                groups
+                    .entry(group.to_string())
+                    .or_default()
+                    .push(column.column_name.clone());
+            }
+        }
+        for (group, mut member_cols) in groups {
+            // A single-member oneof has no XOR to enforce.
+            if member_cols.len() < 2 {
+                continue;
+            }
+            member_cols.sort();
             checks.push(ManifestCheck {
-                name: format!("chk_{}_{}_enum", schema.table_name, column.column_name),
-                expression: format!(
-                    "{} IN ({})",
-                    column.column_name,
-                    values
-                        .iter()
-                        .map(|value| format!("'{}'", value.replace('\'', "''")))
-                        .collect::<Vec<_>>()
-                        .join(",")
-                ),
+                name: format!("chk_{}_{}_oneof", schema.table_name, group),
+                expression: format!("num_nonnulls({}) <= 1", member_cols.join(", ")),
             });
         }
     }
@@ -88,17 +191,34 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
     let mut rls_policies = schema
         .rls_policies
         .iter()
-        .map(|policy| ManifestPolicy {
-            name: policy.name.trim().to_string(),
-            command: normalize_policy_command(&policy.command),
-            using_expression: policy.using_expression.trim().to_string(),
-            with_check: policy.with_check.trim().to_string(),
-            permissive: policy.permissive,
+        .map(|policy| {
+            let mut using_expression = policy.using_expression.trim().to_string();
+            let mut with_check = policy.with_check.trim().to_string();
+            if let Err(reason) = validate_rls_expression(&using_expression) {
+                warnings.push(format!(
+                    "{} RLS policy '{}' USING expression omitted: {}",
+                    schema.table_name, policy.name, reason
+                ));
+                using_expression.clear();
+            }
+            if let Err(reason) = validate_rls_expression(&with_check) {
+                warnings.push(format!(
+                    "{} RLS policy '{}' WITH CHECK expression omitted: {}",
+                    schema.table_name, policy.name, reason
+                ));
+                with_check.clear();
+            }
+            ManifestPolicy {
+                name: normalize_ident(&policy.name),
+                command: normalize_policy_command(&policy.command),
+                using_expression,
+                with_check,
+                permissive: policy.permissive,
+            }
         })
         .collect::<Vec<_>>();
     rls_policies.sort_by(|a, b| a.name.cmp(&b.name));
 
-    let mut warnings = Vec::new();
     warnings.extend(validate_table_shape(
         &schema.schema_name,
         &schema.table_name,
@@ -346,14 +466,14 @@ pub(crate) fn build_manifest_projections(
             instance: String::new(),
             resource_name: format!("{}.{}", table.schema, table.table),
             read_policy: if table.replica_hint.eq_ignore_ascii_case("primary") {
-                "primary".to_string()
+                POLICY_PRIMARY.to_string()
             } else {
-                "replica".to_string()
+                POLICY_REPLICA.to_string()
             },
-            write_policy: "primary".to_string(),
-            fanout_policy: "primary_only".to_string(),
+            write_policy: POLICY_PRIMARY.to_string(),
+            fanout_policy: POLICY_PRIMARY_ONLY.to_string(),
             consistency: ManifestConsistency {
-                model: "strong".to_string(),
+                model: POLICY_STRONG.to_string(),
                 read_your_writes: true,
                 max_replica_lag_ms: 0,
                 eventual_allowed: false,
@@ -377,12 +497,12 @@ pub(crate) fn build_manifest_projections(
                 resource_name: store.resource_name.clone(),
                 read_policy: default_read_policy(&projection_kind),
                 write_policy: store_option(store, "write_policy")
-                    .unwrap_or_else(|| "projection".to_string()),
+                    .unwrap_or_else(|| POLICY_PROJECTION.to_string()),
                 fanout_policy: store_option(store, "fanout_policy")
-                    .unwrap_or_else(|| "async_projection".to_string()),
+                    .unwrap_or_else(|| POLICY_ASYNC_PROJECTION.to_string()),
                 consistency: ManifestConsistency {
                     model: store_option(store, "consistency")
-                        .unwrap_or_else(|| "eventual".to_string()),
+                        .unwrap_or_else(|| POLICY_EVENTUAL.to_string()),
                     read_your_writes: store_option(store, "read_your_writes")
                         .map(|value| matches!(value.as_str(), "1" | "true" | "yes" | "on"))
                         .unwrap_or(false),
@@ -415,14 +535,14 @@ pub(crate) fn projection_kind_for_store(store: &ManifestStore) -> String {
 
 pub(crate) fn default_read_policy(projection_kind: &str) -> String {
     match projection_kind {
-        "relational" => "replica",
-        "cache" => "cache_first",
+        "relational" => POLICY_REPLICA,
+        "cache" => POLICY_CACHE_FIRST,
         "vector" => "vector",
         "document" => "document",
         "graph" => "graph",
         "columnar" => "analytics",
         "object" => "object",
-        _ => "projection",
+        _ => POLICY_PROJECTION,
     }
     .to_string()
 }
@@ -460,12 +580,32 @@ pub(crate) fn audit_column(
 pub(crate) fn column_from_proto(column: &ProtoColumn) -> ManifestColumn {
     let mut sql_type = normalize_sql_type(&column.sql_type);
     // Only append [] for standard SQL arrays. Skip when:
-    //  (a) the type already ends with []
-    //  (b) an explicit sql_type with dimension/modifier is provided (e.g. vector(384),
-    //      geometry, etc.) — these are custom types where the proto `repeated` keyword
-    //      is used to represent multi-valued data but the SQL column itself is a single
-    //      typed value, not a PG array.
-    if column.is_array && !sql_type.ends_with("[]") && !sql_type.contains('(') {
+    //  (a) the type already ends with `]` (e.g. `text[]`, `int[][]`)
+    //  (b) the base type is a custom multi-valued-but-scalar type (vector,
+    //      geometry, …) where the proto `repeated` keyword represents the
+    //      multi-valued payload but the SQL column itself is a single value.
+    //
+    // A previous heuristic treated *any* `(` modifier as case (b), which
+    // wrongly dropped the array suffix for standard parametric types — e.g.
+    // `repeated numeric(10,2)` compiled to a scalar `numeric(10,2)` instead
+    // of `numeric(10,2)[]`. Match only the known scalar custom types by their
+    // base (the token before any `(`).
+    const SCALAR_REPEATED_BASES: &[&str] = &[
+        "vector",
+        "halfvec",
+        "sparsevec",
+        "geometry",
+        "geography",
+        "tsvector",
+    ];
+    let base = sql_type
+        .split('(')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase();
+    let is_scalar_custom = SCALAR_REPEATED_BASES.contains(&base.as_str());
+    if column.is_array && !sql_type.ends_with(']') && !is_scalar_custom {
         sql_type.push_str("[]");
     }
     ManifestColumn {
@@ -512,6 +652,8 @@ pub(crate) fn column_from_proto(column: &ProtoColumn) -> ManifestColumn {
         generated: column.generated,
         generated_expr: column.generated_expr.trim().to_string(),
         is_identity: column.is_identity,
+        is_tenant_column: column.is_tenant,
+        is_project_column: column.is_project,
     }
 }
 
@@ -875,7 +1017,9 @@ pub(crate) fn compute_schema_order(tables: &[ManifestTable]) -> Vec<String> {
                 .or_default()
                 .insert(fk.ref_schema.clone());
             deps.entry(fk.ref_schema.clone()).or_default();
-            min_order.entry(fk.ref_schema.clone()).or_insert(9999);
+            min_order
+                .entry(fk.ref_schema.clone())
+                .or_insert(DEFAULT_MIGRATION_ORDER);
         }
     }
 
@@ -894,34 +1038,41 @@ pub(crate) fn compute_schema_order(tables: &[ManifestTable]) -> Vec<String> {
         }
     }
 
-    let mut ready = indegree
+    let ready_vec = indegree
         .iter()
         .filter(|(_, count)| **count == 0)
         .map(|(schema, _)| schema.clone())
         .collect::<Vec<_>>();
+    let mut ready = ready_vec;
     sort_schemas(&mut ready, &min_order);
+    let mut ready = std::collections::VecDeque::from(ready);
 
     let mut out = Vec::new();
-    while let Some(schema) = ready.first().cloned() {
-        ready.remove(0);
+    let mut out_seen = BTreeSet::new();
+    while let Some(schema) = ready.pop_front() {
+        out_seen.insert(schema.clone());
         out.push(schema.clone());
         if let Some(children) = dependents.get(&schema) {
+            let mut newly_ready = Vec::new();
             for child in children {
                 if let Some(count) = indegree.get_mut(child) {
                     *count -= 1;
                     if *count == 0 {
-                        ready.push(child.clone());
+                        newly_ready.push(child.clone());
                     }
                 }
             }
-            sort_schemas(&mut ready, &min_order);
+            let mut merged = ready.into_iter().collect::<Vec<_>>();
+            merged.extend(newly_ready);
+            sort_schemas(&mut merged, &min_order);
+            ready = std::collections::VecDeque::from(merged);
         }
     }
 
     if out.len() < indegree.len() {
         let mut remaining = indegree
             .keys()
-            .filter(|schema| !out.contains(schema))
+            .filter(|schema| !out_seen.contains(*schema))
             .cloned()
             .collect::<Vec<_>>();
         sort_schemas(&mut remaining, &min_order);
@@ -956,4 +1107,79 @@ pub(crate) fn validate_manifest_tables(tables: &[ManifestTable]) -> Vec<String> 
     }
     errors.extend(detect_fk_cycles(tables));
     errors
+}
+
+#[cfg(test)]
+mod oneof_check_tests {
+    use super::*;
+    use crate::ast::{ProtoColumn, ProtoSchema};
+
+    fn col(name: &str, field_number: i32, oneof: &str) -> ProtoColumn {
+        ProtoColumn {
+            field_name: name.to_string(),
+            column_name: name.to_string(),
+            proto_type: "string".to_string(),
+            sql_type: "TEXT".to_string(),
+            field_number,
+            oneof_group: oneof.to_string(),
+            ..ProtoColumn::default()
+        }
+    }
+
+    #[test]
+    fn oneof_group_emits_xor_check() {
+        let mut schema = ProtoSchema::new("Payment");
+        schema.table_name = "payments".to_string();
+        schema.schema_name = "billing".to_string();
+        schema.is_table = true;
+        schema.columns = vec![
+            col("id", 1, ""),
+            col("card", 2, "method"),
+            col("bank", 3, "method"),
+            col("wallet", 4, "method"),
+            col("solo", 5, "single"), // single-member oneof → no XOR check
+        ];
+
+        let table = table_from_schema(&schema);
+        let oneof: Vec<&ManifestCheck> = table
+            .checks
+            .iter()
+            .filter(|c| c.name.ends_with("_oneof"))
+            .collect();
+
+        assert_eq!(oneof.len(), 1, "only the multi-member group gets a check");
+        assert_eq!(oneof[0].name, "chk_payments_method_oneof");
+        // Member columns are sorted for a deterministic expression.
+        assert_eq!(oneof[0].expression, "num_nonnulls(bank, card, wallet) <= 1");
+    }
+
+    #[test]
+    fn two_oneof_groups_emit_two_checks() {
+        let mut schema = ProtoSchema::new("Multi");
+        schema.table_name = "multi".to_string();
+        schema.columns = vec![
+            col("a1", 1, "alpha"),
+            col("a2", 2, "alpha"),
+            col("b1", 3, "beta"),
+            col("b2", 4, "beta"),
+        ];
+        let table = table_from_schema(&schema);
+        let mut names: Vec<&str> = table
+            .checks
+            .iter()
+            .filter(|c| c.name.ends_with("_oneof"))
+            .map(|c| c.name.as_str())
+            .collect();
+        names.sort();
+        assert_eq!(names, vec!["chk_multi_alpha_oneof", "chk_multi_beta_oneof"]);
+    }
+
+    #[test]
+    fn no_oneof_emits_no_xor_check() {
+        let mut schema = ProtoSchema::new("Plain");
+        schema.table_name = "plain".to_string();
+        schema.columns = vec![col("id", 1, ""), col("name", 2, "")];
+        let table = table_from_schema(&schema);
+        assert!(table.checks.iter().all(|c| !c.name.ends_with("_oneof")));
+    }
 }

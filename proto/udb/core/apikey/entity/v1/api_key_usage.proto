@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package udb.core.apikey.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Apikey.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/apikey/entity/v1;apikeyv1";
+option java_package = "com.udb.core.apikey.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Apikey\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// ApiKeyUsage — Lightweight per-request usage log (partitioned by day).
+// Used for rate-limit enforcement, abuse detection, and billing/audit.
+// ---------------------------------------------------------------------------
+message ApiKeyUsage {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "api_key_usages"
+    schema_name: "udb_authn"
+    migration_order: 5
+    is_table: true
+    comment: "Per-request API key usage log for rate limiting and audit"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: true // corrected: api_key_usages scoped to key owner
+    partition_strategy: PARTITION_STRATEGY_RANGE_MONTH
+    partition_column: "requested_at"
+    retention_days: 365 // 1 year — API key usage for rate-limit audit
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+  };
+
+  string usage_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "usage_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string key_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "key_id" sql_type: "UUID" not_null: true comment: "FK to udb_authn.api_keys.key_id" foreign_key: { references_table: "api_keys" references_schema: "udb_authn" references_column: "key_id" on_delete: REFERENTIAL_ACTION_CASCADE constraint_name: "fk_api_key_usages_key_id" } index: { index_name: "idx_aku_key_id_day" index_type: "BTREE" columns: "requested_at" } }];
+
+  string endpoint = 3 [(udb.core.common.v1.pg_column) = { column_name: "endpoint" sql_type: "VARCHAR(200)" not_null: true comment: "gRPC method or HTTP path" }];
+  string ip_address = 4 [(udb.core.common.v1.pg_column) = { column_name: "ip_address" sql_type: "INET" }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.data_purpose) = "Rate limiting and abuse detection"];
+  int32 http_status = 5 [(udb.core.common.v1.pg_column) = { column_name: "http_status" sql_type: "SMALLINT" }];
+  int32 latency_ms = 6 [(udb.core.common.v1.pg_column) = { column_name: "latency_ms" sql_type: "INTEGER" }];
+  bool rate_limited = 7 [(udb.core.common.v1.pg_column) = { column_name: "rate_limited" sql_type: "BOOLEAN" not_null: true default_value: "FALSE" }];
+
+  google.protobuf.Timestamp requested_at = 8 [(udb.core.common.v1.pg_column) = { column_name: "requested_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  string tenant_id = 9 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_apikeyusage_tenant" index_type: "BTREE" } }];
+}

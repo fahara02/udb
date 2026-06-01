@@ -100,11 +100,7 @@ pub(crate) fn render_add_fk(
     fk: &ManifestForeignKey,
     table_is_partitioned: bool,
 ) -> String {
-    let name = if fk.name.trim().is_empty() {
-        format!("fk_{}_{}", table, fk.columns.join("_"))
-    } else {
-        fk.name.clone()
-    };
+    let name = derive_fk_name(table, fk);
     let mut inner = format!(
         "ALTER TABLE {}.{}\n    ADD CONSTRAINT {}\n    FOREIGN KEY ({}) REFERENCES {}.{} ({})",
         qi(schema),
@@ -249,31 +245,45 @@ pub(crate) fn find_column<'a>(table: &'a ManifestTable, name: &str) -> Option<&'
         .find(|column| column.column_name == name)
 }
 
+/// Derive the auto-generated name for an index, honoring an explicit `name`.
+/// Single source of truth shared by the finder (`find_index`) and the renderer
+/// (`render_index_impl`) so the two cannot drift apart.
+pub(crate) fn derive_index_name(table: &ManifestTable, index: &ManifestIndex) -> String {
+    if index.name.trim().is_empty() {
+        format!(
+            "idx_{}_{}_{}",
+            table.schema,
+            table.table,
+            index.columns.join("_")
+        )
+    } else {
+        index.name.clone()
+    }
+}
+
+/// Derive the auto-generated name for a foreign key, honoring an explicit `name`.
+/// Single source of truth shared by the finder (`find_fk`) and the renderer
+/// (`render_add_fk`).
+pub(crate) fn derive_fk_name(table: &str, fk: &ManifestForeignKey) -> String {
+    if fk.name.trim().is_empty() {
+        format!("fk_{}_{}", table, fk.columns.join("_"))
+    } else {
+        fk.name.clone()
+    }
+}
+
 pub(crate) fn find_index<'a>(table: &'a ManifestTable, name: &str) -> Option<&'a ManifestIndex> {
-    table.indexes.iter().find(|index| {
-        let rendered = if index.name.trim().is_empty() {
-            format!(
-                "idx_{}_{}_{}",
-                table.schema,
-                table.table,
-                index.columns.join("_")
-            )
-        } else {
-            index.name.clone()
-        };
-        rendered == name
-    })
+    table
+        .indexes
+        .iter()
+        .find(|index| derive_index_name(table, index) == name)
 }
 
 pub(crate) fn find_fk<'a>(table: &'a ManifestTable, name: &str) -> Option<&'a ManifestForeignKey> {
-    table.foreign_keys.iter().find(|fk| {
-        let rendered = if fk.name.trim().is_empty() {
-            format!("fk_{}_{}", table.table, fk.columns.join("_"))
-        } else {
-            fk.name.clone()
-        };
-        rendered == name
-    })
+    table
+        .foreign_keys
+        .iter()
+        .find(|fk| derive_fk_name(&table.table, fk) == name)
 }
 
 pub(crate) fn find_check<'a>(table: &'a ManifestTable, name: &str) -> Option<&'a ManifestCheck> {
@@ -324,6 +334,15 @@ pub(crate) fn find_trigger<'a>(
 /// `in_transaction` controls whether CONCURRENTLY can be emitted: inside a
 /// `BEGIN/COMMIT` block PostgreSQL forbids CONCURRENTLY, so we downgrade
 /// automatically to a plain (locking) index creation.
+/// Render an index DDL statement for a **standalone, non-transactional**
+/// artifact (`in_transaction=false`), so `CONCURRENTLY` is preserved for
+/// concurrent non-unique indexes. Used by the bootstrap/delta concurrent-index
+/// artifacts (#120); the content MUST be the single statement (no surrounding
+/// `SET`/`BEGIN`) so the applier runs it in autocommit.
+pub(crate) fn render_index_standalone(table: &ManifestTable, index: &ManifestIndex) -> String {
+    render_index_impl(table, index, /*in_transaction=*/ false)
+}
+
 #[cfg(test)]
 pub(crate) fn render_index(table: &ManifestTable, index: &ManifestIndex) -> String {
     render_index_impl(table, index, /*in_transaction=*/ false)
@@ -349,16 +368,7 @@ pub(crate) fn render_index_impl(
     } else {
         ""
     };
-    let name = if index.name.trim().is_empty() {
-        format!(
-            "idx_{}_{}_{}",
-            table.schema,
-            table.table,
-            index.columns.join("_")
-        )
-    } else {
-        index.name.clone()
-    };
+    let name = derive_index_name(table, index);
     let raw_method = if index.method.trim().is_empty() {
         "BTREE".to_string()
     } else {
@@ -636,9 +646,14 @@ pub(crate) fn render_tsvector_indexes(table: &ManifestTable) -> String {
 // ── GAP 3: Partition child setup ──────────────────────────────────────────────
 
 /// Emit pg_partman `create_parent()` call and optional DEFAULT partition.
-/// Only runs when the table declares a non-empty `partition_interval`.
+/// A table can provide an explicit `partition_interval`; otherwise the UDB
+/// partition strategy enum is the source of truth (`RANGE_MONTH` -> monthly).
 pub(crate) fn render_partition_setup(table: &ManifestTable) -> String {
-    if !is_partitioned(table) || table.partition_interval.trim().is_empty() {
+    if !is_partitioned(table) {
+        return String::new();
+    }
+    let interval = partition_interval_for_table(table);
+    if interval.trim().is_empty() {
         return String::new();
     }
     let premake = if table.partition_premake > 0 {
@@ -681,18 +696,47 @@ pub(crate) fn render_partition_setup(table: &ManifestTable) -> String {
          \t\tp_control := _control_col,\n\
          \t\tp_interval := {interval},\n\
          \t\tp_premake := {premake},\n\
-         \t\tp_start_partition := to_char(now(), 'YYYY-MM-DD')\n\
+         \t\tp_start_partition := to_char(now(), 'YYYY-MM-DD'),\n\
+         \t\tp_date_trunc_interval := {date_trunc_interval}\n\
          \t);\n\
          END IF;\n\
          END$$;\n\n",
         parent_table = ql(&format!("{}.{}", table.schema, table.table)),
         part_col = ql(&table.partition_column),
-        interval = ql(&normalize_partition_interval(&table.partition_interval)),
+        interval = ql(&normalize_partition_interval(&interval)),
         premake = premake,
+        date_trunc_interval = partition_date_trunc_interval(&interval)
+            .map(|value| ql(&value))
+            .unwrap_or_else(|| "NULL".to_string()),
     ));
-    // NOTE: pg_partman 5.x automatically creates the DEFAULT partition
-    // (named "<table>_default") as part of create_parent(). Adding an
-    // explicit CREATE TABLE … DEFAULT here would conflict. Skip it.
+
+    // DEFAULT partition: catches rows whose partition key falls outside every
+    // premade child range (without it such an INSERT errors). pg_partman does
+    // not create this automatically, so emit it when the table opts in.
+    let parent_ident = format!("{}.{}", qi(&table.schema), qi(&table.table));
+    if table.partition_default {
+        let default_ident = format!(
+            "{}.{}",
+            qi(&table.schema),
+            qi(&format!("{}_default", table.table))
+        );
+        out.push_str(&format!(
+            "CREATE TABLE IF NOT EXISTS {default_ident} PARTITION OF {parent_ident} DEFAULT;\n\n"
+        ));
+    }
+
+    // Retention: configure pg_partman to drop child partitions older than the
+    // declared window. retention_keep_table=false detaches AND drops the child
+    // (rather than leaving an orphaned table). run_maintenance enforces it.
+    if table.retention_days > 0 {
+        out.push_str(&format!(
+            "UPDATE partman.part_config\n\
+             \tSET retention = {retention}, retention_keep_table = false\n\
+             \tWHERE parent_table = {parent_lit};\n\n",
+            retention = ql(&format!("{} days", table.retention_days)),
+            parent_lit = ql(&format!("{}.{}", table.schema, table.table)),
+        ));
+    }
     out
 }
 
@@ -713,6 +757,37 @@ pub(crate) fn normalize_partition_interval(interval: &str) -> String {
         "HOURLY" | "HOUR" => "1 hour".to_string(),
         "YEARLY" | "YEAR" => "1 year".to_string(),
         _ => interval.to_string(), // already a valid PG interval string
+    }
+}
+
+fn partition_interval_for_table(table: &ManifestTable) -> String {
+    let explicit = table.partition_interval.trim();
+    if !explicit.is_empty() {
+        return explicit.to_string();
+    }
+    match table
+        .partition_strategy
+        .trim()
+        .to_ascii_uppercase()
+        .as_str()
+    {
+        value if value.contains("RANGE_YEAR") => "YEARLY".to_string(),
+        value if value.contains("RANGE_MONTH") => "MONTHLY".to_string(),
+        value if value.contains("RANGE_WEEK") => "WEEKLY".to_string(),
+        value if value.contains("RANGE_DAY") => "DAILY".to_string(),
+        value if value.contains("RANGE_HOUR") => "HOURLY".to_string(),
+        _ => String::new(),
+    }
+}
+
+fn partition_date_trunc_interval(interval: &str) -> Option<String> {
+    match interval.trim().to_ascii_uppercase().as_str() {
+        "YEARLY" | "YEAR" | "1 YEAR" => Some("year".to_string()),
+        "MONTHLY" | "MONTH" | "1 MONTH" => Some("month".to_string()),
+        "WEEKLY" | "WEEK" | "1 WEEK" => Some("week".to_string()),
+        "DAILY" | "DAY" | "1 DAY" => Some("day".to_string()),
+        "HOURLY" | "HOUR" | "1 HOUR" => Some("hour".to_string()),
+        _ => None,
     }
 }
 

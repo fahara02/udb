@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
+use std::sync::{Mutex, OnceLock};
 
+use crate::backend::BackendKind;
 use crate::generation::sql::qi;
 use crate::generation::{CatalogManifest, ManifestTable};
 
@@ -46,6 +48,16 @@ pub struct RequestContext {
     /// JSON-encoded ReadFence supplied by SDKs/readers for read-your-writes.
     #[serde(default)]
     pub read_fence_json: String,
+    /// mTLS/JWT service identity of the caller (`x-service-identity` /
+    /// cert SAN). Emitted to the backend as `app.current_service_identity`
+    /// so RLS policies / audit triggers can attribute the connection.
+    #[serde(default)]
+    pub service_identity: String,
+    /// Stable id of the authorization decision that admitted this request.
+    /// Emitted to the backend as `app.current_decision_id` so row-level
+    /// audit records can be joined back to the broker's decision audit.
+    #[serde(default)]
+    pub decision_id: String,
 }
 
 impl RequestContext {
@@ -346,6 +358,11 @@ pub fn build_select_query_plan(
     }
 
     let allowed = allowed_columns(table);
+    // #117: resolve proto `field_name` aliases to physical `column_name`s before
+    // validation/emission, so a column override (`field_name != column_name`)
+    // doesn't reject a valid request or build SQL against the wrong column.
+    let resolver = column_resolver(table);
+    let filter = normalize_filter_keys(&resolver, &request.filter);
     let selected_columns = if request.fields.is_empty() {
         table
             .columns
@@ -360,7 +377,7 @@ pub fn build_select_query_plan(
         request
             .fields
             .iter()
-            .map(|field| field.to_ascii_lowercase())
+            .map(|field| resolve_column(&resolver, field))
             .inspect(|field| {
                 if !allowed.contains(field) {
                     errors.push(format!("unknown selected field {}", field));
@@ -370,18 +387,20 @@ pub fn build_select_query_plan(
     };
 
     let mut parameter_columns = Vec::new();
+    let backend_kind = effective_sql_backend(&request.context);
     let compiled_filter = compile_filter_predicates(
-        &request.filter,
+        &filter,
         &allowed,
         &mut errors,
         &mut parameter_columns,
         1,
+        &backend_kind,
     );
-    let filter_columns = filter_columns(&request.filter, &allowed, &mut errors);
+    let filter_columns = filter_columns(&filter, &allowed, &mut errors);
     let sort_columns = request
         .sort
         .iter()
-        .map(|sort| sort.field.to_ascii_lowercase())
+        .map(|sort| resolve_column(&resolver, &sort.field))
         .inspect(|field| {
             if !allowed.contains(field) {
                 errors.push(format!("unknown sort field {}", field));
@@ -393,6 +412,15 @@ pub fn build_select_query_plan(
         errors.push(format!(
             "tenant isolation requires filter on {}",
             tenant_column
+        ));
+    }
+    // Project isolation (mirrors tenant): when the table declares a project key,
+    // the read must filter on it so a query cannot span projects.
+    let project_column = project_column(table);
+    if !project_column.is_empty() && !filter_columns.contains(&project_column) {
+        errors.push(format!(
+            "project isolation requires filter on {}",
+            project_column
         ));
     }
 
@@ -419,7 +447,7 @@ pub fn build_select_query_plan(
                 .map(|sort| {
                     format!(
                         "{} {}",
-                        qi(&sort.field.to_ascii_lowercase()),
+                        qi(&resolve_column(&resolver, &sort.field)),
                         if sort.descending { "DESC" } else { "ASC" }
                     )
                 })
@@ -464,6 +492,10 @@ pub fn build_upsert_plan(
 
     let mut errors = validate_write_context(&request.context);
     let allowed = allowed_columns(table);
+    // #117: resolve proto `field_name` aliases (record keys, conflict fields) to
+    // physical `column_name`s. Idempotent on already-physical names; the runtime
+    // applies the same `normalize_record_keys` before binding values.
+    let resolver = column_resolver(table);
     let Some(record) = request.record.as_object() else {
         return SqlOperationPlan {
             operation: "upsert".to_string(),
@@ -475,7 +507,7 @@ pub fn build_upsert_plan(
 
     let mut parameter_columns = Vec::new();
     for key in record.keys() {
-        let column = key.to_ascii_lowercase();
+        let column = resolve_column(&resolver, key);
         if !allowed.contains(&column) {
             errors.push(format!("unknown record field {}", key));
         } else if !is_server_owned_column(table, &column) {
@@ -489,10 +521,41 @@ pub fn build_upsert_plan(
     if !tenant.is_empty() && !parameter_columns.contains(&tenant) {
         errors.push(format!("tenant isolation requires record field {}", tenant));
     }
-    if let Some(tenant_value) = record.get(&tenant).and_then(Value::as_str)
+    // Look up the tenant value case-insensitively: `record.get(&tenant)` uses the
+    // lowercase manifest column name, but JSON keys arrive in original case, so a
+    // `{"TenantId": …}` payload would miss the lookup and SKIP this mismatch check
+    // — letting a foreign tenant_id through. Match any key whose lowercase equals
+    // the tenant column.
+    if !tenant.is_empty()
+        && let Some(tenant_value) = record
+            .iter()
+            .find(|(key, _)| resolve_column(&resolver, key) == tenant)
+            .and_then(|(_, value)| value.as_str())
         && tenant_value != request.context.tenant_id
     {
         errors.push("record tenant_id must match RequestContext.tenant_id".to_string());
+    }
+
+    // Project isolation (mirrors tenant). When the request carries a project_id
+    // and the table has a project key, the record must include it and the value
+    // must match the request context — preventing cross-project upserts. Gated on
+    // a non-empty context project_id so single-project deployments are unaffected.
+    let project = project_column(table);
+    if !project.is_empty() && !request.context.project_id.is_empty() {
+        if !parameter_columns.contains(&project) {
+            errors.push(format!(
+                "project isolation requires record field {}",
+                project
+            ));
+        }
+        if let Some(project_value) = record
+            .iter()
+            .find(|(key, _)| resolve_column(&resolver, key) == project)
+            .and_then(|(_, value)| value.as_str())
+            && project_value != request.context.project_id
+        {
+            errors.push("record project_id must match RequestContext.project_id".to_string());
+        }
     }
 
     let conflict_columns = if request.conflict_fields.is_empty() {
@@ -501,7 +564,7 @@ pub fn build_upsert_plan(
         request
             .conflict_fields
             .iter()
-            .map(|field| field.to_ascii_lowercase())
+            .map(|field| resolve_column(&resolver, field))
             .collect::<Vec<_>>()
     };
     if conflict_columns.is_empty() {
@@ -590,18 +653,27 @@ pub fn build_delete_plan(
 
     let mut errors = validate_write_context(&request.context);
     let allowed = allowed_columns(table);
+    // #117: resolve proto `field_name` aliases in the delete filter.
+    let resolver = column_resolver(table);
+    let filter = normalize_filter_keys(&resolver, &request.filter);
     let mut parameter_columns = Vec::new();
+    let backend_kind = effective_sql_backend(&request.context);
     let compiled = compile_filter_predicates(
-        &request.filter,
+        &filter,
         &allowed,
         &mut errors,
         &mut parameter_columns,
         1,
+        &backend_kind,
     );
-    let filter_columns = filter_columns(&request.filter, &allowed, &mut errors);
+    let filter_columns = filter_columns(&filter, &allowed, &mut errors);
     let tenant = tenant_column(table);
     if !tenant.is_empty() && !filter_columns.contains(&tenant) {
         errors.push(format!("tenant isolation requires filter on {}", tenant));
+    }
+    let project = project_column(table);
+    if !project.is_empty() && !filter_columns.contains(&project) {
+        errors.push(format!("project isolation requires filter on {}", project));
     }
     if compiled.sql.is_empty() {
         errors.push("delete requires at least one safe filter predicate".to_string());
@@ -1032,16 +1104,52 @@ pub fn table_for_message<'a>(
     manifest: &'a CatalogManifest,
     message_type: &str,
 ) -> Option<&'a ManifestTable> {
+    static INDEX: OnceLock<Mutex<HashMap<String, HashMap<String, usize>>>> = OnceLock::new();
     let leaf = message_type
         .rsplit('.')
         .next()
         .unwrap_or(message_type)
         .to_ascii_lowercase();
+    let exact = message_type.to_ascii_lowercase();
+    let cache_key = if manifest.checksum_sha256.is_empty() {
+        format!("ptr:{:p}:{}", manifest, manifest.tables.len())
+    } else {
+        manifest.checksum_sha256.clone()
+    };
+    let map = INDEX.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Ok(mut guard) = map.lock() {
+        // Bound the process-global cache: manifest checksums change on every
+        // schema reload, so without a cap this map grows forever. When a new
+        // manifest would exceed the cap, drop the whole cache and rebuild lazily
+        // (rebuilding one table's index is cheap) — #136.
+        const INDEX_CACHE_CAP: usize = 64;
+        if guard.len() >= INDEX_CACHE_CAP && !guard.contains_key(&cache_key) {
+            guard.clear();
+        }
+        let index = guard.entry(cache_key).or_insert_with(|| {
+            let mut built = HashMap::new();
+            for (idx, table) in manifest.tables.iter().enumerate() {
+                if !table.message_name.trim().is_empty() {
+                    built.insert(table.message_name.to_ascii_lowercase(), idx);
+                    if let Some(short) = table.message_name.rsplit('.').next() {
+                        built.entry(short.to_ascii_lowercase()).or_insert(idx);
+                    }
+                }
+                if !table.table.trim().is_empty() {
+                    built.insert(table.table.to_ascii_lowercase(), idx);
+                }
+            }
+            built
+        });
+        if let Some(idx) = index.get(&exact).or_else(|| index.get(&leaf)) {
+            return manifest.tables.get(*idx);
+        }
+    }
     manifest.tables.iter().find(|table| {
         table.message_name.eq_ignore_ascii_case(message_type)
-            || table.message_name.to_ascii_lowercase() == leaf
-            || table.table == message_type
-            || table.table == leaf
+            || table.message_name.eq_ignore_ascii_case(&leaf)
+            || table.table.eq_ignore_ascii_case(message_type)
+            || table.table.eq_ignore_ascii_case(&leaf)
     })
 }
 
@@ -1103,10 +1211,41 @@ fn is_operator(value: &str) -> bool {
 }
 
 fn tenant_column(table: &ManifestTable) -> String {
+    // Prefer the proto-declared tenant designator (`tenant_column: true`); this
+    // is authoritative and not tied to a particular column name. Fall back to
+    // the well-known tenant column names so existing schemas that predate the
+    // explicit annotation keep their isolation enforcement.
     table
         .columns
         .iter()
-        .find(|column| column.column_name == "tenant_id")
+        .find(|column| column.is_tenant_column)
+        .or_else(|| {
+            table.columns.iter().find(|column| {
+                matches!(
+                    column.column_name.as_str(),
+                    "tenant_id" | "org_id" | "institution_id"
+                )
+            })
+        })
+        .map(|column| column.column_name.clone())
+        .unwrap_or_default()
+}
+
+/// Resolve the project-isolation column for a table: the proto-declared
+/// `project_column: true` designator first (authoritative), else the well-known
+/// `project_id` name. Mirrors [`tenant_column`]. Empty when the table has no
+/// project key.
+fn project_column(table: &ManifestTable) -> String {
+    table
+        .columns
+        .iter()
+        .find(|column| column.is_project_column)
+        .or_else(|| {
+            table
+                .columns
+                .iter()
+                .find(|column| column.column_name == "project_id")
+        })
         .map(|column| column.column_name.clone())
         .unwrap_or_default()
 }
@@ -1190,6 +1329,7 @@ fn compile_filter_predicates(
     errors: &mut Vec<String>,
     parameter_columns: &mut Vec<String>,
     start_param: usize,
+    backend_kind: &BackendKind,
 ) -> CompiledFilter {
     match value {
         Value::Object(map) => {
@@ -1214,6 +1354,7 @@ fn compile_filter_predicates(
                         parameter_columns,
                         next_param,
                         joiner,
+                        backend_kind,
                     );
                     next_param = compiled.next_param;
                     if !compiled.sql.is_empty() {
@@ -1233,6 +1374,7 @@ fn compile_filter_predicates(
                     errors,
                     parameter_columns,
                     next_param,
+                    backend_kind,
                 );
                 next_param = compiled.next_param;
                 if !compiled.sql.is_empty() {
@@ -1258,13 +1400,20 @@ fn compile_filter_group(
     parameter_columns: &mut Vec<String>,
     start_param: usize,
     joiner: &str,
+    backend_kind: &BackendKind,
 ) -> CompiledFilter {
     let mut parts = Vec::new();
     let mut next_param = start_param;
     if let Value::Array(items) = value {
         for item in items {
-            let compiled =
-                compile_filter_predicates(item, allowed, errors, parameter_columns, next_param);
+            let compiled = compile_filter_predicates(
+                item,
+                allowed,
+                errors,
+                parameter_columns,
+                next_param,
+                backend_kind,
+            );
             next_param = compiled.next_param;
             if !compiled.sql.is_empty() {
                 parts.push(compiled.sql);
@@ -1285,6 +1434,7 @@ fn compile_column_predicate(
     errors: &mut Vec<String>,
     parameter_columns: &mut Vec<String>,
     start_param: usize,
+    backend_kind: &BackendKind,
 ) -> CompiledFilter {
     if let Value::Object(map) = value {
         let mut parts = Vec::new();
@@ -1314,6 +1464,17 @@ fn compile_column_predicate(
                 next_param += 1;
                 continue;
             }
+            if matches!(sql_op, "@>" | "<@" | "?" | "@@" | "&&")
+                && !matches!(backend_kind, &BackendKind::Postgres)
+            {
+                errors.push(format!(
+                    "filter operator '{}' on column '{}' is PostgreSQL-only and cannot be used with backend '{}'",
+                    sql_op,
+                    column,
+                    backend_kind.as_str()
+                ));
+                continue;
+            }
             // GAP 6: JSONB containment / array overlap — bind value as JSONB/array cast
             if matches!(sql_op, "@>" | "<@") {
                 parameter_columns.push(column.to_string());
@@ -1339,6 +1500,20 @@ fn compile_column_predicate(
                 next_param += 1;
                 continue;
             }
+            // `$overlaps` (`&&`) is the Postgres array-overlap operator: it needs a
+            // matching array cast on the bound parameter, which the planner cannot
+            // synthesize without the column's element type. The generic `col && $N`
+            // fallthrough below would bind text and fail at execution
+            // ("operator does not exist: <type> && text"), so reject it here with a
+            // clear message rather than emitting invalid SQL.
+            if sql_op == "&&" {
+                errors.push(format!(
+                    "$overlaps on column '{}' is not supported (array-overlap requires a typed \
+                     array cast); use $contains/$contained_by (@>/<@) for JSONB columns",
+                    column
+                ));
+                continue;
+            }
             // GAP 29: Guard against leading-wildcard full-table-scans via $like/$ilike.
             // A pattern beginning with '%' or '_' forces a sequential scan on every
             // row; B-tree indexes cannot be used. Reject such patterns at the query
@@ -1346,7 +1521,8 @@ fn compile_column_predicate(
             if matches!(sql_op, "LIKE" | "ILIKE")
                 && let Value::String(pattern) = op_value
             {
-                if pattern.starts_with('%') || pattern.starts_with('_') {
+                let guard_pattern = unescape_like_pattern(pattern);
+                if guard_pattern.starts_with('%') || guard_pattern.starts_with('_') {
                     errors.push(format!(
                         "$like/$ilike on column '{}' starts with a wildcard — \
                          this forces a full sequential scan; use a full-text search \
@@ -1364,7 +1540,16 @@ fn compile_column_predicate(
                 }
             }
             parameter_columns.push(column.to_string());
-            parts.push(format!("{} {} ${}", qi(column), sql_op, next_param));
+            if matches!(sql_op, "LIKE" | "ILIKE") {
+                parts.push(format!(
+                    "{} {} ${} ESCAPE '\\\\'",
+                    qi(column),
+                    sql_op,
+                    next_param
+                ));
+            } else {
+                parts.push(format!("{} {} ${}", qi(column), sql_op, next_param));
+            }
             next_param += 1;
         }
         CompiledFilter {
@@ -1378,6 +1563,28 @@ fn compile_column_predicate(
             next_param: start_param + 1,
         }
     }
+}
+
+fn effective_sql_backend(context: &RequestContext) -> BackendKind {
+    if context.target_backend.trim().is_empty() {
+        return BackendKind::Postgres;
+    }
+    BackendKind::from_store_kind("sql", &context.target_backend).unwrap_or(BackendKind::Postgres)
+}
+
+fn unescape_like_pattern(pattern: &str) -> String {
+    let mut out = String::with_capacity(pattern.len());
+    let mut chars = pattern.chars();
+    while let Some(ch) = chars.next() {
+        if ch == '\\'
+            && let Some(next) = chars.next()
+        {
+            out.push(next);
+            continue;
+        }
+        out.push(ch);
+    }
+    out
 }
 
 // Phase I: broker.rs split into helper modules.

@@ -24,10 +24,10 @@ impl Backend for RedisPlugin {
 
     fn generate_artifacts(
         &self,
-        schemas: &[crate::ast::ProtoSchema],
+        manifest: &crate::generation::CatalogManifest,
         sql_config: &crate::generation::sql::SqlGenerationConfig,
     ) -> Result<Vec<crate::generation::GeneratedArtifact>, String> {
-        crate::generation::backends::generate_redis_artifacts(schemas, sql_config)
+        crate::generation::backends::generate_redis_artifacts(manifest, sql_config)
             .map_err(|err| err.to_string())
     }
 }
@@ -41,7 +41,7 @@ impl crate::runtime::executors::handle::DispatchFactory for RedisPlugin {
         _context: Option<&crate::broker::RequestContext>,
     ) -> Result<crate::runtime::executors::handle::DispatchExecutor, tonic::Status> {
         Ok(crate::runtime::executors::handle::DispatchExecutor::Redis(
-            crate::runtime::executors::redis::RedisExecutor(
+            crate::runtime::executors::redis::RedisExecutor::new(
                 runtime.redis_for_instance(instance)?.clone(),
             ),
         ))

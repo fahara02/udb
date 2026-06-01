@@ -164,3 +164,4 @@ class BillingDocument extends \Google\Protobuf\Internal\Message
     }
 
 }
+

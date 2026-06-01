@@ -97,8 +97,6 @@ use super::system::{
     SystemCatalogInspection, SystemCatalogReport, ensure_system_catalog, inspect_system_catalog,
 };
 #[cfg(feature = "s3")]
-const INLINE_OBJECT_LIMIT_BYTES: usize = 1_048_576;
-#[cfg(feature = "s3")]
 const GET_OBJECT_CHUNK_BYTES: usize = 256 * 1024;
 
 #[derive(Debug, Clone, Default)]
@@ -465,6 +463,7 @@ pub(crate) use helpers::*;
 mod accessors;
 mod catalog_admin;
 mod catalog_sql;
+pub use catalog_sql::ManifestDrift;
 mod probe_dispatch;
 mod reload;
 pub use reload::{ConfigReloadMode, ConfigReloadOptions, ConfigReloadReport};
@@ -754,16 +753,19 @@ pub(crate) async fn set_request_local_settings(
             &context.correlation_id[..context.correlation_id.len().min(58)]
         )
     };
-    for (key, value) in [
-        ("application_name", app_name.as_str()),
-        ("app.current_tenant_id", context.tenant_id.as_str()),
-        ("app.current_purpose", context.purpose.as_str()),
-        (
-            "app.current_correlation_id",
-            context.correlation_id.as_str(),
-        ),
-        ("app.current_project_id", context.project_id.as_str()),
-    ] {
+    // Item 135: the `app.current_*` variables come from the single canonical
+    // source (`AppliedContext::session_context_pairs`) shared with the
+    // dialect-aware renderer, so the PG fast path and the universal backend
+    // enforcer never drift. `application_name` is PG-specific and stays here.
+    let applied = crate::runtime::backend_context::AppliedContext::from_request(context);
+    let mut settings: Vec<(&str, String)> = vec![("application_name", app_name)];
+    settings.extend(
+        applied
+            .session_context_pairs()
+            .into_iter()
+            .map(|(key, value)| (key, value.to_string())),
+    );
+    for (key, value) in settings {
         sqlx::query("SELECT set_config($1, $2, true)")
             .bind(key)
             .bind(value)

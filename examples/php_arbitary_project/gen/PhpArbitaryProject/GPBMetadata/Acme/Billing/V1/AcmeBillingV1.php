@@ -22,3 +22,4 @@ class AcmeBillingV1
         static::$is_initialized = true;
     }
 }
+

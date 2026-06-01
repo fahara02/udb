@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package udb.core.apikey.entity.v1;
+
+option csharp_namespace = "udb.core.Apikey.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/apikey/entity/v1;apikeyv1";
+option java_package = "com.udb.core.apikey.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Apikey\\Entity\\V1";
+
+// API keys are machine-to-machine credentials. The plain key is shown once,
+// key_prefix is stored for display, and key_hash is stored for verification.
+// Authorization is driven by scopes, tenant/project restrictions, and UDB
+// authz policies rather than project-specific owner names.
+
+enum ApiKeyStatus {
+  API_KEY_STATUS_UNSPECIFIED = 0;
+  API_KEY_STATUS_ACTIVE = 1;
+  API_KEY_STATUS_REVOKED = 2;
+  API_KEY_STATUS_EXPIRED = 3;
+}
+
+// Owner types — who this key belongs to
+enum ApiKeyOwnerType {
+  API_KEY_OWNER_TYPE_UNSPECIFIED = 0;
+  API_KEY_OWNER_TYPE_INTEGRATION = 1; // External system integration.
+  API_KEY_OWNER_TYPE_CICD = 2; // CI/CD pipeline
+  API_KEY_OWNER_TYPE_ANALYTICS = 3; // Read-only analytics / BI tool
+  API_KEY_OWNER_TYPE_TENANT = 4; // Tenant-scoped integration key
+  API_KEY_OWNER_TYPE_PROJECT = 5; // Project/application-scoped key
+  API_KEY_OWNER_TYPE_SERVICE_ACCOUNT = 6;
+  API_KEY_OWNER_TYPE_WORKLOAD = 7;
+}

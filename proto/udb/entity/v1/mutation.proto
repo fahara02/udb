@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package udb.entity.v1;
+
+option go_package = "github.com/udb-project/udb/gen/go/udb/entity/v1;entityv1";
+option java_package      = "com.udb.entity.v1";
+option csharp_namespace = "Udb.Entity.V1";
+option php_namespace = "Udb\\Entity\\V1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
+
+import "udb/entity/v1/operation.proto";
+
+message MutationResponse {
+  string mutation_id = 1;
+  string resource_uri = 2;
+  string checksum_sha256 = 3;
+  bytes record_json = 4;
+  int64 affected_rows = 5;
+  bool was_duplicate = 6;
+  // JSON-encoded udb.runtime.consistency.WriteReceipt for read-your-writes fencing.
+  string write_receipt_json = 7;
+  string resource_version = 8;
+  map<string, string> metadata = 9;
+  repeated OperationWarning warnings = 10;
+}

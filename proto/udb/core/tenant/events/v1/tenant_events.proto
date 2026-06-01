@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package udb.core.tenant.events.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "udb.core.Tenant.Events.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/tenant/events/v1;tenanteventsv1";
+option java_package = "com.udb.core.tenant.events.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Tenant\\Events\\V1";
+option php_namespace = "Udb\\Core\\Tenant\\Events\\V1";
+
+// Kafka event: Tenant created
+message TenantCreatedEvent {
+  string event_id = 1;
+  string tenant_id = 2;
+  string tenant_code = 3;
+  string tenant_name = 4;
+  string type = 5;
+  string correlation_id = 6;
+  google.protobuf.Timestamp timestamp = 7;
+}
+
+// Kafka event: Tenant status changed
+message TenantStatusChangedEvent {
+  string event_id = 1;
+  string tenant_id = 2;
+  string old_status = 3;
+  string new_status = 4;
+  string correlation_id = 5;
+  google.protobuf.Timestamp timestamp = 6;
+}

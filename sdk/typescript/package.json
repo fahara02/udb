@@ -1,18 +1,50 @@
 {
-  "name": "@udb/sdk",
+  "name": "@udb_plus/sdk",
   "version": "0.1.0",
+  "description": "TypeScript/Node gRPC client for the Universal Data Broker (UDB) — DataBroker data plane plus the native Authn/Authz control plane.",
+  "keywords": ["udb", "grpc", "database", "broker", "multi-tenant", "sdk"],
   "type": "commonjs",
   "license": "MIT",
+  "author": "fahara02",
   "repository": {
     "type": "git",
     "url": "https://github.com/fahara02/udb.git",
     "directory": "sdk/typescript"
   },
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    },
+    "./auth": {
+      "types": "./dist/auth.d.ts",
+      "default": "./dist/auth.js"
+    }
+  },
+  "files": [
+    "dist",
+    "proto",
+    "third_party",
+    "README.md"
+  ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "bundle-proto": "node scripts/bundle-proto.mjs",
+    "build": "npm run bundle-proto && tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.12.2",

@@ -224,16 +224,30 @@ pub fn validate_unified_dsn(entry: &UnifiedDsn) -> DsnValidationReport {
 pub fn resolve_unified_dsn(entry: &UnifiedDsn) -> ResolvedUnifiedDsn {
     match parse_unified_dsn(&entry.dsn) {
         Ok(parsed) => match env::var(&parsed.env_key) {
-            Ok(base_dsn) => ResolvedUnifiedDsn {
-                id: entry.id.clone(),
-                dsn: entry.dsn.clone(),
-                env_key: parsed.env_key,
-                redacted_base_dsn: redact_dsn(&base_dsn),
-                base_dsn,
-                resource_path: parsed.resource_path,
-                valid: true,
-                error: String::new(),
-            },
+            Ok(base_dsn) => {
+                if let Err(err) = validate_base_dsn(&base_dsn) {
+                    return ResolvedUnifiedDsn {
+                        id: entry.id.clone(),
+                        dsn: entry.dsn.clone(),
+                        env_key: parsed.env_key,
+                        redacted_base_dsn: redact_dsn(&base_dsn),
+                        base_dsn,
+                        resource_path: parsed.resource_path,
+                        valid: false,
+                        error: err,
+                    };
+                }
+                ResolvedUnifiedDsn {
+                    id: entry.id.clone(),
+                    dsn: entry.dsn.clone(),
+                    env_key: parsed.env_key,
+                    redacted_base_dsn: redact_dsn(&base_dsn),
+                    base_dsn,
+                    resource_path: parsed.resource_path,
+                    valid: true,
+                    error: String::new(),
+                }
+            }
             Err(err) => ResolvedUnifiedDsn {
                 id: entry.id.clone(),
                 dsn: entry.dsn.clone(),
@@ -252,6 +266,21 @@ pub fn resolve_unified_dsn(entry: &UnifiedDsn) -> ResolvedUnifiedDsn {
             ..ResolvedUnifiedDsn::default()
         },
     }
+}
+
+fn validate_base_dsn(dsn: &str) -> Result<(), String> {
+    let (scheme, rest) = dsn
+        .split_once("://")
+        .ok_or_else(|| "base DSN is missing scheme://".to_string())?;
+    if scheme.trim().is_empty() {
+        return Err("base DSN scheme is empty".to_string());
+    }
+    let authority = rest.split('/').next().unwrap_or_default();
+    let host = authority.rsplit('@').next().unwrap_or_default();
+    if host.trim().is_empty() {
+        return Err("base DSN host is empty".to_string());
+    }
+    Ok(())
 }
 
 pub fn resolve_unified_dsn_catalog(catalog: &UnifiedDsnCatalog) -> Vec<ResolvedUnifiedDsn> {

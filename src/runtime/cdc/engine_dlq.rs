@@ -1,14 +1,24 @@
 //! cdc.rs split — engine_dlq (Phase I).
 use super::*;
 
+fn cdc_retry_delay_secs(delays: &[u64], retry_count: i32) -> i64 {
+    let idx = retry_count.max(0) as usize;
+    delays
+        .get(idx)
+        .copied()
+        .or_else(|| delays.last().copied())
+        .unwrap_or(60)
+        .min(86_400) as i64
+}
+
 impl CdcEngine {
     #[cfg(feature = "kafka")]
-    pub(crate) async fn ack_event(&self, event_id: Uuid, lsn: i64) {
+    pub(crate) async fn ack_event(&self, event_id: Uuid, lsn: i64) -> bool {
         let mut tx = match self.pool.begin().await {
             Ok(tx) => tx,
             Err(e) => {
                 error!("[cdc] failed to start tx for ack: {}", e);
-                return;
+                return false;
             }
         };
 
@@ -28,7 +38,7 @@ impl CdcEngine {
             // Abort the transaction; the offset will not advance, but at least
             // we don't silently commit a partially-applied ack.
             let _ = tx.rollback().await;
-            return;
+            return false;
         }
 
         let offsets_sql = format!(
@@ -49,7 +59,7 @@ impl CdcEngine {
                 lsn, e
             );
             let _ = tx.rollback().await;
-            return;
+            return false;
         }
 
         if self.config.exactly_once_mode != CdcExactlyOnceMode::AtLeastOnce {
@@ -72,7 +82,7 @@ impl CdcEngine {
                     event_id, e
                 );
                 let _ = tx.rollback().await;
-                return;
+                return false;
             }
         }
 
@@ -81,7 +91,9 @@ impl CdcEngine {
                 "[cdc] failed to commit ack transaction for event {}: {}",
                 event_id, e
             );
+            return false;
         }
+        true
     }
 
     #[cfg(feature = "kafka")]
@@ -92,6 +104,23 @@ impl CdcEngine {
         error_type: &str,
         error_message: &str,
     ) -> bool {
+        let topic = payload
+            .get("event_type")
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string();
+        let tenant_id = payload
+            .get("tenant_id")
+            .or_else(|| payload.get("tenant"))
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string();
+        let project_id = payload
+            .get("project_id")
+            .or_else(|| payload.get("project"))
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string();
         let dlq_env = DlqEnvelope {
             failed_event: payload,
             failure_metadata: DlqMeta {
@@ -120,30 +149,38 @@ impl CdcEngine {
         self.mark_cdc_delivery_state(event_id, "dlq", None, None, Some(error_message))
             .await;
 
-        // Persist to Postgres DLQ table (best-effort; Kafka delivery already succeeded)
+        // Persist to Postgres DLQ table. This is part of the CDC contract:
+        // operators need a durable queryable DLQ record in addition to the Kafka
+        // DLQ topic. If the DB write fails, keep the outbox row unacked so the
+        // event can be retried after the catalog/schema issue is fixed.
         {
             use crate::runtime::system::SystemCatalogConfig;
             let sys = SystemCatalogConfig::default();
             let dlq_rel = sys.dlq_relation();
-            let _ = sqlx::query(&format!(
+            let retry_delay = cdc_retry_delay_secs(&self.config.retry_delay_secs, 0);
+            if let Err(e) = sqlx::query(&format!(
                 "INSERT INTO {dlq_rel} \
-                 (event_id, topic, error_type, error_message, payload, created_at) \
-                 VALUES ($1, $2, $3, $4, $5::JSONB, NOW()) \
+                 (event_id, topic, tenant_id, project_id, error_type, error_message, payload, status, next_retry_at, created_at) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7::JSONB, 'RETRYING', NOW() + ($8::TEXT || ' seconds')::INTERVAL, NOW()) \
                  ON CONFLICT (event_id) DO NOTHING"
             ))
             .bind(event_id)
-            .bind("") // topic will be extracted from payload if needed
+            .bind(&topic)
+            .bind(&tenant_id)
+            .bind(&project_id)
             .bind(error_type)
             .bind(error_message)
             .bind(payload_string)
+            .bind(retry_delay)
             .execute(&self.pool)
             .await
-            .map_err(|e| {
+            {
                 error!(
                     "[cdc] dlq postgres insert failed for event {}: {}",
                     event_id, e
                 );
-            });
+                return false;
+            }
         }
 
         true
@@ -270,25 +307,36 @@ impl CdcEngine {
         let sys = SystemCatalogConfig::default();
         let dlq_rel = sys.dlq_relation();
 
+        // Parameterized filters (no string interpolation of caller-supplied
+        // topic/status — this is an admin RPC). Placeholders are numbered as the
+        // optional filters are appended.
         let mut query = format!(
             "SELECT dlq_id, event_id, topic, payload, error_type, error_message, \
              retry_count, last_retry_at, next_retry_at, status, created_at, updated_at \
              FROM {dlq_rel} WHERE 1=1"
         );
-
+        let mut text_binds: Vec<String> = Vec::new();
         if let Some(topic) = &topic_filter {
-            query.push_str(&format!(" AND topic = '{}'", topic.replace('\'', "''")));
+            text_binds.push(topic.clone());
+            query.push_str(&format!(" AND topic = ${}", text_binds.len()));
         }
         if let Some(status) = &status_filter {
-            query.push_str(&format!(" AND status = '{}'", status.replace('\'', "''")));
+            text_binds.push(status.clone());
+            query.push_str(&format!(" AND status = ${}", text_binds.len()));
         }
-
         query.push_str(&format!(
-            " ORDER BY created_at DESC LIMIT {} OFFSET {}",
-            limit, offset
+            " ORDER BY created_at DESC LIMIT ${} OFFSET ${}",
+            text_binds.len() + 1,
+            text_binds.len() + 2,
         ));
 
-        let rows = sqlx::query(&query)
+        let mut q = sqlx::query(&query);
+        for b in &text_binds {
+            q = q.bind(b);
+        }
+        let rows = q
+            .bind(limit)
+            .bind(offset)
             .fetch_all(&self.pool)
             .await
             .map_err(|e| format!("failed to list DLQ events: {}", e))?;
@@ -334,7 +382,37 @@ impl CdcEngine {
         let event_id: Uuid = row.try_get("event_id").map_err(|e| e.to_string())?;
         let topic: String = row.try_get("topic").map_err(|e| e.to_string())?;
         let payload: serde_json::Value = row.try_get("payload").map_err(|e| e.to_string())?;
-        let retry_count: i32 = row.try_get("retry_count").unwrap_or(0);
+        let retry_count: i32 = match row.try_get("retry_count") {
+            Ok(value) => value,
+            Err(err) => {
+                sqlx::query(&format!(
+                    "UPDATE {dlq_rel}
+                     SET status = 'QUARANTINED',
+                         error_message = $1,
+                         updated_at = NOW()
+                     WHERE dlq_id = $2"
+                ))
+                .bind(format!("corrupt retry_count: {err}"))
+                .bind(dlq_id)
+                .execute(&self.pool)
+                .await
+                .map_err(|e| format!("failed to quarantine corrupt DLQ event: {e}"))?;
+                return Err(format!("DLQ event {dlq_id} has corrupt retry_count: {err}"));
+            }
+        };
+
+        // U22: decrypt any reversibly-encrypted fields before re-publishing so a
+        // replayed event carries the original plaintext ("reversible for replay").
+        // No-op when no key is configured (resolver None) or no fields are
+        // encrypted; decrypt failures leave the envelope as-is (best-effort).
+        let payload = match crate::runtime::cdc::encryption::StaticKeyResolver::from_env() {
+            Some(resolver) => crate::runtime::cdc::decrypt_encrypted_json_fields(
+                payload,
+                &resolver,
+                crate::runtime::cdc::encryption::DecryptScope::Replay,
+            ),
+            None => payload,
+        };
 
         // Re-publish to Kafka
         let payload_string = payload.to_string();
@@ -376,8 +454,9 @@ impl CdcEngine {
         let sys = SystemCatalogConfig::default();
         let dlq_rel = sys.dlq_relation();
 
-        let mut query =
-            format!("SELECT dlq_id FROM {dlq_rel} WHERE topic = $1 AND status = 'OPEN'");
+        let mut query = format!(
+            "SELECT dlq_id FROM {dlq_rel} WHERE topic = $1 AND status IN ('OPEN','RETRYING') AND (next_retry_at IS NULL OR next_retry_at <= NOW())"
+        );
 
         if from_date.is_some() {
             query.push_str(" AND created_at >= $2");
@@ -411,6 +490,7 @@ impl CdcEngine {
                 Ok(_) => replayed += 1,
                 Err(e) => {
                     error!("[cdc] failed to replay DLQ event {}: {}", dlq_id, e);
+                    let _ = self.schedule_dlq_retry(dlq_id, &e).await;
                     failed += 1;
                 }
             }
@@ -420,6 +500,86 @@ impl CdcEngine {
             "Replayed {} events, {} failed for topic {}",
             replayed, failed, topic
         ))
+    }
+
+    async fn schedule_dlq_retry(&self, dlq_id: Uuid, error: &str) -> Result<(), String> {
+        use crate::runtime::system::SystemCatalogConfig;
+        let sys = SystemCatalogConfig::default();
+        let dlq_rel = sys.dlq_relation();
+        let row = sqlx::query(&format!(
+            "SELECT topic, retry_count FROM {dlq_rel} WHERE dlq_id = $1"
+        ))
+        .bind(dlq_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| format!("failed to load DLQ retry state: {e}"))?;
+        let (topic, retry_count) = match row {
+            Some(row) => (
+                row.try_get::<String, _>("topic").unwrap_or_default(),
+                row.try_get::<i32, _>("retry_count").unwrap_or(0),
+            ),
+            None => return Err(format!("DLQ event {dlq_id} not found")),
+        };
+        let next_retry_count = retry_count + 1;
+        let policy = self
+            .topic_policies
+            .iter()
+            .find(|policy| policy.topic == topic && policy.enabled);
+        let max_retry_attempts = policy
+            .map(|policy| policy.max_retry_attempts.max(1))
+            .unwrap_or_else(|| self.config.max_retry_attempts.max(1) as i32)
+            .min(self.config.max_retry_attempts.max(1) as i32);
+        if next_retry_count >= max_retry_attempts {
+            sqlx::query(&format!(
+                "UPDATE {dlq_rel}
+                 SET status = 'QUARANTINED',
+                     retry_count = $1,
+                     error_message = $2,
+                     last_retry_at = NOW(),
+                     next_retry_at = NULL,
+                     updated_at = NOW()
+                 WHERE dlq_id = $3"
+            ))
+            .bind(next_retry_count)
+            .bind(error)
+            .bind(dlq_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| format!("failed to quarantine DLQ event: {e}"))?;
+            return Ok(());
+        }
+        let policy_delays = policy
+            .map(|policy| {
+                policy
+                    .retry_delay_secs
+                    .iter()
+                    .filter_map(|delay| u64::try_from(*delay).ok())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        let retry_delay = if policy_delays.is_empty() {
+            cdc_retry_delay_secs(&self.config.retry_delay_secs, next_retry_count)
+        } else {
+            cdc_retry_delay_secs(&policy_delays, next_retry_count)
+        };
+        sqlx::query(&format!(
+            "UPDATE {dlq_rel}
+             SET status = 'RETRYING',
+                 retry_count = $1,
+                 error_message = $2,
+                 last_retry_at = NOW(),
+                 next_retry_at = NOW() + ($3::TEXT || ' seconds')::INTERVAL,
+                 updated_at = NOW()
+             WHERE dlq_id = $4"
+        ))
+        .bind(next_retry_count)
+        .bind(error)
+        .bind(retry_delay)
+        .bind(dlq_id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| format!("failed to schedule DLQ retry: {e}"))?;
+        Ok(())
     }
 
     /// Phase 7: Dismiss a DLQ event (mark as resolved without replay)

@@ -17,6 +17,9 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 use uuid::Uuid;
 
+use super::dialect::{
+    SqlDialect, apply_saga_summary_bucket, build_eq_where, normalize_limit_offset,
+};
 use super::postgres::PostgresCanonicalStore;
 use super::system_store::{
     CompensationStatus, SagaInsert, SagaListFilter, SagaRow, SagaStatus, SagaStore, SagaSummary,
@@ -100,7 +103,7 @@ impl SagaStore for PostgresCanonicalStore {
                     tenant_id            TEXT NOT NULL DEFAULT '',
                     correlation_id       TEXT NOT NULL DEFAULT '',
                     status               TEXT NOT NULL DEFAULT 'pending'
-                                         CHECK (status IN ('indeterminate','in_progress','pending','committed','compensated','failed','failed_compensation','manual_review')),
+                                         CHECK (status IN ('indeterminate','in_progress','pending','committed','compensated','failed','in_doubt','failed_compensation','manual_review')),
                     backend_instance     TEXT NOT NULL DEFAULT '',
                     operation            TEXT NOT NULL DEFAULT '',
                     current_step         INTEGER NOT NULL DEFAULT 0,
@@ -184,36 +187,22 @@ impl SagaStore for PostgresCanonicalStore {
         let rel = self.saga_relation_ref();
         // Build the WHERE clause with placeholder numbers that match
         // the bind order. We bind values in the same order they're
-        // pushed below.
-        let mut clauses: Vec<String> = Vec::new();
-        let mut bind_index: usize = 0;
-        if filter.tenant_id.is_some() {
-            bind_index += 1;
-            clauses.push(format!("tenant_id = ${bind_index}"));
-        }
-        if filter.status.is_some() {
-            bind_index += 1;
-            clauses.push(format!("status = ${bind_index}"));
-        }
-        // tx_id: PG schema declares tx_id as TEXT, not UUID, so we
-        // compare as string. Caller may pass any opaque tx token.
-        if filter.tx_id.is_some() {
-            bind_index += 1;
-            clauses.push(format!("tx_id = ${bind_index}"));
-        }
-        if filter.correlation_id.is_some() {
-            bind_index += 1;
-            clauses.push(format!("correlation_id = ${bind_index}"));
-        }
-        let where_sql = if clauses.is_empty() {
-            String::new()
-        } else {
-            format!("WHERE {}", clauses.join(" AND "))
-        };
-        let limit_placeholder = bind_index + 1;
-        let offset_placeholder = bind_index + 2;
-        let limit = if filter.limit <= 0 { 100 } else { filter.limit };
-        let offset = filter.offset.max(0);
+        // pushed below. tx_id: PG schema declares tx_id as TEXT, not
+        // UUID, so we compare as string. Caller may pass any opaque tx
+        // token.
+        let w = build_eq_where(
+            SqlDialect::POSTGRES,
+            &[
+                ("tenant_id", filter.tenant_id.is_some()),
+                ("status", filter.status.is_some()),
+                ("tx_id", filter.tx_id.is_some()),
+                ("correlation_id", filter.correlation_id.is_some()),
+            ],
+        );
+        let where_sql = &w.where_sql;
+        let limit_placeholder = &w.limit_placeholder;
+        let offset_placeholder = &w.offset_placeholder;
+        let (limit, offset) = normalize_limit_offset(filter.limit, filter.offset);
         let sql = format!(
             r#"SELECT saga_id, tx_id, tenant_id, correlation_id, status,
                       backend_instance, operation, current_step, retry_count,
@@ -222,7 +211,7 @@ impl SagaStore for PostgresCanonicalStore {
                FROM {rel}
                {where_sql}
                ORDER BY updated_at DESC
-               LIMIT ${limit_placeholder} OFFSET ${offset_placeholder}"#
+               LIMIT {limit_placeholder} OFFSET {offset_placeholder}"#
         );
         let mut q = sqlx::query(&sql);
         if let Some(t) = &filter.tenant_id {
@@ -273,6 +262,31 @@ impl SagaStore for PostgresCanonicalStore {
                 "saga {saga_id} not found for update_saga_status"
             )));
         }
+        Ok(())
+    }
+
+    async fn update_saga_statuses_batch(
+        &self,
+        saga_ids: &[Uuid],
+        status: SagaStatus,
+        compensation_status: CompensationStatus,
+    ) -> SystemStoreResult<()> {
+        if saga_ids.is_empty() {
+            return Ok(());
+        }
+        let rel = self.saga_relation_ref();
+        let sql = format!(
+            r#"UPDATE {rel}
+               SET status = $1, compensation_status = $2, updated_at = NOW()
+               WHERE saga_id = ANY($3)"#
+        );
+        sqlx::query(&sql)
+            .bind(status.as_str())
+            .bind(compensation_status.as_str())
+            .bind(saga_ids)
+            .execute(self.pg_pool())
+            .await
+            .map_err(|e| SystemStoreError::query("postgres", sql.clone(), e))?;
         Ok(())
     }
 
@@ -362,7 +376,7 @@ impl SagaStore for PostgresCanonicalStore {
                       recovery_attempts, compensation_status, steps, compensations,
                       last_error, created_at, updated_at
                FROM {rel}
-               WHERE status = 'indeterminate'
+               WHERE status IN ('indeterminate', 'in_doubt')
                   OR (status = 'in_progress'
                       AND EXTRACT(EPOCH FROM (NOW() - updated_at)) > $1::double precision)
                ORDER BY updated_at ASC
@@ -413,24 +427,7 @@ impl SagaStore for PostgresCanonicalStore {
         for row in rows {
             let status: String = row.try_get("status").unwrap_or_default();
             let n: i64 = row.try_get("n").unwrap_or(0);
-            match SagaStatus::parse(&status) {
-                Some(SagaStatus::Indeterminate) => s.indeterminate = n,
-                Some(SagaStatus::InProgress) => s.in_progress = n,
-                Some(SagaStatus::Pending) => s.pending = n,
-                Some(SagaStatus::Committed) => s.committed = n,
-                Some(SagaStatus::Compensated) => s.compensated = n,
-                Some(SagaStatus::Failed) => s.failed = n,
-                Some(SagaStatus::FailedCompensation) => s.failed_compensation = n,
-                Some(SagaStatus::ManualReview) => s.manual_review = n,
-                None => {
-                    return Err(SystemStoreError::SchemaMismatch {
-                        backend: "postgres",
-                        detail: format!(
-                            "unexpected saga status '{status}' in {rel} (CHECK constraint should prevent this)"
-                        ),
-                    });
-                }
-            }
+            apply_saga_summary_bucket(&mut s, "postgres", &status, n)?;
         }
         Ok(s)
     }

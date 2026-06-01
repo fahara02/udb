@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package udb.core.authz.entity.v1;
+
+import "udb/core/common/v1/db.proto";
+
+option csharp_namespace = "udb.core.Authz.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
+option java_package = "com.udb.core.authz.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Entity\\V1";
+
+// Normalized authorization tuple row used by the UDB policy engine.
+// Tuple kinds usually map to policy, grouping, relationship, or override rows.
+message PolicyTuple {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "policy_tuples"
+    schema_name: "udb_authz"
+    migration_order: 1
+    is_table: true
+    comment: "Normalized authorization policy, grouping, and relationship tuples"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: true
+    indexes: {
+      index_name: "uq_policy_tuples_tuple"
+      index_type: "BTREE"
+      unique: true
+      columns: "tuple_kind"
+      columns: "subject"
+      columns: "domain"
+      columns: "object"
+      columns: "action"
+      columns: "effect"
+    }
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    replica_hint: "primary"
+    required_scope: "authz:admin"
+  };
+  option (udb.core.common.v1.cache) = {
+    backend: CACHE_BACKEND_REDIS
+    key_pattern: "udb:authz:tuple:{tuple_kind}:{subject}:{domain}"
+    ttl_seconds: 300 // 5 minutes; policy evaluated on every authorization decision
+    write_through: true
+    read_through: true
+    namespace: "authz_policy"
+    cluster_env_key: "REDIS_CLUSTER_ADDR"
+  };
+
+  int64 policy_tuple_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "policy_tuple_id" sql_type: "BIGSERIAL" primary_key: true not_null: true }];
+  string tuple_kind = 2 [(udb.core.common.v1.pg_column) = { column_name: "tuple_kind" sql_type: "VARCHAR(32)" not_null: true comment: "policy, grouping, relationship, or override" index: { index_name: "idx_policy_tuples_kind" index_type: "BTREE" } }];
+  string subject = 3 [(udb.core.common.v1.pg_column) = { column_name: "subject" sql_type: "TEXT" not_null: true default_value: "''" comment: "Principal, role, group, or service selector" }];
+  string domain = 4 [(udb.core.common.v1.pg_column) = { column_name: "domain" sql_type: "TEXT" not_null: true default_value: "''" comment: "Authorization domain such as tenant:<id> or project:<id>" }];
+  string object = 5 [(udb.core.common.v1.pg_column) = { column_name: "object" sql_type: "TEXT" not_null: true default_value: "''" comment: "Protected object or relationship target" }];
+  string action = 6 [(udb.core.common.v1.pg_column) = { column_name: "action" sql_type: "TEXT" not_null: true default_value: "''" comment: "Action, relation, or matcher verb" }];
+  string effect = 7 [(udb.core.common.v1.pg_column) = { column_name: "effect" sql_type: "TEXT" not_null: true default_value: "''" comment: "allow, deny, or tuple-specific effect" }];
+  string condition = 8 [(udb.core.common.v1.pg_column) = { column_name: "condition" sql_type: "TEXT" not_null: true default_value: "''" comment: "Reserved condition or ABAC matcher expression" }];
+  string tenant_id = 9 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policytuple_tenant" index_type: "BTREE" } }];
+  string project_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" index: { index_name: "idx_policytuple_project" index_type: "BTREE" } }];
+}

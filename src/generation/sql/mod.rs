@@ -14,6 +14,28 @@ pub struct SqlGenerationConfig {
     pub generator_name: String,
     pub lock_timeout: String,
     pub statement_timeout: String,
+    pub qdrant: QdrantGenerationConfig,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct QdrantGenerationConfig {
+    pub default_vector_dimension: i64,
+    pub default_distance: String,
+    pub default_hnsw_m: i64,
+    pub default_hnsw_ef_construct: i64,
+}
+
+const TENANT_CONTEXT_GUC: &str = "app.current_tenant_id";
+
+impl Default for QdrantGenerationConfig {
+    fn default() -> Self {
+        Self {
+            default_vector_dimension: 1536,
+            default_distance: "Cosine".to_string(),
+            default_hnsw_m: 16,
+            default_hnsw_ef_construct: 100,
+        }
+    }
 }
 
 impl Default for SqlGenerationConfig {
@@ -22,6 +44,7 @@ impl Default for SqlGenerationConfig {
             generator_name: "udb".to_string(),
             lock_timeout: "5s".to_string(),
             statement_timeout: "120s".to_string(),
+            qdrant: QdrantGenerationConfig::default(),
         }
     }
 }
@@ -59,6 +82,33 @@ pub fn generate_bootstrap_sql(
             table: table.table.clone(),
             content: render_bootstrap_table(table, &manifest.checksum_sha256, config),
         });
+        // #120: concurrent (non-unique) indexes cannot live inside the table's
+        // transactional artifact. Emit each as its own standalone, single-statement
+        // non-transactional artifact (sorted after the `001_` table create via the
+        // `950_cidx_` prefix) so `CREATE INDEX CONCURRENTLY` runs in autocommit.
+        for index in table.indexes.iter().filter(|i| i.concurrent && !i.unique) {
+            out.push(GeneratedArtifact {
+                rel_path: format!(
+                    "{}/950_cidx_{}.sql",
+                    table.schema,
+                    derive_index_name(table, index)
+                ),
+                kind: "bootstrap".to_string(),
+                schema: table.schema.clone(),
+                table: table.table.clone(),
+                content: format!(
+                    "{}{}\n",
+                    render_non_tx_header(
+                        &manifest.checksum_sha256,
+                        &table.schema,
+                        &table.table,
+                        "bootstrap_concurrent_index",
+                        config,
+                    ),
+                    render_index_standalone(table, index),
+                ),
+            });
+        }
     }
 
     // Collect ALL FK constraints (same-schema AND cross-schema) into a single
@@ -115,9 +165,11 @@ pub fn generate_bootstrap_sql(
             kind: "bootstrap".to_string(),
             schema: String::new(),
             table: String::new(),
-            content: render_foreign_keys_header(&manifest.checksum_sha256, config)
-                + &fk_lines.join("\n")
-                + "\n",
+            content: format!(
+                "{}{}\n",
+                render_foreign_keys_header(&manifest.checksum_sha256, config),
+                fk_lines.join("\n")
+            ),
         });
     }
 
@@ -130,11 +182,19 @@ pub fn generate_delta_sql(
     config: &SqlGenerationConfig,
 ) -> Vec<GeneratedArtifact> {
     let mut grouped: Vec<((&str, &str), Vec<&ChangeOperation>)> = Vec::new();
+    // #116/#120: ops PostgreSQL forbids inside a transaction (enum ADD VALUE,
+    // concurrent index) are pulled out of the grouped BEGIN/COMMIT artifact and
+    // emitted as standalone single-statement non-transactional artifacts.
+    let mut standalone: Vec<&ChangeOperation> = Vec::new();
     for change in changes
         .iter()
         .filter(|change| change.safety == ChangeSafety::SafeAuto)
     {
         if matches!(change.kind, ChangeKind::AddSchema | ChangeKind::CreateStore) {
+            continue;
+        }
+        if op_requires_standalone(manifest, change) {
+            standalone.push(change);
             continue;
         }
         let key = (change.schema.as_str(), change.table.as_str());
@@ -145,7 +205,7 @@ pub fn generate_delta_sql(
         }
     }
 
-    grouped
+    let mut artifacts: Vec<GeneratedArtifact> = grouped
         .into_iter()
         .filter_map(|((schema, table), ops)| {
             let content = render_delta_table(manifest, schema, table, &ops, config);
@@ -162,7 +222,34 @@ pub fn generate_delta_sql(
                 content,
             })
         })
-        .collect()
+        .collect();
+
+    // Standalone non-transactional delta artifacts, sorted after the grouped
+    // `900_auto_` artifacts via the `960_nontx_` prefix.
+    for (idx, op) in standalone.iter().enumerate() {
+        let content = render_standalone_delta(manifest, op, config);
+        if content.trim().is_empty() {
+            continue;
+        }
+        let file_table = if op.table.is_empty() {
+            "schema"
+        } else {
+            op.table.as_str()
+        };
+        let kind_slug = format!("{:?}", op.kind).to_ascii_lowercase();
+        artifacts.push(GeneratedArtifact {
+            rel_path: format!(
+                "{}/960_nontx_{}_{}_{}.sql",
+                op.schema, file_table, kind_slug, idx
+            ),
+            kind: "proto_delta".to_string(),
+            schema: op.schema.clone(),
+            table: op.table.clone(),
+            content,
+        });
+    }
+
+    artifacts
 }
 
 pub fn render_bootstrap_table(
@@ -295,6 +382,12 @@ pub fn render_bootstrap_table(
     }
 
     for index in &table.indexes {
+        // #120: a concurrent (non-unique) index cannot run inside this table's
+        // transactional bootstrap artifact — it is emitted separately as a
+        // standalone non-transactional artifact by `generate_bootstrap_sql`.
+        if index.concurrent && !index.unique {
+            continue;
+        }
         sql.push_str(&render_index_in_tx(table, index));
     }
 
@@ -320,6 +413,18 @@ pub fn render_bootstrap_table(
         }
         sql.push_str(&render_policy(&table.schema, &table.table, policy));
         sql.push_str("\n\n");
+    }
+
+    // Item 137 (Stage 2): when a tenant table opts into RLS but declares no
+    // explicit policy, synthesize a default tenant-isolation policy from its
+    // tenant column so multi-tenant isolation is enforced by default. The
+    // predicate reads `app.current_tenant_id`, which the broker (and the
+    // native fast path) set via `set_config`/`SET LOCAL` per request.
+    if table.enable_rls && table.rls_policies.is_empty() {
+        if let Some(policy) = default_tenant_rls_policy(table) {
+            sql.push_str(&render_policy(&table.schema, &table.table, &policy));
+            sql.push_str("\n\n");
+        }
     }
 
     if !table.comment.trim().is_empty() {
@@ -355,6 +460,44 @@ pub fn render_bootstrap_table(
     sql.push_str(&render_partition_setup(table));
 
     sql
+}
+
+/// Item 137 (Stage 2): synthesize a default tenant-isolation RLS policy from a
+/// table's tenant column. The proto-derived `is_tenant_column` flag is the
+/// source of truth; conventional tenant-discriminator names are only a
+/// compatibility fallback. Returns `None` for tables without one (they get no
+/// default policy). The predicate compares the tenant column against
+/// `current_setting('app.current_tenant_id', true)` so a missing setting yields
+/// SQL NULL (no rows) rather than an error, matching the explicit policies the
+/// proto entities already declare.
+fn default_tenant_rls_policy(table: &ManifestTable) -> Option<ManifestPolicy> {
+    let column = table
+        .columns
+        .iter()
+        .find(|c| c.is_tenant_column)
+        .or_else(|| {
+            table.columns.iter().find(|c| {
+                let column = c.column_name.as_str();
+                let field = c.field_name.as_str();
+                ["tenant_id", "_tenant_id", "org_id", "institution_id"]
+                    .iter()
+                    .any(|candidate| {
+                        column.eq_ignore_ascii_case(candidate)
+                            || field.eq_ignore_ascii_case(candidate)
+                    })
+            })
+        })?;
+    let predicate = format!(
+        "({col}::text = current_setting('{TENANT_CONTEXT_GUC}', true)::text)",
+        col = qi(&column.column_name)
+    );
+    Some(ManifestPolicy {
+        name: "tenant_isolation".to_string(),
+        command: "ALL".to_string(),
+        using_expression: predicate.clone(),
+        with_check: predicate,
+        permissive: true,
+    })
 }
 
 // Phase I: sql.rs split into helper modules.
@@ -460,7 +603,11 @@ mod tests {
     }
 
     #[test]
-    fn bootstrap_artifact_downgrades_concurrent_indexes() {
+    fn bootstrap_emits_concurrent_index_as_standalone_non_tx_artifact() {
+        // #120: a concurrent (non-unique) index must NOT be downgraded into the
+        // table's transactional bootstrap artifact; it is split into its own
+        // standalone, single-statement, non-transactional artifact that keeps
+        // CONCURRENTLY (legal only in autocommit).
         let table = ManifestTable {
             schema: "example_examplegent".to_string(),
             table: "agent_knowledge_embeddings".to_string(),
@@ -479,15 +626,32 @@ mod tests {
             ..ManifestTable::default()
         };
 
-        let sql = render_bootstrap_table(&table, "sha256:test", &SqlGenerationConfig::default());
-
+        // The inline table artifact must NOT contain the concurrent index at all.
+        let table_sql =
+            render_bootstrap_table(&table, "sha256:test", &SqlGenerationConfig::default());
         assert!(
-            sql.contains(
-                "CREATE INDEX IF NOT EXISTS \"idx_agent_knowledge_embeddings_fts_simple\""
-            ),
-            "{sql}"
+            !table_sql.contains("idx_agent_knowledge_embeddings_fts_simple"),
+            "concurrent index must not be inlined into the table artifact: {table_sql}"
         );
-        assert!(!sql.contains("CONCURRENTLY"), "{sql}");
+
+        // The standalone artifact body (header + single statement) keeps
+        // CONCURRENTLY and carries no BEGIN/COMMIT.
+        let cfg = SqlGenerationConfig::default();
+        let body = format!(
+            "{}{}\n",
+            render_non_tx_header(
+                "sha256:test",
+                &table.schema,
+                &table.table,
+                "bootstrap_concurrent_index",
+                &cfg,
+            ),
+            render_index_standalone(&table, &table.indexes[0]),
+        );
+        assert!(body.contains("CONCURRENTLY"), "{body}");
+        assert!(body.contains("UDB:no_transaction=true"), "{body}");
+        assert!(!body.contains("BEGIN;"), "{body}");
+        assert!(!body.contains("COMMIT;"), "{body}");
     }
 
     #[test]

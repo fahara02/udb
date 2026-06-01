@@ -64,6 +64,28 @@ pub struct SecurityConfig {
     pub pii_safe_logging: bool,
     /// Metric endpoint allowlist (comma-separated IPs or CIDRs)
     pub metric_endpoint_allowlist: Vec<String>,
+    /// Expected JWT issuer (`UDB_JWT_ISSUER`). `None` disables issuer validation.
+    pub jwt_issuer: Option<String>,
+    /// Expected JWT audience (`UDB_JWT_AUDIENCE`). `None` disables audience
+    /// validation (tokens are accepted regardless of any `aud` claim).
+    pub jwt_audience: Option<String>,
+    /// Allowed JWT signing algorithms (`UDB_JWT_ALLOWED_ALGS`, comma-separated,
+    /// e.g. `RS256,EdDSA`). Empty = the default asymmetric set.
+    pub jwt_allowed_algs: Vec<String>,
+    /// Clock-skew leeway in seconds applied to `exp`/`nbf`
+    /// (`UDB_JWT_CLOCK_SKEW_SECONDS`). Defaults to 60.
+    pub jwt_clock_skew_secs: u64,
+    /// JWKS endpoint for asymmetric JWT verification (`UDB_JWT_JWKS_URL`).
+    pub jwt_jwks_url: Option<String>,
+    /// JWKS cache TTL (`UDB_JWT_JWKS_CACHE_TTL_SECONDS`). Defaults to 300.
+    pub jwt_jwks_cache_ttl_secs: u64,
+    /// RSA private key (inline PEM or path) UDB uses to *sign* the access tokens
+    /// it issues (`UDB_JWT_PRIVATE_KEY`). `None` disables UDB-issued JWTs — login
+    /// then falls back to server-side session tokens only.
+    pub jwt_private_key: Option<String>,
+    /// Lifetime of UDB-issued access tokens in seconds
+    /// (`UDB_JWT_ACCESS_TTL_SECONDS`). Defaults to 900 (15 minutes).
+    pub jwt_access_ttl_secs: u64,
 }
 
 impl Default for SecurityConfig {
@@ -82,6 +104,14 @@ impl Default for SecurityConfig {
             audit_sink_url: String::new(),
             pii_safe_logging: true,
             metric_endpoint_allowlist: Vec::new(),
+            jwt_issuer: None,
+            jwt_audience: None,
+            jwt_allowed_algs: Vec::new(),
+            jwt_clock_skew_secs: 60,
+            jwt_jwks_url: None,
+            jwt_jwks_cache_ttl_secs: 300,
+            jwt_private_key: None,
+            jwt_access_ttl_secs: 900,
         }
     }
 }
@@ -129,7 +159,16 @@ impl SecurityConfig {
             mtls_required: std::env::var("UDB_MTLS_REQUIRED")
                 .map(|v| !matches!(v.as_str(), "0" | "false" | "no"))
                 .unwrap_or(true),
-            allow_header_scopes: std::env::var("UDB_ALLOW_HEADER_SCOPES").is_ok(),
+            // Parse as a boolean, not mere presence — `UDB_ALLOW_HEADER_SCOPES=0`
+            // / `=false` must DISABLE the dev header-scope fallback, not enable it.
+            allow_header_scopes: std::env::var("UDB_ALLOW_HEADER_SCOPES")
+                .map(|v| {
+                    matches!(
+                        v.trim().to_ascii_lowercase().as_str(),
+                        "1" | "true" | "yes" | "on"
+                    )
+                })
+                .unwrap_or(false),
             encryption_key_rotation_enabled: std::env::var("UDB_ENCRYPTION_KEY_ROTATION")
                 .map(|v| !matches!(v.as_str(), "0" | "false" | "no"))
                 .unwrap_or(false),
@@ -149,6 +188,24 @@ impl SecurityConfig {
                         .collect()
                 })
                 .unwrap_or_default(),
+            jwt_issuer: non_empty_env("UDB_JWT_ISSUER"),
+            jwt_audience: non_empty_env("UDB_JWT_AUDIENCE"),
+            jwt_allowed_algs: csv_env("UDB_JWT_ALLOWED_ALGS"),
+            jwt_clock_skew_secs: std::env::var("UDB_JWT_CLOCK_SKEW_SECONDS")
+                .ok()
+                .and_then(|v| v.parse::<u64>().ok())
+                .unwrap_or(60),
+            jwt_jwks_url: non_empty_env("UDB_JWT_JWKS_URL"),
+            jwt_jwks_cache_ttl_secs: std::env::var("UDB_JWT_JWKS_CACHE_TTL_SECONDS")
+                .ok()
+                .and_then(|v| v.parse::<u64>().ok())
+                .unwrap_or(300),
+            jwt_private_key: non_empty_env("UDB_JWT_PRIVATE_KEY"),
+            jwt_access_ttl_secs: std::env::var("UDB_JWT_ACCESS_TTL_SECONDS")
+                .ok()
+                .and_then(|v| v.parse::<u64>().ok())
+                .filter(|v| *v > 0)
+                .unwrap_or(900),
         }
     }
 
@@ -187,8 +244,11 @@ impl SecurityConfig {
         if let Ok(v) = std::env::var("UDB_MTLS_REQUIRED") {
             self.mtls_required = !matches!(v.as_str(), "0" | "false" | "no");
         }
-        if std::env::var("UDB_ALLOW_HEADER_SCOPES").is_ok() {
-            self.allow_header_scopes = true;
+        if let Ok(v) = std::env::var("UDB_ALLOW_HEADER_SCOPES") {
+            self.allow_header_scopes = matches!(
+                v.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            );
         }
         if let Ok(v) = std::env::var("UDB_ENCRYPTION_KEY_ROTATION") {
             self.encryption_key_rotation_enabled = !matches!(v.as_str(), "0" | "false" | "no");
@@ -210,6 +270,39 @@ impl SecurityConfig {
                 .map(ToString::to_string)
                 .collect();
         }
+        if let Some(v) = non_empty_env("UDB_JWT_ISSUER") {
+            self.jwt_issuer = Some(v);
+        }
+        if let Some(v) = non_empty_env("UDB_JWT_AUDIENCE") {
+            self.jwt_audience = Some(v);
+        }
+        if std::env::var("UDB_JWT_ALLOWED_ALGS").is_ok() {
+            self.jwt_allowed_algs = csv_env("UDB_JWT_ALLOWED_ALGS");
+        }
+        if let Ok(v) = std::env::var("UDB_JWT_CLOCK_SKEW_SECONDS")
+            && let Ok(secs) = v.parse::<u64>()
+        {
+            self.jwt_clock_skew_secs = secs;
+        }
+        if let Some(v) = non_empty_env("UDB_JWT_JWKS_URL") {
+            self.jwt_jwks_url = Some(v);
+        }
+        if let Ok(v) = std::env::var("UDB_JWT_JWKS_CACHE_TTL_SECONDS")
+            && let Ok(secs) = v.parse::<u64>()
+        {
+            self.jwt_jwks_cache_ttl_secs = secs;
+        }
+        // Without these in the merged-config path, UDB-issued JWT signing
+        // (`sign_access_token`) silently no-ops even when the key is configured.
+        if let Some(v) = non_empty_env("UDB_JWT_PRIVATE_KEY") {
+            self.jwt_private_key = Some(v);
+        }
+        if let Ok(v) = std::env::var("UDB_JWT_ACCESS_TTL_SECONDS")
+            && let Ok(secs) = v.parse::<u64>()
+            && secs > 0
+        {
+            self.jwt_access_ttl_secs = secs;
+        }
     }
 
     /// Returns true if the system is in production mode
@@ -230,7 +323,7 @@ impl SecurityConfig {
         if self.allow_header_scopes {
             errors.push("Header-based scopes must be disabled in production (remove UDB_ALLOW_HEADER_SCOPES)".to_string());
         }
-        if self.jwt_public_key.is_none() && !self.mtls_required {
+        if self.jwt_public_key.is_none() && self.jwt_jwks_url.is_none() && !self.mtls_required {
             errors.push("Either JWT or mTLS must be configured for authentication".to_string());
         }
         if self.audit_sink_url.is_empty() {
@@ -289,7 +382,18 @@ impl SecurityContext {
             primary_read: self.primary_read,
             eventual_consistency_allowed: self.eventual_consistency_allowed,
             read_fence_json: self.read_fence_json.clone(),
+            service_identity: self.service_identity.clone(),
+            decision_id: String::new(),
         }
+    }
+
+    /// Same as [`request_context`](Self::request_context) but stamps the
+    /// authorization `decision_id` so the backend context can emit
+    /// `app.current_decision_id` for row-level audit correlation (Stage 2).
+    pub fn request_context_with_decision(&self, decision_id: &str) -> crate::RequestContext {
+        let mut ctx = self.request_context();
+        ctx.decision_id = decision_id.to_string();
+        ctx
     }
 
     pub fn has_scope(&self, scope: &str) -> bool {
@@ -322,6 +426,7 @@ pub struct LogSafeSecurityContext {
     pub user_id: String,
 }
 
+use jsonwebtoken::jwk::JwkSet;
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 
 #[derive(Debug, Deserialize)]
@@ -329,8 +434,289 @@ pub struct SecurityClaims {
     pub tenant_id: Option<String>,
     pub purpose: Option<String>,
     pub scopes: Option<Vec<String>>,
+    /// OAuth2 singular `scope` claim — a space/comma-separated string. Used when
+    /// the array `scopes` claim is absent.
+    #[serde(default)]
+    pub scope: Option<String>,
     pub service_identity: Option<String>,
     pub project_id: Option<String>,
+    // Registered/UDB claims parsed for mapping. `exp`, `nbf`, `aud`, and `iss`
+    // are validated by `jsonwebtoken`'s `Validation` (not mapped here) — adding
+    // `aud` here as a String would break tokens whose `aud` is an array.
+    #[serde(default)]
+    pub sub: Option<String>,
+    #[serde(default)]
+    pub iss: Option<String>,
+    #[serde(default)]
+    pub jti: Option<String>,
+    /// RBAC roles — parsed now; wired into `SecurityContext`/`Decision` in a
+    /// later phase (policy model upgrade).
+    #[serde(default)]
+    pub roles: Option<Vec<String>>,
+    /// ReBAC snapshot version for relationship-cache invalidation (later phase).
+    #[serde(default)]
+    pub relationships_version: Option<String>,
+}
+
+impl SecurityClaims {
+    /// Resolve scopes from either the array `scopes` claim or the OAuth2
+    /// singular `scope` string (space/comma-separated). The array form wins when
+    /// both are present.
+    pub fn resolved_scopes(&self) -> Vec<String> {
+        if let Some(scopes) = &self.scopes {
+            return scopes.clone();
+        }
+        if let Some(scope) = &self.scope {
+            return scope
+                .split([' ', ','])
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(ToString::to_string)
+                .collect();
+        }
+        Vec::new()
+    }
+}
+
+#[derive(Clone)]
+struct JwksCacheEntry {
+    url: String,
+    fetched_at_unix: u64,
+    jwks: JwkSet,
+}
+
+static JWT_JWKS_CACHE: OnceLock<Mutex<Option<JwksCacheEntry>>> = OnceLock::new();
+
+/// Test-only JWKS override: when set, `cached_jwks` returns it directly for both
+/// the fresh and refresh paths, so JWKS verification (kid lookup + rotation) can
+/// be exercised offline without a network fetch.
+#[cfg(test)]
+static TEST_JWKS_OVERRIDE: OnceLock<Mutex<Option<JwkSet>>> = OnceLock::new();
+
+#[cfg(test)]
+pub(crate) fn set_test_jwks(jwks: Option<JwkSet>) {
+    let cell = TEST_JWKS_OVERRIDE.get_or_init(|| Mutex::new(None));
+    if let Ok(mut guard) = cell.lock() {
+        *guard = jwks;
+    }
+}
+
+fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+#[cfg(feature = "http-client")]
+fn fetch_jwks(url: &str) -> Result<JwkSet, String> {
+    reqwest::blocking::get(url)
+        .map_err(|err| format!("JWKS fetch failed: {err}"))?
+        .error_for_status()
+        .map_err(|err| format!("JWKS fetch returned an error status: {err}"))?
+        .json::<JwkSet>()
+        .map_err(|err| format!("JWKS JSON parse failed: {err}"))
+}
+
+#[cfg(not(feature = "http-client"))]
+fn fetch_jwks(_url: &str) -> Result<JwkSet, String> {
+    Err("JWKS validation requires the http-client feature".to_string())
+}
+
+fn cached_jwks(config: &SecurityConfig, refresh: bool) -> Result<JwkSet, String> {
+    #[cfg(test)]
+    if let Some(cell) = TEST_JWKS_OVERRIDE.get()
+        && let Ok(guard) = cell.lock()
+        && let Some(jwks) = guard.as_ref()
+    {
+        return Ok(jwks.clone());
+    }
+    let url = config
+        .jwt_jwks_url
+        .as_deref()
+        .filter(|url| !url.trim().is_empty())
+        .ok_or_else(|| "UDB_JWT_JWKS_URL is not configured".to_string())?;
+    let now = unix_now();
+    let cache = JWT_JWKS_CACHE.get_or_init(|| Mutex::new(None));
+    if !refresh
+        && let Ok(guard) = cache.lock()
+        && let Some(entry) = guard.as_ref()
+        && entry.url == url
+        && now.saturating_sub(entry.fetched_at_unix) <= config.jwt_jwks_cache_ttl_secs
+    {
+        return Ok(entry.jwks.clone());
+    }
+    let jwks = fetch_jwks(url)?;
+    if let Ok(mut guard) = cache.lock() {
+        *guard = Some(JwksCacheEntry {
+            url: url.to_string(),
+            fetched_at_unix: now,
+            jwks: jwks.clone(),
+        });
+    }
+    Ok(jwks)
+}
+
+fn jwks_decoding_key(
+    config: &SecurityConfig,
+    header: &jsonwebtoken::Header,
+) -> Result<DecodingKey, String> {
+    let kid = header
+        .kid
+        .as_deref()
+        .filter(|kid| !kid.trim().is_empty())
+        .ok_or_else(|| "JWT header missing kid for JWKS verification".to_string())?;
+    for refresh in [false, true] {
+        let jwks = cached_jwks(config, refresh)?;
+        if let Some(jwk) = jwks
+            .keys
+            .iter()
+            .find(|jwk| jwk.common.key_id.as_deref() == Some(kid))
+        {
+            return DecodingKey::from_jwk(jwk)
+                .map_err(|err| format!("invalid JWKS key for kid '{kid}': {err}"));
+        }
+    }
+    Err(format!("JWT kid '{kid}' not found in JWKS"))
+}
+
+/// Sign a UDB-issued access token (RS256) from the configured private key
+/// (`UDB_JWT_PRIVATE_KEY`, inline PEM or path). The emitted claims mirror
+/// [`SecurityClaims`] so the token validates through the same
+/// [`validate_bearer_token`] path. Returns `Ok(None)` when no signing key is
+/// configured (the caller then falls back to server-side sessions only); `Err`
+/// only on a real key/signing failure. `iss`/`aud` are stamped when configured.
+#[allow(clippy::too_many_arguments)]
+pub fn sign_access_token(
+    config: &SecurityConfig,
+    subject: &str,
+    tenant_id: &str,
+    project_id: &str,
+    scopes: &[String],
+    roles: &[String],
+    service_identity: &str,
+    jti: &str,
+    now_unix: u64,
+) -> Result<Option<(String, i64)>, String> {
+    use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
+    use serde_json::json;
+
+    let Some(key_src) = config.jwt_private_key.clone() else {
+        return Ok(None);
+    };
+    let key_bytes = if key_src.contains("-----BEGIN") {
+        key_src.into_bytes()
+    } else {
+        std::fs::read(&key_src).map_err(|e| format!("failed to read JWT private key: {e}"))?
+    };
+    let encoding_key = EncodingKey::from_rsa_pem(&key_bytes)
+        .map_err(|e| format!("invalid JWT private key: {e}"))?;
+    let ttl = config.jwt_access_ttl_secs.max(1);
+    let exp = now_unix.saturating_add(ttl) as i64;
+    let mut claims = serde_json::Map::new();
+    claims.insert("sub".into(), json!(subject));
+    claims.insert("iat".into(), json!(now_unix as i64));
+    claims.insert("exp".into(), json!(exp));
+    claims.insert("jti".into(), json!(jti));
+    if !tenant_id.is_empty() {
+        claims.insert("tenant_id".into(), json!(tenant_id));
+    }
+    if !project_id.is_empty() {
+        claims.insert("project_id".into(), json!(project_id));
+    }
+    if !scopes.is_empty() {
+        claims.insert("scopes".into(), json!(scopes));
+    }
+    if !roles.is_empty() {
+        claims.insert("roles".into(), json!(roles));
+    }
+    if !service_identity.is_empty() {
+        claims.insert("service_identity".into(), json!(service_identity));
+    }
+    if let Some(iss) = &config.jwt_issuer {
+        claims.insert("iss".into(), json!(iss));
+    }
+    if let Some(aud) = &config.jwt_audience {
+        claims.insert("aud".into(), json!(aud));
+    }
+    let token = encode(
+        &Header::new(Algorithm::RS256),
+        &serde_json::Value::Object(claims),
+        &encoding_key,
+    )
+    .map_err(|e| format!("failed to sign access token: {e}"))?;
+    Ok(Some((token, exp)))
+}
+
+/// Decode and validate a raw bearer JWT against the configured public key and
+/// validation rules, returning the mapped claims. This shares one validation
+/// path with the per-request broker flow (`security_from_request`) so the auth
+/// service's `Authenticate` RPC enforces the same `exp`/`nbf`/`iss`/`aud`/alg
+/// rules. `Err` carries a caller-safe message (no key material).
+pub fn validate_bearer_token(
+    config: &SecurityConfig,
+    token: &str,
+) -> Result<SecurityClaims, String> {
+    // Pick the decoding-key constructor by the token's declared algorithm
+    // family. A blind `from_rsa_pem().or_else(from_ec_pem)…` chain can build a
+    // wrong-family key from a PEM that several constructors accept by tag, which
+    // then surfaces as a confusing `InvalidAlgorithm` at verification time.
+    let header =
+        jsonwebtoken::decode_header(token).map_err(|e| format!("invalid JWT header: {e}"))?;
+    let decoding_key = if config.jwt_jwks_url.is_some() {
+        jwks_decoding_key(config, &header)?
+    } else {
+        let Some(jwt_key_env) = config.jwt_public_key.clone() else {
+            return Err(
+                "JWT validation is not configured (set UDB_JWT_PUBLIC_KEY or UDB_JWT_JWKS_URL)"
+                    .to_string(),
+            );
+        };
+        let key_bytes = if jwt_key_env.contains("-----BEGIN") {
+            jwt_key_env.into_bytes()
+        } else {
+            std::fs::read(&jwt_key_env)
+                .map_err(|e| format!("failed to read JWT public key: {e}"))?
+        };
+        match header.alg {
+            Algorithm::RS256
+            | Algorithm::RS384
+            | Algorithm::RS512
+            | Algorithm::PS256
+            | Algorithm::PS384
+            | Algorithm::PS512 => DecodingKey::from_rsa_pem(&key_bytes),
+            Algorithm::ES256 | Algorithm::ES384 => DecodingKey::from_ec_pem(&key_bytes),
+            Algorithm::EdDSA => DecodingKey::from_ed_pem(&key_bytes),
+            Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
+                return Err(
+                    "symmetric (HMAC) JWTs are not supported; configure an asymmetric key"
+                        .to_string(),
+                );
+            }
+        }
+        .map_err(|e| format!("invalid JWT public key format: {e}"))?
+    };
+    let mut validation = build_jwt_validation(config);
+    // jsonwebtoken's verifier rejects the token if ANY algorithm in
+    // `validation.algorithms` belongs to a different key family than the decoding
+    // key (it returns `InvalidAlgorithm` before even checking the signature). The
+    // default allow-list spans RSA, EC, and EdDSA families, so an RSA key paired
+    // with the (multi-family) default set would otherwise fail every token. Narrow
+    // the allowed set to the presented token's family; an empty result means the
+    // token's algorithm family is not permitted by the configured allow-list.
+    let presented_family = jwt_algorithm_family(header.alg);
+    validation
+        .algorithms
+        .retain(|alg| jwt_algorithm_family(*alg) == presented_family);
+    if validation.algorithms.is_empty() {
+        return Err(format!(
+            "JWT algorithm {:?} is not permitted by the configured allowed algorithms",
+            header.alg
+        ));
+    }
+    decode::<SecurityClaims>(token, &decoding_key, &validation)
+        .map(|data| data.claims)
+        .map_err(|e| format!("invalid JWT token: {e}"))
 }
 
 pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext, Status> {
@@ -367,45 +753,38 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
         .parse::<u64>()
         .unwrap_or_default();
 
-    if let Some(jwt_key_env) = config.jwt_public_key.clone() {
+    if config.jwt_public_key.is_some() || config.jwt_jwks_url.is_some() {
+        // A JWT verifier is configured via either a static PEM or a JWKS URL.
+        // Both must enter this branch: gating on `jwt_public_key` alone let a
+        // JWKS-only deployment silently skip JWT validation and fall through to
+        // the mTLS/header path (fail-open). `validate_bearer_token` resolves the
+        // key from JWKS when no static PEM is present.
         let auth_header = header("authorization");
         let token = auth_header.strip_prefix("Bearer ").ok_or_else(|| {
             Status::unauthenticated("missing or invalid authorization header (JWT required)")
         })?;
 
-        let key_bytes = if jwt_key_env.contains("-----BEGIN") {
-            jwt_key_env.into_bytes()
+        // Single JWT validation path: reuse `validate_bearer_token` (also used by
+        // the AuthnService `Authenticate` RPC) instead of duplicating the
+        // key-parse + decode here.
+        let claims = validate_bearer_token(&config, token).map_err(Status::unauthenticated)?;
+
+        // `sub` is the canonical principal id; fall back to it when the
+        // x-user-id header is absent.
+        let user_id = if user_id.trim().is_empty() {
+            claims.sub.clone().unwrap_or_default()
         } else {
-            std::fs::read(&jwt_key_env)
-                .map_err(|e| Status::internal(format!("failed to read JWT public key: {}", e)))?
+            user_id
         };
-
-        let decoding_key = DecodingKey::from_rsa_pem(&key_bytes)
-            .or_else(|_| DecodingKey::from_ec_pem(&key_bytes))
-            .or_else(|_| DecodingKey::from_ed_pem(&key_bytes))
-            .map_err(|e| Status::internal(format!("invalid JWT public key format: {}", e)))?;
-
-        let mut validation = Validation::new(Algorithm::RS256);
-        validation.algorithms = vec![
-            Algorithm::RS256,
-            Algorithm::RS384,
-            Algorithm::RS512,
-            Algorithm::ES256,
-            Algorithm::ES384,
-            Algorithm::EdDSA,
-        ];
-        validation.validate_exp = true;
-
-        let claims = decode::<SecurityClaims>(token, &decoding_key, &validation)
-            .map_err(|e| Status::unauthenticated(format!("invalid JWT token: {}", e)))?
-            .claims;
+        // Compute before the struct literal: the literal partially moves `claims`.
+        let resolved_scopes = claims.resolved_scopes();
 
         return Ok(SecurityContext {
             tenant_id: claims.tenant_id.unwrap_or_else(|| header("x-tenant-id")),
             purpose: claims.purpose.unwrap_or_else(|| header("x-purpose")),
             correlation_id,
             user_id,
-            scopes: claims.scopes.unwrap_or_default(),
+            scopes: resolved_scopes,
             service_identity: claims
                 .service_identity
                 .unwrap_or_else(|| "unknown".to_string()),
@@ -489,8 +868,31 @@ fn header_bool(name: &str, header: &impl Fn(&str) -> String) -> bool {
     )
 }
 
+/// Derive the service identity from a client certificate.
+///
+/// Modern service identity lives in the Subject Alternative Name, so we prefer
+/// it over the legacy CN: a URI SAN first (e.g. a SPIFFE id
+/// `spiffe://trust-domain/ns/sa`), then a DNS SAN, and only then fall back to
+/// the subject Common Name. The resolved value flows into
+/// `SecurityContext.service_identity` and therefore into the authz `Principal`.
 pub fn service_identity_from_der(der: &[u8]) -> Option<String> {
+    use x509_parser::extensions::GeneralName;
     let (_, cert) = parse_x509_certificate(der).ok()?;
+    if let Ok(Some(san)) = cert.subject_alternative_name() {
+        let names = &san.value.general_names;
+        if let Some(uri) = names.iter().find_map(|gn| match gn {
+            GeneralName::URI(uri) if !uri.is_empty() => Some(uri.to_string()),
+            _ => None,
+        }) {
+            return Some(uri);
+        }
+        if let Some(dns) = names.iter().find_map(|gn| match gn {
+            GeneralName::DNSName(dns) if !dns.is_empty() => Some(dns.to_string()),
+            _ => None,
+        }) {
+            return Some(dns);
+        }
+    }
     cert.subject()
         .iter_common_name()
         .next()
@@ -638,6 +1040,110 @@ fn non_empty(value: String) -> Option<String> {
     }
 }
 
+/// Read an env var, returning `None` when unset or blank.
+fn non_empty_env(key: &str) -> Option<String> {
+    std::env::var(key).ok().and_then(non_empty)
+}
+
+/// Read a comma-separated env var into a trimmed, non-empty `Vec<String>`.
+fn csv_env(key: &str) -> Vec<String> {
+    std::env::var(key)
+        .ok()
+        .map(|raw| {
+            raw.split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(ToString::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Map JWT algorithm names (`"RS256"`, `"EdDSA"`, …) to `Algorithm`. Unknown
+/// names are skipped. Symmetric algorithms (HS*) are intentionally not mapped —
+/// UDB's JWT path is public-key only.
+fn parse_jwt_algorithms(spec: &[String]) -> Vec<Algorithm> {
+    spec.iter()
+        .filter_map(|name| match name.trim().to_ascii_uppercase().as_str() {
+            "RS256" => Some(Algorithm::RS256),
+            "RS384" => Some(Algorithm::RS384),
+            "RS512" => Some(Algorithm::RS512),
+            "ES256" => Some(Algorithm::ES256),
+            "ES384" => Some(Algorithm::ES384),
+            "PS256" => Some(Algorithm::PS256),
+            "PS384" => Some(Algorithm::PS384),
+            "PS512" => Some(Algorithm::PS512),
+            "EDDSA" => Some(Algorithm::EdDSA),
+            _ => None,
+        })
+        .collect()
+}
+
+/// The default asymmetric algorithm set when `UDB_JWT_ALLOWED_ALGS` is unset.
+fn default_jwt_algorithms() -> Vec<Algorithm> {
+    vec![
+        Algorithm::RS256,
+        Algorithm::RS384,
+        Algorithm::RS512,
+        Algorithm::ES256,
+        Algorithm::ES384,
+        Algorithm::EdDSA,
+    ]
+}
+
+/// Key-family discriminant for a JWT algorithm. `jsonwebtoken::Algorithm::family`
+/// is crate-private, so we mirror its grouping here: a decoding key and the
+/// algorithms it is validated against must belong to the same family. Distinct
+/// values per family are all that callers compare.
+fn jwt_algorithm_family(alg: Algorithm) -> u8 {
+    match alg {
+        Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => 0,
+        Algorithm::RS256
+        | Algorithm::RS384
+        | Algorithm::RS512
+        | Algorithm::PS256
+        | Algorithm::PS384
+        | Algorithm::PS512 => 1,
+        Algorithm::ES256 | Algorithm::ES384 => 2,
+        Algorithm::EdDSA => 3,
+    }
+}
+
+/// Build the `jsonwebtoken::Validation` from the security config. Pure (no env,
+/// no key material) so it can be unit-tested directly.
+///
+/// Hardening over the previous inline logic:
+/// - `exp` AND `nbf` are validated (was `exp` only).
+/// - `leeway` is operator-tunable clock-skew tolerance (was the crate default).
+/// - issuer is validated when `UDB_JWT_ISSUER` is set.
+/// - audience is validated when `UDB_JWT_AUDIENCE` is set, and audience
+///   validation is explicitly **disabled** otherwise (the crate default leaves
+///   it on, which can reject tokens that merely carry an `aud` claim).
+pub(crate) fn build_jwt_validation(config: &SecurityConfig) -> Validation {
+    let mut validation = Validation::new(Algorithm::RS256);
+    validation.algorithms = if config.jwt_allowed_algs.is_empty() {
+        default_jwt_algorithms()
+    } else {
+        let parsed = parse_jwt_algorithms(&config.jwt_allowed_algs);
+        if parsed.is_empty() {
+            default_jwt_algorithms()
+        } else {
+            parsed
+        }
+    };
+    validation.validate_exp = true;
+    validation.validate_nbf = true;
+    validation.leeway = config.jwt_clock_skew_secs;
+    if let Some(iss) = config.jwt_issuer.as_deref().filter(|s| !s.is_empty()) {
+        validation.set_issuer(&[iss]);
+    }
+    match config.jwt_audience.as_deref().filter(|s| !s.is_empty()) {
+        Some(aud) => validation.set_audience(&[aud]),
+        None => validation.validate_aud = false,
+    }
+    validation
+}
+
 // ── Phase 9: Audit Logging ────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -772,6 +1278,18 @@ fn is_pii_field_name(field: &str) -> bool {
         || lower.contains("tin")
         || lower.contains("mobile")
         || lower.contains("national_id")
+        // Credential/secret-bearing field names must never be logged in clear.
+        || lower.contains("password")
+        || lower.contains("passwd")
+        || lower.contains("secret")
+        || lower.contains("token")
+        || lower.contains("api_key")
+        || lower.contains("apikey")
+        || lower.contains("authorization")
+        || lower.contains("key_hash")
+        || lower.contains("private_key")
+        || lower.contains("session_id")
+        || lower.contains("plain_key")
 }
 
 // ── Phase 9: PII-Safe Logging ─────────────────────────────────────────────────
@@ -888,6 +1406,56 @@ pub fn ip_in_cidr(ip: IpAddr, net: IpAddr, prefix_len: u8) -> bool {
 #[cfg(feature = "http-client")]
 use reqwest;
 use uuid;
+
+// ── RFC 2104 HMAC ─────────────────────────────────────────────────────────────
+
+/// Generic RFC 2104 HMAC over a `sha1`/`sha2` `Digest` whose block size is 64
+/// bytes (true for both SHA-1 and SHA-256). Returns the raw MAC bytes.
+///
+/// This is the single source of truth for the keyed-HMAC construction used by
+/// session/API-key hashing, policy-bundle signing, plan-approval signatures, and
+/// RFC 6238 TOTP — all of which previously hand-rolled the identical loop. The
+/// output is byte-for-byte identical to those implementations (block size 64,
+/// ipad `0x36`, opad `0x5c`, key shortened via the same digest when longer than
+/// the block, zero-padded otherwise).
+fn hmac<H>(key: &[u8], msg: &[u8]) -> sha2::digest::Output<H>
+where
+    H: sha2::digest::Digest,
+{
+    const BLOCK: usize = 64;
+    let mut k = if key.len() > BLOCK {
+        H::digest(key).to_vec()
+    } else {
+        key.to_vec()
+    };
+    k.resize(BLOCK, 0);
+    let mut ipad = vec![0x36u8; BLOCK];
+    let mut opad = vec![0x5cu8; BLOCK];
+    for i in 0..BLOCK {
+        ipad[i] ^= k[i];
+        opad[i] ^= k[i];
+    }
+    let mut inner = H::new();
+    inner.update(&ipad);
+    inner.update(msg);
+    let inner_hash = inner.finalize();
+    let mut outer = H::new();
+    outer.update(&opad);
+    outer.update(inner_hash);
+    outer.finalize()
+}
+
+/// HMAC-SHA256 over `msg` keyed by `key`, returning the raw 32-byte digest.
+pub fn hmac_sha256(key: &[u8], msg: &[u8]) -> [u8; 32] {
+    hmac::<sha2::Sha256>(key, msg).into()
+}
+
+/// HMAC-SHA1 over `msg` keyed by `key`, returning the raw 20-byte digest.
+/// SHA-1 here is only the RFC 6238 TOTP HMAC (authenticator-app interop), not a
+/// security primitive for new constructions.
+pub fn hmac_sha1(key: &[u8], msg: &[u8]) -> [u8; 20] {
+    hmac::<sha1::Sha1>(key, msg).into()
+}
 
 // ── Policy linting ────────────────────────────────────────────────────────────
 
@@ -1238,5 +1806,399 @@ mod tests {
         assert_eq!(masked[0]["email"], "***MASKED***");
         assert_eq!(masked[1]["email"], "***MASKED***");
         assert_eq!(masked[0]["id"], 1);
+    }
+
+    // ── JWT validation hardening (Phase 2) ─────────────────────────────────
+
+    #[test]
+    fn jwt_algorithm_parsing_maps_known_and_skips_unknown() {
+        let algs = parse_jwt_algorithms(&[
+            "RS256".into(),
+            "eddsa".into(), // case-insensitive
+            "ES384".into(),
+            "HS256".into(), // symmetric — intentionally skipped
+            "garbage".into(),
+        ]);
+        assert_eq!(
+            algs,
+            vec![Algorithm::RS256, Algorithm::EdDSA, Algorithm::ES384]
+        );
+    }
+
+    #[test]
+    fn jwt_validation_defaults_disable_aud_and_validate_exp_nbf() {
+        let cfg = SecurityConfig::default();
+        let v = build_jwt_validation(&cfg);
+        assert!(v.validate_exp, "exp must be validated");
+        assert!(v.validate_nbf, "nbf must be validated");
+        // No audience configured → audience validation must be OFF so a token
+        // that merely carries an `aud` claim is not rejected.
+        assert!(!v.validate_aud);
+        assert!(v.aud.is_none());
+        assert!(v.iss.is_none(), "no issuer configured → no issuer check");
+        assert_eq!(v.leeway, 60, "default clock-skew leeway");
+        assert_eq!(v.algorithms, default_jwt_algorithms());
+    }
+
+    #[test]
+    fn jwt_validation_enables_issuer_and_audience_when_configured() {
+        let cfg = SecurityConfig {
+            jwt_issuer: Some("https://issuer.example".into()),
+            jwt_audience: Some("udb".into()),
+            jwt_clock_skew_secs: 5,
+            ..SecurityConfig::default()
+        };
+        let v = build_jwt_validation(&cfg);
+        assert_eq!(v.leeway, 5);
+        assert!(v.validate_aud);
+        assert!(
+            v.aud.as_ref().is_some_and(|set| set.contains("udb")),
+            "audience set must contain the configured aud"
+        );
+        assert!(
+            v.iss
+                .as_ref()
+                .is_some_and(|set| set.contains("https://issuer.example")),
+            "issuer set must contain the configured iss"
+        );
+    }
+
+    #[test]
+    fn jwt_validation_explicit_algs_override_default() {
+        let cfg = SecurityConfig {
+            jwt_allowed_algs: vec!["EdDSA".into()],
+            ..SecurityConfig::default()
+        };
+        let v = build_jwt_validation(&cfg);
+        assert_eq!(v.algorithms, vec![Algorithm::EdDSA]);
+    }
+
+    #[test]
+    fn jwt_validation_all_unknown_algs_fall_back_to_default() {
+        let cfg = SecurityConfig {
+            jwt_allowed_algs: vec!["HS256".into(), "nonsense".into()],
+            ..SecurityConfig::default()
+        };
+        let v = build_jwt_validation(&cfg);
+        // All entries unmappable → fall back to the safe default set rather than
+        // an empty algorithm list (which would reject every token).
+        assert_eq!(v.algorithms, default_jwt_algorithms());
+    }
+
+    #[test]
+    fn security_claims_parse_registered_and_udb_claims() {
+        let json = serde_json::json!({
+            "sub": "user_123",
+            "iss": "https://issuer.example",
+            "jti": "tok-1",
+            "tenant_id": "acme",
+            "roles": ["admin", "billing"],
+            "relationships_version": "v42"
+        });
+        let claims: SecurityClaims = serde_json::from_value(json).unwrap();
+        assert_eq!(claims.sub.as_deref(), Some("user_123"));
+        assert_eq!(claims.tenant_id.as_deref(), Some("acme"));
+        assert_eq!(claims.roles.unwrap(), vec!["admin", "billing"]);
+        assert_eq!(claims.relationships_version.as_deref(), Some("v42"));
+    }
+
+    #[test]
+    fn security_claims_tolerate_array_audience() {
+        // Regression guard: an `aud` array must not break claim deserialization
+        // (we intentionally do not model `aud` as a String in SecurityClaims).
+        let json = serde_json::json!({
+            "sub": "u1",
+            "aud": ["a", "b"],
+            "exp": 9999999999i64
+        });
+        let claims: SecurityClaims = serde_json::from_value(json).unwrap();
+        assert_eq!(claims.sub.as_deref(), Some("u1"));
+    }
+
+    #[test]
+    fn production_validation_rejects_dev_header_scopes() {
+        // Header-based scopes are a dev-only fallback; production must reject them.
+        let cfg = SecurityConfig {
+            allow_header_scopes: true,
+            ..SecurityConfig::default()
+        };
+        let errors = cfg.validate_production().unwrap_err();
+        assert!(
+            errors.iter().any(|e| e.contains("Header-based scopes")),
+            "production validation must reject UDB_ALLOW_HEADER_SCOPES, got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn security_claims_resolve_scope_string_or_array() {
+        let from = |v: serde_json::Value| -> SecurityClaims { serde_json::from_value(v).unwrap() };
+        // Array `scopes`.
+        assert_eq!(
+            from(serde_json::json!({"scopes": ["a", "b"]})).resolved_scopes(),
+            vec!["a", "b"]
+        );
+        // OAuth2 singular space-separated `scope`.
+        assert_eq!(
+            from(serde_json::json!({"scope": "a b c"})).resolved_scopes(),
+            vec!["a", "b", "c"]
+        );
+        // Comma-separated tolerated.
+        assert_eq!(
+            from(serde_json::json!({"scope": "a, b"})).resolved_scopes(),
+            vec!["a", "b"]
+        );
+        // Neither → empty.
+        assert!(from(serde_json::json!({})).resolved_scopes().is_empty());
+        // Array wins when both present.
+        assert_eq!(
+            from(serde_json::json!({"scopes": ["x"], "scope": "y z"})).resolved_scopes(),
+            vec!["x"]
+        );
+    }
+
+    // ── Signed JWT end-to-end coverage (sign → validate_bearer_token) ───────────
+    //
+    // These exercise the full `validate_bearer_token` path with a real RS256
+    // keypair (generated under `src/runtime/testdata/`), proving signature,
+    // `exp`, `nbf`, `iss`, and `aud` enforcement rather than only config wiring.
+
+    /// RS256 keypair used solely for tests. NOT a production secret.
+    const TEST_JWT_PRIVATE_PEM: &str = include_str!("testdata/jwt_rs256_private.pem");
+    const TEST_JWT_PUBLIC_PEM: &str = include_str!("testdata/jwt_rs256_public.pem");
+
+    fn unix_now() -> i64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock before unix epoch")
+            .as_secs() as i64
+    }
+
+    /// Sign `claims` into an RS256 JWT using the test private key.
+    fn sign_rs256(claims: &serde_json::Value) -> String {
+        use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
+        let key = EncodingKey::from_rsa_pem(TEST_JWT_PRIVATE_PEM.as_bytes())
+            .expect("load test RSA private key");
+        encode(&Header::new(Algorithm::RS256), claims, &key).expect("sign test JWT")
+    }
+
+    /// `SecurityConfig` that trusts the test public key, plus any overrides.
+    fn jwt_verify_config() -> SecurityConfig {
+        SecurityConfig {
+            jwt_public_key: Some(TEST_JWT_PUBLIC_PEM.to_string()),
+            ..SecurityConfig::default()
+        }
+    }
+
+    #[test]
+    fn jwt_signed_valid_token_round_trips() {
+        let now = unix_now();
+        let token = sign_rs256(&serde_json::json!({
+            "sub": "user_42",
+            "tenant_id": "acme",
+            "scopes": ["udb:read", "udb:write"],
+            "iat": now,
+            "nbf": now - 5,
+            "exp": now + 3600,
+        }));
+        let claims = validate_bearer_token(&jwt_verify_config(), &token)
+            .expect("a correctly-signed, unexpired token must validate");
+        assert_eq!(claims.sub.as_deref(), Some("user_42"));
+        assert_eq!(claims.tenant_id.as_deref(), Some("acme"));
+        assert_eq!(claims.resolved_scopes(), vec!["udb:read", "udb:write"]);
+    }
+
+    #[test]
+    fn jwt_signed_bad_signature_is_rejected() {
+        let now = unix_now();
+        let token = sign_rs256(&serde_json::json!({
+            "sub": "user_42",
+            "exp": now + 3600,
+        }));
+        // Tamper the signature segment (3rd dot-delimited part) so the body is
+        // intact but the RSA signature no longer verifies.
+        let mut parts: Vec<&str> = token.split('.').collect();
+        assert_eq!(parts.len(), 3, "JWT must have header.payload.signature");
+        let sig = parts[2];
+        // Flip the first signature char to a different base64url char.
+        let first = sig.chars().next().unwrap();
+        let replacement = if first == 'A' { 'B' } else { 'A' };
+        let tampered_sig = format!("{replacement}{}", &sig[1..]);
+        parts[2] = &tampered_sig;
+        let tampered = parts.join(".");
+        let err = validate_bearer_token(&jwt_verify_config(), &tampered)
+            .expect_err("a token with a tampered signature must be rejected");
+        assert!(
+            err.contains("invalid JWT token"),
+            "unexpected error for bad signature: {err}"
+        );
+    }
+
+    #[test]
+    fn jwt_signed_expired_token_is_rejected() {
+        let now = unix_now();
+        // exp well past the default 60s leeway.
+        let token = sign_rs256(&serde_json::json!({
+            "sub": "user_42",
+            "iat": now - 7200,
+            "exp": now - 3600,
+        }));
+        let err = validate_bearer_token(&jwt_verify_config(), &token)
+            .expect_err("an expired token must be rejected");
+        assert!(
+            err.contains("invalid JWT token"),
+            "unexpected error for expired token: {err}"
+        );
+    }
+
+    #[test]
+    fn jwt_signed_not_before_in_future_is_rejected() {
+        let now = unix_now();
+        // nbf well beyond the default 60s leeway; exp still in the future so only
+        // the not-before constraint can fail.
+        let token = sign_rs256(&serde_json::json!({
+            "sub": "user_42",
+            "nbf": now + 3600,
+            "exp": now + 7200,
+        }));
+        let err = validate_bearer_token(&jwt_verify_config(), &token)
+            .expect_err("a token whose nbf is in the future must be rejected");
+        assert!(
+            err.contains("invalid JWT token"),
+            "unexpected error for not-yet-valid token: {err}"
+        );
+    }
+
+    #[test]
+    fn jwt_signed_wrong_issuer_is_rejected() {
+        let now = unix_now();
+        let cfg = SecurityConfig {
+            jwt_issuer: Some("https://issuer.example".into()),
+            ..jwt_verify_config()
+        };
+        // Valid signature & timing, but the issuer claim does not match.
+        let token = sign_rs256(&serde_json::json!({
+            "sub": "user_42",
+            "iss": "https://evil.example",
+            "exp": now + 3600,
+        }));
+        let err = validate_bearer_token(&cfg, &token)
+            .expect_err("a token with the wrong issuer must be rejected");
+        assert!(
+            err.contains("invalid JWT token"),
+            "unexpected error for wrong issuer: {err}"
+        );
+        // Sanity: the matching issuer is accepted under the same config.
+        let good = sign_rs256(&serde_json::json!({
+            "sub": "user_42",
+            "iss": "https://issuer.example",
+            "exp": now + 3600,
+        }));
+        assert!(
+            validate_bearer_token(&cfg, &good).is_ok(),
+            "the configured issuer must be accepted"
+        );
+    }
+
+    #[test]
+    fn jwt_signed_wrong_audience_is_rejected() {
+        let now = unix_now();
+        let cfg = SecurityConfig {
+            jwt_audience: Some("udb".into()),
+            ..jwt_verify_config()
+        };
+        // Valid signature & timing, but the audience claim does not match.
+        let token = sign_rs256(&serde_json::json!({
+            "sub": "user_42",
+            "aud": "some-other-service",
+            "exp": now + 3600,
+        }));
+        let err = validate_bearer_token(&cfg, &token)
+            .expect_err("a token with the wrong audience must be rejected");
+        assert!(
+            err.contains("invalid JWT token"),
+            "unexpected error for wrong audience: {err}"
+        );
+        // Sanity: the matching audience is accepted under the same config.
+        let good = sign_rs256(&serde_json::json!({
+            "sub": "user_42",
+            "aud": "udb",
+            "exp": now + 3600,
+        }));
+        assert!(
+            validate_bearer_token(&cfg, &good).is_ok(),
+            "the configured audience must be accepted"
+        );
+    }
+
+    /// Base64url modulus (`n`) of the test RSA public key (`jwt_rs256_public.pem`),
+    /// extracted with `openssl rsa -pubin -modulus`. Paired with the standard
+    /// exponent `AQAB` (65537) it forms a JWK that verifies tokens signed by
+    /// `jwt_rs256_private.pem`.
+    const TEST_JWK_N: &str = "pbvbMYOK95BdLQvc4SaGOwUp1MTQzVtSHsy-9Jr8wuMTQCJVVOfuCOjdgCwAf1DrOkO9zqSxUnvIilarUI_EPHiqWZVdESGGNY0TReKg0rp3iDh6SJXBjgXzJEY_wr79IRoG-sE7PN4o2C2L9zdOJ9GQLJBxUo2UFa8Yyy9WGtcBX1p_tYKb42bItRpiT-Nwt3HFGTMxNhNXhWUSwY9mwR4rPGCeT6NxwQg7UAmTQAzJPz4LWECAmsKcdecsH_dEU3Jl8TN35OTbx6KGySW-gIrMfzqK12pkgEBn3Zmw5UdOA9sMgjSfjVN-MTfnIl-8VmuaAsnIEi13Embmw8kpeQ";
+
+    /// Build a single-key JWKS advertising the test key under `kid`.
+    fn jwks_with_kid(kid: &str) -> jsonwebtoken::jwk::JwkSet {
+        let json = format!(
+            r#"{{"keys":[{{"kty":"RSA","use":"sig","alg":"RS256","kid":"{kid}","n":"{TEST_JWK_N}","e":"AQAB"}}]}}"#
+        );
+        serde_json::from_str(&json).expect("parse test JWKS")
+    }
+
+    /// Sign a test JWT carrying an explicit `kid` header (JWKS key selection).
+    fn sign_rs256_kid(claims: &serde_json::Value, kid: &str) -> String {
+        use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
+        let key = EncodingKey::from_rsa_pem(TEST_JWT_PRIVATE_PEM.as_bytes())
+            .expect("load test RSA private key");
+        let mut header = Header::new(Algorithm::RS256);
+        header.kid = Some(kid.to_string());
+        encode(&header, claims, &key).expect("sign test JWT")
+    }
+
+    /// `SecurityConfig` that resolves keys via a (test-overridden) JWKS endpoint
+    /// rather than a static public key, so the `kid`-lookup path is exercised.
+    fn jwt_jwks_config() -> SecurityConfig {
+        SecurityConfig {
+            jwt_jwks_url: Some("https://test.local/.well-known/jwks.json".to_string()),
+            ..SecurityConfig::default()
+        }
+    }
+
+    #[test]
+    fn jwt_jwks_kid_rotation_and_lookup() {
+        let now = unix_now();
+        let claims = serde_json::json!({ "sub": "user_42", "exp": now + 3600 });
+        let cfg = jwt_jwks_config();
+
+        // The published key set advertises kid "k1": a token signed under k1
+        // resolves the right JWK and validates.
+        set_test_jwks(Some(jwks_with_kid("k1")));
+        let t1 = sign_rs256_kid(&claims, "k1");
+        assert!(
+            validate_bearer_token(&cfg, &t1).is_ok(),
+            "a token whose kid is published in the JWKS must validate"
+        );
+
+        // A token whose kid is absent from the JWKS is rejected (no silent
+        // fall-through to an arbitrary key).
+        let unknown = sign_rs256_kid(&claims, "not-published");
+        assert!(
+            validate_bearer_token(&cfg, &unknown).is_err(),
+            "a token with an unpublished kid must be rejected"
+        );
+
+        // Rotate the JWKS to kid "k2": tokens under the new kid validate, and
+        // the retired kid is no longer accepted (key rotation is picked up).
+        set_test_jwks(Some(jwks_with_kid("k2")));
+        let t2 = sign_rs256_kid(&claims, "k2");
+        assert!(
+            validate_bearer_token(&cfg, &t2).is_ok(),
+            "a token signed under the rotated kid must validate"
+        );
+        assert!(
+            validate_bearer_token(&cfg, &t1).is_err(),
+            "after rotation, a token under the retired kid must be rejected"
+        );
+
+        set_test_jwks(None);
     }
 }

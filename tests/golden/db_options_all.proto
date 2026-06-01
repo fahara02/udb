@@ -1,10 +1,10 @@
 syntax = "proto3";
 package example.udb.golden.v1;
 
-import "example/examplecore/common/v1/db.proto";
+import "udb/core/common/v1/db.proto";
 
 message DbOptionGolden {
-  option (example.examplecore.common.v1.table) = {
+  option (udb.core.common.v1.table) = {
     table_name: "db_option_golden"
     schema_name: "golden"
     migration_order: 7
@@ -18,7 +18,7 @@ message DbOptionGolden {
     retention_days: 30
   };
 
-  option (example.examplecore.common.v1.vector_store) = {
+  option (udb.core.common.v1.vector_store) = {
     backend: VECTOR_BACKEND_QDRANT
     collection_name: "db_option_golden_vectors"
     dimension: 1536
@@ -31,7 +31,7 @@ message DbOptionGolden {
     hnsw_ef_construction: 64
   };
 
-  option (example.examplecore.common.v1.cache) = {
+  option (udb.core.common.v1.cache) = {
     backend: CACHE_BACKEND_REDIS
     key_pattern: "golden:{tenant_id}:{golden_id}"
     ttl_seconds: 600
@@ -42,7 +42,7 @@ message DbOptionGolden {
     namespace: "golden"
   };
 
-  option (example.examplecore.common.v1.model_registry) = {
+  option (udb.core.common.v1.model_registry) = {
     backend: MODEL_BACKEND_MLFLOW
     experiment_name: "golden-models"
     artifact_path: "runs/latest"
@@ -53,7 +53,7 @@ message DbOptionGolden {
     storage_uri_env: "MODEL_STORE_URI"
   };
 
-  string golden_id = 1 [(example.examplecore.common.v1.column) = {
+  string golden_id = 1 [(udb.core.common.v1.column) = {
     column_name: "golden_id"
     sql_type: "UUID"
     not_null: true
@@ -91,24 +91,24 @@ message DbOptionGolden {
     is_json: false
   }];
 
-  string tenant_id = 2 [(example.examplecore.common.v1.column) = {
+  string tenant_id = 2 [(udb.core.common.v1.column) = {
     column_name: "tenant_id"
     sql_type: "UUID"
     not_null: true
   }];
 
-  string status = 3 [(example.examplecore.common.v1.column) = {
+  string status = 3 [(udb.core.common.v1.column) = {
     column_name: "status"
     sql_type: "TEXT"
     default_value: "'active'"
   }];
 
   string object_key = 4 [
-    (example.examplecore.common.v1.column) = {
+    (udb.core.common.v1.column) = {
       column_name: "object_key"
       sql_type: "TEXT"
     },
-    (example.examplecore.common.v1.storage) = {
+    (udb.core.common.v1.storage) = {
       backend: STORAGE_BACKEND_MINIO
       bucket_env_key: "GOLDEN_BUCKET"
       key_prefix: "golden/{tenant_id}"

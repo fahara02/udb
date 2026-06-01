@@ -19,6 +19,7 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 use uuid::Uuid;
 
+use super::dialect::{SqlDialect, build_eq_where, normalize_limit_offset};
 use super::mysql::MysqlCanonicalStore;
 use super::system_store::{
     MigrationAuditStore, MigrationOpInsert, MigrationOpRow, MigrationRunInsert, MigrationRunRow,
@@ -288,23 +289,18 @@ impl MigrationAuditStore for MysqlCanonicalStore {
         &self,
         filter: &MigrationRunsFilter,
     ) -> SystemStoreResult<Vec<MigrationRunRow>> {
-        let mut clauses: Vec<&str> = Vec::new();
-        if filter.project_id.is_some() {
-            clauses.push("project_id = ?");
-        }
-        if filter.state.is_some() {
-            clauses.push("state = ?");
-        }
-        if filter.catalog_version.is_some() {
-            clauses.push("catalog_version = ?");
-        }
-        let where_sql = if clauses.is_empty() {
-            String::new()
-        } else {
-            format!("WHERE {}", clauses.join(" AND "))
-        };
-        let limit = if filter.limit <= 0 { 100 } else { filter.limit };
-        let offset = filter.offset.max(0);
+        let w = build_eq_where(
+            SqlDialect::MYSQL,
+            &[
+                ("project_id", filter.project_id.is_some()),
+                ("state", filter.state.is_some()),
+                ("catalog_version", filter.catalog_version.is_some()),
+            ],
+        );
+        let where_sql = &w.where_sql;
+        let limit_placeholder = &w.limit_placeholder;
+        let offset_placeholder = &w.offset_placeholder;
+        let (limit, offset) = normalize_limit_offset(filter.limit, filter.offset);
         let sql = format!(
             "SELECT run_id, project_id, catalog_version, state,
                     operations_hash, approval_token,
@@ -312,7 +308,7 @@ impl MigrationAuditStore for MysqlCanonicalStore {
              FROM {RUNS_TABLE}
              {where_sql}
              ORDER BY started_at DESC
-             LIMIT ? OFFSET ?"
+             LIMIT {limit_placeholder} OFFSET {offset_placeholder}"
         );
         let mut q = sqlx::query(&sql);
         if let Some(p) = &filter.project_id {

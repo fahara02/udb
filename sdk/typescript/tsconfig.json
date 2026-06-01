@@ -8,5 +8,5 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["client.ts"]
+  "include": ["index.ts", "client.ts", "auth.ts", "protoRoot.ts"]
 }

@@ -20,7 +20,7 @@
 //! the recovery worker scans `pg_prepared_xacts` and drives every
 //! UDB-prefixed xid to its ledger-recorded terminal state.
 
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, Transaction};
 
 use crate::runtime::xa::{PrepareVote, XaParticipant, XaParticipantHandle};
 
@@ -37,6 +37,33 @@ pub struct PostgresXaParticipant {
     /// coordinator passes one per logical mutation; the participant
     /// concatenates them into a single transaction.
     mutations_sql: Vec<String>,
+}
+
+/// Postgres participant wrapping an already-open transaction.
+///
+/// `begin_tx` executes all request mutations through the normal UDB planner and
+/// bind path before commit. For a `two_phase` request, that open transaction is
+/// handed to this participant; PHASE 1 is just `PREPARE TRANSACTION`, and PHASE
+/// 2 commits/rolls back the prepared xid from the pool. This keeps CRUD logic in
+/// one place while still routing the 2PC decision through `XaCoordinator`.
+pub struct ActivePostgresXaParticipant {
+    handle: XaParticipantHandle,
+    pool: PgPool,
+    tx: tokio::sync::Mutex<Option<Transaction<'static, Postgres>>>,
+}
+
+impl ActivePostgresXaParticipant {
+    pub fn new(
+        instance: impl Into<String>,
+        pool: PgPool,
+        tx: Transaction<'static, Postgres>,
+    ) -> Self {
+        Self {
+            handle: XaParticipantHandle::new("postgres", instance),
+            pool,
+            tx: tokio::sync::Mutex::new(Some(tx)),
+        }
+    }
 }
 
 impl PostgresXaParticipant {
@@ -142,6 +169,64 @@ impl XaParticipant for PostgresXaParticipant {
     async fn rollback_prepared(&self, xid: &str) -> Result<(), String> {
         Self::validate_xid(xid)?;
         let sql = format!("ROLLBACK PREPARED {}", Self::quote_xid(xid));
+        sqlx::query(&sql)
+            .execute(&self.pool)
+            .await
+            .map(|_| ())
+            .map_err(|err| format!("ROLLBACK PREPARED failed: {err}"))
+    }
+}
+
+#[async_trait::async_trait]
+impl XaParticipant for ActivePostgresXaParticipant {
+    fn handle(&self) -> &XaParticipantHandle {
+        &self.handle
+    }
+
+    async fn prepare(&self, xid: &str) -> PrepareVote {
+        if let Err(reason) = PostgresXaParticipant::validate_xid(xid) {
+            return PrepareVote::Aborted { reason };
+        }
+        let mut guard = self.tx.lock().await;
+        let Some(mut tx) = guard.take() else {
+            return PrepareVote::Aborted {
+                reason: "active Postgres transaction was already consumed".to_string(),
+            };
+        };
+        let prepare_sql = format!(
+            "PREPARE TRANSACTION {}",
+            PostgresXaParticipant::quote_xid(xid)
+        );
+        if let Err(err) = sqlx::query(&prepare_sql).execute(&mut *tx).await {
+            let _ = tx.rollback().await;
+            return PrepareVote::Aborted {
+                reason: format!("PREPARE TRANSACTION failed: {err}"),
+            };
+        }
+        // After PREPARE the transaction is owned by PostgreSQL's prepared-xact
+        // catalog. Dropping the sqlx wrapper may attempt a best-effort rollback;
+        // PostgreSQL rejects that because the xact is already prepared, and the
+        // actual terminal decision is driven by commit_prepared/rollback_prepared.
+        drop(tx);
+        PrepareVote::Prepared
+    }
+
+    async fn commit_prepared(&self, xid: &str) -> Result<(), String> {
+        PostgresXaParticipant::validate_xid(xid)?;
+        let sql = format!("COMMIT PREPARED {}", PostgresXaParticipant::quote_xid(xid));
+        sqlx::query(&sql)
+            .execute(&self.pool)
+            .await
+            .map(|_| ())
+            .map_err(|err| format!("COMMIT PREPARED failed: {err}"))
+    }
+
+    async fn rollback_prepared(&self, xid: &str) -> Result<(), String> {
+        PostgresXaParticipant::validate_xid(xid)?;
+        let sql = format!(
+            "ROLLBACK PREPARED {}",
+            PostgresXaParticipant::quote_xid(xid)
+        );
         sqlx::query(&sql)
             .execute(&self.pool)
             .await

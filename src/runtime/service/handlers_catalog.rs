@@ -6,20 +6,9 @@ impl DataBrokerService {
         &self,
         request: Request<CatalogManifestRequest>,
     ) -> Result<Response<CatalogManifestResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("GetCatalogManifest", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "GetCatalogManifest").await {
+        let (started, security) = authorized_call!(self, request, "GetCatalogManifest");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("GetCatalogManifest", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "GetCatalogManifest",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let request = request.into_inner();
         let manifest_value = self
@@ -48,20 +37,9 @@ impl DataBrokerService {
         &self,
         request: Request<StageCatalogRequest>,
     ) -> Result<Response<CatalogVersionResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("StageCatalog", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "StageCatalog").await {
+        let (started, security) = authorized_call!(self, request, "StageCatalog");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("StageCatalog", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "StageCatalog",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let actor = security.service_identity.clone();
@@ -139,20 +117,9 @@ impl DataBrokerService {
         &self,
         request: Request<CatalogVersionRequest>,
     ) -> Result<Response<CatalogVersionResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("ActivateCatalog", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "ActivateCatalog").await {
+        let (started, security) = authorized_call!(self, request, "ActivateCatalog");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("ActivateCatalog", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "ActivateCatalog",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let actor = security.service_identity.clone();
@@ -186,7 +153,7 @@ impl DataBrokerService {
                         req.version.clone()
                     };
                     // Just in case it hasn't been staged in this exact node:
-                    let _ = self
+                    if let Err(err) = self
                         .catalog
                         .stage_catalog(
                             manifest,
@@ -194,11 +161,28 @@ impl DataBrokerService {
                             active_version,
                             "backward".to_string(),
                         )
-                        .await;
-                    let _ = self.catalog.activate_catalog(&checksum).await;
+                        .await
+                    {
+                        return self.record_grpc(
+                            "ActivateCatalog",
+                            started,
+                            Err(Status::internal(format!(
+                                "failed to stage active catalog in memory: {err}"
+                            ))),
+                        );
+                    }
+                    if let Err(err) = self.catalog.activate_catalog(&checksum).await {
+                        return self.record_grpc(
+                            "ActivateCatalog",
+                            started,
+                            Err(Status::internal(format!(
+                                "failed to activate catalog in memory: {err}"
+                            ))),
+                        );
+                    }
                 }
 
-                let _ = self
+                if let Err(err) = self
                     .runtime_snapshot()
                     .write_audit_log(
                         &actor,
@@ -210,7 +194,17 @@ impl DataBrokerService {
                         &req.project_id,
                         "",
                     )
-                    .await;
+                    .await
+                {
+                    return self.record_grpc(
+                        "ActivateCatalog",
+                        started,
+                        Err(Status::internal(format!(
+                            "failed to write ActivateCatalog audit log: {}",
+                            err.message()
+                        ))),
+                    );
+                }
                 CatalogVersionResponse {
                     catalog_id: req.version.clone(),
                     project_id: req.project_id,
@@ -228,20 +222,9 @@ impl DataBrokerService {
         &self,
         request: Request<CatalogVersionRequest>,
     ) -> Result<Response<CatalogVersionResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("RollbackCatalog", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "RollbackCatalog").await {
+        let (started, security) = authorized_call!(self, request, "RollbackCatalog");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("RollbackCatalog", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "RollbackCatalog",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let actor = security.service_identity.clone();
@@ -275,7 +258,7 @@ impl DataBrokerService {
                         } else {
                             req.version.clone()
                         };
-                        let _ = self
+                        if let Err(err) = self
                             .catalog
                             .stage_catalog(
                                 manifest,
@@ -283,15 +266,41 @@ impl DataBrokerService {
                                 active_version,
                                 "backward".to_string(),
                             )
-                            .await;
-                        let _ = self.catalog.activate_catalog(&checksum).await;
+                            .await
+                        {
+                            return self.record_grpc(
+                                "RollbackCatalog",
+                                started,
+                                Err(Status::internal(format!(
+                                    "failed to stage rollback catalog in memory: {err}"
+                                ))),
+                            );
+                        }
+                        if let Err(err) = self.catalog.activate_catalog(&checksum).await {
+                            return self.record_grpc(
+                                "RollbackCatalog",
+                                started,
+                                Err(Status::internal(format!(
+                                    "failed to activate rollback catalog in memory: {err}"
+                                ))),
+                            );
+                        }
                     }
 
-                    let _ = self.runtime_snapshot().write_audit_log(
+                    if let Err(err) = self.runtime_snapshot().write_audit_log(
                     &actor, "RollbackCatalog", &req.version,
                     &serde_json::json!({"project_id": req.project_id, "reason": req.reason}),
                     "ok", &security.tenant_id, &req.project_id, &security.correlation_id,
-                ).await;
+                ).await {
+                        return self.record_grpc(
+                            "RollbackCatalog",
+                            started,
+                            Err(Status::internal(format!(
+                                "failed to write RollbackCatalog audit log: {}",
+                                err.message()
+                            ))),
+                        );
+                    }
                     CatalogVersionResponse {
                         catalog_id: req.version.clone(),
                         project_id: req.project_id,
@@ -309,20 +318,9 @@ impl DataBrokerService {
         &self,
         request: Request<StageCatalogRequest>,
     ) -> Result<Response<CatalogValidationResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("ValidateCatalog", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "ValidateCatalog").await {
+        let (started, security) = authorized_call!(self, request, "ValidateCatalog");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("ValidateCatalog", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "ValidateCatalog",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let manifest = match parse_catalog_manifest_payload(&req.manifest_json) {
@@ -368,20 +366,9 @@ impl DataBrokerService {
         &self,
         request: Request<CatalogManifestRequest>,
     ) -> Result<Response<CatalogVersionListResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("GetCatalogVersions", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "GetCatalogVersions").await {
+        let (started, security) = authorized_call!(self, request, "GetCatalogVersions");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("GetCatalogVersions", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "GetCatalogVersions",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let _req = request.into_inner();
         let project_id = security.project_id.clone();
@@ -432,20 +419,9 @@ impl DataBrokerService {
         &self,
         request: Request<CatalogVersionRequest>,
     ) -> Result<Response<CatalogVersionResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("GetCatalogVersion", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "GetCatalogVersion").await {
+        let (started, security) = authorized_call!(self, request, "GetCatalogVersion");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("GetCatalogVersion", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "GetCatalogVersion",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let project_id = if req.project_id.trim().is_empty() {
@@ -502,20 +478,9 @@ impl DataBrokerService {
         &self,
         request: Request<MigrationPlanRequest>,
     ) -> Result<Response<MigrationPlanResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("PlanMigration", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "PlanMigration").await {
+        let (started, security) = authorized_call!(self, request, "PlanMigration");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("PlanMigration", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "PlanMigration",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let runtime = self.runtime_snapshot();
@@ -550,20 +515,9 @@ impl DataBrokerService {
         &self,
         request: Request<MigrationApplyRequest>,
     ) -> Result<Response<MigrationStatusResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("ApplyMigration", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "ApplyMigration").await {
+        let (started, security) = authorized_call!(self, request, "ApplyMigration");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("ApplyMigration", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "ApplyMigration",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let actor = security.service_identity.clone();
@@ -622,20 +576,9 @@ impl DataBrokerService {
         &self,
         request: Request<MigrationRunRequest>,
     ) -> Result<Response<MigrationStatusResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("GetMigrationStatus", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "GetMigrationStatus").await {
+        let (started, security) = authorized_call!(self, request, "GetMigrationStatus");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("GetMigrationStatus", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "GetMigrationStatus",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let runtime = self.runtime_snapshot();
@@ -667,14 +610,7 @@ impl DataBrokerService {
         &self,
         request: Request<MigrationRunListRequest>,
     ) -> Result<Response<MigrationRunListResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("ListMigrationRuns", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "ListMigrationRuns").await {
-            return self.record_grpc("ListMigrationRuns", started, Err(err));
-        }
+        let (started, security) = authorized_call!(self, request, "ListMigrationRuns");
         if let Err(err) = self.require_portal_permission(&security, "ListMigrationRuns", false) {
             return self.record_grpc("ListMigrationRuns", started, Err(err));
         }
@@ -730,20 +666,9 @@ impl DataBrokerService {
         &self,
         request: Request<MigrationRunRequest>,
     ) -> Result<Response<MigrationStatusResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("ApproveMigrationPlan", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "ApproveMigrationPlan").await {
+        let (started, security) = authorized_call!(self, request, "ApproveMigrationPlan");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("ApproveMigrationPlan", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "ApproveMigrationPlan",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let token = uuid::Uuid::new_v4().to_string();

@@ -177,20 +177,24 @@ impl BackendKind {
     /// depending on operator config.
     pub fn role(&self) -> BackendRole {
         match self {
-            // Canonical: SQL stores with strong durability + a
-            // queryable write-progress token (LSN / GTID / data_version
-            // / resumeToken).
-            Self::Postgres | Self::Mysql | Self::Sqlite | Self::Mssql | Self::Mongodb => {
-                BackendRole::Canonical
-            }
-            // Both: durable enough to host system tables AND useful as
-            // a projection target. Operator picks the role per
-            // deployment.
-            Self::Clickhouse | Self::Neo4j => BackendRole::Both,
-            // Projection-only: no durable write-progress token, or
-            // semantics that don't fit canonical roles (cache,
-            // object store, vector index).
-            Self::Redis
+            // Canonical: engines with a concrete `SystemStores` canonical-store
+            // implementation (outbox + advisory leases + saga/audit/migration
+            // stores) AND a queryable write-progress token. Only these can host
+            // the system catalog and act as the write-durability anchor — they
+            // are the backends `register_full_canonical_store` actually registers
+            // (Postgres/MySQL/SQLite). (#129)
+            Self::Postgres | Self::Mysql | Self::Sqlite => BackendRole::Canonical,
+            // Projection: read/write targets that do NOT (yet) implement a
+            // canonical `SystemStores` backing. MSSQL/MongoDB/ClickHouse/Neo4j are
+            // durable and are candidates for a future canonical store, but until
+            // those stores exist the runtime can only use them as projection
+            // targets — advertising Canonical/Both here was a capability lie (no
+            // store to register, so a canonical write would have nowhere to land).
+            Self::Mssql
+            | Self::Mongodb
+            | Self::Clickhouse
+            | Self::Neo4j
+            | Self::Redis
             | Self::Memcached
             | Self::Qdrant
             | Self::Weaviate
@@ -816,18 +820,36 @@ impl BackendKind {
             ops.extend([OP_ENSURE_RESOURCE, OP_DROP_RESOURCE, OP_LIST_RESOURCES]);
         }
         match self {
-            Self::Postgres | Self::Clickhouse | Self::Mongodb | Self::Neo4j | Self::Redis => {
-                ops.push(OP_QUERY);
-            }
+            Self::Postgres
+            | Self::Mysql
+            | Self::Sqlite
+            | Self::Mssql
+            | Self::Clickhouse
+            | Self::Redis
+            | Self::Memcached
+            | Self::Mongodb
+            | Self::Elasticsearch
+            | Self::Neo4j
+            | Self::Cassandra
+            | Self::Weaviate
+            | Self::Pinecone => ops.push(OP_QUERY),
             _ => {}
         }
         match self {
             Self::Postgres
+            | Self::Mysql
+            | Self::Sqlite
+            | Self::Mssql
+            | Self::Clickhouse
+            | Self::Redis
+            | Self::Memcached
             | Self::Mongodb
             | Self::Neo4j
             | Self::Qdrant
-            | Self::Clickhouse
-            | Self::Redis => ops.push(OP_MUTATE),
+            | Self::Elasticsearch
+            | Self::Cassandra
+            | Self::Weaviate
+            | Self::Pinecone => ops.push(OP_MUTATE),
             _ => {}
         }
         if cap.supports_transactions {
@@ -845,7 +867,13 @@ impl BackendKind {
     }
 
     pub fn supports_operation(&self, operation: &str) -> bool {
-        self.supported_operations().contains(&operation)
+        match operation {
+            OP_PING | OP_PROBE | OP_ENSURE_RESOURCE | OP_DROP_RESOURCE | OP_LIST_RESOURCES
+            | OP_QUERY | OP_MUTATE | OP_TRANSACTION | OP_SEARCH | OP_GET_OBJECT | OP_PUT_OBJECT => {
+                self.supported_operations().contains(&operation)
+            }
+            _ => false,
+        }
     }
 
     pub fn capability_matrix_entry(&self) -> BackendCapabilityMatrixEntry {
@@ -1073,6 +1101,56 @@ mod tests {
                 .expect("qdrant matrix entry");
             assert!(qdrant.operations.contains(&"search".to_string()));
             assert!(!qdrant.operations.contains(&"query".to_string()));
+        }
+    }
+
+    #[test]
+    fn advertised_generic_dispatch_operations_are_admitted() {
+        for backend in ALL_KINDS {
+            for operation in backend.supported_operations() {
+                assert!(
+                    backend.supports_operation(operation),
+                    "{} advertises '{operation}' but rejects it",
+                    backend.as_str()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn generic_dispatch_operation_table_pins_known_drift_cases() {
+        for backend in [
+            BackendKind::Mysql,
+            BackendKind::Sqlite,
+            BackendKind::Mssql,
+            BackendKind::Memcached,
+            BackendKind::Elasticsearch,
+            BackendKind::Cassandra,
+            BackendKind::Weaviate,
+            BackendKind::Pinecone,
+        ] {
+            assert!(
+                backend.supported_operations().contains(&OP_QUERY),
+                "{} has a real generic query executor",
+                backend.as_str()
+            );
+            assert!(
+                backend.supported_operations().contains(&OP_MUTATE),
+                "{} has a real generic mutate executor",
+                backend.as_str()
+            );
+        }
+
+        for backend in [
+            BackendKind::Qdrant,
+            BackendKind::AzureBlob,
+            BackendKind::Gcs,
+        ] {
+            assert!(
+                !backend.supports_operation(OP_QUERY),
+                "{} query is an unsupported fallback and must not be admitted",
+                backend.as_str()
+            );
         }
     }
 

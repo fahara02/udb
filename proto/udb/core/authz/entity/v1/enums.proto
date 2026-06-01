@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package udb.core.authz.entity.v1;
+
+option csharp_namespace = "udb.core.Authz.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
+option java_package = "com.udb.core.authz.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Entity\\V1";
+
+enum RoleScopeType {
+  ROLE_SCOPE_TYPE_UNSPECIFIED = 0;
+  ROLE_SCOPE_TYPE_GLOBAL = 1;
+  ROLE_SCOPE_TYPE_TENANT = 2;
+  ROLE_SCOPE_TYPE_PROJECT = 3;
+  ROLE_SCOPE_TYPE_RESOURCE = 4;
+  ROLE_SCOPE_TYPE_EXTERNAL = 5;
+}
+
+enum PrincipalKind {
+  PRINCIPAL_KIND_UNSPECIFIED = 0;
+  PRINCIPAL_KIND_USER = 1;
+  PRINCIPAL_KIND_SERVICE_ACCOUNT = 2;
+  PRINCIPAL_KIND_WORKLOAD = 3;
+  PRINCIPAL_KIND_GROUP = 4;
+  PRINCIPAL_KIND_ROLE = 5;
+  PRINCIPAL_KIND_EXTERNAL_SUBJECT = 6;
+}
+
+enum PolicyEffect {
+  POLICY_EFFECT_UNSPECIFIED = 0;
+  POLICY_EFFECT_ALLOW = 1;
+  POLICY_EFFECT_DENY = 2;
+}
+
+enum DecisionSource {
+  DECISION_SOURCE_UNSPECIFIED = 0;
+  DECISION_SOURCE_ROLE_POLICY = 1;
+  DECISION_SOURCE_DIRECT_POLICY = 2;
+  DECISION_SOURCE_NO_MATCH = 3;
+}

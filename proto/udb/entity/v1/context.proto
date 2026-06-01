@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package udb.entity.v1;
+
+option go_package = "github.com/udb-project/udb/gen/go/udb/entity/v1;entityv1";
+option java_package      = "com.udb.entity.v1";
+option csharp_namespace = "Udb.Entity.V1";
+option php_namespace = "Udb\\Entity\\V1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
+
+message RequestContext {
+  string tenant_id = 1;
+  string user_id = 2;
+  string correlation_id = 3;
+  string purpose = 4;
+  repeated string scopes = 5;
+  string service_identity = 6;
+  string trace_id = 7;
+  // Optional explicit routing target for this request.
+  string target_backend = 8;
+  string target_instance = 9;
+  // Routing policy hint, for example "primary", "replica", or "healthy_read".
+  string routing_policy = 10;
+  // Force this request to read from the primary/write instance.
+  bool primary_read = 11;
+  // Per-request replica lag ceiling in milliseconds. Zero uses the runtime default.
+  uint64 max_replica_lag_ms = 12;
+  // Explicitly allow eventual-consistency routing for this request.
+  bool eventual_consistency_allowed = 13;
+  // JSON-encoded udb.runtime.consistency.ReadFence from a previous write receipt.
+  string read_fence_json = 14;
+  // Project namespace/catalog scope. Empty uses the broker default project.
+  // Mirrors the `x-udb-project-id` request header.
+  string project_id = 15;
+  // Catalog version the client last observed, used for compatibility checks.
+  // Empty uses latest. Mirrors the `x-udb-client-catalog-version` request header.
+  string client_catalog_version = 16;
+  // Optional client identifier for audit, support, and SDK compatibility signals.
+  string client_id = 17;
+  // Requested consistency level, for example "strong", "bounded", or "eventual".
+  // Empty uses the runtime default. Mirrors the `x-udb-consistency` request header.
+  string consistency = 18;
+  // Region or locality preference for latency and data-residency routing.
+  string region = 19;
+  // Caller-provided labels available to policy, routing, audit, and telemetry.
+  map<string, string> attributes = 20;
+}

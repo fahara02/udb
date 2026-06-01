@@ -34,6 +34,7 @@ use reqwest::Client;
 use serde_json::{Value as Json, json};
 
 use crate::backend::BackendKind;
+use crate::runtime::executor_utils::build_probe;
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
@@ -168,19 +169,14 @@ impl crate::runtime::backend_context::BackendContextEnforcer for Neo4jExecutor {
         &self,
         ctx: &crate::runtime::backend_context::AppliedContext,
     ) -> crate::runtime::backend_context::ContextEffect {
-        if ctx.is_empty() {
-            return crate::runtime::backend_context::ContextEffect::Advisory {
-                recorded_in: "no_context_to_apply".into(),
-            };
-        }
         // C7/C8: the Neo4j IR compiler now ANDs `n._tenant_id = $ctx_tenant_id`
         // / `n._project_id = $ctx_project_id` into every MATCH WHERE
         // clause AND stamps them into the MERGE key of every write.
         // Tenant boundary is protocol-enforced.
-        crate::runtime::backend_context::ContextEffect::Enforced {
-            mechanism: "_tenant_id / _project_id stamped in MERGE key; ANDed into MATCH WHERE"
-                .into(),
-        }
+        crate::runtime::backend_context::enforce_with_mechanism(
+            ctx,
+            "_tenant_id / _project_id stamped in MERGE key; ANDed into MATCH WHERE",
+        )
     }
 }
 
@@ -602,16 +598,10 @@ impl BackendExecutor for Neo4jExecutor {
         ))
     }
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
-        let (ok, error) = match <Self as BackendHealth>::ping(self).await {
-            Ok(()) => (true, None),
-            Err(e) => (false, Some(e)),
-        };
-        Ok(BackendProbe {
-            backend: "neo4j".to_string(),
-            instance: None,
-            ok,
-            error,
-        })
+        Ok(build_probe(
+            "neo4j",
+            <Self as BackendHealth>::ping(self).await,
+        ))
     }
 }
 

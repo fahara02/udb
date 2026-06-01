@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package udb.core.authz.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/authz/entity/v1/enums.proto";
+import "udb/core/common/v1/db.proto";
+
+option csharp_namespace = "udb.core.Authz.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
+option java_package = "com.udb.core.authz.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Entity\\V1";
+
+message Role {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "roles"
+    schema_name: "udb_authz"
+    migration_order: 2
+    is_table: true
+    comment: "Named roles scoped by tenant, project, resource domain, or access surface"
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    sql_artifacts: {
+      name: "touch_updated_at_function"
+      backend: "postgres"
+      phase: "before_triggers"
+      sql:
+        "CREATE OR REPLACE FUNCTION udb_authz.touch_updated_at()\n"
+        "RETURNS trigger\n"
+        "LANGUAGE plpgsql\n"
+        "AS $$\n"
+        "BEGIN\n"
+        "  NEW.updated_at = CURRENT_TIMESTAMP;\n"
+        "  RETURN NEW;\n"
+        "END;\n"
+        "$$;"
+    }
+    triggers: {
+      trigger_name: "trg_roles_touch_updated_at"
+      timing: "BEFORE"
+      event: "UPDATE"
+      function_name: "udb_authz.touch_updated_at()"
+      for_each: "ROW"
+    }
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+  };
+
+  string role_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "role_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string name = 2 [(udb.core.common.v1.pg_column) = { column_name: "name" sql_type: "VARCHAR(100)" not_null: true comment: "Human-readable role name" index: { index_name: "idx_roles_name_domain" index_type: "BTREE" unique: true columns: "domain" } }];
+
+  string description = 3 [(udb.core.common.v1.pg_column) = { column_name: "description" sql_type: "TEXT" }];
+
+  bool is_system = 4 [(udb.core.common.v1.pg_column) = { column_name: "is_system" sql_type: "BOOLEAN" not_null: true default_value: "false" }];
+
+  bool is_active = 5 [(udb.core.common.v1.pg_column) = { column_name: "is_active" sql_type: "BOOLEAN" not_null: true default_value: "true" }];
+
+  string created_by = 6 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "UUID" }];
+
+  google.protobuf.Timestamp created_at = 7 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  google.protobuf.Timestamp updated_at = 8 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true }];
+
+  google.protobuf.Timestamp deleted_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" comment: "Soft delete timestamp" }];
+  string tenant_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_role_tenant" index_type: "BTREE" } }];
+  string deleted_by = 11 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" comment: "Soft delete actor" }];
+  string role_code = 12 [(udb.core.common.v1.pg_column) = { column_name: "role_code" sql_type: "VARCHAR(120)" comment: "Stable machine-readable role code" index: { index_name: "idx_roles_role_code" index_type: "BTREE" } }];
+  string domain = 13 [(udb.core.common.v1.pg_column) = { column_name: "domain" sql_type: "VARCHAR(200)" comment: "Authorization domain such as tenant:<id>, project:<id>, or resource:<type>/<id>" index: { index_name: "idx_roles_domain" index_type: "BTREE" } }];
+  string project_id = 14 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" comment: "Optional project/application namespace" index: { index_name: "idx_roles_project_id" index_type: "BTREE" } }];
+  RoleScopeType scope_type = 15 [(udb.core.common.v1.pg_column) = { column_name: "scope_type" sql_type: "VARCHAR(40)" not_null: true default_value: "'TENANT'" }];
+  string access_surface = 16 [(udb.core.common.v1.pg_column) = { column_name: "access_surface" sql_type: "VARCHAR(80)" comment: "Optional UI/API/workload surface this role is intended for" }];
+  string metadata_json = 17 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Project-defined role metadata" }];
+}

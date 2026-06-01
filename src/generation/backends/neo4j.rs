@@ -15,9 +15,8 @@
 //! | `udb.neo4j_database` | `neo4j` | Database name override |
 //! | `udb.neo4j_label` | `<resource_name>` | Node label override |
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use crate::generation::backend_safety::generated_at_unix;
 
-use crate::ast::ProtoSchema;
 use crate::generation::GeneratedArtifact;
 use crate::generation::backend_safety::{
     safe_comment_value, safe_identifier, safe_resource_name, store_opt_str_any,
@@ -27,10 +26,9 @@ use crate::generation::sql::SqlGenerationConfig;
 
 /// Generate Neo4j Cypher constraint/index artifacts from the proto AST.
 pub fn generate_neo4j_artifacts(
-    schemas: &[ProtoSchema],
+    manifest: &CatalogManifest,
     _config: &SqlGenerationConfig,
 ) -> Result<Vec<GeneratedArtifact>, serde_json::Error> {
-    let manifest = CatalogManifest::from_schemas(schemas)?;
     let checksum = &manifest.checksum_sha256;
     let ts = generated_at_unix();
 
@@ -137,13 +135,6 @@ fn to_pascal_case(s: &str) -> String {
             }
         })
         .collect()
-}
-
-fn generated_at_unix() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or_default()
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

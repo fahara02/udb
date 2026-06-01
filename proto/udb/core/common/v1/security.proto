@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package udb.core.common.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option csharp_namespace = "udb.core.Common.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/common/v1;commonv1";
+option java_package = "com.udb.core.common.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Common\\V1";
+option php_namespace = "Udb\\Core\\Common\\V1";
+
+extend google.protobuf.FieldOptions {
+  bool pii = 50010;
+  bool encrypted_security = 50011;
+  bool log_masked = 50012;
+  bool log_redacted = 50013;
+  bool sensitive = 50014;
+  bool requires_consent = 50015;
+  string data_purpose = 50016;
+  int32 retention_days = 50017;
+  bool tokenized = 50018;
+  SecurityClassification security_classification = 50019;
+  DataCategory data_category = 50020;
+}
+
+extend google.protobuf.MethodOptions {
+  EndpointSecurity endpoint_security = 51001;
+  RestContract rest_contract = 51002;
+}
+
+message EndpointSecurity {
+  AuthMode mode = 1;
+  repeated string roles = 2;
+  repeated string scopes = 3;
+  bool tenant_required = 4;
+  bool csrf_required = 5;
+  string policy_ref = 6;
+  bool internal_grpc_only = 7;
+}
+
+message RestContract {
+  bool response_envelope = 1;
+  bool api_error = 2;
+  bool pagination_meta = 3;
+  bool explicit_nulls = 4;
+}
+
+enum AuthMode {
+  AUTH_MODE_UNSPECIFIED = 0;
+  AUTH_MODE_PUBLIC = 1;
+  AUTH_MODE_BEARER = 2;
+  AUTH_MODE_API_KEY = 3;
+  AUTH_MODE_SERVICE_ACCOUNT = 4;
+}
+
+enum SecurityClassification {
+  SECURITY_CLASSIFICATION_UNSPECIFIED = 0;
+  SECURITY_CLASSIFICATION_PUBLIC = 1;
+  SECURITY_CLASSIFICATION_INTERNAL = 2;
+  SECURITY_CLASSIFICATION_CONFIDENTIAL = 3;
+  SECURITY_CLASSIFICATION_RESTRICTED = 4;
+}
+
+enum DataCategory {
+  DATA_CATEGORY_UNSPECIFIED = 0;
+  DATA_CATEGORY_PERSONAL = 1;
+  DATA_CATEGORY_FINANCIAL = 2;
+  DATA_CATEGORY_BIOMETRIC = 3;
+  DATA_CATEGORY_IDENTITY = 4;
+  DATA_CATEGORY_OPERATIONAL = 5;
+  DATA_CATEGORY_SYSTEM = 6;
+}

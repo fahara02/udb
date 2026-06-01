@@ -488,6 +488,28 @@ async fn lookup_message_schema_returns_descriptor() {
 }
 
 #[tokio::test]
+async fn lookup_message_schema_rejects_cross_project_non_admin() {
+    let svc = open_service();
+    let mut req = Request::new(MessageSchemaLookupRequest {
+        context: None,
+        project_id: "other-project".to_string(),
+        message_type: "Payment".to_string(),
+        client_catalog_version: String::new(),
+    });
+    req.metadata_mut()
+        .insert("x-tenant-id", "test-tenant".parse().unwrap());
+    req.metadata_mut()
+        .insert("x-project-id", "bound-project".parse().unwrap());
+    req.metadata_mut()
+        .insert("x-purpose", "schema".parse().unwrap());
+    req.metadata_mut()
+        .insert("x-scopes", "udb:read".parse().unwrap());
+
+    let err = svc.lookup_message_schema(req).await.unwrap_err();
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+}
+
+#[tokio::test]
 async fn list_message_schemas_returns_active_messages() {
     let svc = open_service();
     let mut req = Request::new(MessageSchemaListRequest {
@@ -509,6 +531,27 @@ async fn list_message_schemas_returns_active_messages() {
             .contains(&"Payment".to_string()),
         "active message list should contain Payment"
     );
+}
+
+#[tokio::test]
+async fn list_message_schemas_rejects_cross_project_non_admin() {
+    let svc = open_service();
+    let mut req = Request::new(MessageSchemaListRequest {
+        context: None,
+        project_id: "other-project".to_string(),
+        client_catalog_version: String::new(),
+    });
+    req.metadata_mut()
+        .insert("x-tenant-id", "test-tenant".parse().unwrap());
+    req.metadata_mut()
+        .insert("x-project-id", "bound-project".parse().unwrap());
+    req.metadata_mut()
+        .insert("x-purpose", "schema".parse().unwrap());
+    req.metadata_mut()
+        .insert("x-scopes", "udb:read".parse().unwrap());
+
+    let err = svc.list_message_schemas(req).await.unwrap_err();
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
 }
 
 #[tokio::test]
@@ -570,6 +613,164 @@ fn portal_permissions_distinguish_viewer_and_operator() {
         svc.require_portal_permission(&operator, "RetrySagaCompensation", true)
             .is_ok()
     );
+}
+
+// ── Broker v2 authz gate (UDB_AUTHZ_V2) — items 124-131 ──────────────────
+// These drive `DataBrokerService::authorize()` with the v2 decision engine
+// forced on per-instance (`set_authz_v2_override`), so the broker-level
+// allow/deny path is exercised deterministically — no live Postgres, no gRPC
+// server. The env flag `UDB_AUTHZ_V2` is a cached `OnceLock` and cannot vary
+// per test, which is exactly why the per-instance override exists. The broker
+// passes the raw RPC name (`Select`/`Upsert`/`PutPolicy`) as the operation, so
+// a matching policy carries the same operation string.
+
+fn v2_service(policies: Vec<crate::runtime::security::AbacPolicy>) -> DataBrokerService {
+    let mut svc = ready_service(); // abac_default_allow = false
+    if let Ok(mut p) = svc.abac_policies.write() {
+        *p = policies;
+    }
+    svc.set_authz_v2_override(true);
+    svc
+}
+
+fn billing_ctx(scopes: &[&str]) -> SecurityContext {
+    SecurityContext {
+        tenant_id: "acme".to_string(),
+        purpose: "billing".to_string(),
+        service_identity: "svc:billing".to_string(),
+        scopes: scopes.iter().map(|s| s.to_string()).collect(),
+        ..SecurityContext::default()
+    }
+}
+
+fn allow_policy(operation: &str, scope: &str) -> crate::runtime::security::AbacPolicy {
+    crate::runtime::security::AbacPolicy {
+        effect: crate::runtime::security::PolicyEffect::Allow,
+        service_identity: "svc:billing".to_string(),
+        tenant_id: "*".to_string(),
+        purpose: "billing".to_string(),
+        message_type: "*".to_string(),
+        operation: operation.to_string(),
+        required_scope: scope.to_string(),
+    }
+}
+
+#[tokio::test]
+async fn broker_v2_select_allowed_with_matching_policy() {
+    // 124: a Select policy granting the caller's scope/purpose → authorized.
+    let svc = v2_service(vec![allow_policy("Select", "udb:read")]);
+    let ctx = billing_ctx(&["udb:read"]);
+    assert!(
+        svc.authorize(&ctx, "Payment", "Select").await.is_ok(),
+        "matching v2 policy must authorize Select"
+    );
+}
+
+#[tokio::test]
+async fn broker_v2_select_denied_without_policy() {
+    // 125: no policy + deny-by-default → PermissionDenied.
+    let svc = v2_service(vec![]);
+    let ctx = billing_ctx(&["udb:read"]);
+    let err = svc.authorize(&ctx, "Payment", "Select").await.unwrap_err();
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+}
+
+#[tokio::test]
+async fn broker_v2_upsert_allowed_with_matching_policy() {
+    // 126: an Upsert policy authorizes the matching write.
+    let svc = v2_service(vec![allow_policy("Upsert", "udb:write")]);
+    let ctx = billing_ctx(&["udb:write"]);
+    assert!(
+        svc.authorize(&ctx, "Payment", "Upsert").await.is_ok(),
+        "matching v2 policy must authorize Upsert"
+    );
+}
+
+#[tokio::test]
+async fn broker_v2_admin_rpc_denied_without_grant() {
+    // 127: a read grant does not authorize an admin mutation under v2 — the
+    // operation selector must match, so PutPolicy is denied.
+    let svc = v2_service(vec![allow_policy("Select", "udb:read")]);
+    let ctx = billing_ctx(&["udb:read", "udb:admin"]);
+    let err = svc
+        .authorize(&ctx, "Policy", "PutPolicy")
+        .await
+        .unwrap_err();
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+}
+
+#[tokio::test]
+async fn broker_v2_external_roles_alone_do_not_bypass_policy() {
+    // 128: a caller carrying external IdP "roles" as scopes but with no UDB
+    // policy granting the operation is denied. External identity is mapped, but
+    // UDB authorization is never bypassed by the upstream roles alone.
+    let svc = v2_service(vec![]);
+    let ctx = billing_ctx(&["role:admin", "role:billing-manager"]);
+    let err = svc.authorize(&ctx, "Payment", "Select").await.unwrap_err();
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+}
+
+#[tokio::test]
+async fn broker_v2_policy_reload_updates_decisions() {
+    // 131: hot-reloading the shared ABAC store changes the decision without
+    // rebuilding the service.
+    let svc = v2_service(vec![]);
+    let ctx = billing_ctx(&["udb:read"]);
+    assert_eq!(
+        svc.authorize(&ctx, "Payment", "Select")
+            .await
+            .unwrap_err()
+            .code(),
+        tonic::Code::PermissionDenied,
+        "deny-by-default before any policy is loaded"
+    );
+    svc.abac_policies
+        .write()
+        .unwrap()
+        .push(allow_policy("Select", "udb:read"));
+    assert!(
+        svc.authorize(&ctx, "Payment", "Select").await.is_ok(),
+        "the reloaded grant must take effect on the next decision"
+    );
+}
+
+#[tokio::test]
+async fn broker_v2_matches_legacy_abac_decisions() {
+    // 132 gate: the v2 decision engine must agree with the legacy `evaluate_abac`
+    // path on allow/deny for the same inputs, so flipping the broker default to
+    // v2 is safe. We run an identical matrix through both paths (toggled by the
+    // per-instance override) and assert the outcomes match.
+    let policies = vec![
+        allow_policy("Select", "udb:read"),
+        crate::runtime::security::AbacPolicy {
+            effect: crate::runtime::security::PolicyEffect::Deny,
+            service_identity: "svc:billing".to_string(),
+            tenant_id: "*".to_string(),
+            purpose: "billing".to_string(),
+            message_type: "*".to_string(),
+            operation: "Delete".to_string(),
+            required_scope: String::new(),
+        },
+    ];
+    let cases = [
+        (billing_ctx(&["udb:read"]), "Payment", "Select"), // matching allow
+        (billing_ctx(&[]), "Payment", "Select"),           // missing required scope
+        (billing_ctx(&["udb:read"]), "Payment", "Delete"), // explicit deny wins
+        (billing_ctx(&["udb:write"]), "Payment", "Upsert"), // no matching policy
+    ];
+    for (ctx, msg, op) in cases {
+        let mut legacy = v2_service(policies.clone());
+        legacy.set_authz_v2_override(false);
+        let legacy_ok = legacy.authorize(&ctx, msg, op).await.is_ok();
+
+        let v2 = v2_service(policies.clone()); // override = true
+        let v2_ok = v2.authorize(&ctx, msg, op).await.is_ok();
+
+        assert_eq!(
+            legacy_ok, v2_ok,
+            "v2 and legacy ABAC disagree for {msg}/{op} (legacy={legacy_ok}, v2={v2_ok})"
+        );
+    }
 }
 
 // ── Authorization: deny-by-default scope enforcement ─────────────────────

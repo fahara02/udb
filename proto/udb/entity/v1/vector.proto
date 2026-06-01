@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package udb.entity.v1;
+
+option go_package = "github.com/udb-project/udb/gen/go/udb/entity/v1;entityv1";
+option java_package      = "com.udb.entity.v1";
+option csharp_namespace = "Udb.Entity.V1";
+option php_namespace = "Udb\\Entity\\V1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
+
+import "google/protobuf/struct.proto";
+import "udb/entity/v1/context.proto";
+
+message VectorSearchRequest {
+  RequestContext context = 1;
+  string collection = 2;
+  repeated float vector = 3;
+  google.protobuf.Struct filter = 4;
+  int32 limit = 5;
+  float score_threshold = 6;
+  bool with_payload = 7;
+}
+
+message VectorHybridSearchRequest {
+  RequestContext context = 1;
+  string collection = 2;
+  repeated float vector = 3;
+  string text_query = 4;
+  google.protobuf.Struct filter = 5;
+  int32 limit = 6;
+  repeated float fusion_weights = 7;
+  bool with_payload = 8;
+}
+
+message VectorPointMutation {
+  string id = 1;
+  repeated float vector = 2;
+  google.protobuf.Struct payload = 3;
+}
+
+message VectorUpsertRequest {
+  RequestContext context = 1;
+  string collection = 2;
+  repeated VectorPointMutation points = 3;
+  string idempotency_key = 4;
+}
+
+message VectorPoint {
+  string id = 1;
+  float score = 2;
+  google.protobuf.Struct payload = 3;
+}
+
+message VectorSet {
+  repeated VectorPoint points = 1;
+}

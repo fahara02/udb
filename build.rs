@@ -214,91 +214,144 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = std::env::var("OUT_DIR")?;
     let descriptor_path = std::path::Path::new(&out_dir).join("udb_descriptor.bin");
 
+    // Recursively collect every `.proto` under the udb package root so new
+    // domains (core/authn, core/authz, core/apikey, …) are compiled without
+    // editing a hand-maintained file list. Sorted for deterministic codegen.
+    let mut proto_files = Vec::new();
+    collect_proto_files(&udb_root, &mut proto_files)?;
+    proto_files.sort();
+    if proto_files.is_empty() {
+        return Err(format!("no .proto files found under {}", udb_root.display()).into());
+    }
+    for file in &proto_files {
+        println!("cargo:rerun-if-changed={}", file.display());
+    }
+
+    // Include paths: the proto root (resolves `udb/...` imports) plus the
+    // vendored third-party protos (google/api/*). Vendoring keeps `cargo build`
+    // offline — no `buf` or network dependency at build time, matching the
+    // protoc-bin-vendored approach. google/protobuf/* well-known types are
+    // resolved by protoc itself.
+    let mut includes: Vec<std::path::PathBuf> = vec![proto_root.clone()];
+    for candidate in [
+        manifest_dir.join("third_party/googleapis"),
+        proto_root
+            .parent()
+            .map(|parent| parent.join("third_party/googleapis"))
+            .unwrap_or_default(),
+    ] {
+        if candidate.join("google/api/annotations.proto").exists() {
+            includes.push(candidate);
+            break;
+        }
+    }
+
     tonic_build::configure()
         .build_server(true)
         .build_client(true)
         .file_descriptor_set_path(&descriptor_path)
-        .compile_protos(
-            &[
-                udb_root.join("entity/v1/types.proto"),
-                udb_root.join("events/v1/udb_events.proto"),
-                udb_root.join("services/v1/data_broker.proto"),
-            ],
-            &[&proto_root],
-        )?;
+        .compile_protos(&proto_files, &includes)?;
 
-    // Derive the proto package prefix and root Rust module name from UDB_PROTO_PREFIX.
-    // e.g. "udb" -> pkg_prefix="udb", root_mod="udb"
-    let pkg_prefix = prefix.replace('/', ".");
-    let segments = prefix.split('/').collect::<Vec<_>>();
-    let root_mod = segments
-        .first()
-        .copied()
-        .filter(|segment| !segment.is_empty())
-        .ok_or("UDB_PROTO_PREFIX must not be empty")?;
+    // Emit a `pub mod` tree mirroring the proto packages actually compiled,
+    // e.g. `udb.core.authn.services.v1` -> `udb::core::authn::services::v1`,
+    // with `tonic::include_proto!` at each package leaf. src/protocol/mod.rs
+    // just `include!`s the result, so it never hard-codes package names.
+    let mut packages = std::collections::BTreeSet::new();
+    for file in &proto_files {
+        if let Some(pkg) = read_proto_package(file) {
+            packages.insert(pkg);
+        }
+    }
+    if packages.is_empty() {
+        return Err("no `package` declarations found in the compiled protos".into());
+    }
 
-    // Write a protocol.rs into OUT_DIR so src/protocol/mod.rs never needs
-    // to know the package name — it just does: include!(concat!(env!("OUT_DIR"), "/protocol.rs"))
-    let protocol_rs = if segments.len() == 1 && root_mod == "udb" {
-        format!(
-            r#"pub mod udb {{
-    pub mod entity {{
-        pub mod v1 {{
-            tonic::include_proto!("{pkg}.entity.v1");
-        }}
-    }}
-    pub mod events {{
-        pub mod v1 {{
-            tonic::include_proto!("{pkg}.events.v1");
-        }}
-    }}
-    pub mod services {{
-        pub mod v1 {{
-            tonic::include_proto!("{pkg}.services.v1");
-        }}
-    }}
-}}
+    let mut protocol_rs = render_package_modules(&packages);
+    // Preserve the historical flat re-exports so existing `crate::protocol::*`
+    // references to the broker contract keep compiling. The newer core auth
+    // packages are intentionally NOT glob-exported because type names such as
+    // `Principal` recur across them; reference those by full module path.
+    for legacy in ["udb.entity.v1", "udb.events.v1", "udb.services.v1"] {
+        if packages.contains(legacy) {
+            protocol_rs.push_str(&format!("pub use {}::*;\n", legacy.replace('.', "::")));
+        }
+    }
 
-pub use udb::entity::v1::*;
-pub use udb::events::v1::*;
-pub use udb::services::v1::*;
-"#,
-            pkg = pkg_prefix,
-        )
-    } else {
-        format!(
-            r#"pub mod {root_mod} {{
-    pub mod udb {{
-        pub mod entity {{
-            pub mod v1 {{
-                tonic::include_proto!("{pkg}.entity.v1");
-            }}
-        }}
-        pub mod events {{
-            pub mod v1 {{
-                tonic::include_proto!("{pkg}.events.v1");
-            }}
-        }}
-        pub mod services {{
-            pub mod v1 {{
-                tonic::include_proto!("{pkg}.services.v1");
-            }}
-        }}
-    }}
-}}
-
-pub use {root_mod}::udb::entity::v1::*;
-pub use {root_mod}::udb::events::v1::*;
-pub use {root_mod}::udb::services::v1::*;
-"#,
-            root_mod = root_mod,
-            pkg = pkg_prefix,
-        )
-    };
     std::fs::write(
         std::path::Path::new(&out_dir).join("protocol.rs"),
         protocol_rs,
     )?;
 
     Ok(())
+}
+
+/// Recursively collect every `*.proto` file under `dir`.
+fn collect_proto_files(
+    dir: &std::path::Path,
+    out: &mut Vec<std::path::PathBuf>,
+) -> std::io::Result<()> {
+    for entry in std::fs::read_dir(dir)? {
+        let path = entry?.path();
+        if path.is_dir() {
+            collect_proto_files(&path, out)?;
+        } else if path.extension().and_then(|ext| ext.to_str()) == Some("proto") {
+            out.push(path);
+        }
+    }
+    Ok(())
+}
+
+/// Read the `package` declaration from a `.proto` file, if present.
+fn read_proto_package(path: &std::path::Path) -> Option<String> {
+    let contents = std::fs::read_to_string(path).ok()?;
+    for line in contents.lines() {
+        let line = line.trim();
+        if let Some(rest) = line.strip_prefix("package ") {
+            return Some(rest.trim().trim_end_matches(';').trim().to_string());
+        }
+    }
+    None
+}
+
+/// Render a nested `pub mod` tree from a set of dotted proto package names,
+/// emitting `tonic::include_proto!("<package>")` at each package leaf.
+fn render_package_modules(packages: &std::collections::BTreeSet<String>) -> String {
+    #[derive(Default)]
+    struct Node {
+        children: std::collections::BTreeMap<String, Node>,
+        is_package: bool,
+    }
+
+    let mut root = Node::default();
+    for pkg in packages {
+        let mut node = &mut root;
+        for segment in pkg.split('.') {
+            node = node.children.entry(segment.to_string()).or_default();
+        }
+        node.is_package = true;
+    }
+
+    fn render(node: &Node, path: &str, indent: usize, out: &mut String) {
+        for (segment, child) in &node.children {
+            let pad = "    ".repeat(indent);
+            let child_path = if path.is_empty() {
+                segment.clone()
+            } else {
+                format!("{path}.{segment}")
+            };
+            out.push_str(&format!("{pad}pub mod {segment} {{\n"));
+            if child.is_package {
+                out.push_str(&format!(
+                    "{pad}    tonic::include_proto!(\"{child_path}\");\n"
+                ));
+            }
+            render(child, &child_path, indent + 1, out);
+            out.push_str(&format!("{pad}}}\n"));
+        }
+    }
+
+    let mut out =
+        String::from("// @generated by build.rs from the compiled proto packages — do not edit.\n");
+    render(&root, "", 0, &mut out);
+    out
 }

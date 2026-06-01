@@ -49,8 +49,14 @@ pub(crate) use handle::DispatchExecutor;
 
 // `DataBrokerRuntime` import was needed by the deleted `DefaultBackendExecutor`
 // forwarding adapter; the dispatch path now uses `DispatchExecutor` directly.
+use bytes::Bytes;
 use serde::Serialize;
 use std::collections::BTreeMap;
+use std::pin::Pin;
+use tokio_stream::Stream;
+
+pub type ExecutorByteStream =
+    Pin<Box<dyn Stream<Item = Result<Bytes, tonic::Status>> + Send + 'static>>;
 
 #[allow(async_fn_in_trait)]
 pub trait BackendHealth: Send + Sync {
@@ -64,6 +70,10 @@ pub trait BackendHealth: Send + Sync {
 #[allow(async_fn_in_trait)]
 pub trait QueryExecutor: Send + Sync {
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status>;
+    async fn query_stream(&self, request_json: &str) -> Result<ExecutorByteStream, tonic::Status> {
+        let response = self.query(request_json).await?;
+        Ok(Box::pin(tokio_stream::iter([Ok(Bytes::from(response))])))
+    }
 }
 
 #[allow(async_fn_in_trait)]
@@ -79,8 +89,23 @@ pub trait SearchExecutor: Send + Sync {
 #[allow(async_fn_in_trait)]
 pub trait ObjectExecutor: Send + Sync {
     async fn get_object(&self, request_json: &str) -> Result<Vec<u8>, tonic::Status>;
+    async fn get_object_stream(
+        &self,
+        request_json: &str,
+    ) -> Result<ExecutorByteStream, tonic::Status> {
+        let bytes = self.get_object(request_json).await?;
+        Ok(Box::pin(tokio_stream::iter([Ok(Bytes::from(bytes))])))
+    }
     async fn put_object(&self, request_json: &str, bytes: Vec<u8>)
     -> Result<String, tonic::Status>;
+    /// Remove an object by `{"bucket","object_key"|"key"}`. Only real object
+    /// stores (S3/MinIO, GCS, Azure Blob) override this; other backends report
+    /// `unimplemented` so callers never silently no-op a delete.
+    async fn delete_object(&self, _request_json: &str) -> Result<(), tonic::Status> {
+        Err(tonic::Status::unimplemented(
+            "delete_object is not supported by this backend",
+        ))
+    }
 }
 
 #[allow(async_fn_in_trait)]

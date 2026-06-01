@@ -49,6 +49,22 @@ UDB_ABAC_DEFAULT_ALLOW=false
 
 Use `policy-lint` before loading policy changes.
 
+## Native Auth Lifetimes
+
+Native authn defaults are intentionally conservative but usable:
+
+```env
+UDB_SESSION_TTL_SECONDS=86400
+UDB_SESSION_IDLE_TTL_SECONDS=3600
+UDB_OTP_TTL_SECONDS=600
+UDB_OTP_COOLDOWN_SECONDS=60
+UDB_NATIVE_ACCESS_TTL_SECS=900
+```
+
+Sessions last up to one day with a one-hour idle window. OTPs last ten minutes
+with a sixty-second resend cooldown. Native direct-DB access grants last fifteen
+minutes so clients re-authorize regularly while avoiding per-request DSN churn.
+
 ## Audit
 
 Admin and security-sensitive operations should emit audit records. Supported

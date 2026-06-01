@@ -81,6 +81,44 @@ impl MysqlCanonicalStore {
             .map(|(m,)| m.to_ascii_uppercase().starts_with("ON"))
             .unwrap_or(false))
     }
+
+    /// Non-GTID durability token for a server acting as a replica: SHOW MASTER
+    /// STATUS is empty there, so read the replica's applied coordinates
+    /// (`Relay_Master_Log_File` + `Exec_Master_Log_Pos`). Tries the modern
+    /// `SHOW REPLICA STATUS` first, falling back to `SHOW SLAVE STATUS` on
+    /// older servers. Column names are looked up by name (wide result set).
+    async fn replica_durability_token(&self) -> Result<DurabilityToken, String> {
+        use sqlx::Row;
+        let row = match sqlx::query("SHOW REPLICA STATUS")
+            .fetch_optional(&self.pool)
+            .await
+        {
+            Ok(Some(r)) => Some(r),
+            // Older servers don't recognise REPLICA; try the legacy spelling.
+            _ => sqlx::query("SHOW SLAVE STATUS")
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|e| format!("SHOW REPLICA/SLAVE STATUS failed: {e}"))?,
+        };
+        let row = row.ok_or_else(|| {
+            "neither SHOW MASTER STATUS nor SHOW REPLICA STATUS returned a row; \
+             binary logging / replication is not configured on this server"
+                .to_string()
+        })?;
+        let file: String = row
+            .try_get::<String, _>("Relay_Master_Log_File")
+            .or_else(|_| row.try_get::<String, _>("Source_Log_File"))
+            .map_err(|e| format!("replica status missing log-file column: {e}"))?;
+        let pos: u64 = row
+            .try_get::<u64, _>("Exec_Master_Log_Pos")
+            .or_else(|_| {
+                row.try_get::<i64, _>("Exec_Master_Log_Pos")
+                    .map(|p| p as u64)
+            })
+            .or_else(|_| row.try_get::<u64, _>("Exec_Source_Log_Pos"))
+            .map_err(|e| format!("replica status missing log-pos column: {e}"))?;
+        Ok(DurabilityToken::new("mysql", format!("file:{file}:{pos}")))
+    }
 }
 
 #[async_trait]
@@ -115,9 +153,10 @@ impl CanonicalStore for MysqlCanonicalStore {
                 Some((file, pos)) => {
                     Ok(DurabilityToken::new("mysql", format!("file:{file}:{pos}")))
                 }
-                None => Err(
-                    "SHOW MASTER STATUS returned no row; is binary logging enabled?".to_string(),
-                ),
+                // SHOW MASTER STATUS is empty on a replica (non-GTID). Fall back
+                // to the replica's applied coordinates so a replica-targeted
+                // deployment can still produce a durability token.
+                None => self.replica_durability_token().await,
             }
         }
     }
@@ -178,7 +217,11 @@ impl CanonicalStore for MysqlCanonicalStore {
                 if started.elapsed() >= timeout {
                     return Ok(false);
                 }
-                tokio::time::sleep(Duration::from_millis(50)).await;
+                tokio::time::sleep(crate::runtime::canonical_store::durability_poll_interval(
+                    timeout,
+                    crate::runtime::canonical_store::MYSQL_DURABILITY_POLL_MS,
+                ))
+                .await;
             }
         }
     }
@@ -219,13 +262,28 @@ impl CanonicalStore for MysqlCanonicalStore {
     async fn ensure_system_tables(&self) -> Result<(), String> {
         let rel = self.safe_relation()?;
         let sql = format!(
+            // Full outbox schema (parity with the Postgres system catalog): the
+            // production tailer UPDATEs delivery_state + the Kafka state columns,
+            // so a minimal table breaks at-least-once delivery on MySQL (#132).
             "CREATE TABLE IF NOT EXISTS {rel} ( \
                 event_seq      BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, \
                 event_id       CHAR(36) NOT NULL UNIQUE, \
                 topic          VARCHAR(255) NOT NULL, \
                 partition_key  VARCHAR(255) NOT NULL DEFAULT '', \
                 payload        JSON NOT NULL, \
-                created_at     TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) \
+                headers        JSON NULL, \
+                delivery_state VARCHAR(20) NOT NULL DEFAULT 'pending', \
+                publishing_started_at TIMESTAMP(6) NULL, \
+                published_at   TIMESTAMP(6) NULL, \
+                acked_at       TIMESTAMP(6) NULL, \
+                dlq_at         TIMESTAMP(6) NULL, \
+                producer_epoch BIGINT NOT NULL DEFAULT 0, \
+                transactional_id VARCHAR(255) NOT NULL DEFAULT '', \
+                kafka_partition INT NULL, \
+                kafka_offset   BIGINT NULL, \
+                last_error     TEXT NULL, \
+                created_at     TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \
+                INDEX idx_outbox_delivery_state (delivery_state, event_seq) \
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
         );
         sqlx::query(&sql)
@@ -258,32 +316,43 @@ impl CanonicalStore for MysqlCanonicalStore {
     ) -> Result<bool, String> {
         // MySQL has no conditional ON DUPLICATE KEY UPDATE clause.
         // The portable atomic pattern: INSERT … ON DUPLICATE KEY
-        // UPDATE owner_id = IF(expires_at < NOW(6), VALUES(owner_id), owner_id),
-        //         expires_at = IF(expires_at < NOW(6), VALUES(expires_at), expires_at);
-        // The IF() ensures the existing row is only overwritten when
-        // it's expired. Then SELECT to confirm.
+        // UPDATE owner_id/expires_at when the row is expired or the
+        // caller is refreshing its own live lease. Then SELECT to confirm.
         let ttl_secs = ttl.as_secs() as i64;
-        let sql = "
+        // Run the upsert + ownership confirmation in ONE transaction (MySQL has
+        // no RETURNING). InnoDB's INSERT … ON DUPLICATE KEY UPDATE takes an
+        // X-lock on the row; the subsequent `SELECT … FOR UPDATE` in the same tx
+        // reads that locked row and a competing acquire blocks until we commit —
+        // closing the TOCTOU window the prior separate-pool SELECT had.
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| format!("try_acquire_advisory_lease begin (mysql) failed: {e}"))?;
+        let upsert = "
             INSERT INTO udb_advisory_leases (lease_name, owner_id, expires_at)
             VALUES (?, ?, DATE_ADD(NOW(6), INTERVAL ? SECOND))
             ON DUPLICATE KEY UPDATE
-              owner_id   = IF(expires_at < NOW(6), VALUES(owner_id), owner_id),
-              expires_at = IF(expires_at < NOW(6), VALUES(expires_at), expires_at)
+              owner_id   = IF(expires_at < NOW(6) OR owner_id = VALUES(owner_id), VALUES(owner_id), owner_id),
+              expires_at = IF(expires_at < NOW(6) OR owner_id = VALUES(owner_id), VALUES(expires_at), expires_at)
         ";
-        sqlx::query(sql)
+        sqlx::query(upsert)
             .bind(lease_name)
             .bind(owner_id)
             .bind(ttl_secs)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| format!("try_acquire_advisory_lease (mysql) failed: {e}"))?;
-        // Confirm ownership.
-        let stored_owner: Option<String> =
-            sqlx::query_scalar("SELECT owner_id FROM udb_advisory_leases WHERE lease_name = ?")
-                .bind(lease_name)
-                .fetch_optional(&self.pool)
-                .await
-                .map_err(|e| format!("try_acquire_advisory_lease lookup (mysql) failed: {e}"))?;
+        let stored_owner: Option<String> = sqlx::query_scalar(
+            "SELECT owner_id FROM udb_advisory_leases WHERE lease_name = ? FOR UPDATE",
+        )
+        .bind(lease_name)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| format!("try_acquire_advisory_lease lookup (mysql) failed: {e}"))?;
+        tx.commit()
+            .await
+            .map_err(|e| format!("try_acquire_advisory_lease commit (mysql) failed: {e}"))?;
         Ok(matches!(stored_owner, Some(o) if o == owner_id))
     }
 

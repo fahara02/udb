@@ -25,6 +25,7 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 use uuid::Uuid;
 
+use super::dialect::apply_projection_summary_bucket;
 use super::postgres::PostgresCanonicalStore;
 use super::system_store::{
     DeadLetterGroup, PendingTaskMetric, ProjectionClaimFilter, ProjectionOperation,
@@ -36,6 +37,11 @@ use super::system_store::{
 /// `SystemCatalogConfig::projection_tasks_relation()` for the canonical
 /// `udb_system.udb_projection_tasks` table.
 const DEFAULT_REL: &str = r#""udb_system"."udb_projection_tasks""#;
+
+fn projection_retry_delay_secs(retry_count: i32) -> i64 {
+    let attempt = retry_count.max(1).min(12) as u32;
+    (1_i64 << (attempt - 1)).min(3600)
+}
 
 impl PostgresCanonicalStore {
     /// PG pool getter for the projection impl below.
@@ -107,6 +113,10 @@ fn row_to_projection_task(row: sqlx::postgres::PgRow) -> SystemStoreResult<Proje
         updated_at: row
             .try_get::<DateTime<Utc>, _>("updated_at")
             .unwrap_or_else(|_| Utc::now()),
+        next_retry_at: row
+            .try_get::<Option<DateTime<Utc>>, _>("next_retry_at")
+            .ok()
+            .flatten(),
         completed_at: row
             .try_get::<Option<DateTime<Utc>>, _>("completed_at")
             .ok()
@@ -156,6 +166,7 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
                                        CHECK (status IN ('PENDING','IN_PROGRESS','COMPLETED','FAILED','DEAD_LETTER')),
                     retry_count        INTEGER NOT NULL DEFAULT 0,
                     last_error         TEXT NOT NULL DEFAULT '',
+                    next_retry_at      TIMESTAMPTZ,
                     created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     completed_at       TIMESTAMPTZ
@@ -167,8 +178,27 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
                      ON {rel} (status, created_at)"#
             ),
             format!(
+                r#"CREATE INDEX IF NOT EXISTS "idx_udb_projection_tasks_project_status_created_at"
+                     ON {rel} (project_id, status, created_at)"#
+            ),
+            format!(
                 r#"CREATE INDEX IF NOT EXISTS "idx_udb_projection_tasks_backend_status"
                      ON {rel} (target_backend, target_instance, status)"#
+            ),
+            format!(
+                r#"CREATE INDEX IF NOT EXISTS "idx_udb_projection_tasks_claim_pending"
+                     ON {rel} (project_id, created_at, task_id)
+                     WHERE status = 'PENDING'"#
+            ),
+            format!(
+                r#"CREATE INDEX IF NOT EXISTS "idx_udb_projection_tasks_claim_failed"
+                     ON {rel} (project_id, next_retry_at, created_at, task_id)
+                     WHERE status = 'FAILED'"#
+            ),
+            format!(r#"ALTER TABLE {rel} ADD COLUMN IF NOT EXISTS next_retry_at TIMESTAMPTZ"#),
+            format!(
+                r#"CREATE INDEX IF NOT EXISTS "idx_udb_projection_tasks_next_retry"
+                     ON {rel} (next_retry_at) WHERE status = 'FAILED' AND next_retry_at IS NOT NULL"#
             ),
         ];
         for sql in stmts.iter() {
@@ -240,43 +270,84 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
             return Ok(Vec::new());
         }
         let rel = self.projection_relation_ref();
-        // Same pattern as `runtime/projection/mod.rs::run_once`:
-        // inner SELECT with FOR UPDATE SKIP LOCKED picks the rows
-        // we'll process; outer UPDATE flips status to IN_PROGRESS
-        // and the RETURNING clause hands the full row back.
-        //
-        // Target filter is parameterised (PG supports parameters
-        // inside subqueries cleanly).
+        let mut next_param = 3;
+        let project_filter = if filter.project_id.is_some() {
+            let clause = format!("AND project_id = ${next_param}");
+            next_param += 1;
+            clause
+        } else {
+            String::new()
+        };
         let target_filter = match (&filter.target_backend, &filter.target_instance) {
-            (Some(_), Some(_)) => "AND target_backend = $3 AND target_instance = $4",
-            (Some(_), None) => "AND target_backend = $3",
-            (None, Some(_)) => "AND target_instance = $3",
-            (None, None) => "",
+            (Some(_), Some(_)) => {
+                let clause = format!(
+                    "AND target_backend = ${next_param} AND target_instance = ${}",
+                    next_param + 1
+                );
+                next_param += 2;
+                clause
+            }
+            (Some(_), None) => {
+                let clause = format!("AND target_backend = ${next_param}");
+                next_param += 1;
+                clause
+            }
+            (None, Some(_)) => {
+                let clause = format!("AND target_instance = ${next_param}");
+                next_param += 1;
+                clause
+            }
+            (None, None) => String::new(),
         };
         let sql = format!(
             r#"
-            UPDATE {rel}
-            SET status = 'IN_PROGRESS', updated_at = NOW()
-            WHERE task_id IN (
-                SELECT task_id FROM {rel}
-                WHERE status IN ('PENDING', 'FAILED')
+            WITH pending_candidates AS (
+                SELECT task_id, created_at FROM {rel}
+                WHERE status = 'PENDING'
                   AND retry_count < $1
+                  {project_filter}
                   {target_filter}
                 ORDER BY created_at
                 LIMIT $2
                 FOR UPDATE SKIP LOCKED
+            ),
+            failed_candidates AS (
+                SELECT task_id, created_at FROM {rel}
+                WHERE status = 'FAILED'
+                  AND retry_count < $1
+                  AND (next_retry_at IS NULL OR next_retry_at <= NOW())
+                  {project_filter}
+                  {target_filter}
+                ORDER BY created_at
+                LIMIT $2
+                FOR UPDATE SKIP LOCKED
+            ),
+            candidates AS (
+                SELECT task_id FROM (
+                    SELECT task_id, created_at FROM pending_candidates
+                    UNION ALL
+                    SELECT task_id, created_at FROM failed_candidates
+                ) c
+                ORDER BY created_at
+                LIMIT $2
             )
+            UPDATE {rel}
+            SET status = 'IN_PROGRESS', updated_at = NOW()
+            WHERE task_id IN (SELECT task_id FROM candidates)
             RETURNING task_id, idempotency_key, project_id,
                       target_backend, target_instance, projection_kind, resource_name,
                       operation, source_row_key, target_options, source_payload,
                       source_checksum, status, retry_count, last_error,
-                      created_at, updated_at, completed_at
+                      created_at, updated_at, next_retry_at, completed_at
             "#
         );
         // Bind in the order matching the placeholders.
         let mut q = sqlx::query(&sql)
             .bind(filter.max_retries)
             .bind(filter.batch_size);
+        if let Some(project_id) = &filter.project_id {
+            q = q.bind(project_id);
+        }
         match (&filter.target_backend, &filter.target_instance) {
             (Some(b), Some(i)) => {
                 q = q.bind(b).bind(i);
@@ -304,7 +375,7 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
         let rel = self.projection_relation_ref();
         let sql = format!(
             r#"UPDATE {rel}
-               SET status = 'COMPLETED', completed_at = NOW(), updated_at = NOW()
+               SET status = 'COMPLETED', completed_at = NOW(), next_retry_at = NULL, updated_at = NOW()
                WHERE task_id = $1"#
         );
         sqlx::query(&sql)
@@ -334,7 +405,9 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
         let rel = self.projection_relation_ref();
         let sql = format!(
             r#"UPDATE {rel}
-               SET status = $1, retry_count = $2, last_error = $3, updated_at = NOW()
+               SET status = $1, retry_count = $2, last_error = $3,
+                   next_retry_at = CASE WHEN $1 = 'FAILED' THEN NOW() + ($5::TEXT || ' seconds')::INTERVAL ELSE NULL END,
+                   updated_at = NOW()
                WHERE task_id = $4"#
         );
         sqlx::query(&sql)
@@ -342,6 +415,7 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
             .bind(new_retry_count)
             .bind(error)
             .bind(task_id)
+            .bind(projection_retry_delay_secs(new_retry_count))
             .execute(self.pg_pool())
             .await
             .map_err(|e| SystemStoreError::query("postgres", sql.clone(), e))?;
@@ -359,7 +433,7 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
         };
         let sql = format!(
             r#"UPDATE {rel}
-               SET status = 'PENDING', retry_count = 0, last_error = '', updated_at = NOW()
+               SET status = 'PENDING', retry_count = 0, last_error = '', next_retry_at = NULL, updated_at = NOW()
                WHERE status = 'DEAD_LETTER' {where_clause}"#
         );
         let mut q = sqlx::query(&sql);
@@ -509,21 +583,7 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
         for row in rows {
             let status: String = row.try_get("status").unwrap_or_default();
             let n: i64 = row.try_get("n").unwrap_or(0);
-            match status.as_str() {
-                "PENDING" => s.pending = n,
-                "IN_PROGRESS" => s.in_progress = n,
-                "COMPLETED" => s.completed = n,
-                "FAILED" => s.failed = n,
-                "DEAD_LETTER" => s.dead_letter = n,
-                _ => {
-                    return Err(SystemStoreError::SchemaMismatch {
-                        backend: "postgres",
-                        detail: format!(
-                            "unexpected status '{status}' in {rel} (CHECK constraint should prevent this)"
-                        ),
-                    });
-                }
-            }
+            apply_projection_summary_bucket(&mut s, "postgres", &status, n)?;
         }
         Ok(s)
     }

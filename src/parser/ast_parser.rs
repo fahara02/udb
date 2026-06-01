@@ -126,6 +126,7 @@ impl ProtoAstParser {
                 out.reserved_numbers.extend(ranges);
                 out.reserved_names.extend(names);
             } else if self.cur().is_ident("extensions") {
+                out.unsupported_extensions.push(self.span());
                 self.skip_to_statement_end();
             } else if self.cur().kind == TokenKind::Ident {
                 if let Some(field) = self.parse_field_ast("", "")? {

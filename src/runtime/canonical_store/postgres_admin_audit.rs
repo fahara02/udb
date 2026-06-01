@@ -20,6 +20,7 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 use uuid::Uuid;
 
+use super::dialect::{SqlDialect, build_eq_where, normalize_limit_offset};
 use super::postgres::PostgresCanonicalStore;
 use super::system_store::{
     AdminAuditChainReport, AdminAuditInsert, AdminAuditListFilter, AdminAuditRow, AdminAuditStore,
@@ -32,9 +33,6 @@ const DEFAULT_REL: &str = r#""udb_system"."udb_admin_audit_log""#;
 /// `0x7564625F6175_6469` is "udb_audi" in ASCII — encoded as the
 /// 64-bit integer the `pg_advisory_xact_lock()` builtin takes.
 const ADMIN_AUDIT_CHAIN_LOCK_KEY: i64 = 0x7564_625F_6175_6469;
-
-/// Pages of this many rows are pulled during streaming verify.
-const VERIFY_PAGE_SIZE: i64 = 1000;
 
 impl PostgresCanonicalStore {
     pub fn with_admin_audit_relation(mut self, relation: impl Into<String>) -> Self {
@@ -211,28 +209,19 @@ impl AdminAuditStore for PostgresCanonicalStore {
         filter: &AdminAuditListFilter,
     ) -> SystemStoreResult<Vec<AdminAuditRow>> {
         let rel = self.admin_audit_relation_ref();
-        let mut clauses: Vec<String> = Vec::new();
-        let mut bind_index: usize = 0;
-        for (column, value) in [
-            ("operation", filter.operation.as_ref()),
-            ("actor", filter.actor.as_ref()),
-            ("tenant_id", filter.tenant_id.as_ref()),
-            ("project_id", filter.project_id.as_ref()),
-        ] {
-            if value.is_some() {
-                bind_index += 1;
-                clauses.push(format!("{column} = ${bind_index}"));
-            }
-        }
-        let where_sql = if clauses.is_empty() {
-            String::new()
-        } else {
-            format!("WHERE {}", clauses.join(" AND "))
-        };
-        let limit_p = bind_index + 1;
-        let offset_p = bind_index + 2;
-        let limit = if filter.limit <= 0 { 100 } else { filter.limit };
-        let offset = filter.offset.max(0);
+        let w = build_eq_where(
+            SqlDialect::POSTGRES,
+            &[
+                ("operation", filter.operation.is_some()),
+                ("actor", filter.actor.is_some()),
+                ("tenant_id", filter.tenant_id.is_some()),
+                ("project_id", filter.project_id.is_some()),
+            ],
+        );
+        let where_sql = &w.where_sql;
+        let limit_placeholder = &w.limit_placeholder;
+        let offset_placeholder = &w.offset_placeholder;
+        let (limit, offset) = normalize_limit_offset(filter.limit, filter.offset);
         let sql = format!(
             r#"SELECT audit_id, actor, operation, target, request_json, result,
                       tenant_id, project_id, correlation_id,
@@ -241,7 +230,7 @@ impl AdminAuditStore for PostgresCanonicalStore {
                FROM {rel}
                {where_sql}
                ORDER BY created_at DESC
-               LIMIT ${limit_p} OFFSET ${offset_p}"#
+               LIMIT {limit_placeholder} OFFSET {offset_placeholder}"#
         );
         let mut q = sqlx::query(&sql);
         for value in [
@@ -276,18 +265,37 @@ impl AdminAuditStore for PostgresCanonicalStore {
         limit: Option<i64>,
     ) -> SystemStoreResult<AdminAuditChainReport> {
         let rel = self.admin_audit_relation_ref();
+        // Verify under a SINGLE SERIALIZABLE snapshot on one pinned
+        // connection (#162): paging across separate pool connections let a
+        // concurrent append with an earlier created_at shift the OFFSET window
+        // and skip rows, hiding tamper. One MVCC snapshot makes concurrent
+        // writes invisible for the whole scan, so offsets are stable. COMMIT is
+        // issued on every exit path so the pooled connection isn't returned with
+        // an open transaction.
+        let mut conn = self
+            .pg_pool()
+            .acquire()
+            .await
+            .map_err(|e| SystemStoreError::io("postgres", e))?;
+        sqlx::query("BEGIN ISOLATION LEVEL SERIALIZABLE")
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| SystemStoreError::query("postgres", "BEGIN SERIALIZABLE", e))?;
         let mut previous_hash = String::new();
         let mut checked: i64 = 0;
         let mut offset: i64 = 0;
-        loop {
+        let final_report = loop {
             let remaining = match limit {
                 Some(n) if n > 0 => (n - checked).max(0),
                 _ => i64::MAX,
             };
             if remaining == 0 {
-                break;
+                break AdminAuditChainReport::Passed {
+                    checked_count: checked,
+                    last_hash: previous_hash.clone(),
+                };
             }
-            let page = remaining.min(VERIFY_PAGE_SIZE);
+            let page = remaining.min(super::dialect::admin_audit_verify_page_size());
             let sql = format!(
                 r#"SELECT audit_id, actor, operation, target, request_json, result,
                           tenant_id, project_id, correlation_id,
@@ -297,34 +305,57 @@ impl AdminAuditStore for PostgresCanonicalStore {
                    ORDER BY created_at ASC, audit_id ASC
                    LIMIT $1 OFFSET $2"#
             );
-            let rows = sqlx::query(&sql)
+            let rows = match sqlx::query(&sql)
                 .bind(page)
                 .bind(offset)
-                .fetch_all(self.pg_pool())
+                .fetch_all(&mut *conn)
                 .await
-                .map_err(|e| SystemStoreError::query("postgres", sql.clone(), e))?;
+            {
+                Ok(rows) => rows,
+                Err(e) => {
+                    let _ = sqlx::query("COMMIT").execute(&mut *conn).await;
+                    return Err(SystemStoreError::query("postgres", sql.clone(), e));
+                }
+            };
             if rows.is_empty() {
-                break;
+                break AdminAuditChainReport::Passed {
+                    checked_count: checked,
+                    last_hash: previous_hash.clone(),
+                };
             }
             let n_rows = rows.len() as i64;
+            let mut tamper: Option<AdminAuditChainReport> = None;
             for r in rows {
-                let row = row_to_audit(r)?;
+                let row = match row_to_audit(r) {
+                    Ok(row) => row,
+                    Err(e) => {
+                        let _ = sqlx::query("COMMIT").execute(&mut *conn).await;
+                        return Err(e);
+                    }
+                };
                 match verify_admin_audit_chain_step(&row, &previous_hash, checked) {
                     Ok(next) => {
                         previous_hash = next;
                         checked += 1;
                     }
-                    Err(report) => return Ok(report),
+                    Err(report) => {
+                        tamper = Some(report);
+                        break;
+                    }
                 }
+            }
+            if let Some(report) = tamper {
+                break report;
             }
             offset += n_rows;
             if n_rows < page {
-                break;
+                break AdminAuditChainReport::Passed {
+                    checked_count: checked,
+                    last_hash: previous_hash.clone(),
+                };
             }
-        }
-        Ok(AdminAuditChainReport::Passed {
-            checked_count: checked,
-            last_hash: previous_hash,
-        })
+        };
+        let _ = sqlx::query("COMMIT").execute(&mut *conn).await;
+        Ok(final_report)
     }
 }

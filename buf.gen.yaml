@@ -16,6 +16,11 @@ managed:
     # stable across regen.
     - file_option: php_namespace
     - file_option: php_metadata_namespace
+    # Preserve explicit `option csharp_namespace = "udb.core.Authn.Services.V1"`
+    # etc. Managed mode otherwise force-PascalCases every segment
+    # ("Udb.Core.Authn..."), diverging from the namespaces the proto authors
+    # declared and the handwritten C# client (UdbAuthClient.cs) consumes.
+    - file_option: csharp_namespace
   override:
     - file_option: go_package_prefix
       value: github.com/fahara02/udb/sdk/go/gen
@@ -32,6 +37,10 @@ plugins:
     opt: [target=ts]
 
   # ── OpenAPI v2 — for HTTP/JSON gateway transcoding + docs ──────────
+  # NOTE: after `buf generate`, run `node scripts/openapi-postprocess.mjs` to set
+  # the merged document's title/version/scope (the openapiv2 merge mode titles it
+  # after the first proto and emits "version not set"). CI runs this automatically
+  # before the drift check; run it locally too or the committed swagger will drift.
   - remote: buf.build/grpc-ecosystem/openapiv2
     out: api
     opt:
@@ -53,22 +62,26 @@ plugins:
     out: sdk/go/gen
     opt: [paths=source_relative, require_unimplemented_servers=false]
 
-  # Python / C# / Java codegen stays commented for now to keep
-  # `buf generate` fast; flip on when those SDKs ship.
-  #
-  # - remote: buf.build/protocolbuffers/python:v31.1
-  #   out: sdk/python/gen
-  # - remote: buf.build/grpc/python:v1.76.0
-  #   out: sdk/python/gen
-  # - remote: buf.build/protocolbuffers/pyi:v31.1
-  #   out: sdk/python/gen
-  #
-  # - remote: buf.build/protocolbuffers/csharp
-  #   out: sdk/csharp/gen
-  # - remote: buf.build/grpc/csharp
-  #   out: sdk/csharp/gen
-  #
-  # - remote: buf.build/protocolbuffers/java
-  #   out: sdk/java/gen
-  # - remote: buf.build/grpc/java
-  #   out: sdk/java/gen
+  # ── Python SDK ─────────────────────────────────────────────────────
+  - remote: buf.build/protocolbuffers/python:v31.1
+    out: sdk/python/gen
+  - remote: buf.build/grpc/python:v1.76.0
+    out: sdk/python/gen
+  - remote: buf.build/protocolbuffers/pyi:v31.1
+    out: sdk/python/gen
+
+  # ── C# SDK ─────────────────────────────────────────────────────────
+  # base_namespace= (empty) emits namespace-based subdirectories so the
+  # duplicate proto basenames across domains (entities.proto, enums.proto,
+  # core.proto) don't collide into one flat output dir.
+  - remote: buf.build/protocolbuffers/csharp
+    out: sdk/csharp/gen
+    opt: [base_namespace=]
+  - remote: buf.build/grpc/csharp
+    out: sdk/csharp/gen
+
+  # ── Java SDK ───────────────────────────────────────────────────────
+  - remote: buf.build/protocolbuffers/java
+    out: sdk/java/gen
+  - remote: buf.build/grpc/java
+    out: sdk/java/gen

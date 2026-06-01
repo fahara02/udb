@@ -13,18 +13,18 @@
 //! - Computes a per-row projection checksum from the source payload +
 //!   projection target spec.
 //! - Compares against the target's stored checksum (or absence of a row).
-//! - Enqueues repair tasks for divergent rows via the existing
-//!   `ProjectionEngine`, so the standard worker pulls them on the next
-//!   tick — no new execution path, no new dispatch logic.
+//! - Reports divergent rows in `DriftReport.divergent_rows` together with a
+//!   repair-cost estimate.
 //!
-//! The acceptance gate ("Corrupting a Mongo/Qdrant/ClickHouse projection
-//! row is detected and repaired") is satisfied because:
+//! ## Detect + repair
 //!
-//! 1. **Detect** = source/target checksum mismatch flagged in
-//!    `DriftReport.divergent_rows`.
-//! 2. **Repair** = `DriftScanner::repair` enqueues projection tasks
-//!    with `operation: "upsert"` against the source row, which the
-//!    standard worker then applies idempotently.
+//! [`DriftScanner`] *detects* drift (pure logic, no engine handle, testable
+//! without live backends). [`repair_drift`] is the *repair* half: it takes a
+//! [`DriftReport`] and re-projects every divergent row through
+//! [`ProjectionEngine::replay_by_primary_key`], which enqueues an idempotent
+//! `upsert` projection task the standard worker then applies to the drifted
+//! target. The scanner stays pure; `repair_drift` lives at the runtime layer
+//! where the `ProjectionEngine` handle is available.
 //!
 //! This module is pure logic — actual target reads (Mongo find,
 //! Qdrant retrieve, ClickHouse SELECT) are abstracted behind the
@@ -32,11 +32,13 @@
 //! live backends.
 
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::runtime::projection::ProjectionTarget;
+use crate::runtime::DataBrokerRuntime;
+use crate::runtime::projection::{ProjectionPlan, ProjectionTarget};
 
 /// How aggressively to scan the source for drift.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -164,6 +166,322 @@ pub trait TargetChecksumProbe: Send + Sync {
     ) -> Result<TargetObservation, String>;
 }
 
+/// Runtime-backed drift probe. It uses the configured backend dispatchers
+/// instead of direct client calls, so production drift scans exercise the same
+/// backend instances/operators configured for the broker.
+pub struct RuntimeTargetChecksumProbe {
+    runtime: Arc<DataBrokerRuntime>,
+}
+
+impl RuntimeTargetChecksumProbe {
+    pub fn new(runtime: Arc<DataBrokerRuntime>) -> Self {
+        Self { runtime }
+    }
+
+    pub fn support_warning(target: &ProjectionTarget) -> Option<String> {
+        let backend = target.backend.to_ascii_lowercase();
+        match backend.as_str() {
+            "postgres" | "mysql" | "sqlite" | "mssql" | "mongodb" | "clickhouse"
+            | "elasticsearch" => None,
+            _ => Some(format!(
+                "projection drift probe is not implemented for backend '{}' resource '{}'",
+                target.backend, target.resource_name
+            )),
+        }
+    }
+
+    fn request_for_target(
+        target: &ProjectionTarget,
+        row_key: &serde_json::Value,
+    ) -> Result<String, String> {
+        let backend = target.backend.to_ascii_lowercase();
+        let request = match backend.as_str() {
+            "postgres" => sql_probe_request(target, row_key, SqlProbeDialect::Postgres)?,
+            "mysql" => sql_probe_request(target, row_key, SqlProbeDialect::Mysql)?,
+            "sqlite" => sql_probe_request(target, row_key, SqlProbeDialect::Sqlite)?,
+            "mssql" => sql_probe_request(target, row_key, SqlProbeDialect::Mssql)?,
+            "mongodb" => serde_json::json!({
+                "collection": target.resource_name,
+                "filter": row_key,
+                "limit": 1
+            }),
+            "clickhouse" => serde_json::json!({
+                "table": target.resource_name,
+                "filter": row_key,
+                "limit": 1
+            }),
+            "elasticsearch" => serde_json::json!({
+                "method": "POST",
+                "path": format!("/{}/_search", target.resource_name),
+                "body": {
+                    "query": {"bool": {"filter": row_key_to_elastic_terms(row_key)?}},
+                    "size": 1
+                }
+            }),
+            _ => {
+                return Err(format!(
+                    "projection drift probe is not implemented for backend '{}'",
+                    target.backend
+                ));
+            }
+        };
+        serde_json::to_string(&request)
+            .map_err(|err| format!("failed to encode drift probe request: {err}"))
+    }
+}
+
+#[async_trait::async_trait]
+impl TargetChecksumProbe for RuntimeTargetChecksumProbe {
+    async fn observe(
+        &self,
+        target: &ProjectionTarget,
+        row_key: &serde_json::Value,
+    ) -> Result<TargetObservation, String> {
+        let request = Self::request_for_target(target, row_key)?;
+        let response = self
+            .runtime
+            .query_backend_target(&target.backend, Some(&target.instance), &request)
+            .await
+            .map_err(|err| format!("drift probe query failed for {}: {err}", target.backend))?;
+        let response_json: serde_json::Value = serde_json::from_str(&response)
+            .map_err(|err| format!("drift probe response was not JSON: {err}"))?;
+        let target_checksum =
+            first_payload(&response_json).map(|payload| checksum_of_payload(&payload));
+        Ok(TargetObservation {
+            row_key: row_key.clone(),
+            target_checksum,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DriftScanTargetResult {
+    pub report: DriftReport,
+    pub warnings: Vec<String>,
+}
+
+pub struct DriftScannerWorker {
+    scanner: DriftScanner,
+    probe: RuntimeTargetChecksumProbe,
+}
+
+impl DriftScannerWorker {
+    pub fn new(runtime: Arc<DataBrokerRuntime>, mode: ScanMode) -> Self {
+        Self {
+            scanner: DriftScanner::new(mode),
+            probe: RuntimeTargetChecksumProbe::new(runtime),
+        }
+    }
+
+    pub async fn scan_plan(
+        &self,
+        plan: &ProjectionPlan,
+        samples: &[SourceSample],
+    ) -> Vec<DriftScanTargetResult> {
+        let mut results = Vec::new();
+        for target in &plan.targets {
+            if let Some(warning) = RuntimeTargetChecksumProbe::support_warning(target) {
+                results.push(DriftScanTargetResult {
+                    report: empty_report(target),
+                    warnings: vec![warning],
+                });
+                continue;
+            }
+            match self.scanner.scan(target, samples, &self.probe).await {
+                Ok(report) => results.push(DriftScanTargetResult {
+                    report,
+                    warnings: Vec::new(),
+                }),
+                Err(err) => results.push(DriftScanTargetResult {
+                    report: empty_report(target),
+                    warnings: vec![err],
+                }),
+            }
+        }
+        results
+    }
+}
+
+/// Repair every divergent row in a [`DriftReport`] by re-projecting the
+/// authoritative source row through the projection engine.
+///
+/// Closes the detect→repair loop (the scanner only *detects*; this is the
+/// repair half). For each `DivergentRow` it calls
+/// [`ProjectionEngine::replay_by_primary_key`], which loads the canonical
+/// source row by its PK and enqueues an idempotent `upsert` projection task —
+/// the standard projection worker then re-applies it to the drifted target.
+///
+/// `message_type` / `project_id` identify the source the report was scanned
+/// against (the scanner is intentionally pure and does not carry them).
+/// Returns the number of projection tasks enqueued.
+pub async fn repair_drift(
+    engine: &crate::runtime::projection::ProjectionEngine,
+    manifest: &crate::generation::CatalogManifest,
+    project_id: &str,
+    message_type: &str,
+    report: &DriftReport,
+) -> Result<u64, String> {
+    let row_keys: Vec<serde_json::Value> = report
+        .divergent_rows
+        .iter()
+        .map(|row| row.row_key.clone())
+        .collect();
+    let (enqueued, _checkpoint) = engine
+        .replay_batch_rows(
+            manifest,
+            project_id,
+            message_type,
+            &row_keys,
+            DRIFT_REPAIR_BATCH_SIZE,
+            None,
+        )
+        .await?;
+    Ok(enqueued)
+}
+
+const DRIFT_REPAIR_BATCH_SIZE: usize = 100;
+
+#[derive(Debug, Clone, Copy)]
+enum SqlProbeDialect {
+    Postgres,
+    Mysql,
+    Sqlite,
+    Mssql,
+}
+
+fn sql_probe_request(
+    target: &ProjectionTarget,
+    row_key: &serde_json::Value,
+    dialect: SqlProbeDialect,
+) -> Result<serde_json::Value, String> {
+    let key = row_key
+        .as_object()
+        .ok_or_else(|| "projection row key must be a JSON object".to_string())?;
+    if key.is_empty() {
+        return Err("projection row key must not be empty".to_string());
+    }
+    let table = quote_qualified_identifier(&target.resource_name, dialect)?;
+    let mut params = Vec::new();
+    let mut predicates = Vec::new();
+    for (idx, (column, value)) in key.iter().enumerate() {
+        params.push(value.clone());
+        predicates.push(format!(
+            "{} = {}",
+            quote_identifier(column, dialect)?,
+            placeholder(idx + 1, dialect)
+        ));
+    }
+    let sql = match dialect {
+        SqlProbeDialect::Mssql => format!(
+            "SELECT TOP (1) * FROM {table} WHERE {}",
+            predicates.join(" AND ")
+        ),
+        _ => format!(
+            "SELECT * FROM {table} WHERE {} LIMIT 1",
+            predicates.join(" AND ")
+        ),
+    };
+    Ok(serde_json::json!({ "sql": sql, "params": params }))
+}
+
+fn row_key_to_elastic_terms(row_key: &serde_json::Value) -> Result<Vec<serde_json::Value>, String> {
+    let key = row_key
+        .as_object()
+        .ok_or_else(|| "projection row key must be a JSON object".to_string())?;
+    if key.is_empty() {
+        return Err("projection row key must not be empty".to_string());
+    }
+    Ok(key
+        .iter()
+        .map(|(field, value)| {
+            let mut term = serde_json::Map::new();
+            term.insert(field.clone(), value.clone());
+            serde_json::json!({ "term": term })
+        })
+        .collect())
+}
+
+fn placeholder(index: usize, dialect: SqlProbeDialect) -> String {
+    match dialect {
+        SqlProbeDialect::Postgres => format!("${index}"),
+        SqlProbeDialect::Mysql | SqlProbeDialect::Sqlite => "?".to_string(),
+        SqlProbeDialect::Mssql => format!("@P{index}"),
+    }
+}
+
+fn quote_qualified_identifier(value: &str, dialect: SqlProbeDialect) -> Result<String, String> {
+    value
+        .split('.')
+        .map(|part| quote_identifier(part, dialect))
+        .collect::<Result<Vec<_>, _>>()
+        .map(|parts| parts.join("."))
+}
+
+fn quote_identifier(value: &str, dialect: SqlProbeDialect) -> Result<String, String> {
+    if value.is_empty()
+        || !value
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+        || value.chars().next().is_some_and(|ch| ch.is_ascii_digit())
+    {
+        return Err(format!("unsafe projection identifier '{value}'"));
+    }
+    Ok(match dialect {
+        SqlProbeDialect::Mysql => format!("`{value}`"),
+        SqlProbeDialect::Mssql => format!("[{value}]"),
+        SqlProbeDialect::Postgres | SqlProbeDialect::Sqlite => format!("\"{value}\""),
+    })
+}
+
+fn first_payload(response: &serde_json::Value) -> Option<serde_json::Value> {
+    match response {
+        serde_json::Value::Array(rows) => rows.first().cloned(),
+        serde_json::Value::Object(map) => {
+            for key in ["rows", "documents", "results", "items", "hits", "data"] {
+                if let Some(value) = map.get(key).and_then(serde_json::Value::as_array)
+                    && let Some(first) = value.first()
+                {
+                    return Some(unwrap_elastic_hit(first));
+                }
+            }
+            if let Some(hits) = map
+                .get("hits")
+                .and_then(|hits| hits.get("hits"))
+                .and_then(serde_json::Value::as_array)
+                && let Some(first) = hits.first()
+            {
+                return Some(unwrap_elastic_hit(first));
+            }
+            if map.get("found").and_then(serde_json::Value::as_bool) == Some(false) {
+                return None;
+            }
+            Some(response.clone())
+        }
+        _ => None,
+    }
+}
+
+fn unwrap_elastic_hit(value: &serde_json::Value) -> serde_json::Value {
+    value
+        .get("_source")
+        .cloned()
+        .unwrap_or_else(|| value.clone())
+}
+
+fn empty_report(target: &ProjectionTarget) -> DriftReport {
+    DriftReport {
+        target_backend: target.backend.clone(),
+        target_instance: target.instance.clone(),
+        target_resource: target.resource_name.clone(),
+        source_rows_scanned: 0,
+        divergent_rows: Vec::new(),
+        estimated_repair_cost: RepairCostEstimate {
+            rows_to_repair: 0,
+            total_cost_units: 0.0,
+        },
+    }
+}
+
 /// Pure-logic scanner. Takes source samples + a probe, produces a
 /// drift report. The runtime feeds it source rows via
 /// `ProjectionEngine::load_source_rows`; tests feed it canned vectors.
@@ -195,25 +513,28 @@ impl DriftScanner {
     ) -> Result<DriftReport, String> {
         let limited = self.limit_samples(samples);
         let mut divergent = Vec::new();
-        for sample in limited {
+        // Dedup by (kind, row_key): the same key can be sampled more than once,
+        // and without this the report (and the rows_to_repair cost estimate) is
+        // inflated by duplicates even though repair dedups via idempotency_key.
+        let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+        for sample in &limited {
             let observation = probe.observe(target, &sample.row_key).await?;
-            match &observation.target_checksum {
-                None => divergent.push(DivergentRow {
-                    row_key: sample.row_key.clone(),
-                    source_checksum: sample.source_checksum.clone(),
-                    target_checksum: None,
-                    kind: DivergenceKind::MissingOnTarget,
-                }),
+            let (target_checksum, kind) = match &observation.target_checksum {
+                None => (None, DivergenceKind::MissingOnTarget),
                 Some(target_sum) if target_sum != &sample.source_checksum => {
-                    divergent.push(DivergentRow {
-                        row_key: sample.row_key.clone(),
-                        source_checksum: sample.source_checksum.clone(),
-                        target_checksum: Some(target_sum.clone()),
-                        kind: DivergenceKind::ChecksumMismatch,
-                    });
+                    (Some(target_sum.clone()), DivergenceKind::ChecksumMismatch)
                 }
-                Some(_) => {}
+                Some(_) => continue,
+            };
+            if !seen.insert(format!("{kind:?}|{:?}", sample.row_key)) {
+                continue;
             }
+            divergent.push(DivergentRow {
+                row_key: sample.row_key.clone(),
+                source_checksum: sample.source_checksum.clone(),
+                target_checksum,
+                kind,
+            });
         }
         let cost_units = default_cost_units(&target.backend);
         let rows_to_repair = divergent.len();
@@ -257,12 +578,21 @@ impl DriftScanner {
         }
     }
 
-    fn limit_samples<'a>(&self, all: &'a [SourceSample]) -> &'a [SourceSample] {
+    fn limit_samples<'a>(&self, all: &'a [SourceSample]) -> Vec<&'a SourceSample> {
         match self.mode {
-            ScanMode::Full => all,
+            ScanMode::Full => all.iter().collect(),
             ScanMode::Sample { rows_per_target } => {
                 let take = rows_per_target.min(all.len());
-                &all[..take]
+                // A first-N prefix (`&all[..take]`) never detects corruption
+                // beyond row N. Instead order rows by their `source_checksum`
+                // (a SHA-256 — uniformly distributed over the keyspace) and take
+                // the first N. This yields a sample spread across ALL rows, yet
+                // stays deterministic across reruns (no RNG dependency) so the
+                // scan is reproducible.
+                let mut idx: Vec<usize> = (0..all.len()).collect();
+                idx.sort_by(|&a, &b| all[a].source_checksum.cmp(&all[b].source_checksum));
+                idx.truncate(take);
+                idx.into_iter().map(|i| &all[i]).collect()
             }
         }
     }

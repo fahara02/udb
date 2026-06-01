@@ -152,7 +152,25 @@ pub async fn apply_artifacts(
 ) -> Vec<ArtifactApplyResult> {
     let mut results = Vec::with_capacity(artifacts.len());
     for artifact in artifacts {
-        let already_applied = target.verify_applied(artifact).await.unwrap_or(false);
+        // Fail-closed: a verify_applied error (connection lost, permission denied)
+        // must NOT be downgraded to "not applied" — that would re-run
+        // apply_artifact and duplicate an already-applied resource. On verify
+        // failure, record the error and skip the apply for this artifact.
+        let already_applied = match target.verify_applied(artifact).await {
+            Ok(applied) => applied,
+            Err(err) => {
+                results.push(ArtifactApplyResult {
+                    rel_path: artifact.rel_path.clone(),
+                    backend: target.backend_name().to_string(),
+                    applied: false,
+                    skipped: false,
+                    error: Some(format!(
+                        "verify_applied failed (not applied to avoid duplicate): {err}"
+                    )),
+                });
+                continue;
+            }
+        };
 
         if already_applied {
             results.push(ArtifactApplyResult {

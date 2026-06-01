@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package udb.core.notification.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/notification/entity/v1/enums.proto";
+
+option csharp_namespace = "udb.core.Notification.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/notification/entity/v1;notificationv1";
+option java_package = "com.udb.core.notification.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Notification\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// NotificationTemplate — Message template with variable substitution.
+// ---------------------------------------------------------------------------
+
+message NotificationTemplate {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "notification_templates"
+    schema_name: "udb_notification"
+    migration_order: 1
+    is_table: true
+    comment: "Message templates for each notification type and channel"
+    soft_delete: true
+    audit_fields: true
+    enable_rls: false
+    sql_artifacts: {
+      name: "touch_updated_at_function"
+      backend: "postgres"
+      phase: "before_triggers"
+      sql:
+        "CREATE OR REPLACE FUNCTION udb_notification.touch_updated_at()\n"
+        "RETURNS trigger\n"
+        "LANGUAGE plpgsql\n"
+        "AS $$\n"
+        "BEGIN\n"
+        "  NEW.updated_at = CURRENT_TIMESTAMP;\n"
+        "  RETURN NEW;\n"
+        "END;\n"
+        "$$;"
+    }
+    triggers: {
+      trigger_name: "trg_notification_templates_touch_updated_at"
+      timing: "BEFORE"
+      event: "UPDATE"
+      function_name: "udb_notification.touch_updated_at()"
+      for_each: "ROW"
+    }
+    required_scope: "notification:admin"
+  };
+
+  string template_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "template_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  // Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+  string event_type = 2 [(udb.core.common.v1.pg_column) = { column_name: "event_type" sql_type: "VARCHAR(80)" not_null: true index: { index_name: "idx_notif_templates_event_channel" index_type: "BTREE" columns: "event_type" columns: "channel" unique: true } }];
+
+  NotificationChannel channel = 3 [(udb.core.common.v1.pg_column) = { column_name: "channel" sql_type: "VARCHAR(20)" not_null: true }];
+
+  string subject_template = 4 [(udb.core.common.v1.pg_column) = { column_name: "subject_template" sql_type: "VARCHAR(500)" is_tsvector: true tsvector_language: "english" tsvector_source_columns: "subject_template" tsvector_source_columns: "body_template" comment: "Handlebars/Go template such as '{{.ResourceName}} requires review'" }];
+
+  string body_template = 5 [(udb.core.common.v1.pg_column) = { column_name: "body_template" sql_type: "TEXT" not_null: true comment: "Full message body template with variable placeholders" }];
+
+  string locale = 6 [(udb.core.common.v1.pg_column) = { column_name: "locale" sql_type: "VARCHAR(10)" not_null: true default_value: "'en'" comment: "en | bn" }];
+
+  bool is_active = 7 [(udb.core.common.v1.pg_column) = { column_name: "is_active" sql_type: "BOOLEAN" not_null: true default_value: "TRUE" }];
+
+  google.protobuf.Timestamp created_at = 8 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  google.protobuf.Timestamp updated_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true }];
+  google.protobuf.Timestamp deleted_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" index: { index_name: "idx_notif_templates_active" index_type: "BTREE" where_clause: "deleted_at IS NULL" } }];
+
+  string created_by = 11 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "VARCHAR(120)" comment: "Identity that created this record." }];
+  string deleted_by = 12 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" comment: "Soft delete actor" }];
+}

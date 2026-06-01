@@ -1,0 +1,131 @@
+syntax = "proto3";
+
+package udb.core.apikey.services.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/apikey/entity/v1/api_key.proto";
+import "udb/core/apikey/entity/v1/enums.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/types.proto";
+
+option csharp_namespace = "udb.core.Apikey.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/apikey/services/v1;apikeyservicev1";
+option java_package = "com.udb.core.apikey.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Apikey\\Services\\V1";
+option php_namespace = "Udb\\Core\\Apikey\\Services\\V1";
+
+// ============================================================
+// Key lifecycle
+// ============================================================
+
+message CreateApiKeyRequest {
+  string name = 1;
+  string description = 2;
+  udb.core.apikey.entity.v1.ApiKeyOwnerType owner_type = 3;
+  string owner_id = 4;
+  repeated string scopes = 5; // e.g. ["resource:write", "project:read"]
+  repeated string ip_allowlist = 6; // CIDR strings; empty = unrestricted
+  int32 rate_limit_per_minute = 7; // 0 = use default (60)
+  int64 rate_limit_per_day = 8; // 0 = use default (10000)
+  google.protobuf.Timestamp expires_at = 9; // null = never expires
+  udb.core.common.v1.RequestContext context = 10;
+}
+
+message CreateApiKeyResponse {
+  udb.core.apikey.entity.v1.ApiKey key = 1;
+  // Plain key returned ONCE — not stored, must be saved by caller
+  string plain_key = 2;
+}
+
+message GetApiKeyRequest {
+  string key_id = 1;
+}
+
+message GetApiKeyResponse {
+  udb.core.apikey.entity.v1.ApiKey key = 1;
+}
+
+message ListApiKeysRequest {
+  string owner_id = 1;
+  udb.core.apikey.entity.v1.ApiKeyOwnerType owner_type = 2;
+  udb.core.apikey.entity.v1.ApiKeyStatus status = 3;
+  udb.core.common.v1.PageRequest page = 4;
+}
+
+message ListApiKeysResponse {
+  repeated udb.core.apikey.entity.v1.ApiKey keys = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+message RevokeApiKeyRequest {
+  string key_id = 1;
+  string revoke_reason = 2;
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message RevokeApiKeyResponse {
+  string key_id = 1;
+  google.protobuf.Timestamp revoked_at = 2;
+  string operation_id = 3;
+}
+
+// Update mutable fields: name, description, scopes, ip_allowlist, rate limits, expires_at
+message UpdateApiKeyRequest {
+  string key_id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string scopes = 4;
+  repeated string ip_allowlist = 5;
+  int32 rate_limit_per_minute = 6;
+  int64 rate_limit_per_day = 7;
+  google.protobuf.Timestamp expires_at = 8;
+  udb.core.common.v1.RequestContext context = 9;
+}
+
+message UpdateApiKeyResponse {
+  udb.core.apikey.entity.v1.ApiKey key = 1;
+}
+
+// ============================================================
+// Key validation — called by the API gateway on every request
+// ============================================================
+
+message ValidateApiKeyRequest {
+  string plain_key = 1; // Raw key from Authorization header
+  string endpoint = 2; // gRPC method or HTTP path being accessed
+  string required_scope = 3; // e.g. "resource:write"
+  string ip_address = 4; // source IP for allowlist check
+}
+
+message ValidateApiKeyResponse {
+  bool valid = 1;
+  string key_id = 2;
+  string owner_id = 3;
+  udb.core.apikey.entity.v1.ApiKeyOwnerType owner_type = 4;
+  // Granted scopes list (caller checks required_scope membership)
+  repeated string scopes = 5;
+  bool rate_limited = 6;
+}
+
+// ============================================================
+// Usage stats
+// ============================================================
+
+message GetApiKeyUsageStatsRequest {
+  string key_id = 1;
+  google.protobuf.Timestamp from = 2;
+  google.protobuf.Timestamp to = 3;
+}
+
+message ApiKeyDailyStat {
+  string date = 1; // YYYY-MM-DD
+  int64 total_requests = 2;
+  int64 rate_limited_count = 3;
+  double avg_latency_ms = 4;
+  map<string, int64> status_counts = 5; // HTTP status → count
+}
+
+message GetApiKeyUsageStatsResponse {
+  repeated ApiKeyDailyStat stats = 1;
+  int64 total_requests = 2;
+}

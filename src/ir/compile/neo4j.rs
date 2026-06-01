@@ -13,8 +13,6 @@
 
 use serde_json::{Map, Value as Json, json};
 
-use std::collections::HashSet;
-
 use crate::backend::BackendKind;
 use crate::generation::ManifestTable;
 use crate::ir::filter::{ComparisonOp, LogicalFilter};
@@ -222,15 +220,17 @@ impl Compiler for Neo4jCompiler {
         let mut where_parts: Vec<String> = Vec::new();
         if let Some(tid) = ctx.tenant_id
             && !tid.is_empty()
+            && let Some(column) = Some(super::util::tenant_system_field(table))
         {
             let p = bind.push(&LogicalValue::String(tid.to_string()));
-            where_parts.push(format!("n.`_tenant_id` = {p}"));
+            where_parts.push(format!("n.`{column}` = {p}"));
         }
         if let Some(pid) = ctx.project_id
             && !pid.is_empty()
+            && let Some(column) = Some(super::util::project_system_field(table))
         {
             let p = bind.push(&LogicalValue::String(pid.to_string()));
-            where_parts.push(format!("n.`_project_id` = {p}"));
+            where_parts.push(format!("n.`{column}` = {p}"));
         }
         if let Some(f) = &op.filter {
             let body = self.render_filter(f, table, &op.message_type, &mut bind)?;
@@ -340,15 +340,17 @@ impl Compiler for Neo4jCompiler {
         }
         if let Some(tid) = ctx.tenant_id
             && !tid.is_empty()
+            && let Some(column) = Some(super::util::tenant_system_field(table))
         {
             let p = bind.push(&LogicalValue::String(tid.to_string()));
-            key_parts.push(format!("`_tenant_id`: {p}"));
+            key_parts.push(format!("`{column}`: {p}"));
         }
         if let Some(pid) = ctx.project_id
             && !pid.is_empty()
+            && let Some(column) = Some(super::util::project_system_field(table))
         {
             let p = bind.push(&LogicalValue::String(pid.to_string()));
-            key_parts.push(format!("`_project_id`: {p}"));
+            key_parts.push(format!("`{column}`: {p}"));
         }
         let mut cypher = format!("MERGE (n:`{label}` {{{}}})", key_parts.join(", "));
 
@@ -410,15 +412,17 @@ impl Compiler for Neo4jCompiler {
         let mut where_parts: Vec<String> = vec![user_body];
         if let Some(tid) = ctx.tenant_id
             && !tid.is_empty()
+            && let Some(column) = Some(super::util::tenant_system_field(table))
         {
             let p = bind.push(&LogicalValue::String(tid.to_string()));
-            where_parts.push(format!("n.`_tenant_id` = {p}"));
+            where_parts.push(format!("n.`{column}` = {p}"));
         }
         if let Some(pid) = ctx.project_id
             && !pid.is_empty()
+            && let Some(column) = Some(super::util::project_system_field(table))
         {
             let p = bind.push(&LogicalValue::String(pid.to_string()));
-            where_parts.push(format!("n.`_project_id` = {p}"));
+            where_parts.push(format!("n.`{column}` = {p}"));
         }
         let body = where_parts.join(" AND ");
         let mut cypher = format!("MATCH (n:`{label}`) WHERE {body} DETACH DELETE n");
@@ -451,14 +455,7 @@ impl Compiler for Neo4jCompiler {
                 reason: "LogicalAggregate::aggregates must be non-empty".into(),
             });
         }
-        let mut seen: HashSet<&str> = HashSet::new();
-        for agg in &op.aggregates {
-            if !seen.insert(agg.alias.as_str()) {
-                return Err(CompileError::Malformed {
-                    reason: format!("duplicate aggregate alias '{}'", agg.alias),
-                });
-            }
-        }
+        super::util::validate_aggregate_aliases(&op.aggregates)?;
         let table = self.resolve_table(&op.message_type, ctx)?;
         let label = Self::label_for(table);
         let mut bind = CypherBind::new();

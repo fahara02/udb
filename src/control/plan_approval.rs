@@ -95,7 +95,14 @@ pub fn build_exported_plan(
     let make_op = |c: &&ChangeOperation| {
         let kind = format!("{:?}", c.kind);
         let safety = format!("{:?}", c.safety);
-        let fp = op_fingerprint(&kind, &c.schema, &c.table, &c.column, &safety);
+        let fp = op_fingerprint(
+            &kind,
+            &c.schema,
+            &c.table,
+            &c.column,
+            &c.object_name,
+            &safety,
+        );
         PlanOperation {
             kind,
             schema: c.schema.clone(),
@@ -246,11 +253,28 @@ pub fn plan_matches_current_diff(
 
 /// Deterministic fingerprint for a single operation.
 /// Excludes SQL preview and timestamps — stable across re-runs.
-pub fn op_fingerprint(kind: &str, schema: &str, table: &str, column: &str, safety: &str) -> String {
+pub fn op_fingerprint(
+    kind: &str,
+    schema: &str,
+    table: &str,
+    column: &str,
+    object_name: &str,
+    safety: &str,
+) -> String {
     use sha2::{Digest, Sha256};
     let mut h = Sha256::new();
     for part in &[
-        kind, "\x00", schema, "\x00", table, "\x00", column, "\x00", safety,
+        kind,
+        "\x00",
+        schema,
+        "\x00",
+        table,
+        "\x00",
+        column,
+        "\x00",
+        object_name,
+        "\x00",
+        safety,
     ] {
         h.update(part.as_bytes());
     }
@@ -400,6 +424,12 @@ impl Default for ApprovalConfig {
     }
 }
 
+impl ApprovalConfig {
+    pub fn from_env() -> Self {
+        Self::default()
+    }
+}
+
 /// Typed failure modes the workflow surfaces. Each maps to a clear
 /// operator message in the gRPC handler.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -487,35 +517,24 @@ pub fn compute_signature(
     reason: &str,
     signing_key: &[u8],
 ) -> String {
-    use sha2::{Digest, Sha256};
-    // Hand-rolled HMAC-SHA256: hmac = SHA256( (key ^ opad) || SHA256((key ^ ipad) || message) )
-    // sha2 doesn't ship HMAC; rather than pull a new dep we implement
-    // the standard construction directly. Block size for SHA-256 is 64.
-    const BLOCK: usize = 64;
-    let mut k = if signing_key.len() > BLOCK {
-        Sha256::digest(signing_key).to_vec()
-    } else {
-        signing_key.to_vec()
-    };
-    k.resize(BLOCK, 0);
-    let mut ipad = vec![0x36u8; BLOCK];
-    let mut opad = vec![0x5cu8; BLOCK];
-    for i in 0..BLOCK {
-        ipad[i] ^= k[i];
-        opad[i] ^= k[i];
+    use crate::runtime::security::hmac_sha256;
+    // Canonical message: NUL-separated tuple so distinct field boundaries can't
+    // collide. HMAC-SHA256 over it via the shared `security::hmac_sha256` helper
+    // (byte-identical to the previous hand-rolled construction).
+    let mut msg =
+        Vec::with_capacity(plan_operations_hash.len() + approver_id.len() + reason.len() + 2);
+    msg.extend_from_slice(plan_operations_hash.as_bytes());
+    msg.push(0);
+    msg.extend_from_slice(approver_id.as_bytes());
+    msg.push(0);
+    msg.extend_from_slice(reason.as_bytes());
+    let mac = hmac_sha256(signing_key, &msg);
+    let mut out = String::with_capacity("hmac-sha256:".len() + mac.len() * 2);
+    out.push_str("hmac-sha256:");
+    for b in mac {
+        out.push_str(&format!("{b:02x}"));
     }
-    let mut inner = Sha256::new();
-    inner.update(&ipad);
-    inner.update(plan_operations_hash.as_bytes());
-    inner.update(b"\x00");
-    inner.update(approver_id.as_bytes());
-    inner.update(b"\x00");
-    inner.update(reason.as_bytes());
-    let inner_hash = inner.finalize();
-    let mut outer = Sha256::new();
-    outer.update(&opad);
-    outer.update(&inner_hash);
-    format!("hmac-sha256:{:x}", outer.finalize())
+    out
 }
 
 fn compute_seal(plan: &ExportedPlan, signatures: &[ApprovalSignature]) -> String {
@@ -727,8 +746,8 @@ mod tests {
 
     #[test]
     fn op_fingerprint_is_stable() {
-        let fp1 = op_fingerprint("AddColumn", "ocr", "cases", "tenant_id", "SafeAuto");
-        let fp2 = op_fingerprint("AddColumn", "ocr", "cases", "tenant_id", "SafeAuto");
+        let fp1 = op_fingerprint("AddColumn", "ocr", "cases", "tenant_id", "", "SafeAuto");
+        let fp2 = op_fingerprint("AddColumn", "ocr", "cases", "tenant_id", "", "SafeAuto");
         assert_eq!(fp1, fp2);
         assert!(fp1.starts_with("sha256:"));
     }

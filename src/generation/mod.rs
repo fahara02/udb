@@ -8,7 +8,8 @@ pub mod sql;
 
 pub use backends::{
     generate_clickhouse_artifacts, generate_minio_artifacts, generate_mongodb_artifacts,
-    generate_neo4j_artifacts, generate_qdrant_artifacts, generate_redis_artifacts,
+    generate_mssql_artifacts, generate_mysql_artifacts, generate_neo4j_artifacts,
+    generate_qdrant_artifacts, generate_redis_artifacts, generate_sqlite_artifacts,
 };
 pub use drift_report::{DriftItem, DriftReport, DriftSeverity, build_drift_report};
 pub use dsn::{

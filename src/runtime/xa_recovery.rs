@@ -36,6 +36,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use sqlx::Row;
+
+use crate::runtime::system::SystemCatalogConfig;
+use crate::runtime::xa::{XaDecision, XaLedgerEntry};
 
 /// What the recovery worker needs from each backend to drive an
 /// in-doubt xid to terminal. Different from `XaParticipant` — that
@@ -107,6 +111,7 @@ impl XaInDoubtParticipant for MysqlInDoubtParticipant {
 
     async fn commit_prepared(&self, xid: &str) -> Result<(), String> {
         use sqlx::Executor;
+        validate_xid(xid)?;
         let mut conn = self
             .pool
             .acquire()
@@ -120,6 +125,7 @@ impl XaInDoubtParticipant for MysqlInDoubtParticipant {
 
     async fn rollback_prepared(&self, xid: &str) -> Result<(), String> {
         use sqlx::Executor;
+        validate_xid(xid)?;
         let mut conn = self
             .pool
             .acquire()
@@ -398,6 +404,241 @@ impl Default for RecoveryConfig {
             max_attempts,
         }
     }
+}
+
+/// Startup recovery for abandoned PostgreSQL 2PC prepared transactions.
+///
+/// `begin_tx`'s live 2PC path issues `PREPARE TRANSACTION 'udb_<txid>'` and then
+/// `COMMIT PREPARED` on a fresh connection. If the process crashes between the
+/// two, the prepared transaction is stranded in `pg_prepared_xacts` holding its
+/// row locks **forever**. Following the standard 2PC *presumed-abort* rule, this
+/// sweep `ROLLBACK PREPARED`s every `udb_`-prefixed prepared transaction older
+/// than `grace_secs` (the grace window leaves prepares from in-flight requests
+/// untouched). Returns the number rolled back. Safe to call on every startup.
+pub async fn recover_abandoned_prepared_transactions(
+    pool: &sqlx::PgPool,
+    grace_secs: i64,
+) -> Result<u64, String> {
+    // Coordinator xids are `udb-<uuid>`; never touch a co-tenant application's
+    // prepared transactions.
+    let gids: Vec<String> = sqlx::query_scalar(
+        "SELECT gid FROM pg_prepared_xacts \
+         WHERE gid LIKE 'udb-%' \
+           AND prepared < NOW() - make_interval(secs => $1::double precision)",
+    )
+    .bind(grace_secs.max(0) as f64)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("scan pg_prepared_xacts failed: {e}"))?;
+    let mut rolled_back = 0u64;
+    for gid in gids {
+        // Defense-in-depth: gid is operator-data-adjacent, so validate the
+        // charset before interpolating into ROLLBACK PREPARED (xids can't be
+        // parameter-bound in this statement form).
+        if validate_xid(&gid).is_err() {
+            tracing::warn!(gid = %gid, "skipping prepared xact with unexpected gid charset");
+            continue;
+        }
+        match sqlx::query(&format!("ROLLBACK PREPARED '{gid}'"))
+            .execute(pool)
+            .await
+        {
+            Ok(_) => {
+                rolled_back += 1;
+                tracing::warn!(
+                    gid = %gid,
+                    "rolled back abandoned UDB prepared transaction (presumed-abort recovery)"
+                );
+            }
+            Err(e) => tracing::warn!(
+                gid = %gid,
+                "failed to roll back abandoned prepared transaction: {e}"
+            ),
+        }
+    }
+    Ok(rolled_back)
+}
+
+pub async fn ensure_xa_ledger_table(
+    pool: &sqlx::PgPool,
+    config: &SystemCatalogConfig,
+) -> Result<(), String> {
+    for statement in xa_ledger_statements(config) {
+        sqlx::query(&statement)
+            .execute(pool)
+            .await
+            .map_err(|e| format!("ensure XA ledger failed: {e}"))?;
+    }
+    Ok(())
+}
+
+pub async fn record_xa_ledger_entry(
+    pool: &sqlx::PgPool,
+    config: &SystemCatalogConfig,
+    entry: &XaLedgerEntry,
+) -> Result<(), String> {
+    ensure_xa_ledger_table(pool, config).await?;
+    let relation = config.xa_ledger_relation();
+    let participants = serde_json::to_value(&entry.participants)
+        .map_err(|e| format!("serialize XA participants failed: {e}"))?;
+    sqlx::query(&format!(
+        "INSERT INTO {relation}
+             (xid, tenant_id, project_id, origin_rpc, correlation_id,
+              participants, decision, reason, decided_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6::JSONB,$7,$8,
+                 to_timestamp($9::DOUBLE PRECISION / 1000.0), NOW())
+         ON CONFLICT (xid) DO UPDATE SET
+              tenant_id = EXCLUDED.tenant_id,
+              project_id = EXCLUDED.project_id,
+              origin_rpc = EXCLUDED.origin_rpc,
+              correlation_id = EXCLUDED.correlation_id,
+              participants = EXCLUDED.participants,
+              decision = EXCLUDED.decision,
+              reason = EXCLUDED.reason,
+              decided_at = EXCLUDED.decided_at,
+              updated_at = NOW()"
+    ))
+    .bind(&entry.xid)
+    .bind(&entry.tenant_id)
+    .bind(&entry.project_id)
+    .bind(&entry.origin_rpc)
+    .bind(&entry.correlation_id)
+    .bind(participants)
+    .bind(entry.decision.as_str())
+    .bind(&entry.reason)
+    .bind(entry.decided_at_unix_ms as f64)
+    .execute(pool)
+    .await
+    .map_err(|e| format!("record XA ledger failed: {e}"))?;
+    Ok(())
+}
+
+pub async fn recover_xa_ledger_indoubt(
+    pool: &sqlx::PgPool,
+    config: &SystemCatalogConfig,
+) -> Result<u64, String> {
+    ensure_xa_ledger_table(pool, config).await?;
+    let relation = config.xa_ledger_relation();
+    let rows = sqlx::query(&format!(
+        "SELECT xid, participants, reason FROM {relation}
+         WHERE decision = 'in_doubt'
+         ORDER BY updated_at ASC
+         LIMIT 100"
+    ))
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("load XA in-doubt ledger rows failed: {e}"))?;
+
+    let mut registry = InDoubtRegistry::new();
+    registry.register(Arc::new(PostgresInDoubtParticipant {
+        label: "postgres".to_string(),
+        pool: pool.clone(),
+    }));
+
+    let mut terminal = 0u64;
+    for db_row in rows {
+        let xid: String = db_row.try_get("xid").map_err(|e| e.to_string())?;
+        let participants_json: serde_json::Value =
+            db_row.try_get("participants").map_err(|e| e.to_string())?;
+        let participants = serde_json::from_value::<Vec<String>>(participants_json)
+            .map_err(|e| format!("decode XA participants for {xid}: {e}"))?;
+        let reason: String = db_row.try_get("reason").unwrap_or_default();
+        let row = InDoubtLedgerRow {
+            xid: xid.clone(),
+            participants,
+            reason,
+        };
+        let outcomes = drive_indoubt_row(&row, &registry).await;
+        if outcomes.iter().all(RecoveryOutcome::is_terminal) {
+            let decision = if outcomes
+                .iter()
+                .any(|o| matches!(o, RecoveryOutcome::RolledBack { .. }))
+            {
+                XaDecision::RolledBack
+            } else {
+                XaDecision::Committed
+            };
+            mark_xa_ledger_decision(pool, config, &xid, decision, "").await?;
+            terminal += 1;
+        } else {
+            let reason = outcomes
+                .iter()
+                .filter_map(|outcome| match outcome {
+                    RecoveryOutcome::Failed {
+                        backend, reason, ..
+                    } => Some(format!("{backend}: {reason}")),
+                    RecoveryOutcome::NoParticipant { backend, .. } => {
+                        Some(format!("{backend}: no in-doubt participant registered"))
+                    }
+                    _ => None,
+                })
+                .collect::<Vec<_>>()
+                .join("; ");
+            sqlx::query(&format!(
+                "UPDATE {relation}
+                 SET recovery_attempts = recovery_attempts + 1,
+                     reason = CASE WHEN $2 = '' THEN reason ELSE $2 END,
+                     updated_at = NOW()
+                 WHERE xid = $1"
+            ))
+            .bind(&xid)
+            .bind(reason)
+            .execute(pool)
+            .await
+            .map_err(|e| format!("update XA retry state failed: {e}"))?;
+        }
+    }
+    Ok(terminal)
+}
+
+async fn mark_xa_ledger_decision(
+    pool: &sqlx::PgPool,
+    config: &SystemCatalogConfig,
+    xid: &str,
+    decision: XaDecision,
+    reason: &str,
+) -> Result<(), String> {
+    let relation = config.xa_ledger_relation();
+    sqlx::query(&format!(
+        "UPDATE {relation}
+         SET decision = $2,
+             reason = CASE WHEN $3 = '' THEN reason ELSE $3 END,
+             updated_at = NOW()
+         WHERE xid = $1"
+    ))
+    .bind(xid)
+    .bind(decision.as_str())
+    .bind(reason)
+    .execute(pool)
+    .await
+    .map_err(|e| format!("mark XA ledger decision failed: {e}"))?;
+    Ok(())
+}
+
+fn xa_ledger_statements(config: &SystemCatalogConfig) -> [String; 2] {
+    let relation = config.xa_ledger_relation();
+    [
+        format!(
+            "CREATE TABLE IF NOT EXISTS {relation} (
+                xid TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL DEFAULT '',
+                project_id TEXT NOT NULL DEFAULT '',
+                origin_rpc TEXT NOT NULL DEFAULT '',
+                correlation_id TEXT NOT NULL DEFAULT '',
+                participants JSONB NOT NULL DEFAULT '[]'::JSONB,
+                decision TEXT NOT NULL DEFAULT 'in_doubt'
+                    CHECK (decision IN ('committed','rolled_back','in_doubt')),
+                reason TEXT NOT NULL DEFAULT '',
+                recovery_attempts INTEGER NOT NULL DEFAULT 0,
+                decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )"
+        ),
+        format!(
+            "CREATE INDEX IF NOT EXISTS \"idx_{}_decision_updated\" ON {relation} (decision, updated_at)",
+            config.xa_ledger_table
+        ),
+    ]
 }
 
 /// Wall-clock helper. Pulled out so tests can stub via dependency

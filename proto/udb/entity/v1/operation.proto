@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package udb.entity.v1;
+
+option go_package = "github.com/udb-project/udb/gen/go/udb/entity/v1;entityv1";
+option java_package      = "com.udb.entity.v1";
+option csharp_namespace = "Udb.Entity.V1";
+option php_namespace = "Udb\\Entity\\V1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
+
+// StoreResource identifies any UDB-managed logical store without binding the
+// client to a physical database product.
+message StoreResource {
+  string backend = 1;
+  string instance = 2;
+  string resource_kind = 3;
+  string resource_name = 4;
+  string resource_uri = 5;
+  string message_type = 6;
+  string schema = 7;
+  map<string, string> labels = 8;
+}
+
+message OperationWarning {
+  string code = 1;
+  string message = 2;
+  map<string, string> metadata = 3;
+}
+
+message OperationStats {
+  int64 scanned_count = 1;
+  int64 matched_count = 2;
+  int64 affected_count = 3;
+  int64 returned_count = 4;
+  int64 elapsed_ms = 5;
+  string backend = 6;
+  string instance = 7;
+}

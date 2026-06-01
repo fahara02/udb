@@ -7,9 +7,10 @@ use crate::generation::{
     generate_bootstrap_sql, generate_delta_sql, generate_unified_dsn_catalog,
 };
 use crate::observability::{MetricLabels, TraceContext};
-use crate::provisioning::build_provisioning_plan;
+use crate::provisioning::try_build_provisioning_plan;
 
 use super::diff::{ChangeOperation, ChangeSafety, diff_manifests};
+use super::diff_backends::diff_all_backends;
 
 /// FSM states tracked inside a `MigrationPlan`.
 ///
@@ -104,7 +105,14 @@ pub fn build_migration_plan(
     config: &MigrationPlanConfig,
 ) -> Result<MigrationPlan, serde_json::Error> {
     let manifest = CatalogManifest::from_schemas(schemas)?;
-    let changes = diff_manifests(previous, &manifest);
+    let mut changes = diff_manifests(previous, &manifest);
+    // Wire in per-backend diffs (Qdrant, MongoDB, Neo4j, ClickHouse, S3/MinIO):
+    // diff_manifests covers Postgres-style relational DDL; diff_all_backends
+    // surfaces backend-specific deltas (collection/index/lifecycle changes) that
+    // were previously never diffed in any live plan. Disjoint ChangeKind sets,
+    // so a plain extend is correct; all ops flow through the same
+    // finalize/generate/apply pipeline below.
+    changes.extend(diff_all_backends(previous, &manifest));
     let blocked = changes.iter().any(|change| {
         matches!(
             change.safety,
@@ -123,7 +131,7 @@ pub fn build_migration_plan(
         generate_bootstrap_sql(schemas, &config.sql)?
     };
     let dsn_catalog = generate_unified_dsn_catalog(schemas, &config.dsn)?;
-    let resource_actions = build_resource_actions(&manifest, &dsn_catalog.entries);
+    let resource_actions = build_resource_actions(&manifest, &dsn_catalog.entries)?;
 
     // Full FSM path — matches the Go service execution lifecycle.
     let mut states = vec![
@@ -184,8 +192,11 @@ pub fn build_migration_plan(
 fn build_resource_actions(
     manifest: &CatalogManifest,
     dsn_entries: &[UnifiedDsn],
-) -> Vec<ResourceAction> {
-    build_provisioning_plan(manifest, dsn_entries)
+) -> Result<Vec<ResourceAction>, serde_json::Error> {
+    let plan = try_build_provisioning_plan(manifest, dsn_entries).map_err(|err| {
+        serde_json::Error::io(std::io::Error::new(std::io::ErrorKind::InvalidInput, err))
+    })?;
+    Ok(plan
         .actions
         .into_iter()
         .map(|action| ResourceAction {
@@ -204,13 +215,13 @@ fn build_resource_actions(
             dsn: action.dsn,
             parameters: action.parameters,
         })
-        .collect()
+        .collect())
 }
 
 fn resource_actions_checksum(actions: &[ResourceAction]) -> Result<String, serde_json::Error> {
     use sha2::{Digest, Sha256};
 
-    let mut canonical = actions.to_vec();
+    let mut canonical = actions.iter().collect::<Vec<_>>();
     canonical.sort_by(|a, b| {
         (
             a.tier.as_str(),
@@ -239,7 +250,7 @@ fn resource_actions_checksum(actions: &[ResourceAction]) -> Result<String, serde
 fn sql_checksum(artifacts: &[GeneratedArtifact]) -> String {
     use sha2::{Digest, Sha256};
 
-    let mut canonical = artifacts.to_vec();
+    let mut canonical = artifacts.iter().collect::<Vec<_>>();
     canonical.sort_by(|a, b| a.rel_path.cmp(&b.rel_path));
     let mut hasher = Sha256::new();
     for artifact in canonical {

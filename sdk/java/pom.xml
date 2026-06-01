@@ -76,7 +76,9 @@
             </goals>
             <configuration>
               <sources>
-                <source>gen/java</source>
+                <!-- buf writes Java stubs to sdk/java/gen/<package>/… (e.g.
+                     gen/com/udb/…), so the source root is `gen`, not `gen/java`. -->
+                <source>gen</source>
               </sources>
             </configuration>
           </execution>

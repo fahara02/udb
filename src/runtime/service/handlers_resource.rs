@@ -6,20 +6,9 @@ impl DataBrokerService {
         &self,
         request: Request<ResourceAdminRequest>,
     ) -> Result<Response<MutationResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("EnsureResource", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "EnsureResource").await {
+        let (started, security) = authorized_call!(self, request, "EnsureResource");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("EnsureResource", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "EnsureResource",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let metadata_context = security.request_context();
@@ -116,20 +105,9 @@ impl DataBrokerService {
         &self,
         request: Request<ResourceAdminRequest>,
     ) -> Result<Response<MutationResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("DropResource", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "DropResource").await {
+        let (started, security) = authorized_call!(self, request, "DropResource");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("DropResource", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "DropResource",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let metadata_context = security.request_context();
@@ -224,20 +202,9 @@ impl DataBrokerService {
         &self,
         request: Request<ResourceAdminRequest>,
     ) -> Result<Response<ResourceListResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("ListResources", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "ListResources").await {
+        let (started, security) = authorized_call!(self, request, "ListResources");
+        if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("ListResources", started, Err(err));
-        }
-        if !security.scopes.iter().any(|s| s == "udb:admin" || s == "*") {
-            return self.record_grpc(
-                "ListResources",
-                started,
-                Err(Status::permission_denied("scope udb:admin is required")),
-            );
         }
         let req = request.into_inner();
         let metadata_context = security.request_context();

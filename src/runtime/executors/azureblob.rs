@@ -20,12 +20,13 @@
 
 use std::sync::Arc;
 
-use serde_json::Value as JsonValue;
-
 use azure_storage::prelude::*;
 use azure_storage_blobs::prelude::*;
 
-use crate::runtime::backend_context::{AppliedContext, BackendContextEnforcer, ContextEffect};
+use crate::runtime::backend_context::{
+    AppliedContext, BackendContextEnforcer, ContextEffect, enforce_with_mechanism,
+};
+use crate::runtime::executor_utils::{build_probe, parse_object_dispatch, reject_oversized_object};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
@@ -87,15 +88,10 @@ impl BackendContextEnforcer for AzureBlobExecutor {
         "azureblob"
     }
     fn enforce(&self, ctx: &AppliedContext) -> ContextEffect {
-        if ctx.is_empty() {
-            return ContextEffect::Advisory {
-                recorded_in: "no_context_to_apply".into(),
-            };
-        }
-        ContextEffect::Enforced {
-            mechanism: "key prefix t:<tenant>/p:<project>/ prepended by compile_read/write/delete"
-                .into(),
-        }
+        enforce_with_mechanism(
+            ctx,
+            "key prefix t:<tenant>/p:<project>/ prepended by compile_read/write/delete",
+        )
     }
 }
 
@@ -105,31 +101,16 @@ impl BackendHealth for AzureBlobExecutor {
     }
 }
 
+/// Azure-Blob object-dispatch parse: container primary
+/// (`container`/`bucket`), blob as `blob`/`key`. Delegates to the shared
+/// object-store parser.
 fn parse_dispatch(req: &str) -> Result<(String, String, String, Option<String>), tonic::Status> {
-    let v: JsonValue = serde_json::from_str(req)
-        .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
-    let op = v
-        .get("op")
-        .and_then(|x| x.as_str())
-        .ok_or_else(|| tonic::Status::invalid_argument("missing `op`"))?
-        .to_string();
-    let container = v
-        .get("container")
-        .or_else(|| v.get("bucket"))
-        .and_then(|x| x.as_str())
-        .ok_or_else(|| tonic::Status::invalid_argument("missing `container`/`bucket`"))?
-        .to_string();
-    let blob = v
-        .get("blob")
-        .or_else(|| v.get("key"))
-        .and_then(|x| x.as_str())
-        .unwrap_or("")
-        .to_string();
-    let content_type = v
-        .get("content_type")
-        .and_then(|x| x.as_str())
-        .map(str::to_string);
-    Ok((op, container, blob, content_type))
+    parse_object_dispatch(
+        req,
+        &["container", "bucket"],
+        &["blob", "key"],
+        "container`/`bucket",
+    )
 }
 
 impl QueryExecutor for AzureBlobExecutor {
@@ -185,6 +166,7 @@ impl ObjectExecutor for AzureBlobExecutor {
                 "put_object expects op=\"put\", got '{op}'"
             )));
         }
+        reject_oversized_object(bytes.len())?;
         let blob_client = self.client.container(&container).blob_client(blob.clone());
         let mut put = blob_client.put_block_blob(bytes);
         if let Some(ct) = content_type {
@@ -193,6 +175,16 @@ impl ObjectExecutor for AzureBlobExecutor {
         put.await
             .map_err(|e| tonic::Status::internal(format!("azure blob put failed: {e}")))?;
         Ok(serde_json::json!({ "ok": true, "container": container, "blob": blob }).to_string())
+    }
+
+    async fn delete_object(&self, request_json: &str) -> Result<(), tonic::Status> {
+        let (_op, container, blob, _) = parse_dispatch(request_json)?;
+        let blob_client = self.client.container(&container).blob_client(blob);
+        blob_client
+            .delete()
+            .await
+            .map(|_| ())
+            .map_err(|e| tonic::Status::internal(format!("azure blob delete failed: {e}")))
     }
 }
 
@@ -243,20 +235,7 @@ impl BackendExecutor for AzureBlobExecutor {
         ))
     }
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
-        match self.ping().await {
-            Ok(()) => Ok(BackendProbe {
-                backend: "azureblob".to_string(),
-                instance: None,
-                ok: true,
-                error: None,
-            }),
-            Err(err) => Ok(BackendProbe {
-                backend: "azureblob".to_string(),
-                instance: None,
-                ok: false,
-                error: Some(err),
-            }),
-        }
+        Ok(build_probe("azureblob", self.ping().await))
     }
 }
 

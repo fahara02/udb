@@ -65,6 +65,14 @@ pub struct AppliedContext {
     pub scopes: String,
     /// Correlation id propagated to backend logs / spans.
     pub correlation_id: String,
+    /// Subject/user identifier of the caller. Emitted so RLS policies and
+    /// audit triggers can attribute rows to a user without re-deriving it.
+    pub user_id: String,
+    /// mTLS/JWT service identity of the caller (Stage 2).
+    pub service_identity: String,
+    /// Stable id of the authorization decision that admitted the request
+    /// (Stage 2). Lets row-level audit join back to the decision audit.
+    pub decision_id: String,
     /// Additional key/value attributes the planner added (e.g.
     /// `replica_pin`, `cache_bypass`). Backends that can record arbitrary
     /// metadata (Mongo session metadata, Neo4j tx metadata) propagate
@@ -83,6 +91,9 @@ impl AppliedContext {
             purpose: ctx.purpose.clone(),
             scopes: ctx.scopes.join(","),
             correlation_id: ctx.correlation_id.clone(),
+            user_id: ctx.user_id.clone(),
+            service_identity: ctx.service_identity.clone(),
+            decision_id: ctx.decision_id.clone(),
             attributes: BTreeMap::new(),
         }
     }
@@ -95,7 +106,35 @@ impl AppliedContext {
             && self.purpose.is_empty()
             && self.scopes.is_empty()
             && self.correlation_id.is_empty()
+            && self.user_id.is_empty()
+            && self.service_identity.is_empty()
+            && self.decision_id.is_empty()
             && self.attributes.is_empty()
+    }
+
+    /// The canonical, ordered list of `app.current_*` session-context
+    /// key/value pairs the broker projects into every backend. This is the
+    /// single source of truth (Stage 2, item 135): both the Postgres
+    /// `set_config` path in `runtime::core` and the dialect-aware
+    /// [`render_sql_session_settings`] renderer derive their variables here,
+    /// so adding a context field — like the Stage-2 identity fields below —
+    /// lights up everywhere at once. Empty values are retained by callers
+    /// that filter them; this method keeps the canonical ordering.
+    pub fn session_context_pairs(&self) -> Vec<(&'static str, &str)> {
+        vec![
+            ("app.current_tenant_id", self.tenant_id.as_str()),
+            ("app.current_project_id", self.project_id.as_str()),
+            ("app.current_purpose", self.purpose.as_str()),
+            ("app.current_scopes", self.scopes.as_str()),
+            ("app.current_correlation_id", self.correlation_id.as_str()),
+            // Stage 2 (item 136): identity + decision attribution.
+            ("app.current_user_id", self.user_id.as_str()),
+            (
+                "app.current_service_identity",
+                self.service_identity.as_str(),
+            ),
+            ("app.current_decision_id", self.decision_id.as_str()),
+        ]
     }
 }
 
@@ -125,6 +164,32 @@ impl ContextEffect {
     pub fn is_unsupported(&self) -> bool {
         matches!(self, Self::Unsupported { .. })
     }
+}
+
+/// Shared body for the common `BackendContextEnforcer::enforce` shape: an
+/// empty context is `Advisory { recorded_in: "no_context_to_apply" }`, and a
+/// non-empty context is `Enforced { mechanism }` with the backend's own
+/// per-backend mechanism string. Backends with extra conditions (e.g. MSSQL,
+/// which keys on whether a request context is bound) implement `enforce`
+/// directly instead of delegating here.
+pub fn enforce_with_mechanism(ctx: &AppliedContext, mechanism: &str) -> ContextEffect {
+    if ctx.is_empty() {
+        ContextEffect::Advisory {
+            recorded_in: "no_context_to_apply".into(),
+        }
+    } else {
+        ContextEffect::Enforced {
+            mechanism: mechanism.into(),
+        }
+    }
+}
+
+/// Escape a string literal for inlining into a SQL statement for the given
+/// dialect. Every dialect doubles the single-quote (`'` → `''`); this is the
+/// single source of that rule so the per-dialect arms in
+/// [`render_sql_session_settings`] don't each open-code it.
+pub fn escape_sql_string(value: &str, _dialect: SqlDialect) -> String {
+    value.replace('\'', "''")
 }
 
 /// Backend-specific request-context applicator. Implementations live
@@ -163,13 +228,9 @@ pub fn render_sql_session_settings(ctx: &AppliedContext, dialect: SqlDialect) ->
         return Vec::new();
     }
     let mut out = Vec::new();
-    let pairs = [
-        ("app.current_tenant_id", ctx.tenant_id.as_str()),
-        ("app.current_project_id", ctx.project_id.as_str()),
-        ("app.current_purpose", ctx.purpose.as_str()),
-        ("app.current_scopes", ctx.scopes.as_str()),
-        ("app.current_correlation_id", ctx.correlation_id.as_str()),
-    ];
+    // Item 135: derive from the single canonical source so PG `set_config`
+    // and every SQL dialect emit the same `app.current_*` variable set.
+    let pairs = ctx.session_context_pairs();
     for (key, value) in pairs {
         if value.is_empty() {
             continue;
@@ -180,7 +241,7 @@ pub fn render_sql_session_settings(ctx: &AppliedContext, dialect: SqlDialect) ->
                 // the setting is rolled back automatically. Quoting is
                 // single-quote escape via doubling — the same shape the
                 // existing `set_request_local_settings` uses.
-                let escaped = value.replace('\'', "''");
+                let escaped = escape_sql_string(value, dialect);
                 out.push(format!("SET LOCAL {key} = '{escaped}'"));
             }
             SqlDialect::Mysql => {
@@ -188,7 +249,7 @@ pub fn render_sql_session_settings(ctx: &AppliedContext, dialect: SqlDialect) ->
                 // '<value>'`. Dots aren't legal in user-variable names,
                 // so we munge the key to underscores.
                 let var_name = key.replace('.', "_");
-                let escaped = value.replace('\'', "''");
+                let escaped = escape_sql_string(value, dialect);
                 out.push(format!("SET @{var_name} = '{escaped}'"));
             }
             SqlDialect::Sqlite => {
@@ -199,8 +260,8 @@ pub fn render_sql_session_settings(ctx: &AppliedContext, dialect: SqlDialect) ->
                 // populated each request — RLS-style views read from
                 // it. The executor creates the temp table on first
                 // touch.
-                let escaped_key = key.replace('\'', "''");
-                let escaped_value = value.replace('\'', "''");
+                let escaped_key = escape_sql_string(key, dialect);
+                let escaped_value = escape_sql_string(value, dialect);
                 out.push(format!(
                     "INSERT OR REPLACE INTO _udb_context(key, value) \
                      VALUES ('{escaped_key}', '{escaped_value}')"
@@ -213,7 +274,7 @@ pub fn render_sql_session_settings(ctx: &AppliedContext, dialect: SqlDialect) ->
                 // '<value>'` here so the executor can emit them inline
                 // when the driver doesn't support per-query settings.
                 let escaped_key = key.replace('.', "_");
-                let escaped_value = value.replace('\'', "''");
+                let escaped_value = escape_sql_string(value, dialect);
                 out.push(format!("SET {escaped_key} = '{escaped_value}'"));
             }
             SqlDialect::Mssql => {
@@ -230,8 +291,8 @@ pub fn render_sql_session_settings(ctx: &AppliedContext, dialect: SqlDialect) ->
                 let key_id = key.replace('.', "_");
                 // T-SQL string literals: double the single quote to
                 // escape. Names go in N'...' (nvarchar literal).
-                let escaped_key = key_id.replace('\'', "''");
-                let escaped_value = value.replace('\'', "''");
+                let escaped_key = escape_sql_string(&key_id, dialect);
+                let escaped_value = escape_sql_string(value, dialect);
                 out.push(format!(
                     "EXEC sp_set_session_context @key = N'{escaped_key}', \
                      @value = N'{escaped_value}', @read_only = 1"

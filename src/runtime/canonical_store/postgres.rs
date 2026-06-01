@@ -112,7 +112,10 @@ impl CanonicalStore for PostgresCanonicalStore {
         }
         let target_lsn = token.value.clone();
         let started = Instant::now();
-        let poll = Duration::from_millis(25);
+        let poll = crate::runtime::canonical_store::durability_poll_interval(
+            timeout,
+            crate::runtime::canonical_store::POSTGRES_DURABILITY_POLL_MS,
+        );
         loop {
             // pg_last_wal_replay_lsn returns NULL on a primary;
             // pg_current_wal_lsn is always ≥ any replica LSN.
@@ -224,10 +227,16 @@ impl CanonicalStore for PostgresCanonicalStore {
         owner_id: &str,
         ttl: std::time::Duration,
     ) -> Result<bool, String> {
-        // PG atomic acquire: ON CONFLICT DO UPDATE …WHERE expires_at < NOW().
-        // The WHERE clause makes the UPDATE only fire on expired rows;
-        // the RETURNING clause hands back the (resolved) owner_id so
-        // we can confirm we won.
+        // PG atomic acquire via INSERT … ON CONFLICT DO UPDATE. The WHERE clause
+        // deliberately encodes TWO distinct, safe transitions (do not collapse or
+        // reorder without re-reading both):
+        //   1. `expires_at < NOW()`            → take over an EXPIRED lease.
+        //   2. `owner_id = EXCLUDED.owner_id`  → the current owner REFRESHES its
+        //                                         own TTL (heartbeat).
+        // It must NEVER allow stealing a non-expired lease owned by someone else;
+        // both branches preserve that (branch 2 only matches when we already own
+        // it). The RETURNING owner_id + the equality check below confirm we hold
+        // the lease (a non-firing UPDATE returns no row → Ok(false)).
         let ttl_secs = ttl.as_secs() as i64;
         let sql = r#"
             INSERT INTO "udb_system"."udb_advisory_leases" (lease_name, owner_id, expires_at)
@@ -236,6 +245,7 @@ impl CanonicalStore for PostgresCanonicalStore {
               SET owner_id   = EXCLUDED.owner_id,
                   expires_at = EXCLUDED.expires_at
               WHERE "udb_system"."udb_advisory_leases".expires_at < NOW()
+                 OR "udb_system"."udb_advisory_leases".owner_id = EXCLUDED.owner_id
             RETURNING owner_id
         "#;
         let resulting_owner: Option<String> = sqlx::query_scalar(sql)

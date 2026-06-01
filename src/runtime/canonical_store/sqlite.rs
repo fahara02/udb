@@ -102,7 +102,10 @@ impl CanonicalStore for SqliteCanonicalStore {
             .parse()
             .map_err(|e| format!("invalid sqlite data_version '{}': {e}", token.value))?;
         let started = Instant::now();
-        let poll = Duration::from_millis(5);
+        let poll = crate::runtime::canonical_store::durability_poll_interval(
+            timeout,
+            crate::runtime::canonical_store::SQLITE_DURABILITY_POLL_MS,
+        );
         loop {
             let (current,): (i64,) = sqlx::query_as("PRAGMA data_version")
                 .fetch_one(&self.pool)
@@ -162,12 +165,26 @@ impl CanonicalStore for SqliteCanonicalStore {
         // for ROWID. `TEXT` for JSON since sqlite is typeless; the
         // app side parses with serde_json.
         let sql = format!(
+            // Full outbox schema (parity with the Postgres system catalog): the
+            // production tailer UPDATEs delivery_state + the Kafka state columns,
+            // so a minimal table breaks at-least-once delivery on SQLite (#132).
             "CREATE TABLE IF NOT EXISTS {table} ( \
                 event_seq      INTEGER PRIMARY KEY AUTOINCREMENT, \
                 event_id       TEXT NOT NULL UNIQUE, \
                 topic          TEXT NOT NULL, \
                 partition_key  TEXT NOT NULL DEFAULT '', \
                 payload        TEXT NOT NULL, \
+                headers        TEXT, \
+                delivery_state TEXT NOT NULL DEFAULT 'pending', \
+                publishing_started_at TEXT, \
+                published_at   TEXT, \
+                acked_at       TEXT, \
+                dlq_at         TEXT, \
+                producer_epoch INTEGER NOT NULL DEFAULT 0, \
+                transactional_id TEXT NOT NULL DEFAULT '', \
+                kafka_partition INTEGER, \
+                kafka_offset   INTEGER, \
+                last_error     TEXT NOT NULL DEFAULT '', \
                 created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) \
             )"
         );
@@ -210,6 +227,13 @@ impl CanonicalStore for SqliteCanonicalStore {
         let now_iso = now.to_rfc3339();
         let expires = now + chrono::Duration::seconds(ttl.as_secs() as i64);
         let expires_iso = expires.to_rfc3339();
+        // Confirm ownership in the SAME statement via RETURNING (sqlx-sqlite
+        // supports it) — a separate follow-up SELECT was a TOCTOU window where a
+        // concurrent caller could claim the lease between the upsert and the
+        // confirmation, yielding a false-positive. RETURNING owner_id only emits
+        // a row when our INSERT fired or the ON CONFLICT UPDATE matched (expired
+        // takeover or our own refresh); a live row owned by another caller skips
+        // the UPDATE and returns no row → Ok(false).
         let sql = "
             INSERT INTO udb_advisory_leases (lease_name, owner_id, expires_at)
             VALUES (?, ?, ?)
@@ -217,33 +241,18 @@ impl CanonicalStore for SqliteCanonicalStore {
               SET owner_id   = excluded.owner_id,
                   expires_at = excluded.expires_at
               WHERE udb_advisory_leases.expires_at < ?
+                 OR udb_advisory_leases.owner_id = excluded.owner_id
+            RETURNING owner_id
         ";
-        let result = sqlx::query(sql)
+        let resulting_owner: Option<String> = sqlx::query_scalar(sql)
             .bind(lease_name)
             .bind(owner_id)
             .bind(&expires_iso)
             .bind(&now_iso)
-            .execute(&self.pool)
+            .fetch_optional(&self.pool)
             .await
             .map_err(|e| format!("try_acquire_advisory_lease (sqlite) failed: {e}"))?;
-        // rows_affected == 1 means we successfully inserted or
-        // re-claimed an expired row. == 0 means the existing row is
-        // still live and owned by someone else (or by us at a
-        // different ttl — re-acquiring is still "we own it").
-        //
-        // For correctness we follow up with a SELECT to confirm
-        // ownership: SQLite's `excluded` clause is reliable but on
-        // a successful re-acquire `rows_affected` may report 1 only
-        // when SQLite considers the row "changed", which depends on
-        // the column values. The SELECT is unambiguous.
-        let _ = result;
-        let owner: Option<String> =
-            sqlx::query_scalar("SELECT owner_id FROM udb_advisory_leases WHERE lease_name = ?")
-                .bind(lease_name)
-                .fetch_optional(&self.pool)
-                .await
-                .map_err(|e| format!("try_acquire_advisory_lease lookup failed: {e}"))?;
-        Ok(matches!(owner, Some(o) if o == owner_id))
+        Ok(matches!(resulting_owner, Some(o) if o == owner_id))
     }
 
     async fn release_advisory_lease(&self, lease_name: &str, owner_id: &str) -> Result<(), String> {

@@ -1,6 +1,12 @@
 //! main.rs split — env_setup (Phase H).
 use super::*;
 
+pub(crate) const DEFAULT_GRPC_BIND_HOST: &str = "0.0.0.0";
+pub(crate) const DEFAULT_GRPC_TARGET_HOST: &str = "127.0.0.1";
+pub(crate) const DEFAULT_GRPC_PORT: &str = "50051";
+pub(crate) const DEFAULT_GRPC_BIND_ADDR: &str = "0.0.0.0:50051";
+pub(crate) const DEFAULT_GRPC_TARGET_ADDR: &str = "127.0.0.1:50051";
+
 /// Only called from the single-threaded CLI dispatch path; no other thread reads
 /// the environment concurrently.
 pub(crate) fn run_force_sync_for_instance(
@@ -252,9 +258,12 @@ pub(crate) fn load_udb_config_overlay(args: &[String]) {
     );
 
     if let Some(addr) = yaml_string(&yaml, &["server", "grpc_addr"]) {
+        set_env_if_absent("UDB_GRPC_BIND_ADDR", &addr);
         set_env_if_absent("UDB_GRPC_ADDR", &addr);
     } else if let Some(port) = yaml_string(&yaml, &["server", "port"]) {
-        let host = yaml_string(&yaml, &["server", "host"]).unwrap_or_else(|| "0.0.0.0".to_string());
+        let host = yaml_string(&yaml, &["server", "host"])
+            .unwrap_or_else(|| DEFAULT_GRPC_BIND_HOST.to_string());
+        set_env_if_absent("UDB_GRPC_BIND_ADDR", &format!("{host}:{port}"));
         set_env_if_absent("UDB_GRPC_ADDR", &format!("{host}:{port}"));
     }
     if let Some(addr) = yaml_string(&yaml, &["server", "metrics_addr"]) {

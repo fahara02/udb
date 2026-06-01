@@ -1,0 +1,24 @@
+FROM alpine:3.22
+
+RUN apk add --no-cache \
+    composer \
+    git \
+    php84 \
+    php84-ctype \
+    php84-curl \
+    php84-dom \
+    php84-fileinfo \
+    php84-iconv \
+    php84-json \
+    php84-mbstring \
+    php84-openssl \
+    php84-pecl-grpc \
+    php84-pecl-protobuf \
+    php84-phar \
+    php84-simplexml \
+    php84-tokenizer \
+    php84-xml \
+    php84-xmlwriter \
+    unzip
+
+WORKDIR /workspace

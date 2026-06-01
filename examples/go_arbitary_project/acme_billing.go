@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"log"
 	"os"
+	"strings"
+	"time"
 
 	acmebillingv1 "github.com/fahara02/udb/examples/go_arbitary_project/gen/go/acme/billing/v1"
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
@@ -54,14 +58,48 @@ func main() {
 	})
 
 	ctx := context.Background()
-	if _, err := client.Upsert(ctx, acmeProductUpsert()); err != nil {
+
+	runID := time.Now().UnixNano()
+	productID := fmt.Sprintf("prod-sdk-go-crud-%d", runID)
+
+	if _, err := client.Broker.Delete(client.Context(ctx), acmeProductDelete(productID, fmt.Sprintf("go-product-cleanup-%d", runID))); err != nil {
 		log.Fatal(err)
 	}
-	rows, err := client.Select(ctx, acmeProductSelect())
+	if _, err := client.Upsert(ctx, acmeProductUpsert(productID, "SDK smoke test product", fmt.Sprintf("go-product-create-%d", runID))); err != nil {
+		log.Fatal(err)
+	}
+	rows, err := client.Select(ctx, acmeProductSelect(productID))
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("relational selected rows=%d", len(rows.RecordsJson)+len(rows.Rows))
+	if rowCount(rows) != 1 {
+		log.Fatalf("relational create/read expected 1 row, got %d", rowCount(rows))
+	}
+	log.Printf("relational create/read rows=%d", rowCount(rows))
+
+	if _, err := client.Upsert(ctx, acmeProductUpsert(productID, "SDK smoke test product updated", fmt.Sprintf("go-product-update-%d", runID))); err != nil {
+		log.Fatal(err)
+	}
+	rows, err = client.Select(ctx, acmeProductSelect(productID))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !recordsContain(rows, "SDK smoke test product updated") {
+		log.Fatal("relational update was not visible in select response")
+	}
+	log.Printf("relational update verified rows=%d", rowCount(rows))
+
+	if _, err := client.Broker.Delete(client.Context(ctx), acmeProductDelete(productID, fmt.Sprintf("go-product-delete-%d", runID))); err != nil {
+		log.Fatal(err)
+	}
+	rows, err = client.Select(ctx, acmeProductSelect(productID))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if rowCount(rows) != 0 {
+		log.Fatalf("relational delete expected 0 rows, got %d", rowCount(rows))
+	}
+	log.Printf("relational delete verified rows=%d", rowCount(rows))
 
 	if _, err := client.Broker.VectorUpsert(client.Context(ctx), acmeVectorUpsert()); err != nil {
 		log.Fatal(err)
@@ -75,6 +113,14 @@ func main() {
 	if _, err := putObject(ctx, client); err != nil {
 		log.Fatal(err)
 	}
+	objectBytes, err := getObject(ctx, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !strings.Contains(string(objectBytes), "hello from the Go UDB SDK example") {
+		log.Fatal("object readback did not match uploaded content")
+	}
+	log.Printf("object readback bytes=%d", len(objectBytes))
 	url, err := client.Broker.GeneratePresignedUrl(client.Context(ctx), &entityv1.UrlRequest{
 		Bucket:      bucket,
 		ObjectKey:   "invoices/sdk/go/smoke.txt",
@@ -88,10 +134,10 @@ func main() {
 	log.Printf("object presigned url expires_at=%d", url.ExpiresAtUnix)
 }
 
-func acmeProductUpsert() *entityv1.UpsertRequest {
+func acmeProductUpsert(productID, name, idempotencyKey string) *entityv1.UpsertRequest {
 	product := &acmebillingv1.Product{
-		ProductId:   "prod-sdk-go-001",
-		Name:        "SDK smoke test product",
+		ProductId:   productID,
+		Name:        name,
 		Description: "Inserted by the Go UDB SDK example",
 		PriceCents:  12900,
 		Sku:         "SDK-GO-001",
@@ -105,14 +151,35 @@ func acmeProductUpsert() *entityv1.UpsertRequest {
 		RecordJson:     record,
 		ConflictFields: []string{"product_id"},
 		ReturnRecord:   true,
-		IdempotencyKey: "go-product-sdk-001",
+		IdempotencyKey: idempotencyKey,
 	}
 }
 
-func acmeProductSelect() *entityv1.SelectRequest {
+func acmeProductSelect(productID string) *entityv1.SelectRequest {
+	filter, err := structpb.NewStruct(map[string]any{
+		"product_id": productID,
+	})
+	if err != nil {
+		panic(err)
+	}
 	return &entityv1.SelectRequest{
 		MessageType: messageType,
+		Filter:      filter,
 		Limit:       10,
+	}
+}
+
+func acmeProductDelete(productID, idempotencyKey string) *entityv1.DeleteRequest {
+	filter, err := structpb.NewStruct(map[string]any{
+		"product_id": productID,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return &entityv1.DeleteRequest{
+		MessageType:    messageType,
+		Filter:         filter,
+		IdempotencyKey: idempotencyKey,
 	}
 }
 
@@ -164,10 +231,52 @@ func putObject(ctx context.Context, client *udbclient.Client) (*entityv1.Mutatio
 	return stream.CloseAndRecv()
 }
 
+func getObject(ctx context.Context, client *udbclient.Client) ([]byte, error) {
+	stream, err := client.Broker.GetObject(client.Context(ctx), &entityv1.ObjectRequest{
+		Bucket:    bucket,
+		ObjectKey: "invoices/sdk/go/smoke.txt",
+	})
+	if err != nil {
+		return nil, err
+	}
+	var out []byte
+	for {
+		chunk, err := stream.Recv()
+		if err == io.EOF {
+			return out, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, chunk.GetData()...)
+	}
+}
+
 func makeVector(dim int) []float32 {
 	vector := make([]float32, dim)
 	for i := range vector {
 		vector[i] = float32((i%17)+1) / 17.0
 	}
 	return vector
+}
+
+func rowCount(rows *entityv1.RecordSet) int {
+	if len(rows.GetRecordsJson()) > 0 {
+		return len(rows.GetRecordsJson())
+	}
+	return len(rows.GetRows())
+}
+
+func recordsContain(rows *entityv1.RecordSet, needle string) bool {
+	for _, record := range rows.GetRecordsJson() {
+		if strings.Contains(string(record), needle) {
+			return true
+		}
+	}
+	for _, row := range rows.GetRows() {
+		if strings.Contains(row.String(), needle) {
+			return true
+		}
+	}
+	return false
 }

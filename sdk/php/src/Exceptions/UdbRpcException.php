@@ -29,16 +29,20 @@ final class UdbRpcException extends UdbException
     }
 
     /**
-     * Convenience constructor from a gRPC status array as returned
+     * Convenience constructor from a gRPC status value as returned
      * by `\Grpc\UnaryCall::wait()`'s second return value.
      *
-     * @param  array{code:int,details:string,metadata?:array<string,mixed>}  $status
+     * PHP gRPC may return either an array-like status or a stdClass,
+     * depending on extension/runtime version.
      */
-    public static function fromGrpcStatus(array $status, string $rpcName): self
+    public static function fromGrpcStatus(mixed $status, string $rpcName): self
     {
+        $code = is_object($status) ? ($status->code ?? -1) : ($status['code'] ?? -1);
+        $details = is_object($status) ? ($status->details ?? '') : ($status['details'] ?? '');
+
         return new self(
-            status: $status['code'],
-            details: $status['details'],
+            status: (int) $code,
+            details: (string) $details,
             raw: $status,
             rpcName: $rpcName,
         );

@@ -241,6 +241,135 @@ message M {
     assert!(schemas[0].reserved_names.is_empty());
 }
 
+// ── map<K, V> key/value typing ─────────────────────────────────────────────
+//
+// The lexer previously discarded the `<...>` of a map type, so the parser only
+// saw `map` and recorded nothing about K/V. These pin the new behavior across
+// spacing, dotted value types, and the `map`-as-field-name edge case.
+
+#[test]
+fn parser_captures_map_key_value_types() {
+    let src = r#"
+package x;
+message M {
+  option (table) = { table_name: "m" schema_name: "x" migration_order: 1 };
+  string id = 1;
+  map<string, int32> attributes = 2;
+  map<string,string> labels = 3;
+  map<int64, foo.Bar> refs = 4;
+  map <string, bool> flags = 5;
+  string map = 6;
+}
+"#;
+    let schemas = parse_str(src);
+    let cols = &schemas[0].columns;
+    let by = |name: &str| {
+        cols.iter()
+            .find(|c| c.field_name == name)
+            .unwrap_or_else(|| panic!("missing field {name}"))
+    };
+
+    let attrs = by("attributes");
+    assert_eq!(attrs.proto_type, "map<string,int32>");
+    assert_eq!(attrs.sql_type, "JSONB");
+    assert_eq!(attrs.map_key_type, "string");
+    assert_eq!(attrs.map_value_type, "int32");
+
+    // No spaces inside the generic.
+    let labels = by("labels");
+    assert_eq!(labels.map_key_type, "string");
+    assert_eq!(labels.map_value_type, "string");
+    assert_eq!(labels.sql_type, "JSONB");
+
+    // Dotted value type — split on the first top-level comma only.
+    let refs = by("refs");
+    assert_eq!(refs.map_key_type, "int64");
+    assert_eq!(refs.map_value_type, "foo.Bar");
+    assert_eq!(refs.sql_type, "JSONB");
+
+    // Whitespace before `<` is tolerated.
+    let flags = by("flags");
+    assert_eq!(flags.proto_type, "map<string,bool>");
+    assert_eq!(flags.map_value_type, "bool");
+
+    // EDGE: a field literally named `map` must NOT be treated as a map type.
+    let map_field = by("map");
+    assert_eq!(map_field.proto_type, "string");
+    assert!(map_field.map_key_type.is_empty());
+    assert!(map_field.map_value_type.is_empty());
+}
+
+#[test]
+fn infer_sql_type_handles_map_generics() {
+    assert_eq!(infer_sql_type("map<string,int32>"), "JSONB");
+    // Dotted value type must not confuse the dot-split.
+    assert_eq!(infer_sql_type("map<int64,foo.Bar>"), "JSONB");
+    assert_eq!(infer_sql_type("map"), "JSONB");
+}
+
+// ── Nested enum capture ────────────────────────────────────────────────────
+//
+// Nested enums were previously skipped wholesale. They're now captured (name +
+// values) for codegen/metadata, while nested messages remain skipped.
+
+#[test]
+fn parser_captures_nested_enums() {
+    let src = r#"
+package x;
+message Order {
+  option (table) = { table_name: "orders" schema_name: "x" migration_order: 1 };
+  enum Status {
+    option allow_alias = true;
+    reserved 7;
+    STATUS_UNSPECIFIED = 0;
+    ACTIVE = 1;
+    INACTIVE = 2 [deprecated = true];
+  }
+  message Nested { string inner = 1; }
+  string id = 1;
+  Status status = 2;
+}
+"#;
+    let schemas = parse_str(src);
+    let s = &schemas[0];
+
+    assert_eq!(s.nested_enums.len(), 1, "exactly one nested enum");
+    let e = &s.nested_enums[0];
+    assert_eq!(e.name, "Status");
+    // Enum-level `option`/`reserved` lines and per-value `[...]` options are
+    // skipped; only NAME = NUMBER entries are captured, in declaration order.
+    let vals: Vec<(&str, i32)> = e
+        .values
+        .iter()
+        .map(|v| (v.name.as_str(), v.number))
+        .collect();
+    assert_eq!(
+        vals,
+        vec![("STATUS_UNSPECIFIED", 0), ("ACTIVE", 1), ("INACTIVE", 2)]
+    );
+
+    // The nested MESSAGE is still skipped — its `inner` field must not leak in
+    // as a column of Order — and the real table columns survive intact.
+    assert!(s.columns.iter().any(|c| c.field_name == "id"));
+    assert!(s.columns.iter().any(|c| c.field_name == "status"));
+    assert!(
+        !s.columns.iter().any(|c| c.field_name == "inner"),
+        "nested message field must not leak into the table"
+    );
+}
+
+#[test]
+fn parser_without_nested_enums_is_empty() {
+    let src = r#"
+package x;
+message M {
+  option (table) = { table_name: "m" schema_name: "x" migration_order: 1 };
+  string id = 1;
+}
+"#;
+    assert!(parse_str(src)[0].nested_enums.is_empty());
+}
+
 #[test]
 fn schema_without_language_options_returns_none_namespace() {
     let src = r#"

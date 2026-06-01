@@ -4,9 +4,19 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::ast::{GenericStore, ProtoColumn, ProtoForeignKey, ProtoIndex, ProtoSchema};
+use crate::ast::{
+    DEFAULT_MIGRATION_ORDER, GenericStore, ProtoColumn, ProtoForeignKey, ProtoIndex, ProtoSchema,
+};
 
 pub const GENERATOR_VERSION: &str = "3";
+pub const POLICY_PRIMARY: &str = "primary";
+pub const POLICY_REPLICA: &str = "replica";
+pub const POLICY_PRIMARY_ONLY: &str = "primary_only";
+pub const POLICY_ASYNC_PROJECTION: &str = "async_projection";
+pub const POLICY_PROJECTION: &str = "projection";
+pub const POLICY_CACHE_FIRST: &str = "cache_first";
+pub const POLICY_STRONG: &str = "strong";
+pub const POLICY_EVENTUAL: &str = "eventual";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct CatalogManifest {
@@ -200,6 +210,16 @@ pub struct ManifestColumn {
     pub generated: bool,
     pub generated_expr: String,
     pub is_identity: bool,
+    /// Tenant-isolation key designator (proto `tenant_column: true`). Drives
+    /// query-plan tenant enforcement. Kept out of `ColumnDdl`/checksum since it
+    /// has no DDL effect; `skip_serializing_if` preserves existing manifests.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub is_tenant_column: bool,
+    /// Project-isolation key designator (proto `project_column: true`). Drives
+    /// query-plan project enforcement; kept out of `ColumnDdl`/checksum (no DDL
+    /// effect); `skip_serializing_if` preserves existing manifests.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub is_project_column: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -415,7 +435,7 @@ impl CatalogManifest {
     pub fn from_schemas(schemas: &[ProtoSchema]) -> Result<Self, serde_json::Error> {
         let mut tables = Vec::new();
         let mut stores = Vec::new();
-        let warnings = Vec::new();
+        let mut warnings = Vec::new();
 
         for schema in schemas {
             if schema.is_table {
@@ -457,6 +477,7 @@ impl CatalogManifest {
         let schema_order = compute_schema_order(&tables);
         let schema_checksums = compute_schema_checksums(&tables)?;
         let validation_errors = validate_manifest_tables(&tables);
+        warnings.extend(partitioned_fk_warnings(&tables));
         let checksum_sha256 = checksum_hex(&catalog_ddl(&tables, &stores))?;
 
         Ok(Self {
@@ -703,6 +724,48 @@ fn detect_fk_cycles(tables: &[ManifestTable]) -> Vec<String> {
     errors
 }
 
+fn partitioned_fk_warnings(tables: &[ManifestTable]) -> Vec<String> {
+    let partition_columns: BTreeMap<(&str, &str), &str> = tables
+        .iter()
+        .filter(|table| {
+            !table.partition_strategy.trim().is_empty() && !table.partition_column.trim().is_empty()
+        })
+        .map(|table| {
+            (
+                (table.schema.as_str(), table.table.as_str()),
+                table.partition_column.as_str(),
+            )
+        })
+        .collect();
+
+    let mut warnings = Vec::new();
+    for table in tables {
+        for fk in &table.foreign_keys {
+            let ref_key = (fk.ref_schema.as_str(), fk.ref_table.as_str());
+            let Some(&partition_column) = partition_columns.get(&ref_key) else {
+                continue;
+            };
+            if fk
+                .ref_columns
+                .iter()
+                .any(|column| column.as_str() == partition_column)
+            {
+                continue;
+            }
+            warnings.push(format!(
+                "skipped FK {}.{} -> {}.{}: referenced table is partitioned on '{}' but FK ref_columns {:?} do not include the partition key; add a denormalized partition-key column to the child table",
+                table.schema,
+                table.table,
+                fk.ref_schema,
+                fk.ref_table,
+                partition_column,
+                fk.ref_columns
+            ));
+        }
+    }
+    warnings
+}
+
 fn dfs_cycle(
     node: &str,
     adj: &BTreeMap<String, Vec<String>>,
@@ -905,8 +968,14 @@ pub fn check_key(check: &ManifestCheck) -> String {
 
 fn sort_schemas(values: &mut [String], min_order: &BTreeMap<String, i32>) {
     values.sort_by(|a, b| {
-        (min_order.get(a).copied().unwrap_or(9999), a.as_str())
-            .cmp(&(min_order.get(b).copied().unwrap_or(9999), b.as_str()))
+        (
+            min_order.get(a).copied().unwrap_or(DEFAULT_MIGRATION_ORDER),
+            a.as_str(),
+        )
+            .cmp(&(
+                min_order.get(b).copied().unwrap_or(DEFAULT_MIGRATION_ORDER),
+                b.as_str(),
+            ))
     });
 }
 

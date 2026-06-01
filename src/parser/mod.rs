@@ -193,6 +193,21 @@ pub fn parse_file(
     parse_file_report(file_path, config).map(|report| report.schemas)
 }
 
+/// Parse proto source held in memory (e.g. embedded native-service protos),
+/// rather than reading from disk. `name` is the logical file name used in
+/// diagnostics. Shares the same lex/parse path as [`parse_file_report`].
+pub fn parse_proto_source(
+    source: &[u8],
+    name: impl Into<String>,
+    config: &ParserConfig,
+) -> Result<ParseReport, ParseError> {
+    let file = name.into();
+    let tokens = Lexer::new(source, file.clone())
+        .tokenize()
+        .map_err(ParseError::Lex)?;
+    ProtoParser::new(tokens, file, config).parse_report()
+}
+
 pub fn parse_file_report(
     file_path: impl AsRef<Path>,
     config: &ParserConfig,

@@ -46,3 +46,4 @@ class CacheBackend
         return constant($const);
     }
 }
+

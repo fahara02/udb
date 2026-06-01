@@ -27,8 +27,6 @@
 //! - Parameters are positional `?` placeholders.
 //! - Keyspace + table separated by `.`.
 
-use std::collections::HashSet;
-
 use crate::backend::BackendKind;
 use crate::generation::ManifestTable;
 use crate::ir::filter::{ComparisonOp, LogicalFilter};
@@ -83,23 +81,38 @@ impl CassandraCompiler {
         table: &ManifestTable,
         message_type: &str,
     ) -> Result<(), CompileError> {
+        // Resolve the PK field names to their column names once, up front — the
+        // per-leaf membership check is then an O(1) set lookup instead of a nested
+        // `primary_key × columns` scan per filter leaf (#95).
+        let mut pk_columns = std::collections::HashSet::new();
+        for pk in &table.primary_key {
+            pk_columns.insert(self.column_for(table, pk, message_type)?);
+        }
+        self.validate_pk_filter_inner(filter, table, message_type, &pk_columns)
+    }
+
+    fn validate_pk_filter_inner(
+        &self,
+        filter: &LogicalFilter,
+        table: &ManifestTable,
+        message_type: &str,
+        pk_columns: &std::collections::HashSet<&str>,
+    ) -> Result<(), CompileError> {
         match filter {
             LogicalFilter::And(clauses) | LogicalFilter::Or(clauses) => {
                 for c in clauses {
-                    self.validate_pk_filter(c, table, message_type)?;
+                    self.validate_pk_filter_inner(c, table, message_type, pk_columns)?;
                 }
                 Ok(())
             }
-            LogicalFilter::Not(inner) => self.validate_pk_filter(inner, table, message_type),
+            LogicalFilter::Not(inner) => {
+                self.validate_pk_filter_inner(inner, table, message_type, pk_columns)
+            }
             LogicalFilter::Comparison { field, .. }
             | LogicalFilter::IsNull(field)
             | LogicalFilter::InList { field, .. } => {
                 let col = self.column_for(table, field, message_type)?;
-                if !table.primary_key.iter().any(|pk| {
-                    self.column_for(table, pk, message_type)
-                        .map(|pk_col| pk_col == col)
-                        .unwrap_or(false)
-                }) {
+                if !pk_columns.contains(col) {
                     return Err(CompileError::OperatorUnsupported {
                         backend: BackendKind::Cassandra,
                         op: "non_pk_filter",
@@ -135,61 +148,31 @@ impl CassandraCompiler {
     /// schema doesn't model multi-tenancy at the row level and the
     /// compiler falls back to advisory mode (no injection).
     ///
-    /// Returns the column name to use (`"tenant_id"` or any
-    /// case-insensitive variant declared in the manifest).
-    fn tenant_column<'a>(table: &'a ManifestTable) -> Option<&'a str> {
-        table
-            .columns
-            .iter()
-            .find(|c| {
-                c.column_name.eq_ignore_ascii_case("tenant_id")
-                    || c.field_name.eq_ignore_ascii_case("tenant_id")
-            })
-            .map(|c| c.column_name.as_str())
+    /// Resolution policy is shared with the other compiler-layer-RLS
+    /// backends — see `util::resolve_tenant_column`. Both `tenant_id`
+    /// and `_tenant_id` are accepted (and the `is_tenant_column`
+    /// manifest flag wins when set).
+    fn tenant_column(table: &ManifestTable) -> Option<&str> {
+        super::util::resolve_tenant_column(table)
     }
 
     /// Same for project_id — second optional injection layer.
-    fn project_column<'a>(table: &'a ManifestTable) -> Option<&'a str> {
-        table
-            .columns
-            .iter()
-            .find(|c| {
-                c.column_name.eq_ignore_ascii_case("project_id")
-                    || c.field_name.eq_ignore_ascii_case("project_id")
-            })
-            .map(|c| c.column_name.as_str())
+    fn project_column(table: &ManifestTable) -> Option<&str> {
+        super::util::resolve_project_column(table)
     }
 
     /// A1: append tenant + project predicates to an existing WHERE
     /// body. Returns the augmented WHERE expression OR `None` when
     /// context is empty / table has no tenant/project columns.
-    /// Each injection adds one `?` placeholder to `params`.
+    /// Each injection adds one `?` placeholder to `params`. Cassandra
+    /// quotes identifiers with double-quotes.
     fn append_context_predicates(
         body: Option<String>,
         table: &ManifestTable,
         ctx: &CompileContext<'_>,
         params: &mut Vec<LogicalValue>,
     ) -> Option<String> {
-        let mut parts: Vec<String> = body.into_iter().collect();
-        if let Some(tid) = ctx.tenant_id
-            && !tid.is_empty()
-            && let Some(col) = Self::tenant_column(table)
-        {
-            params.push(LogicalValue::String(tid.to_string()));
-            parts.push(format!("\"{col}\" = ?"));
-        }
-        if let Some(pid) = ctx.project_id
-            && !pid.is_empty()
-            && let Some(col) = Self::project_column(table)
-        {
-            params.push(LogicalValue::String(pid.to_string()));
-            parts.push(format!("\"{col}\" = ?"));
-        }
-        if parts.is_empty() {
-            None
-        } else {
-            Some(parts.join(" AND "))
-        }
+        super::util::append_context_predicates(body, table, ctx, params, '"')
     }
 
     fn render_filter(
@@ -483,13 +466,8 @@ impl Compiler for CassandraCompiler {
                 reason: "LogicalAggregate::aggregates must be non-empty".into(),
             });
         }
-        let mut seen: HashSet<&str> = HashSet::new();
+        super::util::validate_aggregate_aliases(&op.aggregates)?;
         for agg in &op.aggregates {
-            if !seen.insert(agg.alias.as_str()) {
-                return Err(CompileError::Malformed {
-                    reason: format!("duplicate aggregate alias '{}'", agg.alias),
-                });
-            }
             if matches!(agg.func, AggregateFunc::CountDistinct) {
                 return Err(CompileError::OperatorUnsupported {
                     backend: BackendKind::Cassandra,

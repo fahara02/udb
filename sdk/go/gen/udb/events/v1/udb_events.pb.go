@@ -9,6 +9,7 @@ package eventsv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -99,7 +100,108 @@ func (x *CDCEnvelope) GetPublishedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// Kafka topic: udb.migration.drift_detected.v1
+// Canonical inner envelope wrapping every native domain event stored in the
+// transactional outbox `payload` column. The CDC engine relays this as JSON on
+// the per-domain Kafka topic (e.g. `udb.authn.user.registered.v1`); downstream
+// Apache Spark streaming jobs decode it. The concrete domain event (authn,
+// authz, or apikey) is carried as a JSON object under `payload`.
+//
+// This formalizes the shape produced by the native auth services'
+// outbox event sink and by the broker's `prepare_outbox_envelope`, so producers
+// and Spark consumers share one contract.
+type EventEnvelope struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`       // UUID; also the outbox row's event_id
+	EventType     string                 `protobuf:"bytes,2,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"` // event type / Kafka topic, e.g. udb.authn.user.registered.v1
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`                  // envelope event time (CDC EventEnvelope.timestamp)
+	CorrelationId string                 `protobuf:"bytes,4,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	DocumentId    string                 `protobuf:"bytes,5,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"` // aggregate id; equals the outbox / Kafka partition key
+	SchemaUri     string                 `protobuf:"bytes,6,opt,name=schema_uri,json=schemaUri,proto3" json:"schema_uri,omitempty"`    // optional schema-registry reference
+	Payload       *structpb.Struct       `protobuf:"bytes,7,opt,name=payload,proto3" json:"payload,omitempty"`                         // the domain event fields (incl. tenant_id)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventEnvelope) Reset() {
+	*x = EventEnvelope{}
+	mi := &file_udb_events_v1_udb_events_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventEnvelope) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventEnvelope) ProtoMessage() {}
+
+func (x *EventEnvelope) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_events_v1_udb_events_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventEnvelope.ProtoReflect.Descriptor instead.
+func (*EventEnvelope) Descriptor() ([]byte, []int) {
+	return file_udb_events_v1_udb_events_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *EventEnvelope) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *EventEnvelope) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *EventEnvelope) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
+}
+
+func (x *EventEnvelope) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *EventEnvelope) GetDocumentId() string {
+	if x != nil {
+		return x.DocumentId
+	}
+	return ""
+}
+
+func (x *EventEnvelope) GetSchemaUri() string {
+	if x != nil {
+		return x.SchemaUri
+	}
+	return ""
+}
+
+func (x *EventEnvelope) GetPayload() *structpb.Struct {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+// Kafka topic: udb.migration.drift.detected.v1
 type DriftDetectedEvent struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	EventId               string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
@@ -114,7 +216,7 @@ type DriftDetectedEvent struct {
 
 func (x *DriftDetectedEvent) Reset() {
 	*x = DriftDetectedEvent{}
-	mi := &file_udb_events_v1_udb_events_proto_msgTypes[1]
+	mi := &file_udb_events_v1_udb_events_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -126,7 +228,7 @@ func (x *DriftDetectedEvent) String() string {
 func (*DriftDetectedEvent) ProtoMessage() {}
 
 func (x *DriftDetectedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_events_v1_udb_events_proto_msgTypes[1]
+	mi := &file_udb_events_v1_udb_events_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -139,7 +241,7 @@ func (x *DriftDetectedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DriftDetectedEvent.ProtoReflect.Descriptor instead.
 func (*DriftDetectedEvent) Descriptor() ([]byte, []int) {
-	return file_udb_events_v1_udb_events_proto_rawDescGZIP(), []int{1}
+	return file_udb_events_v1_udb_events_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *DriftDetectedEvent) GetEventId() string {
@@ -198,7 +300,7 @@ type ProvisioningCompletedEvent struct {
 
 func (x *ProvisioningCompletedEvent) Reset() {
 	*x = ProvisioningCompletedEvent{}
-	mi := &file_udb_events_v1_udb_events_proto_msgTypes[2]
+	mi := &file_udb_events_v1_udb_events_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -210,7 +312,7 @@ func (x *ProvisioningCompletedEvent) String() string {
 func (*ProvisioningCompletedEvent) ProtoMessage() {}
 
 func (x *ProvisioningCompletedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_events_v1_udb_events_proto_msgTypes[2]
+	mi := &file_udb_events_v1_udb_events_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -223,7 +325,7 @@ func (x *ProvisioningCompletedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProvisioningCompletedEvent.ProtoReflect.Descriptor instead.
 func (*ProvisioningCompletedEvent) Descriptor() ([]byte, []int) {
-	return file_udb_events_v1_udb_events_proto_rawDescGZIP(), []int{2}
+	return file_udb_events_v1_udb_events_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ProvisioningCompletedEvent) GetEventId() string {
@@ -265,13 +367,24 @@ var File_udb_events_v1_udb_events_proto protoreflect.FileDescriptor
 
 const file_udb_events_v1_udb_events_proto_rawDesc = "" +
 	"\n" +
-	"\x1eudb/events/v1/udb_events.proto\x12\rudb.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc5\x01\n" +
+	"\x1eudb/events/v1/udb_events.proto\x12\rudb.events.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc5\x01\n" +
 	"\vCDCEnvelope\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x14\n" +
 	"\x05topic\x18\x02 \x01(\tR\x05topic\x12#\n" +
 	"\rpartition_key\x18\x03 \x01(\tR\fpartitionKey\x12!\n" +
 	"\fpayload_json\x18\x04 \x01(\tR\vpayloadJson\x12=\n" +
-	"\fpublished_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\"\xa2\x02\n" +
+	"\fpublished_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\"\x9d\x02\n" +
+	"\rEventEnvelope\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1d\n" +
+	"\n" +
+	"event_type\x18\x02 \x01(\tR\teventType\x128\n" +
+	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12%\n" +
+	"\x0ecorrelation_id\x18\x04 \x01(\tR\rcorrelationId\x12\x1f\n" +
+	"\vdocument_id\x18\x05 \x01(\tR\n" +
+	"documentId\x12\x1d\n" +
+	"\n" +
+	"schema_uri\x18\x06 \x01(\tR\tschemaUri\x121\n" +
+	"\apayload\x18\a \x01(\v2\x17.google.protobuf.StructR\apayload\"\xa2\x02\n" +
 	"\x12DriftDetectedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x124\n" +
 	"\x16schema_checksum_sha256\x18\x02 \x01(\tR\x14schemaChecksumSha256\x126\n" +
@@ -287,8 +400,8 @@ const file_udb_events_v1_udb_events_proto_rawDesc = "" +
 	"\x17applied_operation_count\x18\x03 \x01(\x05R\x15appliedOperationCount\x12%\n" +
 	"\x0ecorrelation_id\x18\x04 \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAtB\x88\x01\n" +
-	"\x11com.udb.events.v1B\x0eUdbEventsProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/events/v1;eventsv1\xa2\x02\x03UEX\xaa\x02\rUdb.Events.V1\xea\x02\x0fUdb::Events::V1b\x06proto3"
+	"occurredAtB\xb4\x01\n" +
+	"\x11com.udb.events.v1B\x0eUdbEventsProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/events/v1;eventsv1\xa2\x02\x03UEX\xaa\x02\rUdb.Events.V1\xca\x02\rUdb\\Events\\V1\xe2\x02\x19Udb\\GPBMetadata\\Events\\V1\xea\x02\x0fUdb::Events::V1b\x06proto3"
 
 var (
 	file_udb_events_v1_udb_events_proto_rawDescOnce sync.Once
@@ -302,22 +415,26 @@ func file_udb_events_v1_udb_events_proto_rawDescGZIP() []byte {
 	return file_udb_events_v1_udb_events_proto_rawDescData
 }
 
-var file_udb_events_v1_udb_events_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_udb_events_v1_udb_events_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_udb_events_v1_udb_events_proto_goTypes = []any{
 	(*CDCEnvelope)(nil),                // 0: udb.events.v1.CDCEnvelope
-	(*DriftDetectedEvent)(nil),         // 1: udb.events.v1.DriftDetectedEvent
-	(*ProvisioningCompletedEvent)(nil), // 2: udb.events.v1.ProvisioningCompletedEvent
-	(*timestamppb.Timestamp)(nil),      // 3: google.protobuf.Timestamp
+	(*EventEnvelope)(nil),              // 1: udb.events.v1.EventEnvelope
+	(*DriftDetectedEvent)(nil),         // 2: udb.events.v1.DriftDetectedEvent
+	(*ProvisioningCompletedEvent)(nil), // 3: udb.events.v1.ProvisioningCompletedEvent
+	(*timestamppb.Timestamp)(nil),      // 4: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),            // 5: google.protobuf.Struct
 }
 var file_udb_events_v1_udb_events_proto_depIdxs = []int32{
-	3, // 0: udb.events.v1.CDCEnvelope.published_at:type_name -> google.protobuf.Timestamp
-	3, // 1: udb.events.v1.DriftDetectedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	3, // 2: udb.events.v1.ProvisioningCompletedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	4, // 0: udb.events.v1.CDCEnvelope.published_at:type_name -> google.protobuf.Timestamp
+	4, // 1: udb.events.v1.EventEnvelope.timestamp:type_name -> google.protobuf.Timestamp
+	5, // 2: udb.events.v1.EventEnvelope.payload:type_name -> google.protobuf.Struct
+	4, // 3: udb.events.v1.DriftDetectedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	4, // 4: udb.events.v1.ProvisioningCompletedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_udb_events_v1_udb_events_proto_init() }
@@ -331,7 +448,7 @@ func file_udb_events_v1_udb_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_events_v1_udb_events_proto_rawDesc), len(file_udb_events_v1_udb_events_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

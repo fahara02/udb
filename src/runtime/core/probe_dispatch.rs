@@ -559,7 +559,9 @@ impl DataBrokerRuntime {
             if let Some(client) = &self.redis
                 && let Ok(mut conn) = client.get_multiplexed_async_connection().await
             {
-                let _: redis::RedisResult<()> = conn.set_ex(&redis_key, &event_id, 604_800).await;
+                let _: redis::RedisResult<()> = conn
+                    .set_ex(&redis_key, &event_id, self.config.cdc.idempotency_ttl_secs)
+                    .await;
             }
         }
 
@@ -743,7 +745,23 @@ impl DataBrokerRuntime {
                     format!("backend '{backend}' has no generic-dispatch executor"),
                 )
             })?;
-        factory.build_dispatch_executor(self, instance, write, context)
+        let executor = factory.build_dispatch_executor(self, instance, write, context)?;
+        // Item 4: record the backend's RequestContext enforcement posture for the
+        // request we just resolved. With a context present this reports
+        // Enforced/Advisory/Unsupported per backend; probe/admin paths (no
+        // context) yield Advisory (no-op). Emitted to tracing so operators can
+        // observe RLS posture without changing the dispatch result.
+        if let Some(ctx) = context {
+            use crate::runtime::backend_context::BackendContextEnforcer;
+            let applied = crate::runtime::backend_context::AppliedContext::from_request(ctx);
+            let effect = executor.enforce(&applied);
+            tracing::debug!(
+                backend = %backend,
+                effect = ?effect,
+                "backend context enforcement evaluated for dispatch"
+            );
+        }
+        Ok(executor)
     }
 
     /// Execute a generic read/query operation against a configured backend.
@@ -932,6 +950,28 @@ impl DataBrokerRuntime {
             )?,
             request_json,
             bytes,
+        )
+        .await
+    }
+
+    /// Remove an object from an object-store backend.
+    pub async fn delete_object_backend_target(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        request_json: &str,
+    ) -> Result<(), tonic::Status> {
+        parse_dispatch_json(request_json)?;
+        use crate::runtime::executors::ObjectExecutor;
+        ObjectExecutor::delete_object(
+            &self.resolve_dispatch_executor(
+                backend,
+                instance,
+                false,
+                tonic::Code::FailedPrecondition,
+                None,
+            )?,
+            request_json,
         )
         .await
     }

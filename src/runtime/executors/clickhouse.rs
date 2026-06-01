@@ -31,10 +31,13 @@ use reqwest::Client;
 use serde_json::{Value as Json, json};
 
 use crate::backend::BackendKind;
+use crate::runtime::executor_utils::build_probe;
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
 };
+
+const CLICKHOUSE_MAX_QUERY_LIMIT: i64 = 10_000;
 
 // ── Identifier validation ─────────────────────────────────────────────────────
 
@@ -122,10 +125,7 @@ impl ClickHouseConfig {
         let is_cloud = super::http::is_cloud("UDB_CH_DEPLOY_MODE", &http_base, ".clickhouse.cloud");
         let connect_timeout_secs =
             super::http::env_timeout("UDB_CH_CONNECT_TIMEOUT_SECS", 10).as_secs();
-        let query_timeout_secs = std::env::var("UDB_CH_QUERY_TIMEOUT_SECS")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(30u64);
+        let query_timeout_secs = env_timeout_secs("UDB_CH_QUERY_TIMEOUT_SECS", 30);
 
         Some(Self {
             http_base,
@@ -171,6 +171,25 @@ impl ClickHouseConfig {
     }
 }
 
+fn env_timeout_secs(key: &str, default_secs: u64) -> u64 {
+    match env::var(key) {
+        Ok(raw) => match raw.trim().parse::<u64>() {
+            Ok(value) if value > 0 => value,
+            Ok(_) => {
+                tracing::warn!("{key} must be greater than zero; using {default_secs}s");
+                default_secs
+            }
+            Err(err) => {
+                tracing::warn!(
+                    "{key} is not a valid timeout in seconds: {err}; using {default_secs}s"
+                );
+                default_secs
+            }
+        },
+        Err(_) => default_secs,
+    }
+}
+
 // ── Executor ──────────────────────────────────────────────────────────────────
 
 /// ClickHouse column-store executor using the ClickHouse HTTP interface.
@@ -189,11 +208,6 @@ impl crate::runtime::backend_context::BackendContextEnforcer for ClickHouseExecu
         &self,
         ctx: &crate::runtime::backend_context::AppliedContext,
     ) -> crate::runtime::backend_context::ContextEffect {
-        if ctx.is_empty() {
-            return crate::runtime::backend_context::ContextEffect::Advisory {
-                recorded_in: "no_context_to_apply".into(),
-            };
-        }
         // A2 (2026-05-30): the ClickHouse compiler now AND-injects
         // `tenant_id = ?` / `project_id = ?` into every read,
         // delete, search and aggregate when the manifest declares
@@ -203,9 +217,10 @@ impl crate::runtime::backend_context::BackendContextEnforcer for ClickHouseExecu
         // Per-query SETTINGS are still rendered alongside for
         // operator row-policy integration, but enforcement no
         // longer depends on the operator wiring those policies.
-        crate::runtime::backend_context::ContextEffect::Enforced {
-            mechanism: "compiler_tenant_predicate_injection + SETTINGS".into(),
-        }
+        crate::runtime::backend_context::enforce_with_mechanism(
+            ctx,
+            "compiler_tenant_predicate_injection + SETTINGS",
+        )
     }
 }
 
@@ -251,10 +266,27 @@ impl ClickHouseExecutor {
 
     // ── Low-level execution ───────────────────────────────────────────────────
 
+    /// Detect a genuine trailing `FORMAT <name>` clause. A naive
+    /// `contains("FORMAT")` matches function names like `formatDateTime(...)`
+    /// or `toFormat(...)` in the middle of a query, which would wrongly
+    /// suppress the appended output format. ClickHouse's FORMAT clause is
+    /// always the final clause, so check that the second-to-last token
+    /// (after stripping a trailing `;`) is `FORMAT`.
+    fn has_trailing_format_clause(sql: &str) -> bool {
+        let trimmed = sql.trim_end().trim_end_matches(';').trim_end();
+        let mut tokens = trimmed.split_whitespace().rev();
+        // last token = format name; the token before it must be FORMAT
+        let _name = tokens.next();
+        tokens
+            .next()
+            .map(|t| t.eq_ignore_ascii_case("FORMAT"))
+            .unwrap_or(false)
+    }
+
     /// Execute a SQL query string against ClickHouse and return the raw response body.
     /// Appends `FORMAT <fmt>` unless the query already contains a FORMAT clause.
     async fn execute_raw(&self, sql: &str, format: &str) -> Result<String, String> {
-        let full_sql = if format.is_empty() || sql.to_ascii_uppercase().contains("FORMAT") {
+        let full_sql = if format.is_empty() || Self::has_trailing_format_clause(sql) {
             sql.to_string()
         } else {
             format!("{sql} FORMAT {format}")
@@ -288,35 +320,35 @@ impl ClickHouseExecutor {
     /// Uses `JSONCompact` output format.
     pub async fn select_rows(&self, sql: &str) -> Result<Vec<Json>, String> {
         let body = self.execute_raw(sql, "JSONCompact").await?;
-        let parsed: Json =
+        let mut parsed: Json =
             serde_json::from_str(&body).map_err(|e| format!("ClickHouse decode failed: {e}"))?;
 
-        // JSONCompact: { "meta": [...], "data": [[...], ...] }
-        let meta = parsed
-            .get("meta")
-            .and_then(|m| m.as_array())
-            .cloned()
-            .unwrap_or_default();
-        let column_names: Vec<&str> = meta
-            .iter()
-            .filter_map(|col| col.get("name").and_then(|n| n.as_str()))
-            .collect();
+        // JSONCompact: { "meta": [...], "data": [[...], ...] }. Take both arrays out
+        // of `parsed` and move each cell into its row object — no whole-array,
+        // per-row, or per-cell value clones (#103).
+        let column_names: Vec<String> = match parsed.get_mut("meta").map(Json::take) {
+            Some(Json::Array(cols)) => cols
+                .into_iter()
+                .filter_map(|col| col.get("name").and_then(|n| n.as_str()).map(str::to_string))
+                .collect(),
+            _ => Vec::new(),
+        };
 
-        let rows = parsed
-            .get("data")
-            .and_then(|d| d.as_array())
-            .cloned()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|row| {
-                let arr = row.as_array().cloned().unwrap_or_default();
-                let mut obj = serde_json::Map::new();
-                for (name, val) in column_names.iter().zip(arr.iter()) {
-                    obj.insert((*name).to_string(), val.clone());
-                }
-                Json::Object(obj)
-            })
-            .collect();
+        let rows = match parsed.get_mut("data").map(Json::take) {
+            Some(Json::Array(data)) => data
+                .into_iter()
+                .map(|row| {
+                    let mut obj = serde_json::Map::new();
+                    if let Json::Array(cells) = row {
+                        for (name, val) in column_names.iter().zip(cells) {
+                            obj.insert(name.clone(), val);
+                        }
+                    }
+                    Json::Object(obj)
+                })
+                .collect(),
+            _ => Vec::new(),
+        };
         Ok(rows)
     }
 
@@ -403,7 +435,14 @@ impl ClickHouseExecutor {
         }
         let limit = spec.get("limit").and_then(Json::as_i64).unwrap_or(100);
         if limit > 0 {
-            sql.push_str(&format!(" LIMIT {}", limit.min(10_000)));
+            if limit > CLICKHOUSE_MAX_QUERY_LIMIT {
+                tracing::warn!(
+                    requested_limit = limit,
+                    applied_limit = CLICKHOUSE_MAX_QUERY_LIMIT,
+                    "ClickHouse generic query limit capped"
+                );
+            }
+            sql.push_str(&format!(" LIMIT {}", limit.min(CLICKHOUSE_MAX_QUERY_LIMIT)));
         }
         Ok(sql)
     }
@@ -626,16 +665,10 @@ impl BackendExecutor for ClickHouseExecutor {
         ))
     }
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
-        let (ok, error) = match <Self as BackendHealth>::ping(self).await {
-            Ok(()) => (true, None),
-            Err(e) => (false, Some(e)),
-        };
-        Ok(BackendProbe {
-            backend: "clickhouse".to_string(),
-            instance: None,
-            ok,
-            error,
-        })
+        Ok(build_probe(
+            "clickhouse",
+            <Self as BackendHealth>::ping(self).await,
+        ))
     }
 }
 

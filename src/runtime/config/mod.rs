@@ -46,17 +46,24 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
+use crate::control::tracker::DEFAULT_LEDGER_SCHEMA;
 use crate::generation::{UnifiedDsnCatalog, parse_unified_dsn};
 use crate::runtime::executor_utils::{env_first, env_i32, env_u32};
 use crate::runtime::{cdc::CdcConfig, channels::ChannelSettings, security::SecurityConfig};
 
 // ── Default helpers ───────────────────────────────────────────────────────────
 
+pub(crate) const DEFAULT_DB_MIN_CONNECTIONS: i32 = 5;
+pub(crate) const DEFAULT_DB_MAX_OPEN_CONNS: i32 = 50;
+pub(crate) const DEFAULT_DB_ACQUIRE_TIMEOUT_SECS: u64 = 10;
+pub(crate) const DEFAULT_DB_IDLE_TIMEOUT_SECS: u64 = 600;
+pub(crate) const DEFAULT_DB_MAX_LIFETIME_SECS: u64 = 1800;
+
 fn five_i32() -> i32 {
-    5
+    DEFAULT_DB_MIN_CONNECTIONS
 }
 fn ten_u64() -> u64 {
-    10
+    DEFAULT_DB_ACQUIRE_TIMEOUT_SECS
 }
 fn hundred_i32() -> i32 {
     100
@@ -177,6 +184,7 @@ pub struct ServiceSettings {
     pub allow_degraded_backends: bool,
     pub catalog_compat_warn_only: bool,
     pub catalog_compatibility_level: String,
+    pub rate_limit_enabled: bool,
     pub rate_limit_window_secs: u64,
     pub rate_limit_max_per_window: u32,
     pub tls: TlsSettings,
@@ -194,6 +202,7 @@ impl Default for ServiceSettings {
             allow_degraded_backends: false,
             catalog_compat_warn_only: false,
             catalog_compatibility_level: "backward".to_string(),
+            rate_limit_enabled: true,
             rate_limit_window_secs: 60,
             rate_limit_max_per_window: 1000,
             tls: TlsSettings::default(),
@@ -238,6 +247,9 @@ impl ServiceSettings {
         {
             self.catalog_compatibility_level = normalize_catalog_compatibility_level(&value);
         }
+        if let Some(value) = bool_env("UDB_RATE_LIMIT_ENABLED") {
+            self.rate_limit_enabled = value;
+        }
         if let Some(value) = env_u32("UDB_RATE_LIMIT_WINDOW_SECS") {
             self.rate_limit_window_secs = value.max(1) as u64;
         }
@@ -262,6 +274,9 @@ pub struct SagaSettings {
     pub recovery_enabled: bool,
     pub recovery_interval_secs: u64,
     pub stale_threshold_secs: u64,
+    pub worker_lease_ttl_secs: u64,
+    pub poison_threshold: i64,
+    pub recovery_batch_size: i64,
 }
 
 impl Default for SagaSettings {
@@ -270,6 +285,9 @@ impl Default for SagaSettings {
             recovery_enabled: true,
             recovery_interval_secs: 60,
             stale_threshold_secs: 300,
+            worker_lease_ttl_secs: 120,
+            poison_threshold: 3,
+            recovery_batch_size: 100,
         }
     }
 }
@@ -284,6 +302,15 @@ impl SagaSettings {
         }
         if let Some(value) = env_u32("UDB_SAGA_STALE_THRESHOLD_SECONDS") {
             self.stale_threshold_secs = value.max(1) as u64;
+        }
+        if let Some(value) = env_u32("UDB_SAGA_WORKER_LEASE_TTL_SECS") {
+            self.worker_lease_ttl_secs = value.max(1) as u64;
+        }
+        if let Some(value) = env_i32("UDB_SAGA_POISON_THRESHOLD") {
+            self.poison_threshold = i64::from(value.max(1));
+        }
+        if let Some(value) = env_i32("UDB_SAGA_RECOVERY_BATCH_SIZE") {
+            self.recovery_batch_size = i64::from(value.max(1));
         }
     }
 }
@@ -319,6 +346,7 @@ impl CircuitBreakerSettings {
 #[serde(default)]
 pub struct SystemCatalogSettings {
     pub saga_table: String,
+    pub xa_ledger_table: String,
     pub catalog_versions_table: String,
     pub catalog_activation_log_table: String,
     pub project_catalog_bindings_table: String,
@@ -339,6 +367,7 @@ impl Default for SystemCatalogSettings {
     fn default() -> Self {
         Self {
             saga_table: "udb_saga_coordinator".to_string(),
+            xa_ledger_table: "udb_xa_ledger".to_string(),
             catalog_versions_table: "udb_catalog_versions".to_string(),
             catalog_activation_log_table: "udb_catalog_activation_log".to_string(),
             project_catalog_bindings_table: "udb_project_catalog_bindings".to_string(),
@@ -359,6 +388,7 @@ impl Default for SystemCatalogSettings {
 impl SystemCatalogSettings {
     pub fn merge_env(&mut self) {
         merge_identifier_env("UDB_SAGA_TABLE", &mut self.saga_table);
+        merge_identifier_env("UDB_XA_LEDGER_TABLE", &mut self.xa_ledger_table);
         merge_identifier_env(
             "UDB_CATALOG_VERSIONS_TABLE",
             &mut self.catalog_versions_table,
@@ -491,6 +521,7 @@ impl EncryptionSettings {
 /// The Go UDB service builds this from `DatabaseConfig` + env overrides and
 /// passes it to `NewEngine()`. Mirrors the legacy Go service migration options.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct MigrationOptions {
     // ── Paths ─────────────────────────────────────────────────────────────────
     /// Directory containing SQL migration files, e.g. `"db/migration"`.
@@ -507,6 +538,8 @@ pub struct MigrationOptions {
     pub db_ops_root: String,
     /// Directory for the proto AST manifest JSON files, e.g. `"db/migration_manifest"`.
     pub manifest_dir: String,
+    /// PostgreSQL schema that stores UDB's migration ledger tables.
+    pub ledger_schema: String,
 
     // ── Behaviour flags ───────────────────────────────────────────────────────
     /// Re-generate delta SQL files when the proto manifest checksum changes.
@@ -523,6 +556,8 @@ pub struct MigrationOptions {
     pub log_queries: bool,
     /// Force a bootstrap re-apply even when the manifest checksum is unchanged.
     pub force_reseed: bool,
+    /// Explicitly skip live PostgreSQL verification when the manifest checksum is unchanged.
+    pub skip_unchanged_verify: bool,
 
     // ── Timeouts ──────────────────────────────────────────────────────────────
     /// PostgreSQL `lock_timeout` SET at the head of every generated SQL file.
@@ -569,6 +604,7 @@ impl Default for MigrationOptions {
             bootstrap_dir: "db/bootstrap".to_string(),
             db_ops_root: String::new(),
             manifest_dir: "db/migration_manifest".to_string(),
+            ledger_schema: DEFAULT_LEDGER_SCHEMA.to_string(),
             generate_sql: true,
             generate_bootstrap: false,
             emergency_auto_alter: false,
@@ -576,6 +612,7 @@ impl Default for MigrationOptions {
             dry_run: false,
             log_queries: false,
             force_reseed: false,
+            skip_unchanged_verify: false,
             lock_timeout: "5s".to_string(),
             statement_timeout: "120s".to_string(),
             exec_timeout_secs: 300,
@@ -597,25 +634,42 @@ impl MigrationOptions {
     /// - `UDB_SEEDER_PATH` (legacy alias)
     pub fn from_env() -> Self {
         let mut opts = Self::default();
+        opts.merge_env();
+        opts
+    }
+
+    /// Overlay env-provided fields onto an existing (e.g. file-loaded) config,
+    /// touching ONLY fields whose env var is present — so file-configured safety
+    /// flags (`require_approval_plan`, hooks, `strict_verify`, `dry_run`) survive.
+    pub fn merge_env(&mut self) {
         if let Some(path) = std::env::var("UDB_SEEDERS_PATH")
             .ok()
             .or_else(|| std::env::var("UDB_SEEDER_PATH").ok())
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty())
         {
-            opts.seeders_path = path;
+            self.seeders_path = path;
         }
         if let Some(path) = std::env::var("UDB_DB_OPS_ROOT")
             .ok()
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty())
         {
-            opts.db_ops_root = path;
+            self.db_ops_root = path;
+        }
+        if let Some(schema) = std::env::var("UDB_LEDGER_SCHEMA")
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+        {
+            self.ledger_schema = schema;
         }
         if let Some(value) = bool_env("UDB_FORCE_RESEED") {
-            opts.force_reseed = value;
+            self.force_reseed = value;
         }
-        opts
+        if let Some(value) = bool_env("UDB_SKIP_UNCHANGED_VERIFY") {
+            self.skip_unchanged_verify = value;
+        }
     }
 
     /// Returns `true` when any notification events are configured.
@@ -1174,8 +1228,8 @@ impl UdbConfig {
         if let Some(v) = env_u32("UDB_PG_REPLICA_MAX_LAG_SECS") {
             self.pg_replica_max_lag_secs = v as u64;
         }
-        if let Ok(v) = std::env::var("UDB_PG_REPLICA_FAIL_OPEN") {
-            self.pg_replica_fail_open = matches!(v.as_str(), "1" | "true" | "TRUE" | "yes" | "on");
+        if let Some(v) = bool_env("UDB_PG_REPLICA_FAIL_OPEN") {
+            self.pg_replica_fail_open = v;
         }
         if let Some(v) = env_u32("UDB_PG_REPLICA_MIN_CONNECTIONS") {
             self.pg_replica_min_connections = v;
@@ -1208,9 +1262,10 @@ impl UdbConfig {
             self.kafka_brokers = Some(v);
         }
 
-        // Migration options
-        self.migration = MigrationOptions::from_env();
-        self.audit_sink = AuditSinkConfig::from_env();
+        // Migration options — overlay env onto file-loaded config (do NOT
+        // replace, which would discard YAML-configured hooks/approval/sinks).
+        self.migration.merge_env();
+        self.audit_sink.merge_env();
         self.service.merge_env();
         self.channels.merge_env();
         self.cdc.merge_env();
@@ -1342,6 +1397,7 @@ pub fn validate_udb_config(
     }
 
     errors.extend(config.backend_instances.validate());
+    errors.extend(config.audit_sink.validate());
 
     health_gates.push(health_gate(
         "sql",

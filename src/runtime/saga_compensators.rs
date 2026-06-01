@@ -507,15 +507,17 @@ fn parse_s3_target(payload: &CompensationPayload) -> Result<(&str, &str), String
 }
 
 /// Walk the JSON array of compensation steps from the saga row,
-/// dispatching each through the registry. Returns one [`StepOutcome`]
-/// per step in original order.
+/// dispatching each through the registry. Steps are compensated in
+/// **reverse (LIFO)** order — the last-executed forward step is undone first,
+/// which is required for correct saga semantics (a later step may depend on an
+/// earlier one). The reported `index` is still the step's original position.
 pub async fn dispatch_compensations(
     registry: &CompensatorRegistry,
     compensations: &serde_json::Value,
 ) -> Vec<StepOutcome> {
     let steps = compensations.as_array().cloned().unwrap_or_default();
     let mut out = Vec::with_capacity(steps.len());
-    for (i, step) in steps.iter().enumerate() {
+    for (i, step) in steps.iter().enumerate().rev() {
         let Some(payload) = CompensationPayload::try_from_json(step) else {
             out.push(StepOutcome::Malformed { index: i });
             continue;
@@ -537,10 +539,13 @@ pub async fn dispatch_compensations(
     out
 }
 
-/// Convenience: have **every** step succeed? The recovery worker uses
-/// this to decide whether to mark the saga `compensated`.
+/// Convenience: did **every** step succeed? The recovery worker uses this to
+/// decide whether to mark the saga `compensated`. An empty set (a saga with no
+/// compensation steps, or a null/absent `compensations` field) is vacuously
+/// successful — there is nothing to undo, so it must NOT be treated as a failure
+/// (doing so poisoned such sagas into `manual_review`).
 pub fn all_compensated(outcomes: &[StepOutcome]) -> bool {
-    !outcomes.is_empty() && outcomes.iter().all(StepOutcome::is_success)
+    outcomes.iter().all(StepOutcome::is_success)
 }
 
 // ── SQL canonical-store compensators (NW-deep) ────────────────────────────────

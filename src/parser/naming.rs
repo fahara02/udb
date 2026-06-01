@@ -1,4 +1,10 @@
 pub(super) fn infer_sql_type(proto_type: &str) -> String {
+    // `map<K, V>` (and bare `map`) store as JSONB. Checked on the full type
+    // before the dot-split, since a dotted value type (e.g. `map<string,
+    // foo.Bar>`) would otherwise leave `base` as "Bar>".
+    if proto_type.to_ascii_lowercase().starts_with("map<") {
+        return "JSONB".to_string();
+    }
     let base = proto_type.rsplit('.').next().unwrap_or(proto_type);
     match base.to_ascii_lowercase().as_str() {
         "string" => "TEXT",

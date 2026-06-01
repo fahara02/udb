@@ -272,3 +272,4 @@ class Invoice extends \Google\Protobuf\Internal\Message
     }
 
 }
+

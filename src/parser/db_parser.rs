@@ -1,7 +1,9 @@
 use std::collections::{BTreeMap, HashMap};
 
 use super::lexer::{Token, TokenKind};
-use crate::ast::{KNOWN_LANGUAGE_FILE_OPTIONS, ProtoColumn, ProtoSchema};
+use crate::ast::{
+    KNOWN_LANGUAGE_FILE_OPTIONS, ProtoColumn, ProtoNestedEnum, ProtoNestedEnumValue, ProtoSchema,
+};
 
 use super::naming::{infer_sql_type, to_plural, to_snake_case};
 use super::options::{
@@ -228,7 +230,17 @@ impl<'a> ProtoParser<'a> {
                 }
                 continue;
             }
+            if self.cur().is_ident("enum") {
+                self.consume();
+                let enum_name = self.consume_ident().unwrap_or_default();
+                if let Some(parsed) = self.parse_nested_enum_body(enum_name) {
+                    schema.nested_enums.push(parsed);
+                }
+                continue;
+            }
             if matches_nested_block(self.cur().value.as_str()) {
+                // Nested message (and any other nested block) — skipped; UDB
+                // models tables, not nested message types.
                 self.consume();
                 self.consume_ident();
                 self.skip_block();
@@ -244,9 +256,12 @@ impl<'a> ProtoParser<'a> {
                 continue;
             }
             if self.cur().value == "extensions" {
-                // proto3 doesn't support extensions; in proto2 we
-                // intentionally skip them — UDB's schema model is
-                // proto3-centric.
+                let token = self.cur().clone();
+                self.diagnostic_at(
+                    &token,
+                    "unsupported_extensions",
+                    "proto extensions are not represented by UDB's schema model and were ignored",
+                );
                 self.skip_to_statement_end();
                 continue;
             }
@@ -400,13 +415,51 @@ impl<'a> ProtoParser<'a> {
         }
         self.consume();
 
+        // proto3 requires every field to carry a positive field number. A
+        // missing or unparseable number means malformed input — previously this
+        // silently produced a column with field_number = 0 (an invalid slot that
+        // also collides in the checksum sort). Emit a diagnostic and skip the
+        // field, matching the other malformed-field branches above.
         let field_number = if self.cur().kind == TokenKind::Number {
-            let value = self.cur().value.parse::<i32>().unwrap_or_default();
-            self.consume();
-            value
+            match self.cur().value.parse::<i32>() {
+                Ok(value) => {
+                    self.consume();
+                    value
+                }
+                Err(_) => {
+                    let tok = self.cur().clone();
+                    self.diagnostic_at(
+                        &tok,
+                        "db_field_number_invalid",
+                        &format!(
+                            "field '{field_name}' has an unparseable field number '{}'; skipping",
+                            tok.value
+                        ),
+                    );
+                    self.skip_to_statement_end();
+                    return None;
+                }
+            }
         } else {
-            0
+            let tok = self.cur().clone();
+            self.diagnostic_at(
+                &tok,
+                "db_field_number_missing",
+                &format!("field '{field_name}' is missing its proto field number; skipping"),
+            );
+            self.skip_to_statement_end();
+            return None;
         };
+        if let Err(reason) = validate_proto_field_number(field_number) {
+            let tok = self.cur().clone();
+            self.diagnostic_at(
+                &tok,
+                "db_field_number_out_of_range",
+                &format!("field '{field_name}' uses invalid proto field number {field_number}: {reason}; skipping"),
+            );
+            self.skip_to_statement_end();
+            return None;
+        }
 
         let mut column = ProtoColumn {
             field_name: field_name.clone(),
@@ -418,6 +471,22 @@ impl<'a> ProtoParser<'a> {
             oneof_group: oneof_group.to_string(),
             ..ProtoColumn::default()
         };
+        if let Some((key, value)) = parse_map_kv(&proto_type) {
+            if !is_valid_proto_map_key_type(&key) {
+                let tok = self.cur().clone();
+                self.diagnostic_at(
+                    &tok,
+                    "db_map_key_type_invalid",
+                    &format!(
+                        "field '{field_name}' uses invalid proto map key type '{key}'; map keys must be bool, string, or integral scalar types"
+                    ),
+                );
+                self.skip_to_statement_end();
+                return None;
+            }
+            column.map_key_type = key;
+            column.map_value_type = value;
+        }
 
         if self.cur().kind == TokenKind::LBracket {
             self.consume();
@@ -430,6 +499,63 @@ impl<'a> ProtoParser<'a> {
             self.consume();
         }
         Some(column)
+    }
+
+    /// Parse a nested enum body `{ NAME = N [opts]; ... }` into its values.
+    /// Enum-level `option`/`reserved` lines and per-value `[ ... ]` options are
+    /// skipped. The enum name has already been consumed; `cur()` is at the `{`.
+    fn parse_nested_enum_body(&mut self, name: String) -> Option<ProtoNestedEnum> {
+        if self.cur().kind != TokenKind::LBrace {
+            self.skip_to_statement_end();
+            return None;
+        }
+        self.consume(); // {
+        let mut values = Vec::new();
+        while self.cur().kind != TokenKind::RBrace && self.cur().kind != TokenKind::Eof {
+            if self.cur().is_ident("option") || self.cur().value == "reserved" {
+                self.skip_to_statement_end();
+                continue;
+            }
+            if self.cur().kind != TokenKind::Ident {
+                self.skip_to_statement_end();
+                continue;
+            }
+            let value_name = self.consume_ident().unwrap_or_default();
+            if self.cur().kind != TokenKind::Equal {
+                self.skip_to_statement_end();
+                continue;
+            }
+            self.consume(); // =
+            let number = if self.cur().kind == TokenKind::Number {
+                let n = self.cur().value.parse::<i32>().unwrap_or_default();
+                self.consume();
+                n
+            } else {
+                0
+            };
+            // Skip optional per-value options `[ ... ]`.
+            if self.cur().kind == TokenKind::LBracket {
+                while self.cur().kind != TokenKind::RBracket && self.cur().kind != TokenKind::Eof {
+                    self.consume();
+                }
+                if self.cur().kind == TokenKind::RBracket {
+                    self.consume();
+                }
+            }
+            if self.cur().kind == TokenKind::Semicolon {
+                self.consume();
+            }
+            if !value_name.is_empty() {
+                values.push(ProtoNestedEnumValue {
+                    name: value_name,
+                    number,
+                });
+            }
+        }
+        if self.cur().kind == TokenKind::RBrace {
+            self.consume();
+        }
+        Some(ProtoNestedEnum { name, values })
     }
 
     fn parse_field_options(&mut self, column: &mut ProtoColumn) {
@@ -905,6 +1031,53 @@ fn normalize_annotation_name(option_name: &str) -> String {
 
 fn is_annotation_version_option(option_name: &str) -> bool {
     normalize_annotation_name(option_name) == "udb.annotation_version"
+}
+
+/// Parse the key/value type names out of a `map<K, V>` proto type token (the
+/// lexer captures it as a single normalized token, e.g. "map<string,int32>").
+/// Returns `None` for non-map types. The value type may be dotted (e.g.
+/// `foo.Bar`); proto disallows nested maps, so the first top-level comma
+/// separates key from value.
+fn parse_map_kv(proto_type: &str) -> Option<(String, String)> {
+    let inner = proto_type.strip_prefix("map<")?.strip_suffix('>')?;
+    let (key, value) = inner.split_once(',')?;
+    let key = key.trim();
+    let value = value.trim();
+    if key.is_empty() || value.is_empty() {
+        return None;
+    }
+    Some((key.to_string(), value.to_string()))
+}
+
+fn validate_proto_field_number(value: i32) -> Result<(), &'static str> {
+    if value <= 0 {
+        return Err("field numbers must be positive");
+    }
+    if value > 536_870_911 {
+        return Err("field numbers must not exceed 536870911");
+    }
+    if (19_000..=19_999).contains(&value) {
+        return Err("field numbers 19000 through 19999 are reserved by protobuf");
+    }
+    Ok(())
+}
+
+fn is_valid_proto_map_key_type(value: &str) -> bool {
+    matches!(
+        value.trim(),
+        "int32"
+            | "int64"
+            | "uint32"
+            | "uint64"
+            | "sint32"
+            | "sint64"
+            | "fixed32"
+            | "fixed64"
+            | "sfixed32"
+            | "sfixed64"
+            | "bool"
+            | "string"
+    )
 }
 
 fn is_canonical_udb_option_name(option_name: &str) -> bool {

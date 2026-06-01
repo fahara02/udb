@@ -6,19 +6,11 @@ impl DataBrokerService {
         &self,
         request: Request<tonic::Streaming<Chunk>>,
     ) -> Result<Response<MutationResponse>, Status> {
-        let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("PutObject", started, Err(e)),
-        };
-        if let Err(err) = self.authorize(&security, "*", "PutObject").await {
-            return self.record_grpc("PutObject", started, Err(err));
-        }
+        let (started, security) = authorized_call!(self, request, "PutObject");
         let manifest = &self.catalog.active_for(&security.project_id).manifest;
         let runtime = self.runtime_snapshot();
         let metadata_context = security.request_context();
         let execution_context = metadata_context.clone();
-        let response_context = metadata_context.clone();
         let result = self
             .execute_with_channel_scoped(
                 crate::runtime::channels::OperationChannel::Object,
@@ -37,7 +29,7 @@ impl DataBrokerService {
                 "PutObject",
                 started,
                 Ok(self
-                    .with_mutation_response_headers(res, &response_context)
+                    .with_mutation_response_headers(res, &metadata_context)
                     .await),
             ),
             Err(err) => self.record_grpc("PutObject", started, Err(err)),
@@ -65,7 +57,6 @@ impl DataBrokerService {
         let runtime = self.runtime_snapshot();
         let metadata_context = security.request_context();
         let execution_context = metadata_context.clone();
-        let response_context = metadata_context.clone();
         let result = self
             .execute_with_channel_scoped(
                 crate::runtime::channels::OperationChannel::Object,
@@ -80,13 +71,12 @@ impl DataBrokerService {
             .await;
 
         match result {
-            Ok(chunks) => self.record_grpc(
+            Ok(stream) => self.record_grpc(
                 "GetObject",
                 started,
                 Ok(self.with_catalog_response_headers(
-                    Response::new(Box::pin(tokio_stream::iter(chunks.into_iter().map(Ok)))
-                        as ResponseStream<Chunk>),
-                    &response_context,
+                    Response::new(stream as ResponseStream<Chunk>),
+                    &metadata_context,
                 )),
             ),
             Err(err) => self.record_grpc("GetObject", started, Err(err)),
@@ -114,7 +104,6 @@ impl DataBrokerService {
         let runtime = self.runtime_snapshot();
         let metadata_context = security.request_context();
         let execution_context = metadata_context.clone();
-        let response_context = metadata_context.clone();
         let result = self
             .execute_with_channel_scoped(
                 crate::runtime::channels::OperationChannel::Object,
@@ -132,7 +121,7 @@ impl DataBrokerService {
             Ok(res) => self.record_grpc(
                 "GeneratePresignedUrl",
                 started,
-                Ok(self.with_catalog_response_headers(Response::new(res), &response_context)),
+                Ok(self.with_catalog_response_headers(Response::new(res), &metadata_context)),
             ),
             Err(err) => self.record_grpc("GeneratePresignedUrl", started, Err(err)),
         }
@@ -159,7 +148,6 @@ impl DataBrokerService {
         let runtime = self.runtime_snapshot();
         let metadata_context = security.request_context();
         let execution_context = metadata_context.clone();
-        let response_context = metadata_context.clone();
         let result = self
             .execute_with_channel_scoped(
                 crate::runtime::channels::OperationChannel::Object,
@@ -177,7 +165,7 @@ impl DataBrokerService {
             Ok(res) => self.record_grpc(
                 "InitiateMultipartUpload",
                 started,
-                Ok(self.with_catalog_response_headers(Response::new(res), &response_context)),
+                Ok(self.with_catalog_response_headers(Response::new(res), &metadata_context)),
             ),
             Err(err) => self.record_grpc("InitiateMultipartUpload", started, Err(err)),
         }

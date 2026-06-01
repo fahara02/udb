@@ -13,13 +13,16 @@ use crate::proto::{
 };
 
 use crate::runtime::executor_utils::{
-    json_bool, json_i32, json_required_f32_vec, json_required_str, json_scalar_to_string,
-    json_to_struct, qdrant_status, store_option, store_option_i32, struct_to_json,
+    build_probe, json_bool, json_i32, json_required_f32_vec, json_required_str,
+    json_scalar_to_string, json_to_struct, qdrant_status, store_option, store_option_i32,
+    struct_to_json,
 };
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
 };
+
+const QDRANT_DEFAULT_SEARCH_LIMIT: i32 = 10;
 
 // ── Collection name validation (GAP 27) ────────────────────────────────
 
@@ -123,9 +126,6 @@ impl QdrantHttpClient {
         store: &ManifestStore,
     ) -> Result<(), tonic::Status> {
         validate_collection_name(&store.resource_name)?;
-        if self.collection_exists(&store.resource_name).await.is_ok() {
-            return Ok(());
-        }
         let dimension = store_option_i32(store, "dimension").max(1);
         let distance = normalize_qdrant_distance(&store_option(store, "distance"));
         let url = format!(
@@ -147,6 +147,9 @@ impl QdrantHttpClient {
                 tonic::Status::unavailable(format!("Qdrant collection create failed: {err}"))
             })?;
         let status = response.status();
+        if status == reqwest::StatusCode::CONFLICT {
+            return Ok(());
+        }
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             return Err(tonic::Status::unavailable(format!(
@@ -164,7 +167,11 @@ impl QdrantHttpClient {
         validate_collection_name(&request.collection)?;
         let mut body = json!({
             "vector": request.vector,
-            "limit": if request.limit > 0 { request.limit } else { 10 },
+            "limit": if request.limit > 0 {
+                request.limit
+            } else {
+                QDRANT_DEFAULT_SEARCH_LIMIT
+            },
             "with_payload": request.with_payload,
         });
         if !filter.is_null() {
@@ -327,7 +334,7 @@ impl QdrantHttpClient {
         let limit = if request.limit > 0 {
             request.limit as usize
         } else {
-            10
+            QDRANT_DEFAULT_SEARCH_LIMIT as usize
         };
         let text_query = request.text_query.trim().to_lowercase();
         let dense_weight = request.fusion_weights.first().copied().unwrap_or(0.7) as f64;
@@ -558,20 +565,16 @@ impl crate::runtime::backend_context::BackendContextEnforcer for QdrantExecutor 
         &self,
         ctx: &crate::runtime::backend_context::AppliedContext,
     ) -> crate::runtime::backend_context::ContextEffect {
-        if ctx.is_empty() {
-            return crate::runtime::backend_context::ContextEffect::Advisory {
-                recorded_in: "no_context_to_apply".into(),
-            };
-        }
         // C7/C8: the Qdrant IR compiler now stamps `_tenant_id` /
         // `_project_id` onto every point payload at write time AND
         // ANDs them into the `must` clause of every read/search/
         // delete filter. Tenant boundary is protocol-enforced —
         // a cross-tenant search can't surface points across the
         // boundary.
-        crate::runtime::backend_context::ContextEffect::Enforced {
-            mechanism: "_tenant_id / _project_id payload stamps; AND'd into must-filters".into(),
-        }
+        crate::runtime::backend_context::enforce_with_mechanism(
+            ctx,
+            "_tenant_id / _project_id payload stamps; AND'd into must-filters",
+        )
     }
 }
 
@@ -600,7 +603,7 @@ impl SearchExecutor for QdrantExecutor {
         let collection = json_required_str(&spec, "collection")?;
         let vector = json_required_f32_vec(&spec, "vector")?;
         let filter = spec.get("filter").cloned().unwrap_or(JsonValue::Null);
-        let limit = json_i32(&spec, "limit").unwrap_or(10);
+        let limit = json_i32(&spec, "limit").unwrap_or(QDRANT_DEFAULT_SEARCH_LIMIT);
         let with_payload = json_bool(&spec, "with_payload").unwrap_or(true);
         let result = if let Some(text_query) = spec
             .get("text_query")
@@ -849,16 +852,10 @@ impl BackendExecutor for QdrantExecutor {
         ))
     }
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
-        let (ok, error) = match <Self as BackendHealth>::ping(self).await {
-            Ok(()) => (true, None),
-            Err(e) => (false, Some(e)),
-        };
-        Ok(BackendProbe {
-            backend: "qdrant".to_string(),
-            instance: None,
-            ok,
-            error,
-        })
+        Ok(build_probe(
+            "qdrant",
+            <Self as BackendHealth>::ping(self).await,
+        ))
     }
 }
 

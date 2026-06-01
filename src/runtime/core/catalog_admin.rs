@@ -280,6 +280,12 @@ impl DataBrokerRuntime {
             })?
             .ok_or_else(|| tonic::Status::not_found("staged catalog version not found"))?
         };
+        // Activation mutates five tables; run them in a single transaction so a
+        // mid-sequence failure cannot leave the catalog with no ACTIVE row (or
+        // two). The transaction is dropped (rolled back) on any early return.
+        let mut tx = pool.begin().await.map_err(|err| {
+            tonic::Status::internal(format!("activate_catalog begin failed: {err}"))
+        })?;
         // Find current active version for this project
         let from_version: Option<String> = sqlx::query_scalar(&format!(
             "SELECT version FROM {cat_rel}
@@ -287,7 +293,7 @@ impl DataBrokerRuntime {
              ORDER BY activated_at DESC LIMIT 1"
         ))
         .bind(project_id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(|err| tonic::Status::internal(format!("activate_catalog lookup failed: {err}")))?;
         // Deactivate old active
@@ -296,7 +302,7 @@ impl DataBrokerRuntime {
              WHERE project_id = $1 AND status = 'ACTIVE'"
         ))
         .bind(project_id)
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .map_err(|err| {
             tonic::Status::internal(format!("activate_catalog deactivate failed: {err}"))
@@ -309,7 +315,7 @@ impl DataBrokerRuntime {
         ))
         .bind(id)
         .bind(project_id)
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .map_err(|err| tonic::Status::internal(format!("activate_catalog update failed: {err}")))?;
         if rows.rows_affected() == 0 {
@@ -322,7 +328,7 @@ impl DataBrokerRuntime {
             "SELECT version, checksum_sha256 FROM {cat_rel} WHERE catalog_id = $1"
         ))
         .bind(id)
-        .fetch_one(pool)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|err| {
             tonic::Status::internal(format!("activate_catalog version fetch failed: {err}"))
@@ -337,7 +343,7 @@ impl DataBrokerRuntime {
         .bind(&to_version_row.0)
         .bind(actor)
         .bind(reason)
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .map_err(|err| tonic::Status::internal(format!("activate_catalog log failed: {err}")))?;
         sqlx::query(&format!(
@@ -354,12 +360,12 @@ impl DataBrokerRuntime {
         .bind(id)
         .bind(&to_version_row.0)
         .bind(&to_version_row.1)
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .map_err(|err| {
             tonic::Status::internal(format!("activate_catalog project binding failed: {err}"))
         })?;
-        let _ = sqlx::query(&format!(
+        sqlx::query(&format!(
             "INSERT INTO {reload_rel}
                  (project_id, catalog_id, version, checksum_sha256, action, result, message)
              VALUES ($1, $2, $3, $4, 'ACTIVATE', 'ok', $5)"
@@ -369,8 +375,14 @@ impl DataBrokerRuntime {
         .bind(&to_version_row.0)
         .bind(&to_version_row.1)
         .bind(reason)
-        .execute(pool)
-        .await;
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| {
+            tonic::Status::internal(format!("activate_catalog reload log failed: {err}"))
+        })?;
+        tx.commit().await.map_err(|err| {
+            tonic::Status::internal(format!("activate_catalog commit failed: {err}"))
+        })?;
         Ok(())
     }
 
@@ -786,6 +798,8 @@ impl DataBrokerRuntime {
         status_filter: &str,
         limit: i64,
         page_token: &str,
+        tenant_id: &str,
+        project_id: &str,
     ) -> Result<Vec<serde_json::Value>, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         use sqlx::QueryBuilder;
@@ -808,14 +822,27 @@ impl DataBrokerRuntime {
 
         // Build parameterised query — never interpolate caller strings
         let mut qb = QueryBuilder::new(
-            "SELECT dlq_id, event_id, topic, payload, error_type, error_message,
+            "SELECT dlq_id, event_id, topic, tenant_id, project_id, payload, error_type, error_message,
                     status, EXTRACT(EPOCH FROM created_at)::BIGINT AS created_at_unix,
-                    EXTRACT(EPOCH FROM updated_at)::BIGINT AS updated_at_unix
+                    EXTRACT(EPOCH FROM updated_at)::BIGINT AS updated_at_unix,
+                    COUNT(*) OVER() AS total_count
              FROM ",
         );
         qb.push(&dlq_rel);
 
         let mut first_filter = true;
+        if !tenant_id.trim().is_empty() {
+            qb.push(if first_filter { " WHERE " } else { " AND " });
+            first_filter = false;
+            qb.push("tenant_id = ");
+            qb.push_bind(tenant_id);
+        }
+        if !project_id.trim().is_empty() {
+            qb.push(if first_filter { " WHERE " } else { " AND " });
+            first_filter = false;
+            qb.push("project_id = ");
+            qb.push_bind(project_id);
+        }
         if !topic.is_empty() {
             qb.push(if first_filter { " WHERE " } else { " AND " });
             first_filter = false;
@@ -842,17 +869,25 @@ impl DataBrokerRuntime {
             "dlq_id": row.try_get::<Uuid,_>("dlq_id").map(|u| u.to_string()).unwrap_or_default(),
             "event_id": row.try_get::<Uuid,_>("event_id").map(|u| u.to_string()).unwrap_or_default(),
             "topic": row.try_get::<String,_>("topic").unwrap_or_default(),
+            "tenant_id": row.try_get::<String,_>("tenant_id").unwrap_or_default(),
+            "project_id": row.try_get::<String,_>("project_id").unwrap_or_default(),
             "payload_json": row.try_get::<serde_json::Value,_>("payload").map(|v| v.to_string()).unwrap_or_default(),
             "error_type": row.try_get::<String,_>("error_type").unwrap_or_default(),
             "error_message": row.try_get::<String,_>("error_message").unwrap_or_default(),
             "status": row.try_get::<String,_>("status").unwrap_or_default(),
             "created_at_unix": row.try_get::<i64,_>("created_at_unix").unwrap_or_default(),
             "updated_at_unix": row.try_get::<i64,_>("updated_at_unix").unwrap_or_default(),
+            "total_count": row.try_get::<i64,_>("total_count").unwrap_or_default(),
         })).collect())
     }
 
     /// Fetch one DLQ event by id.
-    pub async fn get_dlq_event(&self, dlq_id: &str) -> Result<serde_json::Value, tonic::Status> {
+    pub async fn get_dlq_event(
+        &self,
+        dlq_id: &str,
+        tenant_id: &str,
+        project_id: &str,
+    ) -> Result<serde_json::Value, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
@@ -861,14 +896,16 @@ impl DataBrokerRuntime {
             .parse()
             .map_err(|_| tonic::Status::invalid_argument("dlq_id must be a UUID"))?;
         let row = sqlx::query(&format!(
-            "SELECT dlq_id, event_id, topic, payload, error_type, error_message,
+            "SELECT dlq_id, event_id, topic, tenant_id, project_id, payload, error_type, error_message,
                     retry_count, last_retry_at, next_retry_at, status,
                     EXTRACT(EPOCH FROM created_at)::BIGINT AS created_at_unix,
                     EXTRACT(EPOCH FROM updated_at)::BIGINT AS updated_at_unix
              FROM {dlq_rel}
-             WHERE dlq_id = $1"
+             WHERE dlq_id = $1 AND tenant_id = $2 AND project_id = $3"
         ))
         .bind(id)
+        .bind(tenant_id)
+        .bind(project_id)
         .fetch_optional(pool)
         .await
         .map_err(|err| tonic::Status::internal(format!("get_dlq_event failed: {err}")))?
@@ -877,6 +914,8 @@ impl DataBrokerRuntime {
             "dlq_id": row.try_get::<Uuid,_>("dlq_id").map(|u| u.to_string()).unwrap_or_default(),
             "event_id": row.try_get::<Uuid,_>("event_id").map(|u| u.to_string()).unwrap_or_default(),
             "topic": row.try_get::<String,_>("topic").unwrap_or_default(),
+            "tenant_id": row.try_get::<String,_>("tenant_id").unwrap_or_default(),
+            "project_id": row.try_get::<String,_>("project_id").unwrap_or_default(),
             "payload_json": row.try_get::<serde_json::Value,_>("payload").map(|v| v.to_string()).unwrap_or_default(),
             "error_type": row.try_get::<String,_>("error_type").unwrap_or_default(),
             "error_message": row.try_get::<String,_>("error_message").unwrap_or_default(),
@@ -892,6 +931,8 @@ impl DataBrokerRuntime {
         &self,
         dlq_id: &str,
         preserve_event_id: bool,
+        tenant_id: &str,
+        project_id: &str,
     ) -> Result<String, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let pool = self.pg_pool()?;
@@ -904,9 +945,11 @@ impl DataBrokerRuntime {
         let row = sqlx::query(&format!(
             "SELECT event_id, topic, payload, retry_count
              FROM {dlq_rel}
-             WHERE dlq_id = $1 AND status IN ('OPEN','RETRYING','QUARANTINED')"
+             WHERE dlq_id = $1 AND tenant_id = $2 AND project_id = $3 AND status IN ('OPEN','RETRYING','QUARANTINED')"
         ))
         .bind(id)
+        .bind(tenant_id)
+        .bind(project_id)
         .fetch_optional(pool)
         .await
         .map_err(|err| tonic::Status::internal(format!("replay_dlq_event lookup failed: {err}")))?
@@ -991,6 +1034,8 @@ impl DataBrokerRuntime {
         &self,
         dlq_id: &str,
         new_status: &str,
+        tenant_id: &str,
+        project_id: &str,
     ) -> Result<(), tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let pool = self.pg_pool()?;
@@ -1000,10 +1045,12 @@ impl DataBrokerRuntime {
             .parse()
             .map_err(|_| tonic::Status::invalid_argument("dlq_id must be a UUID"))?;
         let rows = sqlx::query(&format!(
-            "UPDATE {dlq_rel} SET status = $1, updated_at = NOW() WHERE dlq_id = $2"
+            "UPDATE {dlq_rel} SET status = $1, updated_at = NOW() WHERE dlq_id = $2 AND tenant_id = $3 AND project_id = $4"
         ))
         .bind(new_status)
         .bind(id)
+        .bind(tenant_id)
+        .bind(project_id)
         .execute(pool)
         .await
         .map_err(|err| tonic::Status::internal(format!("update_dlq_status failed: {err}")))?;
@@ -1021,6 +1068,8 @@ impl DataBrokerRuntime {
     pub async fn get_cdc_status(
         &self,
         slot_name: &str,
+        tenant_id: &str,
+        project_id: &str,
     ) -> Result<serde_json::Value, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let pool = self.pg_pool()?;
@@ -1031,9 +1080,11 @@ impl DataBrokerRuntime {
             "SELECT c.slot_name, c.paused, c.pause_reason,
                     (SELECT COUNT(*) FROM {out_rel} WHERE dispatched_at IS NULL) AS outbox_depth
              FROM {ctrl_rel} c
-             WHERE c.slot_name = $1"
+             WHERE c.slot_name = $1 AND c.tenant_id = $2 AND c.project_id = $3"
         ))
         .bind(slot_name)
+        .bind(tenant_id)
+        .bind(project_id)
         .fetch_optional(pool)
         .await
         .map_err(|err| tonic::Status::internal(format!("get_cdc_status failed: {err}")))?;
@@ -1057,18 +1108,27 @@ impl DataBrokerRuntime {
     }
 
     /// Pause CDC on a slot.
-    pub async fn pause_cdc(&self, slot_name: &str, reason: &str) -> Result<(), tonic::Status> {
+    pub async fn pause_cdc(
+        &self,
+        slot_name: &str,
+        reason: &str,
+        tenant_id: &str,
+        project_id: &str,
+    ) -> Result<(), tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let ctrl_rel = config.cdc_control_relation();
         sqlx::query(&format!(
-            "INSERT INTO {ctrl_rel} (slot_name, paused, pause_reason)
-             VALUES ($1, TRUE, $2)
+            "INSERT INTO {ctrl_rel} (slot_name, tenant_id, project_id, paused, pause_reason)
+             VALUES ($1, $2, $3, TRUE, $4)
              ON CONFLICT (slot_name) DO UPDATE
-                SET paused = TRUE, pause_reason = EXCLUDED.pause_reason, updated_at = NOW()"
+                SET paused = TRUE, pause_reason = EXCLUDED.pause_reason, updated_at = NOW()
+                WHERE {ctrl_rel}.tenant_id = EXCLUDED.tenant_id AND {ctrl_rel}.project_id = EXCLUDED.project_id"
         ))
         .bind(slot_name)
+        .bind(tenant_id)
+        .bind(project_id)
         .bind(reason)
         .execute(pool)
         .await
@@ -1077,18 +1137,26 @@ impl DataBrokerRuntime {
     }
 
     /// Resume a paused CDC slot.
-    pub async fn resume_cdc(&self, slot_name: &str) -> Result<(), tonic::Status> {
+    pub async fn resume_cdc(
+        &self,
+        slot_name: &str,
+        tenant_id: &str,
+        project_id: &str,
+    ) -> Result<(), tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let ctrl_rel = config.cdc_control_relation();
         sqlx::query(&format!(
-            "INSERT INTO {ctrl_rel} (slot_name, paused, pause_reason)
-             VALUES ($1, FALSE, '')
+            "INSERT INTO {ctrl_rel} (slot_name, tenant_id, project_id, paused, pause_reason)
+             VALUES ($1, $2, $3, FALSE, '')
              ON CONFLICT (slot_name) DO UPDATE
-                SET paused = FALSE, pause_reason = '', updated_at = NOW()"
+                SET paused = FALSE, pause_reason = '', updated_at = NOW()
+                WHERE {ctrl_rel}.tenant_id = EXCLUDED.tenant_id AND {ctrl_rel}.project_id = EXCLUDED.project_id"
         ))
         .bind(slot_name)
+        .bind(tenant_id)
+        .bind(project_id)
         .execute(pool)
         .await
         .map_err(|err| tonic::Status::internal(format!("resume_cdc failed: {err}")))?;
@@ -1096,18 +1164,26 @@ impl DataBrokerRuntime {
     }
 
     /// Request a leader step-down on the CDC slot.
-    pub async fn stepdown_cdc_leader(&self, slot_name: &str) -> Result<(), tonic::Status> {
+    pub async fn stepdown_cdc_leader(
+        &self,
+        slot_name: &str,
+        tenant_id: &str,
+        project_id: &str,
+    ) -> Result<(), tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let ctrl_rel = config.cdc_control_relation();
         sqlx::query(&format!(
-            "INSERT INTO {ctrl_rel} (slot_name, paused, requested_leader_stepdown_at)
-             VALUES ($1, FALSE, NOW())
+            "INSERT INTO {ctrl_rel} (slot_name, tenant_id, project_id, paused, requested_leader_stepdown_at)
+             VALUES ($1, $2, $3, FALSE, NOW())
              ON CONFLICT (slot_name) DO UPDATE
-                SET requested_leader_stepdown_at = NOW(), updated_at = NOW()"
+                SET requested_leader_stepdown_at = NOW(), updated_at = NOW()
+                WHERE {ctrl_rel}.tenant_id = EXCLUDED.tenant_id AND {ctrl_rel}.project_id = EXCLUDED.project_id"
         ))
         .bind(slot_name)
+        .bind(tenant_id)
+        .bind(project_id)
         .execute(pool)
         .await
         .map_err(|err| tonic::Status::internal(format!("stepdown_cdc_leader failed: {err}")))?;
@@ -1218,6 +1294,51 @@ impl DataBrokerRuntime {
             "priority": row.try_get::<i32,_>("priority").unwrap_or_default(),
             "enabled": row.try_get::<bool,_>("enabled").unwrap_or(true),
         })).collect())
+    }
+
+    pub async fn list_policies_page(
+        &self,
+        include_disabled: bool,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<serde_json::Value>, i64), tonic::Status> {
+        let pool = self.pg_pool()?;
+        let abac_table = self.abac_policy_relation();
+        let enabled_clause = if include_disabled {
+            ""
+        } else {
+            "WHERE enabled = TRUE"
+        };
+        let rows = sqlx::query(&format!(
+            "SELECT policy_id, effect, service_identity, tenant_id, purpose,
+                    message_type, operation, required_scope, priority, enabled,
+                    COUNT(*) OVER() AS total_count
+             FROM {abac_table}
+             {enabled_clause}
+             ORDER BY priority DESC, policy_id ASC
+             LIMIT $1 OFFSET $2"
+        ))
+        .bind(limit.max(1))
+        .bind(offset.max(0))
+        .fetch_all(pool)
+        .await
+        .map_err(|err| tonic::Status::internal(format!("list_policies_page failed: {err}")))?;
+        let total = rows
+            .first()
+            .and_then(|row| row.try_get::<i64, _>("total_count").ok())
+            .unwrap_or(0);
+        Ok((rows.iter().map(|row| serde_json::json!({
+            "policy_id": row.try_get::<i64,_>("policy_id").unwrap_or_default(),
+            "effect": row.try_get::<String,_>("effect").unwrap_or_default(),
+            "service_identity": row.try_get::<String,_>("service_identity").unwrap_or_default(),
+            "tenant_id": row.try_get::<String,_>("tenant_id").unwrap_or_default(),
+            "purpose": row.try_get::<String,_>("purpose").unwrap_or_default(),
+            "message_type": row.try_get::<String,_>("message_type").unwrap_or_default(),
+            "operation": row.try_get::<String,_>("operation").unwrap_or_default(),
+            "required_scope": row.try_get::<String,_>("required_scope").unwrap_or_default(),
+            "priority": row.try_get::<i32,_>("priority").unwrap_or_default(),
+            "enabled": row.try_get::<bool,_>("enabled").unwrap_or(true),
+        })).collect(), total))
     }
 
     /// Upsert a policy.  Returns the new/updated policy_id.
@@ -1383,43 +1504,6 @@ impl DataBrokerRuntime {
                 tracing::warn!(error=?err, "audit log write failed (non-fatal)");
                 tonic::Status::internal(format!("write_audit_log failed: {err}"))
             })
-    }
-
-    // NW1-3d: legacy helper retained for callers that read it
-    // directly. Routes through `AdminAuditStore::latest_admin_audit_hash`.
-    #[allow(dead_code)]
-    async fn latest_admin_audit_hash(&self, _audit_rel: &str) -> Result<String, tonic::Status> {
-        use crate::runtime::canonical_store::system_store::AdminAuditStore;
-        let Some(store) = self.default_system_stores() else {
-            return Ok(String::new());
-        };
-        AdminAuditStore::latest_admin_audit_hash(store.as_ref())
-            .await
-            .map_err(|err| {
-                tonic::Status::internal(format!("latest_admin_audit_hash failed: {err}"))
-            })
-    }
-
-    // NW1-3d helper, used by the new path above (kept for compile
-    // backward compat of any internal callsite if it exists).
-    #[allow(dead_code)]
-    async fn _latest_admin_audit_hash_legacy_sql(
-        &self,
-        audit_rel: &str,
-    ) -> Result<String, tonic::Status> {
-        let Some(pool) = &self.pg_pool else {
-            return Ok(String::new());
-        };
-        sqlx::query_scalar::<_, Option<String>>(&format!(
-            "SELECT current_hash FROM {audit_rel}
-             WHERE current_hash <> ''
-             ORDER BY created_at DESC, audit_id DESC
-             LIMIT 1"
-        ))
-        .fetch_optional(pool)
-        .await
-        .map(|value| value.flatten().unwrap_or_default())
-        .map_err(|err| tonic::Status::internal(format!("latest_admin_audit_hash failed: {err}")))
     }
 
     // ── Phase 6.1 — Project registry ─────────────────────────────────────────

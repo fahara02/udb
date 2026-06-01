@@ -28,6 +28,7 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 use uuid::Uuid;
 
+use super::dialect::apply_projection_summary_bucket;
 use super::mysql::MysqlCanonicalStore;
 use super::system_store::{
     DeadLetterGroup, PendingTaskMetric, ProjectionClaimFilter, ProjectionOperation,
@@ -36,6 +37,11 @@ use super::system_store::{
 };
 
 const TABLE: &str = "udb_projection_tasks";
+
+fn projection_retry_delay_secs(retry_count: i32) -> i64 {
+    let attempt = retry_count.max(1).min(12) as u32;
+    (1_i64 << (attempt - 1)).min(3600)
+}
 
 impl MysqlCanonicalStore {
     /// Pool getter for the projection impl.
@@ -100,6 +106,10 @@ fn row_to_projection_task(row: sqlx::mysql::MySqlRow) -> SystemStoreResult<Proje
         updated_at: row
             .try_get::<DateTime<Utc>, _>("updated_at")
             .unwrap_or_else(|_| Utc::now()),
+        next_retry_at: row
+            .try_get::<Option<DateTime<Utc>>, _>("next_retry_at")
+            .ok()
+            .flatten(),
         completed_at: row
             .try_get::<Option<DateTime<Utc>>, _>("completed_at")
             .ok()
@@ -140,6 +150,7 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
                 status             VARCHAR(16) NOT NULL DEFAULT 'PENDING',
                 retry_count        INT NOT NULL DEFAULT 0,
                 last_error         TEXT NOT NULL,
+                next_retry_at      TIMESTAMP(6) NULL,
                 created_at         TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                 updated_at         TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                 completed_at       TIMESTAMP(6) NULL,
@@ -156,18 +167,42 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
             "CREATE INDEX idx_{TABLE}_status_created_at \
              ON {TABLE} (status, created_at)"
         );
+        let create_idx_project_status = format!(
+            "CREATE INDEX idx_{TABLE}_project_status_created_at \
+             ON {TABLE} (project_id, status, created_at)"
+        );
         let create_idx_backend = format!(
             "CREATE INDEX idx_{TABLE}_backend_status \
              ON {TABLE} (target_backend, target_instance, status)"
+        );
+        let add_next_retry =
+            format!("ALTER TABLE {TABLE} ADD COLUMN next_retry_at TIMESTAMP(6) NULL");
+        let create_idx_retry = format!(
+            "CREATE INDEX idx_{TABLE}_next_retry \
+             ON {TABLE} (status, next_retry_at)"
         );
         sqlx::query(&create_table)
             .execute(self.mysql_pool())
             .await
             .map_err(|e| SystemStoreError::query("mysql", create_table.clone(), e))?;
+        if let Err(e) = sqlx::query(&add_next_retry)
+            .execute(self.mysql_pool())
+            .await
+        {
+            let msg = e.to_string();
+            if !msg.contains("Duplicate column name") && !msg.contains("already exists") {
+                return Err(SystemStoreError::query("mysql", add_next_retry, e));
+            }
+        }
         // Index creation is best-effort: on a fresh DB it succeeds;
         // on a re-run it errors as "Duplicate key name" which we
         // treat as success.
-        for sql in [&create_idx_status, &create_idx_backend] {
+        for sql in [
+            &create_idx_status,
+            &create_idx_project_status,
+            &create_idx_backend,
+            &create_idx_retry,
+        ] {
             if let Err(e) = sqlx::query(sql).execute(self.mysql_pool()).await {
                 let msg = e.to_string();
                 if !msg.contains("Duplicate key name") && !msg.contains("already exists") {
@@ -279,12 +314,18 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
             "SELECT task_id FROM {TABLE}
              WHERE status IN ('PENDING', 'FAILED')
                AND retry_count < ?
+               AND (? = '' OR project_id = ?)
+               AND (next_retry_at IS NULL OR next_retry_at <= NOW(6))
                {target_clause}
              ORDER BY created_at
              LIMIT ?
              FOR UPDATE SKIP LOCKED"
         );
-        let mut q = sqlx::query_scalar::<_, String>(&select_sql).bind(filter.max_retries);
+        let project_id = filter.project_id.as_deref().unwrap_or("");
+        let mut q = sqlx::query_scalar::<_, String>(&select_sql)
+            .bind(filter.max_retries)
+            .bind(project_id)
+            .bind(project_id);
         match (&filter.target_backend, &filter.target_instance) {
             (Some(b), Some(i)) => {
                 q = q.bind(b.clone()).bind(i.clone());
@@ -334,7 +375,7 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
                     target_backend, target_instance, projection_kind, resource_name,
                     operation, source_row_key, target_options, source_payload,
                     source_checksum, status, retry_count, last_error,
-                    created_at, updated_at, completed_at
+                    created_at, updated_at, next_retry_at, completed_at
              FROM {TABLE}
              WHERE task_id IN ({})
              ORDER BY created_at",
@@ -363,7 +404,7 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
     async fn mark_projection_task_completed(&self, task_id: Uuid) -> SystemStoreResult<()> {
         let sql = format!(
             "UPDATE {TABLE}
-             SET status = 'COMPLETED', completed_at = NOW(6), updated_at = NOW(6)
+             SET status = 'COMPLETED', completed_at = NOW(6), next_retry_at = NULL, updated_at = NOW(6)
              WHERE task_id = ?"
         );
         sqlx::query(&sql)
@@ -392,13 +433,17 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
         }
         let sql = format!(
             "UPDATE {TABLE}
-             SET status = ?, retry_count = ?, last_error = ?, updated_at = NOW(6)
+             SET status = ?, retry_count = ?, last_error = ?,
+                 next_retry_at = CASE WHEN ? = 'FAILED' THEN DATE_ADD(NOW(6), INTERVAL ? SECOND) ELSE NULL END,
+                 updated_at = NOW(6)
              WHERE task_id = ?"
         );
         sqlx::query(&sql)
             .bind(new_status.as_str())
             .bind(new_retry_count)
             .bind(error)
+            .bind(new_status.as_str())
+            .bind(projection_retry_delay_secs(new_retry_count))
             .bind(task_id.to_string())
             .execute(self.mysql_pool())
             .await
@@ -416,7 +461,7 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
         };
         let sql = format!(
             "UPDATE {TABLE}
-             SET status = 'PENDING', retry_count = 0, last_error = '', updated_at = NOW(6)
+             SET status = 'PENDING', retry_count = 0, last_error = '', next_retry_at = NULL, updated_at = NOW(6)
              WHERE status = 'DEAD_LETTER' {where_clause}"
         );
         let mut q = sqlx::query(&sql);
@@ -566,21 +611,7 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
             .map_err(|e| SystemStoreError::query("mysql", sql.clone(), e))?;
         let mut s = ProjectionTaskSummary::default();
         for (status, n) in rows {
-            match status.as_str() {
-                "PENDING" => s.pending = n,
-                "IN_PROGRESS" => s.in_progress = n,
-                "COMPLETED" => s.completed = n,
-                "FAILED" => s.failed = n,
-                "DEAD_LETTER" => s.dead_letter = n,
-                _ => {
-                    return Err(SystemStoreError::SchemaMismatch {
-                        backend: "mysql",
-                        detail: format!(
-                            "unexpected status '{status}' in {TABLE} (CHECK constraint should prevent this)"
-                        ),
-                    });
-                }
-            }
+            apply_projection_summary_bucket(&mut s, "mysql", &status, n)?;
         }
         Ok(s)
     }

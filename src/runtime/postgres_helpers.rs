@@ -338,9 +338,54 @@ pub(crate) fn bind_one<'q>(
             .map_err(|err| tonic::Status::invalid_argument(format!("invalid UUID: {err}")))?;
         return Ok(query.bind(parsed));
     }
-    // Array value — used for $in / = ANY($N) filters.
-    // Bind every element as text; PostgreSQL will cast to the column type.
+    // Array value — used for `$in` / `col = ANY($N)` filters. (#121)
+    // Bind a *typed* array matching the column type: PostgreSQL does NOT
+    // implicitly cast a `text[]` element to the column type inside `= ANY`, so a
+    // `uuid`/`int`/`numeric` column compared against a text array fails at
+    // execution. Typed arrays keep the predicate index-usable (no `::type` cast
+    // on the column needed).
     if let JsonValue::Array(items) = value {
+        if sql_type == "UUID" {
+            let mut arr: Vec<Uuid> = Vec::with_capacity(items.len());
+            for item in items {
+                let parsed = item
+                    .as_str()
+                    .ok_or_else(|| {
+                        tonic::Status::invalid_argument("UUID $in value must be a string")
+                    })?
+                    .parse::<Uuid>()
+                    .map_err(|err| {
+                        tonic::Status::invalid_argument(format!("invalid UUID in $in: {err}"))
+                    })?;
+                arr.push(parsed);
+            }
+            return Ok(query.bind(arr));
+        }
+        if sql_type.contains("INT") || sql_type.contains("SERIAL") {
+            let mut arr: Vec<i64> = Vec::with_capacity(items.len());
+            for item in items {
+                arr.push(json_i64(item)?);
+            }
+            return Ok(query.bind(arr));
+        }
+        if sql_type.contains("REAL")
+            || sql_type.contains("DOUBLE")
+            || sql_type.contains("FLOAT")
+            || sql_type.contains("NUMERIC")
+            || sql_type.contains("DECIMAL")
+        {
+            let mut arr: Vec<f64> = Vec::with_capacity(items.len());
+            for item in items {
+                arr.push(json_f64(item)?);
+            }
+            return Ok(query.bind(arr));
+        }
+        if sql_type.contains("BOOL") {
+            let arr: Vec<bool> = items.iter().map(|i| i.as_bool().unwrap_or(false)).collect();
+            return Ok(query.bind(arr));
+        }
+        // text / varchar / enum / timestamp and friends: a text[] compares
+        // correctly for text-typed columns (`text = ANY(text[])`).
         let arr: Vec<String> = items.iter().map(json_scalar_to_string).collect();
         return Ok(query.bind(arr));
     }
@@ -418,8 +463,11 @@ fn collect_filter_values(value: &JsonValue, out: &mut Vec<JsonValue>) {
                 if matches!(normalized.as_str(), "$and" | "and" | "$or" | "or") {
                     collect_filter_values(nested, out);
                 } else if normalized.starts_with('$') {
-                    // Skip $is_null — it produces no SQL parameter (IS NULL has no bind value).
-                    if normalized != "$is_null" {
+                    // Skip the null predicates — `$is_null`/`$not_null` compile to
+                    // `IS NULL` / `IS NOT NULL`, which bind no SQL parameter. Pushing
+                    // a value for them would desync the placeholder↔value count and
+                    // make `bind_values` fail (or bind onto the wrong $N).
+                    if !matches!(normalized.as_str(), "$is_null" | "$not_null") {
                         out.push(nested.clone());
                     }
                 } else if let JsonValue::Object(_) = nested {

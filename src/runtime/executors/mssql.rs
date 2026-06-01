@@ -2,12 +2,10 @@
 //!
 //! Real TDS-protocol implementation via the canonical `tiberius`
 //! driver. Tiberius is async-native via the `tokio-util` `compat`
-//! shim. The executor holds a `Mutex<Option<Client>>` — single
-//! connection per executor instance, lazily initialised on first
-//! use, reconnected on transport errors. For production deployments
-//! requiring concurrent throughput, operators front the broker with
-//! a connection pool (deadpool-tiberius / bb8-tiberius) at the
-//! orchestration layer; this executor stays simple + correct.
+//! shim. The executor holds a small round-robin pool of lazily
+//! initialised clients. Each client still serialises its own I/O,
+//! which is what tiberius requires, but unrelated requests no longer
+//! queue behind one global mutex.
 //!
 //! ## Dispatch contract
 //!
@@ -22,17 +20,16 @@
 //!
 //! ## What this does NOT do (yet)
 //!
-//! - **Pooling** — single connection per executor; auto-reconnects
-//!   on `tiberius::error::Error`. For multi-tenant production
-//!   deployments, wrap with `deadpool-tiberius` at the broker
-//!   orchestration layer.
-//! - **AAD / Managed Identity auth** — tiberius supports it via the
+//! - **AAD / Managed Identity auth** - tiberius supports it via the
 //!   `AuthMethod::AADToken` variant; not wired here (operators
 //!   typically set the token externally and pass via ADO string).
 //! - **MARS** — Multiple Active Result Sets isn't enabled; each
 //!   query consumes the connection until completion.
 
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicUsize, Ordering},
+};
 
 use serde_json::Value as JsonValue;
 use tiberius::{AuthMethod, Client, Config};
@@ -44,21 +41,30 @@ use crate::broker::RequestContext;
 use crate::runtime::backend_context::{
     AppliedContext, BackendContextEnforcer, ContextEffect, SqlDialect, render_sql_session_settings,
 };
+use crate::runtime::core::{validate_mutation_sql, validate_read_sql};
+use crate::runtime::executor_utils::{
+    base64_cell, build_probe, parse_sql_dispatch, with_executor_timeout,
+};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
 };
 
 type TiberiusClient = Client<Compat<TcpStream>>;
+type TiberiusSlot = Arc<Mutex<Option<TiberiusClient>>>;
+
+const DEFAULT_MSSQL_POOL_SIZE: usize = 4;
+const MAX_MSSQL_POOL_SIZE: usize = 64;
 
 /// Holds the ADO connection string and a lazily-initialised tiberius
-/// client. The client is wrapped in an async mutex so concurrent
-/// `query`/`mutate` calls serialise on the single connection (which
-/// is what tiberius requires anyway — no MARS).
+/// client pool. Each slot is wrapped in an async mutex; the pool
+/// spreads requests across slots so one long-running query does not
+/// block every other SQL Server operation.
 #[derive(Clone)]
 pub struct MssqlClient {
     ado_string: Arc<String>,
-    inner: Arc<Mutex<Option<TiberiusClient>>>,
+    slots: Arc<Vec<TiberiusSlot>>,
+    next_slot: Arc<AtomicUsize>,
 }
 
 impl std::fmt::Debug for MssqlClient {
@@ -73,10 +79,24 @@ impl MssqlClient {
     /// Construct without opening a connection. The first call to
     /// `with_client` triggers the initial TCP + TDS handshake.
     pub fn new(ado_string: impl Into<String>) -> Self {
+        let pool_size = std::env::var("UDB_MSSQL_POOL_SIZE")
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(DEFAULT_MSSQL_POOL_SIZE)
+            .clamp(1, MAX_MSSQL_POOL_SIZE);
+        let slots = (0..pool_size)
+            .map(|_| Arc::new(Mutex::new(None)))
+            .collect::<Vec<_>>();
         Self {
             ado_string: Arc::new(ado_string.into()),
-            inner: Arc::new(Mutex::new(None)),
+            slots: Arc::new(slots),
+            next_slot: Arc::new(AtomicUsize::new(0)),
         }
+    }
+
+    fn next_slot(&self) -> TiberiusSlot {
+        let idx = self.next_slot.fetch_add(1, Ordering::Relaxed) % self.slots.len();
+        Arc::clone(&self.slots[idx])
     }
 
     /// Open a fresh tiberius client from the configured ADO string.
@@ -105,7 +125,8 @@ impl MssqlClient {
     where
         F: AsyncFnOnce(&mut TiberiusClient) -> Result<R, tiberius::error::Error>,
     {
-        let mut guard = self.inner.lock().await;
+        let slot = self.next_slot();
+        let mut guard = slot.lock().await;
         // Ensure a live client.
         if guard.is_none() {
             *guard = Some(self.open().await?);
@@ -114,11 +135,9 @@ impl MssqlClient {
         match f(client).await {
             Ok(v) => Ok(v),
             Err(err) => {
-                // Drop the connection on any error so the next call
-                // reconnects. This is conservative but correct;
-                // tiberius doesn't surface a typed "is this a
-                // transient connection error" predicate.
-                *guard = None;
+                if is_transport_error(&err) {
+                    *guard = None;
+                }
                 Err(format!("tiberius: {err}"))
             }
         }
@@ -130,6 +149,20 @@ impl MssqlClient {
         self.with_client(async |client| client.simple_query("SELECT 1").await.map(|_| ()))
             .await
     }
+}
+
+fn is_transport_error(err: &tiberius::error::Error) -> bool {
+    let text = err.to_string().to_ascii_lowercase();
+    text.contains("io error")
+        || text.contains("connection")
+        || text.contains("connection reset")
+        || text.contains("connection refused")
+        || text.contains("connection aborted")
+        || text.contains("broken pipe")
+        || text.contains("timed out")
+        || text.contains("timeout")
+        || text.contains("transport")
+        || text.contains("tls")
 }
 
 /// Generic-dispatch executor wrapping an `MssqlClient`.
@@ -201,26 +234,24 @@ impl BackendContextEnforcer for MssqlExecutor {
     }
 
     fn enforce(&self, ctx: &AppliedContext) -> ContextEffect {
-        if ctx.is_empty() {
-            return ContextEffect::Advisory {
-                recorded_in: "no_context_to_apply".into(),
-            };
-        }
-        // A3 (2026-05-30): when the executor was constructed via
-        // `with_context`, every dispatched call now prepends
-        // `EXEC sp_set_session_context` so RLS policies that read
-        // `SESSION_CONTEXT(N'app_current_tenant_id')` are
-        // automatically scoped to the request. The actual SET
-        // happens in `apply_session_context`; we report `Enforced`
-        // when the executor is wired with context (the runtime
-        // assembles us via `with_context` on the request path).
+        // A3 (2026-05-30): when the executor was constructed via `with_context`,
+        // every dispatched call prepends `EXEC sp_set_session_context` so RLS
+        // policies reading `SESSION_CONTEXT(N'app_current_tenant_id')` are
+        // scoped to the request (the actual SET happens in
+        // `apply_session_context`). On that request-wired path the posture is
+        // exactly the shared `is_empty → Advisory else Enforced`, so route it
+        // through `enforce_with_mechanism` (#22). Off that path (probes /
+        // `new`), stay honest about the unbound mode.
         if self.context.is_some() {
-            ContextEffect::Enforced {
-                mechanism: "EXEC sp_set_session_context (T-SQL SESSION_CONTEXT)".into(),
+            crate::runtime::backend_context::enforce_with_mechanism(
+                ctx,
+                "EXEC sp_set_session_context (T-SQL SESSION_CONTEXT)",
+            )
+        } else if ctx.is_empty() {
+            ContextEffect::Advisory {
+                recorded_in: "no_context_to_apply".into(),
             }
         } else {
-            // Reachable from probes / non-request paths; honest
-            // about the mode.
             ContextEffect::Advisory {
                 recorded_in: "T-SQL SESSION_CONTEXT (no request context bound)".into(),
             }
@@ -232,22 +263,6 @@ impl BackendHealth for MssqlExecutor {
     async fn ping(&self) -> Result<(), String> {
         self.client.ping().await
     }
-}
-
-fn parse_dispatch(request_json: &str) -> Result<(String, Vec<JsonValue>), tonic::Status> {
-    let v: JsonValue = serde_json::from_str(request_json)
-        .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
-    let sql = v
-        .get("sql")
-        .and_then(|x| x.as_str())
-        .ok_or_else(|| tonic::Status::invalid_argument("missing `sql` in dispatch request"))?
-        .to_string();
-    let params = v
-        .get("params")
-        .and_then(|x| x.as_array())
-        .cloned()
-        .unwrap_or_default();
-    Ok((sql, params))
 }
 
 /// Convert a `tiberius::Row` into a `serde_json::Value` object. Each
@@ -272,14 +287,7 @@ fn row_to_json(row: &tiberius::Row) -> JsonValue {
         } else if let Ok(v) = row.try_get::<bool, _>(idx) {
             v.map(JsonValue::from).unwrap_or(JsonValue::Null)
         } else if let Ok(v) = row.try_get::<&[u8], _>(idx) {
-            v.map(|bytes| {
-                use base64::Engine as _;
-                JsonValue::String(format!(
-                    "base64:{}",
-                    base64::engine::general_purpose::STANDARD.encode(bytes)
-                ))
-            })
-            .unwrap_or(JsonValue::Null)
+            v.map(base64_cell).unwrap_or(JsonValue::Null)
         } else {
             JsonValue::Null
         };
@@ -337,48 +345,57 @@ fn bind_refs<'a>(params: &'a [SqlParam]) -> Vec<&'a dyn tiberius::ToSql> {
 
 impl QueryExecutor for MssqlExecutor {
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let (sql, params_json) = parse_dispatch(request_json)?;
-        let params: Vec<SqlParam> = params_json.iter().map(SqlParam::from_json).collect();
-        // A3: pre-render the session-context batch (if any) so the
-        // hot path inside `with_client` only does I/O.
-        let ctx_batch = self.session_context_batch();
-        let rows = self
-            .client
-            .with_client(async |client| {
-                if let Some(ref batch) = ctx_batch {
-                    Self::apply_session_context(client, batch).await?;
-                }
-                let refs = bind_refs(&params);
-                let stream = client.query(&sql, &refs).await?;
-                let rows = stream.into_first_result().await?;
-                Ok::<_, tiberius::error::Error>(rows)
+        with_executor_timeout("SQL Server", "query", async {
+            let (sql, params_json) = parse_sql_dispatch(request_json)?;
+            validate_read_sql(&sql)?;
+            let params: Vec<SqlParam> = params_json.iter().map(SqlParam::from_json).collect();
+            // A3: pre-render the session-context batch (if any) so the
+            // hot path inside `with_client` only does I/O.
+            let ctx_batch = self.session_context_batch();
+            let rows = self
+                .client
+                .with_client(async |client| {
+                    if let Some(ref batch) = ctx_batch {
+                        Self::apply_session_context(client, batch).await?;
+                    }
+                    let refs = bind_refs(&params);
+                    let stream = client.query(&sql, &refs).await?;
+                    let rows = stream.into_first_result().await?;
+                    Ok::<_, tiberius::error::Error>(rows)
+                })
+                .await
+                .map_err(|e| tonic::Status::internal(format!("mssql query failed: {e}")))?;
+            let json: Vec<JsonValue> = rows.iter().map(row_to_json).collect();
+            serde_json::to_string(&JsonValue::Array(json)).map_err(|e| {
+                tonic::Status::internal(format!("mssql response serialise failed: {e}"))
             })
-            .await
-            .map_err(|e| tonic::Status::internal(format!("mssql query failed: {e}")))?;
-        let json: Vec<JsonValue> = rows.iter().map(row_to_json).collect();
-        serde_json::to_string(&JsonValue::Array(json))
-            .map_err(|e| tonic::Status::internal(format!("mssql response serialise failed: {e}")))
+        })
+        .await
     }
 }
 
 impl MutationExecutor for MssqlExecutor {
     async fn mutate(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let (sql, params_json) = parse_dispatch(request_json)?;
-        let params: Vec<SqlParam> = params_json.iter().map(SqlParam::from_json).collect();
-        let ctx_batch = self.session_context_batch();
-        let result = self
-            .client
-            .with_client(async |client| {
-                if let Some(ref batch) = ctx_batch {
-                    Self::apply_session_context(client, batch).await?;
-                }
-                let refs = bind_refs(&params);
-                let result = client.execute(&sql, &refs).await?;
-                Ok::<_, tiberius::error::Error>(result.rows_affected().iter().sum::<u64>())
-            })
-            .await
-            .map_err(|e| tonic::Status::internal(format!("mssql mutate failed: {e}")))?;
-        Ok(serde_json::json!({ "rows_affected": result }).to_string())
+        with_executor_timeout("SQL Server", "mutate", async {
+            let (sql, params_json) = parse_sql_dispatch(request_json)?;
+            validate_mutation_sql(&sql)?;
+            let params: Vec<SqlParam> = params_json.iter().map(SqlParam::from_json).collect();
+            let ctx_batch = self.session_context_batch();
+            let result = self
+                .client
+                .with_client(async |client| {
+                    if let Some(ref batch) = ctx_batch {
+                        Self::apply_session_context(client, batch).await?;
+                    }
+                    let refs = bind_refs(&params);
+                    let result = client.execute(&sql, &refs).await?;
+                    Ok::<_, tiberius::error::Error>(result.rows_affected().iter().sum::<u64>())
+                })
+                .await
+                .map_err(|e| tonic::Status::internal(format!("mssql mutate failed: {e}")))?;
+            Ok(serde_json::json!({ "rows_affected": result }).to_string())
+        })
+        .await
     }
 }
 
@@ -452,7 +469,7 @@ impl BackendExecutor for MssqlExecutor {
         // "transaction" support; multi-statement TX needs the saga
         // path. The dispatch JSON carries the SQL the caller wants
         // wrapped — execute inside BEGIN/COMMIT.
-        let (sql, params_json) = parse_dispatch(request_json)?;
+        let (sql, params_json) = parse_sql_dispatch(request_json)?;
         let params: Vec<SqlParam> = params_json.iter().map(SqlParam::from_json).collect();
         let ctx_batch = self.session_context_batch();
         let result = self
@@ -484,20 +501,7 @@ impl BackendExecutor for MssqlExecutor {
     }
 
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
-        match self.ping().await {
-            Ok(()) => Ok(BackendProbe {
-                backend: "mssql".to_string(),
-                instance: None,
-                ok: true,
-                error: None,
-            }),
-            Err(err) => Ok(BackendProbe {
-                backend: "mssql".to_string(),
-                instance: None,
-                ok: false,
-                error: Some(err),
-            }),
-        }
+        Ok(build_probe("mssql", self.ping().await))
     }
 }
 
@@ -509,7 +513,7 @@ mod tests {
     #[test]
     fn parse_dispatch_extracts_sql_and_params() {
         let req = r#"{"sql":"SELECT * FROM [t] WHERE [id] = @P1","params":["abc"]}"#;
-        let (sql, params) = parse_dispatch(req).unwrap();
+        let (sql, params) = parse_sql_dispatch(req).unwrap();
         assert_eq!(sql, "SELECT * FROM [t] WHERE [id] = @P1");
         assert_eq!(params, vec![json!("abc")]);
     }
@@ -517,14 +521,14 @@ mod tests {
     #[test]
     fn parse_dispatch_defaults_params_to_empty() {
         let req = r#"{"sql":"SELECT 1"}"#;
-        let (_, params) = parse_dispatch(req).unwrap();
+        let (_, params) = parse_sql_dispatch(req).unwrap();
         assert!(params.is_empty());
     }
 
     #[test]
     fn parse_dispatch_rejects_missing_sql() {
         let req = r#"{"params":[]}"#;
-        let err = parse_dispatch(req).unwrap_err();
+        let err = parse_sql_dispatch(req).unwrap_err();
         assert_eq!(err.code(), tonic::Code::InvalidArgument);
     }
 
