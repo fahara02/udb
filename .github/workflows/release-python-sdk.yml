@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Expected sdk/python pyproject version, for example 0.1.4"
+        description: "Expected UDB release version, for example 0.2.0"
         required: true
   push:
     tags:
-      - "python-v*"
+      - "v*"
 
 permissions:
   contents: read
@@ -50,7 +50,7 @@ jobs:
         run: |
           version="$(python -c 'import tomllib; print(tomllib.load(open("sdk/python/pyproject.toml", "rb"))["project"]["version"])')"
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            tag="${GITHUB_REF_NAME#python-v}"
+            tag="${GITHUB_REF_NAME#v}"
             if [[ "${tag}" != "${version}" ]]; then
               echo "Tag ${GITHUB_REF_NAME} does not match sdk/python version ${version}" >&2
               exit 1

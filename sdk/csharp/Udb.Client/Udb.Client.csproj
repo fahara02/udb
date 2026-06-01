@@ -3,10 +3,9 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Package version — single source of truth is /versions.json
-         ("sdk.csharp"); CI's version-consistency check enforces the match,
-         and the NuGet release tag (csharp-v<x.y.z>) must equal this. -->
-    <Version>0.1.0</Version>
+    <!-- Package version — single source of truth is /versions.json.
+         Every SDK follows the main UDB release version; CI enforces the match. -->
+    <Version>0.2.0</Version>
     <PackageId>Udb.Client</PackageId>
     <Authors>fahara02</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

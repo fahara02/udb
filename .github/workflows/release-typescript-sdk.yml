@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Expected sdk/typescript package.json version, for example 0.1.0"
+        description: "Expected UDB release version, for example 0.2.0"
         required: true
   push:
     tags:
-      - "typescript-v*"
+      - "v*"
 
 permissions:
   contents: read
@@ -40,7 +40,7 @@ jobs:
         run: |
           version="$(node -p "require('./sdk/typescript/package.json').version")"
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            tag="${GITHUB_REF_NAME#typescript-v}"
+            tag="${GITHUB_REF_NAME#v}"
             if [[ "${tag}" != "${version}" ]]; then
               echo "Tag ${GITHUB_REF_NAME} does not match sdk/typescript version ${version}" >&2
               exit 1

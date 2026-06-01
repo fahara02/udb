@@ -1,5 +1,5 @@
 {
-  "$comment": "Single source of truth for every UDB artifact version. Edit here, then run `node scripts/check-versions.mjs --fix` to propagate into the manifests, or `node scripts/check-versions.mjs` (no args) to verify they match. CI gates on this; release workflows assert tag == manifest == this file. See VERSIONING.md.",
+  "$comment": "Single source of truth for the UDB release version. The crate and every SDK follow this same version. Edit here, then run `node scripts/check-versions.mjs --fix` to propagate into the manifests, or `node scripts/check-versions.mjs` (no args) to verify they match. CI gates on this; release workflows assert tag == manifest == this file. See VERSIONING.md.",
   "protocol": "1.0.0",
   "components": {
     "udb": {
@@ -9,37 +9,37 @@
       "publishes": ["crates.io", "release binaries", "ghcr docker image"]
     },
     "sdk-go": {
-      "version": "0.1.0",
+      "version": "0.2.0",
       "manifest": "(git tag only — Go module)",
       "tag": "sdk/go/v{version}",
       "publishes": ["Go module proxy"]
     },
     "sdk-python": {
-      "version": "0.1.4",
+      "version": "0.2.0",
       "manifest": "sdk/python/pyproject.toml",
-      "tag": "python-v{version}",
+      "tag": "v{version}",
       "publishes": ["PyPI (udb-client)"]
     },
     "sdk-typescript": {
-      "version": "0.1.0",
+      "version": "0.2.0",
       "manifest": "sdk/typescript/package.json",
-      "tag": "typescript-v{version}",
+      "tag": "v{version}",
       "publishes": ["npm (@udb_plus/sdk)"]
     },
     "sdk-csharp": {
-      "version": "0.1.0",
+      "version": "0.2.0",
       "manifest": "sdk/csharp/Udb.Client/Udb.Client.csproj",
-      "tag": "csharp-v{version}",
+      "tag": "v{version}",
       "publishes": ["NuGet (Udb.Client)"]
     },
     "sdk-java": {
-      "version": "0.1.0",
+      "version": "0.2.0",
       "manifest": "sdk/java/pom.xml",
-      "tag": "java-v{version}",
+      "tag": "v{version}",
       "publishes": ["Maven Central (dev.udb:udb-java-client)"]
     },
     "sdk-php": {
-      "version": "0.1.0",
+      "version": "0.2.0",
       "manifest": "(git tag only — Composer/VCS)",
       "tag": "v{version}",
       "publishes": ["Packagist (fahara02/udb-laravel)"]

@@ -23,7 +23,7 @@ twine upload --repository testpypi dist/*
 python -m pip install \
   --index-url https://test.pypi.org/simple/ \
   --extra-index-url https://pypi.org/simple/ \
-  udb-client==0.1.4
+  udb-client==0.2.0
 ```
 
 ## 3. Publish to PyPI
@@ -32,11 +32,11 @@ This repo has a GitHub `production` environment secret named `PYPI_API_TOKEN`.
 Publish from GitHub Actions with either:
 
 ```bash
-git tag python-v0.1.4
-git push origin python-v0.1.4
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
-or run the `Release Python SDK` workflow manually and enter `0.1.4`.
+or run the `Release Python SDK` workflow manually and enter `0.2.0`.
 
 Manual fallback:
 
@@ -54,7 +54,7 @@ name: Publish Python SDK
 on:
   push:
     tags:
-      - "python-v*"
+      - "v*"
 
 jobs:
   publish:

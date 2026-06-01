@@ -6,10 +6,10 @@
 //   node scripts/check-versions.mjs --fix    # rewrite manifests from versions.json
 //   node scripts/check-versions.mjs --json    # machine-readable report
 //
-// `versions.json` is the single source of truth. Per-package SemVer is
-// independent (a package may be at a different x.y.z than the crate); the wire
-// PROTOCOL version is the one number that MUST be identical everywhere. CI gates
-// on the check; release workflows additionally assert tag == manifest == this.
+// `versions.json` is the single source of truth. UDB releases one version for
+// the crate and every SDK; the wire PROTOCOL version is a separate compatibility
+// number that MUST be identical everywhere. CI gates on the check; release
+// workflows additionally assert tag == manifest == this.
 // See VERSIONING.md.
 
 import fs from "node:fs";
@@ -70,10 +70,10 @@ processTriple("sdk-typescript", "sdk/typescript/package.json", C["sdk-typescript
 processTriple("sdk-csharp", "sdk/csharp/Udb.Client/Udb.Client.csproj", C["sdk-csharp"].version, /(<Version>)([^<]*)(<\/Version>)/);
 processTriple("sdk-java", "sdk/java/pom.xml", C["sdk-java"].version, /(<version>)([^<]*)(<\/version>)/, { snapshotOk: true });
 
-// go / php are git-tag-driven (no manifest version field). Their tag is asserted
-// at release time; here we only note the intended version.
-record("sdk-go", "(git tag sdk/go/v…)", C["sdk-go"].version, C["sdk-go"].version, true, "tag-driven");
-record("sdk-php", "(git tag v… → Packagist)", C["sdk-php"].version, C["sdk-php"].version, true, "tag-driven");
+// go / php are git-tag-driven (no manifest version field). Their release version
+// still follows the main UDB version; here we only note the intended version.
+record("sdk-go", "(module tag sdk/go/v…)", C["sdk-go"].version, C["sdk-go"].version, true, "tag-driven");
+record("sdk-php", "(release tag v… → Packagist)", C["sdk-php"].version, C["sdk-php"].version, true, "tag-driven");
 
 // ── Protocol version (must be identical everywhere) ──────────────────────────
 // Plain-text marker file.
