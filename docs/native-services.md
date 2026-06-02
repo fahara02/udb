@@ -5,23 +5,21 @@ plane** defined under `proto/udb/core/**`. These services let UDB act as the
 authentication + authorization authority in front of the databases it brokers,
 rather than delegating identity and access decisions to each calling service.
 
-```mermaid
-flowchart TB
-    APP["app / SDK"] -->|data RPCs| PUB["public listener<br/>DataBroker (73 RPCs)"]
-    PEP["trusted PEP / gateway"] -->|auth + admin RPCs| INT["internal listener (UDB_AUTH_GRPC_ADDR)<br/>Authn · Authz · ApiKey · Tenant · Notification · Analytics"]
-    INT -.->|Authorize / GetNativeAccess| PUB
-    PUB --> BK[("18 backends")]
-    INT --> PG[("Postgres (native tables)")]
-```
+<p align="center">
+  <img src="assets/control-plane.svg" alt="UDB topology: apps reach the public DataBroker listener (75 RPCs); a trusted PEP reaches the isolated internal control-plane listener (Authn, Authz, ApiKey, Tenant, Notification, Analytics, 77 RPCs); the internal plane serves the public plane via Authorize/GetNativeAccess; both reach the 18 backends and emit events to Kafka." width="940">
+</p>
 
 ## Network isolation
 
 The control-plane services are **mounted on a separate gRPC listener** from the
 public `DataBroker`, controlled by `UDB_AUTH_GRPC_ADDR` (default: loopback on the
-DataBroker port + 10). They are a policy decision point that *accepts the subject
-principal as input* (plus a verified-external-claims bridge), so exposing them on
-the public port would let any client assert arbitrary identity, roles, or scopes.
-Put them behind a trusted PEP / gateway, or bind them to an internal interface for
+DataBroker port + 10). Every service on that listener is wrapped by a tonic
+interceptor that requires a verified bearer token with `udb:admin`,
+`udb:auth:admin`, `udb:*`, or `*`; when `x-tenant-id` is present, it must match
+the token tenant. The services are still a policy decision point that *accepts
+the subject principal as input*, so exposing them on the public port would let a
+misconfigured upstream boundary assert arbitrary identity, roles, or scopes. Put
+them behind a trusted PEP / gateway, or bind them to an internal interface for
 cross-host PEPs. Wiring: `src/runtime/service/mod.rs::serve()`.
 
 All control-plane CRUD is **proto-driven** — table and column shape is resolved
@@ -62,8 +60,9 @@ Identity features:
 - **MFA** — RFC 6238 TOTP (authenticator-app compatible), secret encrypted at rest.
 - **Sessions** — hashed ids, idle + absolute TTL, immediate revocation, CSRF
   (signed double-submit bound to the session).
-- **Hybrid external identity** — the external provider (OIDC / Better Auth /
-  Laravel auth) proves *who*; UDB authz still decides *what*.
+- **Hybrid external identity** — external auth now requires a signed JWT verified
+  by UDB before claims are mapped; raw JSON claims are rejected. UDB authz still
+  decides *what* the mapped principal may do.
 
 ### AuthzService
 

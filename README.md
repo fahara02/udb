@@ -4,12 +4,12 @@
 
 <p align="center">
 <a href="Cargo.toml"><img alt="Rust 2024" src="https://img.shields.io/badge/Rust-2024-b7410e?logo=rust&logoColor=white"></a>
-<a href="proto/README.md"><img alt="gRPC + Protobuf" src="https://img.shields.io/badge/API-gRPC%20%2B%20Protobuf-244c5a?logo=grpc&logoColor=white"></a>
-<a href="sdk/UDB_PROTOCOL_VERSION"><img alt="Protocol 1.0.0" src="https://img.shields.io/badge/protocol-1.0.0-2f855a"></a>
-<a href="#-backend-matrix"><img alt="Backends" src="https://img.shields.io/badge/backends-18-4c51bf"></a>
-<a href="#-supported-features"><img alt="DataBroker RPCs" src="https://img.shields.io/badge/DataBroker-73%20RPCs-0e7490"></a>
-<a href="#native-control-plane"><img alt="Control plane" src="https://img.shields.io/badge/control%20plane-6%20services%20%C2%B7%2077%20RPCs-7c3aed"></a>
-<a href="#-quickstart-per-language"><img alt="SDKs" src="https://img.shields.io/badge/SDKs-Go%20%C2%B7%20Python%20%C2%B7%20TS%20%C2%B7%20Java%20%C2%B7%20C%23%20%C2%B7%20PHP-1f6feb"></a>
+<a href="proto/README.md"><img alt="gRPC + Protobuf" src="https://img.shields.io/badge/API-gRPC%20%2B%20Protobuf-2563eb?logo=grpc&logoColor=white"></a>
+<a href="sdk/UDB_PROTOCOL_VERSION"><img alt="Protocol 1.0.0" src="https://img.shields.io/badge/protocol-1.0.0-059669"></a>
+<a href="#-backend-matrix"><img alt="18 backend kinds" src="https://img.shields.io/badge/backends-18-7c3aed"></a>
+<a href="#-supported-features"><img alt="75 DataBroker RPCs" src="https://img.shields.io/badge/DataBroker-75%20RPCs-0f766e"></a>
+<a href="#native-control-plane"><img alt="77 native control-plane RPCs" src="https://img.shields.io/badge/control%20plane-77%20RPCs-c2410c"></a>
+<a href="#-quickstart-per-language"><img alt="SDKs for six languages" src="https://img.shields.io/badge/SDKs-Go%20%C2%B7%20Python%20%C2%B7%20TS%20%C2%B7%20Java%20%C2%B7%20C%23%20%C2%B7%20PHP-334155"></a>
 <a href="LICENSE"><img alt="License MIT" src="https://img.shields.io/badge/license-MIT-555"></a>
 </p>
 
@@ -18,21 +18,9 @@ UDB is a Rust implementation of a proto-driven data broker. It reads project-own
 migration/bootstrap artifacts, and serves those schemas through a neutral gRPC
 `DataBroker` API — fronted by a native auth/authz control plane.
 
-```mermaid
-flowchart LR
-    P["📦 project .proto<br/>(+ udb annotations)"] --> PA["🧩 parser →<br/>ProtoSchema AST"]
-    PA --> CM["📚 CatalogManifest<br/>+ checksum"]
-    CM --> GEN["🛠️ lint · drift ·<br/>migrations · SQL"]
-    CM --> RT["⚙️ DataBroker runtime"]
-    subgraph RT_PIPE["request pipeline"]
-        direction LR
-        AUTH["🔐 authn / authz"] --> ADM["🚦 channel admission"] --> IR["🔁 neutral IR"] --> EX["🔌 backend executor"]
-    end
-    RT --> RT_PIPE
-    EX --> DB[("🗄️ 18 backends<br/>SQL · vector · object ·<br/>cache · doc · graph · column")]
-    classDef accent fill:#1f6feb,stroke:#0b3d91,color:#fff;
-    class RT,RT_PIPE accent;
-```
+<p align="center">
+  <img src="docs/assets/architecture-pipeline.svg" alt="UDB architecture: project protos are parsed into a catalog manifest that drives build-time generation and the per-request DataBroker runtime pipeline (authn/authz → admission → neutral IR → executor → 18 backends)." width="900">
+</p>
 
 This repo is not only a parser and not only a gRPC server. It is a crate,
 binary, runtime, protocol module, SDK workspace, backend plugin inventory,
@@ -61,7 +49,7 @@ UDB centralizes those concerns:
 
 ## ⚡ Supported Features
 
-Data plane (`DataBroker`, 73 RPCs):
+Data plane (`DataBroker`, 75 RPCs):
 
 - **Relational** CRUD + batch (`Select`/`BatchSelect`/`Upsert`/`BatchUpsert`/`Delete`).
 - **Vector** search / hybrid search / upsert (Qdrant, Weaviate, Pinecone, Elasticsearch knn).
@@ -82,42 +70,77 @@ Control plane (`proto/udb/core/**`, isolated listener — see [Native Control Pl
 
 All native control-plane CRUD is **proto-driven** (table + column shape resolved from the embedded `proto/udb/core/**` manifest via `NativeModel`) and **Postgres-backed, fail-closed** — no in-memory stores.
 
-## Honest Status
+## Project Status
 
-The maintained docs now live under [`docs/README.md`](docs/README.md). The old
-older notes and duplicate runbooks were consolidated so current status is easier
-to verify. The source of truth for backend inventory is:
+UDB is built **capability-honest by design**: every backend advertises exactly
+what it can do through a typed capability matrix (`BackendCapability`), and the
+runtime refuses operations a backend does not actually support rather than
+failing silently. That honesty is a feature — you always know which guarantees
+you are getting — and it is the baseline we are levelling **up**, not down.
 
-- [`src/backend/mod.rs`](src/backend/mod.rs): `BackendKind`, tier, role,
-  capability matrix, operation support.
-- [`src/backend/plugins/mod.rs`](src/backend/plugins/mod.rs): compiled plugin
-  inventory.
-- [`src/runtime/executors/`](src/runtime/executors): runtime executor modules.
-- [`src/ir/compile/`](src/ir/compile): backend-specific IR compilers.
-- [`Cargo.toml`](Cargo.toml): default and optional feature graph.
+**Maturity at a glance**
 
-The current code recognizes 18 backend kinds and the default feature set enables
-their plugin modules. A slim build can compile only the core pieces, for example
-`--no-default-features --features postgres`.
+| Area | Status | Notes |
+|---|---|---|
+| Proto parser, catalog, drift, migrations | 🟢 Stable | Hand-written parser, deterministic checksums, audited apply ledger |
+| DataBroker data plane (75 RPCs) | 🟢 Stable | Relational, vector, object, cache, document, graph, column |
+| Native control plane (Authn/Authz/ApiKey/Tenant/Notification/Analytics) | 🟢 Stable | Proto-driven, Postgres-backed, fail-closed, protected by bearer auth on its own listener |
+| Postgres / MySQL / SQLite canonical stores | 🟢 Stable | Full system-store traits (outbox, saga, audit, leases) |
+| CDC to Kafka (transactional outbox, DLQ, topic policy) | 🟢 Stable | At-least-once and exactly-once (Kafka transactions) modes |
+| 2PC / XA, sagas with recovery | 🟡 Beta | Postgres 2PC and MySQL XA behind `UDB_2PC_ENABLED` |
+| Vector / object / document / graph / column backends | 🟡 Beta | Reached as projection targets via typed and generic dispatch |
+| SDKs (Go, Python, TypeScript, Java, C#, PHP) | 🟡 Beta | Go/Python/TS/PHP publish today; C#/Java version-checked, publish wiring in progress |
 
-Also note that the Docker files still show some historical path assumptions in
-places. The Rust crate and CLI are the most reliable entry points while the repo
-split/packaging work settles.
+**Backend support tiers.** The runtime distinguishes a backend's *role* from its
+*reachability*:
+
+- **Canonical** — can host UDB's own system tables and act as the write-durability
+  anchor. Today: **Postgres, MySQL, SQLite** (they implement the full
+  `SystemStores` trait set).
+- **Projection** — a first-class read/write target reached through typed RPCs
+  and/or generic dispatch, but not (yet) a canonical store. Today: the other 15
+  backends. This is a truthful *current* state, not a permanent ceiling.
+
+**Roadmap — toward full backend support**
+
+- 🎯 Promote MSSQL, MongoDB, ClickHouse, and Neo4j from projection to **canonical**
+  by implementing their `SystemStores` (outbox + advisory leases + saga/audit/
+  migration stores), so any of them can anchor a deployment.
+- 🎯 First-class typed routing for the remaining vector backends
+  (Weaviate / Pinecone / Elasticsearch) and object backends (Azure Blob / GCS),
+  not just Qdrant and S3/MinIO.
+- 🎯 Finish C# (NuGet) and Java (Maven Central) publish pipelines on the shared
+  release tag.
+- 🎯 Extend the direct typed object APIs beyond S3/MinIO; S3/MinIO `GetObject`
+  already streams from the storage byte stream without full-body buffering.
+
+**Source of truth** (the matrix is generated from code, never hand-maintained):
+
+- [`src/backend/mod.rs`](src/backend/mod.rs) — `BackendKind`, tier, role, capability matrix, operation support
+- [`src/backend/plugins/mod.rs`](src/backend/plugins/mod.rs) — compiled plugin inventory
+- [`src/runtime/executors/`](src/runtime/executors) — runtime executor modules
+- [`src/ir/compile/`](src/ir/compile) — backend-specific IR compilers
+- [`Cargo.toml`](Cargo.toml) — default and optional feature graph
+
+The code recognizes **18 backend kinds**, all enabled in the default feature set;
+a slim build compiles only what you need, e.g. `--no-default-features --features postgres`.
+Inspect the live capability matrix any time with
+`cargo run --bin udb-proto-parser -- compat-matrix` (JSON straight from `src/backend/mod.rs`).
 
 ## Codebase Map
 
-Approximate source shape at the time this README was written:
+Current source shape (Rust files per area):
 
 | Area | Files | Purpose |
 |---|---:|---|
-| [`src/runtime`](src/runtime) | 102 | Broker orchestration, service handlers, backend clients, CDC, catalog, system stores, security, metrics |
-| [`src/ir`](src/ir) | 28 | Neutral logical operations and backend compilers |
-| [`src/generation`](src/generation) | 17 | Manifest, SQL, DSN, drift, lint, and backend artifact generation |
+| [`src/runtime`](src/runtime) | 143 | Broker orchestration, service handlers, backend clients, CDC, catalog, system stores, security, metrics |
+| [`src/ir`](src/ir) | 29 | Neutral logical operations and backend compilers |
+| [`src/generation`](src/generation) | 18 | Manifest, SQL, DSN, drift, lint, and backend artifact generation |
 | [`src/migration`](src/migration) | 7 | Diffing, plans, audited apply, phase runner, db_ops sync |
-| [`src/control`](src/control) | 11 | Startup lifecycle, FSM, hooks, notifications, approval workflow |
+| [`src/control`](src/control) | 10 | Startup lifecycle, FSM, hooks, notifications, approval workflow |
 | [`src/parser`](src/parser) | 10 | Hand-written proto lexer/parser and annotation extraction |
 | [`src/backend`](src/backend) | 21 | Backend identity, capabilities, plugin contract, plugin inventory |
-| [`src/cli`](src/cli) | 7 | `udb-proto-parser` command implementation |
+| [`src/cli`](src/cli) | 8 | `udb-proto-parser` command implementation |
 | [`src/planning`](src/planning) | 4 | Request planning helpers for broker operations |
 | [`src/schema`](src/schema) | 3 | Proto AST structs and deterministic checksums |
 | [`crates/udb-portable`](crates/udb-portable) | 2 | WASM/edge-safe parser/checksum/schema-cache subset |
@@ -127,27 +150,9 @@ entry point is tiny by design: [`src/main.rs`](src/main.rs) calls the CLI module
 
 ## Request Flow
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant C as 📱 Client / SDK
-    participant S as ⚙️ DataBrokerService
-    participant A as 🔐 authz (v2)
-    participant Ch as 🚦 channels
-    participant IR as 🔁 IR + router
-    participant B as 🔌 Backend
-    C->>S: gRPC + metadata (tenant, purpose, scopes, …)
-    S->>S: SecurityContext · ensure_ready() · catalog compat
-    S->>A: authorize(identity, tenant, op, resource)
-    A-->>S: Decision (allow + decision_id / deny)
-    S->>Ch: acquire permit (limit · fairness · backpressure)
-    Ch-->>S: permit
-    S->>IR: lower to neutral IR · resolve target
-    IR->>B: execute (SET LOCAL app.current_* for RLS)
-    B-->>S: result
-    S-->>C: response + catalog/consistency headers (+ write receipt)
-    Note over S,B: side effects → metrics · audit · CDC · projection · saga · DLQ
-```
+<p align="center">
+  <img src="docs/assets/request-flow.svg" alt="UDB request flow: client → security context → authorization → channel admission → neutral IR → backend execution with RLS → response, with metrics/audit/CDC/projection/saga/DLQ side effects." width="900">
+</p>
 
 For a normal gRPC call:
 
@@ -168,7 +173,7 @@ For a normal gRPC call:
 11. Metrics, audit, CDC, projection, saga, or DLQ paths record side effects as
     configured.
 
-The `DataBroker` data-plane contract defines 73 RPCs in
+The `DataBroker` data-plane contract defines 75 RPCs in
 [`proto/udb/services/v1/data_broker.proto`](proto/udb/services/v1/data_broker.proto).
 They cover relational, vector, object, cache, document, graph, time-series,
 analytical, transaction/2PC, CDC, resource admin, catalog, migration, DLQ, saga,
@@ -247,44 +252,51 @@ UDB separates backend identity from runtime availability:
 
 - `BackendKind` is the known backend enum.
 - `BackendTier` groups SQL/cache/vector/object/document/graph/column stores.
-- `BackendRole` says whether a backend can be canonical, projection-only, or
-  both.
+- `BackendRole` says whether a backend is **canonical** (can host UDB's system
+  tables and anchor durability) or a **projection** target (read/write only).
 - `BackendCapability` declares operation and consistency properties.
 - `Backend` plugin structs register backend-specific setup, generation, and
   conformance contracts.
 
 The code declares **18 `BackendKind` variants** (`src/backend/mod.rs`), all enabled
-in the default feature set. `role` is whether a backend can host UDB system tables
-(canonical) or only serve reads/projections; `RLS` is how per-tenant context is
-enforced (Postgres/MySQL/SQLite session GUCs, key-prefix for KV/object, filter
-predicate for document/vector). Slim builds compile a subset, e.g.
+in the default feature set. `RLS` is how per-tenant context is enforced
+(Postgres/MySQL/SQLite session GUCs, key-prefix for KV/object, filter predicate
+for document/vector). Slim builds compile a subset, e.g.
 `--no-default-features --features postgres`.
 
 | Backend | Tier | Feature flag | Role | Operations | Txn / 2PC | RLS |
 |---|---|---|---|---|---|---|
-| Postgres | SQL | `postgres` (always on) | canonical | relational CRUD, tx | yes / **2PC** | session GUC |
-| MySQL | SQL | `mysql` | canonical | relational CRUD, tx | yes / **XA+2PC** | session GUC |
-| SQLite | SQL | `sqlite` | canonical | relational CRUD, tx | yes / — | context table |
-| SQL Server | SQL | `mssql` | projection | relational CRUD, tx | yes / — | `SESSION_CONTEXT` |
-| ClickHouse | column | `clickhouse` | both | analytical query, mutate | — | session setting |
-| Redis | cache | `redis` | projection | cache get/set/del/scan | — | key prefix |
-| Memcached | cache | `memcached` | projection | cache get/set | — | key prefix |
+| Postgres | SQL | `postgres` (always on) | 🟢 canonical | relational CRUD, tx | yes / **2PC** | session GUC |
+| MySQL | SQL | `mysql` | 🟢 canonical | relational CRUD, tx | yes / **XA+2PC** | session GUC |
+| SQLite | SQL | `sqlite` | 🟢 canonical | relational CRUD, tx | yes / — | context table |
+| SQL Server | SQL | `mssql` | projection 🎯 | relational CRUD, tx | yes / — | `SESSION_CONTEXT` |
+| MongoDB | document | `mongodb` | projection 🎯 | document find/upsert, tx | yes / — | filter |
+| ClickHouse | column | `clickhouse` | projection 🎯 | analytical query, mutate | — | session setting |
+| Neo4j | graph | `neo4j` | projection 🎯 | graph query/mutate, tx | yes / — | Cypher param |
 | Qdrant | vector | `qdrant` | projection | vector search/upsert | — | filter |
 | Weaviate | vector | `weaviate` | projection | vector + hybrid search | — | filter |
 | Pinecone | vector | `pinecone` | projection | vector + hybrid search | — | filter |
-| MinIO | object | `s3` | projection | object put/get/presign | — | key prefix |
+| Elasticsearch | search | `elasticsearch` | projection | search + hybrid | — | filter |
+| Redis | cache | `redis` | projection | cache get/set/del/scan | — | key prefix |
+| Memcached | cache | `memcached` | projection | cache get/set | — | key prefix |
 | S3 | object | `s3` | projection | object put/get/presign | — | key prefix |
+| MinIO | object | `s3` | projection | object put/get/presign | — | key prefix |
 | Azure Blob | object | `azureblob` | projection | object put/get | — | key prefix |
 | Google Cloud Storage | object | `gcs` | projection | object put/get | — | key prefix |
-| MongoDB | document | `mongodb` | canonical | document find/upsert, tx | yes / — | filter |
-| Elasticsearch | search | `elasticsearch` | projection | search + hybrid | — | filter |
-| Neo4j | graph | `neo4j` | both | graph query/mutate, tx | yes / — | Cypher param |
 | Cassandra / ScyllaDB | column | `cassandra` | projection | wide-column query/mutate | LWT only | partition key |
 
+> **Role legend** — 🟢 **canonical**: implements the full `SystemStores` trait set
+> and can anchor a deployment (host UDB's system tables, outbox, saga/audit/lease
+> state). **projection**: a first-class read/write target reached via typed RPCs
+> and/or generic dispatch. **🎯**: durable engine on the [roadmap](#project-status)
+> to be promoted to canonical. This reflects what the code registers today, not a
+> permanent ceiling.
+
 Postgres is always compiled (never feature-gated); the other 17 are gated. MinIO
-and S3 share the `s3` feature. `src/backend/mod.rs` is the source of truth for the
-full `BackendCapability` matrix (transactions, XA/2PC, RLS, vector/hybrid search,
-TTL, object-store, migration-ledger, consistency model).
+and S3 share the `s3` feature. `src/backend/mod.rs` is the single source of truth for
+the full `BackendCapability` matrix (transactions, XA/2PC, RLS, vector/hybrid search,
+TTL, object-store, migration-ledger, consistency model) — print it with
+`cargo run --bin udb-proto-parser -- compat-matrix`.
 
 ### Canonical Stores
 
@@ -535,36 +547,19 @@ Start here:
 
 Beyond the data-plane `DataBroker`, UDB serves a UDB-owned **auth/admin control
 plane** defined under `proto/udb/core/**`. These six services are **network-isolated
-on a separate listener** (`UDB_AUTH_GRPC_ADDR`, default loopback `port+10`) because
-they are a policy decision point that accepts the subject principal as input — they
-must not sit on the public `DataBroker` port where any client could assert identity.
+on a separate listener** (`UDB_AUTH_GRPC_ADDR`, default loopback `port+10`) and
+protected by a tonic interceptor that requires a verified bearer token with
+`udb:admin`, `udb:auth:admin`, `udb:*`, or `*`. The interceptor also binds
+`x-tenant-id` to the token tenant when that metadata is present. The listener
+still must not sit on the public `DataBroker` port, because these services are a
+policy decision point that accepts the subject principal as input.
 All of them are proto-driven (`NativeModel`) and Postgres-backed, failing closed
 when no PG pool is configured; their tables are generated from the embedded
 `proto/udb/core/**` manifest through the normal migration path.
 
-```mermaid
-flowchart TB
-    APP["📱 app / SDK<br/>(6 languages)"]
-    PEP["🛡️ trusted PEP / gateway"]
-    subgraph UDB["UDB process"]
-        direction TB
-        PUB["🌐 public listener<br/><b>DataBroker</b> · 73 RPCs"]
-        INT["🔒 internal listener · UDB_AUTH_GRPC_ADDR<br/><b>Authn · Authz · ApiKey · Tenant · Notification · Analytics</b>"]
-    end
-    BK[("🗄️ 18 backends")]
-    KAFKA["📨 Kafka (CDC / events)"]
-    APP -->|"data RPCs"| PUB
-    PEP -->|"auth / admin RPCs"| INT
-    INT -.->|"Authorize / GetNativeAccess"| PUB
-    PUB --> BK
-    INT --> BK
-    PUB -.->|"outbox relay"| KAFKA
-    INT -.->|"auth/notification events"| KAFKA
-    classDef pub fill:#0e7490,stroke:#083344,color:#fff;
-    classDef int fill:#7c3aed,stroke:#3b0764,color:#fff;
-    class PUB pub;
-    class INT int;
-```
+<p align="center">
+  <img src="docs/assets/control-plane.svg" alt="UDB topology: apps reach the public DataBroker listener (75 RPCs); a trusted PEP reaches the isolated internal control-plane listener (6 services, 77 RPCs); both reach the 18 backends and emit events to Kafka." width="940">
+</p>
 
 | Service | Proto | RPCs | What it does |
 |---|---|---:|---|
@@ -581,7 +576,8 @@ Key capabilities:
   RS256 access tokens + refresh tokens (`UDB_JWT_PRIVATE_KEY`), Argon2id passwords
   (legacy keyed-HMAC auto-upgraded on login), RFC 6238 TOTP MFA, server-side sessions
   with idle/absolute TTL + revocation, mTLS SAN identity, and a hybrid external-identity
-  bridge (the external provider proves *who*; UDB authz still decides *what*).
+  bridge. External-provider authentication now requires a signed JWT verified by
+  UDB before claims are mapped; raw JSON claims are rejected.
 - **Authorization**: one engine for RBAC (roles + bindings), ABAC (attribute
   conditions), and simple ReBAC (relationship tuples) with tenant/project domains,
   explicit-deny-wins, priority, and deterministic `decision_id` + audit records.

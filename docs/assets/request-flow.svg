@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 620" role="img" aria-labelledby="title desc">
+  <title id="title">DataBroker request flow</title>
+  <desc id="desc">Sequence diagram showing client, service, authorization, channel admission, IR routing, backend execution, and asynchronous side effects.</desc>
+  <defs>
+    <style>
+      .bg{fill:#fbfdff}.frame{fill:#ffffff;stroke:#cbd5e1;stroke-width:1.5}.lane{stroke:#dbe4ef;stroke-width:1.4;stroke-dasharray:5 6}.head{stroke-width:2;rx:8}.cyan{fill:#cffafe;stroke:#0891b2}.blue{fill:#dbeafe;stroke:#2563eb}.violet{fill:#ede9fe;stroke:#7c3aed}.teal{fill:#ccfbf1;stroke:#0f766e}.indigo{fill:#e0e7ff;stroke:#4f46e5}.green{fill:#dcfce7;stroke:#15803d}.orange{fill:#ffedd5;stroke:#ea580c}.call{stroke:#334155;stroke-width:2;fill:none}.return{stroke:#64748b;stroke-width:1.7;stroke-dasharray:7 5;fill:none}.title{font:700 23px -apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;fill:#0f172a}.text{font:700 13px -apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;fill:#0f172a}.small{font:12px -apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;fill:#475569}.badge{fill:#ffffff;stroke:#334155;stroke-width:1.4}.note{fill:#fff7ed;stroke:#ea580c;stroke-width:1.8}.node{cursor:pointer}.node:hover .head,.node:focus .head{stroke-width:3;filter:url(#shadow)}.node:hover text,.node:focus text{text-decoration:underline}
+    </style>
+    <filter id="shadow" x="-10%" y="-25%" width="120%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0f172a" flood-opacity=".16"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#334155"/></marker>
+    <marker id="arrowR" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#64748b"/></marker>
+  </defs>
+  <rect class="bg" width="1240" height="620" rx="14"/>
+  <rect class="frame" x="20" y="20" width="1200" height="580" rx="14"/>
+  <text class="title" x="48" y="58">DataBroker request flow</text>
+  <text class="small" x="48" y="82">Every request moves through security, authorization, admission control, planning, and backend execution.</text>
+
+  <g text-anchor="middle">
+    <g class="node" tabindex="0"><title>Application or SDK making a DataBroker RPC.</title><rect class="head cyan" x="44" y="116" width="156" height="56"/><text class="text" x="122" y="140">Client / SDK</text><text class="small" x="122" y="158">app side</text></g>
+    <g class="node" tabindex="0"><title>DataBrokerService extracts context, enforces readiness, and orchestrates handlers.</title><rect class="head blue" x="244" y="116" width="172" height="56"/><text class="text" x="330" y="140">DataBrokerService</text><text class="small" x="330" y="158">service layer</text></g>
+    <g class="node" tabindex="0"><title>Authz evaluates scopes, tenant, operation, resource, RBAC, ABAC, and ReBAC.</title><rect class="head violet" x="472" y="116" width="150" height="56"/><text class="text" x="547" y="140">Authz engine</text><text class="small" x="547" y="158">decision_id</text></g>
+    <g class="node" tabindex="0"><title>Channel admission applies concurrency limits, fairness, and backpressure.</title><rect class="head teal" x="672" y="116" width="150" height="56"/><text class="text" x="747" y="140">Channels</text><text class="small" x="747" y="158">admission</text></g>
+    <g class="node" tabindex="0"><title>Planner lowers to neutral IR and resolves target backend and instance.</title><rect class="head indigo" x="872" y="116" width="150" height="56"/><text class="text" x="947" y="140">IR / router</text><text class="small" x="947" y="158">plan + route</text></g>
+    <g class="node" tabindex="0"><title>Backend plugin executes the operation with tenant context.</title><rect class="head green" x="1072" y="116" width="118" height="56"/><text class="text" x="1131" y="140">Backend</text><text class="small" x="1131" y="158">executor</text></g>
+  </g>
+
+  <line class="lane" x1="122" y1="172" x2="122" y2="520"/>
+  <line class="lane" x1="330" y1="172" x2="330" y2="520"/>
+  <line class="lane" x1="547" y1="172" x2="547" y2="520"/>
+  <line class="lane" x1="747" y1="172" x2="747" y2="520"/>
+  <line class="lane" x1="947" y1="172" x2="947" y2="520"/>
+  <line class="lane" x1="1131" y1="172" x2="1131" y2="520"/>
+
+  <g class="node" tabindex="0"><title>Client sends gRPC request metadata: tenant, purpose, scopes, service identity, project, catalog version.</title><circle class="badge cyan" cx="122" cy="204" r="13"/><text class="text" x="122" y="209" text-anchor="middle">1</text><path class="call" d="M136 204 H326" marker-end="url(#arrow)"/><text class="small" x="231" y="193" text-anchor="middle">gRPC + request metadata</text></g>
+  <g class="node" tabindex="0"><title>Service builds the security context, checks lifecycle readiness, and validates catalog compatibility.</title><circle class="badge blue" cx="330" cy="244" r="13"/><text class="text" x="330" y="249" text-anchor="middle">2</text><path class="call" d="M344 244 H454 V266 H344" marker-end="url(#arrow)"/><text class="small" x="462" y="249">SecurityContext, readiness, catalog compatibility</text></g>
+  <g class="node" tabindex="0"><title>Service asks the authorization engine for an allow or deny decision.</title><circle class="badge violet" cx="330" cy="302" r="13"/><text class="text" x="330" y="307" text-anchor="middle">3</text><path class="call" d="M344 302 H543" marker-end="url(#arrow)"/><text class="small" x="444" y="291" text-anchor="middle">authorize operation/resource</text></g>
+  <g class="node" tabindex="0"><title>Authorization returns allow plus decision_id, or a denial.</title><circle class="badge violet" cx="547" cy="340" r="13"/><text class="text" x="547" y="345" text-anchor="middle">4</text><path class="return" d="M533 340 H344" marker-end="url(#arrowR)"/><text class="small" x="439" y="329" text-anchor="middle">allow + decision_id, or deny</text></g>
+  <g class="node" tabindex="0"><title>Allowed calls acquire a channel permit before touching a backend.</title><circle class="badge teal" cx="330" cy="378" r="13"/><text class="text" x="330" y="383" text-anchor="middle">5</text><path class="call" d="M344 378 H743" marker-end="url(#arrow)"/><text class="small" x="544" y="367" text-anchor="middle">acquire fair channel permit</text></g>
+  <g class="node" tabindex="0"><title>The admission layer grants capacity or applies backpressure.</title><circle class="badge teal" cx="747" cy="416" r="13"/><text class="text" x="747" y="421" text-anchor="middle">6</text><path class="return" d="M733 416 H344" marker-end="url(#arrowR)"/><text class="small" x="539" y="405" text-anchor="middle">permit granted</text></g>
+  <g class="node" tabindex="0"><title>The service lowers the request to neutral IR or a typed plan and resolves target backend.</title><circle class="badge indigo" cx="330" cy="454" r="13"/><text class="text" x="330" y="459" text-anchor="middle">7</text><path class="call" d="M344 454 H943" marker-end="url(#arrow)"/><text class="small" x="644" y="443" text-anchor="middle">lower to neutral IR and resolve backend target</text></g>
+  <g class="node" tabindex="0"><title>The backend executes with tenant/project context and RLS variables where supported.</title><circle class="badge green" cx="947" cy="492" r="13"/><text class="text" x="947" y="497" text-anchor="middle">8</text><path class="call" d="M961 492 H1127" marker-end="url(#arrow)"/><text class="small" x="1044" y="481" text-anchor="middle">execute with tenant context</text></g>
+  <g class="node" tabindex="0"><title>Backend results stream or return to the service.</title><circle class="badge green" cx="1131" cy="530" r="13"/><text class="text" x="1131" y="535" text-anchor="middle">9</text><path class="return" d="M1117 530 H344" marker-end="url(#arrowR)"/><text class="small" x="731" y="519" text-anchor="middle">rows, object chunks, or mutation response</text></g>
+  <g class="node" tabindex="0"><title>The client receives the response plus catalog and consistency metadata.</title><circle class="badge cyan" cx="330" cy="568" r="13"/><text class="text" x="330" y="573" text-anchor="middle">10</text><path class="return" d="M316 568 H136" marker-end="url(#arrowR)"/><text class="small" x="226" y="557" text-anchor="middle">response headers + receipt</text></g>
+
+  <rect class="note" x="430" y="548" width="742" height="34" rx="8"/>
+  <text class="small" x="450" y="570">Async side effects: metrics, audit, CDC to Kafka, projection tasks, saga state, DLQ records.</text>
+</svg>

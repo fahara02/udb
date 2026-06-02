@@ -1,8 +1,15 @@
 # UDB Documentation
 
-These are the maintained project docs as of 2026-05-31. Older audit logs,
-older implementation notes, duplicate security guides, and one-off runbooks were consolidated
-because they contradicted the current codebase.
+The maintained UDB documentation set. Every page describes the code that exists
+today; the source-of-truth files below are authoritative, and the docs are kept
+in step with them.
+
+**Architecture at a glance** — the root README renders three custom diagrams you
+can reuse:
+
+- [`assets/architecture-pipeline.svg`](assets/architecture-pipeline.svg) — proto to manifest to generation to runtime to 18 backends
+- [`assets/request-flow.svg`](assets/request-flow.svg) — the per-request sequence: authz, admission, IR, execute
+- [`assets/control-plane.svg`](assets/control-plane.svg) — public vs. isolated internal listener topology
 
 | Need | Read |
 |---|---|
