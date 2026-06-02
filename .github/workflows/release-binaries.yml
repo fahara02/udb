@@ -133,7 +133,9 @@ jobs:
         shell: bash
         run: |
           if [ "${{ runner.os }}" = "Windows" ]; then
-            export PATH="/c/Strawberry/perl/bin:/c/Program Files/NASM:${PATH}"
+            msvc_bin="$(cygpath -u "${VCToolsInstallDir}bin\\Hostx64\\x64")"
+            export PATH="${msvc_bin}:/c/Strawberry/perl/bin:/c/Program Files/NASM:${PATH}"
+            export CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER="${msvc_bin}/link.exe"
           fi
           cargo build --release --locked --target ${{ matrix.target }} \
             --bin udb-proto-parser \
