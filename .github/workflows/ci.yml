@@ -284,6 +284,7 @@ jobs:
           node scripts/sdk-codegen-postprocess.mjs
           if ! git diff --quiet -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api; then
             echo "::error::Committed SDK stubs are stale. Run 'buf generate --include-imports' and commit the result."
+            git diff -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api | sed -n '1,200p'
             git diff --stat -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api
             exit 1
           fi
