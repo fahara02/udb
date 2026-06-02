@@ -2481,7 +2481,7 @@ mod tests {
         // MongoDB is pinned here ONLY in non-`mongodb-native` builds, where no
         // store is compiled). These remain projection-only until their stores
         // exist.
-        for kind in [
+        let projection_until_store: &[BackendKind] = &[
             #[cfg(not(feature = "mongodb-native"))]
             BackendKind::Mongodb,
             // B.10c: ClickHouse graduated (native ReplacingMergeTree store).
@@ -2496,14 +2496,15 @@ mod tests {
             // in non-`cassandra` builds, where no store is compiled.
             #[cfg(not(feature = "cassandra"))]
             BackendKind::Cassandra,
-        ] {
+        ];
+        for kind in projection_until_store {
             assert_eq!(
                 kind.role(),
                 BackendRole::Projection,
                 "{kind:?} must stay Projection until its canonical SystemStores exists"
             );
             assert!(
-                !CANONICAL_SYSTEM_STORE_BACKENDS.contains(&kind),
+                !CANONICAL_SYSTEM_STORE_BACKENDS.contains(kind),
                 "{kind:?} must not be on the SystemStores allowlist yet"
             );
         }

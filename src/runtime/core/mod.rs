@@ -39,7 +39,7 @@ use crate::broker::{
     DeletePlanRequest, RequestContext, SelectPlanRequest, SortSpec, UpsertPlanRequest,
     build_delete_plan, build_select_query_plan, build_upsert_plan, table_for_message,
 };
-#[cfg(feature = "s3")]
+#[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
 use crate::broker::{
     ObjectAccessRequest, ObjectStreamPlanRequest, build_object_stream_plan, evaluate_object_access,
 };

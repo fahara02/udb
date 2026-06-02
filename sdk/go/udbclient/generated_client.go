@@ -280,41 +280,67 @@ func (g *GeneratedClient) InvokeUnary(ctx context.Context, fullMethod string, re
 // here (the stream may have already produced data); retry is the caller's
 // decision. Metadata and per-call deadline still apply.
 func (g *GeneratedClient) NewServerStream(ctx context.Context, fullMethod string, desc *grpc.StreamDesc, req any, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-	callCtx := g.outgoingContext(ctx)
-	if g.opt.CallTimeout > 0 {
-		if _, ok := ctx.Deadline(); !ok {
-			callCtx, _ = context.WithTimeout(callCtx, g.opt.CallTimeout)
-		}
-	}
+	callCtx, cancel := g.withDeadline(g.outgoingContext(ctx))
 	cs, err := g.conn.NewStream(callCtx, desc, fullMethod, opts...)
 	if err != nil {
+		cancel()
 		return nil, mapError(fullMethod, err, nil)
 	}
 	if req != nil {
 		if err := cs.SendMsg(req); err != nil {
+			cancel()
 			return nil, mapError(fullMethod, err, nil)
 		}
 		if err := cs.CloseSend(); err != nil {
+			cancel()
 			return nil, mapError(fullMethod, err, nil)
 		}
 	}
-	return cs, nil
+	return &cancelOnRecvStream{ClientStream: cs, cancel: cancel}, nil
 }
 
 // NewClientStream opens a client-streaming or bidi RPC. Never retried (the body
 // is non-idempotent). Metadata and per-call deadline still apply.
 func (g *GeneratedClient) NewClientStream(ctx context.Context, fullMethod string, desc *grpc.StreamDesc, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-	callCtx := g.outgoingContext(ctx)
-	if g.opt.CallTimeout > 0 {
-		if _, ok := ctx.Deadline(); !ok {
-			callCtx, _ = context.WithTimeout(callCtx, g.opt.CallTimeout)
-		}
-	}
+	callCtx, cancel := g.withDeadline(g.outgoingContext(ctx))
 	cs, err := g.conn.NewStream(callCtx, desc, fullMethod, opts...)
 	if err != nil {
+		cancel()
 		return nil, mapError(fullMethod, err, nil)
 	}
-	return cs, nil
+	return &cancelOnCloseStream{ClientStream: cs, cancel: cancel}, nil
+}
+
+type cancelOnRecvStream struct {
+	grpc.ClientStream
+	cancel context.CancelFunc
+}
+
+func (s *cancelOnRecvStream) RecvMsg(m any) error {
+	err := s.ClientStream.RecvMsg(m)
+	if err != nil {
+		s.cancel()
+	}
+	return err
+}
+
+type cancelOnCloseStream struct {
+	grpc.ClientStream
+	cancel context.CancelFunc
+}
+
+func (s *cancelOnCloseStream) RecvMsg(m any) error {
+	err := s.ClientStream.RecvMsg(m)
+	if err != nil {
+		s.cancel()
+	}
+	return err
+}
+
+func (s *cancelOnCloseStream) CloseSend() error {
+	err := s.ClientStream.CloseSend()
+	s.cancel()
+	return err
 }
 
 // ── Dial-option interceptors ─────────────────────────────────────────────────
@@ -366,17 +392,13 @@ func (g *GeneratedClient) streamInterceptor() grpc.StreamClientInterceptor {
 	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
 		// Streams are not retried (possibly mid-flight / non-idempotent); we
 		// only inject metadata + deadline + map dial errors.
-		callCtx := g.outgoingContext(ctx)
-		if g.opt.CallTimeout > 0 {
-			if _, ok := ctx.Deadline(); !ok {
-				callCtx, _ = context.WithTimeout(callCtx, g.opt.CallTimeout)
-			}
-		}
+		callCtx, cancel := g.withDeadline(g.outgoingContext(ctx))
 		cs, err := streamer(callCtx, desc, cc, method, opts...)
 		if err != nil {
+			cancel()
 			return nil, mapError(method, err, nil)
 		}
-		return cs, nil
+		return &cancelOnCloseStream{ClientStream: cs, cancel: cancel}, nil
 	}
 }
 
@@ -573,13 +595,13 @@ var AllRPCs = []RPCInfo{
 
 // ServiceRPCCounts maps each service's full name to its RPC count.
 var ServiceRPCCounts = map[string]int{
-	"udb.core.analytics.services.v1.AnalyticsService": 7,
-	"udb.core.apikey.services.v1.ApiKeyService": 7,
-	"udb.core.authn.services.v1.AuthnService": 23,
-	"udb.core.authz.services.v1.AuthzService": 23,
+	"udb.core.analytics.services.v1.AnalyticsService":       7,
+	"udb.core.apikey.services.v1.ApiKeyService":             7,
+	"udb.core.authn.services.v1.AuthnService":               23,
+	"udb.core.authz.services.v1.AuthzService":               23,
 	"udb.core.notification.services.v1.NotificationService": 11,
-	"udb.core.tenant.services.v1.TenantService": 6,
-	"udb.services.v1.DataBroker": 76,
+	"udb.core.tenant.services.v1.TenantService":             6,
+	"udb.services.v1.DataBroker":                            76,
 }
 
 // rpcIndex is a fast Name->RPCInfo lookup built from AllRPCs at init.
