@@ -104,18 +104,25 @@ class UdbDetailedRpcError(UdbRpcError):
 
 
 def _extract_error_detail(error: grpc.RpcError) -> bytes | None:
-    trailers = None
+    trailers_obj: object = None
     getter = getattr(error, "trailing_metadata", None)
     if callable(getter):
         try:
-            trailers = getter()
+            trailers_obj = getter()
         except Exception:  # pragma: no cover - defensive
-            trailers = None
-    if not trailers:
+            trailers_obj = None
+    if not isinstance(trailers_obj, Sequence):
         return None
-    for key, value in trailers:
+    for entry in trailers_obj:
+        if not isinstance(entry, tuple) or len(entry) != 2:
+            continue
+        key, value = entry
         if key == _ERROR_DETAIL_TRAILER:
-            return value if isinstance(value, (bytes, bytearray)) else None
+            if isinstance(value, bytes):
+                return value
+            if isinstance(value, bytearray):
+                return bytes(value)
+            return None
     return None
 
 
@@ -297,7 +304,7 @@ class _ServiceClientBase:
             try:
                 first = next(iterator)
             except StopIteration:
-                return
+                return iter(())
             except grpc.RpcError as error:
                 code = error.code()
                 if retryable and self._retry.should_retry(code, attempt):

@@ -26,6 +26,9 @@ COPY configs ./configs
 # `[[bench]] core_bench` resolves to benches/core_bench.rs; cargo needs the file
 # to exist when it parses the manifest, even for a --bin build.
 COPY benches ./benches
+# `[[example]] dhat_hotpath` is also declared in the root manifest, so Cargo
+# needs examples/ present while parsing, even for this --bin release build.
+COPY examples ./examples
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
