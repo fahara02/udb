@@ -52,6 +52,76 @@ impl DataBrokerService {
         }
     }
 
+    /// Additive typed columnar read (A.4). Runs the exact same authorize /
+    /// export-control / channel-scoped select path as `Select`, then re-encodes
+    /// the resulting (already masked) `RecordSet` as a `RecordBatchV2` and emits
+    /// it as a single server-streamed batch. True per-batch streaming over
+    /// `query_stream` is layered on later (A.6); the V1 `Select` path is
+    /// untouched.
+    pub(crate) async fn select_v2_inner(
+        &self,
+        request: Request<SelectRequest>,
+    ) -> Result<Response<ResponseStream<crate::proto::RecordBatchV2>>, Status> {
+        let started = Instant::now();
+        let security = match security_from_request(&request) {
+            Ok(s) => s,
+            Err(e) => return self.record_grpc("SelectV2", started, Err(e)),
+        };
+        let request = request.into_inner();
+        let decision_id = match self
+            .authorize(&security, &request.message_type, "Select")
+            .await
+        {
+            Ok(id) => id,
+            Err(err) => return self.record_grpc("SelectV2", started, Err(err)),
+        };
+        if let Err(err) = enforce_select_export_controls(
+            &self.catalog.active_for(&security.project_id).manifest,
+            &security,
+            &request.message_type,
+            &request.fields,
+        ) {
+            return self.record_grpc("SelectV2", started, Err(err));
+        }
+        // Active catalog version stamps the batch's schema_version.
+        let schema_version = self
+            .catalog
+            .active_for(&security.project_id)
+            .metadata
+            .version
+            .clone();
+        let manifest = &self.catalog.active_for(&security.project_id).manifest;
+        let runtime = self.runtime_snapshot();
+        let metadata_context = security.request_context_with_decision(&decision_id);
+        let exec_context = metadata_context.clone();
+        let result = self
+            .execute_with_channel_scoped(
+                crate::runtime::channels::OperationChannel::Read,
+                Some(&metadata_context),
+                Some("postgres"),
+                || async move { runtime.select(manifest, request, exec_context).await },
+            )
+            .await;
+
+        match result {
+            Ok(res) => {
+                let batch = crate::runtime::executor_utils::record_batch_v2_from_record_set(
+                    &res,
+                    &schema_version,
+                );
+                let stream: ResponseStream<crate::proto::RecordBatchV2> =
+                    Box::pin(tokio_stream::once(Ok(batch)));
+                self.record_grpc(
+                    "SelectV2",
+                    started,
+                    Ok(self
+                        .with_catalog_response_headers(Response::new(stream), &metadata_context)),
+                )
+            }
+            Err(err) => self.record_grpc("SelectV2", started, Err(err)),
+        }
+    }
+
     pub(crate) async fn batch_select_inner(
         &self,
         request: Request<tonic::Streaming<SelectRequest>>,

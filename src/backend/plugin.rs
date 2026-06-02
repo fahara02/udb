@@ -179,10 +179,53 @@ impl BackendPluginContract {
         if self.capability_matrix.operations.is_empty() {
             failures.push("capability matrix must declare at least one operation".to_string());
         }
+        // B.3: capability-evidence summary derived from the V2 model so the
+        // conformance report carries the same evidence the matrix tests assert.
+        let kind = BackendKind::from_token(&self.backend);
+        let (
+            native_executor,
+            compiler_mediated,
+            lifecycle,
+            system_store,
+            canonical_candidate,
+            canonical_goal,
+        ) = match kind {
+            Some(k) => {
+                let v2 = k.capabilities_v2();
+                (
+                    v2.native_executor,
+                    v2.compiler_mediated,
+                    v2.lifecycle.as_str().to_string(),
+                    v2.system_store.as_str().to_string(),
+                    v2.canonical_candidate.as_str().to_string(),
+                    v2.canonical_goal.to_string(),
+                )
+            }
+            None => {
+                failures.push(format!(
+                    "contract backend '{}' does not resolve to a BackendKind",
+                    self.backend
+                ));
+                (
+                    false,
+                    false,
+                    "unknown".to_string(),
+                    "unknown".to_string(),
+                    "unknown".to_string(),
+                    String::new(),
+                )
+            }
+        };
         BackendConformanceReport {
             backend: self.backend.clone(),
             passed: failures.is_empty(),
             failures,
+            native_executor,
+            compiler_mediated,
+            lifecycle,
+            system_store,
+            canonical_candidate,
+            canonical_goal,
         }
     }
 }
@@ -193,6 +236,26 @@ pub struct BackendConformanceReport {
     pub backend: String,
     pub passed: bool,
     pub failures: Vec<String>,
+    // ── B.3 capability-evidence fields ─────────────────────────────────────────
+    /// V2 dimension 1: backend ships a compiled-in runtime executor.
+    #[serde(default)]
+    pub native_executor: bool,
+    /// V2 dimension 2: backend has an `ir::compile` dialect compiler.
+    #[serde(default)]
+    pub compiler_mediated: bool,
+    /// V2 dimension 4: resource-lifecycle kind
+    /// (`none`/`compiler_mediated`/`native`/`catalog_migration`).
+    #[serde(default)]
+    pub lifecycle: String,
+    /// V2 dimension 5: canonical system-store support (`none`/`full`).
+    #[serde(default)]
+    pub system_store: String,
+    /// B.12-B.15: canonical promotion roadmap bucket.
+    #[serde(default)]
+    pub canonical_candidate: String,
+    /// B.12-B.15: concrete promotion/conformance goal.
+    #[serde(default)]
+    pub canonical_goal: String,
 }
 
 /// Backends that have a runtime implementation in this source tree.
@@ -545,5 +608,115 @@ mod tests {
             BackendSupportState::Unknown
         );
         assert!(support_state_for_token("postgres").is_runtime_supported());
+    }
+
+    // ── B.3: plugin conformance against matrix + dispatch registry ─────────────
+
+    #[test]
+    fn every_plugin_kind_matches_its_contract() {
+        // The plugin's BackendKind must agree with its advertised contract
+        // (backend token + tier), so the inventory and the contract cannot drift.
+        for plugin in all_plugins() {
+            let kind = plugin.kind();
+            let contract = plugin.contract();
+            assert_eq!(
+                contract.backend,
+                kind.as_str(),
+                "{kind:?}: contract backend token mismatch"
+            );
+            assert_eq!(
+                contract.tier,
+                kind.tier().as_str(),
+                "{kind:?}: contract tier mismatch"
+            );
+            assert_eq!(
+                contract.capability_matrix.backend,
+                kind.as_str(),
+                "{kind:?}: contract capability_matrix backend mismatch"
+            );
+        }
+    }
+
+    #[test]
+    fn runtime_plugins_advertising_dispatch_ops_have_a_dispatch_factory() {
+        // B.3: a runtime-supported plugin that advertises generic-dispatch
+        // operations beyond the universal ping/probe MUST resolve to a
+        // DispatchFactory (cross-checked against handle.rs, read-only). Otherwise
+        // generic dispatch would admit an operation it cannot build an executor
+        // for.
+        use crate::runtime::executors::handle::dispatch_factory_for;
+        for plugin in all_plugins() {
+            let kind = plugin.kind();
+            let ops = kind.supported_operations();
+            let advertises_real_ops = ops.iter().any(|op| *op != "ping" && *op != "probe");
+            if advertises_real_ops {
+                assert!(
+                    dispatch_factory_for(&kind).is_some(),
+                    "{kind:?} advertises dispatch ops {ops:?} but has no DispatchFactory"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn conformance_report_carries_capability_evidence() {
+        // B.3: every plugin's conformance report must carry honest capability
+        // evidence matching the V2 model.
+        for plugin in all_plugins() {
+            let kind = plugin.kind();
+            let report = plugin.conformance_report();
+            assert!(
+                report.passed,
+                "{kind:?} conformance failed: {:?}",
+                report.failures
+            );
+            let v2 = kind.capabilities_v2();
+            assert_eq!(report.native_executor, v2.native_executor, "{kind:?}");
+            assert_eq!(report.compiler_mediated, v2.compiler_mediated, "{kind:?}");
+            assert_eq!(report.lifecycle, v2.lifecycle.as_str(), "{kind:?}");
+            assert_eq!(report.system_store, v2.system_store.as_str(), "{kind:?}");
+            assert_eq!(
+                report.canonical_candidate,
+                v2.canonical_candidate.as_str(),
+                "{kind:?}"
+            );
+            assert_eq!(report.canonical_goal, v2.canonical_goal, "{kind:?}");
+            // Registered plugins are runtime-supported, so native_executor must
+            // be true (the evidence is not hollow).
+            assert!(
+                report.native_executor,
+                "{kind:?} is a registered plugin but reports no native executor"
+            );
+        }
+    }
+
+    #[test]
+    fn known_but_compiled_out_backends_classify_as_disabled_by_feature() {
+        // B.3: a backend that has a runtime implementation but whose plugin is
+        // not in the current `all_plugins()` set (feature disabled) must classify
+        // as DisabledByFeature, never KnownUnsupported. Since every known kind has
+        // a runtime implementation in-tree, any kind absent from the live registry
+        // is by definition feature-disabled.
+        let live: Vec<BackendKind> = all_plugins().into_iter().map(|p| p.kind()).collect();
+        for kind in BackendKind::all_known() {
+            if live.contains(kind) {
+                assert_eq!(
+                    support_state_for_kind(kind),
+                    BackendSupportState::RuntimeSupported,
+                    "{kind:?} is in the live registry"
+                );
+            } else {
+                assert_eq!(
+                    support_state_for_kind(kind),
+                    BackendSupportState::DisabledByFeature,
+                    "{kind:?} is compiled out and must report DisabledByFeature, not \
+                     KnownUnsupported"
+                );
+                assert!(
+                    has_runtime_implementation(kind),
+                    "{kind:?} must have a runtime implementation to be DisabledByFeature"
+                );
+            }
+        }
     }
 }

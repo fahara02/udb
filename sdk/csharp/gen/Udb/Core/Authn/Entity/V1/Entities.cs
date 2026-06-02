@@ -28,15 +28,16 @@ namespace udb.core.Authn.Entity.V1 {
             "Yi5jb3JlLmF1dGhuLmVudGl0eS52MRokdWRiL2NvcmUvYXV0aG4vZW50aXR5",
             "L3YxL2VudW1zLnByb3RvGiJ1ZGIvY29yZS9hdXRobi9lbnRpdHkvdjEvb3Rw",
             "LnByb3RvGiZ1ZGIvY29yZS9hdXRobi9lbnRpdHkvdjEvc2Vzc2lvbi5wcm90",
-            "bxojdWRiL2NvcmUvYXV0aG4vZW50aXR5L3YxL3VzZXIucHJvdG9C+AEKHGNv",
-            "bS51ZGIuY29yZS5hdXRobi5lbnRpdHkudjFCDUVudGl0aWVzUHJvdG9QAVpE",
-            "Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9h",
-            "dXRobi9lbnRpdHkvdjE7ZW50aXR5djGiAgRVQ0FFqgIYdWRiLmNvcmUuQXV0",
-            "aG4uRW50aXR5LlYxygIYVWRiXENvcmVcQXV0aG5cRW50aXR5XFYx4gIkVWRi",
-            "XEdQQk1ldGFkYXRhXENvcmVcQXV0aG5cRW50aXR5XFYx6gIcVWRiOjpDb3Jl",
-            "OjpBdXRobjo6RW50aXR5OjpWMVAAUAFQAlADYgZwcm90bzM="));
+            "bxojdWRiL2NvcmUvYXV0aG4vZW50aXR5L3YxL3VzZXIucHJvdG8aJ3VkYi9j",
+            "b3JlL2F1dGhuL2VudGl0eS92MS93ZWJhdXRobi5wcm90b0L4AQocY29tLnVk",
+            "Yi5jb3JlLmF1dGhuLmVudGl0eS52MUINRW50aXRpZXNQcm90b1ABWkRnaXRo",
+            "dWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2F1dGhu",
+            "L2VudGl0eS92MTtlbnRpdHl2MaICBFVDQUWqAhh1ZGIuY29yZS5BdXRobi5F",
+            "bnRpdHkuVjHKAhhVZGJcQ29yZVxBdXRoblxFbnRpdHlcVjHiAiRVZGJcR1BC",
+            "TWV0YWRhdGFcQ29yZVxBdXRoblxFbnRpdHlcVjHqAhxVZGI6OkNvcmU6OkF1",
+            "dGhuOjpFbnRpdHk6OlYxUABQAVACUANQBGIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { global::udb.core.Authn.Entity.V1.EnumsReflection.Descriptor, global::udb.core.Authn.Entity.V1.OtpReflection.Descriptor, global::udb.core.Authn.Entity.V1.SessionReflection.Descriptor, global::udb.core.Authn.Entity.V1.UserReflection.Descriptor, },
+          new pbr::FileDescriptor[] { global::udb.core.Authn.Entity.V1.EnumsReflection.Descriptor, global::udb.core.Authn.Entity.V1.OtpReflection.Descriptor, global::udb.core.Authn.Entity.V1.SessionReflection.Descriptor, global::udb.core.Authn.Entity.V1.UserReflection.Descriptor, global::udb.core.Authn.Entity.V1.WebauthnReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, null));
     }
     #endregion

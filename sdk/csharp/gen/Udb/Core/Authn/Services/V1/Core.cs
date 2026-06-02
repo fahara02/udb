@@ -230,13 +230,49 @@ namespace udb.core.Authn.Services.V1 {
             "X2lkGAIgASgJUgVvdHBJZBISCgRjb2RlGAMgASgJUgRjb2RlEjwKB2NvbnRl",
             "eHQYBCABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHRS",
             "B2NvbnRleHQiOgocQ29uZmlybU1GQUVucm9sbG1lbnRSZXNwb25zZRIaCghl",
-            "bnJvbGxlZBgBIAEoCFIIZW5yb2xsZWRCggIKHmNvbS51ZGIuY29yZS5hdXRo",
-            "bi5zZXJ2aWNlcy52MUIJQ29yZVByb3RvUAFaSGdpdGh1Yi5jb20vZmFoYXJh",
-            "MDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvYXV0aG4vc2VydmljZXMvdjE7",
-            "c2VydmljZXN2MaICBFVDQVOqAhp1ZGIuY29yZS5BdXRobi5TZXJ2aWNlcy5W",
-            "McoCGlVkYlxDb3JlXEF1dGhuXFNlcnZpY2VzXFYx4gImVWRiXEdQQk1ldGFk",
-            "YXRhXENvcmVcQXV0aG5cU2VydmljZXNcVjHqAh5VZGI6OkNvcmU6OkF1dGhu",
-            "OjpTZXJ2aWNlczo6VjFiBnByb3RvMw=="));
+            "bnJvbGxlZBgBIAEoCFIIZW5yb2xsZWQiywEKIFN0YXJ0V2ViQXV0aG5SZWdp",
+            "c3RyYXRpb25SZXF1ZXN0EhcKB3VzZXJfaWQYASABKAlSBnVzZXJJZBIUCgVs",
+            "YWJlbBgCIAEoCVIFbGFiZWwSGwoJdGVuYW50X2lkGAMgASgJUgh0ZW5hbnRJ",
+            "ZBIdCgpwcm9qZWN0X2lkGAQgASgJUglwcm9qZWN0SWQSPAoHY29udGV4dBgF",
+            "IAEoCzIiLnVkYi5jb3JlLmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dFIHY29u",
+            "dGV4dCLLAQohU3RhcnRXZWJBdXRoblJlZ2lzdHJhdGlvblJlc3BvbnNlEiEK",
+            "DGNoYWxsZW5nZV9pZBgBIAEoCVILY2hhbGxlbmdlSWQSWworcHVibGljX2tl",
+            "eV9jcmVkZW50aWFsX2NyZWF0aW9uX29wdGlvbnNfanNvbhgCIAEoCVImcHVi",
+            "bGljS2V5Q3JlZGVudGlhbENyZWF0aW9uT3B0aW9uc0pzb24SJgoPZXhwaXJl",
+            "c19hdF91bml4GAMgASgDUg1leHBpcmVzQXRVbml4ItcBCiFGaW5pc2hXZWJB",
+            "dXRoblJlZ2lzdHJhdGlvblJlcXVlc3QSIQoMY2hhbGxlbmdlX2lkGAEgASgJ",
+            "UgtjaGFsbGVuZ2VJZBI7ChpwdWJsaWNfa2V5X2NyZWRlbnRpYWxfanNvbhgC",
+            "IAEoCVIXcHVibGljS2V5Q3JlZGVudGlhbEpzb24SFAoFbGFiZWwYAyABKAlS",
+            "BWxhYmVsEjwKB2NvbnRleHQYBCABKAsyIi51ZGIuY29yZS5jb21tb24udjEu",
+            "UmVxdWVzdENvbnRleHRSB2NvbnRleHQiggEKIkZpbmlzaFdlYkF1dGhuUmVn",
+            "aXN0cmF0aW9uUmVzcG9uc2USHgoKcmVnaXN0ZXJlZBgBIAEoCFIKcmVnaXN0",
+            "ZXJlZBIjCg1jcmVkZW50aWFsX2lkGAIgASgJUgxjcmVkZW50aWFsSWQSFwoH",
+            "dXNlcl9pZBgDIAEoCVIGdXNlcklkIrcBCiJTdGFydFdlYkF1dGhuQXV0aGVu",
+            "dGljYXRpb25SZXF1ZXN0EhcKB3VzZXJfaWQYASABKAlSBnVzZXJJZBIbCgl0",
+            "ZW5hbnRfaWQYAiABKAlSCHRlbmFudElkEh0KCnByb2plY3RfaWQYAyABKAlS",
+            "CXByb2plY3RJZBI8Cgdjb250ZXh0GAQgASgLMiIudWRiLmNvcmUuY29tbW9u",
+            "LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0IssBCiNTdGFydFdlYkF1dGhu",
+            "QXV0aGVudGljYXRpb25SZXNwb25zZRIhCgxjaGFsbGVuZ2VfaWQYASABKAlS",
+            "C2NoYWxsZW5nZUlkElkKKnB1YmxpY19rZXlfY3JlZGVudGlhbF9yZXF1ZXN0",
+            "X29wdGlvbnNfanNvbhgCIAEoCVIlcHVibGljS2V5Q3JlZGVudGlhbFJlcXVl",
+            "c3RPcHRpb25zSnNvbhImCg9leHBpcmVzX2F0X3VuaXgYAyABKANSDWV4cGly",
+            "ZXNBdFVuaXgiwwEKI0ZpbmlzaFdlYkF1dGhuQXV0aGVudGljYXRpb25SZXF1",
+            "ZXN0EiEKDGNoYWxsZW5nZV9pZBgBIAEoCVILY2hhbGxlbmdlSWQSOwoacHVi",
+            "bGljX2tleV9jcmVkZW50aWFsX2pzb24YAiABKAlSF3B1YmxpY0tleUNyZWRl",
+            "bnRpYWxKc29uEjwKB2NvbnRleHQYAyABKAsyIi51ZGIuY29yZS5jb21tb24u",
+            "djEuUmVxdWVzdENvbnRleHRSB2NvbnRleHQi+gEKJEZpbmlzaFdlYkF1dGhu",
+            "QXV0aGVudGljYXRpb25SZXNwb25zZRJDCglwcmluY2lwYWwYASABKAsyJS51",
+            "ZGIuY29yZS5hdXRobi5zZXJ2aWNlcy52MS5QcmluY2lwYWxSCXByaW5jaXBh",
+            "bBIdCgpzZXNzaW9uX2lkGAIgASgJUglzZXNzaW9uSWQSIQoMYWNjZXNzX3Rv",
+            "a2VuGAMgASgJUgthY2Nlc3NUb2tlbhImCg9leHBpcmVzX2F0X3VuaXgYBCAB",
+            "KANSDWV4cGlyZXNBdFVuaXgSIwoNY3JlZGVudGlhbF9pZBgFIAEoCVIMY3Jl",
+            "ZGVudGlhbElkQoICCh5jb20udWRiLmNvcmUuYXV0aG4uc2VydmljZXMudjFC",
+            "CUNvcmVQcm90b1ABWkhnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28v",
+            "Z2VuL3VkYi9jb3JlL2F1dGhuL3NlcnZpY2VzL3YxO3NlcnZpY2VzdjGiAgRV",
+            "Q0FTqgIadWRiLmNvcmUuQXV0aG4uU2VydmljZXMuVjHKAhpVZGJcQ29yZVxB",
+            "dXRoblxTZXJ2aWNlc1xWMeICJlVkYlxHUEJNZXRhZGF0YVxDb3JlXEF1dGhu",
+            "XFNlcnZpY2VzXFYx6gIeVWRiOjpDb3JlOjpBdXRobjo6U2VydmljZXM6OlYx",
+            "YgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Authn.Entity.V1.EnumsReflection.Descriptor, global::udb.core.Authn.Entity.V1.SessionReflection.Descriptor, global::udb.core.Authn.Entity.V1.UserReflection.Descriptor, global::udb.core.Common.V1.DtoReflection.Descriptor, global::udb.core.Common.V1.TypesReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
@@ -286,7 +322,15 @@ namespace udb.core.Authn.Services.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authn.Services.V1.EnrollMFARequest), global::udb.core.Authn.Services.V1.EnrollMFARequest.Parser, new[]{ "UserId", "MfaType", "Context" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authn.Services.V1.EnrollMFAResponse), global::udb.core.Authn.Services.V1.EnrollMFAResponse.Parser, new[]{ "TotpSecret", "TotpQrUri", "VerifyOtpId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authn.Services.V1.ConfirmMFAEnrollmentRequest), global::udb.core.Authn.Services.V1.ConfirmMFAEnrollmentRequest.Parser, new[]{ "UserId", "OtpId", "Code", "Context" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authn.Services.V1.ConfirmMFAEnrollmentResponse), global::udb.core.Authn.Services.V1.ConfirmMFAEnrollmentResponse.Parser, new[]{ "Enrolled" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authn.Services.V1.ConfirmMFAEnrollmentResponse), global::udb.core.Authn.Services.V1.ConfirmMFAEnrollmentResponse.Parser, new[]{ "Enrolled" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationRequest), global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationRequest.Parser, new[]{ "UserId", "Label", "TenantId", "ProjectId", "Context" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationResponse), global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationResponse.Parser, new[]{ "ChallengeId", "PublicKeyCredentialCreationOptionsJson", "ExpiresAtUnix" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationRequest), global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationRequest.Parser, new[]{ "ChallengeId", "PublicKeyCredentialJson", "Label", "Context" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationResponse), global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationResponse.Parser, new[]{ "Registered", "CredentialId", "UserId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationRequest), global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationRequest.Parser, new[]{ "UserId", "TenantId", "ProjectId", "Context" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationResponse), global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationResponse.Parser, new[]{ "ChallengeId", "PublicKeyCredentialRequestOptionsJson", "ExpiresAtUnix" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest), global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest.Parser, new[]{ "ChallengeId", "PublicKeyCredentialJson", "Context" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse), global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse.Parser, new[]{ "Principal", "SessionId", "AccessToken", "ExpiresAtUnix", "CredentialId" }, null, null, null, null)
           }));
     }
     #endregion
@@ -14958,6 +15002,2449 @@ namespace udb.core.Authn.Services.V1 {
             break;
           case 8: {
             Enrolled = input.ReadBool();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class StartWebAuthnRegistrationRequest : pb::IMessage<StartWebAuthnRegistrationRequest>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<StartWebAuthnRegistrationRequest> _parser = new pb::MessageParser<StartWebAuthnRegistrationRequest>(() => new StartWebAuthnRegistrationRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<StartWebAuthnRegistrationRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Authn.Services.V1.CoreReflection.Descriptor.MessageTypes[47]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public StartWebAuthnRegistrationRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public StartWebAuthnRegistrationRequest(StartWebAuthnRegistrationRequest other) : this() {
+      userId_ = other.userId_;
+      label_ = other.label_;
+      tenantId_ = other.tenantId_;
+      projectId_ = other.projectId_;
+      context_ = other.context_ != null ? other.context_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public StartWebAuthnRegistrationRequest Clone() {
+      return new StartWebAuthnRegistrationRequest(this);
+    }
+
+    /// <summary>Field number for the "user_id" field.</summary>
+    public const int UserIdFieldNumber = 1;
+    private string userId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string UserId {
+      get { return userId_; }
+      set {
+        userId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "label" field.</summary>
+    public const int LabelFieldNumber = 2;
+    private string label_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Label {
+      get { return label_; }
+      set {
+        label_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 3;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 4;
+    private string projectId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "context" field.</summary>
+    public const int ContextFieldNumber = 5;
+    private global::udb.core.Common.V1.RequestContext context_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Common.V1.RequestContext Context {
+      get { return context_; }
+      set {
+        context_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as StartWebAuthnRegistrationRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(StartWebAuthnRegistrationRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (UserId != other.UserId) return false;
+      if (Label != other.Label) return false;
+      if (TenantId != other.TenantId) return false;
+      if (ProjectId != other.ProjectId) return false;
+      if (!object.Equals(Context, other.Context)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (UserId.Length != 0) hash ^= UserId.GetHashCode();
+      if (Label.Length != 0) hash ^= Label.GetHashCode();
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
+      if (context_ != null) hash ^= Context.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (UserId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(UserId);
+      }
+      if (Label.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Label);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ProjectId);
+      }
+      if (context_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(Context);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (UserId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(UserId);
+      }
+      if (Label.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Label);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ProjectId);
+      }
+      if (context_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(Context);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (UserId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(UserId);
+      }
+      if (Label.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Label);
+      }
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
+      }
+      if (context_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Context);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(StartWebAuthnRegistrationRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.UserId.Length != 0) {
+        UserId = other.UserId;
+      }
+      if (other.Label.Length != 0) {
+        Label = other.Label;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
+      }
+      if (other.context_ != null) {
+        if (context_ == null) {
+          Context = new global::udb.core.Common.V1.RequestContext();
+        }
+        Context.MergeFrom(other.Context);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            UserId = input.ReadString();
+            break;
+          }
+          case 18: {
+            Label = input.ReadString();
+            break;
+          }
+          case 26: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 34: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 42: {
+            if (context_ == null) {
+              Context = new global::udb.core.Common.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            UserId = input.ReadString();
+            break;
+          }
+          case 18: {
+            Label = input.ReadString();
+            break;
+          }
+          case 26: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 34: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 42: {
+            if (context_ == null) {
+              Context = new global::udb.core.Common.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class StartWebAuthnRegistrationResponse : pb::IMessage<StartWebAuthnRegistrationResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<StartWebAuthnRegistrationResponse> _parser = new pb::MessageParser<StartWebAuthnRegistrationResponse>(() => new StartWebAuthnRegistrationResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<StartWebAuthnRegistrationResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Authn.Services.V1.CoreReflection.Descriptor.MessageTypes[48]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public StartWebAuthnRegistrationResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public StartWebAuthnRegistrationResponse(StartWebAuthnRegistrationResponse other) : this() {
+      challengeId_ = other.challengeId_;
+      publicKeyCredentialCreationOptionsJson_ = other.publicKeyCredentialCreationOptionsJson_;
+      expiresAtUnix_ = other.expiresAtUnix_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public StartWebAuthnRegistrationResponse Clone() {
+      return new StartWebAuthnRegistrationResponse(this);
+    }
+
+    /// <summary>Field number for the "challenge_id" field.</summary>
+    public const int ChallengeIdFieldNumber = 1;
+    private string challengeId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ChallengeId {
+      get { return challengeId_; }
+      set {
+        challengeId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "public_key_credential_creation_options_json" field.</summary>
+    public const int PublicKeyCredentialCreationOptionsJsonFieldNumber = 2;
+    private string publicKeyCredentialCreationOptionsJson_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string PublicKeyCredentialCreationOptionsJson {
+      get { return publicKeyCredentialCreationOptionsJson_; }
+      set {
+        publicKeyCredentialCreationOptionsJson_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "expires_at_unix" field.</summary>
+    public const int ExpiresAtUnixFieldNumber = 3;
+    private long expiresAtUnix_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long ExpiresAtUnix {
+      get { return expiresAtUnix_; }
+      set {
+        expiresAtUnix_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as StartWebAuthnRegistrationResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(StartWebAuthnRegistrationResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ChallengeId != other.ChallengeId) return false;
+      if (PublicKeyCredentialCreationOptionsJson != other.PublicKeyCredentialCreationOptionsJson) return false;
+      if (ExpiresAtUnix != other.ExpiresAtUnix) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ChallengeId.Length != 0) hash ^= ChallengeId.GetHashCode();
+      if (PublicKeyCredentialCreationOptionsJson.Length != 0) hash ^= PublicKeyCredentialCreationOptionsJson.GetHashCode();
+      if (ExpiresAtUnix != 0L) hash ^= ExpiresAtUnix.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (ChallengeId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ChallengeId);
+      }
+      if (PublicKeyCredentialCreationOptionsJson.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(PublicKeyCredentialCreationOptionsJson);
+      }
+      if (ExpiresAtUnix != 0L) {
+        output.WriteRawTag(24);
+        output.WriteInt64(ExpiresAtUnix);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (ChallengeId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ChallengeId);
+      }
+      if (PublicKeyCredentialCreationOptionsJson.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(PublicKeyCredentialCreationOptionsJson);
+      }
+      if (ExpiresAtUnix != 0L) {
+        output.WriteRawTag(24);
+        output.WriteInt64(ExpiresAtUnix);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (ChallengeId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ChallengeId);
+      }
+      if (PublicKeyCredentialCreationOptionsJson.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(PublicKeyCredentialCreationOptionsJson);
+      }
+      if (ExpiresAtUnix != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(ExpiresAtUnix);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(StartWebAuthnRegistrationResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ChallengeId.Length != 0) {
+        ChallengeId = other.ChallengeId;
+      }
+      if (other.PublicKeyCredentialCreationOptionsJson.Length != 0) {
+        PublicKeyCredentialCreationOptionsJson = other.PublicKeyCredentialCreationOptionsJson;
+      }
+      if (other.ExpiresAtUnix != 0L) {
+        ExpiresAtUnix = other.ExpiresAtUnix;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            ChallengeId = input.ReadString();
+            break;
+          }
+          case 18: {
+            PublicKeyCredentialCreationOptionsJson = input.ReadString();
+            break;
+          }
+          case 24: {
+            ExpiresAtUnix = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            ChallengeId = input.ReadString();
+            break;
+          }
+          case 18: {
+            PublicKeyCredentialCreationOptionsJson = input.ReadString();
+            break;
+          }
+          case 24: {
+            ExpiresAtUnix = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class FinishWebAuthnRegistrationRequest : pb::IMessage<FinishWebAuthnRegistrationRequest>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<FinishWebAuthnRegistrationRequest> _parser = new pb::MessageParser<FinishWebAuthnRegistrationRequest>(() => new FinishWebAuthnRegistrationRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<FinishWebAuthnRegistrationRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Authn.Services.V1.CoreReflection.Descriptor.MessageTypes[49]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public FinishWebAuthnRegistrationRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public FinishWebAuthnRegistrationRequest(FinishWebAuthnRegistrationRequest other) : this() {
+      challengeId_ = other.challengeId_;
+      publicKeyCredentialJson_ = other.publicKeyCredentialJson_;
+      label_ = other.label_;
+      context_ = other.context_ != null ? other.context_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public FinishWebAuthnRegistrationRequest Clone() {
+      return new FinishWebAuthnRegistrationRequest(this);
+    }
+
+    /// <summary>Field number for the "challenge_id" field.</summary>
+    public const int ChallengeIdFieldNumber = 1;
+    private string challengeId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ChallengeId {
+      get { return challengeId_; }
+      set {
+        challengeId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "public_key_credential_json" field.</summary>
+    public const int PublicKeyCredentialJsonFieldNumber = 2;
+    private string publicKeyCredentialJson_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string PublicKeyCredentialJson {
+      get { return publicKeyCredentialJson_; }
+      set {
+        publicKeyCredentialJson_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "label" field.</summary>
+    public const int LabelFieldNumber = 3;
+    private string label_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Label {
+      get { return label_; }
+      set {
+        label_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "context" field.</summary>
+    public const int ContextFieldNumber = 4;
+    private global::udb.core.Common.V1.RequestContext context_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Common.V1.RequestContext Context {
+      get { return context_; }
+      set {
+        context_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as FinishWebAuthnRegistrationRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(FinishWebAuthnRegistrationRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ChallengeId != other.ChallengeId) return false;
+      if (PublicKeyCredentialJson != other.PublicKeyCredentialJson) return false;
+      if (Label != other.Label) return false;
+      if (!object.Equals(Context, other.Context)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ChallengeId.Length != 0) hash ^= ChallengeId.GetHashCode();
+      if (PublicKeyCredentialJson.Length != 0) hash ^= PublicKeyCredentialJson.GetHashCode();
+      if (Label.Length != 0) hash ^= Label.GetHashCode();
+      if (context_ != null) hash ^= Context.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (ChallengeId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ChallengeId);
+      }
+      if (PublicKeyCredentialJson.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(PublicKeyCredentialJson);
+      }
+      if (Label.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Label);
+      }
+      if (context_ != null) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Context);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (ChallengeId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ChallengeId);
+      }
+      if (PublicKeyCredentialJson.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(PublicKeyCredentialJson);
+      }
+      if (Label.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Label);
+      }
+      if (context_ != null) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Context);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (ChallengeId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ChallengeId);
+      }
+      if (PublicKeyCredentialJson.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(PublicKeyCredentialJson);
+      }
+      if (Label.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Label);
+      }
+      if (context_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Context);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(FinishWebAuthnRegistrationRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ChallengeId.Length != 0) {
+        ChallengeId = other.ChallengeId;
+      }
+      if (other.PublicKeyCredentialJson.Length != 0) {
+        PublicKeyCredentialJson = other.PublicKeyCredentialJson;
+      }
+      if (other.Label.Length != 0) {
+        Label = other.Label;
+      }
+      if (other.context_ != null) {
+        if (context_ == null) {
+          Context = new global::udb.core.Common.V1.RequestContext();
+        }
+        Context.MergeFrom(other.Context);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            ChallengeId = input.ReadString();
+            break;
+          }
+          case 18: {
+            PublicKeyCredentialJson = input.ReadString();
+            break;
+          }
+          case 26: {
+            Label = input.ReadString();
+            break;
+          }
+          case 34: {
+            if (context_ == null) {
+              Context = new global::udb.core.Common.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            ChallengeId = input.ReadString();
+            break;
+          }
+          case 18: {
+            PublicKeyCredentialJson = input.ReadString();
+            break;
+          }
+          case 26: {
+            Label = input.ReadString();
+            break;
+          }
+          case 34: {
+            if (context_ == null) {
+              Context = new global::udb.core.Common.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class FinishWebAuthnRegistrationResponse : pb::IMessage<FinishWebAuthnRegistrationResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<FinishWebAuthnRegistrationResponse> _parser = new pb::MessageParser<FinishWebAuthnRegistrationResponse>(() => new FinishWebAuthnRegistrationResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<FinishWebAuthnRegistrationResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Authn.Services.V1.CoreReflection.Descriptor.MessageTypes[50]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public FinishWebAuthnRegistrationResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public FinishWebAuthnRegistrationResponse(FinishWebAuthnRegistrationResponse other) : this() {
+      registered_ = other.registered_;
+      credentialId_ = other.credentialId_;
+      userId_ = other.userId_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public FinishWebAuthnRegistrationResponse Clone() {
+      return new FinishWebAuthnRegistrationResponse(this);
+    }
+
+    /// <summary>Field number for the "registered" field.</summary>
+    public const int RegisteredFieldNumber = 1;
+    private bool registered_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Registered {
+      get { return registered_; }
+      set {
+        registered_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "credential_id" field.</summary>
+    public const int CredentialIdFieldNumber = 2;
+    private string credentialId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string CredentialId {
+      get { return credentialId_; }
+      set {
+        credentialId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "user_id" field.</summary>
+    public const int UserIdFieldNumber = 3;
+    private string userId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string UserId {
+      get { return userId_; }
+      set {
+        userId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as FinishWebAuthnRegistrationResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(FinishWebAuthnRegistrationResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Registered != other.Registered) return false;
+      if (CredentialId != other.CredentialId) return false;
+      if (UserId != other.UserId) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Registered != false) hash ^= Registered.GetHashCode();
+      if (CredentialId.Length != 0) hash ^= CredentialId.GetHashCode();
+      if (UserId.Length != 0) hash ^= UserId.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Registered != false) {
+        output.WriteRawTag(8);
+        output.WriteBool(Registered);
+      }
+      if (CredentialId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(CredentialId);
+      }
+      if (UserId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(UserId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Registered != false) {
+        output.WriteRawTag(8);
+        output.WriteBool(Registered);
+      }
+      if (CredentialId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(CredentialId);
+      }
+      if (UserId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(UserId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Registered != false) {
+        size += 1 + 1;
+      }
+      if (CredentialId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(CredentialId);
+      }
+      if (UserId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(UserId);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(FinishWebAuthnRegistrationResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Registered != false) {
+        Registered = other.Registered;
+      }
+      if (other.CredentialId.Length != 0) {
+        CredentialId = other.CredentialId;
+      }
+      if (other.UserId.Length != 0) {
+        UserId = other.UserId;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            Registered = input.ReadBool();
+            break;
+          }
+          case 18: {
+            CredentialId = input.ReadString();
+            break;
+          }
+          case 26: {
+            UserId = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            Registered = input.ReadBool();
+            break;
+          }
+          case 18: {
+            CredentialId = input.ReadString();
+            break;
+          }
+          case 26: {
+            UserId = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class StartWebAuthnAuthenticationRequest : pb::IMessage<StartWebAuthnAuthenticationRequest>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<StartWebAuthnAuthenticationRequest> _parser = new pb::MessageParser<StartWebAuthnAuthenticationRequest>(() => new StartWebAuthnAuthenticationRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<StartWebAuthnAuthenticationRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Authn.Services.V1.CoreReflection.Descriptor.MessageTypes[51]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public StartWebAuthnAuthenticationRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public StartWebAuthnAuthenticationRequest(StartWebAuthnAuthenticationRequest other) : this() {
+      userId_ = other.userId_;
+      tenantId_ = other.tenantId_;
+      projectId_ = other.projectId_;
+      context_ = other.context_ != null ? other.context_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public StartWebAuthnAuthenticationRequest Clone() {
+      return new StartWebAuthnAuthenticationRequest(this);
+    }
+
+    /// <summary>Field number for the "user_id" field.</summary>
+    public const int UserIdFieldNumber = 1;
+    private string userId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string UserId {
+      get { return userId_; }
+      set {
+        userId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 2;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 3;
+    private string projectId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "context" field.</summary>
+    public const int ContextFieldNumber = 4;
+    private global::udb.core.Common.V1.RequestContext context_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Common.V1.RequestContext Context {
+      get { return context_; }
+      set {
+        context_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as StartWebAuthnAuthenticationRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(StartWebAuthnAuthenticationRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (UserId != other.UserId) return false;
+      if (TenantId != other.TenantId) return false;
+      if (ProjectId != other.ProjectId) return false;
+      if (!object.Equals(Context, other.Context)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (UserId.Length != 0) hash ^= UserId.GetHashCode();
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
+      if (context_ != null) hash ^= Context.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (UserId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(UserId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(ProjectId);
+      }
+      if (context_ != null) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Context);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (UserId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(UserId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(ProjectId);
+      }
+      if (context_ != null) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Context);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (UserId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(UserId);
+      }
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
+      }
+      if (context_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Context);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(StartWebAuthnAuthenticationRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.UserId.Length != 0) {
+        UserId = other.UserId;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
+      }
+      if (other.context_ != null) {
+        if (context_ == null) {
+          Context = new global::udb.core.Common.V1.RequestContext();
+        }
+        Context.MergeFrom(other.Context);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            UserId = input.ReadString();
+            break;
+          }
+          case 18: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 26: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 34: {
+            if (context_ == null) {
+              Context = new global::udb.core.Common.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            UserId = input.ReadString();
+            break;
+          }
+          case 18: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 26: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 34: {
+            if (context_ == null) {
+              Context = new global::udb.core.Common.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class StartWebAuthnAuthenticationResponse : pb::IMessage<StartWebAuthnAuthenticationResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<StartWebAuthnAuthenticationResponse> _parser = new pb::MessageParser<StartWebAuthnAuthenticationResponse>(() => new StartWebAuthnAuthenticationResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<StartWebAuthnAuthenticationResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Authn.Services.V1.CoreReflection.Descriptor.MessageTypes[52]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public StartWebAuthnAuthenticationResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public StartWebAuthnAuthenticationResponse(StartWebAuthnAuthenticationResponse other) : this() {
+      challengeId_ = other.challengeId_;
+      publicKeyCredentialRequestOptionsJson_ = other.publicKeyCredentialRequestOptionsJson_;
+      expiresAtUnix_ = other.expiresAtUnix_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public StartWebAuthnAuthenticationResponse Clone() {
+      return new StartWebAuthnAuthenticationResponse(this);
+    }
+
+    /// <summary>Field number for the "challenge_id" field.</summary>
+    public const int ChallengeIdFieldNumber = 1;
+    private string challengeId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ChallengeId {
+      get { return challengeId_; }
+      set {
+        challengeId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "public_key_credential_request_options_json" field.</summary>
+    public const int PublicKeyCredentialRequestOptionsJsonFieldNumber = 2;
+    private string publicKeyCredentialRequestOptionsJson_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string PublicKeyCredentialRequestOptionsJson {
+      get { return publicKeyCredentialRequestOptionsJson_; }
+      set {
+        publicKeyCredentialRequestOptionsJson_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "expires_at_unix" field.</summary>
+    public const int ExpiresAtUnixFieldNumber = 3;
+    private long expiresAtUnix_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long ExpiresAtUnix {
+      get { return expiresAtUnix_; }
+      set {
+        expiresAtUnix_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as StartWebAuthnAuthenticationResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(StartWebAuthnAuthenticationResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ChallengeId != other.ChallengeId) return false;
+      if (PublicKeyCredentialRequestOptionsJson != other.PublicKeyCredentialRequestOptionsJson) return false;
+      if (ExpiresAtUnix != other.ExpiresAtUnix) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ChallengeId.Length != 0) hash ^= ChallengeId.GetHashCode();
+      if (PublicKeyCredentialRequestOptionsJson.Length != 0) hash ^= PublicKeyCredentialRequestOptionsJson.GetHashCode();
+      if (ExpiresAtUnix != 0L) hash ^= ExpiresAtUnix.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (ChallengeId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ChallengeId);
+      }
+      if (PublicKeyCredentialRequestOptionsJson.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(PublicKeyCredentialRequestOptionsJson);
+      }
+      if (ExpiresAtUnix != 0L) {
+        output.WriteRawTag(24);
+        output.WriteInt64(ExpiresAtUnix);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (ChallengeId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ChallengeId);
+      }
+      if (PublicKeyCredentialRequestOptionsJson.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(PublicKeyCredentialRequestOptionsJson);
+      }
+      if (ExpiresAtUnix != 0L) {
+        output.WriteRawTag(24);
+        output.WriteInt64(ExpiresAtUnix);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (ChallengeId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ChallengeId);
+      }
+      if (PublicKeyCredentialRequestOptionsJson.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(PublicKeyCredentialRequestOptionsJson);
+      }
+      if (ExpiresAtUnix != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(ExpiresAtUnix);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(StartWebAuthnAuthenticationResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ChallengeId.Length != 0) {
+        ChallengeId = other.ChallengeId;
+      }
+      if (other.PublicKeyCredentialRequestOptionsJson.Length != 0) {
+        PublicKeyCredentialRequestOptionsJson = other.PublicKeyCredentialRequestOptionsJson;
+      }
+      if (other.ExpiresAtUnix != 0L) {
+        ExpiresAtUnix = other.ExpiresAtUnix;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            ChallengeId = input.ReadString();
+            break;
+          }
+          case 18: {
+            PublicKeyCredentialRequestOptionsJson = input.ReadString();
+            break;
+          }
+          case 24: {
+            ExpiresAtUnix = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            ChallengeId = input.ReadString();
+            break;
+          }
+          case 18: {
+            PublicKeyCredentialRequestOptionsJson = input.ReadString();
+            break;
+          }
+          case 24: {
+            ExpiresAtUnix = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class FinishWebAuthnAuthenticationRequest : pb::IMessage<FinishWebAuthnAuthenticationRequest>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<FinishWebAuthnAuthenticationRequest> _parser = new pb::MessageParser<FinishWebAuthnAuthenticationRequest>(() => new FinishWebAuthnAuthenticationRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<FinishWebAuthnAuthenticationRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Authn.Services.V1.CoreReflection.Descriptor.MessageTypes[53]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public FinishWebAuthnAuthenticationRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public FinishWebAuthnAuthenticationRequest(FinishWebAuthnAuthenticationRequest other) : this() {
+      challengeId_ = other.challengeId_;
+      publicKeyCredentialJson_ = other.publicKeyCredentialJson_;
+      context_ = other.context_ != null ? other.context_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public FinishWebAuthnAuthenticationRequest Clone() {
+      return new FinishWebAuthnAuthenticationRequest(this);
+    }
+
+    /// <summary>Field number for the "challenge_id" field.</summary>
+    public const int ChallengeIdFieldNumber = 1;
+    private string challengeId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ChallengeId {
+      get { return challengeId_; }
+      set {
+        challengeId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "public_key_credential_json" field.</summary>
+    public const int PublicKeyCredentialJsonFieldNumber = 2;
+    private string publicKeyCredentialJson_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string PublicKeyCredentialJson {
+      get { return publicKeyCredentialJson_; }
+      set {
+        publicKeyCredentialJson_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "context" field.</summary>
+    public const int ContextFieldNumber = 3;
+    private global::udb.core.Common.V1.RequestContext context_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Common.V1.RequestContext Context {
+      get { return context_; }
+      set {
+        context_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as FinishWebAuthnAuthenticationRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(FinishWebAuthnAuthenticationRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ChallengeId != other.ChallengeId) return false;
+      if (PublicKeyCredentialJson != other.PublicKeyCredentialJson) return false;
+      if (!object.Equals(Context, other.Context)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ChallengeId.Length != 0) hash ^= ChallengeId.GetHashCode();
+      if (PublicKeyCredentialJson.Length != 0) hash ^= PublicKeyCredentialJson.GetHashCode();
+      if (context_ != null) hash ^= Context.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (ChallengeId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ChallengeId);
+      }
+      if (PublicKeyCredentialJson.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(PublicKeyCredentialJson);
+      }
+      if (context_ != null) {
+        output.WriteRawTag(26);
+        output.WriteMessage(Context);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (ChallengeId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ChallengeId);
+      }
+      if (PublicKeyCredentialJson.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(PublicKeyCredentialJson);
+      }
+      if (context_ != null) {
+        output.WriteRawTag(26);
+        output.WriteMessage(Context);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (ChallengeId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ChallengeId);
+      }
+      if (PublicKeyCredentialJson.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(PublicKeyCredentialJson);
+      }
+      if (context_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Context);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(FinishWebAuthnAuthenticationRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ChallengeId.Length != 0) {
+        ChallengeId = other.ChallengeId;
+      }
+      if (other.PublicKeyCredentialJson.Length != 0) {
+        PublicKeyCredentialJson = other.PublicKeyCredentialJson;
+      }
+      if (other.context_ != null) {
+        if (context_ == null) {
+          Context = new global::udb.core.Common.V1.RequestContext();
+        }
+        Context.MergeFrom(other.Context);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            ChallengeId = input.ReadString();
+            break;
+          }
+          case 18: {
+            PublicKeyCredentialJson = input.ReadString();
+            break;
+          }
+          case 26: {
+            if (context_ == null) {
+              Context = new global::udb.core.Common.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            ChallengeId = input.ReadString();
+            break;
+          }
+          case 18: {
+            PublicKeyCredentialJson = input.ReadString();
+            break;
+          }
+          case 26: {
+            if (context_ == null) {
+              Context = new global::udb.core.Common.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class FinishWebAuthnAuthenticationResponse : pb::IMessage<FinishWebAuthnAuthenticationResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<FinishWebAuthnAuthenticationResponse> _parser = new pb::MessageParser<FinishWebAuthnAuthenticationResponse>(() => new FinishWebAuthnAuthenticationResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<FinishWebAuthnAuthenticationResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Authn.Services.V1.CoreReflection.Descriptor.MessageTypes[54]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public FinishWebAuthnAuthenticationResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public FinishWebAuthnAuthenticationResponse(FinishWebAuthnAuthenticationResponse other) : this() {
+      principal_ = other.principal_ != null ? other.principal_.Clone() : null;
+      sessionId_ = other.sessionId_;
+      accessToken_ = other.accessToken_;
+      expiresAtUnix_ = other.expiresAtUnix_;
+      credentialId_ = other.credentialId_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public FinishWebAuthnAuthenticationResponse Clone() {
+      return new FinishWebAuthnAuthenticationResponse(this);
+    }
+
+    /// <summary>Field number for the "principal" field.</summary>
+    public const int PrincipalFieldNumber = 1;
+    private global::udb.core.Authn.Services.V1.Principal principal_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Authn.Services.V1.Principal Principal {
+      get { return principal_; }
+      set {
+        principal_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "session_id" field.</summary>
+    public const int SessionIdFieldNumber = 2;
+    private string sessionId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string SessionId {
+      get { return sessionId_; }
+      set {
+        sessionId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "access_token" field.</summary>
+    public const int AccessTokenFieldNumber = 3;
+    private string accessToken_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string AccessToken {
+      get { return accessToken_; }
+      set {
+        accessToken_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "expires_at_unix" field.</summary>
+    public const int ExpiresAtUnixFieldNumber = 4;
+    private long expiresAtUnix_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long ExpiresAtUnix {
+      get { return expiresAtUnix_; }
+      set {
+        expiresAtUnix_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "credential_id" field.</summary>
+    public const int CredentialIdFieldNumber = 5;
+    private string credentialId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string CredentialId {
+      get { return credentialId_; }
+      set {
+        credentialId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as FinishWebAuthnAuthenticationResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(FinishWebAuthnAuthenticationResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(Principal, other.Principal)) return false;
+      if (SessionId != other.SessionId) return false;
+      if (AccessToken != other.AccessToken) return false;
+      if (ExpiresAtUnix != other.ExpiresAtUnix) return false;
+      if (CredentialId != other.CredentialId) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (principal_ != null) hash ^= Principal.GetHashCode();
+      if (SessionId.Length != 0) hash ^= SessionId.GetHashCode();
+      if (AccessToken.Length != 0) hash ^= AccessToken.GetHashCode();
+      if (ExpiresAtUnix != 0L) hash ^= ExpiresAtUnix.GetHashCode();
+      if (CredentialId.Length != 0) hash ^= CredentialId.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (principal_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Principal);
+      }
+      if (SessionId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(SessionId);
+      }
+      if (AccessToken.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(AccessToken);
+      }
+      if (ExpiresAtUnix != 0L) {
+        output.WriteRawTag(32);
+        output.WriteInt64(ExpiresAtUnix);
+      }
+      if (CredentialId.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(CredentialId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (principal_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Principal);
+      }
+      if (SessionId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(SessionId);
+      }
+      if (AccessToken.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(AccessToken);
+      }
+      if (ExpiresAtUnix != 0L) {
+        output.WriteRawTag(32);
+        output.WriteInt64(ExpiresAtUnix);
+      }
+      if (CredentialId.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(CredentialId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (principal_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Principal);
+      }
+      if (SessionId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(SessionId);
+      }
+      if (AccessToken.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(AccessToken);
+      }
+      if (ExpiresAtUnix != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(ExpiresAtUnix);
+      }
+      if (CredentialId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(CredentialId);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(FinishWebAuthnAuthenticationResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.principal_ != null) {
+        if (principal_ == null) {
+          Principal = new global::udb.core.Authn.Services.V1.Principal();
+        }
+        Principal.MergeFrom(other.Principal);
+      }
+      if (other.SessionId.Length != 0) {
+        SessionId = other.SessionId;
+      }
+      if (other.AccessToken.Length != 0) {
+        AccessToken = other.AccessToken;
+      }
+      if (other.ExpiresAtUnix != 0L) {
+        ExpiresAtUnix = other.ExpiresAtUnix;
+      }
+      if (other.CredentialId.Length != 0) {
+        CredentialId = other.CredentialId;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            if (principal_ == null) {
+              Principal = new global::udb.core.Authn.Services.V1.Principal();
+            }
+            input.ReadMessage(Principal);
+            break;
+          }
+          case 18: {
+            SessionId = input.ReadString();
+            break;
+          }
+          case 26: {
+            AccessToken = input.ReadString();
+            break;
+          }
+          case 32: {
+            ExpiresAtUnix = input.ReadInt64();
+            break;
+          }
+          case 42: {
+            CredentialId = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            if (principal_ == null) {
+              Principal = new global::udb.core.Authn.Services.V1.Principal();
+            }
+            input.ReadMessage(Principal);
+            break;
+          }
+          case 18: {
+            SessionId = input.ReadString();
+            break;
+          }
+          case 26: {
+            AccessToken = input.ReadString();
+            break;
+          }
+          case 32: {
+            ExpiresAtUnix = input.ReadInt64();
+            break;
+          }
+          case 42: {
+            CredentialId = input.ReadString();
             break;
           }
         }

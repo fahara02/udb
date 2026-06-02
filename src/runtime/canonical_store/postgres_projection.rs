@@ -141,66 +141,12 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
         // The DDL is split into multiple statements because we want
         // each to be idempotent (CREATE INDEX IF NOT EXISTS is
         // per-statement).
-        let stmts = [
-            format!(
-                r#"
-                CREATE TABLE IF NOT EXISTS {rel} (
-                    task_id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                    idempotency_key    TEXT NOT NULL UNIQUE,
-                    project_id         TEXT NOT NULL DEFAULT '',
-                    manifest_checksum  TEXT NOT NULL DEFAULT '',
-                    message_type       TEXT NOT NULL DEFAULT '',
-                    source_schema      TEXT NOT NULL DEFAULT '',
-                    source_table       TEXT NOT NULL DEFAULT '',
-                    source_row_key     JSONB NOT NULL DEFAULT '{{}}'::JSONB,
-                    operation          TEXT NOT NULL DEFAULT 'upsert'
-                                       CHECK (operation IN ('upsert','delete')),
-                    target_backend     TEXT NOT NULL DEFAULT '',
-                    target_instance    TEXT NOT NULL DEFAULT '',
-                    projection_kind    TEXT NOT NULL DEFAULT '',
-                    resource_name      TEXT NOT NULL DEFAULT '',
-                    target_options     JSONB NOT NULL DEFAULT '[]'::JSONB,
-                    source_payload     JSONB NOT NULL DEFAULT '{{}}'::JSONB,
-                    source_checksum    TEXT NOT NULL DEFAULT '',
-                    status             TEXT NOT NULL DEFAULT 'PENDING'
-                                       CHECK (status IN ('PENDING','IN_PROGRESS','COMPLETED','FAILED','DEAD_LETTER')),
-                    retry_count        INTEGER NOT NULL DEFAULT 0,
-                    last_error         TEXT NOT NULL DEFAULT '',
-                    next_retry_at      TIMESTAMPTZ,
-                    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    completed_at       TIMESTAMPTZ
-                )
-                "#
-            ),
-            format!(
-                r#"CREATE INDEX IF NOT EXISTS "idx_udb_projection_tasks_status_created_at"
-                     ON {rel} (status, created_at)"#
-            ),
-            format!(
-                r#"CREATE INDEX IF NOT EXISTS "idx_udb_projection_tasks_project_status_created_at"
-                     ON {rel} (project_id, status, created_at)"#
-            ),
-            format!(
-                r#"CREATE INDEX IF NOT EXISTS "idx_udb_projection_tasks_backend_status"
-                     ON {rel} (target_backend, target_instance, status)"#
-            ),
-            format!(
-                r#"CREATE INDEX IF NOT EXISTS "idx_udb_projection_tasks_claim_pending"
-                     ON {rel} (project_id, created_at, task_id)
-                     WHERE status = 'PENDING'"#
-            ),
-            format!(
-                r#"CREATE INDEX IF NOT EXISTS "idx_udb_projection_tasks_claim_failed"
-                     ON {rel} (project_id, next_retry_at, created_at, task_id)
-                     WHERE status = 'FAILED'"#
-            ),
-            format!(r#"ALTER TABLE {rel} ADD COLUMN IF NOT EXISTS next_retry_at TIMESTAMPTZ"#),
-            format!(
-                r#"CREATE INDEX IF NOT EXISTS "idx_udb_projection_tasks_next_retry"
-                     ON {rel} (next_retry_at) WHERE status = 'FAILED' AND next_retry_at IS NOT NULL"#
-            ),
-        ];
+        //
+        // B.7: the statement strings now come from the shared
+        // `sql_schema` renderer (single source of truth across SQL
+        // backends); the execute/error-handling loop below is
+        // unchanged.
+        let stmts = super::sql_schema::postgres_projection_tasks_ddl(rel);
         for sql in stmts.iter() {
             sqlx::query(sql)
                 .execute(self.pg_pool())

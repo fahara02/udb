@@ -119,35 +119,10 @@ impl SagaStore for SqliteCanonicalStore {
     }
 
     async fn ensure_saga_tables(&self) -> SystemStoreResult<()> {
-        let create_table = format!(
-            r#"
-            CREATE TABLE IF NOT EXISTS {TABLE} (
-                saga_id              TEXT PRIMARY KEY,
-                tx_id                TEXT NOT NULL DEFAULT '',
-                tenant_id            TEXT NOT NULL DEFAULT '',
-                correlation_id       TEXT NOT NULL DEFAULT '',
-                status               TEXT NOT NULL DEFAULT 'pending'
-                                     CHECK (status IN ('indeterminate','in_progress','pending','committed','compensated','failed','in_doubt','failed_compensation','manual_review')),
-                backend_instance     TEXT NOT NULL DEFAULT '',
-                operation            TEXT NOT NULL DEFAULT '',
-                current_step         INTEGER NOT NULL DEFAULT 0,
-                retry_count          INTEGER NOT NULL DEFAULT 0,
-                recovery_attempts    INTEGER NOT NULL DEFAULT 0,
-                compensation_status  TEXT NOT NULL DEFAULT 'none'
-                                     CHECK (compensation_status IN ('none','completed','manual_review','retry_requested')),
-                steps                TEXT NOT NULL DEFAULT '[]',
-                compensations        TEXT NOT NULL DEFAULT '[]',
-                last_error           TEXT NOT NULL DEFAULT '',
-                created_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                updated_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-            )
-            "#
-        );
-        let create_idx = format!(
-            "CREATE INDEX IF NOT EXISTS idx_{TABLE}_tenant_status \
-             ON {TABLE} (tenant_id, status, updated_at DESC)"
-        );
-        for sql in [create_table, create_idx] {
+        // B.7: DDL strings come from the shared `sql_schema` renderer (single
+        // source of truth across SQL backends); the execute loop below is
+        // unchanged.
+        for sql in super::sql_schema::sqlite_sagas_ddl(TABLE) {
             sqlx::query(&sql)
                 .execute(self.pool_ref())
                 .await

@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	DataBroker_Select_FullMethodName                  = "/udb.services.v1.DataBroker/Select"
 	DataBroker_BatchSelect_FullMethodName             = "/udb.services.v1.DataBroker/BatchSelect"
+	DataBroker_SelectV2_FullMethodName                = "/udb.services.v1.DataBroker/SelectV2"
 	DataBroker_Upsert_FullMethodName                  = "/udb.services.v1.DataBroker/Upsert"
 	DataBroker_BatchUpsert_FullMethodName             = "/udb.services.v1.DataBroker/BatchUpsert"
 	DataBroker_Delete_FullMethodName                  = "/udb.services.v1.DataBroker/Delete"
@@ -108,6 +109,10 @@ type DataBrokerClient interface {
 	// ── Relational ─────────────────────────────────────────────────────────────
 	Select(ctx context.Context, in *v1.SelectRequest, opts ...grpc.CallOption) (*v1.RecordSet, error)
 	BatchSelect(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[v1.SelectRequest, v1.RecordSet], error)
+	// Additive typed columnar read. Reuses SelectRequest; streams RecordBatchV2.
+	// Clients use this only when ProtocolSupport.encodings advertises
+	// "record_batch_v2" and otherwise fall back to Select/RecordSet.
+	SelectV2(ctx context.Context, in *v1.SelectRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.RecordBatchV2], error)
 	Upsert(ctx context.Context, in *v1.UpsertRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
 	BatchUpsert(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[v1.UpsertRequest, v1.MutationResponse], error)
 	// Delete rows without raw SQL.
@@ -272,6 +277,25 @@ func (c *dataBrokerClient) BatchSelect(ctx context.Context, opts ...grpc.CallOpt
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type DataBroker_BatchSelectClient = grpc.BidiStreamingClient[v1.SelectRequest, v1.RecordSet]
 
+func (c *dataBrokerClient) SelectV2(ctx context.Context, in *v1.SelectRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.RecordBatchV2], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &DataBroker_ServiceDesc.Streams[1], DataBroker_SelectV2_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[v1.SelectRequest, v1.RecordBatchV2]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type DataBroker_SelectV2Client = grpc.ServerStreamingClient[v1.RecordBatchV2]
+
 func (c *dataBrokerClient) Upsert(ctx context.Context, in *v1.UpsertRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.MutationResponse)
@@ -284,7 +308,7 @@ func (c *dataBrokerClient) Upsert(ctx context.Context, in *v1.UpsertRequest, opt
 
 func (c *dataBrokerClient) BatchUpsert(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[v1.UpsertRequest, v1.MutationResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &DataBroker_ServiceDesc.Streams[1], DataBroker_BatchUpsert_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &DataBroker_ServiceDesc.Streams[2], DataBroker_BatchUpsert_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +361,7 @@ func (c *dataBrokerClient) VectorUpsert(ctx context.Context, in *v1.VectorUpsert
 
 func (c *dataBrokerClient) VectorBatchUpsert(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[v1.VectorUpsertRequest, v1.MutationResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &DataBroker_ServiceDesc.Streams[2], DataBroker_VectorBatchUpsert_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &DataBroker_ServiceDesc.Streams[3], DataBroker_VectorBatchUpsert_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +374,7 @@ type DataBroker_VectorBatchUpsertClient = grpc.BidiStreamingClient[v1.VectorUpse
 
 func (c *dataBrokerClient) PutObject(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[v1.Chunk, v1.MutationResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &DataBroker_ServiceDesc.Streams[3], DataBroker_PutObject_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &DataBroker_ServiceDesc.Streams[4], DataBroker_PutObject_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -363,7 +387,7 @@ type DataBroker_PutObjectClient = grpc.ClientStreamingClient[v1.Chunk, v1.Mutati
 
 func (c *dataBrokerClient) GetObject(ctx context.Context, in *v1.ObjectRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.Chunk], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &DataBroker_ServiceDesc.Streams[4], DataBroker_GetObject_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &DataBroker_ServiceDesc.Streams[5], DataBroker_GetObject_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -532,7 +556,7 @@ func (c *dataBrokerClient) AnalyticalQuery(ctx context.Context, in *v1.Analytica
 
 func (c *dataBrokerClient) BeginTx(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[v1.Mutation, v1.TxStatus], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &DataBroker_ServiceDesc.Streams[5], DataBroker_BeginTx_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &DataBroker_ServiceDesc.Streams[6], DataBroker_BeginTx_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -545,7 +569,7 @@ type DataBroker_BeginTxClient = grpc.BidiStreamingClient[v1.Mutation, v1.TxStatu
 
 func (c *dataBrokerClient) PublishCDC(ctx context.Context, in *v1.CDCSubscriptionRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v11.CDCEnvelope], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &DataBroker_ServiceDesc.Streams[6], DataBroker_PublishCDC_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &DataBroker_ServiceDesc.Streams[7], DataBroker_PublishCDC_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1042,6 +1066,10 @@ type DataBrokerServer interface {
 	// ── Relational ─────────────────────────────────────────────────────────────
 	Select(context.Context, *v1.SelectRequest) (*v1.RecordSet, error)
 	BatchSelect(grpc.BidiStreamingServer[v1.SelectRequest, v1.RecordSet]) error
+	// Additive typed columnar read. Reuses SelectRequest; streams RecordBatchV2.
+	// Clients use this only when ProtocolSupport.encodings advertises
+	// "record_batch_v2" and otherwise fall back to Select/RecordSet.
+	SelectV2(*v1.SelectRequest, grpc.ServerStreamingServer[v1.RecordBatchV2]) error
 	Upsert(context.Context, *v1.UpsertRequest) (*v1.MutationResponse, error)
 	BatchUpsert(grpc.BidiStreamingServer[v1.UpsertRequest, v1.MutationResponse]) error
 	// Delete rows without raw SQL.
@@ -1187,6 +1215,9 @@ func (UnimplementedDataBrokerServer) Select(context.Context, *v1.SelectRequest) 
 }
 func (UnimplementedDataBrokerServer) BatchSelect(grpc.BidiStreamingServer[v1.SelectRequest, v1.RecordSet]) error {
 	return status.Error(codes.Unimplemented, "method BatchSelect not implemented")
+}
+func (UnimplementedDataBrokerServer) SelectV2(*v1.SelectRequest, grpc.ServerStreamingServer[v1.RecordBatchV2]) error {
+	return status.Error(codes.Unimplemented, "method SelectV2 not implemented")
 }
 func (UnimplementedDataBrokerServer) Upsert(context.Context, *v1.UpsertRequest) (*v1.MutationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Upsert not implemented")
@@ -1451,6 +1482,17 @@ func _DataBroker_BatchSelect_Handler(srv interface{}, stream grpc.ServerStream) 
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type DataBroker_BatchSelectServer = grpc.BidiStreamingServer[v1.SelectRequest, v1.RecordSet]
+
+func _DataBroker_SelectV2_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(v1.SelectRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(DataBrokerServer).SelectV2(m, &grpc.GenericServerStream[v1.SelectRequest, v1.RecordBatchV2]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type DataBroker_SelectV2Server = grpc.ServerStreamingServer[v1.RecordBatchV2]
 
 func _DataBroker_Upsert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1.UpsertRequest)
@@ -2994,6 +3036,11 @@ var DataBroker_ServiceDesc = grpc.ServiceDesc{
 			Handler:       _DataBroker_BatchSelect_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
+		},
+		{
+			StreamName:    "SelectV2",
+			Handler:       _DataBroker_SelectV2_Handler,
+			ServerStreams: true,
 		},
 		{
 			StreamName:    "BatchUpsert",

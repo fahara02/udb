@@ -2,9 +2,9 @@
 
 Artifact: `dev.udb:udb-java-client`
 
-Current manifest version: `0.2.1-SNAPSHOT`
+Current manifest version: `0.3.0-SNAPSHOT`
 
-Release target: `0.2.1`
+Release target: `0.3.0`
 
 Runtime: Java 17+
 

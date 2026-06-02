@@ -294,37 +294,79 @@ impl Neo4jExecutor {
     /// Execute a single Cypher statement and return all rows as JSON objects.
     async fn run_single(&self, cypher: &str, params: Json) -> Result<Vec<Json>, String> {
         let results = self.cypher(&[(cypher, params)]).await?;
-        let rows = results
-            .into_iter()
-            .next()
-            .and_then(|r| {
-                let columns = r
-                    .get("columns")
-                    .and_then(|c| c.as_array())
+        Ok(results
+            .first()
+            .map(Self::rows_from_result)
+            .unwrap_or_default())
+    }
+
+    /// Parse one statement result-set (the `{columns, data:[{row:[...]}]}`
+    /// shape the HTTP API returns) into a `Vec` of column-keyed JSON objects.
+    /// Shared by `run_single` (above) and the canonical-store helpers below.
+    fn rows_from_result(result: &Json) -> Vec<Json> {
+        let columns = result
+            .get("columns")
+            .and_then(|c| c.as_array())
+            .cloned()
+            .unwrap_or_default();
+        let Some(data) = result.get("data").and_then(|d| d.as_array()) else {
+            return Vec::new();
+        };
+        data.iter()
+            .map(|row| {
+                let row_vals = row
+                    .get("row")
+                    .and_then(|v| v.as_array())
                     .cloned()
                     .unwrap_or_default();
-                let data = r.get("data").and_then(|d| d.as_array()).cloned()?;
-                Some(
-                    data.into_iter()
-                        .map(|row| {
-                            let row_vals = row
-                                .get("row")
-                                .and_then(|v| v.as_array())
-                                .cloned()
-                                .unwrap_or_default();
-                            let mut obj = serde_json::Map::new();
-                            for (col, val) in columns.iter().zip(row_vals.iter()) {
-                                if let Some(name) = col.as_str() {
-                                    obj.insert(name.to_string(), val.clone());
-                                }
-                            }
-                            Json::Object(obj)
-                        })
-                        .collect::<Vec<_>>(),
-                )
+                let mut obj = serde_json::Map::new();
+                for (col, val) in columns.iter().zip(row_vals.iter()) {
+                    if let Some(name) = col.as_str() {
+                        obj.insert(name.to_string(), val.clone());
+                    }
+                }
+                Json::Object(obj)
             })
-            .unwrap_or_default();
-        Ok(rows)
+            .collect()
+    }
+
+    /// B.10b: run a single auto-commit Cypher statement with parameters and
+    /// return all rows as column-keyed JSON objects.
+    ///
+    /// This is the single-statement entry point the `Neo4jCanonicalStore` uses
+    /// (outbox enqueue, lease acquire/release, counter reads). It is a thin
+    /// `pub(crate)` wrapper over the existing private `run_single`, so the
+    /// canonical store does not depend on internal naming.
+    pub(crate) async fn cypher_rows(
+        &self,
+        cypher: &str,
+        params: Json,
+    ) -> Result<Vec<Json>, String> {
+        self.run_single(cypher, params).await
+    }
+
+    /// B.10b: run a LIST of Cypher statements atomically inside ONE HTTP
+    /// transaction (the `/db/<db>/tx/commit` endpoint opens, runs every
+    /// statement, and commits in a single request — all-or-nothing). Returns
+    /// the parsed rows for EACH statement, in order, so a caller that needs the
+    /// `RETURN` of a later statement (e.g. the outbox-seq counter) can read it.
+    ///
+    /// The canonical store needs atomic multi-statement transactions for the
+    /// claims / audit-chain writes; this is the foundation. The existing
+    /// auto-commit endpoint already provides the atomicity (a single POST of N
+    /// statements commits as one transaction), so no new endpoint is needed.
+    ///
+    /// Phase 1's outbox enqueue is a single statement (the counter bump and the
+    /// event CREATE are one Cypher statement), so this multi-statement helper is
+    /// the FOUNDATION the phase-2 system-store traits (projection claims /
+    /// audit-chain appends) will use — hence `allow(dead_code)` until then.
+    #[allow(dead_code)]
+    pub(crate) async fn cypher_tx_rows(
+        &self,
+        statements: &[(&str, Json)],
+    ) -> Result<Vec<Vec<Json>>, String> {
+        let results = self.cypher(statements).await?;
+        Ok(results.iter().map(Self::rows_from_result).collect())
     }
 
     // ── Public graph API ──────────────────────────────────────────────────────

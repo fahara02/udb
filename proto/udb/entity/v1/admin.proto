@@ -36,6 +36,64 @@ message CapabilitiesResponse {
   repeated BackendInstanceStatus backend_instances = 7;
   // Machine-readable backend operation support matrix.
   repeated BackendCapabilityDescriptor backend_capabilities = 8;
+  // V2 protocol negotiation metadata. Additive (field 9): old clients that
+  // only read fields 1-8 are unaffected; new clients use this to detect the
+  // supported protocol version range, wire encodings, compression, streaming
+  // support, and message-size limits before choosing a transport path.
+  ProtocolSupport protocol_support = 9;
+  // Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+  // for a specific backend, whether server-streaming reads / object streaming
+  // are available and which wire encodings that backend can emit.
+  repeated BackendProtocolSupport backend_protocol_support = 10;
+}
+
+// ── Protocol V2 negotiation ───────────────────────────────────────────────────
+
+// Server-advertised protocol capabilities. Returned inside
+// CapabilitiesResponse.protocol_support so a V2-aware client can feature-detect
+// before issuing V2-only RPCs, and fall back to the V1 RecordSet path when an
+// encoding (e.g. "record_batch_v2") is not advertised.
+message ProtocolSupport {
+  // Lowest UDB wire protocol version this server still accepts (semver string,
+  // e.g. "1.0.0").
+  string min_protocol_version = 1;
+  // Highest UDB wire protocol version this server speaks (semver string).
+  string max_protocol_version = 2;
+  // Supported row/wire encodings, e.g. "record_set_v1". "record_batch_v2" is
+  // added later once the typed columnar encoding ships.
+  repeated string encodings = 3;
+  // Supported transport compression algorithms (e.g. "gzip", "zstd"). Empty
+  // when the server advertises no compression negotiation.
+  repeated string compression = 4;
+  // True when the server can stream query results (server-streaming reads).
+  bool supports_streaming_reads = 5;
+  // True when the server can stream object payloads (chunked get/put).
+  bool supports_object_streaming = 6;
+  // Maximum inbound (client->server) message size in bytes the server accepts.
+  // 0 means "not advertised / use transport default".
+  int64 max_recv_message_bytes = 7;
+  // Maximum outbound (server->client) message size in bytes the server emits.
+  // 0 means "not advertised / use transport default".
+  int64 max_send_message_bytes = 8;
+  // RPC method names supported by this DataBroker instance. Mirrors
+  // CapabilitiesResponse.supported_rpcs so a client can negotiate purely from
+  // ProtocolSupport.
+  repeated string supported_rpcs = 9;
+}
+
+// Per-backend protocol support, conservatively derived from the capability
+// matrix. A client uses this to avoid requesting streaming from a backend that
+// cannot stream.
+message BackendProtocolSupport {
+  // Backend identifier, e.g. "postgres", "s3", "qdrant".
+  string backend = 1;
+  // True when this backend can serve server-streaming query reads.
+  bool supports_streaming_reads = 2;
+  // True when this backend can stream object payloads (object stores only).
+  bool supports_object_streaming = 3;
+  // Wire encodings this specific backend can emit. Empty means "inherits the
+  // server-wide ProtocolSupport.encodings".
+  repeated string encodings = 4;
 }
 
 message BackendCapabilityDescriptor {

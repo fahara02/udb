@@ -40,14 +40,15 @@ public final class EntitiesProto extends com.google.protobuf.GeneratedFile {
       "thn/entity/v1/enums.proto\032\"udb/core/auth" +
       "n/entity/v1/otp.proto\032&udb/core/authn/en" +
       "tity/v1/session.proto\032#udb/core/authn/en" +
-      "tity/v1/user.protoB\370\001\n\034com.udb.core.auth" +
-      "n.entity.v1B\rEntitiesProtoP\001ZDgithub.com" +
-      "/fahara02/udb/sdk/go/gen/udb/core/authn/" +
-      "entity/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Aut" +
-      "hn.Entity.V1\312\002\030Udb\\Core\\Authn\\Entity\\V1\342" +
-      "\002$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\352\002" +
-      "\034Udb::Core::Authn::Entity::V1P\000P\001P\002P\003b\006p" +
-      "roto3"
+      "tity/v1/user.proto\032\'udb/core/authn/entit" +
+      "y/v1/webauthn.protoB\370\001\n\034com.udb.core.aut" +
+      "hn.entity.v1B\rEntitiesProtoP\001ZDgithub.co" +
+      "m/fahara02/udb/sdk/go/gen/udb/core/authn" +
+      "/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Au" +
+      "thn.Entity.V1\312\002\030Udb\\Core\\Authn\\Entity\\V1" +
+      "\342\002$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\352" +
+      "\002\034Udb::Core::Authn::Entity::V1P\000P\001P\002P\003P\004" +
+      "b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -56,12 +57,14 @@ public final class EntitiesProto extends com.google.protobuf.GeneratedFile {
           com.udb.core.authn.entity.v1.OtpProto.getDescriptor(),
           com.udb.core.authn.entity.v1.SessionProto.getDescriptor(),
           com.udb.core.authn.entity.v1.UserProto.getDescriptor(),
+          com.udb.core.authn.entity.v1.WebauthnProto.getDescriptor(),
         });
     descriptor.resolveAllFeaturesImmutable();
     com.udb.core.authn.entity.v1.EnumsProto.getDescriptor();
     com.udb.core.authn.entity.v1.OtpProto.getDescriptor();
     com.udb.core.authn.entity.v1.SessionProto.getDescriptor();
     com.udb.core.authn.entity.v1.UserProto.getDescriptor();
+    com.udb.core.authn.entity.v1.WebauthnProto.getDescriptor();
   }
 
   // @@protoc_insertion_point(outer_class_scope)

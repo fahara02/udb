@@ -87,6 +87,38 @@ pub(crate) enum Command {
     },
     /// Native auth control-plane CLI over generated authn/authz/apikey RPCs.
     Auth(AuthCommand),
+    /// Export UDB's embedded proto contract (annotations + broker/service protos)
+    /// into a local proto tree, so a project can `import "udb/core/common/v1/
+    /// db.proto"` without cloning the repo or depending on a registry. The files
+    /// are compiled into the binary, so they always match the running version.
+    ProtoExport {
+        /// Destination proto root (files land under `<dir>/udb/core/…`).
+        /// Defaults to an existing `proto/` dir, or creates `proto/`.
+        out_dir: String,
+        /// Create-or-merge `buf.yaml` at the project root. On by default;
+        /// pass `--no-buf-yaml` to skip touching buf.yaml.
+        manage_buf_yaml: bool,
+    },
+    /// Generate the per-language SDK client/robustness layer from the embedded
+    /// proto RPC manifest (descriptor set = source of truth) and the editable
+    /// `sdk-templates/<lang>/` templates. `manifest` dumps the RPC surface as
+    /// JSON; `list-langs` prints which template dirs are available.
+    Sdk {
+        action: SdkAction,
+        /// Language to generate for, or `all`. Defaults to `all`.
+        lang: String,
+        /// Template root. Defaults to `sdk-templates`.
+        templates_dir: String,
+        /// SDK output root. Defaults to `sdk`.
+        out_dir: String,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SdkAction {
+    Generate,
+    Manifest,
+    ListLangs,
 }
 
 pub(crate) enum AuthCommand {
@@ -344,6 +376,30 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
             offset = 1;
             Command::Serve
         }
+        // `udb proto export [<dir>] [--out <dir>] [--buf-yaml]`
+        Some("proto") if args.get(1).map(|value| value.as_str()) == Some("export") => {
+            offset = 2;
+            Command::ProtoExport {
+                out_dir: flag_value("--out").unwrap_or_default(),
+                manage_buf_yaml: !has_flag("--no-buf-yaml"),
+            }
+        }
+        // `udb sdk <generate|manifest|list-langs> [--lang <name>] [--templates <dir>] [--out <dir>]`
+        Some("sdk") => {
+            offset = 2;
+            let action = match args.get(1).map(|value| value.as_str()) {
+                Some("manifest") => SdkAction::Manifest,
+                Some("list-langs") | Some("languages") => SdkAction::ListLangs,
+                _ => SdkAction::Generate,
+            };
+            Command::Sdk {
+                action,
+                lang: flag_value("--lang").unwrap_or_else(|| "all".to_string()),
+                templates_dir: flag_value("--templates")
+                    .unwrap_or_else(|| "sdk-templates".to_string()),
+                out_dir: flag_value("--out").unwrap_or_else(|| "sdk".to_string()),
+            }
+        }
         Some("admin") if args.get(1).map(|value| value.as_str()) == Some("force-sync") => {
             offset = 2;
             Command::AdminForceSync
@@ -411,6 +467,9 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                     args[index - 1].as_str(),
                     "--prior"
                         | "--backend"
+                        | "--out"
+                        | "--lang"
+                        | "--templates"
                         | "--config"
                         | "--tenant"
                         | "--project"
@@ -442,6 +501,11 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                     | "--force-bootstrap"
                     | "--yes"
                     | "--all-for-principal"
+                    | "--buf-yaml"
+                    | "--no-buf-yaml"
+                    | "--out"
+                    | "--lang"
+                    | "--templates"
                     | "--prior"
                     | "--backend"
                     | "--tenant"

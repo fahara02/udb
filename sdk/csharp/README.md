@@ -2,7 +2,7 @@
 
 Package: `Udb.Client`
 
-Current release: `0.2.1`
+Current release: `0.3.0`
 
 Target framework: `net8.0`
 
@@ -12,7 +12,7 @@ protobuf classes under `sdk/csharp/gen`.
 NuGet publishing is part of the release pipeline. Once published:
 
 ```powershell
-dotnet add package Udb.Client --version 0.2.1
+dotnet add package Udb.Client --version 0.3.0
 ```
 
 For local development from this checkout:

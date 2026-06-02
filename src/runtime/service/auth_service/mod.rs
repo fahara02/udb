@@ -114,6 +114,7 @@ impl DataBrokerService {
                     api_key_store.clone(),
                     Arc::new(PostgresUserStore::new(pool.clone(), "")),
                 )
+                .with_postgres(Some(pool.clone()))
                 .with_event_sink(event_sink.clone()),
                 ApiKeyServiceImpl::with_store(authn_config, api_key_store)
                     .with_postgres(Some(pool.clone()))

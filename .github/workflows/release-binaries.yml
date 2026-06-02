@@ -13,11 +13,13 @@ name: Release · binaries
 # (os ∈ linux|windows|darwin, arch ∈ amd64|arm64; NOT archived, so the scripts'
 # `-notmatch "\.(zip|tar\.gz)$"` asset filter selects them.)
 #
-# Feature set: a PORTABLE subset of `default` — drops native-C backends that are
+# Feature set: a PORTABLE subset of `default` plus the full auth surface. It
+# drops native-C backends that are
 # painful on Windows/macOS runners (kafka/rdkafka, cassandra/scylla,
 # mssql/tiberius, memcached, mongodb-native) while keeping the common surface
-# (postgres, qdrant, s3, redis, the REST backends, otel). The Linux Docker image
-# still ships full default features. A disabled backend's RPCs return
+# (postgres, qdrant, s3, redis, the REST backends, otel) and ships real OIDC +
+# WebAuthn support in the CLI/broker binaries. The Linux Docker image still
+# ships full default features plus auth. A disabled backend's RPCs return
 # FailedPrecondition rather than disappearing.
 #
 # Trigger: a pushed `v*.*.*` tag, or manual dispatch for a build-only dry run.
@@ -31,7 +33,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   PORTABLE_FEATURES: >-
-    postgres,mysql,sqlite,qdrant,s3,mongodb,neo4j,clickhouse,redis,elasticsearch,weaviate,pinecone,azureblob,gcs,otel,runtime-logging,http-client
+    postgres,mysql,sqlite,qdrant,s3,mongodb,neo4j,clickhouse,redis,elasticsearch,weaviate,pinecone,azureblob,gcs,otel,runtime-logging,http-client,oidc,webauthn
 
 permissions:
   contents: write
@@ -103,13 +105,13 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
-      # Native build deps. aws-lc-sys (s3) needs cmake + NASM; several REST
-      # backends need a C toolchain.
+      # Native build deps. aws-lc-sys (s3) needs cmake + NASM; WebAuthn pulls
+      # vendored OpenSSL and requires a platform-native Perl plus compiler tools.
       - name: Install build deps (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends cmake clang nasm ninja-build pkg-config libssl-dev
+          sudo apt-get install -y --no-install-recommends build-essential cmake clang perl nasm ninja-build pkg-config libssl-dev
 
       - name: Install build deps (macOS)
         if: runner.os == 'macOS'
@@ -117,11 +119,22 @@ jobs:
 
       - name: Install build deps (Windows)
         if: runner.os == 'Windows'
-        run: choco install nasm --no-progress -y
+        shell: pwsh
+        run: |
+          choco install strawberryperl nasm --no-progress -y
+          "C:\Strawberry\perl\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Configure MSVC build tools (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
 
       - name: Build
         shell: bash
         run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            export PATH="/c/Strawberry/perl/bin:/c/Program Files/NASM:${PATH}"
+          fi
           cargo build --release --locked --target ${{ matrix.target }} \
             --bin udb-proto-parser \
             --no-default-features --features "${PORTABLE_FEATURES}"

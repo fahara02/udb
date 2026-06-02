@@ -64,28 +64,14 @@ impl AdminAuditStore for MysqlCanonicalStore {
     }
 
     async fn ensure_admin_audit_tables(&self) -> SystemStoreResult<()> {
-        let create_table = format!(
-            r#"
-            CREATE TABLE IF NOT EXISTS {TABLE} (
-                audit_id         CHAR(36) NOT NULL PRIMARY KEY,
-                actor            VARCHAR(255) NOT NULL DEFAULT '',
-                operation        VARCHAR(255) NOT NULL,
-                target           VARCHAR(255) NOT NULL DEFAULT '',
-                request_json     JSON NOT NULL,
-                result           VARCHAR(32) NOT NULL DEFAULT 'ok',
-                tenant_id        VARCHAR(255) NOT NULL DEFAULT '',
-                project_id       VARCHAR(255) NOT NULL DEFAULT '',
-                correlation_id   VARCHAR(255) NOT NULL DEFAULT '',
-                previous_hash    VARCHAR(128) NOT NULL DEFAULT '',
-                current_hash     VARCHAR(128) NOT NULL DEFAULT '',
-                signer_key_id    VARCHAR(255) NOT NULL DEFAULT '',
-                external_anchor  TEXT NOT NULL,
-                created_at       TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            "#
-        );
-        let idx_op = format!("CREATE INDEX idx_{TABLE}_op ON {TABLE} (operation, created_at)");
-        let idx_hash = format!("CREATE INDEX idx_{TABLE}_hash ON {TABLE} (current_hash)");
+        // B.7: DDL strings come from the shared `sql_schema` renderer (single
+        // source of truth across SQL backends); the execute/error-tolerance
+        // logic below is unchanged.
+        let super::sql_schema::MysqlAdminAuditDdl {
+            create_table,
+            idx_op,
+            idx_hash,
+        } = super::sql_schema::mysql_admin_audit_ddl(TABLE);
         sqlx::query(&create_table)
             .execute(self.mysql_pool())
             .await
@@ -216,14 +202,21 @@ impl AdminAuditStore for MysqlCanonicalStore {
             .acquire()
             .await
             .map_err(|e| SystemStoreError::io("mysql", e))?;
+        // `SET TRANSACTION ISOLATION LEVEL` can use the normal (prepared) path,
+        // but transaction control (BEGIN/COMMIT/ROLLBACK) cannot go through
+        // MySQL's prepared-statement protocol (error 1295). Drive the
+        // transaction via sqlx's transaction API on the SAME connection, so the
+        // isolation level set above applies to it and BEGIN/COMMIT/ROLLBACK go
+        // over the text protocol.
+        use sqlx::Connection as _;
         sqlx::query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
             .execute(&mut *conn)
             .await
             .map_err(|e| {
                 SystemStoreError::query("mysql", "SET TRANSACTION ISOLATION LEVEL SERIALIZABLE", e)
             })?;
-        sqlx::query("START TRANSACTION")
-            .execute(&mut *conn)
+        let mut tx = conn
+            .begin()
             .await
             .map_err(|e| SystemStoreError::query("mysql", "START TRANSACTION", e))?;
         let mut previous_hash = String::new();
@@ -253,12 +246,12 @@ impl AdminAuditStore for MysqlCanonicalStore {
             let rows = match sqlx::query(&sql)
                 .bind(page)
                 .bind(offset)
-                .fetch_all(&mut *conn)
+                .fetch_all(&mut *tx)
                 .await
             {
                 Ok(rows) => rows,
                 Err(e) => {
-                    let _ = sqlx::query("ROLLBACK").execute(&mut *conn).await;
+                    // tx drops here on early return → automatic ROLLBACK.
                     return Err(SystemStoreError::query("mysql", sql.clone(), e));
                 }
             };
@@ -274,7 +267,7 @@ impl AdminAuditStore for MysqlCanonicalStore {
                 let row = match row_to_audit(r) {
                     Ok(row) => row,
                     Err(err) => {
-                        let _ = sqlx::query("ROLLBACK").execute(&mut *conn).await;
+                        // tx drops here on early return → automatic ROLLBACK.
                         return Err(err);
                     }
                 };
@@ -300,8 +293,7 @@ impl AdminAuditStore for MysqlCanonicalStore {
                 };
             }
         };
-        sqlx::query("COMMIT")
-            .execute(&mut *conn)
+        tx.commit()
             .await
             .map_err(|e| SystemStoreError::query("mysql", "COMMIT", e))?;
         Ok(final_report)

@@ -164,30 +164,11 @@ impl CanonicalStore for SqliteCanonicalStore {
         // SQLite: `INTEGER PRIMARY KEY` is the auto-increment alias
         // for ROWID. `TEXT` for JSON since sqlite is typeless; the
         // app side parses with serde_json.
-        let sql = format!(
-            // Full outbox schema (parity with the Postgres system catalog): the
-            // production tailer UPDATEs delivery_state + the Kafka state columns,
-            // so a minimal table breaks at-least-once delivery on SQLite (#132).
-            "CREATE TABLE IF NOT EXISTS {table} ( \
-                event_seq      INTEGER PRIMARY KEY AUTOINCREMENT, \
-                event_id       TEXT NOT NULL UNIQUE, \
-                topic          TEXT NOT NULL, \
-                partition_key  TEXT NOT NULL DEFAULT '', \
-                payload        TEXT NOT NULL, \
-                headers        TEXT, \
-                delivery_state TEXT NOT NULL DEFAULT 'pending', \
-                publishing_started_at TEXT, \
-                published_at   TEXT, \
-                acked_at       TEXT, \
-                dlq_at         TEXT, \
-                producer_epoch INTEGER NOT NULL DEFAULT 0, \
-                transactional_id TEXT NOT NULL DEFAULT '', \
-                kafka_partition INTEGER, \
-                kafka_offset   INTEGER, \
-                last_error     TEXT NOT NULL DEFAULT '', \
-                created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) \
-            )"
-        );
+        //
+        // B.7: outbox DDL comes from the shared `sql_schema` renderer (single
+        // source of truth across SQL backends); execute/error-handling below
+        // is unchanged.
+        let sql = super::sql_schema::sqlite_outbox_ddl(table);
         sqlx::query(&sql)
             .execute(&self.pool)
             .await

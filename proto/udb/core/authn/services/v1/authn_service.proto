@@ -372,4 +372,46 @@ service AuthnService {
       body: "*"
     };
   }
+
+  // ── WebAuthn / passkeys ─────────────────────────────────────────────────
+  rpc StartWebAuthnRegistration(StartWebAuthnRegistrationRequest) returns (StartWebAuthnRegistrationResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/users/{user_id}/webauthn/registration:start"
+      body: "*"
+    };
+  }
+  rpc FinishWebAuthnRegistration(FinishWebAuthnRegistrationRequest) returns (FinishWebAuthnRegistrationResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/webauthn/registration:finish"
+      body: "*"
+    };
+  }
+  rpc StartWebAuthnAuthentication(StartWebAuthnAuthenticationRequest) returns (StartWebAuthnAuthenticationResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_PUBLIC
+      tenant_required: false
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/webauthn/authentication:start"
+      body: "*"
+    };
+  }
+  rpc FinishWebAuthnAuthentication(FinishWebAuthnAuthenticationRequest) returns (FinishWebAuthnAuthenticationResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_PUBLIC
+      tenant_required: false
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/webauthn/authentication:finish"
+      body: "*"
+    };
+  }
 }

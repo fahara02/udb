@@ -57,6 +57,104 @@ pub(crate) fn reject_oversized_object(len: usize) -> Result<(), tonic::Status> {
     }
 }
 
+// ── Typed error details (A.3) ────────────────────────────────────────────────
+//
+// SDKs should branch on a machine-readable `ErrorDetail` instead of parsing the
+// human-readable status message. We prost-encode an `ErrorDetail` and attach it
+// to the `tonic::Status` as a binary trailer metadata value under
+// `udb-error-detail-bin` (the `-bin` suffix tells gRPC the value is raw bytes,
+// base64-transcoded on the wire). The status message stays the same human text,
+// so existing string-based behavior is unaffected — the typed detail is purely
+// additive.
+
+/// Binary trailer metadata key carrying the prost-encoded `ErrorDetail`.
+/// The `-bin` suffix is required by gRPC for binary metadata values.
+pub(crate) const ERROR_DETAIL_METADATA_KEY: &str = "udb-error-detail-bin";
+
+/// Build a `tonic::Status` with the given code + human message and attach a
+/// prost-encoded [`ErrorDetail`] under [`ERROR_DETAIL_METADATA_KEY`]. The
+/// message is preserved verbatim so callers that still read the string keep
+/// working; SDKs that understand the typed detail decode the metadata instead.
+pub(crate) fn status_with_error_detail(
+    code: tonic::Code,
+    message: impl Into<String>,
+    detail: crate::proto::ErrorDetail,
+) -> tonic::Status {
+    use prost::Message as _;
+    let mut metadata = tonic::metadata::MetadataMap::new();
+    let encoded = detail.encode_to_vec();
+    let value = tonic::metadata::MetadataValue::from_bytes(&encoded);
+    metadata.insert_bin(ERROR_DETAIL_METADATA_KEY, value);
+    tonic::Status::with_metadata(code, message.into(), metadata)
+}
+
+/// Backend-capability refusal: the target backend does not support the
+/// requested operation. `FailedPrecondition`, `kind = CAPABILITY`, not
+/// retryable. The caller supplies the same human text it would otherwise pass
+/// to `Status::failed_precondition` so messages are unchanged.
+pub(crate) fn capability_status(
+    backend: impl Into<String>,
+    operation: impl Into<String>,
+    capability_required: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    let detail = crate::proto::ErrorDetail {
+        backend: backend.into(),
+        operation: operation.into(),
+        capability_required: capability_required.into(),
+        retryable: false,
+        retry_after_ms: 0,
+        policy_decision_id: String::new(),
+        correlation_id: String::new(),
+        kind: crate::proto::ErrorKind::Capability as i32,
+    };
+    status_with_error_detail(tonic::Code::FailedPrecondition, message, detail)
+}
+
+/// Transient-failure refusal the caller may retry. `Unavailable`,
+/// `kind = RETRYABLE`, `retryable = true`, with an optional suggested backoff.
+pub(crate) fn retryable_status(
+    backend: impl Into<String>,
+    operation: impl Into<String>,
+    retry_after_ms: i64,
+    message: impl Into<String>,
+) -> tonic::Status {
+    let detail = crate::proto::ErrorDetail {
+        backend: backend.into(),
+        operation: operation.into(),
+        capability_required: String::new(),
+        retryable: true,
+        retry_after_ms,
+        policy_decision_id: String::new(),
+        correlation_id: String::new(),
+        kind: crate::proto::ErrorKind::Retryable as i32,
+    };
+    status_with_error_detail(tonic::Code::Unavailable, message, detail)
+}
+
+/// Compiler refusal: map a `CompileError::code()` token onto a typed
+/// `ErrorDetail` (`kind = SCHEMA`, code carried in `capability_required`).
+/// `InvalidArgument` matches the existing compile-error mapping. Additive — the
+/// human message is preserved.
+pub(crate) fn compile_error_status(
+    backend: impl Into<String>,
+    operation: impl Into<String>,
+    compile_code: &str,
+    message: impl Into<String>,
+) -> tonic::Status {
+    let detail = crate::proto::ErrorDetail {
+        backend: backend.into(),
+        operation: operation.into(),
+        capability_required: compile_code.to_string(),
+        retryable: false,
+        retry_after_ms: 0,
+        policy_decision_id: String::new(),
+        correlation_id: String::new(),
+        kind: crate::proto::ErrorKind::Schema as i32,
+    };
+    status_with_error_detail(tonic::Code::InvalidArgument, message, detail)
+}
+
 // ── Struct / prost ────────────────────────────────────────────────────────────
 
 pub(crate) fn struct_to_json(value: &Struct) -> JsonValue {
@@ -111,6 +209,51 @@ pub(crate) fn json_to_prost_value(value: &JsonValue) -> Option<ProstValue> {
             JsonValue::Object(_) => Kind::StructValue(json_to_struct(value)?),
         }),
     })
+}
+
+// D.3: consuming (`_into_`) variants for callers that OWN the `JsonValue` and
+// drop it afterwards. They MOVE keys/strings/arrays into the proto value instead
+// of cloning every field — byte-for-byte equivalent output (proven by
+// `conversion_tests`), fewer allocations (quantified by `hotpath_bench`'s
+// move-vs-clone case).
+//
+// Wired into the qdrant response/upsert paths, which own each point JSON and
+// discard it after building the proto point — so the payload Struct is MOVED out
+// (`Value::take` + `json_into_struct`) instead of cloned. Keep the borrowing
+// variants for inspect-only / reused sub-value paths (filters, the dual
+// JSON+proto row build in `core::mod`).
+pub(crate) fn json_into_struct(value: JsonValue) -> Option<Struct> {
+    let JsonValue::Object(map) = value else {
+        return None;
+    };
+    Some(Struct {
+        fields: map
+            .into_iter()
+            .filter_map(|(key, value)| json_into_prost_value(value).map(|v| (key, v)))
+            .collect(),
+    })
+}
+
+pub(crate) fn json_into_prost_value(value: JsonValue) -> Option<ProstValue> {
+    let kind = match value {
+        JsonValue::Null => Kind::NullValue(0),
+        JsonValue::Bool(value) => Kind::BoolValue(value),
+        JsonValue::Number(value) => Kind::NumberValue(value.as_f64()?),
+        JsonValue::String(value) => Kind::StringValue(value), // moved, not cloned
+        JsonValue::Array(items) => Kind::ListValue(ListValue {
+            values: items
+                .into_iter()
+                .filter_map(json_into_prost_value)
+                .collect(),
+        }),
+        JsonValue::Object(map) => Kind::StructValue(Struct {
+            fields: map
+                .into_iter()
+                .filter_map(|(key, value)| json_into_prost_value(value).map(|v| (key, v)))
+                .collect(),
+        }),
+    };
+    Some(ProstValue { kind: Some(kind) })
 }
 
 // ── RequestContext merging ────────────────────────────────────────────────────
@@ -195,6 +338,194 @@ pub(crate) fn cached_record_set(records_json: Vec<Vec<u8>>) -> RecordSet {
         records_json,
         ..RecordSet::default()
     }
+}
+
+// ── RecordBatchV2 (A.4) ────────────────────────────────────────────────────────
+
+fn proto_row_to_json(row: &ProtoRow) -> JsonValue {
+    JsonValue::Object(
+        row.fields
+            .iter()
+            .map(|(key, value)| (key.clone(), prost_value_to_json(value)))
+            .collect(),
+    )
+}
+
+fn decode_base64_cell(value: &str) -> Option<Vec<u8>> {
+    use base64::Engine as _;
+    let raw = value.strip_prefix("base64:")?;
+    base64::engine::general_purpose::STANDARD.decode(raw).ok()
+}
+
+/// Infer a column's [`ColumnType`] and pack the per-row values into the matching
+/// typed array, recording NULLs in the bitmap. Bytes columns are recognised via
+/// the `base64:` cell prefix SQL executors emit (see [`base64_cell`]); columns
+/// whose values mix scalar kinds — or contain arrays/objects — fall back to a
+/// JSON-encoded string column so nothing is lost.
+fn build_column_batch(name: &str, rows: &[JsonValue]) -> crate::proto::ColumnBatch {
+    use crate::proto::{ColumnBatch, ColumnType};
+
+    let cells: Vec<Option<&JsonValue>> = rows
+        .iter()
+        .map(|row| row.as_object().and_then(|obj| obj.get(name)))
+        .collect();
+
+    let (mut saw_bool, mut saw_int, mut saw_float) = (false, false, false);
+    let (mut saw_str_plain, mut saw_str_b64, mut saw_nested, mut any_value) =
+        (false, false, false, false);
+    for cell in &cells {
+        match cell {
+            None | Some(JsonValue::Null) => {}
+            Some(JsonValue::Bool(_)) => {
+                saw_bool = true;
+                any_value = true;
+            }
+            Some(JsonValue::Number(n)) => {
+                any_value = true;
+                if n.is_i64() || n.is_u64() {
+                    saw_int = true;
+                } else {
+                    saw_float = true;
+                }
+            }
+            Some(JsonValue::String(s)) => {
+                any_value = true;
+                if s.starts_with("base64:") {
+                    saw_str_b64 = true;
+                } else {
+                    saw_str_plain = true;
+                }
+            }
+            Some(JsonValue::Array(_)) | Some(JsonValue::Object(_)) => {
+                saw_nested = true;
+                any_value = true;
+            }
+        }
+    }
+
+    let categories = [
+        saw_bool,
+        saw_int || saw_float,
+        saw_str_plain || saw_str_b64,
+        saw_nested,
+    ]
+    .iter()
+    .filter(|present| **present)
+    .count();
+
+    let col_type = if !any_value {
+        ColumnType::Null
+    } else if categories > 1 {
+        ColumnType::Json
+    } else if saw_bool {
+        ColumnType::Bool
+    } else if saw_int && !saw_float {
+        ColumnType::Int64
+    } else if saw_int || saw_float {
+        ColumnType::Double
+    } else if saw_str_b64 && !saw_str_plain {
+        ColumnType::Bytes
+    } else if saw_str_plain || saw_str_b64 {
+        ColumnType::String
+    } else {
+        ColumnType::Json
+    };
+
+    let mut column = ColumnBatch {
+        name: name.to_string(),
+        r#type: col_type as i32,
+        nulls: Vec::with_capacity(cells.len()),
+        ..ColumnBatch::default()
+    };
+    for cell in &cells {
+        let is_null = matches!(cell, None | Some(JsonValue::Null));
+        column.nulls.push(is_null);
+        match col_type {
+            ColumnType::Bool => column
+                .bool_values
+                .push(cell.and_then(|v| v.as_bool()).unwrap_or(false)),
+            ColumnType::Int64 => column
+                .int64_values
+                .push(cell.and_then(|v| v.as_i64()).unwrap_or(0)),
+            ColumnType::Double => column
+                .double_values
+                .push(cell.and_then(|v| v.as_f64()).unwrap_or(0.0)),
+            ColumnType::String => column.string_values.push(match cell {
+                Some(JsonValue::String(s)) => s.clone(),
+                Some(other) if !other.is_null() => other.to_string(),
+                _ => String::new(),
+            }),
+            ColumnType::Bytes => column.bytes_values.push(
+                cell.and_then(|v| v.as_str())
+                    .and_then(decode_base64_cell)
+                    .unwrap_or_default(),
+            ),
+            ColumnType::Json => column.json_values.push(match cell {
+                Some(v) if !v.is_null() => v.to_string(),
+                _ => String::new(),
+            }),
+            ColumnType::Null | ColumnType::Unspecified => {}
+        }
+    }
+    column
+}
+
+/// Build a columnar [`crate::proto::RecordBatchV2`] from JSON row objects. The
+/// rows are the same masked/encrypted JSON the V1 `RecordSet` carries, so the
+/// V2 encoding inherits the V1 serializer's PII masking by construction. Column
+/// order is the first-seen key order across rows.
+pub(crate) fn record_batch_v2_from_json_rows(
+    rows: &[JsonValue],
+    schema_version: &str,
+    next_page_token: String,
+    total_count: i32,
+) -> crate::proto::RecordBatchV2 {
+    let mut field_order: Vec<String> = Vec::new();
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for row in rows {
+        if let Some(obj) = row.as_object() {
+            for key in obj.keys() {
+                if seen.insert(key.clone()) {
+                    field_order.push(key.clone());
+                }
+            }
+        }
+    }
+    let columns = field_order
+        .iter()
+        .map(|name| build_column_batch(name, rows))
+        .collect::<Vec<_>>();
+    crate::proto::RecordBatchV2 {
+        columns,
+        row_count: rows.len() as i32,
+        schema_version: schema_version.to_string(),
+        field_order,
+        next_page_token,
+        total_count,
+    }
+}
+
+/// Convert a V1 [`RecordSet`] into the additive [`crate::proto::RecordBatchV2`]
+/// columnar encoding, preferring the serialized `records_json` blobs (the masked
+/// canonical form) and falling back to the proto `rows`.
+pub(crate) fn record_batch_v2_from_record_set(
+    set: &RecordSet,
+    schema_version: &str,
+) -> crate::proto::RecordBatchV2 {
+    let rows: Vec<JsonValue> = if !set.records_json.is_empty() {
+        set.records_json
+            .iter()
+            .filter_map(|blob| serde_json::from_slice(blob).ok())
+            .collect()
+    } else {
+        set.rows.iter().map(proto_row_to_json).collect()
+    };
+    record_batch_v2_from_json_rows(
+        &rows,
+        schema_version,
+        set.next_page_token.clone(),
+        set.total_count,
+    )
 }
 
 // ── JSON helpers ──────────────────────────────────────────────────────────────
@@ -403,8 +734,8 @@ pub(crate) fn object_bytes_from_json(value: &JsonValue) -> Result<Vec<u8>, tonic
         .or_else(|| value.get("content_base64"))
         .and_then(JsonValue::as_str)
     {
-        use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
-        return B64.decode(base64_value).map_err(|err| {
+        // D.5: through the accel layer (scalar today; SIMD swap-in point for D.6).
+        return crate::runtime::accel::base64_decode(base64_value).map_err(|err| {
             tonic::Status::invalid_argument(format!("invalid object base64: {err}"))
         });
     }
@@ -495,10 +826,10 @@ pub(crate) fn parse_sql_dispatch(
 /// executors (mysql / sqlite / mssql) emit for `BLOB`/`VARBINARY` columns.
 #[cfg(any(feature = "mysql", feature = "sqlite", feature = "mssql"))]
 pub(crate) fn base64_cell(bytes: &[u8]) -> JsonValue {
-    use base64::Engine as _;
+    // D.5: through the accel layer (scalar today; SIMD swap-in point for D.6).
     JsonValue::String(format!(
         "base64:{}",
-        base64::engine::general_purpose::STANDARD.encode(bytes)
+        crate::runtime::accel::base64_encode(bytes)
     ))
 }
 
@@ -655,7 +986,7 @@ pub(crate) fn parse_object_dispatch(
 pub(crate) fn parse_rest_dispatch(
     req: &str,
 ) -> Result<(reqwest::Method, String, JsonValue), tonic::Status> {
-    let v: JsonValue = serde_json::from_str(req)
+    let mut v: JsonValue = serde_json::from_str(req)
         .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
     let path = v
         .get("path")
@@ -668,7 +999,13 @@ pub(crate) fn parse_rest_dispatch(
         .unwrap_or("POST")
         .parse::<reqwest::Method>()
         .map_err(|e| tonic::Status::invalid_argument(format!("bad method: {e}")))?;
-    let body = v.get("body").cloned().unwrap_or(JsonValue::Null);
+    // D.3: move the (possibly large, nested) body out via `Value::take` instead of
+    // deep-cloning it. `path`/`method` are already extracted, so replacing `body`
+    // with Null is harmless; the returned body is byte-for-byte the same value.
+    let body = v
+        .get_mut("body")
+        .map(JsonValue::take)
+        .unwrap_or(JsonValue::Null);
     Ok((method, path, body))
 }
 
@@ -726,5 +1063,254 @@ pub(crate) fn qdrant_status(status: reqwest::StatusCode) -> Result<(), tonic::St
         Err(tonic::Status::unavailable(format!(
             "Qdrant returned HTTP {status}"
         )))
+    }
+}
+
+// ── Typed error detail tests (A.3) ────────────────────────────────────────────
+
+#[cfg(test)]
+mod conversion_tests {
+    use super::{json_into_prost_value, json_into_struct, json_to_prost_value, json_to_struct};
+    use serde_json::json;
+
+    fn sample() -> serde_json::Value {
+        json!({
+            "id": "abc", "n": 42, "f": 3.5, "b": true, "nil": null,
+            "tags": ["x", "y", 1, false, null],
+            "nested": {"k": "v", "deep": {"arr": [1, 2.5, "z"], "flag": true}}
+        })
+    }
+
+    #[test]
+    fn json_into_struct_matches_borrowing_variant() {
+        let v = sample();
+        let borrowed = json_to_struct(&v).expect("object");
+        let moved = json_into_struct(v).expect("object");
+        assert_eq!(
+            borrowed, moved,
+            "consuming variant must yield an identical Struct"
+        );
+    }
+
+    #[test]
+    fn json_into_prost_value_matches_borrowing_variant() {
+        let v = sample();
+        let borrowed = json_to_prost_value(&v).expect("value");
+        let moved = json_into_prost_value(v).expect("value");
+        assert_eq!(borrowed, moved);
+    }
+
+    #[test]
+    fn json_into_struct_rejects_non_object() {
+        assert!(json_into_struct(json!([1, 2, 3])).is_none());
+        assert!(json_into_struct(json!("scalar")).is_none());
+    }
+}
+
+#[cfg(test)]
+mod error_detail_tests {
+    use super::{
+        ERROR_DETAIL_METADATA_KEY, capability_status, compile_error_status, retryable_status,
+    };
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use prost::Message as _;
+
+    /// Decode the prost `ErrorDetail` from the binary trailer the way an SDK
+    /// would, so the test proves the typed detail is recoverable end-to-end.
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("error-detail trailer present")
+            .to_bytes()
+            .expect("trailer decodes to bytes");
+        ErrorDetail::decode(raw.as_ref()).expect("trailer decodes as ErrorDetail")
+    }
+
+    #[test]
+    fn capability_status_carries_typed_detail_and_preserves_message() {
+        let status = capability_status(
+            "cassandra",
+            "ensure_resource",
+            "supports_resource_lifecycle",
+            "backend 'cassandra' does not support operation 'ensure_resource'",
+        );
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        // Human-readable message is preserved verbatim (additive detail only).
+        assert!(status.message().contains("does not support operation"));
+        let detail = decode_detail(&status);
+        assert_eq!(detail.backend, "cassandra");
+        assert_eq!(detail.operation, "ensure_resource");
+        assert_eq!(detail.capability_required, "supports_resource_lifecycle");
+        assert!(!detail.retryable);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+    }
+
+    #[test]
+    fn retryable_status_is_unavailable_with_backoff() {
+        let status = retryable_status("postgres", "query", 250, "temporarily unavailable");
+        assert_eq!(status.code(), tonic::Code::Unavailable);
+        let detail = decode_detail(&status);
+        assert!(detail.retryable);
+        assert_eq!(detail.retry_after_ms, 250);
+        assert_eq!(detail.kind, ErrorKind::Retryable as i32);
+    }
+
+    #[test]
+    fn compile_error_status_carries_code_as_schema_kind() {
+        let status = compile_error_status(
+            "mssql",
+            "mutate",
+            "operation_not_supported",
+            "compile failed",
+        );
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(&status);
+        assert_eq!(detail.capability_required, "operation_not_supported");
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert!(!detail.retryable);
+    }
+}
+
+// ── RecordBatchV2 conversion tests (A.4) ──────────────────────────────────────
+
+#[cfg(test)]
+mod record_batch_tests {
+    use super::{record_batch_v2_from_json_rows, record_batch_v2_from_record_set};
+    use crate::proto::{ColumnType, RecordBatchV2, RecordSet};
+    use serde_json::json;
+
+    fn col<'a>(batch: &'a RecordBatchV2, name: &str) -> &'a crate::proto::ColumnBatch {
+        batch
+            .columns
+            .iter()
+            .find(|c| c.name == name)
+            .unwrap_or_else(|| panic!("column {name} present"))
+    }
+
+    #[test]
+    fn infers_typed_columns_with_nulls_bytes_and_json_fallback() {
+        let rows = vec![
+            json!({"id": 1, "name": "alice", "active": true, "score": 9.5,
+                   "blob": "base64:aGk=", "tags": ["a","b"], "maybe": null}),
+            json!({"id": 2, "name": "bob", "active": false, "score": 3.0,
+                   "blob": "base64:Ynll", "tags": ["c"], "maybe": 7}),
+        ];
+        let batch = record_batch_v2_from_json_rows(&rows, "v3", "tok".into(), 2);
+
+        assert_eq!(batch.row_count, 2);
+        assert_eq!(batch.schema_version, "v3");
+        assert_eq!(batch.next_page_token, "tok");
+        assert_eq!(batch.total_count, 2);
+        // field_order carries every key (order-independent: serde_json Map is sorted).
+        let mut got = batch.field_order.clone();
+        got.sort();
+        assert_eq!(
+            got,
+            vec!["active", "blob", "id", "maybe", "name", "score", "tags"]
+        );
+
+        let id = col(&batch, "id");
+        assert_eq!(id.r#type, ColumnType::Int64 as i32);
+        assert_eq!(id.int64_values, vec![1, 2]);
+        assert_eq!(id.nulls, vec![false, false]);
+
+        assert_eq!(col(&batch, "name").r#type, ColumnType::String as i32);
+        assert_eq!(col(&batch, "name").string_values, vec!["alice", "bob"]);
+
+        assert_eq!(col(&batch, "active").r#type, ColumnType::Bool as i32);
+        assert_eq!(col(&batch, "active").bool_values, vec![true, false]);
+
+        assert_eq!(col(&batch, "score").r#type, ColumnType::Double as i32);
+        assert_eq!(col(&batch, "score").double_values, vec![9.5, 3.0]);
+
+        // bytes detected via the `base64:` cell prefix and decoded.
+        let blob = col(&batch, "blob");
+        assert_eq!(blob.r#type, ColumnType::Bytes as i32);
+        assert_eq!(blob.bytes_values, vec![b"hi".to_vec(), b"bye".to_vec()]);
+
+        // nested arrays fall back to a JSON-encoded string column.
+        let tags = col(&batch, "tags");
+        assert_eq!(tags.r#type, ColumnType::Json as i32);
+        assert_eq!(tags.json_values[0], "[\"a\",\"b\"]");
+
+        // a single scalar category (int) with a NULL → Int64 + null bitmap.
+        let maybe = col(&batch, "maybe");
+        assert_eq!(maybe.r#type, ColumnType::Int64 as i32);
+        assert_eq!(maybe.nulls, vec![true, false]);
+        assert_eq!(maybe.int64_values, vec![0, 7]);
+    }
+
+    #[test]
+    fn all_null_column_is_null_typed() {
+        let rows = vec![json!({"x": null}), json!({"x": null})];
+        let batch = record_batch_v2_from_json_rows(&rows, "", String::new(), 0);
+        let x = col(&batch, "x");
+        assert_eq!(x.r#type, ColumnType::Null as i32);
+        assert_eq!(x.nulls, vec![true, true]);
+        assert!(x.int64_values.is_empty());
+    }
+
+    #[test]
+    fn mixed_scalar_kinds_fall_back_to_json() {
+        let rows = vec![json!({"v": true}), json!({"v": "hello"})];
+        let batch = record_batch_v2_from_json_rows(&rows, "", String::new(), 0);
+        let v = col(&batch, "v");
+        assert_eq!(v.r#type, ColumnType::Json as i32);
+        assert_eq!(v.json_values, vec!["true", "\"hello\""]);
+    }
+
+    #[test]
+    fn from_record_set_uses_records_json() {
+        let blob = serde_json::to_vec(&json!({"a": 1})).unwrap();
+        let set = RecordSet {
+            records_json: vec![blob],
+            total_count: 1,
+            next_page_token: "n".into(),
+            ..RecordSet::default()
+        };
+        let batch = record_batch_v2_from_record_set(&set, "v1");
+        assert_eq!(batch.row_count, 1);
+        assert_eq!(batch.total_count, 1);
+        assert_eq!(batch.next_page_token, "n");
+        assert_eq!(col(&batch, "a").int64_values, vec![1]);
+    }
+
+    /// A.5 — compile-time proof that the selected bytes fields are generated as
+    /// `bytes::Bytes` (not `Vec<u8>`). Fails to compile if the build.rs
+    /// `.bytes([...])` config regresses.
+    #[test]
+    fn selected_proto_bytes_fields_are_bytes_type() {
+        let chunk = crate::proto::Chunk::default();
+        let _: bytes::Bytes = chunk.data;
+        let row = crate::proto::ProjectionDriftDivergentRow::default();
+        let _: bytes::Bytes = row.row_key_json;
+    }
+
+    /// A.7 — the V2 columnar frames must carry exactly the same logical values
+    /// as the V1 `RecordSet`, and must NOT resurrect any field the V1 serializer
+    /// masked out. Because the converter reads the already-masked `records_json`,
+    /// a field masked away (absent from the blob) can never appear in V2.
+    #[test]
+    fn v2_batch_matches_v1_rows_and_inherits_masking() {
+        // The V1 serializer masked "ssn" out, so it is absent from the blob.
+        let blob = serde_json::to_vec(&json!({"id": 1, "email": "a@b.com"})).unwrap();
+        let set = RecordSet {
+            records_json: vec![blob],
+            total_count: 1,
+            ..RecordSet::default()
+        };
+        let batch = record_batch_v2_from_record_set(&set, "v9");
+
+        let mut names: Vec<String> = batch.columns.iter().map(|c| c.name.clone()).collect();
+        names.sort();
+        assert_eq!(names, vec!["email", "id"], "V2 columns mirror the V1 row");
+        assert!(
+            !batch.field_order.contains(&"ssn".to_string()),
+            "a field masked out of records_json must not leak into the V2 batch"
+        );
+        assert_eq!(col(&batch, "id").int64_values, vec![1]);
+        assert_eq!(col(&batch, "email").string_values, vec!["a@b.com"]);
+        assert_eq!(batch.schema_version, "v9");
     }
 }

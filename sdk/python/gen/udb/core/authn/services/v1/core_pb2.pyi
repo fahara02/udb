@@ -611,3 +611,95 @@ class ConfirmMFAEnrollmentResponse(_message.Message):
     ENROLLED_FIELD_NUMBER: _ClassVar[int]
     enrolled: bool
     def __init__(self, enrolled: bool = ...) -> None: ...
+
+class StartWebAuthnRegistrationRequest(_message.Message):
+    __slots__ = ("user_id", "label", "tenant_id", "project_id", "context")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    label: str
+    tenant_id: str
+    project_id: str
+    context: _types_pb2.RequestContext
+    def __init__(self, user_id: _Optional[str] = ..., label: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class StartWebAuthnRegistrationResponse(_message.Message):
+    __slots__ = ("challenge_id", "public_key_credential_creation_options_json", "expires_at_unix")
+    CHALLENGE_ID_FIELD_NUMBER: _ClassVar[int]
+    PUBLIC_KEY_CREDENTIAL_CREATION_OPTIONS_JSON_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    challenge_id: str
+    public_key_credential_creation_options_json: str
+    expires_at_unix: int
+    def __init__(self, challenge_id: _Optional[str] = ..., public_key_credential_creation_options_json: _Optional[str] = ..., expires_at_unix: _Optional[int] = ...) -> None: ...
+
+class FinishWebAuthnRegistrationRequest(_message.Message):
+    __slots__ = ("challenge_id", "public_key_credential_json", "label", "context")
+    CHALLENGE_ID_FIELD_NUMBER: _ClassVar[int]
+    PUBLIC_KEY_CREDENTIAL_JSON_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    challenge_id: str
+    public_key_credential_json: str
+    label: str
+    context: _types_pb2.RequestContext
+    def __init__(self, challenge_id: _Optional[str] = ..., public_key_credential_json: _Optional[str] = ..., label: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class FinishWebAuthnRegistrationResponse(_message.Message):
+    __slots__ = ("registered", "credential_id", "user_id")
+    REGISTERED_FIELD_NUMBER: _ClassVar[int]
+    CREDENTIAL_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    registered: bool
+    credential_id: str
+    user_id: str
+    def __init__(self, registered: bool = ..., credential_id: _Optional[str] = ..., user_id: _Optional[str] = ...) -> None: ...
+
+class StartWebAuthnAuthenticationRequest(_message.Message):
+    __slots__ = ("user_id", "tenant_id", "project_id", "context")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    tenant_id: str
+    project_id: str
+    context: _types_pb2.RequestContext
+    def __init__(self, user_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class StartWebAuthnAuthenticationResponse(_message.Message):
+    __slots__ = ("challenge_id", "public_key_credential_request_options_json", "expires_at_unix")
+    CHALLENGE_ID_FIELD_NUMBER: _ClassVar[int]
+    PUBLIC_KEY_CREDENTIAL_REQUEST_OPTIONS_JSON_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    challenge_id: str
+    public_key_credential_request_options_json: str
+    expires_at_unix: int
+    def __init__(self, challenge_id: _Optional[str] = ..., public_key_credential_request_options_json: _Optional[str] = ..., expires_at_unix: _Optional[int] = ...) -> None: ...
+
+class FinishWebAuthnAuthenticationRequest(_message.Message):
+    __slots__ = ("challenge_id", "public_key_credential_json", "context")
+    CHALLENGE_ID_FIELD_NUMBER: _ClassVar[int]
+    PUBLIC_KEY_CREDENTIAL_JSON_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    challenge_id: str
+    public_key_credential_json: str
+    context: _types_pb2.RequestContext
+    def __init__(self, challenge_id: _Optional[str] = ..., public_key_credential_json: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class FinishWebAuthnAuthenticationResponse(_message.Message):
+    __slots__ = ("principal", "session_id", "access_token", "expires_at_unix", "credential_id")
+    PRINCIPAL_FIELD_NUMBER: _ClassVar[int]
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    CREDENTIAL_ID_FIELD_NUMBER: _ClassVar[int]
+    principal: Principal
+    session_id: str
+    access_token: str
+    expires_at_unix: int
+    credential_id: str
+    def __init__(self, principal: _Optional[_Union[Principal, _Mapping]] = ..., session_id: _Optional[str] = ..., access_token: _Optional[str] = ..., expires_at_unix: _Optional[int] = ..., credential_id: _Optional[str] = ...) -> None: ...

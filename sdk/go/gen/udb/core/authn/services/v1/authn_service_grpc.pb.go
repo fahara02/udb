@@ -19,29 +19,33 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthnService_CreateUser_FullMethodName           = "/udb.core.authn.services.v1.AuthnService/CreateUser"
-	AuthnService_GetUser_FullMethodName              = "/udb.core.authn.services.v1.AuthnService/GetUser"
-	AuthnService_ListUsers_FullMethodName            = "/udb.core.authn.services.v1.AuthnService/ListUsers"
-	AuthnService_UpdateUser_FullMethodName           = "/udb.core.authn.services.v1.AuthnService/UpdateUser"
-	AuthnService_ChangeUserStatus_FullMethodName     = "/udb.core.authn.services.v1.AuthnService/ChangeUserStatus"
-	AuthnService_AdminResetPassword_FullMethodName   = "/udb.core.authn.services.v1.AuthnService/AdminResetPassword"
-	AuthnService_SendOTP_FullMethodName              = "/udb.core.authn.services.v1.AuthnService/SendOTP"
-	AuthnService_VerifyOTP_FullMethodName            = "/udb.core.authn.services.v1.AuthnService/VerifyOTP"
-	AuthnService_ResendOTP_FullMethodName            = "/udb.core.authn.services.v1.AuthnService/ResendOTP"
-	AuthnService_Authenticate_FullMethodName         = "/udb.core.authn.services.v1.AuthnService/Authenticate"
-	AuthnService_Login_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/Login"
-	AuthnService_RefreshToken_FullMethodName         = "/udb.core.authn.services.v1.AuthnService/RefreshToken"
-	AuthnService_Logout_FullMethodName               = "/udb.core.authn.services.v1.AuthnService/Logout"
-	AuthnService_ChangePassword_FullMethodName       = "/udb.core.authn.services.v1.AuthnService/ChangePassword"
-	AuthnService_ValidateToken_FullMethodName        = "/udb.core.authn.services.v1.AuthnService/ValidateToken"
-	AuthnService_CreateSession_FullMethodName        = "/udb.core.authn.services.v1.AuthnService/CreateSession"
-	AuthnService_RefreshSession_FullMethodName       = "/udb.core.authn.services.v1.AuthnService/RefreshSession"
-	AuthnService_GetSession_FullMethodName           = "/udb.core.authn.services.v1.AuthnService/GetSession"
-	AuthnService_ListSessions_FullMethodName         = "/udb.core.authn.services.v1.AuthnService/ListSessions"
-	AuthnService_RevokeSession_FullMethodName        = "/udb.core.authn.services.v1.AuthnService/RevokeSession"
-	AuthnService_ValidateCSRF_FullMethodName         = "/udb.core.authn.services.v1.AuthnService/ValidateCSRF"
-	AuthnService_EnrollMFA_FullMethodName            = "/udb.core.authn.services.v1.AuthnService/EnrollMFA"
-	AuthnService_ConfirmMFAEnrollment_FullMethodName = "/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment"
+	AuthnService_CreateUser_FullMethodName                   = "/udb.core.authn.services.v1.AuthnService/CreateUser"
+	AuthnService_GetUser_FullMethodName                      = "/udb.core.authn.services.v1.AuthnService/GetUser"
+	AuthnService_ListUsers_FullMethodName                    = "/udb.core.authn.services.v1.AuthnService/ListUsers"
+	AuthnService_UpdateUser_FullMethodName                   = "/udb.core.authn.services.v1.AuthnService/UpdateUser"
+	AuthnService_ChangeUserStatus_FullMethodName             = "/udb.core.authn.services.v1.AuthnService/ChangeUserStatus"
+	AuthnService_AdminResetPassword_FullMethodName           = "/udb.core.authn.services.v1.AuthnService/AdminResetPassword"
+	AuthnService_SendOTP_FullMethodName                      = "/udb.core.authn.services.v1.AuthnService/SendOTP"
+	AuthnService_VerifyOTP_FullMethodName                    = "/udb.core.authn.services.v1.AuthnService/VerifyOTP"
+	AuthnService_ResendOTP_FullMethodName                    = "/udb.core.authn.services.v1.AuthnService/ResendOTP"
+	AuthnService_Authenticate_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/Authenticate"
+	AuthnService_Login_FullMethodName                        = "/udb.core.authn.services.v1.AuthnService/Login"
+	AuthnService_RefreshToken_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/RefreshToken"
+	AuthnService_Logout_FullMethodName                       = "/udb.core.authn.services.v1.AuthnService/Logout"
+	AuthnService_ChangePassword_FullMethodName               = "/udb.core.authn.services.v1.AuthnService/ChangePassword"
+	AuthnService_ValidateToken_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/ValidateToken"
+	AuthnService_CreateSession_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/CreateSession"
+	AuthnService_RefreshSession_FullMethodName               = "/udb.core.authn.services.v1.AuthnService/RefreshSession"
+	AuthnService_GetSession_FullMethodName                   = "/udb.core.authn.services.v1.AuthnService/GetSession"
+	AuthnService_ListSessions_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/ListSessions"
+	AuthnService_RevokeSession_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/RevokeSession"
+	AuthnService_ValidateCSRF_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/ValidateCSRF"
+	AuthnService_EnrollMFA_FullMethodName                    = "/udb.core.authn.services.v1.AuthnService/EnrollMFA"
+	AuthnService_ConfirmMFAEnrollment_FullMethodName         = "/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment"
+	AuthnService_StartWebAuthnRegistration_FullMethodName    = "/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration"
+	AuthnService_FinishWebAuthnRegistration_FullMethodName   = "/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration"
+	AuthnService_StartWebAuthnAuthentication_FullMethodName  = "/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication"
+	AuthnService_FinishWebAuthnAuthentication_FullMethodName = "/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication"
 )
 
 // AuthnServiceClient is the client API for AuthnService service.
@@ -92,6 +96,11 @@ type AuthnServiceClient interface {
 	EnrollMFA(ctx context.Context, in *EnrollMFARequest, opts ...grpc.CallOption) (*EnrollMFAResponse, error)
 	// Step 2: confirm with first TOTP code (or email OTP)
 	ConfirmMFAEnrollment(ctx context.Context, in *ConfirmMFAEnrollmentRequest, opts ...grpc.CallOption) (*ConfirmMFAEnrollmentResponse, error)
+	// ── WebAuthn / passkeys ─────────────────────────────────────────────────
+	StartWebAuthnRegistration(ctx context.Context, in *StartWebAuthnRegistrationRequest, opts ...grpc.CallOption) (*StartWebAuthnRegistrationResponse, error)
+	FinishWebAuthnRegistration(ctx context.Context, in *FinishWebAuthnRegistrationRequest, opts ...grpc.CallOption) (*FinishWebAuthnRegistrationResponse, error)
+	StartWebAuthnAuthentication(ctx context.Context, in *StartWebAuthnAuthenticationRequest, opts ...grpc.CallOption) (*StartWebAuthnAuthenticationResponse, error)
+	FinishWebAuthnAuthentication(ctx context.Context, in *FinishWebAuthnAuthenticationRequest, opts ...grpc.CallOption) (*FinishWebAuthnAuthenticationResponse, error)
 }
 
 type authnServiceClient struct {
@@ -332,6 +341,46 @@ func (c *authnServiceClient) ConfirmMFAEnrollment(ctx context.Context, in *Confi
 	return out, nil
 }
 
+func (c *authnServiceClient) StartWebAuthnRegistration(ctx context.Context, in *StartWebAuthnRegistrationRequest, opts ...grpc.CallOption) (*StartWebAuthnRegistrationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StartWebAuthnRegistrationResponse)
+	err := c.cc.Invoke(ctx, AuthnService_StartWebAuthnRegistration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) FinishWebAuthnRegistration(ctx context.Context, in *FinishWebAuthnRegistrationRequest, opts ...grpc.CallOption) (*FinishWebAuthnRegistrationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FinishWebAuthnRegistrationResponse)
+	err := c.cc.Invoke(ctx, AuthnService_FinishWebAuthnRegistration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) StartWebAuthnAuthentication(ctx context.Context, in *StartWebAuthnAuthenticationRequest, opts ...grpc.CallOption) (*StartWebAuthnAuthenticationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StartWebAuthnAuthenticationResponse)
+	err := c.cc.Invoke(ctx, AuthnService_StartWebAuthnAuthentication_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) FinishWebAuthnAuthentication(ctx context.Context, in *FinishWebAuthnAuthenticationRequest, opts ...grpc.CallOption) (*FinishWebAuthnAuthenticationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FinishWebAuthnAuthenticationResponse)
+	err := c.cc.Invoke(ctx, AuthnService_FinishWebAuthnAuthentication_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthnServiceServer is the server API for AuthnService service.
 // All implementations should embed UnimplementedAuthnServiceServer
 // for forward compatibility.
@@ -380,6 +429,11 @@ type AuthnServiceServer interface {
 	EnrollMFA(context.Context, *EnrollMFARequest) (*EnrollMFAResponse, error)
 	// Step 2: confirm with first TOTP code (or email OTP)
 	ConfirmMFAEnrollment(context.Context, *ConfirmMFAEnrollmentRequest) (*ConfirmMFAEnrollmentResponse, error)
+	// ── WebAuthn / passkeys ─────────────────────────────────────────────────
+	StartWebAuthnRegistration(context.Context, *StartWebAuthnRegistrationRequest) (*StartWebAuthnRegistrationResponse, error)
+	FinishWebAuthnRegistration(context.Context, *FinishWebAuthnRegistrationRequest) (*FinishWebAuthnRegistrationResponse, error)
+	StartWebAuthnAuthentication(context.Context, *StartWebAuthnAuthenticationRequest) (*StartWebAuthnAuthenticationResponse, error)
+	FinishWebAuthnAuthentication(context.Context, *FinishWebAuthnAuthenticationRequest) (*FinishWebAuthnAuthenticationResponse, error)
 }
 
 // UnimplementedAuthnServiceServer should be embedded to have
@@ -457,6 +511,18 @@ func (UnimplementedAuthnServiceServer) EnrollMFA(context.Context, *EnrollMFARequ
 }
 func (UnimplementedAuthnServiceServer) ConfirmMFAEnrollment(context.Context, *ConfirmMFAEnrollmentRequest) (*ConfirmMFAEnrollmentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ConfirmMFAEnrollment not implemented")
+}
+func (UnimplementedAuthnServiceServer) StartWebAuthnRegistration(context.Context, *StartWebAuthnRegistrationRequest) (*StartWebAuthnRegistrationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartWebAuthnRegistration not implemented")
+}
+func (UnimplementedAuthnServiceServer) FinishWebAuthnRegistration(context.Context, *FinishWebAuthnRegistrationRequest) (*FinishWebAuthnRegistrationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FinishWebAuthnRegistration not implemented")
+}
+func (UnimplementedAuthnServiceServer) StartWebAuthnAuthentication(context.Context, *StartWebAuthnAuthenticationRequest) (*StartWebAuthnAuthenticationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartWebAuthnAuthentication not implemented")
+}
+func (UnimplementedAuthnServiceServer) FinishWebAuthnAuthentication(context.Context, *FinishWebAuthnAuthenticationRequest) (*FinishWebAuthnAuthenticationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FinishWebAuthnAuthentication not implemented")
 }
 func (UnimplementedAuthnServiceServer) testEmbeddedByValue() {}
 
@@ -892,6 +958,78 @@ func _AuthnService_ConfirmMFAEnrollment_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthnService_StartWebAuthnRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartWebAuthnRegistrationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).StartWebAuthnRegistration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_StartWebAuthnRegistration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).StartWebAuthnRegistration(ctx, req.(*StartWebAuthnRegistrationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_FinishWebAuthnRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FinishWebAuthnRegistrationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).FinishWebAuthnRegistration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_FinishWebAuthnRegistration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).FinishWebAuthnRegistration(ctx, req.(*FinishWebAuthnRegistrationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_StartWebAuthnAuthentication_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartWebAuthnAuthenticationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).StartWebAuthnAuthentication(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_StartWebAuthnAuthentication_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).StartWebAuthnAuthentication(ctx, req.(*StartWebAuthnAuthenticationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_FinishWebAuthnAuthentication_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FinishWebAuthnAuthenticationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).FinishWebAuthnAuthentication(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_FinishWebAuthnAuthentication_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).FinishWebAuthnAuthentication(ctx, req.(*FinishWebAuthnAuthenticationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthnService_ServiceDesc is the grpc.ServiceDesc for AuthnService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -990,6 +1128,22 @@ var AuthnService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ConfirmMFAEnrollment",
 			Handler:    _AuthnService_ConfirmMFAEnrollment_Handler,
+		},
+		{
+			MethodName: "StartWebAuthnRegistration",
+			Handler:    _AuthnService_StartWebAuthnRegistration_Handler,
+		},
+		{
+			MethodName: "FinishWebAuthnRegistration",
+			Handler:    _AuthnService_FinishWebAuthnRegistration_Handler,
+		},
+		{
+			MethodName: "StartWebAuthnAuthentication",
+			Handler:    _AuthnService_StartWebAuthnAuthentication_Handler,
+		},
+		{
+			MethodName: "FinishWebAuthnAuthentication",
+			Handler:    _AuthnService_FinishWebAuthnAuthentication_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

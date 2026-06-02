@@ -61,10 +61,67 @@ impl DataBrokerService {
                 system_catalog_relations.push(format!("project:{project_scope}:catalog:{ver}"));
             }
         }
-        let supported_rpcs = SUPPORTED_RPC_NAMES
+        let supported_rpcs: Vec<String> = SUPPORTED_RPC_NAMES
             .iter()
             .map(|name| (*name).to_string())
             .collect();
+
+        // ── V2 protocol negotiation (additive fields 9/10) ──────────────────
+        // Derive the negotiation block from the same constants the V1 fields
+        // use, so a V2-aware client can feature-detect without parsing the V1
+        // surface. This block never alters fields 1-8.
+        //
+        // Compression: the DataBroker server does not currently configure
+        // tonic transport compression negotiation (no accept_compressed /
+        // send_compressed on the server builder), so we advertise none. If
+        // compression is wired later, populate this from that config.
+        //
+        // Max message bytes: the server relies on tonic's transport defaults
+        // (no max_decoding_message_size / max_encoding_message_size override),
+        // so we report 0 ("not advertised / use transport default").
+        let backend_caps = crate::backend::capability_matrix();
+        let backend_protocol_support: Vec<crate::proto::BackendProtocolSupport> = backend_caps
+            .iter()
+            .map(|entry| {
+                // Streaming reads: any backend that supports the "query"
+                // operation can be read via the server-streaming path
+                // (QueryExecutor::query_stream has a default chunking impl).
+                let supports_streaming_reads = entry.operations.iter().any(|op| op == "query");
+                // Object streaming: object stores expose get_object/put_object
+                // (ObjectExecutor::get_object_stream default-chunks).
+                let supports_object_streaming = entry
+                    .operations
+                    .iter()
+                    .any(|op| op == "get_object" || op == "put_object");
+                crate::proto::BackendProtocolSupport {
+                    backend: entry.backend.clone(),
+                    supports_streaming_reads,
+                    supports_object_streaming,
+                    // Empty => inherits server-wide ProtocolSupport.encodings.
+                    encodings: Vec::new(),
+                }
+            })
+            .collect();
+        let protocol_support = Some(crate::proto::ProtocolSupport {
+            // Single-version server today: min == max == UDB_PROTOCOL_VERSION.
+            min_protocol_version: UDB_PROTOCOL_VERSION.to_string(),
+            max_protocol_version: UDB_PROTOCOL_VERSION.to_string(),
+            // V1 row encoding plus the additive typed columnar encoding served
+            // by the SelectV2 RPC (A.4). Clients pick V2 only when they support
+            // it and otherwise fall back to record_set_v1.
+            encodings: vec!["record_set_v1".to_string(), "record_batch_v2".to_string()],
+            // No transport compression negotiation configured (see comment).
+            compression: Vec::new(),
+            // The runtime provides default streaming impls for query reads and
+            // object payloads (see executors::QueryExecutor::query_stream /
+            // ObjectExecutor::get_object_stream).
+            supports_streaming_reads: true,
+            supports_object_streaming: true,
+            // 0 == transport default (no explicit server-side override).
+            max_recv_message_bytes: 0,
+            max_send_message_bytes: 0,
+            supported_rpcs: supported_rpcs.clone(),
+        });
 
         let startup_summary = format!(
             "[UDB] capabilities: {} table(s), {} store(s), {} backend(s) enabled, {} degraded",
@@ -91,7 +148,7 @@ impl DataBrokerService {
                     .iter()
                     .map(backend_instance_status)
                     .collect(),
-                backend_capabilities: crate::backend::capability_matrix()
+                backend_capabilities: backend_caps
                     .into_iter()
                     .map(|entry| BackendCapabilityDescriptor {
                         backend: entry.backend,
@@ -104,6 +161,8 @@ impl DataBrokerService {
                         supports_two_phase_commit: entry.supports_two_phase_commit,
                     })
                     .collect(),
+                protocol_support,
+                backend_protocol_support,
             })),
         )
     }

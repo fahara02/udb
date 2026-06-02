@@ -2,6 +2,7 @@ from udb.core.authn.entity.v1 import enums_pb2 as _enums_pb2
 from udb.core.authn.entity.v1 import otp_pb2 as _otp_pb2
 from udb.core.authn.entity.v1 import session_pb2 as _session_pb2
 from udb.core.authn.entity.v1 import user_pb2 as _user_pb2
+from udb.core.authn.entity.v1 import webauthn_pb2 as _webauthn_pb2
 from google.protobuf import descriptor as _descriptor
 from typing import ClassVar as _ClassVar
 from udb.core.authn.entity.v1.enums_pb2 import AccountKind as AccountKind
@@ -17,6 +18,8 @@ from udb.core.authn.entity.v1.enums_pb2 import TokenType as TokenType
 from udb.core.authn.entity.v1.otp_pb2 import OTP as OTP
 from udb.core.authn.entity.v1.session_pb2 import Session as Session
 from udb.core.authn.entity.v1.user_pb2 import User as User
+from udb.core.authn.entity.v1.webauthn_pb2 import WebAuthnCredential as WebAuthnCredential
+from udb.core.authn.entity.v1.webauthn_pb2 import WebAuthnChallenge as WebAuthnChallenge
 
 DESCRIPTOR: _descriptor.FileDescriptor
 ACCOUNT_KIND_UNSPECIFIED: _enums_pb2.AccountKind

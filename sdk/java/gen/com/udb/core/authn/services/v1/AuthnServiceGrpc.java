@@ -735,6 +735,130 @@ public final class AuthnServiceGrpc {
     return getConfirmMFAEnrollmentMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest,
+      com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse> getStartWebAuthnRegistrationMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "StartWebAuthnRegistration",
+      requestType = com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest.class,
+      responseType = com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest,
+      com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse> getStartWebAuthnRegistrationMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest, com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse> getStartWebAuthnRegistrationMethod;
+    if ((getStartWebAuthnRegistrationMethod = AuthnServiceGrpc.getStartWebAuthnRegistrationMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getStartWebAuthnRegistrationMethod = AuthnServiceGrpc.getStartWebAuthnRegistrationMethod) == null) {
+          AuthnServiceGrpc.getStartWebAuthnRegistrationMethod = getStartWebAuthnRegistrationMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest, com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "StartWebAuthnRegistration"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("StartWebAuthnRegistration"))
+              .build();
+        }
+      }
+    }
+    return getStartWebAuthnRegistrationMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest,
+      com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse> getFinishWebAuthnRegistrationMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "FinishWebAuthnRegistration",
+      requestType = com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest.class,
+      responseType = com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest,
+      com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse> getFinishWebAuthnRegistrationMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest, com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse> getFinishWebAuthnRegistrationMethod;
+    if ((getFinishWebAuthnRegistrationMethod = AuthnServiceGrpc.getFinishWebAuthnRegistrationMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getFinishWebAuthnRegistrationMethod = AuthnServiceGrpc.getFinishWebAuthnRegistrationMethod) == null) {
+          AuthnServiceGrpc.getFinishWebAuthnRegistrationMethod = getFinishWebAuthnRegistrationMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest, com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "FinishWebAuthnRegistration"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("FinishWebAuthnRegistration"))
+              .build();
+        }
+      }
+    }
+    return getFinishWebAuthnRegistrationMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest,
+      com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse> getStartWebAuthnAuthenticationMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "StartWebAuthnAuthentication",
+      requestType = com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest.class,
+      responseType = com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest,
+      com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse> getStartWebAuthnAuthenticationMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest, com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse> getStartWebAuthnAuthenticationMethod;
+    if ((getStartWebAuthnAuthenticationMethod = AuthnServiceGrpc.getStartWebAuthnAuthenticationMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getStartWebAuthnAuthenticationMethod = AuthnServiceGrpc.getStartWebAuthnAuthenticationMethod) == null) {
+          AuthnServiceGrpc.getStartWebAuthnAuthenticationMethod = getStartWebAuthnAuthenticationMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest, com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "StartWebAuthnAuthentication"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("StartWebAuthnAuthentication"))
+              .build();
+        }
+      }
+    }
+    return getStartWebAuthnAuthenticationMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest,
+      com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse> getFinishWebAuthnAuthenticationMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "FinishWebAuthnAuthentication",
+      requestType = com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest.class,
+      responseType = com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest,
+      com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse> getFinishWebAuthnAuthenticationMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest, com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse> getFinishWebAuthnAuthenticationMethod;
+    if ((getFinishWebAuthnAuthenticationMethod = AuthnServiceGrpc.getFinishWebAuthnAuthenticationMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getFinishWebAuthnAuthenticationMethod = AuthnServiceGrpc.getFinishWebAuthnAuthenticationMethod) == null) {
+          AuthnServiceGrpc.getFinishWebAuthnAuthenticationMethod = getFinishWebAuthnAuthenticationMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest, com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "FinishWebAuthnAuthentication"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("FinishWebAuthnAuthentication"))
+              .build();
+        }
+      }
+    }
+    return getFinishWebAuthnAuthenticationMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -996,6 +1120,37 @@ public final class AuthnServiceGrpc {
         io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getConfirmMFAEnrollmentMethod(), responseObserver);
     }
+
+    /**
+     * <pre>
+     * ── WebAuthn / passkeys ─────────────────────────────────────────────────
+     * </pre>
+     */
+    default void startWebAuthnRegistration(com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getStartWebAuthnRegistrationMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void finishWebAuthnRegistration(com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getFinishWebAuthnRegistrationMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void startWebAuthnAuthentication(com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getStartWebAuthnAuthenticationMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void finishWebAuthnAuthentication(com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getFinishWebAuthnAuthenticationMethod(), responseObserver);
+    }
   }
 
   /**
@@ -1256,6 +1411,41 @@ public final class AuthnServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getConfirmMFAEnrollmentMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * ── WebAuthn / passkeys ─────────────────────────────────────────────────
+     * </pre>
+     */
+    public void startWebAuthnRegistration(com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getStartWebAuthnRegistrationMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void finishWebAuthnRegistration(com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getFinishWebAuthnRegistrationMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void startWebAuthnAuthentication(com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getStartWebAuthnAuthenticationMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void finishWebAuthnAuthentication(com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getFinishWebAuthnAuthenticationMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -1472,6 +1662,37 @@ public final class AuthnServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getConfirmMFAEnrollmentMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * ── WebAuthn / passkeys ─────────────────────────────────────────────────
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse startWebAuthnRegistration(com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getStartWebAuthnRegistrationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse finishWebAuthnRegistration(com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getFinishWebAuthnRegistrationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse startWebAuthnAuthentication(com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getStartWebAuthnAuthenticationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse finishWebAuthnAuthentication(com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getFinishWebAuthnAuthenticationMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -1687,6 +1908,37 @@ public final class AuthnServiceGrpc {
     public com.udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse confirmMFAEnrollment(com.udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getConfirmMFAEnrollmentMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ── WebAuthn / passkeys ─────────────────────────────────────────────────
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse startWebAuthnRegistration(com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getStartWebAuthnRegistrationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse finishWebAuthnRegistration(com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getFinishWebAuthnRegistrationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse startWebAuthnAuthentication(com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getStartWebAuthnAuthenticationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse finishWebAuthnAuthentication(com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getFinishWebAuthnAuthenticationMethod(), getCallOptions(), request);
     }
   }
 
@@ -1927,6 +2179,41 @@ public final class AuthnServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getConfirmMFAEnrollmentMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * ── WebAuthn / passkeys ─────────────────────────────────────────────────
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse> startWebAuthnRegistration(
+        com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getStartWebAuthnRegistrationMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse> finishWebAuthnRegistration(
+        com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getFinishWebAuthnRegistrationMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse> startWebAuthnAuthentication(
+        com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getStartWebAuthnAuthenticationMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse> finishWebAuthnAuthentication(
+        com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getFinishWebAuthnAuthenticationMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_USER = 0;
@@ -1952,6 +2239,10 @@ public final class AuthnServiceGrpc {
   private static final int METHODID_VALIDATE_CSRF = 20;
   private static final int METHODID_ENROLL_MFA = 21;
   private static final int METHODID_CONFIRM_MFAENROLLMENT = 22;
+  private static final int METHODID_START_WEB_AUTHN_REGISTRATION = 23;
+  private static final int METHODID_FINISH_WEB_AUTHN_REGISTRATION = 24;
+  private static final int METHODID_START_WEB_AUTHN_AUTHENTICATION = 25;
+  private static final int METHODID_FINISH_WEB_AUTHN_AUTHENTICATION = 26;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -2061,6 +2352,22 @@ public final class AuthnServiceGrpc {
         case METHODID_CONFIRM_MFAENROLLMENT:
           serviceImpl.confirmMFAEnrollment((com.udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse>) responseObserver);
+          break;
+        case METHODID_START_WEB_AUTHN_REGISTRATION:
+          serviceImpl.startWebAuthnRegistration((com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse>) responseObserver);
+          break;
+        case METHODID_FINISH_WEB_AUTHN_REGISTRATION:
+          serviceImpl.finishWebAuthnRegistration((com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse>) responseObserver);
+          break;
+        case METHODID_START_WEB_AUTHN_AUTHENTICATION:
+          serviceImpl.startWebAuthnAuthentication((com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse>) responseObserver);
+          break;
+        case METHODID_FINISH_WEB_AUTHN_AUTHENTICATION:
+          serviceImpl.finishWebAuthnAuthentication((com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -2241,6 +2548,34 @@ public final class AuthnServiceGrpc {
               com.udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest,
               com.udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse>(
                 service, METHODID_CONFIRM_MFAENROLLMENT)))
+        .addMethod(
+          getStartWebAuthnRegistrationMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest,
+              com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse>(
+                service, METHODID_START_WEB_AUTHN_REGISTRATION)))
+        .addMethod(
+          getFinishWebAuthnRegistrationMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest,
+              com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse>(
+                service, METHODID_FINISH_WEB_AUTHN_REGISTRATION)))
+        .addMethod(
+          getStartWebAuthnAuthenticationMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest,
+              com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse>(
+                service, METHODID_START_WEB_AUTHN_AUTHENTICATION)))
+        .addMethod(
+          getFinishWebAuthnAuthenticationMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest,
+              com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse>(
+                service, METHODID_FINISH_WEB_AUTHN_AUTHENTICATION)))
         .build();
   }
 
@@ -2312,6 +2647,10 @@ public final class AuthnServiceGrpc {
               .addMethod(getValidateCSRFMethod())
               .addMethod(getEnrollMFAMethod())
               .addMethod(getConfirmMFAEnrollmentMethod())
+              .addMethod(getStartWebAuthnRegistrationMethod())
+              .addMethod(getFinishWebAuthnRegistrationMethod())
+              .addMethod(getStartWebAuthnAuthenticationMethod())
+              .addMethod(getFinishWebAuthnAuthenticationMethod())
               .build();
         }
       }

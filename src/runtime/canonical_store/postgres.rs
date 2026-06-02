@@ -156,9 +156,14 @@ impl CanonicalStore for PostgresCanonicalStore {
     ) -> Result<i64, String> {
         let rel = self.safe_relation()?;
         // Use the same column order the existing CDC tailer reads.
+        // `event_id` is a `UUID` column; the parameter arrives as text over the
+        // wire, so cast it explicitly ($1::uuid). Without the cast PostgreSQL
+        // rejects the bind ("column is of type uuid but expression is of type
+        // text") — SQLite's TEXT column hid this, but real Postgres does not
+        // implicitly cast a text parameter to uuid.
         let sql = format!(
             "INSERT INTO {rel} (event_id, topic, partition_key, payload, created_at) \
-             VALUES ($1, $2, $3, $4, NOW()) \
+             VALUES ($1::uuid, $2, $3, $4, NOW()) \
              RETURNING event_seq"
         );
         let event_seq: i64 = sqlx::query_scalar(&sql)
@@ -184,16 +189,10 @@ impl CanonicalStore for PostgresCanonicalStore {
 
     async fn ensure_system_tables(&self) -> Result<(), String> {
         let rel = self.safe_relation()?;
-        let sql = format!(
-            "CREATE TABLE IF NOT EXISTS {rel} ( \
-                event_seq      BIGSERIAL PRIMARY KEY, \
-                event_id       UUID NOT NULL UNIQUE, \
-                topic          TEXT NOT NULL, \
-                partition_key  TEXT NOT NULL DEFAULT '', \
-                payload        JSONB NOT NULL, \
-                created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW() \
-            )"
-        );
+        // B.7: outbox DDL comes from the shared `sql_schema` renderer (single
+        // source of truth across SQL backends); execute/error-handling below
+        // is unchanged.
+        let sql = super::sql_schema::postgres_outbox_ddl(rel);
         sqlx::query(&sql)
             .execute(&self.pool)
             .await

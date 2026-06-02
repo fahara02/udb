@@ -1,6 +1,6 @@
 {
   "name": "@udb_plus/sdk",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "TypeScript/Node gRPC client for the Universal Data Broker (UDB) — DataBroker data plane plus the native Authn/Authz control plane.",
   "keywords": ["udb", "grpc", "database", "broker", "multi-tenant", "sdk"],
   "type": "commonjs",
@@ -16,6 +16,9 @@
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "udb": "./bin/udb.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -28,10 +31,15 @@
     "./auth": {
       "types": "./dist/auth.d.ts",
       "default": "./dist/auth.js"
+    },
+    "./generatedClient": {
+      "types": "./dist/generatedClient.d.ts",
+      "default": "./dist/generatedClient.js"
     }
   },
   "files": [
     "dist",
+    "bin",
     "proto",
     "third_party",
     "README.md"
@@ -43,7 +51,8 @@
     "typecheck": "tsc --noEmit",
     "bundle-proto": "node scripts/bundle-proto.mjs",
     "build": "npm run bundle-proto && tsc -p tsconfig.build.json",
-    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "test": "tsc -p tsconfig.test.json && node --test dist-test",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('dist-test',{recursive:true,force:true})\"",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

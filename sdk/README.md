@@ -6,18 +6,18 @@ UDB gRPC protocol.
 Current protocol version: [`UDB_PROTOCOL_VERSION`](UDB_PROTOCOL_VERSION) =
 `1.0.0`.
 
-Current crate/SDK release from [`../versions.json`](../versions.json): `0.2.1`.
+Current crate/SDK release from [`../versions.json`](../versions.json): `0.3.0`.
 
 ## Release Matrix
 
 | SDK | Package | Version | Install | Guide |
 |---|---|---:|---|---|
-| Go | `github.com/fahara02/udb/sdk/go` | `0.2.1` | `go get github.com/fahara02/udb/sdk/go@v0.2.1` | [`go/README.md`](go/README.md) |
-| Python | `udb-client` | `0.2.1` | `pip install udb-client==0.2.1` | [`python/README.md`](python/README.md) |
-| TypeScript / Node | `@udb_plus/sdk` | `0.2.1` | `npm i @udb_plus/sdk@0.2.1` | [`typescript/README.md`](typescript/README.md) |
-| PHP / Laravel | `fahara02/udb-laravel` | `0.2.1` | `composer require fahara02/udb-laravel:^0.2.1` | [`php/README.md`](php/README.md) |
-| C# | `Udb.Client` | `0.2.1` | `dotnet add package Udb.Client --version 0.2.1` | [`csharp/README.md`](csharp/README.md) |
-| Java | `dev.udb:udb-java-client` | `0.2.1-SNAPSHOT` today | build with `mvn -f sdk/java/pom.xml test` until Maven Central release wiring is complete | [`java/README.md`](java/README.md) |
+| Go | `github.com/fahara02/udb/sdk/go` | `0.3.0` | `go get github.com/fahara02/udb/sdk/go@v0.3.0` | [`go/README.md`](go/README.md) |
+| Python | `udb-client` | `0.3.0` | `pip install udb-client==0.3.0` | [`python/README.md`](python/README.md) |
+| TypeScript / Node | `@udb_plus/sdk` | `0.3.0` | `npm i @udb_plus/sdk@0.3.0` | [`typescript/README.md`](typescript/README.md) |
+| PHP / Laravel | `fahara02/udb-laravel` | `0.3.0` | `composer require fahara02/udb-laravel:^0.3.0` | [`php/README.md`](php/README.md) |
+| C# | `Udb.Client` | `0.3.0` | `dotnet add package Udb.Client --version 0.3.0` | [`csharp/README.md`](csharp/README.md) |
+| Java | `dev.udb:udb-java-client` | `0.3.0-SNAPSHOT` today | build with `mvn -f sdk/java/pom.xml test` until Maven Central release wiring is complete | [`java/README.md`](java/README.md) |
 
 Go, Python, TypeScript, and PHP are the published-first SDKs. C# and Java have
 versioned manifests and committed stubs; their public package publishing is

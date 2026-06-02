@@ -142,13 +142,24 @@ impl CanonicalStore for MysqlCanonicalStore {
                 .map_err(|e| format!("gtid_executed query failed: {e}"))?;
             Ok(DurabilityToken::new("mysql", format!("gtid:{}", gtid.0)))
         } else {
-            // File/position path. SHOW MASTER STATUS is a one-row
-            // result set; sqlx parses the first column (`File`) and
-            // second column (`Position`).
-            let row: Option<(String, u64)> = sqlx::query_as("SHOW MASTER STATUS")
+            // File/position path. MySQL 8.4 removed `SHOW MASTER STATUS` and
+            // renamed it to `SHOW BINARY LOG STATUS` (identical columns: `File`,
+            // `Position`). Try the 8.4 form first and fall back to the legacy
+            // form on MySQL < 8.4, so the store works across server versions.
+            // Both are one-row result sets; sqlx parses the first column
+            // (`File`) and second column (`Position`).
+            let row: Option<(String, u64)> = match sqlx::query_as("SHOW BINARY LOG STATUS")
                 .fetch_optional(&self.pool)
                 .await
-                .map_err(|e| format!("SHOW MASTER STATUS failed: {e}"))?;
+            {
+                Ok(row) => row,
+                Err(_) => sqlx::query_as("SHOW MASTER STATUS")
+                    .fetch_optional(&self.pool)
+                    .await
+                    .map_err(|e| {
+                        format!("SHOW BINARY LOG STATUS / SHOW MASTER STATUS failed: {e}")
+                    })?,
+            };
             match row {
                 Some((file, pos)) => {
                     Ok(DurabilityToken::new("mysql", format!("file:{file}:{pos}")))
@@ -194,16 +205,44 @@ impl CanonicalStore for MysqlCanonicalStore {
             let pos: u64 = pos
                 .parse()
                 .map_err(|e| format!("invalid binlog position '{pos}': {e}"))?;
-            // MASTER_POS_WAIT(file, pos, timeout) waits until the
-            // server's replication position has reached or passed the
-            // target. Returns rows-applied count or NULL on timeout.
-            let res: Option<(Option<i64>,)> = sqlx::query_as("SELECT MASTER_POS_WAIT(?, ?, ?)")
-                .bind(file)
-                .bind(pos as i64)
-                .bind(timeout_secs)
-                .fetch_optional(&self.pool)
-                .await
-                .map_err(|e| format!("MASTER_POS_WAIT failed: {e}"))?;
+            // Primary self-check: if THIS server's own binlog has already
+            // reached or passed the target coordinates, the durability point is
+            // satisfied without waiting. *_POS_WAIT only makes sense for a
+            // replica catching up to its source; on a standalone primary (no
+            // replica SQL thread) it returns NULL, so a primary waiting on its
+            // own just-minted token would otherwise never clear.
+            if let Ok(current) = self.current_durability_token().await
+                && let Some(cur) = current.value.strip_prefix("file:")
+                && let Some((cur_file, cur_pos)) = cur.rsplit_once(':')
+                && let Ok(cur_pos) = cur_pos.parse::<u64>()
+                && (cur_file, cur_pos) >= (file, pos)
+            {
+                // Zero-padded sequential binlog file names order lexically, so
+                // the (file, pos) tuple compare is correct.
+                return Ok(true);
+            }
+            // Replica catch-up path. MySQL 8.4 removed MASTER_POS_WAIT and
+            // renamed it to SOURCE_POS_WAIT (identical args/semantics): wait
+            // until the replica applies up to the target, returning the
+            // rows-applied count or NULL on timeout. Try the 8.4 form first and
+            // fall back to the legacy form on MySQL < 8.4.
+            let res: Option<(Option<i64>,)> =
+                match sqlx::query_as("SELECT SOURCE_POS_WAIT(?, ?, ?)")
+                    .bind(file)
+                    .bind(pos as i64)
+                    .bind(timeout_secs)
+                    .fetch_optional(&self.pool)
+                    .await
+                {
+                    Ok(res) => res,
+                    Err(_) => sqlx::query_as("SELECT MASTER_POS_WAIT(?, ?, ?)")
+                        .bind(file)
+                        .bind(pos as i64)
+                        .bind(timeout_secs)
+                        .fetch_optional(&self.pool)
+                        .await
+                        .map_err(|e| format!("SOURCE_POS_WAIT / MASTER_POS_WAIT failed: {e}"))?,
+                };
             Ok(matches!(res, Some((Some(_),))))
         } else {
             // Unknown token format. Poll-fallback: just compare the
@@ -261,31 +300,10 @@ impl CanonicalStore for MysqlCanonicalStore {
 
     async fn ensure_system_tables(&self) -> Result<(), String> {
         let rel = self.safe_relation()?;
-        let sql = format!(
-            // Full outbox schema (parity with the Postgres system catalog): the
-            // production tailer UPDATEs delivery_state + the Kafka state columns,
-            // so a minimal table breaks at-least-once delivery on MySQL (#132).
-            "CREATE TABLE IF NOT EXISTS {rel} ( \
-                event_seq      BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, \
-                event_id       CHAR(36) NOT NULL UNIQUE, \
-                topic          VARCHAR(255) NOT NULL, \
-                partition_key  VARCHAR(255) NOT NULL DEFAULT '', \
-                payload        JSON NOT NULL, \
-                headers        JSON NULL, \
-                delivery_state VARCHAR(20) NOT NULL DEFAULT 'pending', \
-                publishing_started_at TIMESTAMP(6) NULL, \
-                published_at   TIMESTAMP(6) NULL, \
-                acked_at       TIMESTAMP(6) NULL, \
-                dlq_at         TIMESTAMP(6) NULL, \
-                producer_epoch BIGINT NOT NULL DEFAULT 0, \
-                transactional_id VARCHAR(255) NOT NULL DEFAULT '', \
-                kafka_partition INT NULL, \
-                kafka_offset   BIGINT NULL, \
-                last_error     TEXT NULL, \
-                created_at     TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \
-                INDEX idx_outbox_delivery_state (delivery_state, event_seq) \
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-        );
+        // B.7: outbox DDL comes from the shared `sql_schema` renderer (single
+        // source of truth across SQL backends); execute/error-handling below
+        // is unchanged.
+        let sql = super::sql_schema::mysql_outbox_ddl(&rel);
         sqlx::query(&sql)
             .execute(&self.pool)
             .await

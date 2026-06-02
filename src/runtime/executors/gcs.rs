@@ -22,8 +22,8 @@ use crate::runtime::backend_context::{
 };
 use crate::runtime::executor_utils::{build_probe, parse_object_dispatch, reject_oversized_object};
 use crate::runtime::executors::{
-    BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
-    ResourceAdminExecutor, SearchExecutor,
+    BackendExecutor, BackendHealth, BackendProbe, ExecutorByteStream, MutationExecutor,
+    ObjectExecutor, QueryExecutor, ResourceAdminExecutor, SearchExecutor,
 };
 
 #[derive(Clone)]
@@ -191,6 +191,81 @@ impl ObjectExecutor for GcsExecutor {
             .upload_object(&upload_req, bytes, &upload_type)
             .await
             .map_err(|e| tonic::Status::internal(format!("gcs upload failed: {e}")))?;
+        Ok(serde_json::json!({ "ok": true, "bucket": bucket, "object": object }).to_string())
+    }
+
+    /// Streaming download (A.6): `download_streamed_object` yields the object as a
+    /// stream of byte chunks without buffering the whole blob.
+    async fn get_object_stream(
+        &self,
+        request_json: &str,
+    ) -> Result<ExecutorByteStream, tonic::Status> {
+        let (_op, bucket, object, _) = parse_dispatch(request_json)?;
+        let req = GetObjectRequest {
+            bucket,
+            object,
+            ..Default::default()
+        };
+        let source = self
+            .client
+            .inner
+            .download_streamed_object(&req, &Range::default())
+            .await
+            .map_err(|e| tonic::Status::internal(format!("gcs streamed download failed: {e}")))?;
+        let mapped = async_stream::try_stream! {
+            use futures::StreamExt as _;
+            let mut source = source;
+            while let Some(item) = source.next().await {
+                let bytes = item.map_err(|e| {
+                    tonic::Status::internal(format!("gcs download chunk failed: {e}"))
+                })?;
+                yield bytes;
+            }
+        };
+        Ok(Box::pin(mapped))
+    }
+
+    /// Streaming upload (A.6): forward the chunk stream to `upload_streamed_object`
+    /// without buffering. The provider call requires a `Send + Sync` stream, so the
+    /// `Send`-only `ExecutorByteStream` is bridged through a bounded
+    /// `futures::channel::mpsc` (the drain task provides backpressure).
+    async fn put_object_stream(
+        &self,
+        request_json: &str,
+        stream: ExecutorByteStream,
+    ) -> Result<String, tonic::Status> {
+        let (_op, bucket, object, content_type) = parse_dispatch(request_json)?;
+        let (mut tx, rx) =
+            futures::channel::mpsc::channel::<Result<bytes::Bytes, std::io::Error>>(4);
+        tokio::spawn(async move {
+            use futures::SinkExt as _;
+            use tokio_stream::StreamExt as _;
+            let mut stream = stream;
+            while let Some(item) = stream.next().await {
+                let mapped =
+                    item.map_err(|status| std::io::Error::other(status.message().to_string()));
+                if tx.send(mapped).await.is_err() {
+                    break;
+                }
+            }
+        });
+        let mut media = Media::new(object.clone());
+        if let Some(ct) = content_type {
+            media.content_type = ct.into();
+        }
+        let upload_type = UploadType::Simple(media);
+        self.client
+            .inner
+            .upload_streamed_object(
+                &UploadObjectRequest {
+                    bucket: bucket.clone(),
+                    ..Default::default()
+                },
+                rx,
+                &upload_type,
+            )
+            .await
+            .map_err(|e| tonic::Status::internal(format!("gcs streamed upload failed: {e}")))?;
         Ok(serde_json::json!({ "ok": true, "bucket": bucket, "object": object }).to_string())
     }
 

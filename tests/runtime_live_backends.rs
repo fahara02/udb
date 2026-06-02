@@ -347,3 +347,124 @@ live_backend_test!(minio_prefix_listing_and_object_body_roundtrip, async {
         .await
         .expect("delete MinIO bucket");
 });
+
+// B.13 — object-store canonical *feasibility* live conformance.
+//
+// Object backends are canonical CANDIDATES (`CanonicalCandidateProfile::
+// ObjectConditionalWrites`), not yet canonical stores. The one canonical
+// building block their feasibility profile promises is the conditional-write
+// primitive that an atomic lease/claim would be built on:
+//   - `If-None-Match: *`  → create-if-absent (the claim-acquire primitive)
+//   - `If-Match: <etag>`  → compare-and-set on a known generation
+// This test proves that primitive really works against the live endpoint, so
+// the B.13 feasibility claim is evidence-backed rather than aspirational. It
+// also asserts the object backend role STAYS `Projection` — a passing
+// precondition probe must never be mistaken for canonical promotion.
+//
+// Reads `UDB_BENCH_S3_ENDPOINT` (the env the feasibility profile advertises as
+// its live gate), falling back to the MinIO integration endpoint. Runtime-skips
+// unless `UDB_INTEGRATION_TESTS=1`.
+live_backend_test!(object_conditional_write_feasibility_roundtrip, async {
+    use aws_config::BehaviorVersion;
+    use aws_sdk_s3::config::{Credentials, Region};
+    use aws_sdk_s3::primitives::ByteStream;
+
+    // The object backend must remain a projection target — proving conditional
+    // writes work does NOT promote it. This guards against a silent role flip.
+    assert_eq!(
+        udb::backend::BackendKind::Minio.role(),
+        udb::backend::BackendRole::Projection,
+        "object backends stay Projection until a canonical SystemStores lands (B.13)"
+    );
+    assert_eq!(
+        udb::backend::BackendKind::S3.canonical_candidate_profile(),
+        udb::backend::CanonicalCandidateProfile::ObjectConditionalWrites,
+    );
+
+    let endpoint = env::var("UDB_BENCH_S3_ENDPOINT").unwrap_or_else(|_| minio_endpoint());
+    let creds = Credentials::new(
+        env::var("UDB_INTEGRATION_MINIO_ACCESS_KEY").unwrap_or_else(|_| "minio".into()),
+        env::var("UDB_INTEGRATION_MINIO_SECRET_KEY").unwrap_or_else(|_| "minio123".into()),
+        None,
+        None,
+        "runtime-live-test",
+    );
+    let s3_conf = aws_sdk_s3::Config::builder()
+        .behavior_version(BehaviorVersion::latest())
+        .credentials_provider(creds)
+        .region(Region::new("us-east-1"))
+        .endpoint_url(endpoint)
+        .force_path_style(true)
+        .build();
+    let s3 = aws_sdk_s3::Client::from_conf(s3_conf);
+    let bucket = format!("udb-feasibility-{}", Uuid::new_v4().simple());
+    let key = "system/lease/claim.json";
+
+    s3.create_bucket()
+        .bucket(&bucket)
+        .send()
+        .await
+        .expect("create object bucket");
+
+    // 1. Claim-acquire: `If-None-Match: *` PUT succeeds when the object is absent.
+    let first = s3
+        .put_object()
+        .bucket(&bucket)
+        .key(key)
+        .if_none_match("*")
+        .body(ByteStream::from_static(b"owner=a"))
+        .send()
+        .await
+        .expect("conditional create (If-None-Match: *) must succeed on absent key");
+    let etag = first.e_tag().expect("PUT must return an ETag").to_string();
+
+    // 2. Claim-contention: a second `If-None-Match: *` PUT must be REJECTED
+    //    (HTTP 412) — this is the atomic mutual-exclusion the lease relies on.
+    let contended = s3
+        .put_object()
+        .bucket(&bucket)
+        .key(key)
+        .if_none_match("*")
+        .body(ByteStream::from_static(b"owner=b"))
+        .send()
+        .await;
+    assert!(
+        contended.is_err(),
+        "second If-None-Match:* PUT must fail — conditional create is the claim primitive"
+    );
+
+    // 3. Compare-and-set: `If-Match: <etag>` PUT on the known generation succeeds.
+    let cas = s3
+        .put_object()
+        .bucket(&bucket)
+        .key(key)
+        .if_match(&etag)
+        .body(ByteStream::from_static(b"owner=a;renewed"))
+        .send()
+        .await
+        .expect("If-Match on current ETag must succeed (lease renew / CAS)");
+    let new_etag = cas.e_tag().map(ToString::to_string);
+    assert_ne!(
+        new_etag.as_deref(),
+        Some(etag.as_str()),
+        "a successful overwrite must produce a new generation/ETag (read-fence advance)"
+    );
+
+    // 4. Stale CAS: `If-Match` on the OLD ETag must now be rejected.
+    let stale = s3
+        .put_object()
+        .bucket(&bucket)
+        .key(key)
+        .if_match(&etag)
+        .body(ByteStream::from_static(b"owner=b;stolen"))
+        .send()
+        .await;
+    assert!(
+        stale.is_err(),
+        "If-Match on a stale ETag must fail — this is the read-fence the profile promises"
+    );
+
+    // Cleanup (best-effort).
+    let _ = s3.delete_object().bucket(&bucket).key(key).send().await;
+    let _ = s3.delete_bucket().bucket(&bucket).send().await;
+});

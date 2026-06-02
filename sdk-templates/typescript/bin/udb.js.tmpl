@@ -1,0 +1,179 @@
+#!/usr/bin/env node
+// {{GENERATED_NOTE}}
+//
+// Version-matched `udb` CLI launcher bundled with @udb_plus/sdk v{{UDB_VERSION}}.
+//
+// Resolution order:
+//   1. $UDB_BIN, if set and executable, is used verbatim.
+//   2. A `udb` already on PATH whose `--version` matches v{{UDB_VERSION}} is used.
+//   3. Otherwise the matching release binary is downloaded once from
+//      github.com/fahara02/udb (tag v{{UDB_VERSION}}, per-OS/arch asset) into a
+//      per-user cache dir and executed thereafter.
+//
+// The downloaded binary is cached at:
+//   $UDB_CACHE_DIR || <os-cache>/udb/v{{UDB_VERSION}}/udb[.exe]
+"use strict";
+
+const { spawnSync, execFileSync } = require("child_process");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+const https = require("https");
+
+const UDB_VERSION = "{{UDB_VERSION}}";
+const REPO = "fahara02/udb";
+
+function logErr(msg) {
+  process.stderr.write(`udb-launcher: ${msg}\n`);
+}
+
+// ── Per-OS / arch release asset name ────────────────────────────────────────────
+function assetName() {
+  const platform = process.platform; // 'linux' | 'darwin' | 'win32'
+  const arch = process.arch; // 'x64' | 'arm64'
+  const archMap = { x64: "x86_64", arm64: "aarch64" };
+  const a = archMap[arch];
+  if (!a) throw new Error(`unsupported arch: ${arch}`);
+  if (platform === "linux") return `udb-v${UDB_VERSION}-${a}-unknown-linux-gnu.tar.gz`;
+  if (platform === "darwin") return `udb-v${UDB_VERSION}-${a}-apple-darwin.tar.gz`;
+  if (platform === "win32") return `udb-v${UDB_VERSION}-${a}-pc-windows-msvc.zip`;
+  throw new Error(`unsupported platform: ${platform}`);
+}
+
+function binName() {
+  return process.platform === "win32" ? "udb.exe" : "udb";
+}
+
+function cacheDir() {
+  if (process.env.UDB_CACHE_DIR) return process.env.UDB_CACHE_DIR;
+  const base =
+    process.platform === "win32"
+      ? process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local")
+      : process.platform === "darwin"
+        ? path.join(os.homedir(), "Library", "Caches")
+        : process.env.XDG_CACHE_HOME || path.join(os.homedir(), ".cache");
+  return path.join(base, "udb", `v${UDB_VERSION}`);
+}
+
+// ── Reuse an existing version-matched binary ────────────────────────────────────
+function versionMatches(bin) {
+  try {
+    const out = execFileSync(bin, ["--version"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    return out.includes(UDB_VERSION);
+  } catch {
+    return false;
+  }
+}
+
+function findOnPath() {
+  if (process.env.UDB_BIN && fs.existsSync(process.env.UDB_BIN)) return process.env.UDB_BIN;
+  const which = process.platform === "win32" ? "where" : "which";
+  const r = spawnSync(which, ["udb"], { encoding: "utf8" });
+  if (r.status === 0) {
+    const candidate = r.stdout.split(/\r?\n/).find((l) => l.trim().length > 0);
+    if (candidate && versionMatches(candidate.trim())) return candidate.trim();
+  }
+  return null;
+}
+
+// ── Download + extract on cache miss ────────────────────────────────────────────
+function httpsGet(url, dest) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { "User-Agent": "udb-sdk-launcher" } }, (res) => {
+      if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
+        return httpsGet(res.headers.location, dest).then(resolve, reject);
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        return reject(new Error(`download ${url} failed: HTTP ${res.statusCode}`));
+      }
+      const file = fs.createWriteStream(dest);
+      res.pipe(file);
+      file.on("finish", () => file.close(() => resolve()));
+      file.on("error", reject);
+    });
+    req.on("error", reject);
+  });
+}
+
+function extract(archive, intoDir) {
+  if (archive.endsWith(".zip")) {
+    if (process.platform === "win32") {
+      execFileSync("powershell", [
+        "-NoProfile",
+        "-Command",
+        `Expand-Archive -Force -LiteralPath '${archive}' -DestinationPath '${intoDir}'`,
+      ]);
+    } else {
+      execFileSync("unzip", ["-o", archive, "-d", intoDir]);
+    }
+  } else {
+    execFileSync("tar", ["-xzf", archive, "-C", intoDir]);
+  }
+}
+
+function findExtractedBin(dir) {
+  const target = binName();
+  const stack = [dir];
+  while (stack.length) {
+    const d = stack.pop();
+    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+      const full = path.join(d, entry.name);
+      if (entry.isDirectory()) stack.push(full);
+      else if (entry.name === target) return full;
+    }
+  }
+  return null;
+}
+
+async function ensureBinary() {
+  const dir = cacheDir();
+  const cached = path.join(dir, binName());
+  if (fs.existsSync(cached) && versionMatches(cached)) return cached;
+
+  fs.mkdirSync(dir, { recursive: true });
+  const asset = assetName();
+  const url = `https://github.com/${REPO}/releases/download/v${UDB_VERSION}/${asset}`;
+  const archive = path.join(dir, asset);
+  logErr(`downloading ${asset} (udb v${UDB_VERSION}) …`);
+  await httpsGet(url, archive);
+  extract(archive, dir);
+  try {
+    fs.unlinkSync(archive);
+  } catch {
+    /* best-effort */
+  }
+  const found = findExtractedBin(dir);
+  if (!found) throw new Error(`extracted archive did not contain '${binName()}'`);
+  if (found !== cached) {
+    fs.copyFileSync(found, cached);
+  }
+  if (process.platform !== "win32") fs.chmodSync(cached, 0o755);
+  return cached;
+}
+
+async function main() {
+  let bin = findOnPath();
+  if (!bin) {
+    try {
+      bin = await ensureBinary();
+    } catch (e) {
+      logErr(`could not obtain udb v${UDB_VERSION}: ${e.message}`);
+      logErr(`set $UDB_BIN to an installed binary, or install udb manually:`);
+      logErr(`  https://github.com/${REPO}/releases/tag/v${UDB_VERSION}`);
+      process.exit(127);
+    }
+  }
+  const child = spawnSync(bin, process.argv.slice(2), { stdio: "inherit" });
+  if (child.error) {
+    logErr(`failed to exec ${bin}: ${child.error.message}`);
+    process.exit(126);
+  }
+  process.exit(child.status == null ? 1 : child.status);
+}
+
+main();

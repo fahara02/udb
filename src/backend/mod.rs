@@ -182,34 +182,89 @@ impl BackendKind {
             // stores) AND a queryable write-progress token. Only these can host
             // the system catalog and act as the write-durability anchor — they
             // are the backends `register_full_canonical_store` actually registers
-            // (Postgres/MySQL/SQLite). (#129)
-            Self::Postgres | Self::Mysql | Self::Sqlite => BackendRole::Canonical,
-            // Projection: read/write targets that do NOT (yet) implement a
-            // canonical `SystemStores` backing. MSSQL/MongoDB/ClickHouse/Neo4j are
-            // durable and are candidates for a future canonical store, but until
-            // those stores exist the runtime can only use them as projection
-            // targets — advertising Canonical/Both here was a capability lie (no
-            // store to register, so a canonical write would have nowhere to land).
-            Self::Mssql
-            | Self::Mongodb
-            | Self::Clickhouse
-            | Self::Neo4j
-            | Self::Redis
-            | Self::Memcached
-            | Self::Qdrant
-            | Self::Weaviate
-            | Self::Pinecone
-            | Self::Minio
-            | Self::S3
-            | Self::AzureBlob
-            | Self::Gcs
-            | Self::Elasticsearch
-            | Self::Cassandra => BackendRole::Projection,
+            // (Postgres/MySQL/SQLite, and SQL Server via the Tiberius canonical
+            // store — B.8, conformance-verified on real SQL Server 2022). (#129)
+            Self::Postgres | Self::Mysql | Self::Sqlite | Self::Mssql => BackendRole::Canonical,
+            // B.14: Redis has a native `SystemStores` implementation using
+            // Redis atomic primitives. Runtime registration is still refused
+            // unless the server exposes the durable AOF profile.
+            #[cfg(feature = "redis")]
+            Self::Redis => BackendRole::Canonical,
+            #[cfg(not(feature = "redis"))]
+            Self::Redis => BackendRole::Projection,
+            // B.9: native MongoDB (replica set / sharded cluster) has a real
+            // `SystemStores` canonical store — but only when built with the
+            // `mongodb-native` feature. The scalar / Data-API build keeps it
+            // Projection (no store compiled). Runtime registration further gates
+            // on live topology (standalone mongod stays projection).
+            #[cfg(feature = "mongodb-native")]
+            Self::Mongodb => BackendRole::Canonical,
+            #[cfg(not(feature = "mongodb-native"))]
+            Self::Mongodb => BackendRole::Projection,
+            // B.10a: Cassandra has a native CQL + LWT `SystemStores` canonical
+            // store (full 5-contract conformance verified live). Canonical only
+            // in `cassandra` builds; otherwise no store is compiled → Projection.
+            #[cfg(feature = "cassandra")]
+            Self::Cassandra => BackendRole::Canonical,
+            #[cfg(not(feature = "cassandra"))]
+            Self::Cassandra => BackendRole::Projection,
+            // B.10b: Neo4j has a native HTTP-transactional-Cypher `SystemStores`
+            // canonical store (full 5-contract conformance verified live).
+            // Canonical in `neo4j` builds; otherwise no store is compiled.
+            #[cfg(feature = "neo4j")]
+            Self::Neo4j => BackendRole::Canonical,
+            #[cfg(not(feature = "neo4j"))]
+            Self::Neo4j => BackendRole::Projection,
+            // B.11: Qdrant now ships a native SystemStores adapter in qdrant
+            // builds, stored in a dedicated system collection with deterministic
+            // point IDs and strongly ordered writes.
+            #[cfg(feature = "qdrant")]
+            Self::Qdrant => BackendRole::Canonical,
+            #[cfg(not(feature = "qdrant"))]
+            Self::Qdrant => BackendRole::Projection,
+            #[cfg(feature = "pinecone")]
+            Self::Pinecone => BackendRole::Canonical,
+            #[cfg(not(feature = "pinecone"))]
+            Self::Pinecone => BackendRole::Projection,
+            #[cfg(feature = "weaviate")]
+            Self::Weaviate => BackendRole::Canonical,
+            #[cfg(not(feature = "weaviate"))]
+            Self::Weaviate => BackendRole::Projection,
+            #[cfg(feature = "elasticsearch")]
+            Self::Elasticsearch => BackendRole::Canonical,
+            #[cfg(not(feature = "elasticsearch"))]
+            Self::Elasticsearch => BackendRole::Projection,
+            // B.10c: ClickHouse has a native HTTP `SystemStores` canonical store
+            // (ReplacingMergeTree(version) + SELECT … FINAL versioned-CAS; full
+            // 5-contract conformance verified live). Canonical in `clickhouse`
+            // builds; the registration carries a documented single-writer caveat.
+            #[cfg(feature = "clickhouse")]
+            Self::Clickhouse => BackendRole::Canonical,
+            #[cfg(not(feature = "clickhouse"))]
+            Self::Clickhouse => BackendRole::Projection,
+            // Projection: read/write targets that do NOT implement a canonical
+            // `SystemStores` backing.
+            Self::Memcached | Self::Minio | Self::S3 | Self::AzureBlob | Self::Gcs => {
+                BackendRole::Projection
+            }
         }
     }
 
-    /// Returns the capability flags for this backend.
+    /// Returns the V1 capability flags for this backend.
+    ///
+    /// B.1: V1 is now a pure projection of the V2 model. The per-backend feature
+    /// truths still live in the big match below (now `capabilities_v1_fields`),
+    /// but the resource-lifecycle boolean and the new dimensions flow through
+    /// [`Self::capabilities_v2`] so the two views can never disagree.
     pub fn capabilities(&self) -> BackendCapability {
+        self.capabilities_v2().derive_v1()
+    }
+
+    /// B.1: the per-backend feature truths (everything except the lifecycle /
+    /// native-executor / compiler / system-store dimensions, which
+    /// [`Self::capabilities_v2`] supplies). Kept private; callers use
+    /// `capabilities()` (V1) or `capabilities_v2()` (V2).
+    fn capabilities_v1_fields(&self) -> BackendCapability {
         match self {
             Self::Postgres => BackendCapability {
                 supports_sql_ddl: true,
@@ -538,6 +593,528 @@ impl BackendKind {
         }
     }
 
+    /// B.1 — the V2 capability model: orthogonal dimensions per backend.
+    ///
+    /// V1 derives from this (see [`Self::capabilities`]). The per-backend feature
+    /// truths come from [`Self::capabilities_v1_fields`]; this method layers on
+    /// the five V2 dimensions (native executor, compiler-mediated, dispatch
+    /// admission, resource lifecycle kind, canonical system-store).
+    ///
+    /// CRITICAL: the lifecycle classification here is evidence-backed against the
+    /// concrete `ResourceAdminExecutor` impls under `runtime/executors/*`:
+    ///   - `CatalogMigration` — native ensure/drop return `failed_precondition`,
+    ///     lifecycle is via catalog migrations (Postgres/MySQL/SQLite).
+    ///   - `CompilerMediated` — native ensure/drop return `unimplemented`; DDL is
+    ///     via `compile_resource_op` + `mutate` (MSSQL, Cassandra).
+    ///   - `Native` — native ensure/drop do the I/O directly (object stores,
+    ///     Qdrant, MongoDB, Neo4j, ClickHouse, Weaviate, Pinecone, Elasticsearch).
+    ///   - `None` — no resource lifecycle at all (Redis, Memcached).
+    pub fn capabilities_v2(&self) -> BackendCapabilityV2 {
+        let v1 = self.capabilities_v1_fields();
+        let dispatch_operations = self.supported_operations();
+        let lifecycle = self.lifecycle_support();
+        let system_store = self.system_store_support();
+        let canonical_candidate = self.canonical_candidate_profile();
+        let canonical_goal = self.canonical_promotion_goal();
+        // `consistency_model` in V1 is an owned String; the V2 view keeps the
+        // canonical static token. Map the known values back to 'static strs.
+        let consistency_model: &'static str = match v1.consistency_model.as_str() {
+            "strong" => "strong",
+            "eventual" => "eventual",
+            "causal" => "causal",
+            "tunable" => "tunable",
+            "read-your-writes" => "read-your-writes",
+            // Unknown / future tokens: keep the V1 string honest by not silently
+            // mapping it to a wrong canonical token.
+            _ => "unknown",
+        };
+        BackendCapabilityV2 {
+            // Native executor support == has a compiled-in runtime plugin (the
+            // dispatch factory + executor live behind the same feature gate).
+            native_executor: crate::backend::has_runtime_implementation(self),
+            // Compiler-mediated support: every backend with an `ir::compile::*`
+            // dialect. SQL/CQL DDL backends and the document/graph/vector
+            // backends all lower neutral ops through a compiler. KV stores
+            // (Redis/Memcached) and pure object stores have no logical compiler.
+            compiler_mediated: !matches!(
+                self,
+                Self::Redis
+                    | Self::Memcached
+                    | Self::Minio
+                    | Self::S3
+                    | Self::AzureBlob
+                    | Self::Gcs
+            ),
+            dispatch_operations,
+            lifecycle,
+            system_store,
+            canonical_candidate,
+            canonical_goal,
+            supports_sql_ddl: v1.supports_sql_ddl,
+            supports_transactions: v1.supports_transactions,
+            supports_xa: v1.supports_xa,
+            supports_two_phase_commit: v1.supports_two_phase_commit,
+            supports_rls: v1.supports_rls,
+            supports_vector_search: v1.supports_vector_search,
+            supports_streaming: v1.supports_streaming,
+            supports_ttl: v1.supports_ttl,
+            is_object_store: v1.is_object_store,
+            is_migration_ledger_capable: v1.is_migration_ledger_capable,
+            supports_idempotency: v1.supports_idempotency,
+            supports_schema_migration: v1.supports_schema_migration,
+            supports_hybrid_search: v1.supports_hybrid_search,
+            max_payload_bytes: v1.max_payload_bytes,
+            consistency_model,
+        }
+    }
+
+    /// B.1 — how this backend implements resource lifecycle. Evidence-backed
+    /// against `runtime/executors/*::ResourceAdminExecutor` (read-only):
+    /// see the `capabilities_v2` doc comment for the per-class rationale.
+    pub fn lifecycle_support(&self) -> LifecycleSupport {
+        match self {
+            // Native ensure/drop return failed_precondition; lifecycle is via
+            // catalog migrations. Generic dispatch still admits the ops.
+            Self::Postgres | Self::Mysql | Self::Sqlite => LifecycleSupport::CatalogMigration,
+            // Native ensure/drop return `unimplemented`; DDL is compiler-mediated
+            // (`compile_resource_op` + mutate). `list_resources` is a native
+            // catalog query, but ensure/drop are NOT native.
+            Self::Mssql | Self::Cassandra => LifecycleSupport::CompilerMediated,
+            // No buckets / namespaces — no lifecycle at all.
+            Self::Redis | Self::Memcached => LifecycleSupport::None,
+            // Native ensure/drop do real I/O (buckets, collections, indexes,
+            // constraints, tables).
+            Self::Minio
+            | Self::S3
+            | Self::AzureBlob
+            | Self::Gcs
+            | Self::Qdrant
+            | Self::Weaviate
+            | Self::Pinecone
+            | Self::Mongodb
+            | Self::Elasticsearch
+            | Self::Neo4j
+            | Self::Clickhouse => LifecycleSupport::Native,
+        }
+    }
+
+    /// B.1 / B.2 — does this backend have a concrete canonical `SystemStores`
+    /// implementation registered in this source tree? This is the capability-
+    /// level mirror of [`Self::role`]; the two MUST agree (asserted in tests).
+    /// Kept in lock-step with `CANONICAL_SYSTEM_STORE_BACKENDS`.
+    pub fn system_store_support(&self) -> SystemStoreSupport {
+        if CANONICAL_SYSTEM_STORE_BACKENDS.contains(self) {
+            SystemStoreSupport::Full
+        } else {
+            SystemStoreSupport::None
+        }
+    }
+
+    /// B.12-B.14 — machine-readable canonical roadmap class for every backend.
+    ///
+    /// This does not promote a backend. Promotion still requires a concrete
+    /// `SystemStores` implementation and allowlist evidence. The profile makes
+    /// the capability matrix explicit about which canonical proof remains.
+    pub fn canonical_candidate_profile(&self) -> CanonicalCandidateProfile {
+        match self {
+            Self::Postgres | Self::Mysql | Self::Sqlite | Self::Mssql => {
+                CanonicalCandidateProfile::Implemented
+            }
+            #[cfg(feature = "redis")]
+            Self::Redis => CanonicalCandidateProfile::Implemented,
+            #[cfg(not(feature = "redis"))]
+            Self::Redis => CanonicalCandidateProfile::CacheDurabilityRequired,
+            #[cfg(feature = "mongodb-native")]
+            Self::Mongodb => CanonicalCandidateProfile::Implemented,
+            #[cfg(not(feature = "mongodb-native"))]
+            Self::Mongodb => CanonicalCandidateProfile::NativeDriverRequired,
+            // B.10a: Cassandra implemented (native CQL + LWT canonical store) in
+            // `cassandra` builds; semantics-gated candidate otherwise.
+            #[cfg(feature = "cassandra")]
+            Self::Cassandra => CanonicalCandidateProfile::Implemented,
+            #[cfg(not(feature = "cassandra"))]
+            Self::Cassandra => CanonicalCandidateProfile::SemanticsGated,
+            // B.10b: Neo4j implemented (native HTTP-transactional Cypher canonical
+            // store) in `neo4j` builds; semantics-gated candidate otherwise.
+            #[cfg(feature = "neo4j")]
+            Self::Neo4j => CanonicalCandidateProfile::Implemented,
+            #[cfg(not(feature = "neo4j"))]
+            Self::Neo4j => CanonicalCandidateProfile::SemanticsGated,
+            // B.10c: ClickHouse implemented (ReplacingMergeTree versioned-CAS
+            // canonical store) in `clickhouse` builds; semantics-gated otherwise.
+            #[cfg(feature = "clickhouse")]
+            Self::Clickhouse => CanonicalCandidateProfile::Implemented,
+            #[cfg(not(feature = "clickhouse"))]
+            Self::Clickhouse => CanonicalCandidateProfile::SemanticsGated,
+            #[cfg(feature = "qdrant")]
+            Self::Qdrant => CanonicalCandidateProfile::Implemented,
+            #[cfg(not(feature = "qdrant"))]
+            Self::Qdrant => CanonicalCandidateProfile::VectorNativeCasUnsupported,
+            #[cfg(feature = "pinecone")]
+            Self::Pinecone => CanonicalCandidateProfile::Implemented,
+            #[cfg(not(feature = "pinecone"))]
+            Self::Pinecone => CanonicalCandidateProfile::VectorFeasibilityRequired,
+            #[cfg(feature = "weaviate")]
+            Self::Weaviate => CanonicalCandidateProfile::Implemented,
+            #[cfg(not(feature = "weaviate"))]
+            Self::Weaviate => CanonicalCandidateProfile::VectorFeasibilityRequired,
+            #[cfg(feature = "elasticsearch")]
+            Self::Elasticsearch => CanonicalCandidateProfile::Implemented,
+            #[cfg(not(feature = "elasticsearch"))]
+            Self::Elasticsearch => CanonicalCandidateProfile::VectorFeasibilityRequired,
+            Self::Minio | Self::S3 | Self::AzureBlob | Self::Gcs => {
+                CanonicalCandidateProfile::ObjectConditionalWrites
+            }
+            Self::Memcached => CanonicalCandidateProfile::ExplicitlyNotSupported,
+        }
+    }
+
+    /// B.12-B.15 — operator-visible goal that must be satisfied before this
+    /// backend can claim canonical status, or the conformance status for
+    /// already-canonical backends.
+    pub fn canonical_promotion_goal(&self) -> &'static str {
+        match self {
+            Self::Postgres | Self::Mysql | Self::Sqlite | Self::Mssql => {
+                "canonical store implemented; keep five-contract conformance live"
+            }
+            #[cfg(feature = "redis")]
+            Self::Redis => {
+                "B.14: native Redis SystemStores implemented; runtime registration requires durable AOF profile and live conformance"
+            }
+            #[cfg(not(feature = "redis"))]
+            Self::Redis => {
+                "B.14: compile Redis native SystemStores and require durable AOF profile before canonical promotion"
+            }
+            #[cfg(feature = "mongodb-native")]
+            Self::Mongodb => {
+                "canonical store implemented for native MongoDB replica-set/sharded topology; keep topology-gated conformance live"
+            }
+            #[cfg(not(feature = "mongodb-native"))]
+            Self::Mongodb => {
+                "B.9: compile native MongoDB SystemStores and prove replica-set/sharded durability; scalar/Data-API builds remain projection"
+            }
+            Self::Clickhouse => {
+                "B.10: prove canonical semantics for leases, outbox, saga, audit, and migration stores or keep append analytics projection"
+            }
+            Self::Neo4j => {
+                "B.10: implement graph-native SystemStores with transactional claims, idempotent audit, and recoverable saga/outbox state"
+            }
+            Self::Cassandra => {
+                "B.10: implement wide-column SystemStores with compare-and-set claims, quorum guidance, and replay-safe progress tokens"
+            }
+            #[cfg(feature = "qdrant")]
+            Self::Qdrant => {
+                "B.11: native Qdrant SystemStores implemented with a dedicated system collection, deterministic point IDs, strongly ordered writes, and live conformance under UDB_QDRANT_URL"
+            }
+            #[cfg(not(feature = "qdrant"))]
+            Self::Qdrant => {
+                "B.11: compile the native Qdrant SystemStores adapter and prove live conformance before canonical promotion"
+            }
+            #[cfg(feature = "pinecone")]
+            Self::Pinecone => {
+                "B.12: native Pinecone SystemStores implemented in the shared vector system adapter; keep live conformance under UDB_PINECONE_DSN"
+            }
+            #[cfg(not(feature = "pinecone"))]
+            Self::Pinecone => {
+                "B.12: compile the Pinecone vector SystemStores adapter and prove live conformance"
+            }
+            #[cfg(feature = "weaviate")]
+            Self::Weaviate => {
+                "B.12: native Weaviate SystemStores implemented in the shared vector system adapter; keep live conformance under UDB_WEAVIATE_DSN"
+            }
+            #[cfg(not(feature = "weaviate"))]
+            Self::Weaviate => {
+                "B.12: compile the Weaviate vector SystemStores adapter and prove live conformance"
+            }
+            #[cfg(feature = "elasticsearch")]
+            Self::Elasticsearch => {
+                "B.12: native Elasticsearch SystemStores implemented in the shared vector system adapter; keep live conformance under UDB_ELASTIC_DSN"
+            }
+            #[cfg(not(feature = "elasticsearch"))]
+            Self::Elasticsearch => {
+                "B.12: compile the Elasticsearch vector/search SystemStores adapter and prove live conformance"
+            }
+            Self::Minio | Self::S3 | Self::AzureBlob | Self::Gcs => {
+                "B.13: prove object-store canonical profile using conditional writes, generation/etag fencing, listing recovery, and multipart safety"
+            }
+            Self::Memcached => {
+                "B.14: explicitly unsupported for canonical state unless a durable backend profile is added and conformance-proven"
+            }
+        }
+    }
+
+    /// B.13-B.15 — the structured canonical feasibility profile for this backend.
+    ///
+    /// This expands [`Self::canonical_candidate_profile`] into the concrete proof
+    /// dimensions (atomic claims, ordered progress, tenant isolation, read fence)
+    /// plus operator prerequisites and remaining gaps. Object-store and cache/KV
+    /// families (B.13/B.14) are the primary consumers, but every backend returns
+    /// a profile so no capability-matrix row is a silent roadmap island (B.15).
+    pub fn canonical_feasibility_profile(&self) -> CanonicalFeasibilityProfile {
+        let backend = self.as_str();
+        let candidate = self.canonical_candidate_profile();
+        let implemented = self.system_store_support().is_canonical();
+        match self {
+            // ── SQL canonical family (implemented) ──────────────────────────
+            Self::Postgres | Self::Mysql | Self::Sqlite | Self::Mssql => {
+                CanonicalFeasibilityProfile {
+                    backend,
+                    family: "sql",
+                    candidate,
+                    implemented,
+                    atomic_claim_strategy: "row-level UPDATE ... WHERE owner IS NULL guarded by a transactional lock",
+                    ordered_progress_strategy: "monotonic outbox sequence column under transactional isolation",
+                    tenant_isolation_strategy: "tenant_id column + RLS / session-context enforcement",
+                    read_fence_strategy: "transactional write-progress token (LSN / GTID / rowversion)",
+                    durability_prerequisites: &[],
+                    blocking_gaps: &[],
+                    live_conformance_env: Some(match self {
+                        Self::Mysql => "UDB_MYSQL_DSN",
+                        Self::Mssql => "UDB_MSSQL_DSN",
+                        _ => "UDB_PG_DSN",
+                    }),
+                }
+            }
+            // ── Document family (implemented only under mongodb-native) ──────
+            Self::Mongodb => CanonicalFeasibilityProfile {
+                backend,
+                family: "document",
+                candidate,
+                implemented,
+                atomic_claim_strategy: "findOneAndUpdate with an owner guard (single-document atomic CAS)",
+                ordered_progress_strategy: "monotonic counter document + change-stream resume token",
+                tenant_isolation_strategy: "tenant_id field + per-collection scoping",
+                read_fence_strategy: "majority read-concern resume token / cluster time",
+                durability_prerequisites: &[
+                    "replica set or sharded cluster with majority write concern",
+                ],
+                blocking_gaps: if implemented {
+                    &[]
+                } else {
+                    &[
+                        "mongodb-native feature not compiled — Data-API/scalar build stays projection",
+                    ]
+                },
+                live_conformance_env: Some("UDB_MONGODB_DSN"),
+            },
+            // ── Column / graph families (semantics-gated) ───────────────────
+            Self::Clickhouse => CanonicalFeasibilityProfile {
+                backend,
+                family: "column",
+                candidate,
+                implemented,
+                atomic_claim_strategy: "none native — append-only engine has no row update/lock for CAS claims",
+                ordered_progress_strategy: "insert-block ordering only (eventual)",
+                tenant_isolation_strategy: "session-setting scoping (no row policy)",
+                read_fence_strategy: "none proven — eventual visibility of inserted blocks",
+                durability_prerequisites: &[],
+                // B.10c: native HTTP canonical store implemented via
+                // ReplacingMergeTree(version) + SELECT … FINAL versioned-CAS
+                // (full 5-contract conformance verified live) in `clickhouse`
+                // builds → no blocking gaps; the remaining concern (multi-writer
+                // CAS atomicity) is a documented runtime caveat, not a missing
+                // store. Otherwise the candidate gaps stand.
+                blocking_gaps: if cfg!(feature = "clickhouse") {
+                    &[]
+                } else {
+                    &[
+                        "no atomic claim/lease primitive",
+                        "no multi-statement transaction for saga/outbox",
+                        "no canonical SystemStores module for column store",
+                    ]
+                },
+                live_conformance_env: Some("UDB_COLUMN_DSN"),
+            },
+            Self::Neo4j => CanonicalFeasibilityProfile {
+                backend,
+                family: "graph",
+                candidate,
+                implemented,
+                atomic_claim_strategy: "MERGE under a write transaction with a node lock",
+                ordered_progress_strategy: "sequence node + transaction commit order",
+                tenant_isolation_strategy: "tenant property + label scoping",
+                read_fence_strategy: "transaction bookmark",
+                durability_prerequisites: &[],
+                // B.10b: graph-native SystemStores implemented (HTTP-transactional
+                // Cypher; full 5-contract conformance verified live) in `neo4j`
+                // builds → no blocking gaps; otherwise the candidate gap stands.
+                blocking_gaps: if cfg!(feature = "neo4j") {
+                    &[]
+                } else {
+                    &["graph-native SystemStores (leases/outbox/saga/audit) not implemented"]
+                },
+                live_conformance_env: Some("UDB_GRAPH_DSN"),
+            },
+            Self::Cassandra => CanonicalFeasibilityProfile {
+                backend,
+                family: "column",
+                candidate,
+                implemented,
+                atomic_claim_strategy: "lightweight transaction compare-and-set (IF clause, Paxos)",
+                ordered_progress_strategy: "monotonic timeuuid under quorum writes",
+                tenant_isolation_strategy: "tenant partition-key prefix",
+                read_fence_strategy: "LWT applied flag at quorum",
+                durability_prerequisites: &[
+                    "QUORUM/LOCAL_QUORUM read+write consistency configured",
+                ],
+                // B.10a: native CQL + LWT SystemStores implemented (full
+                // 5-contract conformance verified live) in `cassandra` builds →
+                // no blocking gaps; otherwise the candidate gaps stand.
+                blocking_gaps: if cfg!(feature = "cassandra") {
+                    &[]
+                } else {
+                    &[
+                        "wide-column SystemStores not implemented",
+                        "quorum operator guidance + replay-safe progress token unproven",
+                    ]
+                },
+                live_conformance_env: Some("UDB_CASSANDRA_DSN"),
+            },
+            // ── Vector / search families ────────────────────────────────────
+            Self::Qdrant => CanonicalFeasibilityProfile {
+                backend,
+                family: "vector",
+                candidate,
+                implemented,
+                atomic_claim_strategy: "dedicated system collection + deterministic point IDs + strongly ordered point writes; adapter serializes read-modify-write system operations through the canonical store",
+                ordered_progress_strategy: "monotonic outbox sequence document persisted as a Qdrant point under strong write ordering",
+                tenant_isolation_strategy: "dedicated system collection per UDB instance plus tenant/project fields inside system records",
+                read_fence_strategy: "outbox sequence durability token stored in the system collection and polled by wait_for_token",
+                durability_prerequisites: VECTOR_CANONICAL_PLANE_PREREQS,
+                blocking_gaps: if implemented {
+                    &[]
+                } else {
+                    QDRANT_BLOCKING_GAPS
+                },
+                live_conformance_env: Some("UDB_QDRANT_URL"),
+            },
+            Self::Pinecone => CanonicalFeasibilityProfile {
+                backend,
+                family: "vector",
+                candidate,
+                implemented,
+                atomic_claim_strategy: "dedicated namespace + deterministic vector IDs; adapter serializes read-modify-write system operations through the canonical store",
+                ordered_progress_strategy: "monotonic outbox sequence metadata record persisted through Pinecone vector upsert",
+                tenant_isolation_strategy: "dedicated namespace per UDB instance plus tenant/project fields inside system records",
+                read_fence_strategy: "outbox sequence durability token stored in the namespace and polled by wait_for_token",
+                durability_prerequisites: VECTOR_CANONICAL_PLANE_PREREQS,
+                blocking_gaps: if implemented {
+                    &[]
+                } else {
+                    PINECONE_BLOCKING_GAPS
+                },
+                live_conformance_env: Some("UDB_PINECONE_DSN"),
+            },
+            Self::Weaviate => CanonicalFeasibilityProfile {
+                backend,
+                family: "vector",
+                candidate,
+                implemented,
+                atomic_claim_strategy: "dedicated class + deterministic object UUIDs; adapter serializes read-modify-write system operations through the canonical store",
+                ordered_progress_strategy: "monotonic outbox sequence object persisted through Weaviate object upsert",
+                tenant_isolation_strategy: "dedicated system class per UDB instance plus tenant/project fields inside system records",
+                read_fence_strategy: "outbox sequence durability token stored in the class and polled by wait_for_token",
+                durability_prerequisites: VECTOR_CANONICAL_PLANE_PREREQS,
+                blocking_gaps: if implemented {
+                    &[]
+                } else {
+                    WEAVIATE_BLOCKING_GAPS
+                },
+                live_conformance_env: Some("UDB_WEAVIATE_DSN"),
+            },
+            Self::Elasticsearch => CanonicalFeasibilityProfile {
+                backend,
+                family: "vector",
+                candidate,
+                implemented,
+                atomic_claim_strategy: "dedicated system index + deterministic document IDs; adapter serializes read-modify-write system operations through the canonical store",
+                ordered_progress_strategy: "monotonic outbox sequence document persisted with refresh=wait_for",
+                tenant_isolation_strategy: "dedicated system index per UDB instance plus tenant/project fields inside system records",
+                read_fence_strategy: "outbox sequence durability token stored in the index and polled by wait_for_token",
+                durability_prerequisites: VECTOR_CANONICAL_PLANE_PREREQS,
+                blocking_gaps: if implemented {
+                    &[]
+                } else {
+                    ELASTICSEARCH_VECTOR_BLOCKING_GAPS
+                },
+                live_conformance_env: Some("UDB_ELASTIC_DSN"),
+            },
+            // ── B.13 object-store family ────────────────────────────────────
+            Self::S3 | Self::Minio => CanonicalFeasibilityProfile {
+                backend,
+                family: "object",
+                candidate,
+                implemented,
+                atomic_claim_strategy: "conditional PUT via If-None-Match / If-Match ETag + version-id",
+                ordered_progress_strategy: "no native cross-object sequence — needs single-writer or external sequencer profile",
+                tenant_isolation_strategy: "tenant/project key prefix + bucket policy",
+                read_fence_strategy: "ETag / version-id per object",
+                durability_prerequisites: OBJECT_DURABILITY_PREREQS,
+                blocking_gaps: OBJECT_BLOCKING_GAPS,
+                live_conformance_env: Some("UDB_BENCH_S3_ENDPOINT"),
+            },
+            Self::AzureBlob => CanonicalFeasibilityProfile {
+                backend,
+                family: "object",
+                candidate,
+                implemented,
+                atomic_claim_strategy: "blob lease + If-Match ETag conditional write",
+                ordered_progress_strategy: "no native cross-blob sequence — needs single-writer or external sequencer profile",
+                tenant_isolation_strategy: "tenant/project key prefix + container policy",
+                read_fence_strategy: "ETag per blob",
+                durability_prerequisites: OBJECT_DURABILITY_PREREQS,
+                blocking_gaps: OBJECT_BLOCKING_GAPS,
+                live_conformance_env: Some("UDB_BENCH_AZURE_BLOB"),
+            },
+            Self::Gcs => CanonicalFeasibilityProfile {
+                backend,
+                family: "object",
+                candidate,
+                implemented,
+                atomic_claim_strategy: "x-goog-if-generation-match generation precondition on write",
+                ordered_progress_strategy: "no native cross-object sequence — needs single-writer or external sequencer profile",
+                tenant_isolation_strategy: "tenant/project key prefix + bucket IAM",
+                read_fence_strategy: "object generation number",
+                durability_prerequisites: OBJECT_DURABILITY_PREREQS,
+                blocking_gaps: OBJECT_BLOCKING_GAPS,
+                live_conformance_env: Some("UDB_BENCH_GCS"),
+            },
+            // ── B.14 cache/KV family ────────────────────────────────────────
+            Self::Redis => CanonicalFeasibilityProfile {
+                backend,
+                family: "cache",
+                candidate,
+                implemented,
+                atomic_claim_strategy: "Lua / MULTI compare-and-set on an owner key with a TTL lease",
+                ordered_progress_strategy: "INCR sequence + per-record JSON documents (Streams-ready)",
+                tenant_isolation_strategy: "udb:system:{instance} key-prefix namespacing",
+                read_fence_strategy: "INCR durability token gated on AOF fsync",
+                durability_prerequisites: REDIS_DURABILITY_PREREQS,
+                blocking_gaps: if implemented {
+                    &[]
+                } else {
+                    &["redis feature not compiled — native SystemStores absent"]
+                },
+                live_conformance_env: Some("UDB_INTEGRATION_REDIS_URL"),
+            },
+            Self::Memcached => CanonicalFeasibilityProfile {
+                backend,
+                family: "cache",
+                candidate,
+                implemented,
+                atomic_claim_strategy: "single-key CAS token only — no multi-key claim",
+                ordered_progress_strategy: "none — no durable log or scan to recover outbox order",
+                tenant_isolation_strategy: "key-prefix only (no enumeration to audit)",
+                read_fence_strategy: "none — no durable write-progress token",
+                durability_prerequisites: &[
+                    "a durable persistence layer Memcached does not provide",
+                ],
+                blocking_gaps: MEMCACHED_BLOCKING_GAPS,
+                live_conformance_env: None,
+            },
+        }
+    }
+
     /// Returns the default environment variable name for the connection DSN.
     pub fn default_env_key(&self) -> &'static str {
         match self {
@@ -694,6 +1271,316 @@ pub struct BackendCapability {
     pub consistency_model: String,
 }
 
+// ── B.1 V2 capability model ───────────────────────────────────────────────────
+//
+// The V1 `BackendCapability` flags conflated several independent truths into one
+// boolean per feature — most damagingly `supports_resource_lifecycle`, which was
+// read both as "generic dispatch admits ensure/drop/list" AND as "the backend has
+// a working native `ResourceAdminExecutor`". Those are different facts: MSSQL and
+// Cassandra advertise lifecycle and admit the dispatch ops, but their native
+// `ResourceAdminExecutor::{ensure,drop}_resource` return `unimplemented` — the
+// real work goes through the dialect compiler (`compile_resource_op`) + `mutate`.
+//
+// `BackendCapabilityV2` splits the truth into orthogonal dimensions per backend.
+// V1 is DERIVED from V2 (see `BackendCapabilityV2::derive_v1`) so existing callers
+// of `BackendCapability` / `capabilities()` / `capability_matrix()` are unchanged.
+
+/// How a backend implements resource lifecycle (`EnsureResource` / `DropResource`
+/// / `ListResources`).
+///
+/// This is the dimension that B.1 separates out of the V1
+/// `supports_resource_lifecycle` boolean: that flag answered "does the backend
+/// expose lifecycle at all", but said nothing about *how*. Native and
+/// compiler-mediated lifecycle have very different failure modes — a native
+/// executor does the I/O directly, while a compiler-mediated one is only reachable
+/// through `compile_resource_op` + `mutate` and its `ResourceAdminExecutor`
+/// methods deliberately return `unimplemented`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LifecycleSupport {
+    /// No resource lifecycle (KV/cache stores with no buckets/namespaces).
+    None,
+    /// Lifecycle is driven through the dialect compiler's `compile_resource_op`
+    /// plus a `mutate` call. The backend's native `ResourceAdminExecutor`
+    /// `ensure_resource`/`drop_resource` return `unimplemented` on purpose
+    /// (MSSQL, Cassandra). `list_resources` may still be a native catalog query.
+    CompilerMediated,
+    /// The backend implements native `ResourceAdminExecutor::{ensure,drop}_resource`
+    /// that perform the I/O directly (object stores, Qdrant, MongoDB, Neo4j,
+    /// ClickHouse, Weaviate, Pinecone, Elasticsearch).
+    Native,
+    /// Lifecycle for the relational system catalog is managed out-of-band via
+    /// catalog migrations, not the per-request executor. The native
+    /// `ResourceAdminExecutor` methods return `failed_precondition`
+    /// (Postgres/MySQL/SQLite). Generic dispatch still admits the ops.
+    CatalogMigration,
+}
+
+impl LifecycleSupport {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::CompilerMediated => "compiler_mediated",
+            Self::Native => "native",
+            Self::CatalogMigration => "catalog_migration",
+        }
+    }
+    /// Does generic dispatch admit `ensure_resource`/`drop_resource`/
+    /// `list_resources` for this backend? True for every variant except `None`.
+    /// This is the V1 `supports_resource_lifecycle` projection.
+    pub fn admits_dispatch(self) -> bool {
+        !matches!(self, Self::None)
+    }
+    /// Does the backend have a working native `ResourceAdminExecutor` that does
+    /// the ensure/drop I/O directly (i.e. NOT compiler-mediated and NOT
+    /// catalog-migration)? This is the distinct dimension B.1 introduces — it is
+    /// what was previously (incorrectly) read off `supports_resource_lifecycle`.
+    pub fn is_native_executor(self) -> bool {
+        matches!(self, Self::Native)
+    }
+}
+
+/// Whether a backend has a concrete canonical `SystemStores` implementation
+/// registered in this source tree. This mirrors `BackendKind::role` but is the
+/// capability-level fact (B.1 dimension 5 "canonical system-store support").
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SystemStoreSupport {
+    /// No canonical `SystemStores` impl — this backend can only be a projection
+    /// target (it cannot host outbox/saga/projection/audit tables).
+    None,
+    /// A full `SystemStores` supertrait impl exists under
+    /// `runtime/canonical_store/*` (Postgres/MySQL/SQLite today).
+    Full,
+}
+
+impl SystemStoreSupport {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Full => "full",
+        }
+    }
+    pub fn is_canonical(self) -> bool {
+        matches!(self, Self::Full)
+    }
+}
+
+/// B.12-B.15 — canonical promotion roadmap bucket.
+///
+/// `Implemented` is the only profile that may coincide with
+/// `SystemStoreSupport::Full`; every other profile is a named proof obligation
+/// and must remain `BackendRole::Projection` until real canonical-store evidence
+/// lands.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CanonicalCandidateProfile {
+    Implemented,
+    NativeDriverRequired,
+    SemanticsGated,
+    VectorAtomicClaims,
+    VectorNativeCasUnsupported,
+    VectorFeasibilityRequired,
+    ObjectConditionalWrites,
+    CacheDurabilityRequired,
+    ExplicitlyNotSupported,
+}
+
+impl CanonicalCandidateProfile {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Implemented => "implemented",
+            Self::NativeDriverRequired => "native_driver_required",
+            Self::SemanticsGated => "semantics_gated",
+            Self::VectorAtomicClaims => "vector_atomic_claims",
+            Self::VectorNativeCasUnsupported => "vector_native_cas_unsupported",
+            Self::VectorFeasibilityRequired => "vector_feasibility_required",
+            Self::ObjectConditionalWrites => "object_conditional_writes",
+            Self::CacheDurabilityRequired => "cache_durability_required",
+            Self::ExplicitlyNotSupported => "explicitly_not_supported",
+        }
+    }
+}
+
+fn default_canonical_candidate_profile() -> CanonicalCandidateProfile {
+    CanonicalCandidateProfile::ExplicitlyNotSupported
+}
+
+/// B.13-B.15 — structured canonical feasibility profile for one backend.
+///
+/// Where [`CanonicalCandidateProfile`] is a single roadmap *bucket*, this records
+/// the concrete proof obligations a backend family must satisfy before its
+/// [`BackendRole`] can flip to canonical: how atomic claims/leases are expressed,
+/// how outbox ordering survives concurrent writers, how tenant isolation and read
+/// fences work, the operator prerequisites (AOF, bucket versioning, …) that must
+/// hold, and the remaining blocking gaps. It is descriptive evidence, never a
+/// capability claim — `role` + `system_store` stay authoritative. `blocking_gaps`
+/// is empty IFF the backend already ships a `SystemStores` implementation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct CanonicalFeasibilityProfile {
+    pub backend: &'static str,
+    /// Backend family this profile reasons about: "sql", "document", "graph",
+    /// "column", "vector", "object", or "cache".
+    pub family: &'static str,
+    pub candidate: CanonicalCandidateProfile,
+    /// Does a real `SystemStores` implementation compile for this backend in the
+    /// current feature set?
+    pub implemented: bool,
+    /// How atomic lease/claim ownership is (or would be) expressed natively.
+    pub atomic_claim_strategy: &'static str,
+    /// How ordered outbox progress survives concurrent writers.
+    pub ordered_progress_strategy: &'static str,
+    /// How per-tenant isolation is enforced for system records.
+    pub tenant_isolation_strategy: &'static str,
+    /// How a recoverable read fence / durable write-progress token is obtained.
+    pub read_fence_strategy: &'static str,
+    /// Operator prerequisites that MUST hold before canonical registration.
+    pub durability_prerequisites: &'static [&'static str],
+    /// Concrete proofs still missing before promotion (empty == implemented).
+    pub blocking_gaps: &'static [&'static str],
+    /// Env var that gates live conformance for this family, if any.
+    pub live_conformance_env: Option<&'static str>,
+}
+
+// ── B.13/B.14 — shared prerequisite/gap tables (kept module-level so the
+// per-backend match stays declarative and the same operator wording is reused
+// across an object/cache family without divergence). ────────────────────────
+const OBJECT_DURABILITY_PREREQS: &[&str] = &[
+    "bucket/container versioning enabled",
+    "object-lock / retention enabled for audit-chain immutability",
+    "conditional-write (precondition) support enabled on the endpoint",
+    "lifecycle/retention policy provisioned for outbox compaction",
+];
+const OBJECT_BLOCKING_GAPS: &[&str] = &[
+    "no native cross-object monotonic sequence — outbox ordering needs a documented single-writer or external-sequencer profile",
+    "list-after-write / read-after-overwrite consistency must be proven per provider",
+    "multipart write atomicity for large system records is unproven",
+    "no canonical SystemStores module compiled for object backends",
+];
+const REDIS_DURABILITY_PREREQS: &[&str] = &[
+    "AOF persistence enabled (INFO persistence aof_enabled:1)",
+    "appendfsync everysec or always",
+    "replica or RDB+AOF retention for failover durability",
+    "non-volatile maxmemory-policy (no eviction of system keys)",
+];
+const MEMCACHED_BLOCKING_GAPS: &[&str] = &[
+    "no durable storage — items live in volatile RAM",
+    "no key scan / enumeration to recover or audit system state",
+    "no atomic multi-key claim (single-key CAS only)",
+    "eviction can silently drop committed system state",
+];
+const VECTOR_CANONICAL_PLANE_PREREQS: &[&str] = &[
+    "atomic claim winner for leases and task claims",
+    "durable monotonic outbox progress token across writers",
+    "tenant/project-scoped system-state namespace",
+    "read fence that can prove later reads observe writes up to a token",
+];
+const QDRANT_BLOCKING_GAPS: &[&str] = &[
+    "qdrant feature not compiled, so the native SystemStores adapter is absent",
+    "live Qdrant conformance proof has not run for this build profile",
+    "native compare-and-set / insert-if-absent primitive is not documented for point or payload updates",
+    "insert_only avoids overwriting an existing point but does not return a distributed lease winner",
+    "filtered payload updates can select existing points but do not return an atomic claim winner",
+    "WAL-backed writes make individual point mutations durable, but do not create a monotonic cross-point outbox sequence",
+    "strong write ordering orders submitted operations but does not make read-modify-write lease acquisition atomic across brokers",
+];
+const PINECONE_BLOCKING_GAPS: &[&str] = &[
+    "metadata-filter update can change matching records, but does not expose compare-and-set or a claim winner",
+    "upsert/update by id has no native monotonic outbox sequence",
+    "namespace scoping is usable for tenant isolation but not for durable read fencing",
+    "no canonical SystemStores module for the vector plane",
+];
+const WEAVIATE_BLOCKING_GAPS: &[&str] = &[
+    "object update/PATCH and consistency levels do not expose native compare-and-set claim semantics",
+    "leaderless/tunable consistency is not a durable ordered outbox token",
+    "multi-tenancy scopes records but does not provide recovery ordering for SystemStores",
+    "no canonical SystemStores module for the vector plane",
+];
+const ELASTICSEARCH_VECTOR_BLOCKING_GAPS: &[&str] = &[
+    "optimistic concurrency can guard a single document update, but vector/search SystemStores are not implemented",
+    "ordered outbox, lease, saga, audit, and migration contracts are not mapped to Elasticsearch",
+    "tenant scoping and read fencing need a canonical index/profile, not projection search indexes",
+];
+
+/// B.1 — the orthogonal capability dimensions for one backend.
+///
+/// Each field answers an independent question; V1 `BackendCapability` is the
+/// OR/projection of these (see [`Self::derive_v1`]).
+///
+/// This is a computed view (always rebuilt from `BackendKind::capabilities_v2`),
+/// so it derives `Serialize` (for GetCapabilities / compat-matrix output) but not
+/// `Deserialize` — the `&'static str` fields cannot be deserialized into owned
+/// statics, and there is no reason to round-trip a computed view back in.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct BackendCapabilityV2 {
+    // Dimension 1 — native executor support: the backend ships a real
+    // `runtime/executors/*` adapter compiled into the build for query/mutate I/O.
+    pub native_executor: bool,
+    // Dimension 2 — compiler-mediated support: the backend has an
+    // `ir::compile::*` dialect compiler so neutral logical ops are lowered to its
+    // wire DDL/DML (every SQL/CQL backend; document/graph/vector use it too).
+    pub compiler_mediated: bool,
+    // Dimension 3 — generic dispatch admission: the set of generic-dispatch
+    // operation tokens the runtime admits for this backend. Derived from the
+    // existing `supported_operations()` so dispatch behavior is unchanged.
+    pub dispatch_operations: Vec<&'static str>,
+    // Dimension 4 — resource lifecycle support: how ensure/drop/list is
+    // implemented (the native-vs-compiler-mediated distinction B.1 demands).
+    pub lifecycle: LifecycleSupport,
+    // Dimension 5 — canonical system-store support.
+    pub system_store: SystemStoreSupport,
+    // B.12-B.15 — named proof bucket and concrete promotion/conformance goal.
+    pub canonical_candidate: CanonicalCandidateProfile,
+    pub canonical_goal: &'static str,
+
+    // Feature truths that V1 exposes verbatim and that have no finer V2 split.
+    // These stay here so V1 derives entirely from V2 (single source of truth).
+    pub supports_sql_ddl: bool,
+    pub supports_transactions: bool,
+    pub supports_xa: bool,
+    pub supports_two_phase_commit: bool,
+    pub supports_rls: bool,
+    pub supports_vector_search: bool,
+    pub supports_streaming: bool,
+    pub supports_ttl: bool,
+    pub is_object_store: bool,
+    pub is_migration_ledger_capable: bool,
+    pub supports_idempotency: bool,
+    pub supports_schema_migration: bool,
+    pub supports_hybrid_search: bool,
+    pub max_payload_bytes: u64,
+    pub consistency_model: &'static str,
+}
+
+impl BackendCapabilityV2 {
+    /// Project the V2 dimensions down to the stable V1 `BackendCapability`.
+    ///
+    /// V1 `supports_resource_lifecycle` = "generic dispatch admits lifecycle
+    /// ops" = `lifecycle.admits_dispatch()`. The native-executor truth is NOT
+    /// folded into this boolean (that is the whole point of B.1) — callers that
+    /// need it read `lifecycle.is_native_executor()` off V2.
+    pub fn derive_v1(&self) -> BackendCapability {
+        BackendCapability {
+            supports_sql_ddl: self.supports_sql_ddl,
+            supports_transactions: self.supports_transactions,
+            supports_xa: self.supports_xa,
+            supports_two_phase_commit: self.supports_two_phase_commit,
+            supports_rls: self.supports_rls,
+            supports_vector_search: self.supports_vector_search,
+            supports_streaming: self.supports_streaming,
+            supports_ttl: self.supports_ttl,
+            is_object_store: self.is_object_store,
+            is_migration_ledger_capable: self.is_migration_ledger_capable,
+            supports_idempotency: self.supports_idempotency,
+            supports_schema_migration: self.supports_schema_migration,
+            supports_hybrid_search: self.supports_hybrid_search,
+            supports_resource_lifecycle: self.lifecycle.admits_dispatch(),
+            max_payload_bytes: self.max_payload_bytes,
+            consistency_model: self.consistency_model.to_string(),
+        }
+    }
+}
+
 /// P2P — what role a backend plays in the UDB data plane.
 ///
 /// Pre-P2P, the architecture was implicitly **Postgres-as-canonical +
@@ -765,6 +1652,21 @@ pub struct BackendCapabilityMatrixEntry {
     /// host system tables.
     #[serde(default = "default_backend_role")]
     pub role: BackendRole,
+    /// B.12-B.15: roadmap bucket for canonical promotion evidence. This is not
+    /// a capability claim by itself; `role` + `system_store` remain authoritative.
+    #[serde(default = "default_canonical_candidate_profile")]
+    pub canonical_candidate: CanonicalCandidateProfile,
+    /// Concrete implementation/proof goal required for canonical promotion, or
+    /// the live conformance duty for already-canonical stores.
+    #[serde(default)]
+    pub canonical_goal: String,
+    /// B.13-B.15: structured canonical feasibility profile (proof dimensions,
+    /// operator prerequisites, remaining gaps). Surfaced through `doctor` and
+    /// `compat-matrix` so object/cache rows expose concrete promotion evidence.
+    /// Computed view — serialized out, never read back in (so the value type only
+    /// needs `Serialize`).
+    #[serde(default, skip_deserializing, skip_serializing_if = "Option::is_none")]
+    pub canonical_feasibility: Option<CanonicalFeasibilityProfile>,
 }
 
 fn default_backend_role() -> BackendRole {
@@ -813,7 +1715,12 @@ impl BackendKind {
 
     /// Operation tokens supported by the generic dispatch plane for this backend.
     pub fn supported_operations(&self) -> Vec<&'static str> {
-        let cap = self.capabilities();
+        // NOTE: read the raw V1 feature fields here, NOT `capabilities()` /
+        // `capabilities_v2()` — those call back into `supported_operations()`
+        // (V2 dimension 3 is the dispatch op set), which would recurse. The
+        // lifecycle admission decision below is identical to
+        // `lifecycle_support().admits_dispatch()` by construction.
+        let cap = self.capabilities_v1_fields();
         let mut ops = vec![OP_PING, OP_PROBE];
         if cap.supports_resource_lifecycle {
             ops.extend([OP_ENSURE_RESOURCE, OP_DROP_RESOURCE, OP_LIST_RESOURCES]);
@@ -893,6 +1800,9 @@ impl BackendKind {
             // P2P: include the role so doctor + GetCapabilities show
             // which backends can host system tables.
             role: self.role(),
+            canonical_candidate: self.canonical_candidate_profile(),
+            canonical_goal: self.canonical_promotion_goal().to_string(),
+            canonical_feasibility: Some(self.canonical_feasibility_profile()),
         }
     }
 }
@@ -911,6 +1821,74 @@ pub const CORE_BACKENDS: [BackendKind; 4] = [
     BackendKind::Redis,
     BackendKind::Qdrant,
     BackendKind::Minio,
+];
+
+/// B.2 — the SystemStores-evidence allowlist.
+///
+/// `BackendKind::role` cannot enumerate the runtime `CanonicalStoreRegistry`
+/// (that registry is built at startup from operator config and is not reachable
+/// from this compile-time module). So the "evidence" that a backend may claim a
+/// `Canonical`/`Both` role is encoded here as an explicit allowlist of the
+/// backends that have a concrete `SystemStores` supertrait implementation
+/// committed under `src/runtime/canonical_store/*` (Postgres = `postgres.rs` +
+/// `postgres_{projection,saga,admin_audit,migration_audit}.rs`; likewise MySQL
+/// and SQLite). The `SystemStores` supertrait itself lives in
+/// `runtime/canonical_store/mod.rs` and is the union of `CanonicalStore`,
+/// `ProjectionTaskStore`, `SagaStore`, `AdminAuditStore`, `MigrationAuditStore`.
+///
+/// Adding a backend to a canonical role REQUIRES adding it here AND landing its
+/// store impl — the `role_matches_system_store_evidence` test fails otherwise,
+/// so role output, doctor output, and the real registry cannot drift (B.2 done
+/// condition).
+///
+/// Some non-SQL canonical stores are feature-gated below because their native
+/// drivers and live-conformance profiles are optional build targets. Backends
+/// absent from this list stay `Projection`.
+pub const CANONICAL_SYSTEM_STORE_BACKENDS: &[BackendKind] = &[
+    BackendKind::Postgres,
+    BackendKind::Mysql,
+    BackendKind::Sqlite,
+    // B.8: SQL Server canonical store (Tiberius) — promoted after the full
+    // 5-contract conformance passed live on SQL Server 2022.
+    BackendKind::Mssql,
+    // B.14: Redis native canonical store — compiled with the redis feature.
+    // Runtime registration still validates AOF persistence before exposing the
+    // live instance as a SystemStores object.
+    #[cfg(feature = "redis")]
+    BackendKind::Redis,
+    // B.9: native MongoDB canonical store — only in `mongodb-native` builds
+    // (the scalar/Data-API build has no compiled store). Promoted after the full
+    // 5-contract conformance passed live on a MongoDB replica set.
+    #[cfg(feature = "mongodb-native")]
+    BackendKind::Mongodb,
+    // B.10a: Cassandra native CQL + LWT canonical store — compiled with the
+    // `cassandra` feature. Promoted after the full 5-contract conformance passed
+    // live on Cassandra 5.
+    #[cfg(feature = "cassandra")]
+    BackendKind::Cassandra,
+    // B.10b: Neo4j native HTTP-transactional-Cypher canonical store — compiled
+    // with the `neo4j` feature. Promoted after the full 5-contract conformance
+    // passed live on Neo4j 5.
+    #[cfg(feature = "neo4j")]
+    BackendKind::Neo4j,
+    // B.11: Qdrant native SystemStores — compiled with the `qdrant` feature.
+    // Startup registration verifies the system collection can be created before
+    // exposing the live instance as a SystemStores object.
+    #[cfg(feature = "qdrant")]
+    BackendKind::Qdrant,
+    // B.12: shared vector/search canonical store — compiled per backend feature.
+    #[cfg(feature = "pinecone")]
+    BackendKind::Pinecone,
+    #[cfg(feature = "weaviate")]
+    BackendKind::Weaviate,
+    #[cfg(feature = "elasticsearch")]
+    BackendKind::Elasticsearch,
+    // B.10c: ClickHouse native HTTP canonical store (ReplacingMergeTree +
+    // versioned-CAS) — compiled with the `clickhouse` feature. Promoted after the
+    // full 5-contract conformance passed live on ClickHouse 24.8 (single-writer
+    // caveat documented).
+    #[cfg(feature = "clickhouse")]
+    BackendKind::Clickhouse,
 ];
 
 #[cfg(test)]
@@ -1288,5 +2266,646 @@ mod tests {
         assert_eq!(serde_token(&BackendKind::Mssql), "mssql");
         assert_eq!(BackendKind::AzureBlob.as_str(), "azureblob");
         assert_eq!(serde_token(&BackendKind::AzureBlob), "azure_blob");
+    }
+
+    // ── B.1: V2 capability model ───────────────────────────────────────────────
+
+    #[test]
+    fn v1_capabilities_are_a_pure_projection_of_v2() {
+        // V1 must be exactly `capabilities_v2().derive_v1()` for every backend.
+        // This pins that V1 callers see no behavior change after the V2 split.
+        for kind in ALL_KINDS {
+            assert_eq!(
+                kind.capabilities(),
+                kind.capabilities_v2().derive_v1(),
+                "V1 capabilities diverged from V2 projection for {kind:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn v1_resource_lifecycle_equals_dispatch_admission_dimension() {
+        // The V1 `supports_resource_lifecycle` boolean is precisely the
+        // "generic dispatch admits lifecycle ops" projection of V2.
+        for kind in ALL_KINDS {
+            let v2 = kind.capabilities_v2();
+            assert_eq!(
+                kind.capabilities().supports_resource_lifecycle,
+                v2.lifecycle.admits_dispatch(),
+                "{kind:?}: V1 supports_resource_lifecycle must equal lifecycle.admits_dispatch()"
+            );
+        }
+    }
+
+    #[test]
+    fn advertised_operations_have_compiler_or_executor_evidence() {
+        // B.1 done-condition: every advertised operation must have evidence —
+        // either a native runtime executor OR a compiler dialect. A backend that
+        // advertises an operation with NEITHER is a capability lie. (No backend
+        // in the matrix should hit the panic; this test fails loudly if a future
+        // edit adds an operation to a backend that has no implementation seam.)
+        for kind in ALL_KINDS {
+            let v2 = kind.capabilities_v2();
+            for op in &v2.dispatch_operations {
+                // ping/probe are universal control ops — always admissible.
+                if *op == OP_PING || *op == OP_PROBE {
+                    continue;
+                }
+                assert!(
+                    v2.native_executor || v2.compiler_mediated,
+                    "{kind:?} advertises operation '{op}' but has neither native \
+                     executor nor compiler evidence"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn lifecycle_op_admission_requires_nonzero_lifecycle_dimension() {
+        // ensure/drop/list admission must be backed by a lifecycle dimension
+        // that is not `None` — i.e. the dispatch admission and the lifecycle
+        // truth cannot disagree.
+        for kind in ALL_KINDS {
+            let v2 = kind.capabilities_v2();
+            let advertises_lifecycle = v2.dispatch_operations.contains(&OP_ENSURE_RESOURCE)
+                || v2.dispatch_operations.contains(&OP_DROP_RESOURCE)
+                || v2.dispatch_operations.contains(&OP_LIST_RESOURCES);
+            assert_eq!(
+                advertises_lifecycle,
+                v2.lifecycle.admits_dispatch(),
+                "{kind:?}: lifecycle op admission must match lifecycle.admits_dispatch()"
+            );
+        }
+    }
+
+    #[test]
+    fn mssql_lifecycle_is_compiler_mediated_not_native() {
+        // MSSQL admits ensure/drop/list on the generic-dispatch plane, but its
+        // native ResourceAdminExecutor::{ensure,drop}_resource return
+        // `unimplemented` — the real DDL goes through compile_resource_op +
+        // mutate. So: dispatch admits lifecycle, lifecycle is CompilerMediated,
+        // and it is NOT a native executor lifecycle.
+        let v2 = BackendKind::Mssql.capabilities_v2();
+        assert_eq!(v2.lifecycle, LifecycleSupport::CompilerMediated);
+        assert!(v2.lifecycle.admits_dispatch());
+        assert!(
+            !v2.lifecycle.is_native_executor(),
+            "MSSQL lifecycle must NOT claim native executor coverage"
+        );
+        assert!(
+            v2.compiler_mediated,
+            "MSSQL lifecycle is reached through the T-SQL compiler"
+        );
+        // V1 still advertises lifecycle (unchanged behavior).
+        assert!(
+            BackendKind::Mssql
+                .capabilities()
+                .supports_resource_lifecycle
+        );
+    }
+
+    #[test]
+    fn cassandra_lifecycle_is_compiler_mediated_not_native() {
+        // Same distinction as MSSQL: Cassandra's native ensure/drop are
+        // `unimplemented`; DDL is compiler-mediated (CQL via compile_resource_op).
+        let v2 = BackendKind::Cassandra.capabilities_v2();
+        assert_eq!(v2.lifecycle, LifecycleSupport::CompilerMediated);
+        assert!(v2.lifecycle.admits_dispatch());
+        assert!(
+            !v2.lifecycle.is_native_executor(),
+            "Cassandra lifecycle must NOT claim native executor coverage"
+        );
+        assert!(v2.compiler_mediated);
+        assert!(
+            BackendKind::Cassandra
+                .capabilities()
+                .supports_resource_lifecycle
+        );
+    }
+
+    #[test]
+    fn native_lifecycle_backends_are_distinct_from_compiler_mediated() {
+        // Object stores / Qdrant / Mongo / Neo4j / ClickHouse / ES / Weaviate /
+        // Pinecone have native ResourceAdminExecutor ensure/drop that do real
+        // I/O — they are Native, NOT CompilerMediated.
+        for kind in [
+            BackendKind::Minio,
+            BackendKind::S3,
+            BackendKind::Qdrant,
+            BackendKind::Mongodb,
+            BackendKind::Neo4j,
+            BackendKind::Clickhouse,
+            BackendKind::Elasticsearch,
+            BackendKind::Weaviate,
+            BackendKind::Pinecone,
+        ] {
+            let v2 = kind.capabilities_v2();
+            assert_eq!(
+                v2.lifecycle,
+                LifecycleSupport::Native,
+                "{kind:?} has a native ResourceAdminExecutor lifecycle"
+            );
+            assert!(v2.lifecycle.is_native_executor(), "{kind:?}");
+        }
+    }
+
+    #[test]
+    fn sql_canonical_backends_use_catalog_migration_lifecycle() {
+        // Postgres/MySQL/SQLite native ensure/drop return failed_precondition;
+        // lifecycle is via catalog migrations. They still admit dispatch ops.
+        // NOTE: this is the *relational catalog-migration* trio, NOT the whole
+        // CANONICAL_SYSTEM_STORE_BACKENDS allowlist — SQL Server (B.8) is also a
+        // canonical system store but its RESOURCE lifecycle is CompilerMediated
+        // (compile_resource_op + mutate), a separate V2 dimension asserted by
+        // `mssql_lifecycle_is_compiler_mediated_not_native`.
+        for kind in [
+            BackendKind::Postgres,
+            BackendKind::Mysql,
+            BackendKind::Sqlite,
+        ] {
+            let v2 = kind.capabilities_v2();
+            assert_eq!(
+                v2.lifecycle,
+                LifecycleSupport::CatalogMigration,
+                "{kind:?} relational lifecycle is catalog-migration managed"
+            );
+            assert!(!v2.lifecycle.is_native_executor(), "{kind:?}");
+            assert!(v2.lifecycle.admits_dispatch(), "{kind:?}");
+        }
+    }
+
+    #[test]
+    fn no_lifecycle_backends_reject_lifecycle_ops() {
+        for kind in [BackendKind::Redis, BackendKind::Memcached] {
+            let v2 = kind.capabilities_v2();
+            assert_eq!(v2.lifecycle, LifecycleSupport::None, "{kind:?}");
+            assert!(!v2.lifecycle.admits_dispatch(), "{kind:?}");
+            assert!(
+                !kind.capabilities().supports_resource_lifecycle,
+                "{kind:?} must not advertise V1 lifecycle"
+            );
+        }
+    }
+
+    // ── B.2: BackendRole honesty vs SystemStores evidence ──────────────────────
+
+    #[test]
+    fn role_matches_system_store_evidence() {
+        // Any backend whose role is Canonical/Both MUST have a registered
+        // SystemStores evidence entry (the CANONICAL_SYSTEM_STORE_BACKENDS
+        // allowlist, which mirrors the committed
+        // runtime/canonical_store/* impls). Projection backends must NOT be on
+        // the allowlist. This is the role-vs-allowlist consistency check (B.2).
+        for kind in ALL_KINDS {
+            let role_is_canonical = kind.role().can_host_system_tables();
+            let has_evidence = CANONICAL_SYSTEM_STORE_BACKENDS.contains(&kind);
+            assert_eq!(
+                role_is_canonical, has_evidence,
+                "{kind:?}: role.can_host_system_tables()={role_is_canonical} but \
+                 SystemStores evidence={has_evidence} — role and committed \
+                 canonical_store impls must agree"
+            );
+            // The capability-level mirror must also agree.
+            assert_eq!(
+                kind.system_store_support().is_canonical(),
+                has_evidence,
+                "{kind:?}: system_store_support() must mirror the allowlist"
+            );
+        }
+    }
+
+    #[test]
+    fn target_backends_stay_projection_until_canonical_stores_exist() {
+        // B.2 forbids promoting these from Projection until their SystemStores
+        // impls land. SQL Server graduated in B.8, and native MongoDB in B.9 (so
+        // MongoDB is pinned here ONLY in non-`mongodb-native` builds, where no
+        // store is compiled). These remain projection-only until their stores
+        // exist.
+        for kind in [
+            #[cfg(not(feature = "mongodb-native"))]
+            BackendKind::Mongodb,
+            // B.10c: ClickHouse graduated (native ReplacingMergeTree store).
+            // Pinned here only in non-`clickhouse` builds.
+            #[cfg(not(feature = "clickhouse"))]
+            BackendKind::Clickhouse,
+            // B.10b: Neo4j graduated (native HTTP-Cypher store). Pinned here only
+            // in non-`neo4j` builds.
+            #[cfg(not(feature = "neo4j"))]
+            BackendKind::Neo4j,
+            // B.10a: Cassandra graduated (native CQL+LWT store). Pinned here only
+            // in non-`cassandra` builds, where no store is compiled.
+            #[cfg(not(feature = "cassandra"))]
+            BackendKind::Cassandra,
+        ] {
+            assert_eq!(
+                kind.role(),
+                BackendRole::Projection,
+                "{kind:?} must stay Projection until its canonical SystemStores exists"
+            );
+            assert!(
+                !CANONICAL_SYSTEM_STORE_BACKENDS.contains(&kind),
+                "{kind:?} must not be on the SystemStores allowlist yet"
+            );
+        }
+    }
+
+    #[test]
+    fn all_backend_rows_have_canonical_candidate_goals() {
+        // B.15: every capability-matrix row must say what canonical completion
+        // means. Projection backends cannot be silent roadmap islands.
+        for kind in ALL_KINDS {
+            let v2 = kind.capabilities_v2();
+            let matrix = kind.capability_matrix_entry();
+            assert_eq!(
+                matrix.canonical_candidate, v2.canonical_candidate,
+                "{kind:?}: matrix candidate profile must mirror V2"
+            );
+            assert_eq!(
+                matrix.canonical_goal, v2.canonical_goal,
+                "{kind:?}: matrix canonical goal must mirror V2"
+            );
+            assert!(
+                !v2.canonical_goal.trim().is_empty(),
+                "{kind:?}: canonical goal must be explicit"
+            );
+        }
+    }
+
+    #[test]
+    fn b14_cache_backends_have_durability_or_rejection_profiles() {
+        #[cfg(feature = "redis")]
+        assert_eq!(
+            BackendKind::Redis.canonical_candidate_profile(),
+            CanonicalCandidateProfile::Implemented
+        );
+        #[cfg(not(feature = "redis"))]
+        assert_eq!(
+            BackendKind::Redis.canonical_candidate_profile(),
+            CanonicalCandidateProfile::CacheDurabilityRequired
+        );
+        assert_eq!(
+            BackendKind::Memcached.canonical_candidate_profile(),
+            CanonicalCandidateProfile::ExplicitlyNotSupported
+        );
+        #[cfg(feature = "redis")]
+        assert_eq!(BackendKind::Redis.role(), BackendRole::Canonical);
+        #[cfg(not(feature = "redis"))]
+        assert_eq!(BackendKind::Redis.role(), BackendRole::Projection);
+        assert_eq!(BackendKind::Memcached.role(), BackendRole::Projection);
+    }
+
+    #[test]
+    fn vector_plane_backends_share_native_canonical_blockers() {
+        for kind in [
+            BackendKind::Qdrant,
+            BackendKind::Pinecone,
+            BackendKind::Weaviate,
+            BackendKind::Elasticsearch,
+        ] {
+            let profile = kind.canonical_feasibility_profile();
+            assert_eq!(profile.family, "vector", "{kind:?}");
+            if kind.system_store_support().is_canonical() {
+                assert!(profile.implemented, "{kind:?} must expose SystemStores");
+                assert_eq!(kind.role(), BackendRole::Canonical, "{kind:?}");
+                assert_eq!(
+                    kind.system_store_support(),
+                    SystemStoreSupport::Full,
+                    "{kind:?}"
+                );
+                assert!(
+                    profile.blocking_gaps.is_empty(),
+                    "{kind:?} must not carry blockers after promotion"
+                );
+            } else {
+                assert!(!profile.implemented, "{kind:?} must not fake SystemStores");
+                assert_eq!(kind.role(), BackendRole::Projection, "{kind:?}");
+                assert_eq!(
+                    kind.system_store_support(),
+                    SystemStoreSupport::None,
+                    "{kind:?}"
+                );
+                assert!(
+                    !profile.blocking_gaps.is_empty(),
+                    "{kind:?} must expose native vector-plane blockers"
+                );
+            }
+            assert!(
+                profile
+                    .durability_prerequisites
+                    .contains(&"atomic claim winner for leases and task claims"),
+                "{kind:?} must share the vector-plane atomic-claim prerequisite"
+            );
+            if kind.system_store_support().is_canonical() {
+                let expected_env = match kind {
+                    BackendKind::Qdrant => "UDB_QDRANT_URL",
+                    BackendKind::Pinecone => "UDB_PINECONE_DSN",
+                    BackendKind::Weaviate => "UDB_WEAVIATE_DSN",
+                    BackendKind::Elasticsearch => "UDB_ELASTIC_DSN",
+                    _ => unreachable!(),
+                };
+                assert_eq!(profile.live_conformance_env, Some(expected_env));
+                assert!(CANONICAL_SYSTEM_STORE_BACKENDS.contains(&kind));
+            } else {
+                assert!(
+                    profile.live_conformance_env.is_some(),
+                    "{kind:?} must advertise the live conformance env for promotion"
+                );
+                assert!(
+                    !CANONICAL_SYSTEM_STORE_BACKENDS.contains(&kind),
+                    "{kind:?} must not enter the canonical allowlist"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn qdrant_canonical_profile_tracks_compiled_adapter() {
+        let profile = BackendKind::Qdrant.canonical_feasibility_profile();
+        if cfg!(feature = "qdrant") {
+            assert_eq!(
+                BackendKind::Qdrant.canonical_candidate_profile(),
+                CanonicalCandidateProfile::Implemented
+            );
+            assert!(profile.blocking_gaps.is_empty());
+            assert_eq!(BackendKind::Qdrant.role(), BackendRole::Canonical);
+        } else {
+            assert_eq!(
+                BackendKind::Qdrant.canonical_candidate_profile(),
+                CanonicalCandidateProfile::VectorNativeCasUnsupported
+            );
+            assert!(
+                profile
+                    .blocking_gaps
+                    .iter()
+                    .any(|gap| gap.contains("qdrant feature not compiled")),
+                "Qdrant must explain why the adapter is unavailable"
+            );
+        }
+    }
+
+    #[test]
+    fn noncanonical_candidate_profiles_do_not_claim_system_store_support() {
+        for kind in ALL_KINDS {
+            if kind.canonical_candidate_profile() == CanonicalCandidateProfile::Implemented {
+                assert!(
+                    kind.system_store_support().is_canonical(),
+                    "{kind:?}: implemented canonical profile must have SystemStores evidence"
+                );
+            } else {
+                assert_eq!(
+                    kind.role(),
+                    BackendRole::Projection,
+                    "{kind:?}: non-implemented canonical profile must stay Projection"
+                );
+                assert_eq!(
+                    kind.system_store_support(),
+                    SystemStoreSupport::None,
+                    "{kind:?}: non-implemented canonical profile must not claim SystemStores"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn clickhouse_keeps_append_analytics_profile() {
+        // ClickHouse keeps its eventual-consistency / no-multi-statement-txn V1
+        // profile, but B.10c promoted it to a canonical SystemStores backend
+        // (ReplacingMergeTree(version) + SELECT … FINAL versioned-CAS) in
+        // `clickhouse` builds; projection otherwise.
+        let cap = BackendKind::Clickhouse.capabilities();
+        assert_eq!(cap.consistency_model, "eventual");
+        assert!(!cap.supports_transactions);
+        #[cfg(feature = "clickhouse")]
+        assert_eq!(BackendKind::Clickhouse.role(), BackendRole::Canonical);
+        #[cfg(not(feature = "clickhouse"))]
+        assert_eq!(BackendKind::Clickhouse.role(), BackendRole::Projection);
+    }
+
+    #[test]
+    fn canonical_allowlist_backends_are_runtime_capable() {
+        // Every backend on the SystemStores allowlist must actually have a
+        // runtime implementation (otherwise the "evidence" is hollow).
+        for kind in CANONICAL_SYSTEM_STORE_BACKENDS {
+            assert!(
+                crate::backend::has_runtime_implementation(kind),
+                "{kind:?} is on the canonical allowlist but has no runtime impl"
+            );
+        }
+    }
+
+    #[test]
+    fn every_backend_exposes_a_feasibility_profile() {
+        // B.15: no capability-matrix row is a silent roadmap island — every
+        // backend returns a structured feasibility profile that mirrors its
+        // identity and candidate bucket, with all proof dimensions populated.
+        for kind in ALL_KINDS {
+            let p = kind.canonical_feasibility_profile();
+            assert_eq!(
+                p.backend,
+                kind.as_str(),
+                "{kind:?}: profile.backend must equal as_str()"
+            );
+            assert_eq!(
+                p.candidate,
+                kind.canonical_candidate_profile(),
+                "{kind:?}: profile.candidate must mirror canonical_candidate_profile()"
+            );
+            assert!(
+                !p.family.trim().is_empty(),
+                "{kind:?}: family must be explicit"
+            );
+            for (name, s) in [
+                ("atomic_claim_strategy", p.atomic_claim_strategy),
+                ("ordered_progress_strategy", p.ordered_progress_strategy),
+                ("tenant_isolation_strategy", p.tenant_isolation_strategy),
+                ("read_fence_strategy", p.read_fence_strategy),
+            ] {
+                assert!(
+                    !s.trim().is_empty(),
+                    "{kind:?}: {name} must be a non-empty strategy description"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn feasibility_implemented_flag_matches_system_store_evidence() {
+        // The `implemented` flag is the SystemStores-evidence truth, and the
+        // documented invariant is: blocking_gaps is empty IFF a real
+        // SystemStores impl compiles. Both must hold for every backend.
+        for kind in ALL_KINDS {
+            let p = kind.canonical_feasibility_profile();
+            assert_eq!(
+                p.implemented,
+                kind.system_store_support().is_canonical(),
+                "{kind:?}: implemented flag must mirror system_store_support().is_canonical()"
+            );
+            assert_eq!(
+                p.implemented,
+                p.blocking_gaps.is_empty(),
+                "{kind:?}: a backend ships a real SystemStores impl IFF it has no blocking gaps"
+            );
+        }
+    }
+
+    #[test]
+    fn feasibility_profile_is_mirrored_in_capability_matrix() {
+        // Every matrix row must carry the exact feasibility profile of its
+        // backend — and no row may omit it (it is always Some).
+        for entry in capability_matrix() {
+            let kind = ALL_KINDS
+                .into_iter()
+                .find(|k| entry.backend == k.as_str())
+                .unwrap_or_else(|| panic!("matrix row {} has no matching kind", entry.backend));
+            assert_eq!(
+                entry.canonical_feasibility,
+                Some(kind.canonical_feasibility_profile()),
+                "{kind:?}: matrix feasibility must mirror canonical_feasibility_profile()"
+            );
+            assert!(
+                entry.canonical_feasibility.is_some(),
+                "{kind:?}: every matrix row must expose a feasibility profile"
+            );
+        }
+    }
+
+    #[test]
+    fn b13_object_family_feasibility_is_complete() {
+        // B.13: object stores expose explicit operator prerequisites and the
+        // remaining ordering proof gaps, are gated by a live-conformance env,
+        // and stay Projection until those proofs land.
+        for kind in [
+            BackendKind::S3,
+            BackendKind::Minio,
+            BackendKind::AzureBlob,
+            BackendKind::Gcs,
+        ] {
+            let p = kind.canonical_feasibility_profile();
+            assert_eq!(p.family, "object", "{kind:?}: object family");
+            assert_eq!(
+                p.candidate,
+                CanonicalCandidateProfile::ObjectConditionalWrites,
+                "{kind:?}: object stores use the conditional-writes candidate bucket"
+            );
+            assert!(
+                !p.durability_prerequisites.is_empty(),
+                "{kind:?}: object operator prerequisites must be explicit"
+            );
+            assert!(
+                !p.blocking_gaps.is_empty(),
+                "{kind:?}: object stores have remaining blocking gaps"
+            );
+            assert!(
+                p.blocking_gaps.iter().any(|g| g.contains("sequence")
+                    || g.contains("ordering")
+                    || g.contains("order")),
+                "{kind:?}: a blocking gap must call out the ordering/sequence proof"
+            );
+            assert!(
+                p.live_conformance_env.is_some(),
+                "{kind:?}: a live-conformance gate env must be wired"
+            );
+            assert_eq!(
+                kind.role(),
+                BackendRole::Projection,
+                "{kind:?}: object stores stay Projection until proofs land"
+            );
+        }
+    }
+
+    #[test]
+    fn b14_cache_family_feasibility_is_explicit() {
+        // B.14: Redis is a durability-gated candidate (AOF prerequisites,
+        // live gate wired); Memcached is explicitly not supported with
+        // durability/volatility blocking gaps and no live gate.
+        let p = BackendKind::Redis.canonical_feasibility_profile();
+        assert_eq!(p.family, "cache", "Redis: cache family");
+        assert!(
+            p.durability_prerequisites
+                .iter()
+                .any(|s| s.contains("AOF") || s.contains("aof")),
+            "Redis durability prerequisites must mention AOF persistence"
+        );
+        assert!(
+            p.live_conformance_env.is_some(),
+            "Redis: a live-conformance gate env must be wired"
+        );
+
+        let p = BackendKind::Memcached.canonical_feasibility_profile();
+        assert_eq!(p.family, "cache", "Memcached: cache family");
+        assert_eq!(
+            p.candidate,
+            CanonicalCandidateProfile::ExplicitlyNotSupported,
+            "Memcached is explicitly not supported for canonical state"
+        );
+        assert!(!p.implemented, "Memcached: no canonical SystemStores impl");
+        assert!(
+            !p.blocking_gaps.is_empty(),
+            "Memcached: must enumerate blocking gaps"
+        );
+        assert!(
+            p.blocking_gaps
+                .iter()
+                .any(|g| g.contains("durable") || g.contains("volatile") || g.contains("eviction")),
+            "Memcached: a blocking gap must call out durability/volatility/eviction"
+        );
+        assert!(
+            p.live_conformance_env.is_none(),
+            "Memcached: no live-conformance gate (nothing to prove canonical)"
+        );
+    }
+
+    #[test]
+    fn memcached_can_never_claim_canonical() {
+        // B.14/B.15 negative test: Memcached's role, host-ability, system-store
+        // support, and candidate bucket must all refuse canonical promotion.
+        assert_eq!(BackendKind::Memcached.role(), BackendRole::Projection);
+        assert!(
+            !BackendKind::Memcached.role().can_host_system_tables(),
+            "Memcached role must not be able to host system tables"
+        );
+        assert_eq!(
+            BackendKind::Memcached.system_store_support(),
+            SystemStoreSupport::None
+        );
+        assert_eq!(
+            BackendKind::Memcached.canonical_candidate_profile(),
+            CanonicalCandidateProfile::ExplicitlyNotSupported
+        );
+    }
+
+    #[test]
+    fn dispatch_matrix_parity_for_every_backend() {
+        // B.15: the matrix row's advertised operations must be exactly the
+        // generic-dispatch op set (same sorted/deduped order), each op must be
+        // independently accepted by supports_operation, and object RPCs are
+        // admitted IFF the backend is an object store.
+        for kind in ALL_KINDS {
+            let entry = kind.capability_matrix_entry();
+            let expected: Vec<String> = kind
+                .supported_operations()
+                .into_iter()
+                .map(ToString::to_string)
+                .collect();
+            assert_eq!(
+                entry.operations, expected,
+                "{kind:?}: matrix operations must match supported_operations() in order"
+            );
+            for op in &entry.operations {
+                assert!(
+                    kind.supports_operation(op),
+                    "{kind:?}: advertised op '{op}' must be accepted by supports_operation()"
+                );
+            }
+            let admits_object_rpc = entry
+                .operations
+                .iter()
+                .any(|o| o == "get_object" || o == "put_object");
+            assert_eq!(
+                admits_object_rpc,
+                kind.capabilities().is_object_store,
+                "{kind:?}: object RPCs are admitted IFF the backend is an object store"
+            );
+        }
     }
 }

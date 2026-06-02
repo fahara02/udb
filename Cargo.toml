@@ -8,7 +8,7 @@ resolver = "2"
 
 [package]
 name = "udb"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2024"
 rust-version = "1.85"
 description = "Universal Data Broker — a Rust gRPC broker over multiple databases (Postgres, MySQL, SQLite, MongoDB, ClickHouse, Cassandra, MSSQL, Redis, Qdrant, S3, Neo4j, …) with per-tenant RLS, 2PC, sagas, and CDC."
@@ -47,7 +47,12 @@ path = "src/main.rs"
 # code/deps are compiled out, and any gRPC-contract RPC it owns (e.g. VectorSearch
 # for qdrant, the object RPCs for s3) stays present but returns FailedPrecondition.
 # Postgres is the always-on core (sqlx is never gated).
-default = ["postgres", "mysql", "sqlite", "qdrant", "s3", "mongodb", "neo4j", "clickhouse", "redis", "elasticsearch", "memcached", "mssql", "weaviate", "pinecone", "cassandra", "azureblob", "gcs", "kafka", "otel", "runtime-logging", "http-client"]
+default = ["postgres", "mysql", "sqlite", "qdrant", "s3", "mongodb", "neo4j", "clickhouse", "redis", "elasticsearch", "memcached", "mssql", "weaviate", "pinecone", "cassandra", "azureblob", "gcs", "kafka", "otel", "runtime-logging", "http-client", "simd-codecs", "simd-checksum"]
+# D.2: exposes `udb::bench_internals` — `#[doc(hidden)]` pub wrappers over hot
+# `pub(crate)` functions so Criterion micro-benches (`benches/hotpath_bench.rs`)
+# can measure them without widening the public API. NOT a stable API; off by
+# default, enabled only for `cargo bench --features bench-internals`.
+bench-internals = []
 postgres = []
 # MySQL and SQLite are optional SQL backends. Each pulls its sqlx driver and is
 # enabled by `default`; slim postgres-only builds skip both.
@@ -100,6 +105,21 @@ otel = ["dep:opentelemetry", "dep:opentelemetry-otlp", "dep:tracing-opentelemetr
 runtime-logging = ["dep:tracing-subscriber"]
 # Shared HTTP client used by REST-backed integrations.
 http-client = ["dep:reqwest"]
+# ── OFF-by-default optional integrations (not in `default`). ──────────────────
+# OpenID Connect discovery / token verification for the auth plane.
+oidc = ["dep:openidconnect", "openidconnect/reqwest-blocking", "openidconnect/rustls-tls"]
+# WebAuthn / FIDO2 second-factor registration + assertion.
+webauthn = [
+    "dep:webauthn-rs",
+    "dep:openssl-sys",
+    "webauthn-rs/danger-allow-state-serialisation",
+]
+# SIMD-accelerated base64 codec for hot wire-encode paths.
+simd-codecs = ["dep:base64-simd"]
+# SIMD JSON parser for high-throughput JSON decode.
+simd-json = ["dep:simd-json"]
+# SIMD-accelerated CRC32 checksum (e.g. CDC / object integrity).
+simd-checksum = ["dep:crc32fast"]
 
 [dependencies]
 async-stream = "0.3"
@@ -178,6 +198,27 @@ jsonwebtoken = "9"
 dotenvy = "0.15"
 arc-swap = "1.9.1"
 urlencoding = "2"
+# ── OFF-by-default optional integrations. Each is pulled in ONLY by its named
+# feature (see [features] above); none are in `default`. ──────────────────────
+# OpenID Connect client (discovery + ID-token verification). Gated by `oidc`.
+# TODO(parent): verify version — 4.x is the current major on crates.io; if the
+# resolver objects, pin to a known-good 3.x ("3").
+openidconnect = { version = "4", default-features = false, optional = true }
+# WebAuthn / FIDO2 server-side ceremony. Gated by `webauthn`.
+# TODO(parent): verify version — 0.5 is the latest 0.x major on crates.io.
+webauthn-rs = { version = "0.5", optional = true }
+# webauthn-rs 0.5 uses openssl internally. Vendoring keeps the feature build
+# portable on Windows/MSVC, matching the repo's general "no system OpenSSL"
+# stance for optional integrations.
+openssl-sys = { version = "0.9", features = ["vendored"], optional = true }
+# SIMD base64 codec. Gated by `simd-codecs`.
+# TODO(parent): verify version — 0.8 is the latest on crates.io.
+base64-simd = { version = "0.8", optional = true }
+# SIMD JSON parser. Gated by `simd-json`.
+# TODO(parent): verify version — confirm latest 0.x major on crates.io.
+simd-json = { version = "0.14", optional = true }
+# SIMD-accelerated CRC32. Gated by `simd-checksum`.
+crc32fast = { version = "1", optional = true }
 
 [build-dependencies]
 protoc-bin-vendored = "3"
@@ -185,6 +226,8 @@ tonic-build = "0.12"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
+# D.2 heap-allocation profiling for the hot paths (run the dhat_hotpath example).
+dhat = "0.3"
 redis = { version = "0.27", features = ["tokio-comp"] }
 rdkafka = { version = "0.36", default-features = false, features = ["cmake-build", "tokio", "curl-static"] }
 aws-config = "1"
@@ -202,3 +245,23 @@ serde_json = "1"
 [[bench]]
 name = "core_bench"
 harness = false
+
+# D.2 hot-path micro-benchmarks. Needs `bench-internals` to reach the
+# `pub(crate)` conversion/parse helpers: `cargo bench --features bench-internals --bench hotpath_bench`.
+[[bench]]
+name = "hotpath_bench"
+harness = false
+required-features = ["bench-internals"]
+
+# D.2 END-TO-END perf against the live docker backends (relational + object):
+# `UDB_BENCH_LIVE=1 cargo bench --features bench-internals --bench live_backends_bench`.
+[[bench]]
+name = "live_backends_bench"
+harness = false
+required-features = ["bench-internals"]
+
+# D.2 allocation profile for the same hot paths (dhat heap profiler):
+# `cargo run --release --features bench-internals --example dhat_hotpath`.
+[[example]]
+name = "dhat_hotpath"
+required-features = ["bench-internals"]

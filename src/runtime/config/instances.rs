@@ -409,6 +409,22 @@ impl BackendInstanceConfig {
                 ("query_timeout_secs", "UDB_CH_QUERY_TIMEOUT_SECS"),
             ],
         );
+        push_legacy_instance(
+            &mut instances,
+            "mssql",
+            "primary",
+            "UDB_MSSQL_DSN",
+            BackendInstanceRole::ReadWrite,
+            &[],
+        );
+        push_legacy_instance(
+            &mut instances,
+            "cassandra",
+            "primary",
+            "UDB_CASSANDRA_DSN",
+            BackendInstanceRole::ReadWrite,
+            &[],
+        );
         Self { instances }
     }
 
@@ -541,6 +557,8 @@ fn backend_env_segment(backend: &str) -> String {
         "mongodb" | "mongo" => "NOSQL".to_string(),
         "neo4j" => "GRAPH".to_string(),
         "clickhouse" => "COLUMN".to_string(),
+        "mssql" | "sqlserver" => "MSSQL".to_string(),
+        "cassandra" | "scylla" => "CASSANDRA".to_string(),
         other => env_segment(other),
     }
 }
@@ -650,5 +668,32 @@ impl MultiPgConfig {
         let active = self.active();
         let names: Vec<&str> = active.iter().map(|i| i.name.as_str()).collect();
         format!("{} ({} active)", names.join(", "), active.len())
+    }
+}
+
+#[cfg(test)]
+mod b4_target_routing_tests {
+    use super::*;
+
+    #[test]
+    fn mssql_and_cassandra_instances_map_to_canonical_kinds() {
+        for (backend, kind) in [
+            ("mssql", crate::backend::BackendKind::Mssql),
+            ("sqlserver", crate::backend::BackendKind::Mssql),
+            ("cassandra", crate::backend::BackendKind::Cassandra),
+            ("scylla", crate::backend::BackendKind::Cassandra),
+        ] {
+            let inst = BackendInstance {
+                backend: backend.to_string(),
+                ..BackendInstance::default()
+            };
+            assert_eq!(inst.canonical_backend(), Some(kind), "backend {backend}");
+        }
+    }
+
+    #[test]
+    fn descriptor_env_keys_for_target_backends_are_conventional() {
+        assert_eq!(backend_env_segment("mssql"), "MSSQL");
+        assert_eq!(backend_env_segment("cassandra"), "CASSANDRA");
     }
 }

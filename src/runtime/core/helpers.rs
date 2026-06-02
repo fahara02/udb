@@ -754,6 +754,28 @@ pub(crate) fn clickhouse_executor_from_instance(
     }))
 }
 
+#[cfg(feature = "mssql")]
+pub(crate) fn mssql_executor_from_instance(
+    instance: &BackendInstance,
+) -> Option<crate::runtime::executors::mssql::MssqlClient> {
+    instance
+        .resolve_dsn()
+        .map(crate::runtime::executors::mssql::MssqlClient::new)
+}
+
+#[cfg(feature = "cassandra")]
+pub(crate) async fn cassandra_executor_from_instance(
+    instance: &BackendInstance,
+) -> Result<Option<crate::runtime::executors::cassandra::CassandraClient>, String> {
+    let Some(dsn) = instance.resolve_dsn() else {
+        return Ok(None);
+    };
+    crate::runtime::executors::cassandra::CassandraClient::connect(&dsn)
+        .await
+        .map(Some)
+        .map_err(|err| err.to_string())
+}
+
 pub(crate) fn effective_app_name(config: &UdbConfig) -> String {
     if config.app_name.trim().is_empty() {
         "udb".to_string()
@@ -817,4 +839,30 @@ pub(crate) fn effective_backend_instance_config(config: &UdbConfig) -> BackendIn
         });
     }
     BackendInstanceConfig { instances }
+}
+
+#[cfg(all(test, feature = "mssql"))]
+mod b4_mssql_helper_tests {
+    use super::*;
+
+    #[test]
+    fn mssql_helper_builds_lazy_client_from_inline_dsn() {
+        let configured = BackendInstance {
+            backend: "mssql".to_string(),
+            name: "primary".to_string(),
+            dsn: Some("Server=localhost,1433;Database=udb;User=sa;Password=x;".to_string()),
+            dsn_env: None,
+            ..BackendInstance::default()
+        };
+        assert!(mssql_executor_from_instance(&configured).is_some());
+
+        let unconfigured = BackendInstance {
+            backend: "mssql".to_string(),
+            name: "secondary".to_string(),
+            dsn: None,
+            dsn_env: None,
+            ..BackendInstance::default()
+        };
+        assert!(mssql_executor_from_instance(&unconfigured).is_none());
+    }
 }

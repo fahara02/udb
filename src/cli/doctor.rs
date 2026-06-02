@@ -157,6 +157,33 @@ pub(crate) async fn run_doctor(with_probes: bool) -> DoctorReport {
         );
     }
 
+    // ── B.13/B.14 canonical-feasibility honesty warnings ──────────────────────
+    // Prerequisite wording is read from the live feasibility profiles so doctor
+    // never drifts from `udb::backend::capability_matrix()`. Join with "; ".
+    let capability_matrix = udb::backend::capability_matrix();
+    let prereqs_for = |backend: &str| -> Option<String> {
+        capability_matrix
+            .iter()
+            .find(|e| e.backend == backend)
+            .and_then(|e| e.canonical_feasibility.as_ref())
+            .filter(|p| !p.durability_prerequisites.is_empty())
+            .map(|p| p.durability_prerequisites.join("; "))
+    };
+    if init.s3_configured
+        && let Some(prereqs) = prereqs_for("s3")
+    {
+        warnings.push(format!(
+            "B.13: object stores (S3/MinIO) are canonical CANDIDATES only and cannot host system state until these prerequisites hold: {prereqs}"
+        ));
+    }
+    if init.redis_configured
+        && let Some(prereqs) = prereqs_for("redis")
+    {
+        warnings.push(format!(
+            "B.14: Redis canonical promotion requires the durable AOF profile ({prereqs}); without it Redis stays a projection cache"
+        ));
+    }
+
     // Optional live backend probes (--probe flag or when all backends are configured).
     if with_probes {
         #[cfg(feature = "redis")]
@@ -207,7 +234,7 @@ pub(crate) async fn run_doctor(with_probes: bool) -> DoctorReport {
         system_catalog,
         postgres_privileges,
         backend_probes,
-        backend_capabilities: udb::backend::capability_matrix(),
+        backend_capabilities: capability_matrix,
         errors,
         warnings,
     }
@@ -399,6 +426,63 @@ pub(crate) fn print_doctor_human(report: &DoctorReport) {
                 entry.max_payload_bytes,
                 entry.supports_xa,
                 entry.supports_two_phase_commit
+            );
+        }
+    }
+    let canonical_feasibility: Vec<&BackendCapabilityMatrixEntry> = report
+        .backend_capabilities
+        .iter()
+        .filter(|e| {
+            e.canonical_feasibility
+                .as_ref()
+                .is_some_and(|p| p.family == "object" || p.family == "cache")
+        })
+        .collect();
+    if !canonical_feasibility.is_empty() {
+        println!();
+        println!("Canonical Feasibility (object & cache promotion roadmap):");
+        for entry in &canonical_feasibility {
+            let profile = entry
+                .canonical_feasibility
+                .as_ref()
+                .expect("filtered to entries with a feasibility profile");
+            println!(
+                "  {} [{}] candidate={} role={:?} implemented={}",
+                entry.backend,
+                profile.family,
+                profile.candidate.as_str(),
+                entry.role,
+                profile.implemented
+            );
+            println!("     atomic-claim     : {}", profile.atomic_claim_strategy);
+            println!(
+                "     ordered-progress : {}",
+                profile.ordered_progress_strategy
+            );
+            println!(
+                "     tenant-isolation : {}",
+                profile.tenant_isolation_strategy
+            );
+            println!("     read-fence       : {}", profile.read_fence_strategy);
+            println!("     prerequisites:");
+            if profile.durability_prerequisites.is_empty() {
+                println!("        (none)");
+            } else {
+                for prereq in profile.durability_prerequisites {
+                    println!("        - {prereq}");
+                }
+            }
+            println!("     blocking gaps:");
+            if profile.blocking_gaps.is_empty() {
+                println!("        (none)");
+            } else {
+                for gap in profile.blocking_gaps {
+                    println!("        - {gap}");
+                }
+            }
+            println!(
+                "     live gate        : {}",
+                profile.live_conformance_env.unwrap_or("(none)")
             );
         }
     }

@@ -715,35 +715,23 @@ impl DataBrokerRuntime {
         mut stream: tonic::Streaming<Chunk>,
         metadata_context: RequestContext,
     ) -> Result<MutationResponse, tonic::Status> {
-        #[cfg(not(feature = "s3"))]
+        #[cfg(not(any(feature = "s3", feature = "gcs", feature = "azureblob")))]
         {
             let _ = (manifest, &mut stream, metadata_context);
             return Err(tonic::Status::failed_precondition(
-                "s3/object-store feature is not enabled",
+                "no object-store feature (s3/gcs/azureblob) is enabled",
             ));
         }
-        #[cfg(feature = "s3")]
+        #[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
         {
-            let mut chunks = Vec::new();
-            let mut first: Option<Chunk> = None;
-            let mut total = 0usize;
-            let mut final_chunk_seen = false;
-            while let Some(chunk) = stream.next().await {
-                let chunk = chunk?;
-                if first.is_none() {
-                    first = Some(chunk.clone());
-                }
-                total += chunk.data.len();
-                if total > INLINE_OBJECT_LIMIT_BYTES {
-                    return Err(tonic::Status::resource_exhausted(
-                        "Use GeneratePresignedUrl for files > 1MB",
-                    ));
-                }
-                final_chunk_seen |= chunk.final_chunk;
-                chunks.extend_from_slice(&chunk.data);
-            }
-            let first =
-                first.ok_or_else(|| tonic::Status::invalid_argument("empty object stream"))?;
+            // A.6: pull only the FIRST chunk (it carries bucket/key/content-type/
+            // context + the first body slice); the remainder of the gRPC stream is
+            // forwarded straight into the backing store without buffering the whole
+            // object. Size is bounded cumulatively by `UDB_MAX_OBJECT_BYTES`.
+            let first = match stream.next().await {
+                Some(chunk) => chunk?,
+                None => return Err(tonic::Status::invalid_argument("empty object stream")),
+            };
             let context = merge_context(first.context.as_ref(), metadata_context);
             let plan = build_object_stream_plan(
                 manifest,
@@ -753,35 +741,130 @@ impl DataBrokerRuntime {
                     object_key: first.object_key.clone(),
                     method: "PUT".to_string(),
                     chunk_count: 1,
-                    final_chunk_seen,
+                    final_chunk_seen: first.final_chunk,
                     content_type: first.content_type.clone(),
                 },
             );
             reject_plan(&plan.errors)?;
             ensure_typed_object_backend(&plan.backend)?;
-            let target_instance = if context.target_instance.trim().is_empty() {
-                self.choose_instance_name_for_project("minio", true, &context.project_id)
-                    .or_else(|| {
-                        self.choose_instance_name_for_project("s3", true, &context.project_id)
-                    })
-            } else {
-                Some(context.target_instance.as_str())
-            };
-            let s3 = self.s3_for_instance_for_project(target_instance, &context.project_id)?;
-            s3.put_object()
-                .bucket(&first.bucket)
-                .key(&first.object_key)
-                .set_content_type(if first.content_type.is_empty() {
-                    None
-                } else {
-                    Some(first.content_type)
-                })
-                .body(ByteStream::from(chunks))
-                .send()
-                .await
-                .map_err(|err| {
-                    tonic::Status::unavailable(format!("S3 put_object failed: {err}"))
-                })?;
+            let backend = plan.backend.trim().to_ascii_lowercase();
+            let bucket = first.bucket.clone();
+            let object_key = first.object_key.clone();
+            let request_json =
+                object_request_json("put", &bucket, &object_key, &first.content_type);
+            let max_bytes = crate::runtime::config::max_object_bytes();
+            let first_data = first.data;
+            let project = context.project_id.clone();
+
+            match backend.as_str() {
+                "" | "s3" | "minio" => {
+                    #[cfg(feature = "s3")]
+                    {
+                        let target_instance = if context.target_instance.trim().is_empty() {
+                            self.choose_instance_name_for_project("minio", true, &project)
+                                .or_else(|| {
+                                    self.choose_instance_name_for_project("s3", true, &project)
+                                })
+                        } else {
+                            Some(context.target_instance.as_str())
+                        };
+                        let client = self
+                            .s3_for_instance_for_project(target_instance, &project)?
+                            .clone();
+                        let executor = crate::runtime::executors::s3::S3Executor(client);
+                        stream_put_object(
+                            &executor,
+                            &request_json,
+                            first_data,
+                            stream,
+                            max_bytes,
+                            &backend,
+                            &bucket,
+                            &object_key,
+                        )
+                        .await?;
+                    }
+                    #[cfg(not(feature = "s3"))]
+                    return Err(tonic::Status::failed_precondition(
+                        "s3/minio feature is not enabled",
+                    ));
+                }
+                "gcs" => {
+                    #[cfg(feature = "gcs")]
+                    {
+                        let instance = if context.target_instance.trim().is_empty() {
+                            "primary"
+                        } else {
+                            context.target_instance.as_str()
+                        };
+                        let client = self
+                            .gcs_for_instance(instance)
+                            .ok_or_else(|| {
+                                tonic::Status::failed_precondition(format!(
+                                    "gcs instance '{instance}' is not configured"
+                                ))
+                            })?
+                            .clone();
+                        let executor = crate::runtime::executors::gcs::GcsExecutor::new(client);
+                        stream_put_object(
+                            &executor,
+                            &request_json,
+                            first_data,
+                            stream,
+                            max_bytes,
+                            &backend,
+                            &bucket,
+                            &object_key,
+                        )
+                        .await?;
+                    }
+                    #[cfg(not(feature = "gcs"))]
+                    return Err(tonic::Status::failed_precondition(
+                        "gcs feature is not enabled",
+                    ));
+                }
+                "azureblob" => {
+                    #[cfg(feature = "azureblob")]
+                    {
+                        let instance = if context.target_instance.trim().is_empty() {
+                            "primary"
+                        } else {
+                            context.target_instance.as_str()
+                        };
+                        let client = self
+                            .azureblob_for_instance(instance)
+                            .ok_or_else(|| {
+                                tonic::Status::failed_precondition(format!(
+                                    "azureblob instance '{instance}' is not configured"
+                                ))
+                            })?
+                            .clone();
+                        let executor =
+                            crate::runtime::executors::azureblob::AzureBlobExecutor::new(client);
+                        stream_put_object(
+                            &executor,
+                            &request_json,
+                            first_data,
+                            stream,
+                            max_bytes,
+                            &backend,
+                            &bucket,
+                            &object_key,
+                        )
+                        .await?;
+                    }
+                    #[cfg(not(feature = "azureblob"))]
+                    return Err(tonic::Status::failed_precondition(
+                        "azureblob feature is not enabled",
+                    ));
+                }
+                other => {
+                    return Err(tonic::Status::failed_precondition(format!(
+                        "unsupported object backend '{other}'"
+                    )));
+                }
+            }
+
             Ok(MutationResponse {
                 mutation_id: Uuid::new_v4().to_string(),
                 resource_uri: plan.resource_uri,
@@ -802,14 +885,14 @@ impl DataBrokerRuntime {
         >,
         tonic::Status,
     > {
-        #[cfg(not(feature = "s3"))]
+        #[cfg(not(any(feature = "s3", feature = "gcs", feature = "azureblob")))]
         {
             let _ = (manifest, request, metadata_context);
             return Err(tonic::Status::failed_precondition(
-                "s3/object-store feature is not enabled",
+                "no object-store feature (s3/gcs/azureblob) is enabled",
             ));
         }
-        #[cfg(feature = "s3")]
+        #[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
         {
             let context = merge_context(request.context.as_ref(), metadata_context);
             let plan = build_object_stream_plan(
@@ -826,69 +909,99 @@ impl DataBrokerRuntime {
             );
             reject_plan(&plan.errors)?;
             ensure_typed_object_backend(&plan.backend)?;
-            let target_instance = if context.target_instance.trim().is_empty() {
-                self.choose_instance_name_for_project("minio", false, &context.project_id)
-                    .or_else(|| {
-                        self.choose_instance_name_for_project("s3", false, &context.project_id)
-                    })
-            } else {
-                Some(context.target_instance.as_str())
-            };
-            let s3 = self.s3_for_instance_for_project(target_instance, &context.project_id)?;
+            let backend = plan.backend.trim().to_ascii_lowercase();
             let bucket = request.bucket.clone();
             let object_key = request.object_key.clone();
-            let output = s3
-                .get_object()
-                .bucket(&bucket)
-                .key(&object_key)
-                .send()
-                .await
-                .map_err(|err| {
-                    tonic::Status::unavailable(format!("S3 get_object failed: {err}"))
-                })?;
-            let stream = async_stream::try_stream! {
-                use tokio::io::AsyncReadExt;
+            let request_json = object_request_json("get", &bucket, &object_key, "");
+            let project = context.project_id.clone();
 
-                let mut reader = output.body.into_async_read();
-                let mut buf = vec![0u8; GET_OBJECT_CHUNK_BYTES];
-                let mut pending: Option<Vec<u8>> = None;
-                loop {
-                    let read = reader
-                        .read(&mut buf)
-                        .await
-                        .map_err(|err| tonic::Status::unavailable(format!("S3 body read failed: {err}")))?;
-                    if read == 0 {
-                        if let Some(data) = pending.take() {
-                            yield Chunk {
-                                bucket: bucket.clone(),
-                                object_key: object_key.clone(),
-                                data,
-                                final_chunk: true,
-                                ..Chunk::default()
-                            };
-                        }
-                        break;
-                    }
-                    let current = buf[..read].to_vec();
-                    if let Some(data) = pending.replace(current) {
-                        yield Chunk {
-                            bucket: bucket.clone(),
-                            object_key: object_key.clone(),
-                            data,
-                            final_chunk: false,
-                            ..Chunk::default()
+            // A.6: hand back the executor's streaming download wrapped into gRPC
+            // `Chunk`s — the body is never fully buffered in UDB.
+            let chunk_stream = match backend.as_str() {
+                "" | "s3" | "minio" => {
+                    #[cfg(feature = "s3")]
+                    {
+                        use crate::runtime::executors::ObjectExecutor as _;
+                        let target_instance = if context.target_instance.trim().is_empty() {
+                            self.choose_instance_name_for_project("minio", false, &project)
+                                .or_else(|| {
+                                    self.choose_instance_name_for_project("s3", false, &project)
+                                })
+                        } else {
+                            Some(context.target_instance.as_str())
                         };
+                        let client = self
+                            .s3_for_instance_for_project(target_instance, &project)?
+                            .clone();
+                        let executor = crate::runtime::executors::s3::S3Executor(client);
+                        let src = executor.get_object_stream(&request_json).await?;
+                        byte_stream_to_chunk_stream(src, bucket, object_key, backend.clone())
                     }
+                    #[cfg(not(feature = "s3"))]
+                    return Err(tonic::Status::failed_precondition(
+                        "s3/minio feature is not enabled",
+                    ));
+                }
+                "gcs" => {
+                    #[cfg(feature = "gcs")]
+                    {
+                        use crate::runtime::executors::ObjectExecutor as _;
+                        let instance = if context.target_instance.trim().is_empty() {
+                            "primary"
+                        } else {
+                            context.target_instance.as_str()
+                        };
+                        let client = self
+                            .gcs_for_instance(instance)
+                            .ok_or_else(|| {
+                                tonic::Status::failed_precondition(format!(
+                                    "gcs instance '{instance}' is not configured"
+                                ))
+                            })?
+                            .clone();
+                        let executor = crate::runtime::executors::gcs::GcsExecutor::new(client);
+                        let src = executor.get_object_stream(&request_json).await?;
+                        byte_stream_to_chunk_stream(src, bucket, object_key, backend.clone())
+                    }
+                    #[cfg(not(feature = "gcs"))]
+                    return Err(tonic::Status::failed_precondition(
+                        "gcs feature is not enabled",
+                    ));
+                }
+                "azureblob" => {
+                    #[cfg(feature = "azureblob")]
+                    {
+                        use crate::runtime::executors::ObjectExecutor as _;
+                        let instance = if context.target_instance.trim().is_empty() {
+                            "primary"
+                        } else {
+                            context.target_instance.as_str()
+                        };
+                        let client = self
+                            .azureblob_for_instance(instance)
+                            .ok_or_else(|| {
+                                tonic::Status::failed_precondition(format!(
+                                    "azureblob instance '{instance}' is not configured"
+                                ))
+                            })?
+                            .clone();
+                        let executor =
+                            crate::runtime::executors::azureblob::AzureBlobExecutor::new(client);
+                        let src = executor.get_object_stream(&request_json).await?;
+                        byte_stream_to_chunk_stream(src, bucket, object_key, backend.clone())
+                    }
+                    #[cfg(not(feature = "azureblob"))]
+                    return Err(tonic::Status::failed_precondition(
+                        "azureblob feature is not enabled",
+                    ));
+                }
+                other => {
+                    return Err(tonic::Status::failed_precondition(format!(
+                        "unsupported object backend '{other}'"
+                    )));
                 }
             };
-            Ok(Box::pin(stream)
-                as std::pin::Pin<
-                    Box<
-                        dyn tokio_stream::Stream<Item = Result<Chunk, tonic::Status>>
-                            + Send
-                            + 'static,
-                    >,
-                >)
+            Ok(chunk_stream)
         }
     }
 
@@ -1406,6 +1519,23 @@ pub(crate) async fn register_elasticsearch(ctx: &mut RegisterCtx<'_>) {
     runtime
         .elasticsearch_instances
         .insert("primary".to_string(), client.clone());
+    {
+        use crate::runtime::canonical_store::CanonicalStore;
+        use crate::runtime::canonical_store::SystemStores;
+        use crate::runtime::canonical_store::vector_system::VectorSystemCanonicalStore;
+
+        let store = VectorSystemCanonicalStore::new_elasticsearch(client.clone(), "primary");
+        match CanonicalStore::ensure_system_tables(&store).await {
+            Ok(()) => {
+                let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(store);
+                runtime.register_full_canonical_store(store);
+                tracing::info!("Elasticsearch canonical SystemStores registered");
+            }
+            Err(err) => report.warnings.push(format!(
+                "Elasticsearch canonical store not registered: {err}; search executor remains available"
+            )),
+        }
+    }
     runtime.elasticsearch = Some(client);
 }
 
@@ -1469,6 +1599,18 @@ pub(crate) async fn register_memcached(ctx: &mut RegisterCtx<'_>) {
     else {
         return;
     };
+    // D.9: unix-domain sockets don't exist on Windows. Reject a `memcache+unix://`
+    // DSN there with a clear, actionable message instead of an opaque connect
+    // failure / undefined path. Memcached is an optional cache, so this fail-soft
+    // (broker keeps running without the cache) — but the reason is explicit.
+    if cfg!(windows) && is_unix_socket_memcache_dsn(&dsn) {
+        report.warnings.push(format!(
+            "UDB_MEMCACHED_DSN {} uses a unix-domain socket, which is unsupported on \
+             Windows; use a TCP DSN (memcache://host:port) instead — cache disabled",
+            redact_dsn(&dsn)
+        ));
+        return;
+    }
     // `MemcachedClient::connect` is sync — spawn_blocking so we
     // don't tie up the async runtime.
     let dsn_owned = dsn.clone();
@@ -1504,6 +1646,51 @@ fn redact_dsn(dsn: &str) -> String {
     dsn.to_string()
 }
 
+/// D.9: whether a memcached DSN targets a unix-domain socket. Pulled out so the
+/// Windows-rejection guard is unit-testable independent of the host platform.
+#[cfg(feature = "memcached")]
+fn is_unix_socket_memcache_dsn(dsn: &str) -> bool {
+    let dsn = dsn.trim_start();
+    dsn.starts_with("memcache+unix://") || dsn.starts_with("unix://")
+}
+
+#[cfg(all(test, feature = "memcached"))]
+mod memcached_dsn_tests {
+    use super::{is_unix_socket_memcache_dsn, redact_dsn};
+
+    #[test]
+    fn detects_unix_socket_dsn_forms() {
+        assert!(is_unix_socket_memcache_dsn(
+            "memcache+unix:///var/run/memcached.sock"
+        ));
+        assert!(is_unix_socket_memcache_dsn("  unix:///tmp/x.sock"));
+        assert!(!is_unix_socket_memcache_dsn("memcache://127.0.0.1:11211"));
+        assert!(!is_unix_socket_memcache_dsn("memcache+tls://host:11211"));
+        assert!(!is_unix_socket_memcache_dsn("memcache+udp://host:11211"));
+    }
+
+    #[test]
+    fn redact_dsn_strips_userinfo_across_uri_forms() {
+        assert_eq!(
+            redact_dsn("memcache://user:pass@host:11211"),
+            "memcache://***@host:11211"
+        );
+        assert_eq!(
+            redact_dsn("memcache+tls://u:p@h:11211?x=1"),
+            "memcache+tls://***@h:11211?x=1"
+        );
+        // No userinfo → unchanged (incl. the unix-socket path form).
+        assert_eq!(
+            redact_dsn("memcache://127.0.0.1:11211"),
+            "memcache://127.0.0.1:11211"
+        );
+        assert_eq!(
+            redact_dsn("memcache+unix:///var/run/m.sock"),
+            "memcache+unix:///var/run/m.sock"
+        );
+    }
+}
+
 /// C9: register the SQL Server client. Reads `UDB_MSSQL_DSN`
 /// (canonical token pinned by `BackendKind::Mssql::dsn_env_var()`).
 /// Tiberius accepts the ADO connection string format directly:
@@ -1515,23 +1702,58 @@ fn redact_dsn(dsn: &str) -> String {
 /// connection and caches it.
 #[cfg(feature = "mssql")]
 pub(crate) async fn register_mssql(ctx: &mut RegisterCtx<'_>) {
-    use crate::runtime::executors::mssql::MssqlClient;
     let RegisterCtx {
-        runtime, report, ..
+        instance_config,
+        runtime,
+        report,
+        ..
     } = ctx;
-    let Some(ado) = std::env::var("UDB_MSSQL_DSN")
-        .ok()
-        .filter(|s| !s.trim().is_empty())
-    else {
-        return;
-    };
-    let client = MssqlClient::new(ado);
-    tracing::info!("SQL Server client constructed (connection deferred to first use)");
-    report.mssql_configured = true;
-    runtime
-        .mssql_instances
-        .insert("primary".to_string(), client.clone());
-    runtime.mssql = Some(client);
+    for instance in instance_config
+        .active()
+        .filter(|instance| instance_matches_backend(instance, crate::backend::BackendKind::Mssql))
+    {
+        if runtime.mssql_instances.contains_key(&instance.name) {
+            continue;
+        }
+        if let Some(client) = mssql_executor_from_instance(instance) {
+            tracing::info!(
+                instance = %instance.name,
+                "SQL Server client constructed (connection deferred to first use)"
+            );
+            report.mssql_configured = true;
+            if runtime.mssql.is_none() {
+                runtime.mssql = Some(client.clone());
+            }
+            // B.8: register the SQL Server canonical store for the primary
+            // instance. Fail-closed — only register if `ensure_system_tables`
+            // succeeds (a reachable, permissioned SQL Server), mirroring the
+            // PG/MySQL canonical registration but gated as the doc requires.
+            if instance.name == "primary" {
+                use crate::runtime::canonical_store::CanonicalStore;
+                use crate::runtime::canonical_store::SystemStores;
+                use crate::runtime::canonical_store::mssql::MssqlCanonicalStore;
+                use crate::runtime::cdc::CdcConfig;
+                let outbox_relation = CdcConfig::current().outbox_relation_mssql();
+                let store = MssqlCanonicalStore::new(client.clone(), "primary", outbox_relation);
+                match CanonicalStore::ensure_system_tables(&store).await {
+                    Ok(()) => {
+                        let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(store);
+                        runtime.register_full_canonical_store(store);
+                        tracing::info!("SQL Server canonical store registered (B.8)");
+                    }
+                    Err(err) => {
+                        report.warnings.push(format!(
+                            "SQL Server canonical store not registered \
+                             (ensure_system_tables failed): {err}"
+                        ));
+                    }
+                }
+            }
+            runtime
+                .mssql_instances
+                .insert(instance.name.clone(), client);
+        }
+    }
 }
 
 /// C9: register Weaviate. DSN form:
@@ -1561,6 +1783,23 @@ pub(crate) async fn register_weaviate(ctx: &mut RegisterCtx<'_>) {
     runtime
         .weaviate_instances
         .insert("primary".to_string(), client.clone());
+    {
+        use crate::runtime::canonical_store::CanonicalStore;
+        use crate::runtime::canonical_store::SystemStores;
+        use crate::runtime::canonical_store::vector_system::VectorSystemCanonicalStore;
+
+        let store = VectorSystemCanonicalStore::new_weaviate(client.clone(), "primary");
+        match CanonicalStore::ensure_system_tables(&store).await {
+            Ok(()) => {
+                let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(store);
+                runtime.register_full_canonical_store(store);
+                tracing::info!("Weaviate canonical SystemStores registered");
+            }
+            Err(err) => report.warnings.push(format!(
+                "Weaviate canonical store not registered: {err}; vector executor remains available"
+            )),
+        }
+    }
     runtime.weaviate = Some(client);
 }
 
@@ -1592,6 +1831,23 @@ pub(crate) async fn register_pinecone(ctx: &mut RegisterCtx<'_>) {
     runtime
         .pinecone_instances
         .insert("primary".to_string(), client.clone());
+    {
+        use crate::runtime::canonical_store::CanonicalStore;
+        use crate::runtime::canonical_store::SystemStores;
+        use crate::runtime::canonical_store::vector_system::VectorSystemCanonicalStore;
+
+        let store = VectorSystemCanonicalStore::new_pinecone(client.clone(), "primary");
+        match CanonicalStore::ensure_system_tables(&store).await {
+            Ok(()) => {
+                let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(store);
+                runtime.register_full_canonical_store(store);
+                tracing::info!("Pinecone canonical SystemStores registered");
+            }
+            Err(err) => report.warnings.push(format!(
+                "Pinecone canonical store not registered: {err}; vector executor remains available"
+            )),
+        }
+    }
     runtime.pinecone = Some(client);
 }
 
@@ -1601,28 +1857,61 @@ pub(crate) async fn register_pinecone(ctx: &mut RegisterCtx<'_>) {
 ///   `user:pass@host:9042`            → password authenticator
 #[cfg(feature = "cassandra")]
 pub(crate) async fn register_cassandra(ctx: &mut RegisterCtx<'_>) {
-    use crate::runtime::executors::cassandra::CassandraClient;
     let RegisterCtx {
-        runtime, report, ..
+        instance_config,
+        runtime,
+        report,
+        ..
     } = ctx;
-    let Some(dsn) = std::env::var("UDB_CASSANDRA_DSN")
-        .ok()
-        .filter(|s| !s.trim().is_empty())
-    else {
-        return;
-    };
-    match CassandraClient::connect(&dsn).await {
-        Ok(client) => {
-            report.cassandra_configured = true;
-            runtime
-                .cassandra_instances
-                .insert("primary".to_string(), client.clone());
-            runtime.cassandra = Some(client);
+    for instance in instance_config.active().filter(|instance| {
+        instance_matches_backend(instance, crate::backend::BackendKind::Cassandra)
+    }) {
+        if runtime.cassandra_instances.contains_key(&instance.name) {
+            continue;
         }
-        Err(err) => {
-            report
-                .warnings
-                .push(format!("Cassandra unavailable: {err}"));
+        match cassandra_executor_from_instance(instance).await {
+            Ok(Some(client)) => {
+                report.cassandra_configured = true;
+                if runtime.cassandra.is_none() {
+                    runtime.cassandra = Some(client.clone());
+                }
+                // B.10a: register the Cassandra canonical store for the primary
+                // instance. Fail-closed on ensure_system_tables (keyspace +
+                // tables created via LWT-safe idempotent DDL).
+                if instance.name == "primary" {
+                    use crate::runtime::canonical_store::CanonicalStore;
+                    use crate::runtime::canonical_store::SystemStores;
+                    use crate::runtime::canonical_store::cassandra::CassandraCanonicalStore;
+                    let store = CassandraCanonicalStore::new(
+                        client.clone(),
+                        "primary",
+                        "udb",
+                        "udb_outbox_events",
+                    );
+                    match CanonicalStore::ensure_system_tables(&store).await {
+                        Ok(()) => {
+                            let store: std::sync::Arc<dyn SystemStores> =
+                                std::sync::Arc::new(store);
+                            runtime.register_full_canonical_store(store);
+                            tracing::info!("Cassandra canonical store registered (B.10a)");
+                        }
+                        Err(err) => report.warnings.push(format!(
+                            "Cassandra canonical store not registered \
+                             (ensure_system_tables failed): {err}"
+                        )),
+                    }
+                }
+                runtime
+                    .cassandra_instances
+                    .insert(instance.name.clone(), client);
+            }
+            Ok(None) => {}
+            Err(err) => {
+                report.warnings.push(format!(
+                    "Cassandra instance '{}' unavailable: {err}",
+                    instance.name
+                ));
+            }
         }
     }
 }
@@ -1723,6 +2012,25 @@ pub(crate) async fn register_redis(ctx: &mut RegisterCtx<'_>) {
                     client.clone(),
                     HashMap::new(),
                 );
+                {
+                    use crate::runtime::canonical_store::CanonicalStore;
+                    use crate::runtime::canonical_store::SystemStores;
+                    use crate::runtime::canonical_store::redis::RedisCanonicalStore;
+                    let store = RedisCanonicalStore::new(client.clone(), "default");
+                    match CanonicalStore::ensure_system_tables(&store).await {
+                        Ok(()) => {
+                            let store: std::sync::Arc<dyn SystemStores> =
+                                std::sync::Arc::new(store);
+                            runtime.register_full_canonical_store(store);
+                            tracing::info!(
+                                "Redis canonical store registered with durable AOF profile (B.14)"
+                            );
+                        }
+                        Err(err) => report.warnings.push(format!(
+                            "Redis canonical store not registered: {err}; cache executor remains available"
+                        )),
+                    }
+                }
                 runtime.redis = Some(client);
             }
             Err(err) => report.warnings.push(format!("Redis disabled: {err}")),
@@ -1751,6 +2059,27 @@ pub(crate) async fn register_redis(ctx: &mut RegisterCtx<'_>) {
                     client.clone(),
                     instance_labels(instance),
                 );
+                {
+                    use crate::runtime::canonical_store::CanonicalStore;
+                    use crate::runtime::canonical_store::SystemStores;
+                    use crate::runtime::canonical_store::redis::RedisCanonicalStore;
+                    let store = RedisCanonicalStore::new(client.clone(), instance.name.clone());
+                    match CanonicalStore::ensure_system_tables(&store).await {
+                        Ok(()) => {
+                            let store: std::sync::Arc<dyn SystemStores> =
+                                std::sync::Arc::new(store);
+                            runtime.register_full_canonical_store(store);
+                            tracing::info!(
+                                instance = %instance.name,
+                                "Redis canonical store registered with durable AOF profile (B.14)"
+                            );
+                        }
+                        Err(err) => report.warnings.push(format!(
+                            "Redis instance {} canonical store not registered: {err}; cache executor remains available",
+                            instance.name
+                        )),
+                    }
+                }
                 runtime
                     .redis_instances
                     .insert(instance.name.clone(), client);
@@ -1795,6 +2124,25 @@ pub(crate) async fn register_qdrant(ctx: &mut RegisterCtx<'_>) {
             client.clone(),
             HashMap::new(),
         );
+        {
+            use crate::runtime::canonical_store::CanonicalStore;
+            use crate::runtime::canonical_store::SystemStores;
+            use crate::runtime::canonical_store::qdrant::QdrantCanonicalStore;
+
+            let store = QdrantCanonicalStore::new(client.clone(), "default");
+            match CanonicalStore::ensure_system_tables(&store).await {
+                Ok(()) => {
+                    let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(store);
+                    runtime.register_full_canonical_store(store);
+                    tracing::info!(
+                        "Qdrant canonical SystemStores registered for default instance"
+                    );
+                }
+                Err(err) => report.warnings.push(format!(
+                    "Qdrant default canonical store not registered: {err}; vector executor remains available"
+                )),
+            }
+        }
         runtime.qdrant = Some(client);
     }
 
@@ -1816,6 +2164,27 @@ pub(crate) async fn register_qdrant(ctx: &mut RegisterCtx<'_>) {
                 client.clone(),
                 instance_labels(instance),
             );
+            {
+                use crate::runtime::canonical_store::CanonicalStore;
+                use crate::runtime::canonical_store::SystemStores;
+                use crate::runtime::canonical_store::qdrant::QdrantCanonicalStore;
+
+                let store = QdrantCanonicalStore::new(client.clone(), instance.name.clone());
+                match CanonicalStore::ensure_system_tables(&store).await {
+                    Ok(()) => {
+                        let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(store);
+                        runtime.register_full_canonical_store(store);
+                        tracing::info!(
+                            instance = %instance.name,
+                            "Qdrant canonical SystemStores registered for instance"
+                        );
+                    }
+                    Err(err) => report.warnings.push(format!(
+                        "Qdrant instance {} canonical store not registered: {err}; vector executor remains available",
+                        instance.name
+                    )),
+                }
+            }
             runtime
                 .qdrant_instances
                 .insert(instance.name.clone(), client);
@@ -1923,6 +2292,58 @@ pub(crate) async fn register_mongodb(ctx: &mut RegisterCtx<'_>) {
                     executor.clone(),
                     instance_labels(instance),
                 );
+                // B.9: register the native MongoDB canonical store for the
+                // primary instance. Fail-closed — requires the mongodb-native
+                // build, a replica-set/sharded topology (standalone mongod stays
+                // projection), and a successful ensure_system_tables.
+                #[cfg(feature = "mongodb-native")]
+                if instance.name == "primary" {
+                    use crate::runtime::canonical_store::CanonicalStore;
+                    use crate::runtime::canonical_store::SystemStores;
+                    use crate::runtime::canonical_store::mongodb::MongoDbCanonicalStore;
+                    use mongodb_driver::bson::doc;
+                    // Topology guard via the driver's `hello` (replica set →
+                    // setName, sharded → msg=="isdbgrid"); standalone mongod
+                    // cannot run the session transactions the canonical store
+                    // needs, so it stays projection-only.
+                    let topology_ok = match executor.native_database() {
+                        Some(db) => match db.run_command(doc! { "hello": 1 }).await {
+                            Ok(hello) => {
+                                hello.contains_key("setName")
+                                    || hello
+                                        .get_str("msg")
+                                        .map(|m| m == "isdbgrid")
+                                        .unwrap_or(false)
+                            }
+                            Err(_) => false,
+                        },
+                        None => false,
+                    };
+                    if !topology_ok {
+                        report.warnings.push(
+                            "MongoDB canonical store not registered: native canonical \
+                             storage requires a replica set or sharded cluster"
+                                .to_string(),
+                        );
+                    } else if let Some(store) = MongoDbCanonicalStore::from_executor(
+                        &executor,
+                        "primary",
+                        "udb_outbox_events",
+                    ) {
+                        match CanonicalStore::ensure_system_tables(&store).await {
+                            Ok(()) => {
+                                let store: std::sync::Arc<dyn SystemStores> =
+                                    std::sync::Arc::new(store);
+                                runtime.register_full_canonical_store(store);
+                                tracing::info!("MongoDB native canonical store registered (B.9)");
+                            }
+                            Err(err) => report.warnings.push(format!(
+                                "MongoDB canonical store not registered \
+                                 (ensure_system_tables failed): {err}"
+                            )),
+                        }
+                    }
+                }
                 runtime
                     .mongodb_instances
                     .insert(instance.name.clone(), executor);
@@ -1964,6 +2385,27 @@ pub(crate) async fn register_neo4j(ctx: &mut RegisterCtx<'_>) {
                 executor.clone(),
                 instance_labels(instance),
             );
+            // B.10b: register the Neo4j canonical store for the primary instance.
+            // Fail-closed on ensure_system_tables (constraints/indexes created via
+            // idempotent Cypher).
+            #[cfg(feature = "neo4j")]
+            if instance.name == "primary" {
+                use crate::runtime::canonical_store::CanonicalStore;
+                use crate::runtime::canonical_store::SystemStores;
+                use crate::runtime::canonical_store::neo4j::Neo4jCanonicalStore;
+                let store = Neo4jCanonicalStore::new(executor.clone(), "primary");
+                match CanonicalStore::ensure_system_tables(&store).await {
+                    Ok(()) => {
+                        let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(store);
+                        runtime.register_full_canonical_store(store);
+                        tracing::info!("Neo4j canonical store registered (B.10b)");
+                    }
+                    Err(err) => report.warnings.push(format!(
+                        "Neo4j canonical store not registered \
+                         (ensure_system_tables failed): {err}"
+                    )),
+                }
+            }
             runtime
                 .neo4j_instances
                 .insert(instance.name.clone(), executor);
@@ -1998,6 +2440,28 @@ pub(crate) async fn register_clickhouse(ctx: &mut RegisterCtx<'_>) {
                 executor.clone(),
                 instance_labels(instance),
             );
+            // B.10c: register the ClickHouse canonical store for the primary
+            // instance. Fail-closed on ensure_system_tables (MergeTree +
+            // ReplacingMergeTree tables created via idempotent DDL).
+            #[cfg(feature = "clickhouse")]
+            if instance.name == "primary" {
+                use crate::runtime::canonical_store::CanonicalStore;
+                use crate::runtime::canonical_store::SystemStores;
+                use crate::runtime::canonical_store::clickhouse::ClickHouseCanonicalStore;
+                let db = executor.database().to_string();
+                let store = ClickHouseCanonicalStore::new(executor.clone(), "primary", db);
+                match CanonicalStore::ensure_system_tables(&store).await {
+                    Ok(()) => {
+                        let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(store);
+                        runtime.register_full_canonical_store(store);
+                        tracing::info!("ClickHouse canonical store registered (B.10c)");
+                    }
+                    Err(err) => report.warnings.push(format!(
+                        "ClickHouse canonical store not registered \
+                         (ensure_system_tables failed): {err}"
+                    )),
+                }
+            }
             runtime
                 .clickhouse_instances
                 .insert(instance.name.clone(), executor);
@@ -2039,20 +2503,171 @@ fn ensure_typed_vector_backend(backend: &str) -> Result<(), tonic::Status> {
     }
 }
 
-/// #127: typed object RPCs (`GetObject`/`PutObject`/`GeneratePresignedUrl`) are
-/// served by the S3/MinIO client only. Azure Blob / GCS advertise object-store
-/// support but are reachable through `GenericDispatch` / their executors, not
-/// these typed RPCs. Reject a store whose manifest declares a different backend
-/// instead of silently using S3/MinIO. Empty / `s3` / `minio` are accepted.
-#[cfg(feature = "s3")]
+/// The gRPC `Chunk` stream returned by the typed `GetObject` path.
+#[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
+type ObjectChunkStream = std::pin::Pin<
+    Box<dyn tokio_stream::Stream<Item = Result<Chunk, tonic::Status>> + Send + 'static>,
+>;
+
+/// Build the alias-rich request JSON the object executors parse (each reads its
+/// own bucket/key aliases; including every alias keeps the call backend-agnostic).
+#[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
+fn object_request_json(op: &str, bucket: &str, object_key: &str, content_type: &str) -> String {
+    let mut value = serde_json::json!({
+        "op": op,
+        "bucket": bucket,
+        "container": bucket,
+        "object_key": object_key,
+        "key": object_key,
+        "object": object_key,
+        "blob": object_key,
+    });
+    if !content_type.trim().is_empty() {
+        value["content_type"] = serde_json::Value::String(content_type.to_string());
+    }
+    value.to_string()
+}
+
+/// Adapt a gRPC `Streaming<Chunk>` (first chunk already pulled, to read
+/// bucket/key/context) into the [`ExecutorByteStream`] an object executor's
+/// `put_object_stream` consumes. Enforces `UDB_MAX_OBJECT_BYTES` cumulatively and
+/// records bytes/chunks seen for tracing. `Chunk.data` is `bytes::Bytes` (A.5), so
+/// forwarding is zero-copy.
+#[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
+fn grpc_put_byte_stream(
+    first: bytes::Bytes,
+    rest: tonic::Streaming<Chunk>,
+    max_bytes: u64,
+    bytes_seen: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    chunks_seen: std::sync::Arc<std::sync::atomic::AtomicU64>,
+) -> crate::runtime::executors::ExecutorByteStream {
+    use std::sync::atomic::Ordering;
+    Box::pin(async_stream::try_stream! {
+        let mut total = first.len() as u64;
+        if total > max_bytes {
+            Err(tonic::Status::resource_exhausted(format!(
+                "object exceeds UDB_MAX_OBJECT_BYTES ({max_bytes})"
+            )))?;
+        }
+        bytes_seen.store(total, Ordering::Relaxed);
+        chunks_seen.store(1, Ordering::Relaxed);
+        yield first;
+        let mut rest = rest;
+        while let Some(chunk) = rest.next().await {
+            let chunk = chunk?;
+            total += chunk.data.len() as u64;
+            if total > max_bytes {
+                Err(tonic::Status::resource_exhausted(format!(
+                    "object exceeds UDB_MAX_OBJECT_BYTES ({max_bytes})"
+                )))?;
+            }
+            bytes_seen.store(total, Ordering::Relaxed);
+            chunks_seen.fetch_add(1, Ordering::Relaxed);
+            yield chunk.data;
+        }
+    })
+}
+
+/// Wrap an executor's download [`ExecutorByteStream`] into the gRPC `Chunk` stream
+/// the typed `GetObject` returns: marks the final chunk and logs bytes/chunks
+/// streamed when the stream completes.
+#[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
+fn byte_stream_to_chunk_stream(
+    src: crate::runtime::executors::ExecutorByteStream,
+    bucket: String,
+    object_key: String,
+    backend: String,
+) -> ObjectChunkStream {
+    Box::pin(async_stream::try_stream! {
+        let mut src = src;
+        let mut pending: Option<bytes::Bytes> = None;
+        let mut bytes_total: u64 = 0;
+        let mut chunk_count: u64 = 0;
+        while let Some(item) = src.next().await {
+            let data = item?;
+            bytes_total += data.len() as u64;
+            chunk_count += 1;
+            if let Some(prev) = pending.replace(data) {
+                yield Chunk {
+                    bucket: bucket.clone(),
+                    object_key: object_key.clone(),
+                    data: prev,
+                    final_chunk: false,
+                    ..Chunk::default()
+                };
+            }
+        }
+        let last = pending.unwrap_or_default();
+        tracing::info!(
+            target: "udb::object",
+            backend = %backend, bucket = %bucket, object_key = %object_key,
+            chunks = chunk_count, bytes = bytes_total,
+            "get_object streamed"
+        );
+        yield Chunk {
+            bucket,
+            object_key,
+            data: last,
+            final_chunk: true,
+            ..Chunk::default()
+        };
+    })
+}
+
+/// Generic typed `PutObject` over any object executor: stream the chunks in,
+/// enforce the size ceiling, log what was streamed.
+#[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
+async fn stream_put_object<E: crate::runtime::executors::ObjectExecutor>(
+    executor: &E,
+    request_json: &str,
+    first: bytes::Bytes,
+    rest: tonic::Streaming<Chunk>,
+    max_bytes: u64,
+    backend: &str,
+    bucket: &str,
+    object_key: &str,
+) -> Result<(), tonic::Status> {
+    use std::sync::atomic::Ordering;
+    let bytes_seen = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let chunks_seen = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let byte_stream = grpc_put_byte_stream(
+        first,
+        rest,
+        max_bytes,
+        bytes_seen.clone(),
+        chunks_seen.clone(),
+    );
+    executor
+        .put_object_stream(request_json, byte_stream)
+        .await?;
+    tracing::info!(
+        target: "udb::object",
+        backend = %backend, bucket = %bucket, object_key = %object_key,
+        chunks = chunks_seen.load(Ordering::Relaxed),
+        bytes = bytes_seen.load(Ordering::Relaxed),
+        "put_object streamed"
+    );
+    Ok(())
+}
+
+/// Typed object RPCs (`GetObject`/`PutObject`) stream through the object
+/// executor for S3/MinIO, GCS, and Azure Blob (A.6). Reject a store whose
+/// manifest declares some other (non-object) backend instead of silently using a
+/// default. Empty / `s3` / `minio` / `gcs` / `azureblob` are accepted; each is
+/// still gated at the call site by its own cargo feature.
+/// (`GeneratePresignedUrl` remains S3/MinIO-only — presigning is provider-specific.)
+#[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
 fn ensure_typed_object_backend(backend: &str) -> Result<(), tonic::Status> {
     let normalized = backend.trim().to_ascii_lowercase();
-    if matches!(normalized.as_str(), "" | "s3" | "minio") {
+    if matches!(
+        normalized.as_str(),
+        "" | "s3" | "minio" | "gcs" | "azureblob"
+    ) {
         Ok(())
     } else {
         Err(tonic::Status::failed_precondition(format!(
-            "object store is configured for backend '{backend}', but typed object RPCs are served \
-             by S3/MinIO only; use GenericDispatch / the object executor to reach '{backend}'"
+            "typed object RPCs require an object-store backend (s3/minio/gcs/azureblob), but the \
+             store is configured for '{backend}'"
         )))
     }
 }

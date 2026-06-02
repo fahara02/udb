@@ -25,6 +25,10 @@ mod casbin_engine;
 pub mod bundle;
 /// Stage 2: native Postgres restricted-role / DSN contract (item 134).
 pub mod native_access;
+/// C.4: pluggable policy-engine trait seam (Casbin stays the default impl).
+pub mod policy_engine;
+
+pub use policy_engine::PolicyEngine;
 
 /// Map a broker RPC name to a canonical authorization action. Pure so the
 /// broker-integration layer (Milestone 7) and tests share one table.

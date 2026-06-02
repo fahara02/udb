@@ -1,0 +1,438 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Fahara02\UdbLaravel\Generated;
+
+use Fahara02\UdbLaravel\Exceptions\UdbConfigurationException;
+use Fahara02\UdbLaravel\Exceptions\UdbRpcException;
+use Fahara02\UdbLaravel\UdbMetadata;
+use Grpc\BaseStub;
+use Grpc\ChannelCredentials;
+
+/**
+ * {{GENERATED_NOTE}}
+ *
+ * GeneratedClient — robustness / forwarding layer over the buf-generated gRPC
+ * service stubs (the `*Client` classes under `gen/`). It is regenerated from
+ * the embedded proto descriptor set by `udb sdk generate`, so its surface can
+ * never drift from the wire contract.
+ *
+ *   UDB version ...... {{UDB_VERSION}}
+ *   Protocol version . {{PROTOCOL_VERSION}}
+ *   Services ......... {{SERVICE_COUNT}}
+ *   RPCs ............. {{RPC_COUNT}}
+ *
+ * This class COMPOSES WITH the hand-written layer; it does not replace it:
+ *   - it reuses {@see UdbMetadata} for the eight broker headers,
+ *   - it throws the existing {@see UdbRpcException} / {@see UdbConfigurationException},
+ *   - the hand-written {@see \Fahara02\UdbLaravel\UdbClient} and
+ *     {@see \Fahara02\UdbLaravel\UdbAuthClient} remain the ergonomic entry
+ *     points; this generated client is the exhaustive, every-RPC surface.
+ *
+ * Each unary wrapper forwards to the underlying stub method of the same name
+ * and adds: per-call deadline, retry with exponential backoff + jitter on
+ * transient gRPC codes, TLS/credentials wiring, metadata injection, and typed
+ * error mapping (it unpacks the `udb-error-detail-bin` trailer into an
+ * {@see \Udb\Entity\V1\ErrorDetail} when the broker attaches one).
+ *
+ * Streaming RPCs are exposed as accessors returning the live gRPC call object
+ * (metadata + deadline already applied); retry is intentionally not applied to
+ * streams because re-driving a half-consumed stream is unsafe.
+ *
+ * Channel sharing: one gRPC channel per (host, credentials, options) tuple is
+ * created lazily and shared across every service stub, matching the
+ * long-lived-channel guidance in the hand-written {@see \Fahara02\UdbLaravel\UdbClient}.
+ */
+final class GeneratedClient
+{
+    /** gRPC status codes that are safe to retry for idempotent calls. */
+    private const RETRYABLE_CODES = [
+        14, // UNAVAILABLE
+        4,  // DEADLINE_EXCEEDED
+        8,  // RESOURCE_EXHAUSTED
+    ];
+
+    private ?UdbMetadata $boundContext = null;
+
+    /** @var array<class-string, BaseStub> Lazily-built, channel-sharing stubs. */
+    private array $stubs = [];
+
+    /** Shared channel options (incl. credentials) — built once, reused per stub. */
+    private ?array $channelOptions = null;
+
+    /**
+     * @param  array{
+     *   endpoint:string,
+     *   tls?: array{enabled?:bool, root_certs?:?string, target?:?string},
+     *   channel_options?: array<string,mixed>,
+     *   deadline_ms?: int,
+     *   retry?: array{max_attempts?:int, base_delay_ms?:int, max_delay_ms?:int},
+     * }  $config
+     */
+    public function __construct(private readonly array $config)
+    {
+        if (! \extension_loaded('grpc')) {
+            throw new UdbConfigurationException(
+                'The "grpc" PHP extension is not loaded. Install via PECL '
+                . '(`pecl install grpc`) and add "extension=grpc.so" to php.ini.'
+            );
+        }
+        $endpoint = trim((string) ($this->config['endpoint'] ?? ''));
+        if ($endpoint === '') {
+            throw new UdbConfigurationException(
+                'UDB endpoint is not configured. Set UDB_ENDPOINT or '
+                . 'config/udb.php#endpoint to host:port (e.g. "127.0.0.1:50051").'
+            );
+        }
+    }
+
+    /**
+     * Bind a request-scoped {@see UdbMetadata}. The Laravel middleware wires
+     * this early in the request lifecycle so every subsequent RPC inherits the
+     * tenant + correlation without the caller passing them explicitly.
+     */
+    public function bindContext(UdbMetadata $metadata): void
+    {
+        $this->boundContext = $metadata;
+    }
+
+    private function context(): UdbMetadata
+    {
+        if ($this->boundContext === null) {
+            throw new UdbConfigurationException(
+                'No UDB request context is bound. Run inside an HTTP request '
+                . 'with UdbContextMiddleware enabled, call bindContext(), or '
+                . 'pass an explicit UdbMetadata as the last RPC argument.'
+            );
+        }
+        return $this->boundContext;
+    }
+
+    // ── Generated per-RPC wrappers ──────────────────────────────────────────
+    //
+    // One method per RPC across every service. Method name = lcfirst of the
+    // proto method (PHP convention) while it forwards to the stub's PascalCase
+    // method. Unary calls retry; streaming calls return the live call object.
+
+    // @@UDB_RPC_BEGIN kind=unary
+    /**
+     * {{SERVICE_FULL}} / {{RPC_NAME}} ({{RPC_KIND}}).
+     *
+     * Forwards to {@see stubFor()}->{{RPC_NAME}}(); retries transient codes.
+     * Path: {{RPC_PATH}}
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded {{RPC_OUTPUT}}
+     */
+    public function {{RPC_SNAKE}}($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            '{{RPC_NAME}}',
+            '{{SERVICE_NAME}}',
+            '{{SERVICE_PKG}}',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->{{RPC_NAME}}($request, $md, $opts),
+            $metadata,
+        );
+    }
+    // @@UDB_RPC_END
+
+    // @@UDB_RPC_BEGIN kind=server_streaming
+    /**
+     * {{SERVICE_FULL}} / {{RPC_NAME}} ({{RPC_KIND}}).
+     *
+     * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
+     * `->responses()` then check `->getStatus()`. Path: {{RPC_PATH}}
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Grpc\ServerStreamingCall
+     */
+    public function {{RPC_SNAKE}}($request, ?UdbMetadata $metadata = null)
+    {
+        $stub = $this->stubFor('{{SERVICE_NAME}}', '{{SERVICE_PKG}}');
+        return $stub->{{RPC_NAME}}($request, $this->headers($metadata), $this->callOptions());
+    }
+    // @@UDB_RPC_END
+
+    // @@UDB_RPC_BEGIN kind=client_streaming
+    /**
+     * {{SERVICE_FULL}} / {{RPC_NAME}} ({{RPC_KIND}}).
+     *
+     * Returns the live {@see \Grpc\ClientStreamingCall}; `->write()` each
+     * message then `->wait()`. Not retried — re-driving a partially-written
+     * client stream is unsafe. Path: {{RPC_PATH}}
+     *
+     * @return \Grpc\ClientStreamingCall
+     */
+    public function {{RPC_SNAKE}}(?UdbMetadata $metadata = null)
+    {
+        $stub = $this->stubFor('{{SERVICE_NAME}}', '{{SERVICE_PKG}}');
+        return $stub->{{RPC_NAME}}($this->headers($metadata), $this->callOptions());
+    }
+    // @@UDB_RPC_END
+
+    // @@UDB_RPC_BEGIN kind=bidi
+    /**
+     * {{SERVICE_FULL}} / {{RPC_NAME}} ({{RPC_KIND}}).
+     *
+     * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
+     * `->read()` / `->writesDone()`. Not retried. Path: {{RPC_PATH}}
+     *
+     * @return \Grpc\BidiStreamingCall
+     */
+    public function {{RPC_SNAKE}}(?UdbMetadata $metadata = null)
+    {
+        $stub = $this->stubFor('{{SERVICE_NAME}}', '{{SERVICE_PKG}}');
+        return $stub->{{RPC_NAME}}($this->headers($metadata), $this->callOptions());
+    }
+    // @@UDB_RPC_END
+
+    // ── Per-service stub accessors ──────────────────────────────────────────
+    //
+    // Direct, typed access to the underlying buf-generated stub for any caller
+    // that wants the raw surface (or new methods a future regen adds).
+
+    // @@UDB_SERVICE_BEGIN
+    /**
+     * Underlying buf-generated stub for {{SERVICE_FULL}} ({{SERVICE_RPC_COUNT}} RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a {{SERVICE_NAME}}Client
+     */
+    public function {{SERVICE_NAME}}Stub(): BaseStub
+    {
+        return $this->stubFor('{{SERVICE_NAME}}', '{{SERVICE_PKG}}');
+    }
+    // @@UDB_SERVICE_END
+
+    // ── Internals ───────────────────────────────────────────────────────────
+
+    /**
+     * Resolve (and cache) the buf-generated stub for a service. The PSR-4 FQN
+     * is derived from the proto package + service name following the buf-php
+     * convention (`udb.core.apikey.services.v1` + `ApiKeyService` →
+     * `\Udb\Core\Apikey\Services\V1\ApiKeyServiceClient`). Done at runtime so
+     * no class list is hand-maintained.
+     */
+    private function stubFor(string $serviceName, string $servicePkg): BaseStub
+    {
+        $fqn = $this->stubClass($serviceName, $servicePkg);
+        if (isset($this->stubs[$fqn])) {
+            return $this->stubs[$fqn];
+        }
+        if (! class_exists($fqn)) {
+            throw new UdbConfigurationException(
+                "UDB generated stub `{$fqn}` was not found. Run `buf generate` "
+                . 'so the gen/ stubs exist before using GeneratedClient.'
+            );
+        }
+        /** @var BaseStub $stub */
+        $stub = new $fqn((string) $this->config['endpoint'], $this->buildChannelOptions());
+        $this->stubs[$fqn] = $stub;
+        return $stub;
+    }
+
+    /**
+     * Map proto package + service to the buf-php stub class FQN. Each dotted,
+     * lowercase package segment is `ucfirst`-ed; the class is `<Service>Client`.
+     */
+    private function stubClass(string $serviceName, string $servicePkg): string
+    {
+        $ns = implode('\\', array_map('ucfirst', explode('.', $servicePkg)));
+        return '\\' . $ns . '\\' . $serviceName . 'Client';
+    }
+
+    /**
+     * Build the channel-options array (credentials + TLS + tuning) once and
+     * reuse it for every stub so they multiplex over one channel.
+     *
+     * @return array<string,mixed>
+     */
+    private function buildChannelOptions(): array
+    {
+        if ($this->channelOptions !== null) {
+            return $this->channelOptions;
+        }
+
+        $tls = (array) ($this->config['tls'] ?? []);
+        if ((bool) ($tls['enabled'] ?? false)) {
+            $rootCerts = $tls['root_certs'] ?? null;
+            if ($rootCerts !== null && ! is_readable((string) $rootCerts)) {
+                throw new UdbConfigurationException(
+                    "UDB TLS root cert bundle not readable at: {$rootCerts}"
+                );
+            }
+            $pem = $rootCerts !== null ? (string) file_get_contents((string) $rootCerts) : null;
+            $credentials = ChannelCredentials::createSsl($pem);
+        } else {
+            $credentials = ChannelCredentials::createInsecure();
+        }
+
+        $options = (array) ($this->config['channel_options'] ?? []);
+        $options['credentials'] = $credentials;
+
+        $target = $tls['target'] ?? $this->config['endpoint'];
+        if ($target !== $this->config['endpoint']) {
+            $options['grpc.default_authority'] = (string) $target;
+        }
+
+        $this->channelOptions = $options;
+        return $options;
+    }
+
+    /**
+     * Per-call gRPC options — currently just the deadline, expressed as the
+     * timeout (microseconds) the PHP gRPC extension expects.
+     *
+     * @return array<string,mixed>
+     */
+    private function callOptions(): array
+    {
+        $opts = [];
+        $deadlineMs = (int) ($this->config['deadline_ms'] ?? 30_000);
+        if ($deadlineMs > 0) {
+            $opts['timeout'] = $deadlineMs * 1000;
+        }
+        return $opts;
+    }
+
+    /**
+     * Resolve the metadata headers for a call, falling back to the bound
+     * request context when no explicit override is supplied.
+     *
+     * @return array<string, list<string>>
+     */
+    private function headers(?UdbMetadata $metadata): array
+    {
+        return ($metadata ?? $this->context())->toGrpcMetadata();
+    }
+
+    /**
+     * Shared unary invoker: deadline + metadata + retry with exponential
+     * backoff & jitter on transient codes, then typed error mapping. Every
+     * generated unary wrapper funnels through here so behaviour is uniform.
+     *
+     * @param  callable(BaseStub, array<string,list<string>>, array<string,mixed>):mixed  $invoker
+     * @return \Google\Protobuf\Internal\Message
+     */
+    private function invokeUnary(
+        string $rpcName,
+        string $serviceName,
+        string $servicePkg,
+        callable $invoker,
+        ?UdbMetadata $metadata,
+    ) {
+        $stub = $this->stubFor($serviceName, $servicePkg);
+        $md = $this->headers($metadata);
+        $opts = $this->callOptions();
+
+        $retry = (array) ($this->config['retry'] ?? []);
+        $maxAttempts = max(1, (int) ($retry['max_attempts'] ?? 4));
+        $baseDelayMs = max(1, (int) ($retry['base_delay_ms'] ?? 50));
+        $maxDelayMs = max($baseDelayMs, (int) ($retry['max_delay_ms'] ?? 2_000));
+
+        $lastStatus = null;
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            /** @var \Grpc\UnaryCall $call */
+            $call = $invoker($stub, $md, $opts);
+            /** @var array{0: ?object, 1: object|array} $result */
+            $result = $call->wait();
+            [$response, $status] = $result;
+
+            $code = $this->statusCode($status);
+            if ($code === 0) {
+                if ($response === null) {
+                    throw new UdbRpcException(
+                        status: 13, // INTERNAL
+                        details: "UDB {$rpcName} returned OK status with empty body",
+                        raw: $status,
+                        rpcName: $rpcName,
+                    );
+                }
+                return $response;
+            }
+
+            $lastStatus = $status;
+            if ($attempt < $maxAttempts && $this->isRetryable($code)) {
+                $this->sleepBackoff($attempt, $baseDelayMs, $maxDelayMs);
+                continue;
+            }
+            break;
+        }
+
+        throw $this->mapError($lastStatus, $rpcName);
+    }
+
+    private function statusCode(mixed $status): int
+    {
+        return is_object($status) ? (int) ($status->code ?? -1) : (int) ($status['code'] ?? -1);
+    }
+
+    private function isRetryable(int $code): bool
+    {
+        return in_array($code, self::RETRYABLE_CODES, true);
+    }
+
+    /**
+     * Exponential backoff with full jitter, capped at `max_delay_ms`. Sleeps
+     * via `usleep` (microseconds). Honours a broker-supplied `retry_after_ms`
+     * from the typed ErrorDetail when present (set by `mapError`-adjacent
+     * decode in a follow-up; here we use the computed backoff).
+     */
+    private function sleepBackoff(int $attempt, int $baseDelayMs, int $maxDelayMs): void
+    {
+        $ceil = (int) min($maxDelayMs, $baseDelayMs * (2 ** ($attempt - 1)));
+        $jittered = random_int(0, max(0, $ceil));
+        if ($jittered > 0) {
+            usleep($jittered * 1000);
+        }
+    }
+
+    /**
+     * Map a non-OK gRPC status to a typed {@see UdbRpcException}. When the
+     * broker attached a binary `udb-error-detail-bin` trailer, decode it into
+     * an {@see \Udb\Entity\V1\ErrorDetail} (if that generated class exists) and
+     * carry it on the exception for typed capability/policy/quota branching.
+     */
+    private function mapError(mixed $status, string $rpcName): UdbRpcException
+    {
+        $detail = $this->decodeErrorDetail($status);
+        $exception = UdbRpcException::fromGrpcStatus($status, $rpcName);
+        if ($detail !== null && property_exists($exception, 'errorDetail')) {
+            // Forward-compatible: only set if the hand-written exception grows
+            // an `errorDetail` slot. Until then the raw status (which carries
+            // the trailer) is preserved on `$exception->raw`.
+            $exception->errorDetail = $detail;
+        }
+        return $exception;
+    }
+
+    /**
+     * Extract + prost-decode the `udb-error-detail-bin` trailer, if any.
+     *
+     * @return object|null  a \Udb\Entity\V1\ErrorDetail or null
+     */
+    private function decodeErrorDetail(mixed $status): ?object
+    {
+        $metadata = is_object($status) ? ($status->metadata ?? null) : ($status['metadata'] ?? null);
+        if (! is_array($metadata)) {
+            return null;
+        }
+        $values = $metadata['udb-error-detail-bin'] ?? null;
+        if (! is_array($values) || $values === []) {
+            return null;
+        }
+        $fqn = '\\Udb\\Entity\\V1\\ErrorDetail';
+        if (! class_exists($fqn)) {
+            return null;
+        }
+        try {
+            /** @var \Google\Protobuf\Internal\Message $detail */
+            $detail = new $fqn();
+            $detail->mergeFromString((string) $values[0]);
+            return $detail;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+}

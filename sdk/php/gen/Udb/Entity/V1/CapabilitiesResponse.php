@@ -62,6 +62,23 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>repeated .udb.entity.v1.BackendCapabilityDescriptor backend_capabilities = 8 [json_name = "backendCapabilities"];</code>
      */
     private $backend_capabilities;
+    /**
+     * V2 protocol negotiation metadata. Additive (field 9): old clients that
+     * only read fields 1-8 are unaffected; new clients use this to detect the
+     * supported protocol version range, wire encodings, compression, streaming
+     * support, and message-size limits before choosing a transport path.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+     */
+    protected $protocol_support = null;
+    /**
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     *
+     * Generated from protobuf field <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    private $backend_protocol_support;
 
     /**
      * Constructor.
@@ -85,6 +102,15 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      *           Redacted named backend instance inventory visible to clients/admin tools.
      *     @type \Udb\Entity\V1\BackendCapabilityDescriptor[] $backend_capabilities
      *           Machine-readable backend operation support matrix.
+     *     @type \Udb\Entity\V1\ProtocolSupport $protocol_support
+     *           V2 protocol negotiation metadata. Additive (field 9): old clients that
+     *           only read fields 1-8 are unaffected; new clients use this to detect the
+     *           supported protocol version range, wire encodings, compression, streaming
+     *           support, and message-size limits before choosing a transport path.
+     *     @type \Udb\Entity\V1\BackendProtocolSupport[] $backend_protocol_support
+     *           Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     *           for a specific backend, whether server-streaming reads / object streaming
+     *           are available and which wire encodings that backend can emit.
      * }
      */
     public function __construct($data = NULL) {
@@ -296,6 +322,77 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\BackendCapabilityDescriptor::class);
         $this->backend_capabilities = $arr;
+
+        return $this;
+    }
+
+    /**
+     * V2 protocol negotiation metadata. Additive (field 9): old clients that
+     * only read fields 1-8 are unaffected; new clients use this to detect the
+     * supported protocol version range, wire encodings, compression, streaming
+     * support, and message-size limits before choosing a transport path.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+     * @return \Udb\Entity\V1\ProtocolSupport|null
+     */
+    public function getProtocolSupport()
+    {
+        return $this->protocol_support;
+    }
+
+    public function hasProtocolSupport()
+    {
+        return isset($this->protocol_support);
+    }
+
+    public function clearProtocolSupport()
+    {
+        unset($this->protocol_support);
+    }
+
+    /**
+     * V2 protocol negotiation metadata. Additive (field 9): old clients that
+     * only read fields 1-8 are unaffected; new clients use this to detect the
+     * supported protocol version range, wire encodings, compression, streaming
+     * support, and message-size limits before choosing a transport path.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+     * @param \Udb\Entity\V1\ProtocolSupport $var
+     * @return $this
+     */
+    public function setProtocolSupport(\Udb\Entity\V1\ProtocolSupport|null $var)
+    {
+        $this->protocol_support = $var;
+
+        return $this;
+    }
+
+    /**
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     *
+     * Generated from protobuf field <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     * @return RepeatedField<\Udb\Entity\V1\BackendProtocolSupport>
+     */
+    public function getBackendProtocolSupport()
+    {
+        return $this->backend_protocol_support;
+    }
+
+    /**
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     *
+     * Generated from protobuf field <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     * @param \Udb\Entity\V1\BackendProtocolSupport[] $var
+     * @return $this
+     */
+    public function setBackendProtocolSupport(array|RepeatedField $var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\BackendProtocolSupport::class);
+        $this->backend_protocol_support = $arr;
 
         return $this;
     }

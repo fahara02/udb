@@ -12,7 +12,7 @@ WORKDIR /workspace
 RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get update -o Acquire::Check-Valid-Until=false -o Acquire::Retries=5 \
-    && apt-get install -y --no-install-recommends cmake clang curl libcurl4-openssl-dev ca-certificates protobuf-compiler libprotobuf-dev \
+    && apt-get install -y --no-install-recommends build-essential cmake clang curl perl nasm ninja-build pkg-config libcurl4-openssl-dev ca-certificates protobuf-compiler libprotobuf-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Manifests and workspace members first (better layer caching). The workspace
@@ -30,7 +30,7 @@ COPY benches ./benches
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/workspace/target \
-    cargo build --release --bin udb-proto-parser \
+    cargo build --release --bin udb-proto-parser --features oidc,webauthn \
     && cp target/release/udb-proto-parser /tmp/udb-proto-parser
 
 ARG GRPC_HEALTH_PROBE_VERSION=v0.4.37

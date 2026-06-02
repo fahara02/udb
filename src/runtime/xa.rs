@@ -706,6 +706,11 @@ mod tests {
             supports_xa: supports,
             supports_two_phase_commit: supports,
             role: crate::backend::BackendRole::Canonical,
+            // Struct's documented defaults (this test helper predates the B.12
+            // canonical-promotion fields added to the matrix entry).
+            canonical_candidate: crate::backend::CanonicalCandidateProfile::ExplicitlyNotSupported,
+            canonical_goal: String::new(),
+            canonical_feasibility: None,
         }
     }
 

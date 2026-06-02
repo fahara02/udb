@@ -411,6 +411,36 @@ The binary is `udb-proto-parser`. Its name is older than its current scope; it
 now drives parsing, generation, runtime serving, migration/admin checks, and the
 local playground.
 
+Published CLI/broker binaries are built with the portable backend set plus real
+OIDC and WebAuthn support. To reproduce that shipped binary feature set locally:
+
+```powershell
+cargo build --bin udb-proto-parser --no-default-features --features "postgres,mysql,sqlite,qdrant,s3,mongodb,neo4j,clickhouse,redis,elasticsearch,weaviate,pinecone,azureblob,gcs,otel,runtime-logging,http-client,oidc,webauthn"
+```
+
+To verify the normal crate feature behavior on Windows, keep default features on
+and add OIDC/WebAuthn:
+
+```powershell
+cargo check --features oidc,webauthn
+```
+
+WebAuthn uses `webauthn-rs`, which builds vendored OpenSSL. On Windows/MSVC,
+install Visual Studio Build Tools, NASM, and Strawberry Perl; keep
+`C:\Strawberry\perl\bin` ahead of Git/MSYS Perl in `PATH`. On Linux install
+`build-essential`, `perl`, `nasm`, `cmake`, `clang`, `ninja`, and `pkg-config`.
+On macOS, including Apple Silicon, install Xcode command-line tools plus
+`cmake`, `nasm`, and `ninja`.
+
+Windows bootstrap:
+
+```powershell
+.\scripts\bootstrap-webauthn.ps1 -CheckOnly
+.\scripts\bootstrap-webauthn.ps1 -InstallChocolatey -FetchCargo
+.\scripts\bootstrap-webauthn.ps1 -InstallChocolatey -RepairChocolateyLocks -FetchCargo
+.\scripts\bootstrap-webauthn.ps1 -CleanNativeBuildCache
+```
+
 Schema and planning:
 
 ```powershell
@@ -598,7 +628,7 @@ Source: [`src/runtime/authn/`](src/runtime/authn), [`src/runtime/authz/`](src/ru
 The UDB-owned protocol is versioned separately from the crate and SDK package
 versions. The current wire protocol is
 [`1.0.0`](sdk/UDB_PROTOCOL_VERSION), and the current crate/SDK release tracked
-by [`versions.json`](versions.json) is `0.2.1`.
+by [`versions.json`](versions.json) is `0.3.0`.
 
 Canonical proto sources:
 
@@ -624,12 +654,12 @@ Release and install matrix:
 
 | SDK | Current release | Install | Runtime requirements | Notes |
 |---|---:|---|---|---|
-| Go | `0.2.1` | `go get github.com/fahara02/udb/sdk/go@v0.2.1` | Go 1.22+, `grpc`, `protobuf` | Generated stubs plus `udbclient` metadata/auth helpers |
-| Python | `0.2.1` | `pip install udb-client==0.2.1` | Python 3.10+, `grpcio`, `protobuf` | Sync and async clients, optional `pydantic` extra |
-| TypeScript / Node | `0.2.1` | `npm i @udb_plus/sdk@0.2.1` | Node 18+, `@grpc/grpc-js` | Runtime proto loader, package entry points `@udb_plus/sdk`, `/client`, `/auth` |
-| PHP / Laravel | `0.2.1` | `composer require fahara02/udb-laravel:^0.2.1` | PHP 8.1+, `ext-grpc`, Laravel 10/11/12 | ServiceProvider, Facade, middleware, typed exceptions |
-| C# | `0.2.1` | `dotnet add package Udb.Client --version 0.2.1` | .NET 8, `Grpc.Net.Client` | Package id and version are set; NuGet publishing is part of the release pipeline |
-| Java | `0.2.1-SNAPSHOT` today, `0.2.1` target | `dev.udb:udb-java-client` | Java 17, gRPC Java | Manifest is still snapshot; Maven Central release wiring is in progress |
+| Go | `0.3.0` | `go get github.com/fahara02/udb/sdk/go@v0.3.0` | Go 1.22+, `grpc`, `protobuf` | Generated stubs plus `udbclient` metadata/auth helpers |
+| Python | `0.3.0` | `pip install udb-client==0.3.0` | Python 3.10+, `grpcio`, `protobuf` | Sync and async clients, optional `pydantic` extra |
+| TypeScript / Node | `0.3.0` | `npm i @udb_plus/sdk@0.3.0` | Node 18+, `@grpc/grpc-js` | Runtime proto loader, package entry points `@udb_plus/sdk`, `/client`, `/auth` |
+| PHP / Laravel | `0.3.0` | `composer require fahara02/udb-laravel:^0.3.0` | PHP 8.1+, `ext-grpc`, Laravel 10/11/12 | ServiceProvider, Facade, middleware, typed exceptions |
+| C# | `0.3.0` | `dotnet add package Udb.Client --version 0.3.0` | .NET 8, `Grpc.Net.Client` | Package id and version are set; NuGet publishing is part of the release pipeline |
+| Java | `0.3.0-SNAPSHOT` today, `0.3.0` target | `dev.udb:udb-java-client` | Java 17, gRPC Java | Manifest is still snapshot; Maven Central release wiring is in progress |
 
 Every SDK sends the same request metadata headers:
 
@@ -653,7 +683,7 @@ runtime through `@grpc/proto-loader`. Use package entry points, not
 ## Quickstart Per Language
 
 <details open>
-<summary><b>Go</b> - <code>go get github.com/fahara02/udb/sdk/go@v0.2.1</code></summary>
+<summary><b>Go</b> - <code>go get github.com/fahara02/udb/sdk/go@v0.3.0</code></summary>
 
 ```go
 import (
@@ -683,7 +713,7 @@ Guide: [`sdk/go/README.md`](sdk/go/README.md).
 </details>
 
 <details>
-<summary><b>Python</b> - <code>pip install udb-client==0.2.1</code></summary>
+<summary><b>Python</b> - <code>pip install udb-client==0.3.0</code></summary>
 
 ```python
 from udb_client import Metadata, UdbClient, decode_records
@@ -704,12 +734,12 @@ with UdbAuthClient("127.0.0.1:50051", meta) as auth:
     allowed, decision = auth.can(authz.ResourceRef(message_type="acme.billing.v1.Customer"), "read")
 ```
 
-Install `pip install "udb-client[pydantic]==0.2.1"` when you want the optional
+Install `pip install "udb-client[pydantic]==0.3.0"` when you want the optional
 validated command models. Guide: [`sdk/python/README.md`](sdk/python/README.md).
 </details>
 
 <details>
-<summary><b>TypeScript / Node</b> - <code>npm i @udb_plus/sdk@0.2.1</code></summary>
+<summary><b>TypeScript / Node</b> - <code>npm i @udb_plus/sdk@0.3.0</code></summary>
 
 ```ts
 import { dataBrokerClient, metadata, UdbMetadata } from "@udb_plus/sdk/client";
@@ -732,7 +762,7 @@ Guide: [`sdk/typescript/README.md`](sdk/typescript/README.md).
 <details>
 <summary><b>Java</b> - Maven <code>dev.udb:udb-java-client</code>, Java 17</summary>
 
-Current manifest version is `0.2.1-SNAPSHOT`; the release target is `0.2.1`.
+Current manifest version is `0.3.0-SNAPSHOT`; the release target is `0.3.0`.
 Until Maven Central publish wiring is complete, build from the repo checkout:
 
 ```bash
@@ -779,7 +809,7 @@ Guide: [`sdk/csharp/README.md`](sdk/csharp/README.md).
 </details>
 
 <details>
-<summary><b>PHP / Laravel</b> - <code>composer require fahara02/udb-laravel:^0.2.1</code></summary>
+<summary><b>PHP / Laravel</b> - <code>composer require fahara02/udb-laravel:^0.3.0</code></summary>
 
 ```php
 use Fahara02\UdbLaravel\Facades\Udb;

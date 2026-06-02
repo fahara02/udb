@@ -521,6 +521,12 @@ impl CdcConfig {
         format!("`{}`", self.outbox_table.replace('`', "``"))
     }
 
+    /// Bracket-quoted outbox table for SQL Server (B.8). MSSQL uses `[ident]`
+    /// quoting; the table lives in the connected database's default schema.
+    pub fn outbox_relation_mssql(&self) -> String {
+        format!("[{}]", self.outbox_table.replace(']', "]]"))
+    }
+
     pub fn offsets_relation(&self) -> String {
         format!("{}.{}", qi(&self.system_schema), qi(&self.offsets_table))
     }

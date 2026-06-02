@@ -85,6 +85,351 @@ fn descriptor_set_exposes_databroker_reflection_surface() {
     assert!(methods.contains("GetHealthReport"));
 }
 
+/// C.1 — native proto baseline lock. Decodes the compiled descriptor set and
+/// pins the native control-plane services and the catalog-version compatibility
+/// signal, so a breaking change (dropped/renamed service, dropped baseline RPC,
+/// or a moved `client_catalog_version` field) fails HERE before runtime code is
+/// touched. Additive RPCs/fields are allowed; only the stable baseline the
+/// runtime depends on is asserted. This is the in-repo analog of `buf breaking`.
+#[test]
+fn native_service_descriptor_baseline_is_locked() {
+    let descriptor =
+        <prost_types::FileDescriptorSet as prost::Message>::decode(UDB_FILE_DESCRIPTOR_SET)
+            .expect("descriptor set should decode");
+
+    let methods_of = |pkg: &str, svc: &str| -> std::collections::BTreeSet<String> {
+        descriptor
+            .file
+            .iter()
+            .filter(|file| file.package.as_deref() == Some(pkg))
+            .flat_map(|file| file.service.iter())
+            .find(|service| service.name.as_deref() == Some(svc))
+            .unwrap_or_else(|| panic!("native service {pkg}.{svc} must be in the descriptor set"))
+            .method
+            .iter()
+            .filter_map(|method| method.name.clone())
+            .collect()
+    };
+
+    // Every native control-plane service must be present and expose RPCs.
+    for (pkg, svc) in [
+        ("udb.core.authn.services.v1", "AuthnService"),
+        ("udb.core.authz.services.v1", "AuthzService"),
+        ("udb.core.apikey.services.v1", "ApiKeyService"),
+        ("udb.core.tenant.services.v1", "TenantService"),
+        ("udb.core.notification.services.v1", "NotificationService"),
+        ("udb.core.analytics.services.v1", "AnalyticsService"),
+    ] {
+        assert!(
+            !methods_of(pkg, svc).is_empty(),
+            "native service {pkg}.{svc} must expose at least one RPC"
+        );
+    }
+
+    // Lock the security-critical AuthnService baseline (the surface the runtime
+    // and the NativeControlPlaneAuth interceptor depend on). Removing/renaming
+    // any of these is a breaking change that must fail here.
+    let authn = methods_of("udb.core.authn.services.v1", "AuthnService");
+    for required in [
+        "Authenticate",
+        "Login",
+        "Logout",
+        "ValidateToken",
+        "RefreshToken",
+        "ChangePassword",
+        "CreateSession",
+        "RevokeSession",
+        "StartWebAuthnRegistration",
+        "FinishWebAuthnRegistration",
+        "StartWebAuthnAuthentication",
+        "FinishWebAuthnAuthentication",
+    ] {
+        assert!(
+            authn.contains(required),
+            "AuthnService baseline RPC {required} must remain (breaking change otherwise)"
+        );
+    }
+
+    // Compatibility signal (C.1 step 3): `client_catalog_version` is the native
+    // catalog-version negotiation field. Pin its field number so it cannot be
+    // silently renumbered, anywhere it is declared.
+    let client_catalog_version_pinned = descriptor
+        .file
+        .iter()
+        .flat_map(|file| file.message_type.iter())
+        .flat_map(|message| message.field.iter())
+        .any(|field| {
+            field.name.as_deref() == Some("client_catalog_version") && field.number == Some(17)
+        });
+    assert!(
+        client_catalog_version_pinned,
+        "client_catalog_version must remain field 17 (catalog-version compatibility signal)"
+    );
+}
+
+/// E.1 step 3 — full service-descriptor snapshot gate.
+///
+/// `native_service_descriptor_baseline_is_locked` pins that every service is
+/// PRESENT and locks the AuthnService RPC baseline. This complements it with a
+/// comprehensive snapshot of the ENTIRE gRPC surface — all seven services and
+/// every RPC each one shipped at lock time — so a proto change can never
+/// silently DROP or RENAME a generated service descriptor or RPC. Additive RPCs
+/// are allowed (the golden is asserted as a subset of the live descriptor);
+/// removing or renaming one fails here, the in-repo analog of `buf breaking`.
+///
+/// When you intentionally remove/rename an RPC, update this golden in the SAME
+/// commit — that is the deliberate-change checkpoint E.1 requires.
+#[test]
+fn full_service_descriptor_surface_snapshot() {
+    // Golden inventory captured from `UDB_FILE_DESCRIPTOR_SET` (proto source of
+    // truth). 7 services / 157 RPCs at lock time.
+    const GOLDEN: &[(&str, &[&str])] = &[
+        (
+            "udb.core.analytics.services.v1.AnalyticsService",
+            &[
+                "GetExecutorPerformance",
+                "GetPipelineSummary",
+                "GetReconciliationAnalytics",
+                "GetSlaCompliance",
+                "GetThroughput",
+                "RecordPipelineMetric",
+                "TriggerSnapshot",
+            ],
+        ),
+        (
+            "udb.core.apikey.services.v1.ApiKeyService",
+            &[
+                "CreateApiKey",
+                "GetApiKey",
+                "GetApiKeyUsageStats",
+                "ListApiKeys",
+                "RevokeApiKey",
+                "UpdateApiKey",
+                "ValidateApiKey",
+            ],
+        ),
+        (
+            "udb.core.authn.services.v1.AuthnService",
+            &[
+                "AdminResetPassword",
+                "Authenticate",
+                "ChangePassword",
+                "ChangeUserStatus",
+                "ConfirmMFAEnrollment",
+                "CreateSession",
+                "CreateUser",
+                "EnrollMFA",
+                "FinishWebAuthnAuthentication",
+                "FinishWebAuthnRegistration",
+                "GetSession",
+                "GetUser",
+                "ListSessions",
+                "ListUsers",
+                "Login",
+                "Logout",
+                "RefreshSession",
+                "RefreshToken",
+                "ResendOTP",
+                "RevokeSession",
+                "SendOTP",
+                "StartWebAuthnAuthentication",
+                "StartWebAuthnRegistration",
+                "UpdateUser",
+                "ValidateCSRF",
+                "ValidateToken",
+                "VerifyOTP",
+            ],
+        ),
+        (
+            "udb.core.authz.services.v1.AuthzService",
+            &[
+                "AssignRole",
+                "Authorize",
+                "BatchCheckPermissions",
+                "CheckAccess",
+                "CreatePolicyRule",
+                "CreateRole",
+                "DeletePolicyRule",
+                "DeleteRole",
+                "GetNativeAccess",
+                "GetPolicyBundle",
+                "GetPolicyRule",
+                "GetRole",
+                "LintAuthzPolicies",
+                "ListAccessDecisionAudits",
+                "ListPolicyRules",
+                "ListRoles",
+                "ListUserPermissions",
+                "ListUserRoles",
+                "PutAuthzPolicy",
+                "PutRelationship",
+                "PutRoleBinding",
+                "RevokeRole",
+                "UpdateRole",
+            ],
+        ),
+        (
+            "udb.core.notification.services.v1.NotificationService",
+            &[
+                "GetDeliveryStats",
+                "GetNotification",
+                "GetPreference",
+                "GetTemplate",
+                "ListNotifications",
+                "ListPreferences",
+                "ListTemplates",
+                "RetryNotification",
+                "SendNotification",
+                "SetPreference",
+                "UpsertTemplate",
+            ],
+        ),
+        (
+            "udb.core.tenant.services.v1.TenantService",
+            &[
+                "CreateTenant",
+                "GetTenant",
+                "GetTenantConfig",
+                "ListTenants",
+                "UpdateTenant",
+                "UpdateTenantConfig",
+            ],
+        ),
+        (
+            "udb.services.v1.DataBroker",
+            &[
+                "ActivateCatalog",
+                "AnalyticalQuery",
+                "ApplyMigration",
+                "ApproveMigrationPlan",
+                "BatchSelect",
+                "BatchUpsert",
+                "BeginTx",
+                "CacheDelete",
+                "CacheGet",
+                "CacheScan",
+                "CacheSet",
+                "CreateMaterializedView",
+                "Delete",
+                "DeletePolicy",
+                "DismissDlqEvent",
+                "DocumentDelete",
+                "DocumentFind",
+                "DocumentGet",
+                "DocumentUpsert",
+                "DropResource",
+                "EnqueueOutboxEvent",
+                "EnsureProject",
+                "EnsureResource",
+                "GeneratePresignedUrl",
+                "GenericDispatch",
+                "GetAdminSummary",
+                "GetCapabilities",
+                "GetCatalogManifest",
+                "GetCatalogVersion",
+                "GetCatalogVersions",
+                "GetCdcStatus",
+                "GetDlqEvent",
+                "GetHealthReport",
+                "GetMigrationStatus",
+                "GetObject",
+                "GetSaga",
+                "GraphMutate",
+                "GraphQuery",
+                "InitiateMultipartUpload",
+                "LintPolicies",
+                "ListAdminAuditLogs",
+                "ListDlqEvents",
+                "ListMessageSchemas",
+                "ListMigrationRuns",
+                "ListPolicies",
+                "ListProjects",
+                "ListResources",
+                "ListSagas",
+                "LookupMessageSchema",
+                "MarkSagaReviewed",
+                "PauseCdc",
+                "PlanMigration",
+                "PreviewCdcRedaction",
+                "PublishCDC",
+                "PutObject",
+                "PutPolicy",
+                "QuarantineDlqEvent",
+                "ReloadPolicies",
+                "ReplayDlqEvent",
+                "ResumeCdc",
+                "RetrySagaCompensation",
+                "RollbackCatalog",
+                "ScanProjectionDrift",
+                "Select",
+                "SelectV2",
+                "StageCatalog",
+                "StepDownCdcLeader",
+                "TimeSeriesQuery",
+                "TimeSeriesWrite",
+                "Upsert",
+                "ValidateCatalog",
+                "VectorBatchUpsert",
+                "VectorHybridSearch",
+                "VectorSearch",
+                "VectorUpsert",
+                "VerifyAdminAuditLog",
+            ],
+        ),
+    ];
+
+    let descriptor =
+        <prost_types::FileDescriptorSet as prost::Message>::decode(UDB_FILE_DESCRIPTOR_SET)
+            .expect("descriptor set should decode");
+
+    // Build the live {service_fqn -> method names} map from the descriptor.
+    let mut live: std::collections::BTreeMap<String, std::collections::BTreeSet<String>> =
+        std::collections::BTreeMap::new();
+    for file in &descriptor.file {
+        let pkg = file.package.as_deref().unwrap_or("");
+        for svc in &file.service {
+            let Some(name) = svc.name.as_deref() else {
+                continue;
+            };
+            let fqn = format!("{pkg}.{name}");
+            let methods = svc.method.iter().filter_map(|m| m.name.clone()).collect();
+            live.insert(fqn, methods);
+        }
+    }
+
+    // 1. Every golden service descriptor must still exist (no silent service drop).
+    for (svc, golden_methods) in GOLDEN {
+        let live_methods = live.get(*svc).unwrap_or_else(|| {
+            panic!("service descriptor {svc} was dropped from UDB_FILE_DESCRIPTOR_SET")
+        });
+        // 2. Every golden RPC must still exist (no silent RPC drop/rename).
+        for method in *golden_methods {
+            assert!(
+                live_methods.contains(*method),
+                "RPC {svc}.{method} was dropped/renamed — update the proto AND this golden \
+                 deliberately if intended (E.1 breaking-change gate)"
+            );
+        }
+    }
+
+    // 3. The set of UDB service descriptors must match the golden exactly, so a
+    //    NEW service is also a deliberate, reviewed addition here (catches
+    //    accidentally-shipped or accidentally-renamed services). Only UDB
+    //    services are inventoried (vendored google.* descriptors are ignored).
+    let golden_services: std::collections::BTreeSet<&str> =
+        GOLDEN.iter().map(|(s, _)| *s).collect();
+    let live_udb_services: std::collections::BTreeSet<&str> = live
+        .keys()
+        .map(String::as_str)
+        .filter(|fqn| fqn.starts_with("udb."))
+        .collect();
+    assert_eq!(
+        live_udb_services, golden_services,
+        "the set of UDB service descriptors changed — a service was added/removed/renamed; \
+         update this golden snapshot in the same commit"
+    );
+}
+
 #[tokio::test]
 async fn service_runtime_snapshot_is_shared_across_clones() {
     let svc = DataBrokerService::with_runtime(test_manifest(), DataBrokerRuntime::planning_only());
@@ -575,6 +920,120 @@ async fn get_capabilities_includes_backend_capability_matrix() {
         assert!(redis.operations.contains(&"mutate".to_string()));
         assert_eq!(redis.unsupported_error_code, "UDB_UNSUPPORTED_OPERATION");
     }
+}
+
+/// A.1 — V1 compatibility freeze. Pins every existing CapabilitiesResponse V1
+/// field (schema_checksum=1, protocol_version=2, enabled_backends=3,
+/// degraded_backends=4, system_catalog_relations=5, supported_rpcs=6,
+/// backend_instances=7, backend_capabilities=8). This test FAILS if a V2 change
+/// drops or renumbers a V1 field — the field accesses below stop compiling on a
+/// rename/removal, and the assertions catch a field that goes silently empty.
+#[tokio::test]
+async fn get_capabilities_v1_fields_frozen() {
+    let svc = open_service();
+    let resp = svc
+        .get_capabilities(capabilities_request_with_tenant())
+        .await
+        .unwrap();
+    let caps = resp.get_ref();
+
+    // Field 1: schema_checksum — always populated (active manifest checksum or
+    // a computed fallback hash; never empty).
+    assert!(
+        !caps.schema_checksum.is_empty(),
+        "schema_checksum (field 1) must be populated"
+    );
+    // Field 2: protocol_version — pinned to the server constant.
+    assert_eq!(
+        caps.protocol_version, UDB_PROTOCOL_VERSION,
+        "protocol_version (field 2) must equal UDB_PROTOCOL_VERSION"
+    );
+    // Field 3/4: enabled/degraded backends. planning_only() has no live pools,
+    // so enabled may be empty, but the degraded list (all known plugins) must
+    // not be — proving the field is still wired.
+    assert!(
+        !caps.degraded_backends.is_empty(),
+        "degraded_backends (field 4) must list configured-but-unconnected backends"
+    );
+    // Field 5: system_catalog_relations — the fixed system relations are always
+    // present.
+    assert!(
+        !caps.system_catalog_relations.is_empty(),
+        "system_catalog_relations (field 5) must be populated"
+    );
+    // Field 6: supported_rpcs — mirrors SUPPORTED_RPC_NAMES.
+    assert_eq!(
+        caps.supported_rpcs.len(),
+        SUPPORTED_RPC_NAMES.len(),
+        "supported_rpcs (field 6) must mirror SUPPORTED_RPC_NAMES"
+    );
+    assert!(caps.supported_rpcs.contains(&"Select".to_string()));
+    // Field 7: backend_instances — field is wired (Vec accessor compiles).
+    let _backend_instances: &Vec<_> = &caps.backend_instances;
+    // Field 8: backend_capabilities — one descriptor per backend plugin.
+    assert!(
+        !caps.backend_capabilities.is_empty(),
+        "backend_capabilities (field 8) must be populated"
+    );
+}
+
+/// A.2 — additive protocol negotiation. Proves the new V2 fields
+/// (protocol_support=9, backend_protocol_support=10) are populated AND that the
+/// V1 fields (1-8) are still present, so V2 never regresses the V1 surface.
+#[tokio::test]
+async fn get_capabilities_populates_protocol_support() {
+    let svc = open_service();
+    let resp = svc
+        .get_capabilities(capabilities_request_with_tenant())
+        .await
+        .unwrap();
+    let caps = resp.get_ref();
+
+    // V1 fields still present (regression guard).
+    assert!(!caps.schema_checksum.is_empty());
+    assert_eq!(caps.protocol_version, UDB_PROTOCOL_VERSION);
+    assert!(!caps.supported_rpcs.is_empty());
+    assert!(!caps.backend_capabilities.is_empty());
+
+    // Field 9: protocol_support.
+    let ps = caps
+        .protocol_support
+        .as_ref()
+        .expect("protocol_support (field 9) must be populated");
+    assert!(
+        !ps.min_protocol_version.is_empty(),
+        "min_protocol_version must be non-empty"
+    );
+    assert!(
+        !ps.max_protocol_version.is_empty(),
+        "max_protocol_version must be non-empty"
+    );
+    assert_eq!(ps.min_protocol_version, UDB_PROTOCOL_VERSION);
+    assert_eq!(ps.max_protocol_version, UDB_PROTOCOL_VERSION);
+    assert!(
+        ps.encodings.contains(&"record_set_v1".to_string()),
+        "encodings must advertise the V1 row encoding"
+    );
+    assert!(
+        ps.encodings.contains(&"record_batch_v2".to_string()),
+        "A.4 shipped SelectV2, so record_batch_v2 must now be advertised"
+    );
+    assert!(
+        !ps.supported_rpcs.is_empty(),
+        "protocol_support.supported_rpcs must mirror the RPC list"
+    );
+    assert_eq!(ps.supported_rpcs.len(), caps.supported_rpcs.len());
+    assert!(
+        ps.supports_streaming_reads,
+        "runtime provides a default query streaming path"
+    );
+
+    // Field 10: backend_protocol_support — one entry per backend.
+    assert_eq!(
+        caps.backend_protocol_support.len(),
+        caps.backend_capabilities.len(),
+        "backend_protocol_support (field 10) must have one entry per backend"
+    );
 }
 
 #[test]

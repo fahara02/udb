@@ -575,7 +575,7 @@ impl DataBrokerService {
                 .map(|row| {
                     serde_json::to_vec(&row.row_key)
                         .map(|row_key_json| ProjectionDriftDivergentRow {
-                            row_key_json,
+                            row_key_json: row_key_json.into(),
                             source_checksum: row.source_checksum.clone(),
                             target_checksum: row.target_checksum.clone().unwrap_or_default(),
                             kind: match row.kind {

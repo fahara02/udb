@@ -83,8 +83,9 @@ pub(super) fn authn_service(pool: sqlx::PgPool) -> AuthnServiceImpl {
         SecurityConfig::current(),
         sessions,
         Arc::new(PostgresApiKeyStore::new(pool.clone(), "")),
-        Arc::new(PostgresUserStore::new(pool, "")),
+        Arc::new(PostgresUserStore::new(pool.clone(), "")),
     )
+    .with_postgres(Some(pool))
 }
 
 pub(super) fn api_key_service(pool: sqlx::PgPool) -> ApiKeyServiceImpl {

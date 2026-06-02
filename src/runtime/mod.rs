@@ -1,3 +1,4 @@
+pub mod accel; // D.5: scalar-first acceleration layer (codecs/checksum) + cached CPU detect
 pub mod catalog;
 pub mod cdc;
 
@@ -37,6 +38,7 @@ mod rls_context_tests;
 pub mod saga;
 pub mod saga_compensators; // U19: plugin-aware backend compensator dispatch
 pub mod schema_registry;
+pub mod sdk_manifest; // Embedded descriptor set → RPC manifest for `udb sdk generate` (proto = source of truth)
 pub mod security;
 pub mod service;
 pub mod signal;

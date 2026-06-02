@@ -149,6 +149,22 @@ namespace udb.core.Authn.Services.V1 {
     static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.ConfirmMFAEnrollmentRequest> __Marshaller_udb_core_authn_services_v1_ConfirmMFAEnrollmentRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.ConfirmMFAEnrollmentRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.ConfirmMFAEnrollmentResponse> __Marshaller_udb_core_authn_services_v1_ConfirmMFAEnrollmentResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.ConfirmMFAEnrollmentResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationRequest> __Marshaller_udb_core_authn_services_v1_StartWebAuthnRegistrationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationResponse> __Marshaller_udb_core_authn_services_v1_StartWebAuthnRegistrationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationRequest> __Marshaller_udb_core_authn_services_v1_FinishWebAuthnRegistrationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationResponse> __Marshaller_udb_core_authn_services_v1_FinishWebAuthnRegistrationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationRequest> __Marshaller_udb_core_authn_services_v1_StartWebAuthnAuthenticationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationResponse> __Marshaller_udb_core_authn_services_v1_StartWebAuthnAuthenticationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest> __Marshaller_udb_core_authn_services_v1_FinishWebAuthnAuthenticationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse> __Marshaller_udb_core_authn_services_v1_FinishWebAuthnAuthenticationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::udb.core.Authn.Services.V1.CreateUserRequest, global::udb.core.Authn.Services.V1.CreateUserResponse> __Method_CreateUser = new grpc::Method<global::udb.core.Authn.Services.V1.CreateUserRequest, global::udb.core.Authn.Services.V1.CreateUserResponse>(
@@ -333,6 +349,38 @@ namespace udb.core.Authn.Services.V1 {
         "ConfirmMFAEnrollment",
         __Marshaller_udb_core_authn_services_v1_ConfirmMFAEnrollmentRequest,
         __Marshaller_udb_core_authn_services_v1_ConfirmMFAEnrollmentResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationRequest, global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationResponse> __Method_StartWebAuthnRegistration = new grpc::Method<global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationRequest, global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "StartWebAuthnRegistration",
+        __Marshaller_udb_core_authn_services_v1_StartWebAuthnRegistrationRequest,
+        __Marshaller_udb_core_authn_services_v1_StartWebAuthnRegistrationResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationRequest, global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationResponse> __Method_FinishWebAuthnRegistration = new grpc::Method<global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationRequest, global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "FinishWebAuthnRegistration",
+        __Marshaller_udb_core_authn_services_v1_FinishWebAuthnRegistrationRequest,
+        __Marshaller_udb_core_authn_services_v1_FinishWebAuthnRegistrationResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationRequest, global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationResponse> __Method_StartWebAuthnAuthentication = new grpc::Method<global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationRequest, global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "StartWebAuthnAuthentication",
+        __Marshaller_udb_core_authn_services_v1_StartWebAuthnAuthenticationRequest,
+        __Marshaller_udb_core_authn_services_v1_StartWebAuthnAuthenticationResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest, global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse> __Method_FinishWebAuthnAuthentication = new grpc::Method<global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest, global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "FinishWebAuthnAuthentication",
+        __Marshaller_udb_core_authn_services_v1_FinishWebAuthnAuthenticationRequest,
+        __Marshaller_udb_core_authn_services_v1_FinishWebAuthnAuthenticationResponse);
 
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
@@ -533,6 +581,36 @@ namespace udb.core.Authn.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.ConfirmMFAEnrollmentResponse> ConfirmMFAEnrollment(global::udb.core.Authn.Services.V1.ConfirmMFAEnrollmentRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// ── WebAuthn / passkeys ─────────────────────────────────────────────────
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationResponse> StartWebAuthnRegistration(global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationResponse> FinishWebAuthnRegistration(global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationResponse> StartWebAuthnAuthentication(global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse> FinishWebAuthnAuthentication(global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1282,6 +1360,114 @@ namespace udb.core.Authn.Services.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_ConfirmMFAEnrollment, null, options, request);
       }
+      /// <summary>
+      /// ── WebAuthn / passkeys ─────────────────────────────────────────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationResponse StartWebAuthnRegistration(global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return StartWebAuthnRegistration(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── WebAuthn / passkeys ─────────────────────────────────────────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationResponse StartWebAuthnRegistration(global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_StartWebAuthnRegistration, null, options, request);
+      }
+      /// <summary>
+      /// ── WebAuthn / passkeys ─────────────────────────────────────────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationResponse> StartWebAuthnRegistrationAsync(global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return StartWebAuthnRegistrationAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── WebAuthn / passkeys ─────────────────────────────────────────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationResponse> StartWebAuthnRegistrationAsync(global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_StartWebAuthnRegistration, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationResponse FinishWebAuthnRegistration(global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return FinishWebAuthnRegistration(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationResponse FinishWebAuthnRegistration(global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_FinishWebAuthnRegistration, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationResponse> FinishWebAuthnRegistrationAsync(global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return FinishWebAuthnRegistrationAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationResponse> FinishWebAuthnRegistrationAsync(global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_FinishWebAuthnRegistration, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationResponse StartWebAuthnAuthentication(global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return StartWebAuthnAuthentication(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationResponse StartWebAuthnAuthentication(global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_StartWebAuthnAuthentication, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationResponse> StartWebAuthnAuthenticationAsync(global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return StartWebAuthnAuthenticationAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationResponse> StartWebAuthnAuthenticationAsync(global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_StartWebAuthnAuthentication, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse FinishWebAuthnAuthentication(global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return FinishWebAuthnAuthentication(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse FinishWebAuthnAuthentication(global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_FinishWebAuthnAuthentication, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse> FinishWebAuthnAuthenticationAsync(global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return FinishWebAuthnAuthenticationAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse> FinishWebAuthnAuthenticationAsync(global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_FinishWebAuthnAuthentication, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override AuthnServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -1318,7 +1504,11 @@ namespace udb.core.Authn.Services.V1 {
           .AddMethod(__Method_RevokeSession, serviceImpl.RevokeSession)
           .AddMethod(__Method_ValidateCSRF, serviceImpl.ValidateCSRF)
           .AddMethod(__Method_EnrollMFA, serviceImpl.EnrollMFA)
-          .AddMethod(__Method_ConfirmMFAEnrollment, serviceImpl.ConfirmMFAEnrollment).Build();
+          .AddMethod(__Method_ConfirmMFAEnrollment, serviceImpl.ConfirmMFAEnrollment)
+          .AddMethod(__Method_StartWebAuthnRegistration, serviceImpl.StartWebAuthnRegistration)
+          .AddMethod(__Method_FinishWebAuthnRegistration, serviceImpl.FinishWebAuthnRegistration)
+          .AddMethod(__Method_StartWebAuthnAuthentication, serviceImpl.StartWebAuthnAuthentication)
+          .AddMethod(__Method_FinishWebAuthnAuthentication, serviceImpl.FinishWebAuthnAuthentication).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -1351,6 +1541,10 @@ namespace udb.core.Authn.Services.V1 {
       serviceBinder.AddMethod(__Method_ValidateCSRF, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.ValidateCSRFRequest, global::udb.core.Authn.Services.V1.ValidateCSRFResponse>(serviceImpl.ValidateCSRF));
       serviceBinder.AddMethod(__Method_EnrollMFA, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.EnrollMFARequest, global::udb.core.Authn.Services.V1.EnrollMFAResponse>(serviceImpl.EnrollMFA));
       serviceBinder.AddMethod(__Method_ConfirmMFAEnrollment, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.ConfirmMFAEnrollmentRequest, global::udb.core.Authn.Services.V1.ConfirmMFAEnrollmentResponse>(serviceImpl.ConfirmMFAEnrollment));
+      serviceBinder.AddMethod(__Method_StartWebAuthnRegistration, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationRequest, global::udb.core.Authn.Services.V1.StartWebAuthnRegistrationResponse>(serviceImpl.StartWebAuthnRegistration));
+      serviceBinder.AddMethod(__Method_FinishWebAuthnRegistration, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationRequest, global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationResponse>(serviceImpl.FinishWebAuthnRegistration));
+      serviceBinder.AddMethod(__Method_StartWebAuthnAuthentication, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationRequest, global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationResponse>(serviceImpl.StartWebAuthnAuthentication));
+      serviceBinder.AddMethod(__Method_FinishWebAuthnAuthentication, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest, global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse>(serviceImpl.FinishWebAuthnAuthentication));
     }
 
   }

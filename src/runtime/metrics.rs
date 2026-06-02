@@ -648,8 +648,9 @@ impl PrometheusMetrics {
     }
 
     pub fn observe_pg_query(&self, op: &str, table: &str, seconds: f64) {
+        // D.4: `table` is operator/request-defined — bound its cardinality.
         self.pg_duration
-            .with_label_values(&[op, table])
+            .with_label_values(&[op, bounded_label(table).as_ref()])
             .observe(seconds);
     }
 
@@ -660,11 +661,17 @@ impl PrometheusMetrics {
     }
 
     pub fn inc_vector_op(&self, collection: &str, op: &str) {
-        self.vector_ops.with_label_values(&[collection, op]).inc();
+        // D.4: `collection` is untrusted — bound its cardinality.
+        self.vector_ops
+            .with_label_values(&[bounded_label(collection).as_ref(), op])
+            .inc();
     }
 
     pub fn inc_object_op(&self, bucket: &str, method: &str) {
-        self.object_ops.with_label_values(&[bucket, method]).inc();
+        // D.4: `bucket` is untrusted — bound its cardinality.
+        self.object_ops
+            .with_label_values(&[bounded_label(bucket).as_ref(), method])
+            .inc();
     }
 
     pub fn gather_text(&self, extra: &str) -> String {
@@ -755,6 +762,73 @@ fn cdc_error_reason_label(reason: &str) -> &'static str {
         "" => "unknown",
         _ => "other",
     }
+}
+
+// D.4: bound metric-label cardinality under UNTRUSTED resource names (table /
+// collection / bucket / project / instance). A tenant could otherwise blow up
+// Prometheus cardinality (a time series per distinct name) by sending arbitrary
+// names. Raw values still go to traces/logs (callers keep them); the METRIC gets
+// only the bounded form.
+// Bounds resolved from the central config (D.4); cached once so metric
+// increments don't re-read env on every call.
+fn max_label_len() -> usize {
+    static V: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+    *V.get_or_init(crate::runtime::config::metric_label_max_len)
+}
+fn max_distinct_labels() -> usize {
+    static V: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+    *V.get_or_init(crate::runtime::config::metric_max_distinct_labels)
+}
+
+/// Charset+length sanitize: lowercase, keep `[a-z0-9_.:-]` (others → `_`), cap
+/// length; empty/whitespace → `"empty"`. Bounds the label VALUE (size/charset),
+/// not yet its cardinality.
+fn sanitize_label(raw: &str) -> std::borrow::Cow<'static, str> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return std::borrow::Cow::Borrowed("empty");
+    }
+    std::borrow::Cow::Owned(
+        trimmed
+            .chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.' | ':') {
+                    c.to_ascii_lowercase()
+                } else {
+                    '_'
+                }
+            })
+            .take(max_label_len())
+            .collect(),
+    )
+}
+
+/// Cap the number of DISTINCT labels admitted into `seen` at `cap`; anything
+/// beyond collapses to `"overflow"`. Pure (takes the set) so the cardinality
+/// bound is unit-testable without touching global state.
+fn intern_bounded(
+    label: std::borrow::Cow<'static, str>,
+    seen: &std::sync::Mutex<std::collections::HashSet<String>>,
+    cap: usize,
+) -> std::borrow::Cow<'static, str> {
+    let mut guard = seen.lock().unwrap_or_else(|e| e.into_inner());
+    if guard.contains(label.as_ref()) {
+        return label;
+    }
+    if guard.len() < cap {
+        guard.insert(label.clone().into_owned());
+        return label;
+    }
+    std::borrow::Cow::Borrowed("overflow")
+}
+
+/// Bounded metric label for an untrusted resource name: sanitized + capped to
+/// `MAX_DISTINCT_LABELS` distinct values process-wide.
+fn bounded_label(raw: &str) -> std::borrow::Cow<'static, str> {
+    static SEEN: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<String>>> =
+        std::sync::OnceLock::new();
+    let seen = SEEN.get_or_init(|| std::sync::Mutex::new(std::collections::HashSet::new()));
+    intern_bounded(sanitize_label(raw), seen, max_distinct_labels())
 }
 
 impl MetricsRecorder for PrometheusMetrics {
@@ -942,6 +1016,42 @@ impl MetricsRecorder for PrometheusMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sanitize_label_bounds_charset_and_length() {
+        assert_eq!(sanitize_label("My Table!"), "my_table_");
+        assert_eq!(sanitize_label("   "), "empty");
+        assert_eq!(sanitize_label(""), "empty");
+        assert_eq!(sanitize_label("udb.core.v1:users-2"), "udb.core.v1:users-2");
+        assert!(sanitize_label(&"x".repeat(500)).len() <= max_label_len());
+    }
+
+    #[test]
+    fn intern_bounded_caps_cardinality_under_arbitrary_names() {
+        use std::collections::HashSet;
+        use std::sync::Mutex;
+        // Local set so the global SEEN isn't polluted for other tests.
+        let seen = Mutex::new(HashSet::new());
+        let cap = 8;
+        let mut distinct = HashSet::new();
+        // Feed far more distinct names than the cap; the admitted label set must
+        // stay bounded (cap admitted + the single "overflow" bucket).
+        for i in 0..(cap * 10) {
+            let label = intern_bounded(sanitize_label(&format!("tbl_{i}")), &seen, cap);
+            distinct.insert(label.into_owned());
+        }
+        assert!(
+            distinct.len() <= cap + 1,
+            "cardinality must stay bounded, got {} distinct labels",
+            distinct.len()
+        );
+        assert!(
+            distinct.contains("overflow"),
+            "overflow bucket must be used past the cap"
+        );
+        // A name admitted before the cap round-trips deterministically.
+        assert_eq!(intern_bounded(sanitize_label("tbl_0"), &seen, cap), "tbl_0");
+    }
 
     #[test]
     fn noop_metrics_is_callable() {

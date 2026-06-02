@@ -72,6 +72,9 @@
             "pestphp/pest-plugin": true
         }
     },
+    "bin": [
+        "bin/udb"
+    ],
     "minimum-stability": "stable",
     "prefer-stable": true
 }

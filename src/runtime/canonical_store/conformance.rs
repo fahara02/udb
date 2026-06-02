@@ -35,8 +35,10 @@ pub async fn run_contract(store: Arc<dyn CanonicalStore>) {
     let label = store.backend_label();
     assert!(!label.is_empty(), "backend_label must be non-empty");
     assert!(
-        label.chars().all(|c| c.is_ascii_lowercase()),
-        "backend_label '{label}' must be ASCII lowercase (registry uses it as a key)"
+        label
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit()),
+        "backend_label '{label}' must be ASCII lowercase + digits (registry uses it as a key; e.g. 'neo4j')"
     );
 
     // 2. Instance name is reportable.
@@ -786,5 +788,53 @@ mod tests {
             "udb_outbox_events",
         ));
         run_migration_audit_store_contract(store).await;
+    }
+
+    /// B.6 guardrail: `SystemStores` is the *only* expansion point. A backend
+    /// implementing the full supertrait round-trips through the registry in
+    /// BOTH views — `register_full` exposes the rich `SystemStores` view via
+    /// `get_full` AND the same store as a `CanonicalStore` via `get` — becomes
+    /// the default rich store, and the `(backend_label, instance)` pair is the
+    /// single addressing key. The complementary invariant that the fence drives
+    /// such a store purely through the trait object (no backend branch) is
+    /// proven by
+    /// `runtime::consistency_fence::tests::fence_e2e_against_sqlite_system_stores`.
+    #[tokio::test]
+    async fn registry_round_trips_a_full_system_store_in_both_views() {
+        use crate::runtime::canonical_store::CanonicalStoreRegistry;
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .expect("in-memory sqlite");
+        let store = Arc::new(SqliteCanonicalStore::new(
+            pool,
+            "conformance-b6",
+            "udb_outbox_events",
+        ));
+        let label = CanonicalStore::backend_label(store.as_ref()).to_string();
+        let instance = CanonicalStore::instance_name(store.as_ref()).to_string();
+
+        let mut registry = CanonicalStoreRegistry::new();
+        registry.register_full(store);
+
+        assert!(
+            registry.get_full(&label, &instance).is_some(),
+            "register_full must expose the rich SystemStores view via get_full"
+        );
+        assert!(
+            registry.get(&label, &instance).is_some(),
+            "the same full store must also be reachable as a CanonicalStore via get"
+        );
+        assert!(
+            registry.default_full_store().is_some(),
+            "the first register_full becomes the default rich store"
+        );
+        assert_eq!(
+            registry.registered_keys(),
+            vec![(label.to_ascii_lowercase(), instance.clone())],
+            "(backend_label, instance) is the single canonical-store addressing key"
+        );
     }
 }

@@ -3224,6 +3224,534 @@ func (x *ConfirmMFAEnrollmentResponse) GetEnrolled() bool {
 	return false
 }
 
+type StartWebAuthnRegistrationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Label         string                 `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	TenantId      string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Context       *v1.RequestContext     `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartWebAuthnRegistrationRequest) Reset() {
+	*x = StartWebAuthnRegistrationRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartWebAuthnRegistrationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartWebAuthnRegistrationRequest) ProtoMessage() {}
+
+func (x *StartWebAuthnRegistrationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartWebAuthnRegistrationRequest.ProtoReflect.Descriptor instead.
+func (*StartWebAuthnRegistrationRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *StartWebAuthnRegistrationRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *StartWebAuthnRegistrationRequest) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *StartWebAuthnRegistrationRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *StartWebAuthnRegistrationRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *StartWebAuthnRegistrationRequest) GetContext() *v1.RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type StartWebAuthnRegistrationResponse struct {
+	state                                  protoimpl.MessageState `protogen:"open.v1"`
+	ChallengeId                            string                 `protobuf:"bytes,1,opt,name=challenge_id,json=challengeId,proto3" json:"challenge_id,omitempty"`
+	PublicKeyCredentialCreationOptionsJson string                 `protobuf:"bytes,2,opt,name=public_key_credential_creation_options_json,json=publicKeyCredentialCreationOptionsJson,proto3" json:"public_key_credential_creation_options_json,omitempty"`
+	ExpiresAtUnix                          int64                  `protobuf:"varint,3,opt,name=expires_at_unix,json=expiresAtUnix,proto3" json:"expires_at_unix,omitempty"`
+	unknownFields                          protoimpl.UnknownFields
+	sizeCache                              protoimpl.SizeCache
+}
+
+func (x *StartWebAuthnRegistrationResponse) Reset() {
+	*x = StartWebAuthnRegistrationResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartWebAuthnRegistrationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartWebAuthnRegistrationResponse) ProtoMessage() {}
+
+func (x *StartWebAuthnRegistrationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartWebAuthnRegistrationResponse.ProtoReflect.Descriptor instead.
+func (*StartWebAuthnRegistrationResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *StartWebAuthnRegistrationResponse) GetChallengeId() string {
+	if x != nil {
+		return x.ChallengeId
+	}
+	return ""
+}
+
+func (x *StartWebAuthnRegistrationResponse) GetPublicKeyCredentialCreationOptionsJson() string {
+	if x != nil {
+		return x.PublicKeyCredentialCreationOptionsJson
+	}
+	return ""
+}
+
+func (x *StartWebAuthnRegistrationResponse) GetExpiresAtUnix() int64 {
+	if x != nil {
+		return x.ExpiresAtUnix
+	}
+	return 0
+}
+
+type FinishWebAuthnRegistrationRequest struct {
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	ChallengeId             string                 `protobuf:"bytes,1,opt,name=challenge_id,json=challengeId,proto3" json:"challenge_id,omitempty"`
+	PublicKeyCredentialJson string                 `protobuf:"bytes,2,opt,name=public_key_credential_json,json=publicKeyCredentialJson,proto3" json:"public_key_credential_json,omitempty"`
+	Label                   string                 `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
+	Context                 *v1.RequestContext     `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *FinishWebAuthnRegistrationRequest) Reset() {
+	*x = FinishWebAuthnRegistrationRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishWebAuthnRegistrationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishWebAuthnRegistrationRequest) ProtoMessage() {}
+
+func (x *FinishWebAuthnRegistrationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishWebAuthnRegistrationRequest.ProtoReflect.Descriptor instead.
+func (*FinishWebAuthnRegistrationRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *FinishWebAuthnRegistrationRequest) GetChallengeId() string {
+	if x != nil {
+		return x.ChallengeId
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnRegistrationRequest) GetPublicKeyCredentialJson() string {
+	if x != nil {
+		return x.PublicKeyCredentialJson
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnRegistrationRequest) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnRegistrationRequest) GetContext() *v1.RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type FinishWebAuthnRegistrationResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Registered    bool                   `protobuf:"varint,1,opt,name=registered,proto3" json:"registered,omitempty"`
+	CredentialId  string                 `protobuf:"bytes,2,opt,name=credential_id,json=credentialId,proto3" json:"credential_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinishWebAuthnRegistrationResponse) Reset() {
+	*x = FinishWebAuthnRegistrationResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishWebAuthnRegistrationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishWebAuthnRegistrationResponse) ProtoMessage() {}
+
+func (x *FinishWebAuthnRegistrationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishWebAuthnRegistrationResponse.ProtoReflect.Descriptor instead.
+func (*FinishWebAuthnRegistrationResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *FinishWebAuthnRegistrationResponse) GetRegistered() bool {
+	if x != nil {
+		return x.Registered
+	}
+	return false
+}
+
+func (x *FinishWebAuthnRegistrationResponse) GetCredentialId() string {
+	if x != nil {
+		return x.CredentialId
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnRegistrationResponse) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type StartWebAuthnAuthenticationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,3,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Context       *v1.RequestContext     `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartWebAuthnAuthenticationRequest) Reset() {
+	*x = StartWebAuthnAuthenticationRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartWebAuthnAuthenticationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartWebAuthnAuthenticationRequest) ProtoMessage() {}
+
+func (x *StartWebAuthnAuthenticationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartWebAuthnAuthenticationRequest.ProtoReflect.Descriptor instead.
+func (*StartWebAuthnAuthenticationRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *StartWebAuthnAuthenticationRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *StartWebAuthnAuthenticationRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *StartWebAuthnAuthenticationRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *StartWebAuthnAuthenticationRequest) GetContext() *v1.RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type StartWebAuthnAuthenticationResponse struct {
+	state                                 protoimpl.MessageState `protogen:"open.v1"`
+	ChallengeId                           string                 `protobuf:"bytes,1,opt,name=challenge_id,json=challengeId,proto3" json:"challenge_id,omitempty"`
+	PublicKeyCredentialRequestOptionsJson string                 `protobuf:"bytes,2,opt,name=public_key_credential_request_options_json,json=publicKeyCredentialRequestOptionsJson,proto3" json:"public_key_credential_request_options_json,omitempty"`
+	ExpiresAtUnix                         int64                  `protobuf:"varint,3,opt,name=expires_at_unix,json=expiresAtUnix,proto3" json:"expires_at_unix,omitempty"`
+	unknownFields                         protoimpl.UnknownFields
+	sizeCache                             protoimpl.SizeCache
+}
+
+func (x *StartWebAuthnAuthenticationResponse) Reset() {
+	*x = StartWebAuthnAuthenticationResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartWebAuthnAuthenticationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartWebAuthnAuthenticationResponse) ProtoMessage() {}
+
+func (x *StartWebAuthnAuthenticationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartWebAuthnAuthenticationResponse.ProtoReflect.Descriptor instead.
+func (*StartWebAuthnAuthenticationResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *StartWebAuthnAuthenticationResponse) GetChallengeId() string {
+	if x != nil {
+		return x.ChallengeId
+	}
+	return ""
+}
+
+func (x *StartWebAuthnAuthenticationResponse) GetPublicKeyCredentialRequestOptionsJson() string {
+	if x != nil {
+		return x.PublicKeyCredentialRequestOptionsJson
+	}
+	return ""
+}
+
+func (x *StartWebAuthnAuthenticationResponse) GetExpiresAtUnix() int64 {
+	if x != nil {
+		return x.ExpiresAtUnix
+	}
+	return 0
+}
+
+type FinishWebAuthnAuthenticationRequest struct {
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	ChallengeId             string                 `protobuf:"bytes,1,opt,name=challenge_id,json=challengeId,proto3" json:"challenge_id,omitempty"`
+	PublicKeyCredentialJson string                 `protobuf:"bytes,2,opt,name=public_key_credential_json,json=publicKeyCredentialJson,proto3" json:"public_key_credential_json,omitempty"`
+	Context                 *v1.RequestContext     `protobuf:"bytes,3,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *FinishWebAuthnAuthenticationRequest) Reset() {
+	*x = FinishWebAuthnAuthenticationRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishWebAuthnAuthenticationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishWebAuthnAuthenticationRequest) ProtoMessage() {}
+
+func (x *FinishWebAuthnAuthenticationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishWebAuthnAuthenticationRequest.ProtoReflect.Descriptor instead.
+func (*FinishWebAuthnAuthenticationRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *FinishWebAuthnAuthenticationRequest) GetChallengeId() string {
+	if x != nil {
+		return x.ChallengeId
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnAuthenticationRequest) GetPublicKeyCredentialJson() string {
+	if x != nil {
+		return x.PublicKeyCredentialJson
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnAuthenticationRequest) GetContext() *v1.RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type FinishWebAuthnAuthenticationResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Principal     *Principal             `protobuf:"bytes,1,opt,name=principal,proto3" json:"principal,omitempty"`
+	SessionId     string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	AccessToken   string                 `protobuf:"bytes,3,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	ExpiresAtUnix int64                  `protobuf:"varint,4,opt,name=expires_at_unix,json=expiresAtUnix,proto3" json:"expires_at_unix,omitempty"`
+	CredentialId  string                 `protobuf:"bytes,5,opt,name=credential_id,json=credentialId,proto3" json:"credential_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinishWebAuthnAuthenticationResponse) Reset() {
+	*x = FinishWebAuthnAuthenticationResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishWebAuthnAuthenticationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishWebAuthnAuthenticationResponse) ProtoMessage() {}
+
+func (x *FinishWebAuthnAuthenticationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishWebAuthnAuthenticationResponse.ProtoReflect.Descriptor instead.
+func (*FinishWebAuthnAuthenticationResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *FinishWebAuthnAuthenticationResponse) GetPrincipal() *Principal {
+	if x != nil {
+		return x.Principal
+	}
+	return nil
+}
+
+func (x *FinishWebAuthnAuthenticationResponse) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnAuthenticationResponse) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnAuthenticationResponse) GetExpiresAtUnix() int64 {
+	if x != nil {
+		return x.ExpiresAtUnix
+	}
+	return 0
+}
+
+func (x *FinishWebAuthnAuthenticationResponse) GetCredentialId() string {
+	if x != nil {
+		return x.CredentialId
+	}
+	return ""
+}
+
 var File_udb_core_authn_services_v1_core_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
@@ -3526,7 +4054,50 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x04code\x18\x03 \x01(\tR\x04code\x12<\n" +
 	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\":\n" +
 	"\x1cConfirmMFAEnrollmentResponse\x12\x1a\n" +
-	"\benrolled\x18\x01 \x01(\bR\benrolledB\x82\x02\n" +
+	"\benrolled\x18\x01 \x01(\bR\benrolled\"\xcb\x01\n" +
+	" StartWebAuthnRegistrationRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
+	"\x05label\x18\x02 \x01(\tR\x05label\x12\x1b\n" +
+	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x04 \x01(\tR\tprojectId\x12<\n" +
+	"\acontext\x18\x05 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"\xcb\x01\n" +
+	"!StartWebAuthnRegistrationResponse\x12!\n" +
+	"\fchallenge_id\x18\x01 \x01(\tR\vchallengeId\x12[\n" +
+	"+public_key_credential_creation_options_json\x18\x02 \x01(\tR&publicKeyCredentialCreationOptionsJson\x12&\n" +
+	"\x0fexpires_at_unix\x18\x03 \x01(\x03R\rexpiresAtUnix\"\xd7\x01\n" +
+	"!FinishWebAuthnRegistrationRequest\x12!\n" +
+	"\fchallenge_id\x18\x01 \x01(\tR\vchallengeId\x12;\n" +
+	"\x1apublic_key_credential_json\x18\x02 \x01(\tR\x17publicKeyCredentialJson\x12\x14\n" +
+	"\x05label\x18\x03 \x01(\tR\x05label\x12<\n" +
+	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"\x82\x01\n" +
+	"\"FinishWebAuthnRegistrationResponse\x12\x1e\n" +
+	"\n" +
+	"registered\x18\x01 \x01(\bR\n" +
+	"registered\x12#\n" +
+	"\rcredential_id\x18\x02 \x01(\tR\fcredentialId\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\"\xb7\x01\n" +
+	"\"StartWebAuthnAuthenticationRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
+	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x03 \x01(\tR\tprojectId\x12<\n" +
+	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"\xcb\x01\n" +
+	"#StartWebAuthnAuthenticationResponse\x12!\n" +
+	"\fchallenge_id\x18\x01 \x01(\tR\vchallengeId\x12Y\n" +
+	"*public_key_credential_request_options_json\x18\x02 \x01(\tR%publicKeyCredentialRequestOptionsJson\x12&\n" +
+	"\x0fexpires_at_unix\x18\x03 \x01(\x03R\rexpiresAtUnix\"\xc3\x01\n" +
+	"#FinishWebAuthnAuthenticationRequest\x12!\n" +
+	"\fchallenge_id\x18\x01 \x01(\tR\vchallengeId\x12;\n" +
+	"\x1apublic_key_credential_json\x18\x02 \x01(\tR\x17publicKeyCredentialJson\x12<\n" +
+	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"\xfa\x01\n" +
+	"$FinishWebAuthnAuthenticationResponse\x12C\n" +
+	"\tprincipal\x18\x01 \x01(\v2%.udb.core.authn.services.v1.PrincipalR\tprincipal\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId\x12!\n" +
+	"\faccess_token\x18\x03 \x01(\tR\vaccessToken\x12&\n" +
+	"\x0fexpires_at_unix\x18\x04 \x01(\x03R\rexpiresAtUnix\x12#\n" +
+	"\rcredential_id\x18\x05 \x01(\tR\fcredentialIdB\x82\x02\n" +
 	"\x1ecom.udb.core.authn.services.v1B\tCoreProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1audb.core.Authn.Services.V1\xca\x02\x1aUdb\\Core\\Authn\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Authn\\Services\\V1\xea\x02\x1eUdb::Core::Authn::Services::V1b\x06proto3"
 
 var (
@@ -3541,127 +4112,140 @@ func file_udb_core_authn_services_v1_core_proto_rawDescGZIP() []byte {
 	return file_udb_core_authn_services_v1_core_proto_rawDescData
 }
 
-var file_udb_core_authn_services_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 52)
+var file_udb_core_authn_services_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 60)
 var file_udb_core_authn_services_v1_core_proto_goTypes = []any{
-	(*CreateUserRequest)(nil),            // 0: udb.core.authn.services.v1.CreateUserRequest
-	(*CreateUserResponse)(nil),           // 1: udb.core.authn.services.v1.CreateUserResponse
-	(*GetUserRequest)(nil),               // 2: udb.core.authn.services.v1.GetUserRequest
-	(*GetUserResponse)(nil),              // 3: udb.core.authn.services.v1.GetUserResponse
-	(*ListUsersRequest)(nil),             // 4: udb.core.authn.services.v1.ListUsersRequest
-	(*ListUsersResponse)(nil),            // 5: udb.core.authn.services.v1.ListUsersResponse
-	(*UpdateUserRequest)(nil),            // 6: udb.core.authn.services.v1.UpdateUserRequest
-	(*UpdateUserResponse)(nil),           // 7: udb.core.authn.services.v1.UpdateUserResponse
-	(*ChangeUserStatusRequest)(nil),      // 8: udb.core.authn.services.v1.ChangeUserStatusRequest
-	(*ChangeUserStatusResponse)(nil),     // 9: udb.core.authn.services.v1.ChangeUserStatusResponse
-	(*AdminResetPasswordRequest)(nil),    // 10: udb.core.authn.services.v1.AdminResetPasswordRequest
-	(*AdminResetPasswordResponse)(nil),   // 11: udb.core.authn.services.v1.AdminResetPasswordResponse
-	(*SendOTPRequest)(nil),               // 12: udb.core.authn.services.v1.SendOTPRequest
-	(*SendOTPResponse)(nil),              // 13: udb.core.authn.services.v1.SendOTPResponse
-	(*VerifyOTPRequest)(nil),             // 14: udb.core.authn.services.v1.VerifyOTPRequest
-	(*VerifyOTPResponse)(nil),            // 15: udb.core.authn.services.v1.VerifyOTPResponse
-	(*ResendOTPRequest)(nil),             // 16: udb.core.authn.services.v1.ResendOTPRequest
-	(*ResendOTPResponse)(nil),            // 17: udb.core.authn.services.v1.ResendOTPResponse
-	(*Principal)(nil),                    // 18: udb.core.authn.services.v1.Principal
-	(*AuthnRequest)(nil),                 // 19: udb.core.authn.services.v1.AuthnRequest
-	(*AuthnResponse)(nil),                // 20: udb.core.authn.services.v1.AuthnResponse
-	(*LoginRequest)(nil),                 // 21: udb.core.authn.services.v1.LoginRequest
-	(*LoginResponse)(nil),                // 22: udb.core.authn.services.v1.LoginResponse
-	(*RefreshTokenRequest)(nil),          // 23: udb.core.authn.services.v1.RefreshTokenRequest
-	(*RefreshTokenResponse)(nil),         // 24: udb.core.authn.services.v1.RefreshTokenResponse
-	(*LogoutRequest)(nil),                // 25: udb.core.authn.services.v1.LogoutRequest
-	(*LogoutResponse)(nil),               // 26: udb.core.authn.services.v1.LogoutResponse
-	(*ChangePasswordRequest)(nil),        // 27: udb.core.authn.services.v1.ChangePasswordRequest
-	(*ChangePasswordResponse)(nil),       // 28: udb.core.authn.services.v1.ChangePasswordResponse
-	(*ValidateTokenRequest)(nil),         // 29: udb.core.authn.services.v1.ValidateTokenRequest
-	(*ValidateTokenResponse)(nil),        // 30: udb.core.authn.services.v1.ValidateTokenResponse
-	(*CreateSessionRequest)(nil),         // 31: udb.core.authn.services.v1.CreateSessionRequest
-	(*CreateSessionResponse)(nil),        // 32: udb.core.authn.services.v1.CreateSessionResponse
-	(*RefreshSessionRequest)(nil),        // 33: udb.core.authn.services.v1.RefreshSessionRequest
-	(*RefreshSessionResponse)(nil),       // 34: udb.core.authn.services.v1.RefreshSessionResponse
-	(*GetSessionRequest)(nil),            // 35: udb.core.authn.services.v1.GetSessionRequest
-	(*GetSessionResponse)(nil),           // 36: udb.core.authn.services.v1.GetSessionResponse
-	(*ListSessionsRequest)(nil),          // 37: udb.core.authn.services.v1.ListSessionsRequest
-	(*ListSessionsResponse)(nil),         // 38: udb.core.authn.services.v1.ListSessionsResponse
-	(*RevokeSessionRequest)(nil),         // 39: udb.core.authn.services.v1.RevokeSessionRequest
-	(*RevokeSessionResponse)(nil),        // 40: udb.core.authn.services.v1.RevokeSessionResponse
-	(*ValidateCSRFRequest)(nil),          // 41: udb.core.authn.services.v1.ValidateCSRFRequest
-	(*ValidateCSRFResponse)(nil),         // 42: udb.core.authn.services.v1.ValidateCSRFResponse
-	(*EnrollMFARequest)(nil),             // 43: udb.core.authn.services.v1.EnrollMFARequest
-	(*EnrollMFAResponse)(nil),            // 44: udb.core.authn.services.v1.EnrollMFAResponse
-	(*ConfirmMFAEnrollmentRequest)(nil),  // 45: udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest
-	(*ConfirmMFAEnrollmentResponse)(nil), // 46: udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse
-	nil,                                  // 47: udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntry
-	nil,                                  // 48: udb.core.authn.services.v1.UpdateUserRequest.ProfileAttributesEntry
-	nil,                                  // 49: udb.core.authn.services.v1.Principal.AttributesEntry
-	nil,                                  // 50: udb.core.authn.services.v1.AuthnRequest.AttributesEntry
-	nil,                                  // 51: udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntry
-	(*v1.RequestContext)(nil),            // 52: udb.core.common.v1.RequestContext
-	(v11.AccountKind)(0),                 // 53: udb.core.authn.entity.v1.AccountKind
-	(*v11.User)(nil),                     // 54: udb.core.authn.entity.v1.User
-	(v11.UserStatus)(0),                  // 55: udb.core.authn.entity.v1.UserStatus
-	(*v1.PageRequest)(nil),               // 56: udb.core.common.v1.PageRequest
-	(*v1.PageResponse)(nil),              // 57: udb.core.common.v1.PageResponse
-	(v11.OTPType)(0),                     // 58: udb.core.authn.entity.v1.OTPType
-	(v11.AuthCredentialType)(0),          // 59: udb.core.authn.entity.v1.AuthCredentialType
-	(v11.DeviceType)(0),                  // 60: udb.core.authn.entity.v1.DeviceType
-	(*timestamppb.Timestamp)(nil),        // 61: google.protobuf.Timestamp
-	(v11.TokenType)(0),                   // 62: udb.core.authn.entity.v1.TokenType
-	(v11.SessionType)(0),                 // 63: udb.core.authn.entity.v1.SessionType
-	(*v11.Session)(nil),                  // 64: udb.core.authn.entity.v1.Session
-	(v11.AuthFactorKind)(0),              // 65: udb.core.authn.entity.v1.AuthFactorKind
+	(*CreateUserRequest)(nil),                    // 0: udb.core.authn.services.v1.CreateUserRequest
+	(*CreateUserResponse)(nil),                   // 1: udb.core.authn.services.v1.CreateUserResponse
+	(*GetUserRequest)(nil),                       // 2: udb.core.authn.services.v1.GetUserRequest
+	(*GetUserResponse)(nil),                      // 3: udb.core.authn.services.v1.GetUserResponse
+	(*ListUsersRequest)(nil),                     // 4: udb.core.authn.services.v1.ListUsersRequest
+	(*ListUsersResponse)(nil),                    // 5: udb.core.authn.services.v1.ListUsersResponse
+	(*UpdateUserRequest)(nil),                    // 6: udb.core.authn.services.v1.UpdateUserRequest
+	(*UpdateUserResponse)(nil),                   // 7: udb.core.authn.services.v1.UpdateUserResponse
+	(*ChangeUserStatusRequest)(nil),              // 8: udb.core.authn.services.v1.ChangeUserStatusRequest
+	(*ChangeUserStatusResponse)(nil),             // 9: udb.core.authn.services.v1.ChangeUserStatusResponse
+	(*AdminResetPasswordRequest)(nil),            // 10: udb.core.authn.services.v1.AdminResetPasswordRequest
+	(*AdminResetPasswordResponse)(nil),           // 11: udb.core.authn.services.v1.AdminResetPasswordResponse
+	(*SendOTPRequest)(nil),                       // 12: udb.core.authn.services.v1.SendOTPRequest
+	(*SendOTPResponse)(nil),                      // 13: udb.core.authn.services.v1.SendOTPResponse
+	(*VerifyOTPRequest)(nil),                     // 14: udb.core.authn.services.v1.VerifyOTPRequest
+	(*VerifyOTPResponse)(nil),                    // 15: udb.core.authn.services.v1.VerifyOTPResponse
+	(*ResendOTPRequest)(nil),                     // 16: udb.core.authn.services.v1.ResendOTPRequest
+	(*ResendOTPResponse)(nil),                    // 17: udb.core.authn.services.v1.ResendOTPResponse
+	(*Principal)(nil),                            // 18: udb.core.authn.services.v1.Principal
+	(*AuthnRequest)(nil),                         // 19: udb.core.authn.services.v1.AuthnRequest
+	(*AuthnResponse)(nil),                        // 20: udb.core.authn.services.v1.AuthnResponse
+	(*LoginRequest)(nil),                         // 21: udb.core.authn.services.v1.LoginRequest
+	(*LoginResponse)(nil),                        // 22: udb.core.authn.services.v1.LoginResponse
+	(*RefreshTokenRequest)(nil),                  // 23: udb.core.authn.services.v1.RefreshTokenRequest
+	(*RefreshTokenResponse)(nil),                 // 24: udb.core.authn.services.v1.RefreshTokenResponse
+	(*LogoutRequest)(nil),                        // 25: udb.core.authn.services.v1.LogoutRequest
+	(*LogoutResponse)(nil),                       // 26: udb.core.authn.services.v1.LogoutResponse
+	(*ChangePasswordRequest)(nil),                // 27: udb.core.authn.services.v1.ChangePasswordRequest
+	(*ChangePasswordResponse)(nil),               // 28: udb.core.authn.services.v1.ChangePasswordResponse
+	(*ValidateTokenRequest)(nil),                 // 29: udb.core.authn.services.v1.ValidateTokenRequest
+	(*ValidateTokenResponse)(nil),                // 30: udb.core.authn.services.v1.ValidateTokenResponse
+	(*CreateSessionRequest)(nil),                 // 31: udb.core.authn.services.v1.CreateSessionRequest
+	(*CreateSessionResponse)(nil),                // 32: udb.core.authn.services.v1.CreateSessionResponse
+	(*RefreshSessionRequest)(nil),                // 33: udb.core.authn.services.v1.RefreshSessionRequest
+	(*RefreshSessionResponse)(nil),               // 34: udb.core.authn.services.v1.RefreshSessionResponse
+	(*GetSessionRequest)(nil),                    // 35: udb.core.authn.services.v1.GetSessionRequest
+	(*GetSessionResponse)(nil),                   // 36: udb.core.authn.services.v1.GetSessionResponse
+	(*ListSessionsRequest)(nil),                  // 37: udb.core.authn.services.v1.ListSessionsRequest
+	(*ListSessionsResponse)(nil),                 // 38: udb.core.authn.services.v1.ListSessionsResponse
+	(*RevokeSessionRequest)(nil),                 // 39: udb.core.authn.services.v1.RevokeSessionRequest
+	(*RevokeSessionResponse)(nil),                // 40: udb.core.authn.services.v1.RevokeSessionResponse
+	(*ValidateCSRFRequest)(nil),                  // 41: udb.core.authn.services.v1.ValidateCSRFRequest
+	(*ValidateCSRFResponse)(nil),                 // 42: udb.core.authn.services.v1.ValidateCSRFResponse
+	(*EnrollMFARequest)(nil),                     // 43: udb.core.authn.services.v1.EnrollMFARequest
+	(*EnrollMFAResponse)(nil),                    // 44: udb.core.authn.services.v1.EnrollMFAResponse
+	(*ConfirmMFAEnrollmentRequest)(nil),          // 45: udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest
+	(*ConfirmMFAEnrollmentResponse)(nil),         // 46: udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse
+	(*StartWebAuthnRegistrationRequest)(nil),     // 47: udb.core.authn.services.v1.StartWebAuthnRegistrationRequest
+	(*StartWebAuthnRegistrationResponse)(nil),    // 48: udb.core.authn.services.v1.StartWebAuthnRegistrationResponse
+	(*FinishWebAuthnRegistrationRequest)(nil),    // 49: udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest
+	(*FinishWebAuthnRegistrationResponse)(nil),   // 50: udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse
+	(*StartWebAuthnAuthenticationRequest)(nil),   // 51: udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest
+	(*StartWebAuthnAuthenticationResponse)(nil),  // 52: udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse
+	(*FinishWebAuthnAuthenticationRequest)(nil),  // 53: udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest
+	(*FinishWebAuthnAuthenticationResponse)(nil), // 54: udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse
+	nil,                           // 55: udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntry
+	nil,                           // 56: udb.core.authn.services.v1.UpdateUserRequest.ProfileAttributesEntry
+	nil,                           // 57: udb.core.authn.services.v1.Principal.AttributesEntry
+	nil,                           // 58: udb.core.authn.services.v1.AuthnRequest.AttributesEntry
+	nil,                           // 59: udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntry
+	(*v1.RequestContext)(nil),     // 60: udb.core.common.v1.RequestContext
+	(v11.AccountKind)(0),          // 61: udb.core.authn.entity.v1.AccountKind
+	(*v11.User)(nil),              // 62: udb.core.authn.entity.v1.User
+	(v11.UserStatus)(0),           // 63: udb.core.authn.entity.v1.UserStatus
+	(*v1.PageRequest)(nil),        // 64: udb.core.common.v1.PageRequest
+	(*v1.PageResponse)(nil),       // 65: udb.core.common.v1.PageResponse
+	(v11.OTPType)(0),              // 66: udb.core.authn.entity.v1.OTPType
+	(v11.AuthCredentialType)(0),   // 67: udb.core.authn.entity.v1.AuthCredentialType
+	(v11.DeviceType)(0),           // 68: udb.core.authn.entity.v1.DeviceType
+	(*timestamppb.Timestamp)(nil), // 69: google.protobuf.Timestamp
+	(v11.TokenType)(0),            // 70: udb.core.authn.entity.v1.TokenType
+	(v11.SessionType)(0),          // 71: udb.core.authn.entity.v1.SessionType
+	(*v11.Session)(nil),           // 72: udb.core.authn.entity.v1.Session
+	(v11.AuthFactorKind)(0),       // 73: udb.core.authn.entity.v1.AuthFactorKind
 }
 var file_udb_core_authn_services_v1_core_proto_depIdxs = []int32{
-	52, // 0: udb.core.authn.services.v1.CreateUserRequest.context:type_name -> udb.core.common.v1.RequestContext
-	53, // 1: udb.core.authn.services.v1.CreateUserRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	47, // 2: udb.core.authn.services.v1.CreateUserRequest.profile_attributes:type_name -> udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntry
-	54, // 3: udb.core.authn.services.v1.CreateUserResponse.user:type_name -> udb.core.authn.entity.v1.User
-	54, // 4: udb.core.authn.services.v1.GetUserResponse.user:type_name -> udb.core.authn.entity.v1.User
-	53, // 5: udb.core.authn.services.v1.ListUsersRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	55, // 6: udb.core.authn.services.v1.ListUsersRequest.status:type_name -> udb.core.authn.entity.v1.UserStatus
-	56, // 7: udb.core.authn.services.v1.ListUsersRequest.page:type_name -> udb.core.common.v1.PageRequest
-	54, // 8: udb.core.authn.services.v1.ListUsersResponse.users:type_name -> udb.core.authn.entity.v1.User
-	57, // 9: udb.core.authn.services.v1.ListUsersResponse.page:type_name -> udb.core.common.v1.PageResponse
-	52, // 10: udb.core.authn.services.v1.UpdateUserRequest.context:type_name -> udb.core.common.v1.RequestContext
-	53, // 11: udb.core.authn.services.v1.UpdateUserRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	48, // 12: udb.core.authn.services.v1.UpdateUserRequest.profile_attributes:type_name -> udb.core.authn.services.v1.UpdateUserRequest.ProfileAttributesEntry
-	54, // 13: udb.core.authn.services.v1.UpdateUserResponse.user:type_name -> udb.core.authn.entity.v1.User
-	55, // 14: udb.core.authn.services.v1.ChangeUserStatusRequest.new_status:type_name -> udb.core.authn.entity.v1.UserStatus
-	52, // 15: udb.core.authn.services.v1.ChangeUserStatusRequest.context:type_name -> udb.core.common.v1.RequestContext
-	54, // 16: udb.core.authn.services.v1.ChangeUserStatusResponse.user:type_name -> udb.core.authn.entity.v1.User
-	52, // 17: udb.core.authn.services.v1.AdminResetPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
-	58, // 18: udb.core.authn.services.v1.SendOTPRequest.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
-	52, // 19: udb.core.authn.services.v1.SendOTPRequest.context:type_name -> udb.core.common.v1.RequestContext
-	58, // 20: udb.core.authn.services.v1.VerifyOTPResponse.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
-	53, // 21: udb.core.authn.services.v1.Principal.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	49, // 22: udb.core.authn.services.v1.Principal.attributes:type_name -> udb.core.authn.services.v1.Principal.AttributesEntry
-	50, // 23: udb.core.authn.services.v1.AuthnRequest.attributes:type_name -> udb.core.authn.services.v1.AuthnRequest.AttributesEntry
-	59, // 24: udb.core.authn.services.v1.AuthnRequest.credential_type:type_name -> udb.core.authn.entity.v1.AuthCredentialType
+	60, // 0: udb.core.authn.services.v1.CreateUserRequest.context:type_name -> udb.core.common.v1.RequestContext
+	61, // 1: udb.core.authn.services.v1.CreateUserRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	55, // 2: udb.core.authn.services.v1.CreateUserRequest.profile_attributes:type_name -> udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntry
+	62, // 3: udb.core.authn.services.v1.CreateUserResponse.user:type_name -> udb.core.authn.entity.v1.User
+	62, // 4: udb.core.authn.services.v1.GetUserResponse.user:type_name -> udb.core.authn.entity.v1.User
+	61, // 5: udb.core.authn.services.v1.ListUsersRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	63, // 6: udb.core.authn.services.v1.ListUsersRequest.status:type_name -> udb.core.authn.entity.v1.UserStatus
+	64, // 7: udb.core.authn.services.v1.ListUsersRequest.page:type_name -> udb.core.common.v1.PageRequest
+	62, // 8: udb.core.authn.services.v1.ListUsersResponse.users:type_name -> udb.core.authn.entity.v1.User
+	65, // 9: udb.core.authn.services.v1.ListUsersResponse.page:type_name -> udb.core.common.v1.PageResponse
+	60, // 10: udb.core.authn.services.v1.UpdateUserRequest.context:type_name -> udb.core.common.v1.RequestContext
+	61, // 11: udb.core.authn.services.v1.UpdateUserRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	56, // 12: udb.core.authn.services.v1.UpdateUserRequest.profile_attributes:type_name -> udb.core.authn.services.v1.UpdateUserRequest.ProfileAttributesEntry
+	62, // 13: udb.core.authn.services.v1.UpdateUserResponse.user:type_name -> udb.core.authn.entity.v1.User
+	63, // 14: udb.core.authn.services.v1.ChangeUserStatusRequest.new_status:type_name -> udb.core.authn.entity.v1.UserStatus
+	60, // 15: udb.core.authn.services.v1.ChangeUserStatusRequest.context:type_name -> udb.core.common.v1.RequestContext
+	62, // 16: udb.core.authn.services.v1.ChangeUserStatusResponse.user:type_name -> udb.core.authn.entity.v1.User
+	60, // 17: udb.core.authn.services.v1.AdminResetPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
+	66, // 18: udb.core.authn.services.v1.SendOTPRequest.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
+	60, // 19: udb.core.authn.services.v1.SendOTPRequest.context:type_name -> udb.core.common.v1.RequestContext
+	66, // 20: udb.core.authn.services.v1.VerifyOTPResponse.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
+	61, // 21: udb.core.authn.services.v1.Principal.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	57, // 22: udb.core.authn.services.v1.Principal.attributes:type_name -> udb.core.authn.services.v1.Principal.AttributesEntry
+	58, // 23: udb.core.authn.services.v1.AuthnRequest.attributes:type_name -> udb.core.authn.services.v1.AuthnRequest.AttributesEntry
+	67, // 24: udb.core.authn.services.v1.AuthnRequest.credential_type:type_name -> udb.core.authn.entity.v1.AuthCredentialType
 	18, // 25: udb.core.authn.services.v1.AuthnResponse.principal:type_name -> udb.core.authn.services.v1.Principal
-	60, // 26: udb.core.authn.services.v1.LoginRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
-	52, // 27: udb.core.authn.services.v1.LogoutRequest.context:type_name -> udb.core.common.v1.RequestContext
-	52, // 28: udb.core.authn.services.v1.ChangePasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
-	61, // 29: udb.core.authn.services.v1.ChangePasswordResponse.changed_at:type_name -> google.protobuf.Timestamp
-	62, // 30: udb.core.authn.services.v1.ValidateTokenRequest.token_type:type_name -> udb.core.authn.entity.v1.TokenType
-	53, // 31: udb.core.authn.services.v1.ValidateTokenResponse.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	61, // 32: udb.core.authn.services.v1.ValidateTokenResponse.expires_at:type_name -> google.protobuf.Timestamp
-	63, // 33: udb.core.authn.services.v1.ValidateTokenResponse.session_type:type_name -> udb.core.authn.entity.v1.SessionType
+	68, // 26: udb.core.authn.services.v1.LoginRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
+	60, // 27: udb.core.authn.services.v1.LogoutRequest.context:type_name -> udb.core.common.v1.RequestContext
+	60, // 28: udb.core.authn.services.v1.ChangePasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
+	69, // 29: udb.core.authn.services.v1.ChangePasswordResponse.changed_at:type_name -> google.protobuf.Timestamp
+	70, // 30: udb.core.authn.services.v1.ValidateTokenRequest.token_type:type_name -> udb.core.authn.entity.v1.TokenType
+	61, // 31: udb.core.authn.services.v1.ValidateTokenResponse.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	69, // 32: udb.core.authn.services.v1.ValidateTokenResponse.expires_at:type_name -> google.protobuf.Timestamp
+	71, // 33: udb.core.authn.services.v1.ValidateTokenResponse.session_type:type_name -> udb.core.authn.entity.v1.SessionType
 	18, // 34: udb.core.authn.services.v1.ValidateTokenResponse.principal:type_name -> udb.core.authn.services.v1.Principal
-	51, // 35: udb.core.authn.services.v1.ValidateTokenResponse.attributes:type_name -> udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntry
+	59, // 35: udb.core.authn.services.v1.ValidateTokenResponse.attributes:type_name -> udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntry
 	18, // 36: udb.core.authn.services.v1.CreateSessionRequest.principal:type_name -> udb.core.authn.services.v1.Principal
-	64, // 37: udb.core.authn.services.v1.GetSessionResponse.session:type_name -> udb.core.authn.entity.v1.Session
-	56, // 38: udb.core.authn.services.v1.ListSessionsRequest.page:type_name -> udb.core.common.v1.PageRequest
-	64, // 39: udb.core.authn.services.v1.ListSessionsResponse.sessions:type_name -> udb.core.authn.entity.v1.Session
-	57, // 40: udb.core.authn.services.v1.ListSessionsResponse.page:type_name -> udb.core.common.v1.PageResponse
-	52, // 41: udb.core.authn.services.v1.RevokeSessionRequest.context:type_name -> udb.core.common.v1.RequestContext
-	61, // 42: udb.core.authn.services.v1.RevokeSessionResponse.revoked_at:type_name -> google.protobuf.Timestamp
-	65, // 43: udb.core.authn.services.v1.EnrollMFARequest.mfa_type:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	52, // 44: udb.core.authn.services.v1.EnrollMFARequest.context:type_name -> udb.core.common.v1.RequestContext
-	52, // 45: udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest.context:type_name -> udb.core.common.v1.RequestContext
-	46, // [46:46] is the sub-list for method output_type
-	46, // [46:46] is the sub-list for method input_type
-	46, // [46:46] is the sub-list for extension type_name
-	46, // [46:46] is the sub-list for extension extendee
-	0,  // [0:46] is the sub-list for field type_name
+	72, // 37: udb.core.authn.services.v1.GetSessionResponse.session:type_name -> udb.core.authn.entity.v1.Session
+	64, // 38: udb.core.authn.services.v1.ListSessionsRequest.page:type_name -> udb.core.common.v1.PageRequest
+	72, // 39: udb.core.authn.services.v1.ListSessionsResponse.sessions:type_name -> udb.core.authn.entity.v1.Session
+	65, // 40: udb.core.authn.services.v1.ListSessionsResponse.page:type_name -> udb.core.common.v1.PageResponse
+	60, // 41: udb.core.authn.services.v1.RevokeSessionRequest.context:type_name -> udb.core.common.v1.RequestContext
+	69, // 42: udb.core.authn.services.v1.RevokeSessionResponse.revoked_at:type_name -> google.protobuf.Timestamp
+	73, // 43: udb.core.authn.services.v1.EnrollMFARequest.mfa_type:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	60, // 44: udb.core.authn.services.v1.EnrollMFARequest.context:type_name -> udb.core.common.v1.RequestContext
+	60, // 45: udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest.context:type_name -> udb.core.common.v1.RequestContext
+	60, // 46: udb.core.authn.services.v1.StartWebAuthnRegistrationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	60, // 47: udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	60, // 48: udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	60, // 49: udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	18, // 50: udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse.principal:type_name -> udb.core.authn.services.v1.Principal
+	51, // [51:51] is the sub-list for method output_type
+	51, // [51:51] is the sub-list for method input_type
+	51, // [51:51] is the sub-list for extension type_name
+	51, // [51:51] is the sub-list for extension extendee
+	0,  // [0:51] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_authn_services_v1_core_proto_init() }
@@ -3675,7 +4259,7 @@ func file_udb_core_authn_services_v1_core_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_authn_services_v1_core_proto_rawDesc), len(file_udb_core_authn_services_v1_core_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   52,
+			NumMessages:   60,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -2,7 +2,7 @@
 
 Package: `@udb_plus/sdk`
 
-Current release: `0.2.1`
+Current release: `0.3.0`
 
 Runtime: Node 18+
 
@@ -14,7 +14,7 @@ entry points instead of `gen/` files.
 ## Install
 
 ```bash
-npm i @udb_plus/sdk@0.2.1
+npm i @udb_plus/sdk@0.3.0
 ```
 
 `@grpc/grpc-js` and `@grpc/proto-loader` are package dependencies.

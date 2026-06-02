@@ -79,6 +79,118 @@ impl CassandraClient {
             .map(|_| ())
             .map_err(|e| format!("cassandra ping failed: {e}"))
     }
+
+    // ── B.10a — CQL helpers for the canonical store ─────────────────────────
+    //
+    // The canonical store (`runtime/canonical_store/cassandra.rs`) needs to run
+    // CQL directly — DDL, parameterized reads, and LWTs whose `[applied]`
+    // boolean must be inspected. Rather than re-open a second `Session`, it
+    // borrows this client's session through these thin `pub(crate)` helpers,
+    // mirroring how `MssqlClient` exposed `fetch_rows`/`execute_sql` and
+    // `MongoDbExecutor` exposed `native_database()`.
+
+    /// Run a CQL statement (DDL or a write) ignoring any result rows. Used for
+    /// `CREATE KEYSPACE/TABLE` and seed `INSERT`s where the outcome isn't an
+    /// LWT `[applied]` decision.
+    pub(crate) async fn cql_execute<V>(&self, cql: &str, values: V) -> Result<(), String>
+    where
+        V: scylla::serialize::row::SerializeRow,
+    {
+        self.session
+            .query(cql, values)
+            .await
+            .map(|_| ())
+            .map_err(|e| format!("cassandra cql_execute failed: {e}"))
+    }
+
+    /// Run a parameterized CQL SELECT and return the first row's first column
+    /// decoded as `i64`, or `None` when no row matched. Used to read the outbox
+    /// sequence counter.
+    pub(crate) async fn cql_query_first_i64(
+        &self,
+        cql: &str,
+        values: impl scylla::serialize::row::SerializeRow,
+    ) -> Result<Option<i64>, String> {
+        let result = self
+            .session
+            .query(cql, values)
+            .await
+            .map_err(|e| format!("cassandra cql_query_first_i64 failed: {e}"))?;
+        let row = match result.maybe_first_row() {
+            Ok(Some(row)) => row,
+            Ok(None) => return Ok(None),
+            Err(e) => return Err(format!("cassandra cql_query_first_i64 rows error: {e}")),
+        };
+        match row.columns.first().and_then(|c| c.as_ref()) {
+            // Counter is stored as a CQL `bigint`; accept `int` too for safety.
+            Some(v) => v
+                .as_bigint()
+                .or_else(|| v.as_int().map(i64::from))
+                .map(Some)
+                .ok_or_else(|| {
+                    "cassandra cql_query_first_i64: column is not an integer".to_string()
+                }),
+            None => Ok(None),
+        }
+    }
+
+    /// Run a parameterized CQL SELECT and return all result rows. Each
+    /// [`scylla::frame::response::result::Row`] exposes `columns:
+    /// Vec<Option<CqlValue>>` in SELECT order, which the canonical-store row
+    /// mappers (`cassandra_projection.rs` et al.) decode by ordinal via the
+    /// `CqlValue::as_*` accessors. Used by the B.10a phase-2 system-store
+    /// scans (projection / saga / migration tables) where the SQL backends
+    /// would issue a multi-column `SELECT … fetch_all`.
+    ///
+    /// Returns an empty `Vec` when no row matched. `ALLOW FILTERING` scans go
+    /// through here too; that is acceptable for the conformance contract (small
+    /// data) — production would carry a proper secondary index / MV instead.
+    pub(crate) async fn cql_query_rows(
+        &self,
+        cql: &str,
+        values: impl scylla::serialize::row::SerializeRow,
+    ) -> Result<Vec<scylla::frame::response::result::Row>, String> {
+        let result = self
+            .session
+            .query(cql, values)
+            .await
+            .map_err(|e| format!("cassandra cql_query_rows failed: {e}"))?;
+        match result.rows() {
+            Ok(rows) => Ok(rows),
+            // A statement that returns no rows section (shouldn't happen for a
+            // SELECT, but be defensive) is treated as the empty result set.
+            Err(_) => Ok(Vec::new()),
+        }
+    }
+
+    /// Run a CQL LWT (`... IF ...` / `IF NOT EXISTS`) at the given serial
+    /// consistency and return the `[applied]` boolean. Cassandra returns
+    /// `[applied]` as the first column of the single result row; on a
+    /// not-applied LWT it also returns the conflicting row's current values in
+    /// the remaining columns, so we read column 0 directly rather than decoding
+    /// a fixed-width tuple (which would fail with a row-size mismatch).
+    pub(crate) async fn cql_lwt_applied(
+        &self,
+        cql: &str,
+        values: impl scylla::serialize::row::SerializeRow,
+        serial: scylla::statement::SerialConsistency,
+    ) -> Result<bool, String> {
+        let mut query = scylla::statement::query::Query::new(cql.to_string());
+        query.set_serial_consistency(Some(serial));
+        let result = self
+            .session
+            .query(query, values)
+            .await
+            .map_err(|e| format!("cassandra cql_lwt_applied failed: {e}"))?;
+        let row = result
+            .first_row()
+            .map_err(|e| format!("cassandra LWT returned no result row: {e}"))?;
+        row.columns
+            .first()
+            .and_then(|c| c.as_ref())
+            .and_then(|v| v.as_boolean())
+            .ok_or_else(|| "cassandra LWT result missing [applied] boolean".to_string())
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -267,14 +379,19 @@ impl ResourceAdminExecutor for CassandraExecutor {
         _resource_name: &str,
         _spec_json: &str,
     ) -> Result<(), tonic::Status> {
-        // DDL goes through compile_resource_op + mutate.
-        Err(tonic::Status::unimplemented(
-            "CassandraExecutor::ensure_resource — use compile_resource_op + mutate",
+        Err(crate::runtime::executor_utils::capability_status(
+            "cassandra",
+            "ensure_resource",
+            "native_resource_lifecycle",
+            "Cassandra resource lifecycle is compiler-mediated: issue CREATE/DROP through the compiled DDL path (compile_resource_op + mutate), not the native ensure_resource executor method",
         ))
     }
     async fn drop_resource(&self, _resource_name: &str) -> Result<(), tonic::Status> {
-        Err(tonic::Status::unimplemented(
-            "CassandraExecutor::drop_resource — use compile_resource_op + mutate",
+        Err(crate::runtime::executor_utils::capability_status(
+            "cassandra",
+            "drop_resource",
+            "native_resource_lifecycle",
+            "Cassandra resource lifecycle is compiler-mediated: issue CREATE/DROP through the compiled DDL path (compile_resource_op + mutate), not the native drop_resource executor method",
         ))
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {

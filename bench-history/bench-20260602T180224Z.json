@@ -1,0 +1,206 @@
+{
+  "timestamp": "20260602T180224Z",
+  "label": "SIMD-default adopted + json_into_struct wired (structs_from_result); note: cross-run absolutes contaminated by concurrent build load, same-run simd_vs_scalar deltas are the valid proof",
+  "git_commit": "8dd0cbf",
+  "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+  "os": "win32",
+  "results": {
+    "base64/base64_cell (encode)": {
+      "median_ns": 7390587.5,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 1120617271.6309764
+    },
+    "base64/object_bytes_from_json (decode)": {
+      "median_ns": 8150700.0,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 1016111499.625799
+    },
+    "dispatch_parse/parse_object_dispatch": {
+      "median_ns": 14950125.0,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 773652594.8779691
+    },
+    "dispatch_parse/parse_rest_dispatch": {
+      "median_ns": 15185437.5,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 69457399.56454991
+    },
+    "dispatch_parse/parse_sql_dispatch": {
+      "median_ns": 11803570.0,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 98624314.50823775
+    },
+    "live_mysql/read (point select)": {
+      "median_ns": 1800848.2578397212
+    },
+    "live_mysql/write (update)": {
+      "median_ns": 1621246.4646464647
+    },
+    "live_postgres/read (point select)": {
+      "median_ns": 1929016.6666666665
+    },
+    "live_postgres/write (update)": {
+      "median_ns": 2675080.0
+    },
+    "live_s3/get_object (16 kib)": {
+      "median_ns": 2332782.5,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 7023372.303247303
+    },
+    "live_s3/put_object (16 kib)": {
+      "median_ns": 14157516.666666666,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 1157265.1041672798
+    },
+    "merge_context/merge_context (proto + metadata)": {
+      "median_ns": 953.335372154727,
+      "throughput_kind": "Elements",
+      "throughput_per_s": 1048948.8056441268
+    },
+    "simd_vs_scalar/b64_decode_scalar_1024": {
+      "median_ns": 1383.060840677594,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 740386807.2053275
+    },
+    "simd_vs_scalar/b64_decode_scalar_16384": {
+      "median_ns": 20703.03490870032,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 791381556.9675114
+    },
+    "simd_vs_scalar/b64_decode_scalar_262144": {
+      "median_ns": 322339.4192612943,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 813254551.9898117
+    },
+    "simd_vs_scalar/b64_decode_scalar_64": {
+      "median_ns": 229.4553264604811,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 278921396.10462546
+    },
+    "simd_vs_scalar/b64_decode_simd_1024": {
+      "median_ns": 696.4558687503043,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 1470301344.2006443
+    },
+    "simd_vs_scalar/b64_decode_simd_16384": {
+      "median_ns": 9837.374939874939,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 1665484959.1621122
+    },
+    "simd_vs_scalar/b64_decode_simd_262144": {
+      "median_ns": 144913.0859375,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 1808973967.4239001
+    },
+    "simd_vs_scalar/b64_decode_simd_64": {
+      "median_ns": 154.47774343676582,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 414299164.2430216
+    },
+    "simd_vs_scalar/b64_encode_scalar_1024": {
+      "median_ns": 1197.4419026870007,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 855156310.8842227
+    },
+    "simd_vs_scalar/b64_encode_scalar_16384": {
+      "median_ns": 17922.707906663047,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 914147576.6565939
+    },
+    "simd_vs_scalar/b64_encode_scalar_262144": {
+      "median_ns": 294323.8604488078,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 890665131.9409256
+    },
+    "simd_vs_scalar/b64_encode_scalar_64": {
+      "median_ns": 208.62834997314928,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 306765595.41518146
+    },
+    "simd_vs_scalar/b64_encode_simd_1024": {
+      "median_ns": 531.0139622939181,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 1928386205.8474696
+    },
+    "simd_vs_scalar/b64_encode_simd_16384": {
+      "median_ns": 6736.562805772994,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 2432100831.296265
+    },
+    "simd_vs_scalar/b64_encode_simd_262144": {
+      "median_ns": 109601.86205468103,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 2391784182.181273
+    },
+    "simd_vs_scalar/b64_encode_simd_64": {
+      "median_ns": 144.63549534715088,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 442491657.0195209
+    },
+    "simd_vs_scalar/crc32_scalar_1024": {
+      "median_ns": 10355.165797035694,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 98887842.07522142
+    },
+    "simd_vs_scalar/crc32_scalar_16384": {
+      "median_ns": 167124.3650793651,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 98034777.82679659
+    },
+    "simd_vs_scalar/crc32_scalar_262144": {
+      "median_ns": 2600934.2105263155,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 100788400.92881607
+    },
+    "simd_vs_scalar/crc32_scalar_64": {
+      "median_ns": 644.8029106566792,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 99255135.08433333
+    },
+    "simd_vs_scalar/crc32_simd_1024": {
+      "median_ns": 73.7188716724115,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 13890608697.192268
+    },
+    "simd_vs_scalar/crc32_simd_16384": {
+      "median_ns": 996.5642206445456,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 16440485881.986969
+    },
+    "simd_vs_scalar/crc32_simd_262144": {
+      "median_ns": 16139.053452402399,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 16242836097.737705
+    },
+    "simd_vs_scalar/crc32_simd_64": {
+      "median_ns": 40.117236844035915,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 1595324230.5499074
+    },
+    "struct_json/json_into_struct (write path, move)": {
+      "median_ns": 46000900.0,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 95318852.45723452
+    },
+    "struct_json/json_to_prost_value": {
+      "median_ns": 65000750.0,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 67456960.11199869
+    },
+    "struct_json/json_to_struct (write path)": {
+      "median_ns": 38648300.0,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 113452674.5031476
+    },
+    "struct_json/json_to_struct (write path, clone)": {
+      "median_ns": 65627150.0,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 66813094.885272324
+    },
+    "struct_json/struct_to_json (read path)": {
+      "median_ns": 58989550.0,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 74331012.8658381
+    }
+  }
+}

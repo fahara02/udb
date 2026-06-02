@@ -79,36 +79,10 @@ impl AdminAuditStore for PostgresCanonicalStore {
 
     async fn ensure_admin_audit_tables(&self) -> SystemStoreResult<()> {
         let rel = self.admin_audit_relation_ref();
-        let stmts = [
-            format!(
-                r#"
-                CREATE TABLE IF NOT EXISTS {rel} (
-                    audit_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                    actor            TEXT NOT NULL DEFAULT '',
-                    operation        TEXT NOT NULL,
-                    target           TEXT NOT NULL DEFAULT '',
-                    request_json     JSONB NOT NULL DEFAULT '{{}}'::JSONB,
-                    result           TEXT NOT NULL DEFAULT 'ok',
-                    tenant_id        TEXT NOT NULL DEFAULT '',
-                    project_id       TEXT NOT NULL DEFAULT '',
-                    correlation_id   TEXT NOT NULL DEFAULT '',
-                    previous_hash    TEXT NOT NULL DEFAULT '',
-                    current_hash     TEXT NOT NULL DEFAULT '',
-                    signer_key_id    TEXT NOT NULL DEFAULT '',
-                    external_anchor  TEXT NOT NULL DEFAULT '',
-                    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                )
-                "#
-            ),
-            format!(
-                r#"CREATE INDEX IF NOT EXISTS "idx_udb_admin_audit_log_op"
-                     ON {rel} (operation, created_at DESC)"#
-            ),
-            format!(
-                r#"CREATE INDEX IF NOT EXISTS "idx_udb_admin_audit_log_hash"
-                     ON {rel} (current_hash)"#
-            ),
-        ];
+        // B.7: DDL strings come from the shared `sql_schema` renderer (single
+        // source of truth across SQL backends); the execute/error-handling
+        // loop below is unchanged.
+        let stmts = super::sql_schema::postgres_admin_audit_ddl(rel);
         for sql in stmts.iter() {
             sqlx::query(sql)
                 .execute(self.pg_pool())

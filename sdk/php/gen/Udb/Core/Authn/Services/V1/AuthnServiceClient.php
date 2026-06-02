@@ -358,4 +358,61 @@ class AuthnServiceClient extends \Grpc\BaseStub {
         $metadata, $options);
     }
 
+    /**
+     * ── WebAuthn / passkeys ─────────────────────────────────────────────────
+     * @param \Udb\Core\Authn\Services\V1\StartWebAuthnRegistrationRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\StartWebAuthnRegistrationResponse>
+     */
+    public function StartWebAuthnRegistration(\Udb\Core\Authn\Services\V1\StartWebAuthnRegistrationRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\StartWebAuthnRegistrationResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authn\Services\V1\FinishWebAuthnRegistrationRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\FinishWebAuthnRegistrationResponse>
+     */
+    public function FinishWebAuthnRegistration(\Udb\Core\Authn\Services\V1\FinishWebAuthnRegistrationRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\FinishWebAuthnRegistrationResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authn\Services\V1\StartWebAuthnAuthenticationRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\StartWebAuthnAuthenticationResponse>
+     */
+    public function StartWebAuthnAuthentication(\Udb\Core\Authn\Services\V1\StartWebAuthnAuthenticationRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\StartWebAuthnAuthenticationResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authn\Services\V1\FinishWebAuthnAuthenticationRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\FinishWebAuthnAuthenticationResponse>
+     */
+    public function FinishWebAuthnAuthentication(\Udb\Core\Authn\Services\V1\FinishWebAuthnAuthenticationRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\FinishWebAuthnAuthenticationResponse', 'decode'],
+        $metadata, $options);
+    }
+
 }

@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "UDB Control-Plane API",
-    "version": "0.2.1",
+    "version": "0.3.0",
     "description": "HTTP/JSON (gRPC-gateway) surface for UDB control-plane services. The core DataBroker data-plane RPCs are gRPC-native and are not represented here."
   },
   "tags": [
@@ -1845,6 +1845,45 @@
         ]
       }
     },
+    "/v1/auth/users/{userId}/webauthn/registration:start": {
+      "post": {
+        "summary": "── WebAuthn / passkeys ─────────────────────────────────────────────────",
+        "operationId": "AuthnService_StartWebAuthnRegistration",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StartWebAuthnRegistrationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AuthnServiceStartWebAuthnRegistrationBody"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
     "/v1/auth/users/{userId}:change-status": {
       "post": {
         "operationId": "AuthnService_ChangeUserStatus",
@@ -1875,6 +1914,102 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/AuthnServiceChangeUserStatusBody"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/auth/webauthn/authentication:finish": {
+      "post": {
+        "operationId": "AuthnService_FinishWebAuthnAuthentication",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1FinishWebAuthnAuthenticationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1FinishWebAuthnAuthenticationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/auth/webauthn/authentication:start": {
+      "post": {
+        "operationId": "AuthnService_StartWebAuthnAuthentication",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StartWebAuthnAuthenticationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1StartWebAuthnAuthenticationRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/auth/webauthn/registration:finish": {
+      "post": {
+        "operationId": "AuthnService_FinishWebAuthnRegistration",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1FinishWebAuthnRegistrationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1FinishWebAuthnRegistrationRequest"
             }
           }
         ],
@@ -3685,6 +3820,23 @@
         }
       }
     },
+    "AuthnServiceStartWebAuthnRegistrationBody": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "context": {
+          "$ref": "#/definitions/coreCommonV1RequestContext"
+        }
+      }
+    },
     "AuthnServiceUpdateUserBody": {
       "type": "object",
       "properties": {
@@ -5288,6 +5440,72 @@
         }
       },
       "description": "FieldViolation describes a single field-level validation failure."
+    },
+    "v1FinishWebAuthnAuthenticationRequest": {
+      "type": "object",
+      "properties": {
+        "challengeId": {
+          "type": "string"
+        },
+        "publicKeyCredentialJson": {
+          "type": "string"
+        },
+        "context": {
+          "$ref": "#/definitions/coreCommonV1RequestContext"
+        }
+      }
+    },
+    "v1FinishWebAuthnAuthenticationResponse": {
+      "type": "object",
+      "properties": {
+        "principal": {
+          "$ref": "#/definitions/coreAuthnServicesV1Principal"
+        },
+        "sessionId": {
+          "type": "string"
+        },
+        "accessToken": {
+          "type": "string"
+        },
+        "expiresAtUnix": {
+          "type": "string",
+          "format": "int64"
+        },
+        "credentialId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1FinishWebAuthnRegistrationRequest": {
+      "type": "object",
+      "properties": {
+        "challengeId": {
+          "type": "string"
+        },
+        "publicKeyCredentialJson": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "context": {
+          "$ref": "#/definitions/coreCommonV1RequestContext"
+        }
+      }
+    },
+    "v1FinishWebAuthnRegistrationResponse": {
+      "type": "object",
+      "properties": {
+        "registered": {
+          "type": "boolean"
+        },
+        "credentialId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        }
+      }
     },
     "v1GetApiKeyResponse": {
       "type": "object",
@@ -7005,6 +7223,53 @@
         },
         "errorRateSlaMet": {
           "type": "boolean"
+        }
+      }
+    },
+    "v1StartWebAuthnAuthenticationRequest": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "context": {
+          "$ref": "#/definitions/coreCommonV1RequestContext"
+        }
+      }
+    },
+    "v1StartWebAuthnAuthenticationResponse": {
+      "type": "object",
+      "properties": {
+        "challengeId": {
+          "type": "string"
+        },
+        "publicKeyCredentialRequestOptionsJson": {
+          "type": "string"
+        },
+        "expiresAtUnix": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1StartWebAuthnRegistrationResponse": {
+      "type": "object",
+      "properties": {
+        "challengeId": {
+          "type": "string"
+        },
+        "publicKeyCredentialCreationOptionsJson": {
+          "type": "string"
+        },
+        "expiresAtUnix": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },

@@ -103,46 +103,15 @@ impl MigrationAuditStore for MysqlCanonicalStore {
     }
 
     async fn ensure_migration_audit_tables(&self) -> SystemStoreResult<()> {
-        let runs_ddl = format!(
-            r#"
-            CREATE TABLE IF NOT EXISTS {RUNS_TABLE} (
-                run_id            CHAR(36) NOT NULL PRIMARY KEY,
-                project_id        VARCHAR(255) NOT NULL DEFAULT '',
-                catalog_version   VARCHAR(255) NOT NULL DEFAULT '',
-                state             VARCHAR(32) NOT NULL DEFAULT 'DRY_RUN',
-                operations_hash   VARCHAR(255) NOT NULL DEFAULT '',
-                approval_token    VARCHAR(255) NOT NULL DEFAULT '',
-                started_at        TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-                finished_at       TIMESTAMP(6) NULL,
-                error             TEXT NOT NULL,
-                CONSTRAINT chk_{RUNS_TABLE}_state CHECK (state IN ('DRY_RUN','PREFLIGHT','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER'))
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            "#
-        );
-        let runs_idx = format!(
-            "CREATE INDEX idx_{RUNS_TABLE}_project_state ON {RUNS_TABLE} (project_id, state, started_at)"
-        );
-        let ledger_ddl = format!(
-            r#"
-            CREATE TABLE IF NOT EXISTS {LEDGER_TABLE} (
-                id                BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                run_id            CHAR(36) NOT NULL,
-                operation_index   INT NOT NULL,
-                backend           VARCHAR(64) NOT NULL DEFAULT 'postgres',
-                resource_uri      TEXT NOT NULL,
-                operation_kind    VARCHAR(64) NOT NULL DEFAULT '',
-                status            VARCHAR(32) NOT NULL DEFAULT 'PENDING',
-                rollback_json     JSON NOT NULL,
-                error             TEXT NOT NULL,
-                applied_at        TIMESTAMP(6) NULL,
-                CONSTRAINT chk_{LEDGER_TABLE}_status CHECK (status IN ('PENDING','APPLIED','VERIFIED','SKIPPED','FAILED','ROLLED_BACK')),
-                CONSTRAINT fk_{LEDGER_TABLE}_run FOREIGN KEY (run_id) REFERENCES {RUNS_TABLE}(run_id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            "#
-        );
-        let ledger_idx = format!(
-            "CREATE INDEX idx_{LEDGER_TABLE}_run_idx ON {LEDGER_TABLE} (run_id, operation_index)"
-        );
+        // B.7: DDL strings come from the shared `sql_schema` renderer (single
+        // source of truth across SQL backends); the execute/error-tolerance
+        // logic below (incl. interleaved table+index ordering) is unchanged.
+        let super::sql_schema::MysqlMigrationAuditDdl {
+            runs_ddl,
+            runs_idx,
+            ledger_ddl,
+            ledger_idx,
+        } = super::sql_schema::mysql_migration_audit_ddl(RUNS_TABLE, LEDGER_TABLE);
         sqlx::query(&runs_ddl)
             .execute(self.mysql_pool())
             .await

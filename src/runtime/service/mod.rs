@@ -150,6 +150,7 @@ pub(crate) const UDB_PROTOCOL_VERSION: &str = "1.0.0";
 pub(crate) const SUPPORTED_RPC_NAMES: &[&str] = &[
     "Select",
     "BatchSelect",
+    "SelectV2",
     "Upsert",
     "BatchUpsert",
     "Delete",
@@ -934,10 +935,15 @@ fn check_backend_capability(
     if capability_fn(&cap) {
         Ok(())
     } else {
-        Err(Status::failed_precondition(format!(
-            "{}: backend '{backend}' does not support operation '{operation}'",
-            crate::backend::UNSUPPORTED_OPERATION_CODE
-        )))
+        Err(crate::runtime::executor_utils::capability_status(
+            backend,
+            operation,
+            crate::backend::UNSUPPORTED_OPERATION_CODE,
+            format!(
+                "{}: backend '{backend}' does not support operation '{operation}'",
+                crate::backend::UNSUPPORTED_OPERATION_CODE
+            ),
+        ))
     }
 }
 
@@ -967,10 +973,15 @@ fn check_generic_dispatch_operation(backend: &str, operation: &str) -> Result<()
     if supported {
         Ok(())
     } else {
-        Err(Status::failed_precondition(format!(
-            "{}: backend '{backend}' does not support operation '{operation}'",
-            crate::backend::UNSUPPORTED_OPERATION_CODE
-        )))
+        Err(crate::runtime::executor_utils::capability_status(
+            backend,
+            operation,
+            crate::backend::UNSUPPORTED_OPERATION_CODE,
+            format!(
+                "{}: backend '{backend}' does not support operation '{operation}'",
+                crate::backend::UNSUPPORTED_OPERATION_CODE
+            ),
+        ))
     }
 }
 
@@ -1933,6 +1944,7 @@ mod handlers_vector;
 
 impl DataBroker for DataBrokerService {
     type BatchSelectStream = ResponseStream<RecordSet>;
+    type SelectV2Stream = ResponseStream<crate::proto::RecordBatchV2>;
     type BatchUpsertStream = ResponseStream<MutationResponse>;
     type VectorBatchUpsertStream = ResponseStream<MutationResponse>;
     type GetObjectStream = ResponseStream<Chunk>;
@@ -1941,6 +1953,13 @@ impl DataBroker for DataBrokerService {
 
     async fn select(&self, request: Request<SelectRequest>) -> Result<Response<RecordSet>, Status> {
         self.select_inner(request).await
+    }
+
+    async fn select_v2(
+        &self,
+        request: Request<SelectRequest>,
+    ) -> Result<Response<Self::SelectV2Stream>, Status> {
+        self.select_v2_inner(request).await
     }
 
     async fn batch_select(

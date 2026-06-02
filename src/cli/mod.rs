@@ -24,13 +24,53 @@ mod auth;
 mod doctor;
 mod env_setup;
 mod output;
+mod proto_export;
 mod scaffold;
+mod sdk_gen;
 pub(crate) use args::*;
 pub(crate) use auth::*;
 pub(crate) use doctor::*;
 pub(crate) use env_setup::*;
 pub(crate) use output::*;
 pub(crate) use scaffold::*;
+
+/// D.9: platform-appropriate smoke-test script filename. Extracted so the
+/// Windows vs Unix choice is explicit and unit-tested (both scripts must ship).
+fn smoke_script_filename() -> &'static str {
+    if cfg!(windows) {
+        "smoke_test.ps1"
+    } else {
+        "smoke_test.sh"
+    }
+}
+
+#[cfg(test)]
+mod platform_tests {
+    use super::smoke_script_filename;
+    use std::path::PathBuf;
+
+    #[test]
+    fn smoke_script_selected_per_platform_and_both_ship() {
+        assert_eq!(
+            smoke_script_filename(),
+            if cfg!(windows) {
+                "smoke_test.ps1"
+            } else {
+                "smoke_test.sh"
+            }
+        );
+        // Windows support is explicit, not accidental: both scripts must exist.
+        let scripts = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("scripts");
+        assert!(
+            scripts.join("smoke_test.ps1").is_file(),
+            "Windows smoke script missing"
+        );
+        assert!(
+            scripts.join("smoke_test.sh").is_file(),
+            "Unix smoke script missing"
+        );
+    }
+}
 #[cfg(test)]
 mod tests;
 
@@ -192,6 +232,20 @@ pub fn run() {
         Command::InitProject => {
             emit_init_project_scaffold();
             process::exit(0);
+        }
+        Command::ProtoExport {
+            out_dir,
+            manage_buf_yaml,
+        } => {
+            process::exit(proto_export::run(&out_dir, manage_buf_yaml));
+        }
+        Command::Sdk {
+            action,
+            lang,
+            templates_dir,
+            out_dir,
+        } => {
+            process::exit(sdk_gen::run(action, &lang, &templates_dir, &out_dir));
         }
         Command::Dev {
             action,
@@ -586,6 +640,8 @@ pub fn run() {
         | Command::AdminResetDb { .. }
         | Command::PolicyLint
         | Command::PolicySeed
+        | Command::ProtoExport { .. }
+        | Command::Sdk { .. }
         | Command::CompatMatrix => {
             // Already handled before proto parsing above; unreachable.
         }
@@ -832,11 +888,7 @@ fn run_dev_sandbox(action: DevAction, service: Option<&str>, confirmed: bool) ->
             run_compose(&["up", "-d", "--build"]).err().unwrap_or(0)
         }
         DevAction::Smoke => {
-            let script = if cfg!(windows) {
-                manifest_dir.join("scripts").join("smoke_test.ps1")
-            } else {
-                manifest_dir.join("scripts").join("smoke_test.sh")
-            };
+            let script = manifest_dir.join("scripts").join(smoke_script_filename());
             let status = if cfg!(windows) {
                 ProcessCommand::new("powershell")
                     .arg("-ExecutionPolicy")

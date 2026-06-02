@@ -286,6 +286,46 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_authn_services_v1_ConfirmMFAEnrollmentResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -527,14 +567,54 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
       "\003 \001(\tR\004code\022<\n\007context\030\004 \001(\0132\".udb.core." +
       "common.v1.RequestContextR\007context\":\n\034Con" +
       "firmMFAEnrollmentResponse\022\032\n\010enrolled\030\001 " +
-      "\001(\010R\010enrolledB\202\002\n\036com.udb.core.authn.ser" +
-      "vices.v1B\tCoreProtoP\001ZHgithub.com/fahara" +
-      "02/udb/sdk/go/gen/udb/core/authn/service" +
-      "s/v1;servicesv1\242\002\004UCAS\252\002\032udb.core.Authn." +
-      "Services.V1\312\002\032Udb\\Core\\Authn\\Services\\V1" +
-      "\342\002&Udb\\GPBMetadata\\Core\\Authn\\Services\\V" +
-      "1\352\002\036Udb::Core::Authn::Services::V1b\006prot" +
-      "o3"
+      "\001(\010R\010enrolled\"\313\001\n StartWebAuthnRegistrat" +
+      "ionRequest\022\027\n\007user_id\030\001 \001(\tR\006userId\022\024\n\005l" +
+      "abel\030\002 \001(\tR\005label\022\033\n\ttenant_id\030\003 \001(\tR\010te" +
+      "nantId\022\035\n\nproject_id\030\004 \001(\tR\tprojectId\022<\n" +
+      "\007context\030\005 \001(\0132\".udb.core.common.v1.Requ" +
+      "estContextR\007context\"\313\001\n!StartWebAuthnReg" +
+      "istrationResponse\022!\n\014challenge_id\030\001 \001(\tR" +
+      "\013challengeId\022[\n+public_key_credential_cr" +
+      "eation_options_json\030\002 \001(\tR&publicKeyCred" +
+      "entialCreationOptionsJson\022&\n\017expires_at_" +
+      "unix\030\003 \001(\003R\rexpiresAtUnix\"\327\001\n!FinishWebA" +
+      "uthnRegistrationRequest\022!\n\014challenge_id\030" +
+      "\001 \001(\tR\013challengeId\022;\n\032public_key_credent" +
+      "ial_json\030\002 \001(\tR\027publicKeyCredentialJson\022" +
+      "\024\n\005label\030\003 \001(\tR\005label\022<\n\007context\030\004 \001(\0132\"" +
+      ".udb.core.common.v1.RequestContextR\007cont" +
+      "ext\"\202\001\n\"FinishWebAuthnRegistrationRespon" +
+      "se\022\036\n\nregistered\030\001 \001(\010R\nregistered\022#\n\rcr" +
+      "edential_id\030\002 \001(\tR\014credentialId\022\027\n\007user_" +
+      "id\030\003 \001(\tR\006userId\"\267\001\n\"StartWebAuthnAuthen" +
+      "ticationRequest\022\027\n\007user_id\030\001 \001(\tR\006userId" +
+      "\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId\022\035\n\nproject" +
+      "_id\030\003 \001(\tR\tprojectId\022<\n\007context\030\004 \001(\0132\"." +
+      "udb.core.common.v1.RequestContextR\007conte" +
+      "xt\"\313\001\n#StartWebAuthnAuthenticationRespon" +
+      "se\022!\n\014challenge_id\030\001 \001(\tR\013challengeId\022Y\n" +
+      "*public_key_credential_request_options_j" +
+      "son\030\002 \001(\tR%publicKeyCredentialRequestOpt" +
+      "ionsJson\022&\n\017expires_at_unix\030\003 \001(\003R\rexpir" +
+      "esAtUnix\"\303\001\n#FinishWebAuthnAuthenticatio" +
+      "nRequest\022!\n\014challenge_id\030\001 \001(\tR\013challeng" +
+      "eId\022;\n\032public_key_credential_json\030\002 \001(\tR" +
+      "\027publicKeyCredentialJson\022<\n\007context\030\003 \001(" +
+      "\0132\".udb.core.common.v1.RequestContextR\007c" +
+      "ontext\"\372\001\n$FinishWebAuthnAuthenticationR" +
+      "esponse\022C\n\tprincipal\030\001 \001(\0132%.udb.core.au" +
+      "thn.services.v1.PrincipalR\tprincipal\022\035\n\n" +
+      "session_id\030\002 \001(\tR\tsessionId\022!\n\014access_to" +
+      "ken\030\003 \001(\tR\013accessToken\022&\n\017expires_at_uni" +
+      "x\030\004 \001(\003R\rexpiresAtUnix\022#\n\rcredential_id\030" +
+      "\005 \001(\tR\014credentialIdB\202\002\n\036com.udb.core.aut" +
+      "hn.services.v1B\tCoreProtoP\001ZHgithub.com/" +
+      "fahara02/udb/sdk/go/gen/udb/core/authn/s" +
+      "ervices/v1;servicesv1\242\002\004UCAS\252\002\032udb.core." +
+      "Authn.Services.V1\312\002\032Udb\\Core\\Authn\\Servi" +
+      "ces\\V1\342\002&Udb\\GPBMetadata\\Core\\Authn\\Serv" +
+      "ices\\V1\352\002\036Udb::Core::Authn::Services::V1" +
+      "b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -858,6 +938,54 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_services_v1_ConfirmMFAEnrollmentResponse_descriptor,
         new java.lang.String[] { "Enrolled", });
+    internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationRequest_descriptor =
+      getDescriptor().getMessageType(47);
+    internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationRequest_descriptor,
+        new java.lang.String[] { "UserId", "Label", "TenantId", "ProjectId", "Context", });
+    internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationResponse_descriptor =
+      getDescriptor().getMessageType(48);
+    internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationResponse_descriptor,
+        new java.lang.String[] { "ChallengeId", "PublicKeyCredentialCreationOptionsJson", "ExpiresAtUnix", });
+    internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationRequest_descriptor =
+      getDescriptor().getMessageType(49);
+    internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationRequest_descriptor,
+        new java.lang.String[] { "ChallengeId", "PublicKeyCredentialJson", "Label", "Context", });
+    internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationResponse_descriptor =
+      getDescriptor().getMessageType(50);
+    internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationResponse_descriptor,
+        new java.lang.String[] { "Registered", "CredentialId", "UserId", });
+    internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationRequest_descriptor =
+      getDescriptor().getMessageType(51);
+    internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationRequest_descriptor,
+        new java.lang.String[] { "UserId", "TenantId", "ProjectId", "Context", });
+    internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationResponse_descriptor =
+      getDescriptor().getMessageType(52);
+    internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationResponse_descriptor,
+        new java.lang.String[] { "ChallengeId", "PublicKeyCredentialRequestOptionsJson", "ExpiresAtUnix", });
+    internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationRequest_descriptor =
+      getDescriptor().getMessageType(53);
+    internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationRequest_descriptor,
+        new java.lang.String[] { "ChallengeId", "PublicKeyCredentialJson", "Context", });
+    internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationResponse_descriptor =
+      getDescriptor().getMessageType(54);
+    internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationResponse_descriptor,
+        new java.lang.String[] { "Principal", "SessionId", "AccessToken", "ExpiresAtUnix", "CredentialId", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.authn.entity.v1.EnumsProto.getDescriptor();

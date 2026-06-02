@@ -1,0 +1,118 @@
+# Canonical-store backends for live TDD of upgrade_todo.md sections B.7–B.10.
+#
+# These are NOT in docker-compose.integration.yml (which only ships Postgres +
+# Redis + Kafka + Qdrant + MinIO). They are split into their own compose file so
+# the integration/CI stack stays lean; bring them up only when working on the
+# MySQL / SQL Server / MongoDB / Cassandra canonical stores.
+#
+# Host ports use the same high-port convention as the integration stack to avoid
+# clashing with any locally-installed engine.
+#
+#   docker compose -f docker-compose.canonical.yml up -d
+#
+# Host-side DSNs (cargo tests run on the host and reach these via published ports):
+#   UDB_MYSQL_DSN=mysql://udb:udb@127.0.0.1:53306/udb
+#   UDB_MSSQL_DSN=Server=127.0.0.1,51433;User=sa;Password=Udb_Strong#2026;Database=udb;TrustServerCertificate=true
+#   UDB_NOSQL_DSN=mongodb://127.0.0.1:57017/udb?replicaSet=rs0   (also export as UDB_MONGODB_DSN)
+#   UDB_CASSANDRA_DSN=127.0.0.1:59042
+name: udb
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: udb
+      MYSQL_DATABASE: udb
+      MYSQL_USER: udb
+      MYSQL_PASSWORD: udb
+    # Grant REPLICATION CLIENT to the udb user on first init so the canonical
+    # store can read the binlog position (SHOW BINARY LOG STATUS on 8.4+).
+    volumes:
+      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "53306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uudb", "-pudb"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Udb_Strong#2026"
+      MSSQL_PID: Developer
+    ports:
+      - "51433:1433"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "Udb_Strong#2026" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  mongodb:
+    image: mongo:7
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "57017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  cassandra:
+    image: cassandra:5
+    environment:
+      CASSANDRA_DC: dc1
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+    ports:
+      - "59042:9042"
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'describe keyspaces' >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 40
+      start_period: 40s
+
+  # B.10b — Neo4j (canonical store uses the HTTP transactional /tx API; the Bolt
+  # port is published too for an optional native-Bolt adapter).
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/Udb_Strong#2026
+    ports:
+      - "57474:7474"   # HTTP (transactional /tx API)
+      - "57687:7687"   # Bolt
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+
+  # B.10c — ClickHouse (canonical store uses the native HTTP interface).
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    environment:
+      CLICKHOUSE_USER: udb
+      CLICKHOUSE_PASSWORD: udb
+      CLICKHOUSE_DB: udb
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    ports:
+      - "58123:8123"   # HTTP
+      - "59009:9000"   # native TCP
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- 'http://localhost:8123/ping' >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 15s

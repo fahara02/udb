@@ -81,33 +81,10 @@ impl AdminAuditStore for SqliteCanonicalStore {
     }
 
     async fn ensure_admin_audit_tables(&self) -> SystemStoreResult<()> {
-        let create_table = format!(
-            r#"
-            CREATE TABLE IF NOT EXISTS {TABLE} (
-                audit_id         TEXT PRIMARY KEY,
-                actor            TEXT NOT NULL DEFAULT '',
-                operation        TEXT NOT NULL,
-                target           TEXT NOT NULL DEFAULT '',
-                request_json     TEXT NOT NULL DEFAULT '{{}}',
-                result           TEXT NOT NULL DEFAULT 'ok',
-                tenant_id        TEXT NOT NULL DEFAULT '',
-                project_id       TEXT NOT NULL DEFAULT '',
-                correlation_id   TEXT NOT NULL DEFAULT '',
-                previous_hash    TEXT NOT NULL DEFAULT '',
-                current_hash     TEXT NOT NULL DEFAULT '',
-                signer_key_id    TEXT NOT NULL DEFAULT '',
-                external_anchor  TEXT NOT NULL DEFAULT '',
-                created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-            )
-            "#
-        );
-        let idx_op = format!(
-            "CREATE INDEX IF NOT EXISTS idx_{TABLE}_op \
-             ON {TABLE} (operation, created_at DESC)"
-        );
-        let idx_hash =
-            format!("CREATE INDEX IF NOT EXISTS idx_{TABLE}_hash ON {TABLE} (current_hash)");
-        for sql in [create_table, idx_op, idx_hash] {
+        // B.7: DDL strings come from the shared `sql_schema` renderer (single
+        // source of truth across SQL backends); the execute loop below is
+        // unchanged.
+        for sql in super::sql_schema::sqlite_admin_audit_ddl(TABLE) {
             sqlx::query(&sql)
                 .execute(self.pool_ref())
                 .await

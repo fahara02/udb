@@ -277,9 +277,18 @@ impl MongoDbExecutor {
         options.server_selection_timeout = Some(timeout);
         options.app_name = Some(config.app_name.clone().unwrap_or_else(|| "udb".to_string()));
         options.default_database = Some(config.database.clone());
-        options.max_pool_size = config.max_pool_size;
-        options.direct_connection = config.direct_connection;
-        options.retry_writes = config.retry_writes;
+        // Only override DSN-parsed values when the config explicitly sets them;
+        // a `None` config field must NOT clobber a value the DSN already carries
+        // (e.g. `?directConnection=true` / `?retryWrites=…`).
+        if config.max_pool_size.is_some() {
+            options.max_pool_size = config.max_pool_size;
+        }
+        if let Some(direct) = config.direct_connection {
+            options.direct_connection = Some(direct);
+        }
+        if let Some(retry) = config.retry_writes {
+            options.retry_writes = Some(retry);
+        }
         let client = mongodb_driver::Client::with_options(options)
             .map_err(|err| format!("MongoDB native client creation failed: {err}"))?;
         Ok(Self {
@@ -376,6 +385,28 @@ impl MongoDbExecutor {
             MongoDbTransport::DataApi { .. } => {
                 Err("MongoDB native action called on Data API transport".to_string())
             }
+        }
+    }
+
+    /// B.9: hand the native driver `Client` to in-crate consumers (e.g. the
+    /// MongoDB `CanonicalStore`). Returns `Some` only when this executor owns a
+    /// native wire-protocol transport; the Data API transport returns `None`.
+    #[cfg(feature = "mongodb-native")]
+    pub(crate) fn native_client(&self) -> Option<mongodb_driver::Client> {
+        match &self.transport {
+            MongoDbTransport::Native(native) => Some(native.client.clone()),
+            MongoDbTransport::DataApi { .. } => None,
+        }
+    }
+
+    /// B.9: the native default `Database` handle (the database resolved from the
+    /// native config). `Some` only for the native transport. The canonical store
+    /// builds its outbox / lease collections on this handle.
+    #[cfg(feature = "mongodb-native")]
+    pub(crate) fn native_database(&self) -> Option<mongodb_driver::Database> {
+        match &self.transport {
+            MongoDbTransport::Native(native) => Some(native.database()),
+            MongoDbTransport::DataApi { .. } => None,
         }
     }
 

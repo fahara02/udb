@@ -8,15 +8,19 @@
 
 use aws_sdk_s3::Client;
 use aws_sdk_s3::primitives::ByteStream;
+use aws_sdk_s3::types::{CompletedMultipartUpload, CompletedPart};
+use bytes::Bytes;
 use serde_json::Value as JsonValue;
 
 use crate::runtime::executor_utils::{
     json_required_str, object_bytes_from_json, reject_oversized_object,
 };
 use crate::runtime::executors::{
-    BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
-    ResourceAdminExecutor, SearchExecutor,
+    BackendExecutor, BackendHealth, BackendProbe, ExecutorByteStream, MutationExecutor,
+    ObjectExecutor, QueryExecutor, ResourceAdminExecutor, SearchExecutor,
 };
+
+use crate::runtime::config::{s3_download_chunk_bytes, s3_multipart_part_bytes};
 
 pub(crate) struct S3Executor(pub(crate) Client);
 
@@ -144,6 +148,224 @@ impl ObjectExecutor for S3Executor {
             "resource_uri": format!("s3://{bucket}/{object_key}"),
             "affected_rows": 1,
             "bytes": body_len
+        })
+        .to_string())
+    }
+
+    /// Streaming download (A.6): read the S3 body in `S3_DOWNLOAD_CHUNK_BYTES`
+    /// frames without ever holding the whole object in memory.
+    async fn get_object_stream(
+        &self,
+        request_json: &str,
+    ) -> Result<ExecutorByteStream, tonic::Status> {
+        let spec: JsonValue = serde_json::from_str(request_json)
+            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let bucket = json_required_str(&spec, "bucket")?.to_string();
+        let object_key = json_required_str(&spec, "object_key")
+            .or_else(|_| json_required_str(&spec, "key"))?
+            .to_string();
+        let output = self
+            .0
+            .get_object()
+            .bucket(&bucket)
+            .key(&object_key)
+            .send()
+            .await
+            .map_err(|err| tonic::Status::unavailable(format!("S3 get_object failed: {err}")))?;
+        let chunk_bytes = s3_download_chunk_bytes();
+        let stream = async_stream::try_stream! {
+            use tokio::io::AsyncReadExt as _;
+            let mut reader = output.body.into_async_read();
+            let mut buf = vec![0u8; chunk_bytes];
+            loop {
+                let read = reader.read(&mut buf).await.map_err(|err| {
+                    tonic::Status::unavailable(format!("S3 body read failed: {err}"))
+                })?;
+                if read == 0 {
+                    break;
+                }
+                yield Bytes::copy_from_slice(&buf[..read]);
+            }
+        };
+        Ok(Box::pin(stream))
+    }
+
+    /// Streaming upload (A.6): forward the chunk stream to S3 multipart, buffering
+    /// at most one ~8 MiB part. Objects that fit in a single part skip multipart
+    /// and use a plain `PutObject`. On a part failure the multipart upload is
+    /// aborted so no orphaned upload is left behind.
+    async fn put_object_stream(
+        &self,
+        request_json: &str,
+        stream: ExecutorByteStream,
+    ) -> Result<String, tonic::Status> {
+        use tokio_stream::StreamExt as _;
+        let spec: JsonValue = serde_json::from_str(request_json)
+            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let bucket = json_required_str(&spec, "bucket")?.to_string();
+        let object_key = json_required_str(&spec, "object_key")
+            .or_else(|_| json_required_str(&spec, "key"))?
+            .to_string();
+        let content_type = spec
+            .get("content_type")
+            .and_then(JsonValue::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .map(str::to_string);
+
+        let part_size = s3_multipart_part_bytes();
+        let mut stream = stream;
+        let mut buf: Vec<u8> = Vec::with_capacity(part_size);
+        // (upload_id, completed parts, next part number)
+        let mut mpu: Option<(String, Vec<CompletedPart>, i32)> = None;
+
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk?;
+            buf.extend_from_slice(&chunk);
+            if buf.len() < part_size {
+                continue;
+            }
+            if mpu.is_none() {
+                let mut create = self
+                    .0
+                    .create_multipart_upload()
+                    .bucket(&bucket)
+                    .key(&object_key);
+                if let Some(ct) = &content_type {
+                    create = create.content_type(ct);
+                }
+                let created = create.send().await.map_err(|e| {
+                    tonic::Status::unavailable(format!("S3 create_multipart_upload failed: {e}"))
+                })?;
+                let upload_id = created
+                    .upload_id()
+                    .ok_or_else(|| {
+                        tonic::Status::unavailable(
+                            "S3 create_multipart_upload returned no upload_id",
+                        )
+                    })?
+                    .to_string();
+                mpu = Some((upload_id, Vec::new(), 1));
+            }
+            let (upload_id, parts, part_number) =
+                mpu.as_mut().expect("multipart initialized above");
+            let part = std::mem::replace(&mut buf, Vec::with_capacity(part_size));
+            match self
+                .0
+                .upload_part()
+                .bucket(&bucket)
+                .key(&object_key)
+                .upload_id(upload_id.clone())
+                .part_number(*part_number)
+                .body(ByteStream::from(part))
+                .send()
+                .await
+            {
+                Ok(resp) => {
+                    parts.push(
+                        CompletedPart::builder()
+                            .e_tag(resp.e_tag().unwrap_or_default().to_string())
+                            .part_number(*part_number)
+                            .build(),
+                    );
+                    *part_number += 1;
+                }
+                Err(e) => {
+                    let _ = self
+                        .0
+                        .abort_multipart_upload()
+                        .bucket(&bucket)
+                        .key(&object_key)
+                        .upload_id(upload_id.clone())
+                        .send()
+                        .await;
+                    return Err(tonic::Status::unavailable(format!(
+                        "S3 upload_part failed: {e}"
+                    )));
+                }
+            }
+        }
+
+        match mpu {
+            // Never reached the part threshold → small object, single PutObject.
+            None => {
+                let mut request = self
+                    .0
+                    .put_object()
+                    .bucket(&bucket)
+                    .key(&object_key)
+                    .body(ByteStream::from(buf));
+                if let Some(ct) = &content_type {
+                    request = request.content_type(ct);
+                }
+                request.send().await.map_err(|e| {
+                    tonic::Status::unavailable(format!("S3 put_object failed: {e}"))
+                })?;
+            }
+            Some((upload_id, mut parts, part_number)) => {
+                // Flush the trailing (< part-size) remainder as the final part.
+                if !buf.is_empty() {
+                    match self
+                        .0
+                        .upload_part()
+                        .bucket(&bucket)
+                        .key(&object_key)
+                        .upload_id(upload_id.clone())
+                        .part_number(part_number)
+                        .body(ByteStream::from(buf))
+                        .send()
+                        .await
+                    {
+                        Ok(resp) => parts.push(
+                            CompletedPart::builder()
+                                .e_tag(resp.e_tag().unwrap_or_default().to_string())
+                                .part_number(part_number)
+                                .build(),
+                        ),
+                        Err(e) => {
+                            let _ = self
+                                .0
+                                .abort_multipart_upload()
+                                .bucket(&bucket)
+                                .key(&object_key)
+                                .upload_id(upload_id.clone())
+                                .send()
+                                .await;
+                            return Err(tonic::Status::unavailable(format!(
+                                "S3 upload_part (final) failed: {e}"
+                            )));
+                        }
+                    }
+                }
+                let completed = CompletedMultipartUpload::builder()
+                    .set_parts(Some(parts))
+                    .build();
+                if let Err(e) = self
+                    .0
+                    .complete_multipart_upload()
+                    .bucket(&bucket)
+                    .key(&object_key)
+                    .upload_id(upload_id.clone())
+                    .multipart_upload(completed)
+                    .send()
+                    .await
+                {
+                    let _ = self
+                        .0
+                        .abort_multipart_upload()
+                        .bucket(&bucket)
+                        .key(&object_key)
+                        .upload_id(upload_id)
+                        .send()
+                        .await;
+                    return Err(tonic::Status::unavailable(format!(
+                        "S3 complete_multipart_upload failed: {e}"
+                    )));
+                }
+            }
+        }
+        Ok(serde_json::json!({
+            "resource_uri": format!("s3://{bucket}/{object_key}"),
+            "affected_rows": 1
         })
         .to_string())
     }

@@ -301,4 +301,94 @@ public interface CapabilitiesResponseOrBuilder extends
    */
   com.udb.entity.v1.BackendCapabilityDescriptorOrBuilder getBackendCapabilitiesOrBuilder(
       int index);
+
+  /**
+   * <pre>
+   * V2 protocol negotiation metadata. Additive (field 9): old clients that
+   * only read fields 1-8 are unaffected; new clients use this to detect the
+   * supported protocol version range, wire encodings, compression, streaming
+   * support, and message-size limits before choosing a transport path.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+   * @return Whether the protocolSupport field is set.
+   */
+  boolean hasProtocolSupport();
+  /**
+   * <pre>
+   * V2 protocol negotiation metadata. Additive (field 9): old clients that
+   * only read fields 1-8 are unaffected; new clients use this to detect the
+   * supported protocol version range, wire encodings, compression, streaming
+   * support, and message-size limits before choosing a transport path.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+   * @return The protocolSupport.
+   */
+  com.udb.entity.v1.ProtocolSupport getProtocolSupport();
+  /**
+   * <pre>
+   * V2 protocol negotiation metadata. Additive (field 9): old clients that
+   * only read fields 1-8 are unaffected; new clients use this to detect the
+   * supported protocol version range, wire encodings, compression, streaming
+   * support, and message-size limits before choosing a transport path.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+   */
+  com.udb.entity.v1.ProtocolSupportOrBuilder getProtocolSupportOrBuilder();
+
+  /**
+   * <pre>
+   * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+   * for a specific backend, whether server-streaming reads / object streaming
+   * are available and which wire encodings that backend can emit.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+   */
+  java.util.List<com.udb.entity.v1.BackendProtocolSupport> 
+      getBackendProtocolSupportList();
+  /**
+   * <pre>
+   * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+   * for a specific backend, whether server-streaming reads / object streaming
+   * are available and which wire encodings that backend can emit.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+   */
+  com.udb.entity.v1.BackendProtocolSupport getBackendProtocolSupport(int index);
+  /**
+   * <pre>
+   * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+   * for a specific backend, whether server-streaming reads / object streaming
+   * are available and which wire encodings that backend can emit.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+   */
+  int getBackendProtocolSupportCount();
+  /**
+   * <pre>
+   * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+   * for a specific backend, whether server-streaming reads / object streaming
+   * are available and which wire encodings that backend can emit.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+   */
+  java.util.List<? extends com.udb.entity.v1.BackendProtocolSupportOrBuilder> 
+      getBackendProtocolSupportOrBuilderList();
+  /**
+   * <pre>
+   * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+   * for a specific backend, whether server-streaming reads / object streaming
+   * are available and which wire encodings that backend can emit.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+   */
+  com.udb.entity.v1.BackendProtocolSupportOrBuilder getBackendProtocolSupportOrBuilder(
+      int index);
 }

@@ -67,25 +67,138 @@ use serde::{Deserialize, Serialize};
 pub(crate) const POSTGRES_DURABILITY_POLL_MS: u64 = 25;
 pub(crate) const MYSQL_DURABILITY_POLL_MS: u64 = 50;
 pub(crate) const SQLITE_DURABILITY_POLL_MS: u64 = 5;
+// B.9: MongoDB durability is polled against an outbox sequence counter document
+// (no native auto-increment). Round-trips to the counter doc dominate, so the
+// default poll cadence sits between the SQL backends.
+#[cfg(feature = "mongodb-native")]
+pub(crate) const MONGODB_DURABILITY_POLL_MS: u64 = 25;
+// B.10a: Cassandra durability is polled against the LWT-maintained outbox seq
+// counter row (Cassandra has no auto-increment, and COUNTER columns can't be
+// used in LWTs). Each poll is a single-partition read of the counter row, so
+// the cadence matches the other counter-polled backends (Mongo).
+#[cfg(feature = "cassandra")]
+pub(crate) const CASSANDRA_DURABILITY_POLL_MS: u64 = 25;
+// B.10b: Neo4j durability is polled against an outbox sequence counter node
+// maintained over the HTTP transactional Cypher API (Neo4j has no
+// auto-increment). Each poll is a single-node read of the `(:UdbCounter)` node
+// over HTTP, so the cadence matches the other counter-polled backends
+// (Mongo / Cassandra).
+#[cfg(feature = "neo4j")]
+pub(crate) const NEO4J_DURABILITY_POLL_MS: u64 = 25;
+// B.10c: ClickHouse durability is polled against the ReplacingMergeTree outbox
+// seq counter row, read with `SELECT … FINAL`. Each poll forces a part merge at
+// read time over the (tiny) counter table, so the cadence matches the other
+// counter-polled backends (Mongo / Cassandra / Neo4j).
+#[cfg(feature = "clickhouse")]
+pub(crate) const CLICKHOUSE_DURABILITY_POLL_MS: u64 = 25;
 
 pub(crate) fn durability_poll_interval(timeout: Duration, default_ms: u64) -> Duration {
     let adaptive_ms = (timeout.as_millis() / 100).clamp(1, u128::from(default_ms)) as u64;
     Duration::from_millis(adaptive_ms)
 }
 
+// B.10a phase 1: Cassandra / ScyllaDB canonical store (base CanonicalStore
+// surface only — outbox-seq via LWT CAS, advisory leases via LWT, durability
+// token. The four system-store traits are phase 2.)
+#[cfg(feature = "cassandra")]
+pub mod cassandra;
+// B.10a phase 2: Cassandra system-store trait impls (projection / saga /
+// admin-audit / migration-audit) in separate files, mirroring the
+// postgres_*/mssql_*/mongodb_* layout. CQL + LWT (per-row LWT where atomic CAS
+// is needed). `cassandra_projection` hosts the shared CqlValue→typed helpers.
+#[cfg(feature = "cassandra")]
+mod cassandra_admin_audit;
+#[cfg(feature = "cassandra")]
+mod cassandra_migration_audit;
+#[cfg(feature = "cassandra")]
+mod cassandra_projection;
+#[cfg(feature = "cassandra")]
+mod cassandra_saga;
+#[cfg(feature = "mongodb-native")]
+pub mod mongodb;
+#[cfg(feature = "mssql")]
+pub mod mssql;
+// B.10b phase 1: Neo4j canonical store (base CanonicalStore surface only —
+// outbox-seq via a `(:UdbCounter)` node maintained inside the HTTP
+// transactional Cypher API, advisory leases via a `(:UdbLease)` node, durability
+// token. The four system-store traits are phase 2.)
+#[cfg(feature = "neo4j")]
+pub mod neo4j;
+// B.10b phase 2: Neo4j system-store trait impls (projection / saga /
+// admin-audit / migration-audit) in separate files, mirroring the
+// postgres_*/cassandra_* layout. Cypher over the HTTP transactional API
+// (multi-statement ACID tx for the chain-serialised audit append + the atomic
+// claim/recovery flips). `neo4j.rs` (phase 1) hosts the shared node-label
+// constants + the Json-row → typed helpers these reuse.
+#[cfg(feature = "neo4j")]
+mod neo4j_admin_audit;
+#[cfg(feature = "neo4j")]
+mod neo4j_migration_audit;
+#[cfg(feature = "neo4j")]
+mod neo4j_projection;
+#[cfg(feature = "neo4j")]
+mod neo4j_saga;
+// B.10c phase 1: ClickHouse canonical store (base CanonicalStore surface only —
+// outbox via a plain MergeTree append, outbox-seq + advisory leases via a
+// ReplacingMergeTree(version) read-insert-reread CAS emulation, durability
+// token. ClickHouse has no transactions / row locks / native CAS, so the four
+// system-store traits are phase 2 and this store is not yet registered into the
+// runtime registry.)
+#[cfg(feature = "clickhouse")]
+pub mod clickhouse;
+// B.10c phase 2: ClickHouse system-store trait impls (projection / saga /
+// admin-audit / migration-audit) in separate files, mirroring the
+// postgres_*/cassandra_*/neo4j_* layout. Mutable state (projection_tasks, sagas,
+// migration_runs, op-seq counter) uses ReplacingMergeTree(version) +
+// `SELECT … FINAL` read-insert-reread versioned-CAS; append-only data
+// (admin_audit, migration op-ledger) uses plain MergeTree INSERTs.
+// `clickhouse_projection` hosts the shared JSONCompact-row → typed helpers these
+// reuse. Single-writer caveat documented inline (the conformance run is
+// single-threaded).
+#[cfg(feature = "clickhouse")]
+mod clickhouse_admin_audit;
+#[cfg(feature = "clickhouse")]
+mod clickhouse_migration_audit;
+#[cfg(feature = "clickhouse")]
+mod clickhouse_projection;
+#[cfg(feature = "clickhouse")]
+mod clickhouse_saga;
 #[cfg(feature = "mysql")]
 pub mod mysql;
 #[cfg(feature = "postgres")]
 pub mod postgres;
+#[cfg(feature = "qdrant")]
+pub mod qdrant;
+#[cfg(feature = "redis")]
+pub mod redis;
 #[cfg(feature = "sqlite")]
 pub mod sqlite;
 // NW1-1a: system-table operations (projection tasks first).
 pub mod system_store;
+#[cfg(any(
+    feature = "qdrant",
+    feature = "pinecone",
+    feature = "weaviate",
+    feature = "elasticsearch"
+))]
+pub mod vector_plane;
+#[cfg(any(feature = "pinecone", feature = "weaviate", feature = "elasticsearch"))]
+pub mod vector_system;
 // #13/#24: shared SQL-dialect adapter + SQL-template helpers used by
 // the per-backend system-store impls. Compiled whenever any SQL
 // canonical-store backend is enabled.
 #[cfg(any(feature = "postgres", feature = "mysql", feature = "sqlite"))]
 mod dialect;
+// B.7: shared SQL canonical-core DDL builders. Single source of truth for the
+// system-table schema strings the per-backend stores execute, so MSSQL (B.8)
+// and future SQL backends reuse one renderer instead of copying Postgres.
+#[cfg(any(
+    feature = "postgres",
+    feature = "mysql",
+    feature = "sqlite",
+    feature = "mssql"
+))]
+mod sql_schema;
 // NW1-1a: SQLite implementation of ProjectionTaskStore.
 #[cfg(feature = "sqlite")]
 mod sqlite_projection;
@@ -95,6 +208,18 @@ mod postgres_projection;
 // NW1-1a: MySQL implementation of ProjectionTaskStore.
 #[cfg(feature = "mysql")]
 mod mysql_projection;
+// B.8 phase 2: MSSQL implementation of ProjectionTaskStore.
+#[cfg(feature = "mssql")]
+mod mssql_projection;
+// B.9 phase 2: MongoDB implementations of the four system-store traits.
+#[cfg(feature = "mongodb-native")]
+mod mongodb_admin_audit;
+#[cfg(feature = "mongodb-native")]
+mod mongodb_migration_audit;
+#[cfg(feature = "mongodb-native")]
+mod mongodb_projection;
+#[cfg(feature = "mongodb-native")]
+mod mongodb_saga;
 // NW1-1b: SQLite implementation of SagaStore.
 #[cfg(feature = "sqlite")]
 mod sqlite_saga;
@@ -104,6 +229,9 @@ mod postgres_saga;
 // NW1-1b: MySQL implementation of SagaStore.
 #[cfg(feature = "mysql")]
 mod mysql_saga;
+// B.8 phase 2: MSSQL implementation of SagaStore.
+#[cfg(feature = "mssql")]
+mod mssql_saga;
 // NW1-1c: SQLite implementation of AdminAuditStore.
 #[cfg(feature = "sqlite")]
 mod sqlite_admin_audit;
@@ -113,6 +241,9 @@ mod postgres_admin_audit;
 // NW1-1c: MySQL implementation of AdminAuditStore.
 #[cfg(feature = "mysql")]
 mod mysql_admin_audit;
+// B.8 phase 2: MSSQL implementation of AdminAuditStore.
+#[cfg(feature = "mssql")]
+mod mssql_admin_audit;
 // NW1-1d: SQLite implementation of MigrationAuditStore.
 #[cfg(feature = "sqlite")]
 mod sqlite_migration_audit;
@@ -122,10 +253,17 @@ mod postgres_migration_audit;
 // NW1-1d: MySQL implementation of MigrationAuditStore.
 #[cfg(feature = "mysql")]
 mod mysql_migration_audit;
+// B.8 phase 2: MSSQL implementation of MigrationAuditStore.
+#[cfg(feature = "mssql")]
+mod mssql_migration_audit;
 // P2P-8: shared CanonicalStore contract harness. Lives under
 // `#[cfg(test)]` so it's only compiled into the test binary.
 #[cfg(all(test, feature = "sqlite"))]
 mod conformance;
+// B.11 / B.7 safety net: env-gated LIVE Postgres/MySQL conformance reusing the
+// same contract functions. Runtime-skips when UDB_PG_DSN / UDB_MYSQL_DSN unset.
+#[cfg(all(test, feature = "sqlite"))]
+mod conformance_live_tests;
 
 // ── DurabilityToken ───────────────────────────────────────────────────────────
 

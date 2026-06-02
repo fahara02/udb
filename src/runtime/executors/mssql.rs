@@ -149,6 +149,77 @@ impl MssqlClient {
         self.with_client(async |client| client.simple_query("SELECT 1").await.map(|_| ()))
             .await
     }
+
+    /// B.8 — run a parameterised query and return the first result
+    /// set's rows. Thin wrapper over [`Self::with_client`] so the
+    /// canonical store (which lives outside this module and cannot
+    /// reach the private `with_client`) can issue `SELECT`s with bound
+    /// `@P1`/`@P2`/… parameters. `params` are materialised typed
+    /// scalars (see [`SqlParam`]); references are bound via
+    /// [`bind_refs`].
+    pub(crate) async fn fetch_rows(
+        &self,
+        sql: &str,
+        params: &[SqlParam],
+    ) -> Result<Vec<tiberius::Row>, String> {
+        self.with_client(async |client| {
+            let refs = bind_refs(params);
+            let stream = client.query(sql, &refs).await?;
+            let rows = stream.into_first_result().await?;
+            Ok::<_, tiberius::error::Error>(rows)
+        })
+        .await
+    }
+
+    /// B.8 — run a parameterised write and return the total rows
+    /// affected across all result sets. Thin wrapper over
+    /// [`Self::with_client`].
+    pub(crate) async fn execute_sql(&self, sql: &str, params: &[SqlParam]) -> Result<u64, String> {
+        self.with_client(async |client| {
+            let refs = bind_refs(params);
+            let result = client.execute(sql, &refs).await?;
+            Ok::<_, tiberius::error::Error>(result.rows_affected().iter().sum::<u64>())
+        })
+        .await
+    }
+
+    /// B.8 — run a (possibly multi-statement) T-SQL batch with no
+    /// parameters. For DDL / transaction control where tiberius's
+    /// `simple_query` is the right primitive (it accepts `;`-separated
+    /// scripts). Thin wrapper over [`Self::with_client`].
+    pub(crate) async fn simple_batch(&self, sql: &str) -> Result<(), String> {
+        self.with_client(async |client| client.simple_query(sql).await.map(|_| ()))
+            .await
+    }
+
+    /// B.8 phase 2 — run a closure against a SINGLE pinned tiberius
+    /// connection for the whole call. The admin-audit chain append needs
+    /// `BEGIN TRAN` + `sp_getapplock` (`@LockOwner='Transaction'`) + read
+    /// latest hash + INSERT + `COMMIT` to all execute on ONE connection
+    /// inside ONE transaction — otherwise the applock serialises nothing
+    /// (each `fetch_rows`/`execute_sql` would grab a different pooled
+    /// slot) and two concurrent appends could link off the same
+    /// `previous_hash`. This exposes the same lazy-init + auto-reconnect
+    /// `with_client` machinery to sibling canonical-store modules so they
+    /// can pin a connection for a multi-statement critical section. The
+    /// closure receives `&mut TiberiusClient` and may freely
+    /// `simple_query` / `query` / `execute` on it; transport errors drop
+    /// the connection for the next caller exactly like the other helpers.
+    pub(crate) async fn with_pinned_client<F, R>(&self, f: F) -> Result<R, String>
+    where
+        F: AsyncFnOnce(&mut TiberiusClient) -> Result<R, tiberius::error::Error>,
+    {
+        self.with_client(f).await
+    }
+
+    /// B.8 phase 2 — bind `SqlParam` references for a pinned-connection
+    /// query. Sibling modules driving [`Self::with_pinned_client`] hold a
+    /// raw `&mut TiberiusClient`, so they need the same `&[&dyn ToSql]`
+    /// materialisation `fetch_rows` does internally. Re-exported here so
+    /// they don't reimplement [`bind_refs`].
+    pub(crate) fn bind_param_refs<'a>(params: &'a [SqlParam]) -> Vec<&'a dyn tiberius::ToSql> {
+        bind_refs(params)
+    }
 }
 
 fn is_transport_error(err: &tiberius::error::Error) -> bool {
@@ -300,7 +371,7 @@ fn row_to_json(row: &tiberius::Row) -> JsonValue {
 /// `query()` takes `&[&dyn ToSql]`, and the values must outlive the
 /// borrow. We materialise typed scalars in a local `Vec` and hand
 /// references to query().
-enum SqlParam {
+pub(crate) enum SqlParam {
     Null,
     Bool(bool),
     Int(i64),
@@ -309,7 +380,7 @@ enum SqlParam {
 }
 
 impl SqlParam {
-    fn from_json(v: &JsonValue) -> Self {
+    pub(crate) fn from_json(v: &JsonValue) -> Self {
         match v {
             JsonValue::Null => Self::Null,
             JsonValue::Bool(b) => Self::Bool(*b),
@@ -328,7 +399,7 @@ impl SqlParam {
     }
 }
 
-fn bind_refs<'a>(params: &'a [SqlParam]) -> Vec<&'a dyn tiberius::ToSql> {
+pub(crate) fn bind_refs<'a>(params: &'a [SqlParam]) -> Vec<&'a dyn tiberius::ToSql> {
     params
         .iter()
         .map(|p| -> &dyn tiberius::ToSql {
@@ -428,18 +499,21 @@ impl ResourceAdminExecutor for MssqlExecutor {
     async fn ensure_resource(
         &self,
         _resource_name: &str,
-        spec_json: &str,
+        _spec_json: &str,
     ) -> Result<(), tonic::Status> {
-        // The Mssql compiler's compile_resource_op produces a
-        // ready-to-run T-SQL statement; ensure_resource just runs it.
-        let _ = spec_json; // shape: { "sql": "..." } already executed by compile path
-        Err(tonic::Status::unimplemented(
-            "MssqlExecutor::ensure_resource is driven via compile_resource_op + mutate",
+        Err(crate::runtime::executor_utils::capability_status(
+            "mssql",
+            "ensure_resource",
+            "native_resource_lifecycle",
+            "SQL Server resource lifecycle is compiler-mediated: issue CREATE/DROP through the compiled DDL path (compile_resource_op + mutate), not the native ensure_resource executor method",
         ))
     }
     async fn drop_resource(&self, _resource_name: &str) -> Result<(), tonic::Status> {
-        Err(tonic::Status::unimplemented(
-            "MssqlExecutor::drop_resource is driven via compile_resource_op + mutate",
+        Err(crate::runtime::executor_utils::capability_status(
+            "mssql",
+            "drop_resource",
+            "native_resource_lifecycle",
+            "SQL Server resource lifecycle is compiler-mediated: issue CREATE/DROP through the compiled DDL path (compile_resource_op + mutate), not the native drop_resource executor method",
         ))
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
@@ -627,5 +701,42 @@ mod tests {
     fn a3_session_context_batch_is_none_without_context() {
         let exec = MssqlExecutor::new(MssqlClient::new("Server=x;"));
         assert!(exec.session_context_batch().is_none());
+    }
+}
+
+#[cfg(test)]
+mod b5_lifecycle_capability_tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use crate::runtime::executors::ResourceAdminExecutor;
+    use prost::Message as _;
+
+    /// Decode the prost `ErrorDetail` from the binary trailer the way an SDK
+    /// would — same pattern as `executor_utils::error_detail_tests`.
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("error-detail trailer present")
+            .to_bytes()
+            .expect("trailer decodes to bytes");
+        ErrorDetail::decode(raw.as_ref()).expect("trailer decodes as ErrorDetail")
+    }
+
+    #[tokio::test]
+    async fn ensure_resource_returns_typed_capability_error_not_unimplemented() {
+        let exec = MssqlExecutor::new(MssqlClient::new(
+            "Server=localhost,1433;Database=udb;User=sa;Password=x;".to_string(),
+        ));
+        let err = ResourceAdminExecutor::ensure_resource(&exec, "widgets", "{}")
+            .await
+            .expect_err("native ensure_resource must refuse — it is compiler-mediated");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert_ne!(err.code(), tonic::Code::Unimplemented);
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.capability_required, "native_resource_lifecycle");
+        assert_eq!(detail.backend, "mssql");
     }
 }

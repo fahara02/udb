@@ -84,6 +84,48 @@ pub enum CatalogCompatibility {
     },
 }
 
+// ── Protocol support (A.2) ────────────────────────────────────────────────────
+
+/// SDK-side mirror of the server's `udb.entity.v1.ProtocolSupport`
+/// negotiation block (returned in `CapabilitiesResponse.protocol_support`).
+///
+/// `udb-portable` is the WASM/edge-safe subset and deliberately does **not**
+/// depend on the generated `prost`/`tonic` admin types (see crate docs), so
+/// this is a plain serde struct an SDK fills in after a `GetCapabilities`
+/// call. The field set mirrors the proto message one-for-one so an SDK can
+/// cache the negotiated protocol and decide, for example, whether to request
+/// the V1 `record_set_v1` encoding or a later `record_batch_v2`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ProtocolSupport {
+    /// Lowest UDB wire protocol version the server still accepts (semver).
+    pub min_protocol_version: String,
+    /// Highest UDB wire protocol version the server speaks (semver).
+    pub max_protocol_version: String,
+    /// Supported row/wire encodings, e.g. `"record_set_v1"`.
+    pub encodings: Vec<String>,
+    /// Supported transport compression algorithms (may be empty).
+    pub compression: Vec<String>,
+    /// Whether the server can stream query results.
+    pub supports_streaming_reads: bool,
+    /// Whether the server can stream object payloads.
+    pub supports_object_streaming: bool,
+    /// Max inbound message size in bytes (0 == transport default).
+    pub max_recv_message_bytes: i64,
+    /// Max outbound message size in bytes (0 == transport default).
+    pub max_send_message_bytes: i64,
+    /// RPC method names supported by the server.
+    pub supported_rpcs: Vec<String>,
+}
+
+impl ProtocolSupport {
+    /// True when the server advertises the given wire encoding. SDKs use this
+    /// to fall back from `record_batch_v2` to `record_set_v1` when the server
+    /// has not yet shipped the typed columnar encoding.
+    pub fn supports_encoding(&self, encoding: &str) -> bool {
+        self.encodings.iter().any(|e| e == encoding)
+    }
+}
+
 // ── SchemaCache ───────────────────────────────────────────────────────────────
 
 /// In-memory cache of `(catalog_version, manifest_checksum)` plus
@@ -94,6 +136,10 @@ pub enum CatalogCompatibility {
 pub struct SchemaCache {
     last_seen: Option<ObservedHeaders>,
     descriptors: HashMap<String, ProtoSchema>,
+    /// Negotiated protocol support, recorded after the SDK's first
+    /// `GetCapabilities` call. `None` until the SDK calls
+    /// [`SchemaCache::set_protocol_support`].
+    protocol_support: Option<ProtocolSupport>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -163,6 +209,20 @@ impl SchemaCache {
     /// How many descriptors are currently cached.
     pub fn descriptor_count(&self) -> usize {
         self.descriptors.len()
+    }
+
+    /// Record the protocol support block the server returned from
+    /// `GetCapabilities`. The SDK calls this once after negotiation so later
+    /// requests can consult [`SchemaCache::protocol_support`] to pick a wire
+    /// encoding / streaming path without re-fetching capabilities.
+    pub fn set_protocol_support(&mut self, support: ProtocolSupport) {
+        self.protocol_support = Some(support);
+    }
+
+    /// The negotiated protocol support, or `None` if the SDK has not yet
+    /// called [`SchemaCache::set_protocol_support`].
+    pub fn protocol_support(&self) -> Option<&ProtocolSupport> {
+        self.protocol_support.as_ref()
     }
 
     /// Compare an SDK-side checksum against the most recent observed
@@ -324,6 +384,35 @@ mod tests {
     fn compatibility_returns_none_before_first_observation() {
         let cache = SchemaCache::new();
         assert!(cache.compatibility("anything").is_none());
+    }
+
+    /// Pin: protocol support starts unset and round-trips through the
+    /// cache. A.2 — SDKs cache the negotiated `ProtocolSupport` so they can
+    /// pick a wire encoding without re-fetching capabilities.
+    #[test]
+    fn protocol_support_round_trips_through_cache() {
+        let mut cache = SchemaCache::new();
+        assert!(
+            cache.protocol_support().is_none(),
+            "protocol support is unset until negotiated"
+        );
+        let support = ProtocolSupport {
+            min_protocol_version: "1.0.0".to_string(),
+            max_protocol_version: "1.0.0".to_string(),
+            encodings: vec!["record_set_v1".to_string()],
+            supports_streaming_reads: true,
+            supports_object_streaming: true,
+            supported_rpcs: vec!["Select".to_string()],
+            ..Default::default()
+        };
+        cache.set_protocol_support(support.clone());
+        let cached = cache.protocol_support().expect("set above");
+        assert_eq!(cached, &support);
+        assert!(cached.supports_encoding("record_set_v1"));
+        assert!(
+            !cached.supports_encoding("record_batch_v2"),
+            "V2 columnar encoding is not advertised yet"
+        );
     }
 
     /// Pin: `compatibility_against_local` computes the SDK's checksum

@@ -84,6 +84,98 @@ fn bool_env(key: &str) -> Option<bool> {
     })
 }
 
+// ── Object-store streaming tunables (A.6) ─────────────────────────────────────
+//
+// Defaults for the typed PutObject/GetObject streaming path live here (the
+// central settings home), so a missing env var falls back to the value below
+// rather than to a literal scattered across the object executors. Each resolver
+// reads its `UDB_*` override and applies the default when unset/invalid.
+
+/// DoS ceiling for a single typed object upload/download. Override:
+/// `UDB_MAX_OBJECT_BYTES`. Default 5 GiB.
+#[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
+pub(crate) const DEFAULT_MAX_OBJECT_BYTES: u64 = 5 * 1024 * 1024 * 1024;
+/// S3-mandated floor for non-final multipart parts (≥5 MiB).
+#[cfg(feature = "s3")]
+pub(crate) const S3_MIN_PART_BYTES: usize = 5 * 1024 * 1024;
+/// S3 multipart part size. Override: `UDB_S3_MULTIPART_PART_BYTES`. Default 8 MiB.
+#[cfg(feature = "s3")]
+pub(crate) const DEFAULT_S3_MULTIPART_PART_BYTES: usize = 8 * 1024 * 1024;
+/// S3 streaming-download frame size. Override: `UDB_S3_DOWNLOAD_CHUNK_BYTES`.
+/// Default 256 KiB.
+#[cfg(feature = "s3")]
+pub(crate) const DEFAULT_S3_DOWNLOAD_CHUNK_BYTES: usize = 256 * 1024;
+/// Azure staged-block size. Override: `UDB_AZURE_BLOCK_BYTES`. Default 8 MiB.
+#[cfg(feature = "azureblob")]
+pub(crate) const DEFAULT_AZURE_BLOCK_BYTES: usize = 8 * 1024 * 1024;
+
+fn usize_env_or(key: &str, default: usize) -> usize {
+    std::env::var(key)
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .filter(|&value| value > 0)
+        .unwrap_or(default)
+}
+
+// ── Metrics label-cardinality bounds (D.4) ────────────────────────────────────
+// Untrusted resource names (table/collection/bucket/…) become Prometheus label
+// values; cap their size + distinct count here so a tenant can't blow up
+// cardinality. Resolved centrally (raw values still go to traces/logs).
+
+/// Max metric-label length. Override `UDB_METRIC_LABEL_MAX_LEN`. Default 64.
+pub(crate) const DEFAULT_METRIC_LABEL_MAX_LEN: usize = 64;
+/// Max distinct values admitted per bounded label dimension (others →
+/// `"overflow"`). Override `UDB_METRIC_MAX_DISTINCT_LABELS`. Default 512.
+pub(crate) const DEFAULT_METRIC_MAX_DISTINCT_LABELS: usize = 512;
+
+pub(crate) fn metric_label_max_len() -> usize {
+    usize_env_or("UDB_METRIC_LABEL_MAX_LEN", DEFAULT_METRIC_LABEL_MAX_LEN)
+}
+
+pub(crate) fn metric_max_distinct_labels() -> usize {
+    usize_env_or(
+        "UDB_METRIC_MAX_DISTINCT_LABELS",
+        DEFAULT_METRIC_MAX_DISTINCT_LABELS,
+    )
+}
+
+/// Typed-object DoS ceiling in bytes: `UDB_MAX_OBJECT_BYTES` or
+/// [`DEFAULT_MAX_OBJECT_BYTES`].
+#[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
+pub(crate) fn max_object_bytes() -> u64 {
+    std::env::var("UDB_MAX_OBJECT_BYTES")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .filter(|&value| value > 0)
+        .unwrap_or(DEFAULT_MAX_OBJECT_BYTES)
+}
+
+/// S3 multipart part size, clamped up to [`S3_MIN_PART_BYTES`] so a
+/// misconfiguration can't produce an upload S3 rejects.
+#[cfg(feature = "s3")]
+pub(crate) fn s3_multipart_part_bytes() -> usize {
+    usize_env_or(
+        "UDB_S3_MULTIPART_PART_BYTES",
+        DEFAULT_S3_MULTIPART_PART_BYTES,
+    )
+    .max(S3_MIN_PART_BYTES)
+}
+
+/// S3 streaming-download frame size.
+#[cfg(feature = "s3")]
+pub(crate) fn s3_download_chunk_bytes() -> usize {
+    usize_env_or(
+        "UDB_S3_DOWNLOAD_CHUNK_BYTES",
+        DEFAULT_S3_DOWNLOAD_CHUNK_BYTES,
+    )
+}
+
+/// Azure staged-block size.
+#[cfg(feature = "azureblob")]
+pub(crate) fn azure_block_bytes() -> usize {
+    usize_env_or("UDB_AZURE_BLOCK_BYTES", DEFAULT_AZURE_BLOCK_BYTES)
+}
+
 /// Assemble a PostgreSQL DSN from libpq-style component env vars
 /// (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGSSLMODE`,
 /// `PGCHANNELBINDING`).

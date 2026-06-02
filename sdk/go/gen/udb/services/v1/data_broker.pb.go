@@ -26,11 +26,12 @@ var File_udb_services_v1_data_broker_proto protoreflect.FileDescriptor
 
 const file_udb_services_v1_data_broker_proto_rawDesc = "" +
 	"\n" +
-	"!udb/services/v1/data_broker.proto\x12\x0fudb.services.v1\x1a\x19udb/entity/v1/admin.proto\x1a\x18udb/entity/v1/blob.proto\x1a\x17udb/entity/v1/cdc.proto\x1a\x1cudb/entity/v1/mutation.proto\x1a\x1audb/entity/v1/outbox.proto\x1a\x1eudb/entity/v1/relational.proto\x1a\x1audb/entity/v1/stores.proto\x1a\x16udb/entity/v1/tx.proto\x1a\x1audb/entity/v1/vector.proto\x1a\x1eudb/events/v1/udb_events.proto2\xd64\n" +
+	"!udb/services/v1/data_broker.proto\x12\x0fudb.services.v1\x1a\x19udb/entity/v1/admin.proto\x1a\x18udb/entity/v1/blob.proto\x1a\x17udb/entity/v1/cdc.proto\x1a\x1cudb/entity/v1/mutation.proto\x1a\x1audb/entity/v1/outbox.proto\x1a udb/entity/v1/record_batch.proto\x1a\x1eudb/entity/v1/relational.proto\x1a\x1audb/entity/v1/stores.proto\x1a\x16udb/entity/v1/tx.proto\x1a\x1audb/entity/v1/vector.proto\x1a\x1eudb/events/v1/udb_events.proto2\xa25\n" +
 	"\n" +
 	"DataBroker\x12B\n" +
 	"\x06Select\x12\x1c.udb.entity.v1.SelectRequest\x1a\x18.udb.entity.v1.RecordSet\"\x00\x12K\n" +
-	"\vBatchSelect\x12\x1c.udb.entity.v1.SelectRequest\x1a\x18.udb.entity.v1.RecordSet\"\x00(\x010\x01\x12I\n" +
+	"\vBatchSelect\x12\x1c.udb.entity.v1.SelectRequest\x1a\x18.udb.entity.v1.RecordSet\"\x00(\x010\x01\x12J\n" +
+	"\bSelectV2\x12\x1c.udb.entity.v1.SelectRequest\x1a\x1c.udb.entity.v1.RecordBatchV2\"\x000\x01\x12I\n" +
 	"\x06Upsert\x12\x1c.udb.entity.v1.UpsertRequest\x1a\x1f.udb.entity.v1.MutationResponse\"\x00\x12R\n" +
 	"\vBatchUpsert\x12\x1c.udb.entity.v1.UpsertRequest\x1a\x1f.udb.entity.v1.MutationResponse\"\x00(\x010\x01\x12I\n" +
 	"\x06Delete\x12\x1c.udb.entity.v1.DeleteRequest\x1a\x1f.udb.entity.v1.MutationResponse\"\x00\x12N\n" +
@@ -166,199 +167,202 @@ var file_udb_services_v1_data_broker_proto_goTypes = []any{
 	(*v1.AdminAuditLogRequest)(nil),        // 54: udb.entity.v1.AdminAuditLogRequest
 	(*v1.AdminAuditVerifyRequest)(nil),     // 55: udb.entity.v1.AdminAuditVerifyRequest
 	(*v1.RecordSet)(nil),                   // 56: udb.entity.v1.RecordSet
-	(*v1.MutationResponse)(nil),            // 57: udb.entity.v1.MutationResponse
-	(*v1.VectorSet)(nil),                   // 58: udb.entity.v1.VectorSet
-	(*v1.UrlResponse)(nil),                 // 59: udb.entity.v1.UrlResponse
-	(*v1.MultipartUploadResponse)(nil),     // 60: udb.entity.v1.MultipartUploadResponse
-	(*v1.CacheGetResponse)(nil),            // 61: udb.entity.v1.CacheGetResponse
-	(*v1.CacheScanResponse)(nil),           // 62: udb.entity.v1.CacheScanResponse
-	(*v1.DocumentSet)(nil),                 // 63: udb.entity.v1.DocumentSet
-	(*v1.GraphResultSet)(nil),              // 64: udb.entity.v1.GraphResultSet
-	(*v1.TimeSeriesQueryResponse)(nil),     // 65: udb.entity.v1.TimeSeriesQueryResponse
-	(*v1.AnalyticalQueryResponse)(nil),     // 66: udb.entity.v1.AnalyticalQueryResponse
-	(*v1.TxStatus)(nil),                    // 67: udb.entity.v1.TxStatus
-	(*v11.CDCEnvelope)(nil),                // 68: udb.events.v1.CDCEnvelope
-	(*v1.EnqueueOutboxEventResponse)(nil),  // 69: udb.entity.v1.EnqueueOutboxEventResponse
-	(*v1.GenericDispatchResponse)(nil),     // 70: udb.entity.v1.GenericDispatchResponse
-	(*v1.ResourceListResponse)(nil),        // 71: udb.entity.v1.ResourceListResponse
-	(*v1.CatalogVersionResponse)(nil),      // 72: udb.entity.v1.CatalogVersionResponse
-	(*v1.CatalogValidationResponse)(nil),   // 73: udb.entity.v1.CatalogValidationResponse
-	(*v1.CatalogVersionListResponse)(nil),  // 74: udb.entity.v1.CatalogVersionListResponse
-	(*v1.MigrationPlanResponse)(nil),       // 75: udb.entity.v1.MigrationPlanResponse
-	(*v1.MigrationStatusResponse)(nil),     // 76: udb.entity.v1.MigrationStatusResponse
-	(*v1.MigrationRunListResponse)(nil),    // 77: udb.entity.v1.MigrationRunListResponse
-	(*v1.DlqListResponse)(nil),             // 78: udb.entity.v1.DlqListResponse
-	(*v1.DlqEventResponse)(nil),            // 79: udb.entity.v1.DlqEventResponse
-	(*v1.CdcStatusResponse)(nil),           // 80: udb.entity.v1.CdcStatusResponse
-	(*v1.CdcRedactionPreviewResponse)(nil), // 81: udb.entity.v1.CdcRedactionPreviewResponse
-	(*v1.ProjectionDriftScanResponse)(nil), // 82: udb.entity.v1.ProjectionDriftScanResponse
-	(*v1.SagaListResponse)(nil),            // 83: udb.entity.v1.SagaListResponse
-	(*v1.SagaResponse)(nil),                // 84: udb.entity.v1.SagaResponse
-	(*v1.PolicyListResponse)(nil),          // 85: udb.entity.v1.PolicyListResponse
-	(*v1.PolicyLintResponse)(nil),          // 86: udb.entity.v1.PolicyLintResponse
-	(*v1.CapabilitiesResponse)(nil),        // 87: udb.entity.v1.CapabilitiesResponse
-	(*v1.CatalogManifestResponse)(nil),     // 88: udb.entity.v1.CatalogManifestResponse
-	(*v1.MessageSchemaLookupResponse)(nil), // 89: udb.entity.v1.MessageSchemaLookupResponse
-	(*v1.MessageSchemaListResponse)(nil),   // 90: udb.entity.v1.MessageSchemaListResponse
-	(*v1.HealthReportResponse)(nil),        // 91: udb.entity.v1.HealthReportResponse
-	(*v1.ProjectListResponse)(nil),         // 92: udb.entity.v1.ProjectListResponse
-	(*v1.AdminSummaryResponse)(nil),        // 93: udb.entity.v1.AdminSummaryResponse
-	(*v1.AdminAuditLogResponse)(nil),       // 94: udb.entity.v1.AdminAuditLogResponse
-	(*v1.AdminAuditVerifyResponse)(nil),    // 95: udb.entity.v1.AdminAuditVerifyResponse
+	(*v1.RecordBatchV2)(nil),               // 57: udb.entity.v1.RecordBatchV2
+	(*v1.MutationResponse)(nil),            // 58: udb.entity.v1.MutationResponse
+	(*v1.VectorSet)(nil),                   // 59: udb.entity.v1.VectorSet
+	(*v1.UrlResponse)(nil),                 // 60: udb.entity.v1.UrlResponse
+	(*v1.MultipartUploadResponse)(nil),     // 61: udb.entity.v1.MultipartUploadResponse
+	(*v1.CacheGetResponse)(nil),            // 62: udb.entity.v1.CacheGetResponse
+	(*v1.CacheScanResponse)(nil),           // 63: udb.entity.v1.CacheScanResponse
+	(*v1.DocumentSet)(nil),                 // 64: udb.entity.v1.DocumentSet
+	(*v1.GraphResultSet)(nil),              // 65: udb.entity.v1.GraphResultSet
+	(*v1.TimeSeriesQueryResponse)(nil),     // 66: udb.entity.v1.TimeSeriesQueryResponse
+	(*v1.AnalyticalQueryResponse)(nil),     // 67: udb.entity.v1.AnalyticalQueryResponse
+	(*v1.TxStatus)(nil),                    // 68: udb.entity.v1.TxStatus
+	(*v11.CDCEnvelope)(nil),                // 69: udb.events.v1.CDCEnvelope
+	(*v1.EnqueueOutboxEventResponse)(nil),  // 70: udb.entity.v1.EnqueueOutboxEventResponse
+	(*v1.GenericDispatchResponse)(nil),     // 71: udb.entity.v1.GenericDispatchResponse
+	(*v1.ResourceListResponse)(nil),        // 72: udb.entity.v1.ResourceListResponse
+	(*v1.CatalogVersionResponse)(nil),      // 73: udb.entity.v1.CatalogVersionResponse
+	(*v1.CatalogValidationResponse)(nil),   // 74: udb.entity.v1.CatalogValidationResponse
+	(*v1.CatalogVersionListResponse)(nil),  // 75: udb.entity.v1.CatalogVersionListResponse
+	(*v1.MigrationPlanResponse)(nil),       // 76: udb.entity.v1.MigrationPlanResponse
+	(*v1.MigrationStatusResponse)(nil),     // 77: udb.entity.v1.MigrationStatusResponse
+	(*v1.MigrationRunListResponse)(nil),    // 78: udb.entity.v1.MigrationRunListResponse
+	(*v1.DlqListResponse)(nil),             // 79: udb.entity.v1.DlqListResponse
+	(*v1.DlqEventResponse)(nil),            // 80: udb.entity.v1.DlqEventResponse
+	(*v1.CdcStatusResponse)(nil),           // 81: udb.entity.v1.CdcStatusResponse
+	(*v1.CdcRedactionPreviewResponse)(nil), // 82: udb.entity.v1.CdcRedactionPreviewResponse
+	(*v1.ProjectionDriftScanResponse)(nil), // 83: udb.entity.v1.ProjectionDriftScanResponse
+	(*v1.SagaListResponse)(nil),            // 84: udb.entity.v1.SagaListResponse
+	(*v1.SagaResponse)(nil),                // 85: udb.entity.v1.SagaResponse
+	(*v1.PolicyListResponse)(nil),          // 86: udb.entity.v1.PolicyListResponse
+	(*v1.PolicyLintResponse)(nil),          // 87: udb.entity.v1.PolicyLintResponse
+	(*v1.CapabilitiesResponse)(nil),        // 88: udb.entity.v1.CapabilitiesResponse
+	(*v1.CatalogManifestResponse)(nil),     // 89: udb.entity.v1.CatalogManifestResponse
+	(*v1.MessageSchemaLookupResponse)(nil), // 90: udb.entity.v1.MessageSchemaLookupResponse
+	(*v1.MessageSchemaListResponse)(nil),   // 91: udb.entity.v1.MessageSchemaListResponse
+	(*v1.HealthReportResponse)(nil),        // 92: udb.entity.v1.HealthReportResponse
+	(*v1.ProjectListResponse)(nil),         // 93: udb.entity.v1.ProjectListResponse
+	(*v1.AdminSummaryResponse)(nil),        // 94: udb.entity.v1.AdminSummaryResponse
+	(*v1.AdminAuditLogResponse)(nil),       // 95: udb.entity.v1.AdminAuditLogResponse
+	(*v1.AdminAuditVerifyResponse)(nil),    // 96: udb.entity.v1.AdminAuditVerifyResponse
 }
 var file_udb_services_v1_data_broker_proto_depIdxs = []int32{
 	0,  // 0: udb.services.v1.DataBroker.Select:input_type -> udb.entity.v1.SelectRequest
 	0,  // 1: udb.services.v1.DataBroker.BatchSelect:input_type -> udb.entity.v1.SelectRequest
-	1,  // 2: udb.services.v1.DataBroker.Upsert:input_type -> udb.entity.v1.UpsertRequest
-	1,  // 3: udb.services.v1.DataBroker.BatchUpsert:input_type -> udb.entity.v1.UpsertRequest
-	2,  // 4: udb.services.v1.DataBroker.Delete:input_type -> udb.entity.v1.DeleteRequest
-	3,  // 5: udb.services.v1.DataBroker.VectorSearch:input_type -> udb.entity.v1.VectorSearchRequest
-	4,  // 6: udb.services.v1.DataBroker.VectorHybridSearch:input_type -> udb.entity.v1.VectorHybridSearchRequest
-	5,  // 7: udb.services.v1.DataBroker.VectorUpsert:input_type -> udb.entity.v1.VectorUpsertRequest
-	5,  // 8: udb.services.v1.DataBroker.VectorBatchUpsert:input_type -> udb.entity.v1.VectorUpsertRequest
-	6,  // 9: udb.services.v1.DataBroker.PutObject:input_type -> udb.entity.v1.Chunk
-	7,  // 10: udb.services.v1.DataBroker.GetObject:input_type -> udb.entity.v1.ObjectRequest
-	8,  // 11: udb.services.v1.DataBroker.GeneratePresignedUrl:input_type -> udb.entity.v1.UrlRequest
-	9,  // 12: udb.services.v1.DataBroker.InitiateMultipartUpload:input_type -> udb.entity.v1.MultipartUploadRequest
-	10, // 13: udb.services.v1.DataBroker.CacheGet:input_type -> udb.entity.v1.CacheGetRequest
-	11, // 14: udb.services.v1.DataBroker.CacheSet:input_type -> udb.entity.v1.CacheSetRequest
-	12, // 15: udb.services.v1.DataBroker.CacheDelete:input_type -> udb.entity.v1.CacheDeleteRequest
-	13, // 16: udb.services.v1.DataBroker.CacheScan:input_type -> udb.entity.v1.CacheScanRequest
-	14, // 17: udb.services.v1.DataBroker.DocumentGet:input_type -> udb.entity.v1.DocumentGetRequest
-	15, // 18: udb.services.v1.DataBroker.DocumentFind:input_type -> udb.entity.v1.DocumentFindRequest
-	16, // 19: udb.services.v1.DataBroker.DocumentUpsert:input_type -> udb.entity.v1.DocumentUpsertRequest
-	17, // 20: udb.services.v1.DataBroker.DocumentDelete:input_type -> udb.entity.v1.DocumentDeleteRequest
-	18, // 21: udb.services.v1.DataBroker.GraphQuery:input_type -> udb.entity.v1.GraphQueryRequest
-	19, // 22: udb.services.v1.DataBroker.GraphMutate:input_type -> udb.entity.v1.GraphMutationRequest
-	20, // 23: udb.services.v1.DataBroker.TimeSeriesWrite:input_type -> udb.entity.v1.TimeSeriesWriteRequest
-	21, // 24: udb.services.v1.DataBroker.TimeSeriesQuery:input_type -> udb.entity.v1.TimeSeriesQueryRequest
-	22, // 25: udb.services.v1.DataBroker.AnalyticalQuery:input_type -> udb.entity.v1.AnalyticalQueryRequest
-	23, // 26: udb.services.v1.DataBroker.BeginTx:input_type -> udb.entity.v1.Mutation
-	24, // 27: udb.services.v1.DataBroker.PublishCDC:input_type -> udb.entity.v1.CDCSubscriptionRequest
-	25, // 28: udb.services.v1.DataBroker.CreateMaterializedView:input_type -> udb.entity.v1.ViewDefinition
-	26, // 29: udb.services.v1.DataBroker.EnqueueOutboxEvent:input_type -> udb.entity.v1.EnqueueOutboxEventRequest
-	27, // 30: udb.services.v1.DataBroker.GenericDispatch:input_type -> udb.entity.v1.GenericDispatchRequest
-	28, // 31: udb.services.v1.DataBroker.EnsureResource:input_type -> udb.entity.v1.ResourceAdminRequest
-	28, // 32: udb.services.v1.DataBroker.DropResource:input_type -> udb.entity.v1.ResourceAdminRequest
-	28, // 33: udb.services.v1.DataBroker.ListResources:input_type -> udb.entity.v1.ResourceAdminRequest
-	29, // 34: udb.services.v1.DataBroker.StageCatalog:input_type -> udb.entity.v1.StageCatalogRequest
-	30, // 35: udb.services.v1.DataBroker.ActivateCatalog:input_type -> udb.entity.v1.CatalogVersionRequest
-	30, // 36: udb.services.v1.DataBroker.RollbackCatalog:input_type -> udb.entity.v1.CatalogVersionRequest
-	29, // 37: udb.services.v1.DataBroker.ValidateCatalog:input_type -> udb.entity.v1.StageCatalogRequest
-	31, // 38: udb.services.v1.DataBroker.GetCatalogVersions:input_type -> udb.entity.v1.CatalogManifestRequest
-	30, // 39: udb.services.v1.DataBroker.GetCatalogVersion:input_type -> udb.entity.v1.CatalogVersionRequest
-	32, // 40: udb.services.v1.DataBroker.PlanMigration:input_type -> udb.entity.v1.MigrationPlanRequest
-	33, // 41: udb.services.v1.DataBroker.ApplyMigration:input_type -> udb.entity.v1.MigrationApplyRequest
-	34, // 42: udb.services.v1.DataBroker.GetMigrationStatus:input_type -> udb.entity.v1.MigrationRunRequest
-	35, // 43: udb.services.v1.DataBroker.ListMigrationRuns:input_type -> udb.entity.v1.MigrationRunListRequest
-	34, // 44: udb.services.v1.DataBroker.ApproveMigrationPlan:input_type -> udb.entity.v1.MigrationRunRequest
-	36, // 45: udb.services.v1.DataBroker.ListDlqEvents:input_type -> udb.entity.v1.DlqListRequest
-	37, // 46: udb.services.v1.DataBroker.GetDlqEvent:input_type -> udb.entity.v1.DlqEventRequest
-	38, // 47: udb.services.v1.DataBroker.ReplayDlqEvent:input_type -> udb.entity.v1.DlqActionRequest
-	38, // 48: udb.services.v1.DataBroker.DismissDlqEvent:input_type -> udb.entity.v1.DlqActionRequest
-	38, // 49: udb.services.v1.DataBroker.QuarantineDlqEvent:input_type -> udb.entity.v1.DlqActionRequest
-	39, // 50: udb.services.v1.DataBroker.GetCdcStatus:input_type -> udb.entity.v1.CdcControlRequest
-	39, // 51: udb.services.v1.DataBroker.PauseCdc:input_type -> udb.entity.v1.CdcControlRequest
-	39, // 52: udb.services.v1.DataBroker.ResumeCdc:input_type -> udb.entity.v1.CdcControlRequest
-	39, // 53: udb.services.v1.DataBroker.StepDownCdcLeader:input_type -> udb.entity.v1.CdcControlRequest
-	40, // 54: udb.services.v1.DataBroker.PreviewCdcRedaction:input_type -> udb.entity.v1.CdcRedactionPreviewRequest
-	41, // 55: udb.services.v1.DataBroker.ScanProjectionDrift:input_type -> udb.entity.v1.ProjectionDriftScanRequest
-	42, // 56: udb.services.v1.DataBroker.ListSagas:input_type -> udb.entity.v1.SagaListRequest
-	43, // 57: udb.services.v1.DataBroker.GetSaga:input_type -> udb.entity.v1.SagaRequest
-	43, // 58: udb.services.v1.DataBroker.RetrySagaCompensation:input_type -> udb.entity.v1.SagaRequest
-	43, // 59: udb.services.v1.DataBroker.MarkSagaReviewed:input_type -> udb.entity.v1.SagaRequest
-	44, // 60: udb.services.v1.DataBroker.ListPolicies:input_type -> udb.entity.v1.PolicyListRequest
-	45, // 61: udb.services.v1.DataBroker.PutPolicy:input_type -> udb.entity.v1.PutPolicyRequest
-	46, // 62: udb.services.v1.DataBroker.DeletePolicy:input_type -> udb.entity.v1.PolicyRequest
-	47, // 63: udb.services.v1.DataBroker.ReloadPolicies:input_type -> udb.entity.v1.CapabilitiesRequest
-	47, // 64: udb.services.v1.DataBroker.LintPolicies:input_type -> udb.entity.v1.CapabilitiesRequest
-	47, // 65: udb.services.v1.DataBroker.GetCapabilities:input_type -> udb.entity.v1.CapabilitiesRequest
-	31, // 66: udb.services.v1.DataBroker.GetCatalogManifest:input_type -> udb.entity.v1.CatalogManifestRequest
-	48, // 67: udb.services.v1.DataBroker.LookupMessageSchema:input_type -> udb.entity.v1.MessageSchemaLookupRequest
-	49, // 68: udb.services.v1.DataBroker.ListMessageSchemas:input_type -> udb.entity.v1.MessageSchemaListRequest
-	50, // 69: udb.services.v1.DataBroker.GetHealthReport:input_type -> udb.entity.v1.HealthReportRequest
-	51, // 70: udb.services.v1.DataBroker.EnsureProject:input_type -> udb.entity.v1.EnsureProjectRequest
-	52, // 71: udb.services.v1.DataBroker.ListProjects:input_type -> udb.entity.v1.ProjectListRequest
-	53, // 72: udb.services.v1.DataBroker.GetAdminSummary:input_type -> udb.entity.v1.AdminSummaryRequest
-	54, // 73: udb.services.v1.DataBroker.ListAdminAuditLogs:input_type -> udb.entity.v1.AdminAuditLogRequest
-	55, // 74: udb.services.v1.DataBroker.VerifyAdminAuditLog:input_type -> udb.entity.v1.AdminAuditVerifyRequest
-	56, // 75: udb.services.v1.DataBroker.Select:output_type -> udb.entity.v1.RecordSet
-	56, // 76: udb.services.v1.DataBroker.BatchSelect:output_type -> udb.entity.v1.RecordSet
-	57, // 77: udb.services.v1.DataBroker.Upsert:output_type -> udb.entity.v1.MutationResponse
-	57, // 78: udb.services.v1.DataBroker.BatchUpsert:output_type -> udb.entity.v1.MutationResponse
-	57, // 79: udb.services.v1.DataBroker.Delete:output_type -> udb.entity.v1.MutationResponse
-	58, // 80: udb.services.v1.DataBroker.VectorSearch:output_type -> udb.entity.v1.VectorSet
-	58, // 81: udb.services.v1.DataBroker.VectorHybridSearch:output_type -> udb.entity.v1.VectorSet
-	57, // 82: udb.services.v1.DataBroker.VectorUpsert:output_type -> udb.entity.v1.MutationResponse
-	57, // 83: udb.services.v1.DataBroker.VectorBatchUpsert:output_type -> udb.entity.v1.MutationResponse
-	57, // 84: udb.services.v1.DataBroker.PutObject:output_type -> udb.entity.v1.MutationResponse
-	6,  // 85: udb.services.v1.DataBroker.GetObject:output_type -> udb.entity.v1.Chunk
-	59, // 86: udb.services.v1.DataBroker.GeneratePresignedUrl:output_type -> udb.entity.v1.UrlResponse
-	60, // 87: udb.services.v1.DataBroker.InitiateMultipartUpload:output_type -> udb.entity.v1.MultipartUploadResponse
-	61, // 88: udb.services.v1.DataBroker.CacheGet:output_type -> udb.entity.v1.CacheGetResponse
-	57, // 89: udb.services.v1.DataBroker.CacheSet:output_type -> udb.entity.v1.MutationResponse
-	57, // 90: udb.services.v1.DataBroker.CacheDelete:output_type -> udb.entity.v1.MutationResponse
-	62, // 91: udb.services.v1.DataBroker.CacheScan:output_type -> udb.entity.v1.CacheScanResponse
-	63, // 92: udb.services.v1.DataBroker.DocumentGet:output_type -> udb.entity.v1.DocumentSet
-	63, // 93: udb.services.v1.DataBroker.DocumentFind:output_type -> udb.entity.v1.DocumentSet
-	57, // 94: udb.services.v1.DataBroker.DocumentUpsert:output_type -> udb.entity.v1.MutationResponse
-	57, // 95: udb.services.v1.DataBroker.DocumentDelete:output_type -> udb.entity.v1.MutationResponse
-	64, // 96: udb.services.v1.DataBroker.GraphQuery:output_type -> udb.entity.v1.GraphResultSet
-	57, // 97: udb.services.v1.DataBroker.GraphMutate:output_type -> udb.entity.v1.MutationResponse
-	57, // 98: udb.services.v1.DataBroker.TimeSeriesWrite:output_type -> udb.entity.v1.MutationResponse
-	65, // 99: udb.services.v1.DataBroker.TimeSeriesQuery:output_type -> udb.entity.v1.TimeSeriesQueryResponse
-	66, // 100: udb.services.v1.DataBroker.AnalyticalQuery:output_type -> udb.entity.v1.AnalyticalQueryResponse
-	67, // 101: udb.services.v1.DataBroker.BeginTx:output_type -> udb.entity.v1.TxStatus
-	68, // 102: udb.services.v1.DataBroker.PublishCDC:output_type -> udb.events.v1.CDCEnvelope
-	57, // 103: udb.services.v1.DataBroker.CreateMaterializedView:output_type -> udb.entity.v1.MutationResponse
-	69, // 104: udb.services.v1.DataBroker.EnqueueOutboxEvent:output_type -> udb.entity.v1.EnqueueOutboxEventResponse
-	70, // 105: udb.services.v1.DataBroker.GenericDispatch:output_type -> udb.entity.v1.GenericDispatchResponse
-	57, // 106: udb.services.v1.DataBroker.EnsureResource:output_type -> udb.entity.v1.MutationResponse
-	57, // 107: udb.services.v1.DataBroker.DropResource:output_type -> udb.entity.v1.MutationResponse
-	71, // 108: udb.services.v1.DataBroker.ListResources:output_type -> udb.entity.v1.ResourceListResponse
-	72, // 109: udb.services.v1.DataBroker.StageCatalog:output_type -> udb.entity.v1.CatalogVersionResponse
-	72, // 110: udb.services.v1.DataBroker.ActivateCatalog:output_type -> udb.entity.v1.CatalogVersionResponse
-	72, // 111: udb.services.v1.DataBroker.RollbackCatalog:output_type -> udb.entity.v1.CatalogVersionResponse
-	73, // 112: udb.services.v1.DataBroker.ValidateCatalog:output_type -> udb.entity.v1.CatalogValidationResponse
-	74, // 113: udb.services.v1.DataBroker.GetCatalogVersions:output_type -> udb.entity.v1.CatalogVersionListResponse
-	72, // 114: udb.services.v1.DataBroker.GetCatalogVersion:output_type -> udb.entity.v1.CatalogVersionResponse
-	75, // 115: udb.services.v1.DataBroker.PlanMigration:output_type -> udb.entity.v1.MigrationPlanResponse
-	76, // 116: udb.services.v1.DataBroker.ApplyMigration:output_type -> udb.entity.v1.MigrationStatusResponse
-	76, // 117: udb.services.v1.DataBroker.GetMigrationStatus:output_type -> udb.entity.v1.MigrationStatusResponse
-	77, // 118: udb.services.v1.DataBroker.ListMigrationRuns:output_type -> udb.entity.v1.MigrationRunListResponse
-	76, // 119: udb.services.v1.DataBroker.ApproveMigrationPlan:output_type -> udb.entity.v1.MigrationStatusResponse
-	78, // 120: udb.services.v1.DataBroker.ListDlqEvents:output_type -> udb.entity.v1.DlqListResponse
-	79, // 121: udb.services.v1.DataBroker.GetDlqEvent:output_type -> udb.entity.v1.DlqEventResponse
-	57, // 122: udb.services.v1.DataBroker.ReplayDlqEvent:output_type -> udb.entity.v1.MutationResponse
-	57, // 123: udb.services.v1.DataBroker.DismissDlqEvent:output_type -> udb.entity.v1.MutationResponse
-	57, // 124: udb.services.v1.DataBroker.QuarantineDlqEvent:output_type -> udb.entity.v1.MutationResponse
-	80, // 125: udb.services.v1.DataBroker.GetCdcStatus:output_type -> udb.entity.v1.CdcStatusResponse
-	80, // 126: udb.services.v1.DataBroker.PauseCdc:output_type -> udb.entity.v1.CdcStatusResponse
-	80, // 127: udb.services.v1.DataBroker.ResumeCdc:output_type -> udb.entity.v1.CdcStatusResponse
-	80, // 128: udb.services.v1.DataBroker.StepDownCdcLeader:output_type -> udb.entity.v1.CdcStatusResponse
-	81, // 129: udb.services.v1.DataBroker.PreviewCdcRedaction:output_type -> udb.entity.v1.CdcRedactionPreviewResponse
-	82, // 130: udb.services.v1.DataBroker.ScanProjectionDrift:output_type -> udb.entity.v1.ProjectionDriftScanResponse
-	83, // 131: udb.services.v1.DataBroker.ListSagas:output_type -> udb.entity.v1.SagaListResponse
-	84, // 132: udb.services.v1.DataBroker.GetSaga:output_type -> udb.entity.v1.SagaResponse
-	84, // 133: udb.services.v1.DataBroker.RetrySagaCompensation:output_type -> udb.entity.v1.SagaResponse
-	84, // 134: udb.services.v1.DataBroker.MarkSagaReviewed:output_type -> udb.entity.v1.SagaResponse
-	85, // 135: udb.services.v1.DataBroker.ListPolicies:output_type -> udb.entity.v1.PolicyListResponse
-	57, // 136: udb.services.v1.DataBroker.PutPolicy:output_type -> udb.entity.v1.MutationResponse
-	57, // 137: udb.services.v1.DataBroker.DeletePolicy:output_type -> udb.entity.v1.MutationResponse
-	57, // 138: udb.services.v1.DataBroker.ReloadPolicies:output_type -> udb.entity.v1.MutationResponse
-	86, // 139: udb.services.v1.DataBroker.LintPolicies:output_type -> udb.entity.v1.PolicyLintResponse
-	87, // 140: udb.services.v1.DataBroker.GetCapabilities:output_type -> udb.entity.v1.CapabilitiesResponse
-	88, // 141: udb.services.v1.DataBroker.GetCatalogManifest:output_type -> udb.entity.v1.CatalogManifestResponse
-	89, // 142: udb.services.v1.DataBroker.LookupMessageSchema:output_type -> udb.entity.v1.MessageSchemaLookupResponse
-	90, // 143: udb.services.v1.DataBroker.ListMessageSchemas:output_type -> udb.entity.v1.MessageSchemaListResponse
-	91, // 144: udb.services.v1.DataBroker.GetHealthReport:output_type -> udb.entity.v1.HealthReportResponse
-	57, // 145: udb.services.v1.DataBroker.EnsureProject:output_type -> udb.entity.v1.MutationResponse
-	92, // 146: udb.services.v1.DataBroker.ListProjects:output_type -> udb.entity.v1.ProjectListResponse
-	93, // 147: udb.services.v1.DataBroker.GetAdminSummary:output_type -> udb.entity.v1.AdminSummaryResponse
-	94, // 148: udb.services.v1.DataBroker.ListAdminAuditLogs:output_type -> udb.entity.v1.AdminAuditLogResponse
-	95, // 149: udb.services.v1.DataBroker.VerifyAdminAuditLog:output_type -> udb.entity.v1.AdminAuditVerifyResponse
-	75, // [75:150] is the sub-list for method output_type
-	0,  // [0:75] is the sub-list for method input_type
+	0,  // 2: udb.services.v1.DataBroker.SelectV2:input_type -> udb.entity.v1.SelectRequest
+	1,  // 3: udb.services.v1.DataBroker.Upsert:input_type -> udb.entity.v1.UpsertRequest
+	1,  // 4: udb.services.v1.DataBroker.BatchUpsert:input_type -> udb.entity.v1.UpsertRequest
+	2,  // 5: udb.services.v1.DataBroker.Delete:input_type -> udb.entity.v1.DeleteRequest
+	3,  // 6: udb.services.v1.DataBroker.VectorSearch:input_type -> udb.entity.v1.VectorSearchRequest
+	4,  // 7: udb.services.v1.DataBroker.VectorHybridSearch:input_type -> udb.entity.v1.VectorHybridSearchRequest
+	5,  // 8: udb.services.v1.DataBroker.VectorUpsert:input_type -> udb.entity.v1.VectorUpsertRequest
+	5,  // 9: udb.services.v1.DataBroker.VectorBatchUpsert:input_type -> udb.entity.v1.VectorUpsertRequest
+	6,  // 10: udb.services.v1.DataBroker.PutObject:input_type -> udb.entity.v1.Chunk
+	7,  // 11: udb.services.v1.DataBroker.GetObject:input_type -> udb.entity.v1.ObjectRequest
+	8,  // 12: udb.services.v1.DataBroker.GeneratePresignedUrl:input_type -> udb.entity.v1.UrlRequest
+	9,  // 13: udb.services.v1.DataBroker.InitiateMultipartUpload:input_type -> udb.entity.v1.MultipartUploadRequest
+	10, // 14: udb.services.v1.DataBroker.CacheGet:input_type -> udb.entity.v1.CacheGetRequest
+	11, // 15: udb.services.v1.DataBroker.CacheSet:input_type -> udb.entity.v1.CacheSetRequest
+	12, // 16: udb.services.v1.DataBroker.CacheDelete:input_type -> udb.entity.v1.CacheDeleteRequest
+	13, // 17: udb.services.v1.DataBroker.CacheScan:input_type -> udb.entity.v1.CacheScanRequest
+	14, // 18: udb.services.v1.DataBroker.DocumentGet:input_type -> udb.entity.v1.DocumentGetRequest
+	15, // 19: udb.services.v1.DataBroker.DocumentFind:input_type -> udb.entity.v1.DocumentFindRequest
+	16, // 20: udb.services.v1.DataBroker.DocumentUpsert:input_type -> udb.entity.v1.DocumentUpsertRequest
+	17, // 21: udb.services.v1.DataBroker.DocumentDelete:input_type -> udb.entity.v1.DocumentDeleteRequest
+	18, // 22: udb.services.v1.DataBroker.GraphQuery:input_type -> udb.entity.v1.GraphQueryRequest
+	19, // 23: udb.services.v1.DataBroker.GraphMutate:input_type -> udb.entity.v1.GraphMutationRequest
+	20, // 24: udb.services.v1.DataBroker.TimeSeriesWrite:input_type -> udb.entity.v1.TimeSeriesWriteRequest
+	21, // 25: udb.services.v1.DataBroker.TimeSeriesQuery:input_type -> udb.entity.v1.TimeSeriesQueryRequest
+	22, // 26: udb.services.v1.DataBroker.AnalyticalQuery:input_type -> udb.entity.v1.AnalyticalQueryRequest
+	23, // 27: udb.services.v1.DataBroker.BeginTx:input_type -> udb.entity.v1.Mutation
+	24, // 28: udb.services.v1.DataBroker.PublishCDC:input_type -> udb.entity.v1.CDCSubscriptionRequest
+	25, // 29: udb.services.v1.DataBroker.CreateMaterializedView:input_type -> udb.entity.v1.ViewDefinition
+	26, // 30: udb.services.v1.DataBroker.EnqueueOutboxEvent:input_type -> udb.entity.v1.EnqueueOutboxEventRequest
+	27, // 31: udb.services.v1.DataBroker.GenericDispatch:input_type -> udb.entity.v1.GenericDispatchRequest
+	28, // 32: udb.services.v1.DataBroker.EnsureResource:input_type -> udb.entity.v1.ResourceAdminRequest
+	28, // 33: udb.services.v1.DataBroker.DropResource:input_type -> udb.entity.v1.ResourceAdminRequest
+	28, // 34: udb.services.v1.DataBroker.ListResources:input_type -> udb.entity.v1.ResourceAdminRequest
+	29, // 35: udb.services.v1.DataBroker.StageCatalog:input_type -> udb.entity.v1.StageCatalogRequest
+	30, // 36: udb.services.v1.DataBroker.ActivateCatalog:input_type -> udb.entity.v1.CatalogVersionRequest
+	30, // 37: udb.services.v1.DataBroker.RollbackCatalog:input_type -> udb.entity.v1.CatalogVersionRequest
+	29, // 38: udb.services.v1.DataBroker.ValidateCatalog:input_type -> udb.entity.v1.StageCatalogRequest
+	31, // 39: udb.services.v1.DataBroker.GetCatalogVersions:input_type -> udb.entity.v1.CatalogManifestRequest
+	30, // 40: udb.services.v1.DataBroker.GetCatalogVersion:input_type -> udb.entity.v1.CatalogVersionRequest
+	32, // 41: udb.services.v1.DataBroker.PlanMigration:input_type -> udb.entity.v1.MigrationPlanRequest
+	33, // 42: udb.services.v1.DataBroker.ApplyMigration:input_type -> udb.entity.v1.MigrationApplyRequest
+	34, // 43: udb.services.v1.DataBroker.GetMigrationStatus:input_type -> udb.entity.v1.MigrationRunRequest
+	35, // 44: udb.services.v1.DataBroker.ListMigrationRuns:input_type -> udb.entity.v1.MigrationRunListRequest
+	34, // 45: udb.services.v1.DataBroker.ApproveMigrationPlan:input_type -> udb.entity.v1.MigrationRunRequest
+	36, // 46: udb.services.v1.DataBroker.ListDlqEvents:input_type -> udb.entity.v1.DlqListRequest
+	37, // 47: udb.services.v1.DataBroker.GetDlqEvent:input_type -> udb.entity.v1.DlqEventRequest
+	38, // 48: udb.services.v1.DataBroker.ReplayDlqEvent:input_type -> udb.entity.v1.DlqActionRequest
+	38, // 49: udb.services.v1.DataBroker.DismissDlqEvent:input_type -> udb.entity.v1.DlqActionRequest
+	38, // 50: udb.services.v1.DataBroker.QuarantineDlqEvent:input_type -> udb.entity.v1.DlqActionRequest
+	39, // 51: udb.services.v1.DataBroker.GetCdcStatus:input_type -> udb.entity.v1.CdcControlRequest
+	39, // 52: udb.services.v1.DataBroker.PauseCdc:input_type -> udb.entity.v1.CdcControlRequest
+	39, // 53: udb.services.v1.DataBroker.ResumeCdc:input_type -> udb.entity.v1.CdcControlRequest
+	39, // 54: udb.services.v1.DataBroker.StepDownCdcLeader:input_type -> udb.entity.v1.CdcControlRequest
+	40, // 55: udb.services.v1.DataBroker.PreviewCdcRedaction:input_type -> udb.entity.v1.CdcRedactionPreviewRequest
+	41, // 56: udb.services.v1.DataBroker.ScanProjectionDrift:input_type -> udb.entity.v1.ProjectionDriftScanRequest
+	42, // 57: udb.services.v1.DataBroker.ListSagas:input_type -> udb.entity.v1.SagaListRequest
+	43, // 58: udb.services.v1.DataBroker.GetSaga:input_type -> udb.entity.v1.SagaRequest
+	43, // 59: udb.services.v1.DataBroker.RetrySagaCompensation:input_type -> udb.entity.v1.SagaRequest
+	43, // 60: udb.services.v1.DataBroker.MarkSagaReviewed:input_type -> udb.entity.v1.SagaRequest
+	44, // 61: udb.services.v1.DataBroker.ListPolicies:input_type -> udb.entity.v1.PolicyListRequest
+	45, // 62: udb.services.v1.DataBroker.PutPolicy:input_type -> udb.entity.v1.PutPolicyRequest
+	46, // 63: udb.services.v1.DataBroker.DeletePolicy:input_type -> udb.entity.v1.PolicyRequest
+	47, // 64: udb.services.v1.DataBroker.ReloadPolicies:input_type -> udb.entity.v1.CapabilitiesRequest
+	47, // 65: udb.services.v1.DataBroker.LintPolicies:input_type -> udb.entity.v1.CapabilitiesRequest
+	47, // 66: udb.services.v1.DataBroker.GetCapabilities:input_type -> udb.entity.v1.CapabilitiesRequest
+	31, // 67: udb.services.v1.DataBroker.GetCatalogManifest:input_type -> udb.entity.v1.CatalogManifestRequest
+	48, // 68: udb.services.v1.DataBroker.LookupMessageSchema:input_type -> udb.entity.v1.MessageSchemaLookupRequest
+	49, // 69: udb.services.v1.DataBroker.ListMessageSchemas:input_type -> udb.entity.v1.MessageSchemaListRequest
+	50, // 70: udb.services.v1.DataBroker.GetHealthReport:input_type -> udb.entity.v1.HealthReportRequest
+	51, // 71: udb.services.v1.DataBroker.EnsureProject:input_type -> udb.entity.v1.EnsureProjectRequest
+	52, // 72: udb.services.v1.DataBroker.ListProjects:input_type -> udb.entity.v1.ProjectListRequest
+	53, // 73: udb.services.v1.DataBroker.GetAdminSummary:input_type -> udb.entity.v1.AdminSummaryRequest
+	54, // 74: udb.services.v1.DataBroker.ListAdminAuditLogs:input_type -> udb.entity.v1.AdminAuditLogRequest
+	55, // 75: udb.services.v1.DataBroker.VerifyAdminAuditLog:input_type -> udb.entity.v1.AdminAuditVerifyRequest
+	56, // 76: udb.services.v1.DataBroker.Select:output_type -> udb.entity.v1.RecordSet
+	56, // 77: udb.services.v1.DataBroker.BatchSelect:output_type -> udb.entity.v1.RecordSet
+	57, // 78: udb.services.v1.DataBroker.SelectV2:output_type -> udb.entity.v1.RecordBatchV2
+	58, // 79: udb.services.v1.DataBroker.Upsert:output_type -> udb.entity.v1.MutationResponse
+	58, // 80: udb.services.v1.DataBroker.BatchUpsert:output_type -> udb.entity.v1.MutationResponse
+	58, // 81: udb.services.v1.DataBroker.Delete:output_type -> udb.entity.v1.MutationResponse
+	59, // 82: udb.services.v1.DataBroker.VectorSearch:output_type -> udb.entity.v1.VectorSet
+	59, // 83: udb.services.v1.DataBroker.VectorHybridSearch:output_type -> udb.entity.v1.VectorSet
+	58, // 84: udb.services.v1.DataBroker.VectorUpsert:output_type -> udb.entity.v1.MutationResponse
+	58, // 85: udb.services.v1.DataBroker.VectorBatchUpsert:output_type -> udb.entity.v1.MutationResponse
+	58, // 86: udb.services.v1.DataBroker.PutObject:output_type -> udb.entity.v1.MutationResponse
+	6,  // 87: udb.services.v1.DataBroker.GetObject:output_type -> udb.entity.v1.Chunk
+	60, // 88: udb.services.v1.DataBroker.GeneratePresignedUrl:output_type -> udb.entity.v1.UrlResponse
+	61, // 89: udb.services.v1.DataBroker.InitiateMultipartUpload:output_type -> udb.entity.v1.MultipartUploadResponse
+	62, // 90: udb.services.v1.DataBroker.CacheGet:output_type -> udb.entity.v1.CacheGetResponse
+	58, // 91: udb.services.v1.DataBroker.CacheSet:output_type -> udb.entity.v1.MutationResponse
+	58, // 92: udb.services.v1.DataBroker.CacheDelete:output_type -> udb.entity.v1.MutationResponse
+	63, // 93: udb.services.v1.DataBroker.CacheScan:output_type -> udb.entity.v1.CacheScanResponse
+	64, // 94: udb.services.v1.DataBroker.DocumentGet:output_type -> udb.entity.v1.DocumentSet
+	64, // 95: udb.services.v1.DataBroker.DocumentFind:output_type -> udb.entity.v1.DocumentSet
+	58, // 96: udb.services.v1.DataBroker.DocumentUpsert:output_type -> udb.entity.v1.MutationResponse
+	58, // 97: udb.services.v1.DataBroker.DocumentDelete:output_type -> udb.entity.v1.MutationResponse
+	65, // 98: udb.services.v1.DataBroker.GraphQuery:output_type -> udb.entity.v1.GraphResultSet
+	58, // 99: udb.services.v1.DataBroker.GraphMutate:output_type -> udb.entity.v1.MutationResponse
+	58, // 100: udb.services.v1.DataBroker.TimeSeriesWrite:output_type -> udb.entity.v1.MutationResponse
+	66, // 101: udb.services.v1.DataBroker.TimeSeriesQuery:output_type -> udb.entity.v1.TimeSeriesQueryResponse
+	67, // 102: udb.services.v1.DataBroker.AnalyticalQuery:output_type -> udb.entity.v1.AnalyticalQueryResponse
+	68, // 103: udb.services.v1.DataBroker.BeginTx:output_type -> udb.entity.v1.TxStatus
+	69, // 104: udb.services.v1.DataBroker.PublishCDC:output_type -> udb.events.v1.CDCEnvelope
+	58, // 105: udb.services.v1.DataBroker.CreateMaterializedView:output_type -> udb.entity.v1.MutationResponse
+	70, // 106: udb.services.v1.DataBroker.EnqueueOutboxEvent:output_type -> udb.entity.v1.EnqueueOutboxEventResponse
+	71, // 107: udb.services.v1.DataBroker.GenericDispatch:output_type -> udb.entity.v1.GenericDispatchResponse
+	58, // 108: udb.services.v1.DataBroker.EnsureResource:output_type -> udb.entity.v1.MutationResponse
+	58, // 109: udb.services.v1.DataBroker.DropResource:output_type -> udb.entity.v1.MutationResponse
+	72, // 110: udb.services.v1.DataBroker.ListResources:output_type -> udb.entity.v1.ResourceListResponse
+	73, // 111: udb.services.v1.DataBroker.StageCatalog:output_type -> udb.entity.v1.CatalogVersionResponse
+	73, // 112: udb.services.v1.DataBroker.ActivateCatalog:output_type -> udb.entity.v1.CatalogVersionResponse
+	73, // 113: udb.services.v1.DataBroker.RollbackCatalog:output_type -> udb.entity.v1.CatalogVersionResponse
+	74, // 114: udb.services.v1.DataBroker.ValidateCatalog:output_type -> udb.entity.v1.CatalogValidationResponse
+	75, // 115: udb.services.v1.DataBroker.GetCatalogVersions:output_type -> udb.entity.v1.CatalogVersionListResponse
+	73, // 116: udb.services.v1.DataBroker.GetCatalogVersion:output_type -> udb.entity.v1.CatalogVersionResponse
+	76, // 117: udb.services.v1.DataBroker.PlanMigration:output_type -> udb.entity.v1.MigrationPlanResponse
+	77, // 118: udb.services.v1.DataBroker.ApplyMigration:output_type -> udb.entity.v1.MigrationStatusResponse
+	77, // 119: udb.services.v1.DataBroker.GetMigrationStatus:output_type -> udb.entity.v1.MigrationStatusResponse
+	78, // 120: udb.services.v1.DataBroker.ListMigrationRuns:output_type -> udb.entity.v1.MigrationRunListResponse
+	77, // 121: udb.services.v1.DataBroker.ApproveMigrationPlan:output_type -> udb.entity.v1.MigrationStatusResponse
+	79, // 122: udb.services.v1.DataBroker.ListDlqEvents:output_type -> udb.entity.v1.DlqListResponse
+	80, // 123: udb.services.v1.DataBroker.GetDlqEvent:output_type -> udb.entity.v1.DlqEventResponse
+	58, // 124: udb.services.v1.DataBroker.ReplayDlqEvent:output_type -> udb.entity.v1.MutationResponse
+	58, // 125: udb.services.v1.DataBroker.DismissDlqEvent:output_type -> udb.entity.v1.MutationResponse
+	58, // 126: udb.services.v1.DataBroker.QuarantineDlqEvent:output_type -> udb.entity.v1.MutationResponse
+	81, // 127: udb.services.v1.DataBroker.GetCdcStatus:output_type -> udb.entity.v1.CdcStatusResponse
+	81, // 128: udb.services.v1.DataBroker.PauseCdc:output_type -> udb.entity.v1.CdcStatusResponse
+	81, // 129: udb.services.v1.DataBroker.ResumeCdc:output_type -> udb.entity.v1.CdcStatusResponse
+	81, // 130: udb.services.v1.DataBroker.StepDownCdcLeader:output_type -> udb.entity.v1.CdcStatusResponse
+	82, // 131: udb.services.v1.DataBroker.PreviewCdcRedaction:output_type -> udb.entity.v1.CdcRedactionPreviewResponse
+	83, // 132: udb.services.v1.DataBroker.ScanProjectionDrift:output_type -> udb.entity.v1.ProjectionDriftScanResponse
+	84, // 133: udb.services.v1.DataBroker.ListSagas:output_type -> udb.entity.v1.SagaListResponse
+	85, // 134: udb.services.v1.DataBroker.GetSaga:output_type -> udb.entity.v1.SagaResponse
+	85, // 135: udb.services.v1.DataBroker.RetrySagaCompensation:output_type -> udb.entity.v1.SagaResponse
+	85, // 136: udb.services.v1.DataBroker.MarkSagaReviewed:output_type -> udb.entity.v1.SagaResponse
+	86, // 137: udb.services.v1.DataBroker.ListPolicies:output_type -> udb.entity.v1.PolicyListResponse
+	58, // 138: udb.services.v1.DataBroker.PutPolicy:output_type -> udb.entity.v1.MutationResponse
+	58, // 139: udb.services.v1.DataBroker.DeletePolicy:output_type -> udb.entity.v1.MutationResponse
+	58, // 140: udb.services.v1.DataBroker.ReloadPolicies:output_type -> udb.entity.v1.MutationResponse
+	87, // 141: udb.services.v1.DataBroker.LintPolicies:output_type -> udb.entity.v1.PolicyLintResponse
+	88, // 142: udb.services.v1.DataBroker.GetCapabilities:output_type -> udb.entity.v1.CapabilitiesResponse
+	89, // 143: udb.services.v1.DataBroker.GetCatalogManifest:output_type -> udb.entity.v1.CatalogManifestResponse
+	90, // 144: udb.services.v1.DataBroker.LookupMessageSchema:output_type -> udb.entity.v1.MessageSchemaLookupResponse
+	91, // 145: udb.services.v1.DataBroker.ListMessageSchemas:output_type -> udb.entity.v1.MessageSchemaListResponse
+	92, // 146: udb.services.v1.DataBroker.GetHealthReport:output_type -> udb.entity.v1.HealthReportResponse
+	58, // 147: udb.services.v1.DataBroker.EnsureProject:output_type -> udb.entity.v1.MutationResponse
+	93, // 148: udb.services.v1.DataBroker.ListProjects:output_type -> udb.entity.v1.ProjectListResponse
+	94, // 149: udb.services.v1.DataBroker.GetAdminSummary:output_type -> udb.entity.v1.AdminSummaryResponse
+	95, // 150: udb.services.v1.DataBroker.ListAdminAuditLogs:output_type -> udb.entity.v1.AdminAuditLogResponse
+	96, // 151: udb.services.v1.DataBroker.VerifyAdminAuditLog:output_type -> udb.entity.v1.AdminAuditVerifyResponse
+	76, // [76:152] is the sub-list for method output_type
+	0,  // [0:76] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name

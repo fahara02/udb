@@ -39,7 +39,7 @@ public final class AuthnServiceProto extends com.google.protobuf.GeneratedFile {
       "ce.proto\022\032udb.core.authn.services.v1\032\034go" +
       "ogle/api/annotations.proto\032%udb/core/aut" +
       "hn/services/v1/core.proto\032!udb/core/comm" +
-      "on/v1/security.proto2\254\036\n\014AuthnService\022\230\001" +
+      "on/v1/security.proto2\240%\n\014AuthnService\022\230\001" +
       "\n\nCreateUser\022-.udb.core.authn.services.v" +
       "1.CreateUserRequest\032..udb.core.authn.ser" +
       "vices.v1.CreateUserResponse\"+\312\363\030\004\010\002 \001\322\363\030" +
@@ -136,14 +136,36 @@ public final class AuthnServiceProto extends com.google.protobuf.GeneratedFile {
       "rmMFAEnrollmentRequest\0328.udb.core.authn." +
       "services.v1.ConfirmMFAEnrollmentResponse" +
       "\"A\312\363\030\004\010\002 \001\322\363\030\006\010\001\020\001 \001\202\323\344\223\002)\"$/v1/auth/use" +
-      "rs/{user_id}/mfa:confirm:\001*B\212\002\n\036com.udb." +
-      "core.authn.services.v1B\021AuthnServiceProt" +
-      "oP\001ZHgithub.com/fahara02/udb/sdk/go/gen/" +
-      "udb/core/authn/services/v1;servicesv1\242\002\004" +
-      "UCAS\252\002\032udb.core.Authn.Services.V1\312\002\032Udb\\" +
-      "Core\\Authn\\Services\\V1\342\002&Udb\\GPBMetadata" +
-      "\\Core\\Authn\\Services\\V1\352\002\036Udb::Core::Aut" +
-      "hn::Services::V1b\006proto3"
+      "rs/{user_id}/mfa:confirm:\001*\022\341\001\n\031StartWeb" +
+      "AuthnRegistration\022<.udb.core.authn.servi" +
+      "ces.v1.StartWebAuthnRegistrationRequest\032" +
+      "=.udb.core.authn.services.v1.StartWebAut" +
+      "hnRegistrationResponse\"G\312\363\030\004\010\002 \001\202\323\344\223\0029\"4" +
+      "/v1/auth/users/{user_id}/webauthn/regist" +
+      "ration:start:\001*\022\325\001\n\032FinishWebAuthnRegist" +
+      "ration\022=.udb.core.authn.services.v1.Fini" +
+      "shWebAuthnRegistrationRequest\032>.udb.core" +
+      ".authn.services.v1.FinishWebAuthnRegistr" +
+      "ationResponse\"8\312\363\030\004\010\002 \001\202\323\344\223\002*\"%/v1/auth/" +
+      "webauthn/registration:finish:\001*\022\327\001\n\033Star" +
+      "tWebAuthnAuthentication\022>.udb.core.authn" +
+      ".services.v1.StartWebAuthnAuthentication" +
+      "Request\032?.udb.core.authn.services.v1.Sta" +
+      "rtWebAuthnAuthenticationResponse\"7\312\363\030\002\010\001" +
+      "\202\323\344\223\002+\"&/v1/auth/webauthn/authentication" +
+      ":start:\001*\022\333\001\n\034FinishWebAuthnAuthenticati" +
+      "on\022?.udb.core.authn.services.v1.FinishWe" +
+      "bAuthnAuthenticationRequest\032@.udb.core.a" +
+      "uthn.services.v1.FinishWebAuthnAuthentic" +
+      "ationResponse\"8\312\363\030\002\010\001\202\323\344\223\002,\"\'/v1/auth/we" +
+      "bauthn/authentication:finish:\001*B\212\002\n\036com." +
+      "udb.core.authn.services.v1B\021AuthnService" +
+      "ProtoP\001ZHgithub.com/fahara02/udb/sdk/go/" +
+      "gen/udb/core/authn/services/v1;servicesv" +
+      "1\242\002\004UCAS\252\002\032udb.core.Authn.Services.V1\312\002\032" +
+      "Udb\\Core\\Authn\\Services\\V1\342\002&Udb\\GPBMeta" +
+      "data\\Core\\Authn\\Services\\V1\352\002\036Udb::Core:" +
+      ":Authn::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -39,185 +39,187 @@ public final class DataBrokerProto extends com.google.protobuf.GeneratedFile {
       ".services.v1\032\031udb/entity/v1/admin.proto\032" +
       "\030udb/entity/v1/blob.proto\032\027udb/entity/v1" +
       "/cdc.proto\032\034udb/entity/v1/mutation.proto" +
-      "\032\032udb/entity/v1/outbox.proto\032\036udb/entity" +
-      "/v1/relational.proto\032\032udb/entity/v1/stor" +
-      "es.proto\032\026udb/entity/v1/tx.proto\032\032udb/en" +
-      "tity/v1/vector.proto\032\036udb/events/v1/udb_" +
-      "events.proto2\3264\n\nDataBroker\022B\n\006Select\022\034." +
-      "udb.entity.v1.SelectRequest\032\030.udb.entity" +
-      ".v1.RecordSet\"\000\022K\n\013BatchSelect\022\034.udb.ent" +
-      "ity.v1.SelectRequest\032\030.udb.entity.v1.Rec" +
-      "ordSet\"\000(\0010\001\022I\n\006Upsert\022\034.udb.entity.v1.U" +
-      "psertRequest\032\037.udb.entity.v1.MutationRes" +
-      "ponse\"\000\022R\n\013BatchUpsert\022\034.udb.entity.v1.U" +
-      "psertRequest\032\037.udb.entity.v1.MutationRes" +
-      "ponse\"\000(\0010\001\022I\n\006Delete\022\034.udb.entity.v1.De" +
-      "leteRequest\032\037.udb.entity.v1.MutationResp" +
-      "onse\"\000\022N\n\014VectorSearch\022\".udb.entity.v1.V" +
-      "ectorSearchRequest\032\030.udb.entity.v1.Vecto" +
-      "rSet\"\000\022Z\n\022VectorHybridSearch\022(.udb.entit" +
-      "y.v1.VectorHybridSearchRequest\032\030.udb.ent" +
-      "ity.v1.VectorSet\"\000\022U\n\014VectorUpsert\022\".udb" +
-      ".entity.v1.VectorUpsertRequest\032\037.udb.ent" +
-      "ity.v1.MutationResponse\"\000\022^\n\021VectorBatch" +
-      "Upsert\022\".udb.entity.v1.VectorUpsertReque" +
+      "\032\032udb/entity/v1/outbox.proto\032 udb/entity" +
+      "/v1/record_batch.proto\032\036udb/entity/v1/re" +
+      "lational.proto\032\032udb/entity/v1/stores.pro" +
+      "to\032\026udb/entity/v1/tx.proto\032\032udb/entity/v" +
+      "1/vector.proto\032\036udb/events/v1/udb_events" +
+      ".proto2\2425\n\nDataBroker\022B\n\006Select\022\034.udb.en" +
+      "tity.v1.SelectRequest\032\030.udb.entity.v1.Re" +
+      "cordSet\"\000\022K\n\013BatchSelect\022\034.udb.entity.v1" +
+      ".SelectRequest\032\030.udb.entity.v1.RecordSet" +
+      "\"\000(\0010\001\022J\n\010SelectV2\022\034.udb.entity.v1.Selec" +
+      "tRequest\032\034.udb.entity.v1.RecordBatchV2\"\000" +
+      "0\001\022I\n\006Upsert\022\034.udb.entity.v1.UpsertReque" +
+      "st\032\037.udb.entity.v1.MutationResponse\"\000\022R\n" +
+      "\013BatchUpsert\022\034.udb.entity.v1.UpsertReque" +
       "st\032\037.udb.entity.v1.MutationResponse\"\000(\0010" +
-      "\001\022F\n\tPutObject\022\024.udb.entity.v1.Chunk\032\037.u" +
-      "db.entity.v1.MutationResponse\"\000(\001\022C\n\tGet" +
-      "Object\022\034.udb.entity.v1.ObjectRequest\032\024.u" +
-      "db.entity.v1.Chunk\"\0000\001\022O\n\024GeneratePresig" +
-      "nedUrl\022\031.udb.entity.v1.UrlRequest\032\032.udb." +
-      "entity.v1.UrlResponse\"\000\022j\n\027InitiateMulti" +
-      "partUpload\022%.udb.entity.v1.MultipartUplo" +
-      "adRequest\032&.udb.entity.v1.MultipartUploa" +
-      "dResponse\"\000\022M\n\010CacheGet\022\036.udb.entity.v1." +
-      "CacheGetRequest\032\037.udb.entity.v1.CacheGet" +
-      "Response\"\000\022M\n\010CacheSet\022\036.udb.entity.v1.C" +
-      "acheSetRequest\032\037.udb.entity.v1.MutationR" +
-      "esponse\"\000\022S\n\013CacheDelete\022!.udb.entity.v1" +
-      ".CacheDeleteRequest\032\037.udb.entity.v1.Muta" +
-      "tionResponse\"\000\022P\n\tCacheScan\022\037.udb.entity" +
-      ".v1.CacheScanRequest\032 .udb.entity.v1.Cac" +
-      "heScanResponse\"\000\022N\n\013DocumentGet\022!.udb.en" +
-      "tity.v1.DocumentGetRequest\032\032.udb.entity." +
-      "v1.DocumentSet\"\000\022P\n\014DocumentFind\022\".udb.e" +
-      "ntity.v1.DocumentFindRequest\032\032.udb.entit" +
-      "y.v1.DocumentSet\"\000\022Y\n\016DocumentUpsert\022$.u" +
-      "db.entity.v1.DocumentUpsertRequest\032\037.udb" +
-      ".entity.v1.MutationResponse\"\000\022Y\n\016Documen" +
-      "tDelete\022$.udb.entity.v1.DocumentDeleteRe" +
-      "quest\032\037.udb.entity.v1.MutationResponse\"\000" +
-      "\022O\n\nGraphQuery\022 .udb.entity.v1.GraphQuer" +
-      "yRequest\032\035.udb.entity.v1.GraphResultSet\"" +
-      "\000\022U\n\013GraphMutate\022#.udb.entity.v1.GraphMu" +
-      "tationRequest\032\037.udb.entity.v1.MutationRe" +
-      "sponse\"\000\022[\n\017TimeSeriesWrite\022%.udb.entity" +
-      ".v1.TimeSeriesWriteRequest\032\037.udb.entity." +
-      "v1.MutationResponse\"\000\022b\n\017TimeSeriesQuery" +
-      "\022%.udb.entity.v1.TimeSeriesQueryRequest\032" +
-      "&.udb.entity.v1.TimeSeriesQueryResponse\"" +
-      "\000\022b\n\017AnalyticalQuery\022%.udb.entity.v1.Ana" +
-      "lyticalQueryRequest\032&.udb.entity.v1.Anal" +
-      "yticalQueryResponse\"\000\022A\n\007BeginTx\022\027.udb.e" +
-      "ntity.v1.Mutation\032\027.udb.entity.v1.TxStat" +
-      "us\"\000(\0010\001\022S\n\nPublishCDC\022%.udb.entity.v1.C" +
-      "DCSubscriptionRequest\032\032.udb.events.v1.CD" +
-      "CEnvelope\"\0000\001\022Z\n\026CreateMaterializedView\022" +
-      "\035.udb.entity.v1.ViewDefinition\032\037.udb.ent" +
-      "ity.v1.MutationResponse\"\000\022k\n\022EnqueueOutb" +
-      "oxEvent\022(.udb.entity.v1.EnqueueOutboxEve" +
-      "ntRequest\032).udb.entity.v1.EnqueueOutboxE" +
-      "ventResponse\"\000\022b\n\017GenericDispatch\022%.udb." +
-      "entity.v1.GenericDispatchRequest\032&.udb.e" +
-      "ntity.v1.GenericDispatchResponse\"\000\022X\n\016En" +
-      "sureResource\022#.udb.entity.v1.ResourceAdm" +
-      "inRequest\032\037.udb.entity.v1.MutationRespon" +
-      "se\"\000\022V\n\014DropResource\022#.udb.entity.v1.Res" +
-      "ourceAdminRequest\032\037.udb.entity.v1.Mutati" +
-      "onResponse\"\000\022[\n\rListResources\022#.udb.enti" +
-      "ty.v1.ResourceAdminRequest\032#.udb.entity." +
-      "v1.ResourceListResponse\"\000\022[\n\014StageCatalo" +
-      "g\022\".udb.entity.v1.StageCatalogRequest\032%." +
-      "udb.entity.v1.CatalogVersionResponse\"\000\022`" +
-      "\n\017ActivateCatalog\022$.udb.entity.v1.Catalo" +
-      "gVersionRequest\032%.udb.entity.v1.CatalogV" +
-      "ersionResponse\"\000\022`\n\017RollbackCatalog\022$.ud" +
-      "b.entity.v1.CatalogVersionRequest\032%.udb." +
-      "entity.v1.CatalogVersionResponse\"\000\022a\n\017Va" +
-      "lidateCatalog\022\".udb.entity.v1.StageCatal" +
-      "ogRequest\032(.udb.entity.v1.CatalogValidat" +
-      "ionResponse\"\000\022h\n\022GetCatalogVersions\022%.ud" +
-      "b.entity.v1.CatalogManifestRequest\032).udb" +
-      ".entity.v1.CatalogVersionListResponse\"\000\022" +
-      "b\n\021GetCatalogVersion\022$.udb.entity.v1.Cat" +
-      "alogVersionRequest\032%.udb.entity.v1.Catal" +
-      "ogVersionResponse\"\000\022\\\n\rPlanMigration\022#.u" +
-      "db.entity.v1.MigrationPlanRequest\032$.udb." +
-      "entity.v1.MigrationPlanResponse\"\000\022`\n\016App" +
-      "lyMigration\022$.udb.entity.v1.MigrationApp" +
-      "lyRequest\032&.udb.entity.v1.MigrationStatu" +
-      "sResponse\"\000\022b\n\022GetMigrationStatus\022\".udb." +
-      "entity.v1.MigrationRunRequest\032&.udb.enti" +
-      "ty.v1.MigrationStatusResponse\"\000\022f\n\021ListM" +
-      "igrationRuns\022&.udb.entity.v1.MigrationRu" +
-      "nListRequest\032\'.udb.entity.v1.MigrationRu" +
-      "nListResponse\"\000\022d\n\024ApproveMigrationPlan\022" +
-      "\".udb.entity.v1.MigrationRunRequest\032&.ud" +
-      "b.entity.v1.MigrationStatusResponse\"\000\022P\n" +
-      "\rListDlqEvents\022\035.udb.entity.v1.DlqListRe" +
-      "quest\032\036.udb.entity.v1.DlqListResponse\"\000\022" +
-      "P\n\013GetDlqEvent\022\036.udb.entity.v1.DlqEventR" +
-      "equest\032\037.udb.entity.v1.DlqEventResponse\"" +
-      "\000\022T\n\016ReplayDlqEvent\022\037.udb.entity.v1.DlqA" +
-      "ctionRequest\032\037.udb.entity.v1.MutationRes" +
-      "ponse\"\000\022U\n\017DismissDlqEvent\022\037.udb.entity." +
+      "\001\022I\n\006Delete\022\034.udb.entity.v1.DeleteReques" +
+      "t\032\037.udb.entity.v1.MutationResponse\"\000\022N\n\014" +
+      "VectorSearch\022\".udb.entity.v1.VectorSearc" +
+      "hRequest\032\030.udb.entity.v1.VectorSet\"\000\022Z\n\022" +
+      "VectorHybridSearch\022(.udb.entity.v1.Vecto" +
+      "rHybridSearchRequest\032\030.udb.entity.v1.Vec" +
+      "torSet\"\000\022U\n\014VectorUpsert\022\".udb.entity.v1" +
+      ".VectorUpsertRequest\032\037.udb.entity.v1.Mut" +
+      "ationResponse\"\000\022^\n\021VectorBatchUpsert\022\".u" +
+      "db.entity.v1.VectorUpsertRequest\032\037.udb.e" +
+      "ntity.v1.MutationResponse\"\000(\0010\001\022F\n\tPutOb" +
+      "ject\022\024.udb.entity.v1.Chunk\032\037.udb.entity." +
+      "v1.MutationResponse\"\000(\001\022C\n\tGetObject\022\034.u" +
+      "db.entity.v1.ObjectRequest\032\024.udb.entity." +
+      "v1.Chunk\"\0000\001\022O\n\024GeneratePresignedUrl\022\031.u" +
+      "db.entity.v1.UrlRequest\032\032.udb.entity.v1." +
+      "UrlResponse\"\000\022j\n\027InitiateMultipartUpload" +
+      "\022%.udb.entity.v1.MultipartUploadRequest\032" +
+      "&.udb.entity.v1.MultipartUploadResponse\"" +
+      "\000\022M\n\010CacheGet\022\036.udb.entity.v1.CacheGetRe" +
+      "quest\032\037.udb.entity.v1.CacheGetResponse\"\000" +
+      "\022M\n\010CacheSet\022\036.udb.entity.v1.CacheSetReq" +
+      "uest\032\037.udb.entity.v1.MutationResponse\"\000\022" +
+      "S\n\013CacheDelete\022!.udb.entity.v1.CacheDele" +
+      "teRequest\032\037.udb.entity.v1.MutationRespon" +
+      "se\"\000\022P\n\tCacheScan\022\037.udb.entity.v1.CacheS" +
+      "canRequest\032 .udb.entity.v1.CacheScanResp" +
+      "onse\"\000\022N\n\013DocumentGet\022!.udb.entity.v1.Do" +
+      "cumentGetRequest\032\032.udb.entity.v1.Documen" +
+      "tSet\"\000\022P\n\014DocumentFind\022\".udb.entity.v1.D" +
+      "ocumentFindRequest\032\032.udb.entity.v1.Docum" +
+      "entSet\"\000\022Y\n\016DocumentUpsert\022$.udb.entity." +
+      "v1.DocumentUpsertRequest\032\037.udb.entity.v1" +
+      ".MutationResponse\"\000\022Y\n\016DocumentDelete\022$." +
+      "udb.entity.v1.DocumentDeleteRequest\032\037.ud" +
+      "b.entity.v1.MutationResponse\"\000\022O\n\nGraphQ" +
+      "uery\022 .udb.entity.v1.GraphQueryRequest\032\035" +
+      ".udb.entity.v1.GraphResultSet\"\000\022U\n\013Graph" +
+      "Mutate\022#.udb.entity.v1.GraphMutationRequ" +
+      "est\032\037.udb.entity.v1.MutationResponse\"\000\022[" +
+      "\n\017TimeSeriesWrite\022%.udb.entity.v1.TimeSe" +
+      "riesWriteRequest\032\037.udb.entity.v1.Mutatio" +
+      "nResponse\"\000\022b\n\017TimeSeriesQuery\022%.udb.ent" +
+      "ity.v1.TimeSeriesQueryRequest\032&.udb.enti" +
+      "ty.v1.TimeSeriesQueryResponse\"\000\022b\n\017Analy" +
+      "ticalQuery\022%.udb.entity.v1.AnalyticalQue" +
+      "ryRequest\032&.udb.entity.v1.AnalyticalQuer" +
+      "yResponse\"\000\022A\n\007BeginTx\022\027.udb.entity.v1.M" +
+      "utation\032\027.udb.entity.v1.TxStatus\"\000(\0010\001\022S" +
+      "\n\nPublishCDC\022%.udb.entity.v1.CDCSubscrip" +
+      "tionRequest\032\032.udb.events.v1.CDCEnvelope\"" +
+      "\0000\001\022Z\n\026CreateMaterializedView\022\035.udb.enti" +
+      "ty.v1.ViewDefinition\032\037.udb.entity.v1.Mut" +
+      "ationResponse\"\000\022k\n\022EnqueueOutboxEvent\022(." +
+      "udb.entity.v1.EnqueueOutboxEventRequest\032" +
+      ").udb.entity.v1.EnqueueOutboxEventRespon" +
+      "se\"\000\022b\n\017GenericDispatch\022%.udb.entity.v1." +
+      "GenericDispatchRequest\032&.udb.entity.v1.G" +
+      "enericDispatchResponse\"\000\022X\n\016EnsureResour" +
+      "ce\022#.udb.entity.v1.ResourceAdminRequest\032" +
+      "\037.udb.entity.v1.MutationResponse\"\000\022V\n\014Dr" +
+      "opResource\022#.udb.entity.v1.ResourceAdmin" +
+      "Request\032\037.udb.entity.v1.MutationResponse" +
+      "\"\000\022[\n\rListResources\022#.udb.entity.v1.Reso" +
+      "urceAdminRequest\032#.udb.entity.v1.Resourc" +
+      "eListResponse\"\000\022[\n\014StageCatalog\022\".udb.en" +
+      "tity.v1.StageCatalogRequest\032%.udb.entity" +
+      ".v1.CatalogVersionResponse\"\000\022`\n\017Activate" +
+      "Catalog\022$.udb.entity.v1.CatalogVersionRe" +
+      "quest\032%.udb.entity.v1.CatalogVersionResp" +
+      "onse\"\000\022`\n\017RollbackCatalog\022$.udb.entity.v" +
+      "1.CatalogVersionRequest\032%.udb.entity.v1." +
+      "CatalogVersionResponse\"\000\022a\n\017ValidateCata" +
+      "log\022\".udb.entity.v1.StageCatalogRequest\032" +
+      "(.udb.entity.v1.CatalogValidationRespons" +
+      "e\"\000\022h\n\022GetCatalogVersions\022%.udb.entity.v" +
+      "1.CatalogManifestRequest\032).udb.entity.v1" +
+      ".CatalogVersionListResponse\"\000\022b\n\021GetCata" +
+      "logVersion\022$.udb.entity.v1.CatalogVersio" +
+      "nRequest\032%.udb.entity.v1.CatalogVersionR" +
+      "esponse\"\000\022\\\n\rPlanMigration\022#.udb.entity." +
+      "v1.MigrationPlanRequest\032$.udb.entity.v1." +
+      "MigrationPlanResponse\"\000\022`\n\016ApplyMigratio" +
+      "n\022$.udb.entity.v1.MigrationApplyRequest\032" +
+      "&.udb.entity.v1.MigrationStatusResponse\"" +
+      "\000\022b\n\022GetMigrationStatus\022\".udb.entity.v1." +
+      "MigrationRunRequest\032&.udb.entity.v1.Migr" +
+      "ationStatusResponse\"\000\022f\n\021ListMigrationRu" +
+      "ns\022&.udb.entity.v1.MigrationRunListReque" +
+      "st\032\'.udb.entity.v1.MigrationRunListRespo" +
+      "nse\"\000\022d\n\024ApproveMigrationPlan\022\".udb.enti" +
+      "ty.v1.MigrationRunRequest\032&.udb.entity.v" +
+      "1.MigrationStatusResponse\"\000\022P\n\rListDlqEv" +
+      "ents\022\035.udb.entity.v1.DlqListRequest\032\036.ud" +
+      "b.entity.v1.DlqListResponse\"\000\022P\n\013GetDlqE" +
+      "vent\022\036.udb.entity.v1.DlqEventRequest\032\037.u" +
+      "db.entity.v1.DlqEventResponse\"\000\022T\n\016Repla" +
+      "yDlqEvent\022\037.udb.entity.v1.DlqActionReque" +
+      "st\032\037.udb.entity.v1.MutationResponse\"\000\022U\n" +
+      "\017DismissDlqEvent\022\037.udb.entity.v1.DlqActi" +
+      "onRequest\032\037.udb.entity.v1.MutationRespon" +
+      "se\"\000\022X\n\022QuarantineDlqEvent\022\037.udb.entity." +
       "v1.DlqActionRequest\032\037.udb.entity.v1.Muta" +
-      "tionResponse\"\000\022X\n\022QuarantineDlqEvent\022\037.u" +
-      "db.entity.v1.DlqActionRequest\032\037.udb.enti" +
-      "ty.v1.MutationResponse\"\000\022T\n\014GetCdcStatus" +
-      "\022 .udb.entity.v1.CdcControlRequest\032 .udb" +
-      ".entity.v1.CdcStatusResponse\"\000\022P\n\010PauseC" +
-      "dc\022 .udb.entity.v1.CdcControlRequest\032 .u" +
-      "db.entity.v1.CdcStatusResponse\"\000\022Q\n\tResu" +
-      "meCdc\022 .udb.entity.v1.CdcControlRequest\032" +
-      " .udb.entity.v1.CdcStatusResponse\"\000\022Y\n\021S" +
-      "tepDownCdcLeader\022 .udb.entity.v1.CdcCont" +
-      "rolRequest\032 .udb.entity.v1.CdcStatusResp" +
-      "onse\"\000\022n\n\023PreviewCdcRedaction\022).udb.enti" +
-      "ty.v1.CdcRedactionPreviewRequest\032*.udb.e" +
-      "ntity.v1.CdcRedactionPreviewResponse\"\000\022n" +
-      "\n\023ScanProjectionDrift\022).udb.entity.v1.Pr" +
-      "ojectionDriftScanRequest\032*.udb.entity.v1" +
-      ".ProjectionDriftScanResponse\"\000\022N\n\tListSa" +
-      "gas\022\036.udb.entity.v1.SagaListRequest\032\037.ud" +
-      "b.entity.v1.SagaListResponse\"\000\022D\n\007GetSag" +
-      "a\022\032.udb.entity.v1.SagaRequest\032\033.udb.enti" +
-      "ty.v1.SagaResponse\"\000\022R\n\025RetrySagaCompens" +
-      "ation\022\032.udb.entity.v1.SagaRequest\032\033.udb." +
-      "entity.v1.SagaResponse\"\000\022M\n\020MarkSagaRevi" +
-      "ewed\022\032.udb.entity.v1.SagaRequest\032\033.udb.e" +
-      "ntity.v1.SagaResponse\"\000\022U\n\014ListPolicies\022" +
-      " .udb.entity.v1.PolicyListRequest\032!.udb." +
-      "entity.v1.PolicyListResponse\"\000\022O\n\tPutPol" +
-      "icy\022\037.udb.entity.v1.PutPolicyRequest\032\037.u" +
-      "db.entity.v1.MutationResponse\"\000\022O\n\014Delet" +
-      "ePolicy\022\034.udb.entity.v1.PolicyRequest\032\037." +
-      "udb.entity.v1.MutationResponse\"\000\022W\n\016Relo" +
-      "adPolicies\022\".udb.entity.v1.CapabilitiesR" +
-      "equest\032\037.udb.entity.v1.MutationResponse\"" +
-      "\000\022W\n\014LintPolicies\022\".udb.entity.v1.Capabi" +
-      "litiesRequest\032!.udb.entity.v1.PolicyLint" +
-      "Response\"\000\022\\\n\017GetCapabilities\022\".udb.enti" +
-      "ty.v1.CapabilitiesRequest\032#.udb.entity.v" +
-      "1.CapabilitiesResponse\"\000\022e\n\022GetCatalogMa" +
-      "nifest\022%.udb.entity.v1.CatalogManifestRe" +
-      "quest\032&.udb.entity.v1.CatalogManifestRes" +
-      "ponse\"\000\022n\n\023LookupMessageSchema\022).udb.ent" +
-      "ity.v1.MessageSchemaLookupRequest\032*.udb." +
-      "entity.v1.MessageSchemaLookupResponse\"\000\022" +
-      "i\n\022ListMessageSchemas\022\'.udb.entity.v1.Me" +
-      "ssageSchemaListRequest\032(.udb.entity.v1.M" +
-      "essageSchemaListResponse\"\000\022\\\n\017GetHealthR" +
-      "eport\022\".udb.entity.v1.HealthReportReques" +
-      "t\032#.udb.entity.v1.HealthReportResponse\"\000" +
-      "\022W\n\rEnsureProject\022#.udb.entity.v1.Ensure" +
-      "ProjectRequest\032\037.udb.entity.v1.MutationR" +
-      "esponse\"\000\022W\n\014ListProjects\022!.udb.entity.v" +
-      "1.ProjectListRequest\032\".udb.entity.v1.Pro" +
-      "jectListResponse\"\000\022\\\n\017GetAdminSummary\022\"." +
-      "udb.entity.v1.AdminSummaryRequest\032#.udb." +
-      "entity.v1.AdminSummaryResponse\"\000\022a\n\022List" +
-      "AdminAuditLogs\022#.udb.entity.v1.AdminAudi" +
-      "tLogRequest\032$.udb.entity.v1.AdminAuditLo" +
-      "gResponse\"\000\022h\n\023VerifyAdminAuditLog\022&.udb" +
-      ".entity.v1.AdminAuditVerifyRequest\032\'.udb" +
-      ".entity.v1.AdminAuditVerifyResponse\"\000B\303\001" +
-      "\n\023com.udb.services.v1B\017DataBrokerProtoP\001" +
-      "Z=github.com/fahara02/udb/sdk/go/gen/udb" +
-      "/services/v1;servicesv1\242\002\003USX\252\002\017Udb.Serv" +
-      "ices.V1\312\002\017Udb\\Services\\V1\342\002\033Udb\\GPBMetad" +
-      "ata\\Services\\V1\352\002\021Udb::Services::V1b\006pro" +
-      "to3"
+      "tionResponse\"\000\022T\n\014GetCdcStatus\022 .udb.ent" +
+      "ity.v1.CdcControlRequest\032 .udb.entity.v1" +
+      ".CdcStatusResponse\"\000\022P\n\010PauseCdc\022 .udb.e" +
+      "ntity.v1.CdcControlRequest\032 .udb.entity." +
+      "v1.CdcStatusResponse\"\000\022Q\n\tResumeCdc\022 .ud" +
+      "b.entity.v1.CdcControlRequest\032 .udb.enti" +
+      "ty.v1.CdcStatusResponse\"\000\022Y\n\021StepDownCdc" +
+      "Leader\022 .udb.entity.v1.CdcControlRequest" +
+      "\032 .udb.entity.v1.CdcStatusResponse\"\000\022n\n\023" +
+      "PreviewCdcRedaction\022).udb.entity.v1.CdcR" +
+      "edactionPreviewRequest\032*.udb.entity.v1.C" +
+      "dcRedactionPreviewResponse\"\000\022n\n\023ScanProj" +
+      "ectionDrift\022).udb.entity.v1.ProjectionDr" +
+      "iftScanRequest\032*.udb.entity.v1.Projectio" +
+      "nDriftScanResponse\"\000\022N\n\tListSagas\022\036.udb." +
+      "entity.v1.SagaListRequest\032\037.udb.entity.v" +
+      "1.SagaListResponse\"\000\022D\n\007GetSaga\022\032.udb.en" +
+      "tity.v1.SagaRequest\032\033.udb.entity.v1.Saga" +
+      "Response\"\000\022R\n\025RetrySagaCompensation\022\032.ud" +
+      "b.entity.v1.SagaRequest\032\033.udb.entity.v1." +
+      "SagaResponse\"\000\022M\n\020MarkSagaReviewed\022\032.udb" +
+      ".entity.v1.SagaRequest\032\033.udb.entity.v1.S" +
+      "agaResponse\"\000\022U\n\014ListPolicies\022 .udb.enti" +
+      "ty.v1.PolicyListRequest\032!.udb.entity.v1." +
+      "PolicyListResponse\"\000\022O\n\tPutPolicy\022\037.udb." +
+      "entity.v1.PutPolicyRequest\032\037.udb.entity." +
+      "v1.MutationResponse\"\000\022O\n\014DeletePolicy\022\034." +
+      "udb.entity.v1.PolicyRequest\032\037.udb.entity" +
+      ".v1.MutationResponse\"\000\022W\n\016ReloadPolicies" +
+      "\022\".udb.entity.v1.CapabilitiesRequest\032\037.u" +
+      "db.entity.v1.MutationResponse\"\000\022W\n\014LintP" +
+      "olicies\022\".udb.entity.v1.CapabilitiesRequ" +
+      "est\032!.udb.entity.v1.PolicyLintResponse\"\000" +
+      "\022\\\n\017GetCapabilities\022\".udb.entity.v1.Capa" +
+      "bilitiesRequest\032#.udb.entity.v1.Capabili" +
+      "tiesResponse\"\000\022e\n\022GetCatalogManifest\022%.u" +
+      "db.entity.v1.CatalogManifestRequest\032&.ud" +
+      "b.entity.v1.CatalogManifestResponse\"\000\022n\n" +
+      "\023LookupMessageSchema\022).udb.entity.v1.Mes" +
+      "sageSchemaLookupRequest\032*.udb.entity.v1." +
+      "MessageSchemaLookupResponse\"\000\022i\n\022ListMes" +
+      "sageSchemas\022\'.udb.entity.v1.MessageSchem" +
+      "aListRequest\032(.udb.entity.v1.MessageSche" +
+      "maListResponse\"\000\022\\\n\017GetHealthReport\022\".ud" +
+      "b.entity.v1.HealthReportRequest\032#.udb.en" +
+      "tity.v1.HealthReportResponse\"\000\022W\n\rEnsure" +
+      "Project\022#.udb.entity.v1.EnsureProjectReq" +
+      "uest\032\037.udb.entity.v1.MutationResponse\"\000\022" +
+      "W\n\014ListProjects\022!.udb.entity.v1.ProjectL" +
+      "istRequest\032\".udb.entity.v1.ProjectListRe" +
+      "sponse\"\000\022\\\n\017GetAdminSummary\022\".udb.entity" +
+      ".v1.AdminSummaryRequest\032#.udb.entity.v1." +
+      "AdminSummaryResponse\"\000\022a\n\022ListAdminAudit" +
+      "Logs\022#.udb.entity.v1.AdminAuditLogReques" +
+      "t\032$.udb.entity.v1.AdminAuditLogResponse\"" +
+      "\000\022h\n\023VerifyAdminAuditLog\022&.udb.entity.v1" +
+      ".AdminAuditVerifyRequest\032\'.udb.entity.v1" +
+      ".AdminAuditVerifyResponse\"\000B\303\001\n\023com.udb." +
+      "services.v1B\017DataBrokerProtoP\001Z=github.c" +
+      "om/fahara02/udb/sdk/go/gen/udb/services/" +
+      "v1;servicesv1\242\002\003USX\252\002\017Udb.Services.V1\312\002\017" +
+      "Udb\\Services\\V1\342\002\033Udb\\GPBMetadata\\Servic" +
+      "es\\V1\352\002\021Udb::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -227,6 +229,7 @@ public final class DataBrokerProto extends com.google.protobuf.GeneratedFile {
           com.udb.entity.v1.CdcProto.getDescriptor(),
           com.udb.entity.v1.MutationProto.getDescriptor(),
           com.udb.entity.v1.OutboxProto.getDescriptor(),
+          com.udb.entity.v1.RecordBatchProto.getDescriptor(),
           com.udb.entity.v1.RelationalProto.getDescriptor(),
           com.udb.entity.v1.StoresProto.getDescriptor(),
           com.udb.entity.v1.TxProto.getDescriptor(),
@@ -239,6 +242,7 @@ public final class DataBrokerProto extends com.google.protobuf.GeneratedFile {
     com.udb.entity.v1.CdcProto.getDescriptor();
     com.udb.entity.v1.MutationProto.getDescriptor();
     com.udb.entity.v1.OutboxProto.getDescriptor();
+    com.udb.entity.v1.RecordBatchProto.getDescriptor();
     com.udb.entity.v1.RelationalProto.getDescriptor();
     com.udb.entity.v1.StoresProto.getDescriptor();
     com.udb.entity.v1.TxProto.getDescriptor();

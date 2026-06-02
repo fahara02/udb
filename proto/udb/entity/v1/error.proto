@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package udb.entity.v1;
+
+option csharp_namespace = "Udb.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/entity/v1;entityv1";
+option java_package = "com.udb.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
+option php_namespace = "Udb\\Entity\\V1";
+
+// ── Typed error details ───────────────────────────────────────────────────────
+//
+// `ErrorDetail` is the machine-readable companion to a `tonic::Status`. The
+// broker prost-encodes one of these and attaches it to refusal/error statuses
+// under the binary trailer metadata key `udb-error-detail-bin`. SDKs decode it
+// instead of string-parsing the human-readable status message, so capability,
+// policy, quota, schema, and retry decisions are typed end-to-end.
+//
+// All fields are optional in the proto3 sense: a field left at its default
+// (empty string / 0 / false) simply means "not applicable for this error".
+
+// Coarse classification of why a request failed. SDKs branch on `kind` to pick
+// retry / surface-to-user / escalate behavior without parsing messages.
+enum ErrorKind {
+  // Unset / unknown — treat as a generic failure.
+  ERROR_KIND_UNSPECIFIED = 0;
+  // The target backend does not support the requested operation/capability.
+  // Maps to gRPC FailedPrecondition. Never retryable.
+  ERROR_KIND_CAPABILITY = 1;
+  // An authorization / policy decision denied the request. `policy_decision_id`
+  // identifies the decision in audit logs.
+  ERROR_KIND_POLICY = 2;
+  // A quota / rate limit was exceeded. `retry_after_ms` may suggest a backoff.
+  ERROR_KIND_QUOTA = 3;
+  // A schema / catalog mismatch or compile-time validation failure (carries the
+  // CompileError code in `capability_required` when applicable).
+  ERROR_KIND_SCHEMA = 4;
+  // A transient failure the caller may retry. Maps to gRPC Unavailable.
+  ERROR_KIND_RETRYABLE = 5;
+  // An unexpected internal error. Generally not retryable without investigation.
+  ERROR_KIND_INTERNAL = 6;
+}
+
+message ErrorDetail {
+  // Backend selector base this error originated from (e.g. "postgres",
+  // "qdrant"). Empty when the error is not backend-specific.
+  string backend = 1;
+  // Logical operation that failed (e.g. "ensure_resource", "query",
+  // "mutate", "search"). Empty when not operation-specific.
+  string operation = 2;
+  // For capability/schema refusals: the capability or compile-error code that
+  // was required but missing (e.g. "supports_resource_lifecycle",
+  // "operation_not_supported"). Empty otherwise.
+  string capability_required = 3;
+  // Whether the caller may retry the same request as-is.
+  bool retryable = 4;
+  // Suggested backoff before retrying, in milliseconds. 0 means "no suggestion".
+  int64 retry_after_ms = 5;
+  // Identifier of the authorization decision that produced this error, for
+  // correlating with the policy/audit log. Empty when not a policy decision.
+  string policy_decision_id = 6;
+  // Request correlation id, echoed so the caller can stitch the typed error to
+  // its originating request in logs/traces.
+  string correlation_id = 7;
+  // Coarse classification of the failure.
+  ErrorKind kind = 8;
+}

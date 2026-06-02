@@ -1,0 +1,522 @@
+// {{GENERATED_NOTE}}
+//
+// UDB v{{UDB_VERSION}} · protocol v{{PROTOCOL_VERSION}} · {{SERVICE_COUNT}} service(s) · {{RPC_COUNT}} RPC(s)
+//
+// This is a ROBUSTNESS / FORWARDING layer over the runtime-loaded gRPC service
+// stubs (@grpc/proto-loader + @grpc/grpc-js, the same mechanism client.ts and
+// auth.ts use). Each generated method forwards to the underlying dynamic stub
+// method named after the RPC and adds:
+//   - configurable per-call deadline / timeout,
+//   - retry with exponential backoff + jitter on transient gRPC codes
+//     (UNAVAILABLE, DEADLINE_EXCEEDED, RESOURCE_EXHAUSTED) for retry-safe kinds,
+//   - TLS / credentials wiring,
+//   - metadata (authorization / api-key / x-request-id / UdbMetadata headers),
+//   - typed error mapping that unpacks the `udb-error-detail-bin` trailer.
+//
+// It COMPOSES WITH the hand-written layer and never replaces it: it imports
+// UdbMetadata/metadata/UDB_PROTOCOL_VERSION from ./client and reuses
+// ./protoRoot. Import the hand-written `dataBrokerClient`, `UdbAuthClient`,
+// `Negotiator`, etc. directly when you want the lower-level surface.
+//
+// The generated method names are the RPC's snake_case form and each forwards to
+// the PascalCase dynamic-stub method on the right service. Methods are grouped
+// per service so cross-service name reuse never collides:
+//   udb.DataBroker.select(req)         // unary -> Promise
+//   udb.DataBroker.select_v2(req)      // server-streaming -> ClientReadableStream
+//   udb.DataBroker.put_object()        // client-streaming -> { stream, response }
+//   udb.DataBroker.batch_select()      // bidi -> ClientDuplexStream
+
+import * as grpc from "@grpc/grpc-js";
+import * as protoLoader from "@grpc/proto-loader";
+import fs from "fs";
+import path from "path";
+
+import { UDB_PROTOCOL_VERSION, UdbMetadata, metadata as buildMetadata } from "./client";
+import { defaultProtoRoot } from "./protoRoot";
+
+export const UDB_SDK_VERSION = "{{UDB_VERSION}}";
+
+// ── Configuration ─────────────────────────────────────────────────────────────
+
+/** Retry policy for transient failures. Defaults mirror the server's recommended
+ *  client behavior. A non-idempotent RPC (any client-streaming / bidi call) is
+ *  never retried regardless of this policy. */
+export interface RetryPolicy {
+  maxAttempts: number;
+  initialBackoffMs: number;
+  maxBackoffMs: number;
+  backoffMultiplier: number;
+  /** gRPC status codes considered transient and therefore retryable. */
+  retryableCodes: grpc.status[];
+}
+
+export const DEFAULT_RETRY_POLICY: RetryPolicy = {
+  maxAttempts: 4,
+  initialBackoffMs: 100,
+  maxBackoffMs: 5_000,
+  backoffMultiplier: 2.0,
+  retryableCodes: [
+    grpc.status.UNAVAILABLE,
+    grpc.status.DEADLINE_EXCEEDED,
+    grpc.status.RESOURCE_EXHAUSTED,
+  ],
+};
+
+export interface TlsOptions {
+  /** PEM root CA bundle. Omit for the system trust store. */
+  rootCerts?: Buffer;
+  /** PEM client key for mTLS. */
+  privateKey?: Buffer;
+  /** PEM client certificate chain for mTLS. */
+  certChain?: Buffer;
+}
+
+export interface UdbClientOptions {
+  /** `host:port` of the UDB gRPC endpoint. */
+  target: string;
+  /** UDB request metadata headers attached to every call (tenant, purpose, …). */
+  meta: UdbMetadata;
+  /** Enable TLS. When `tls` is provided this is implied. Defaults to insecure. */
+  secure?: boolean;
+  tls?: TlsOptions;
+  /** Bearer token; sent as `authorization: Bearer <token>`. */
+  bearerToken?: string;
+  /** API key; sent as `x-api-key`. */
+  apiKey?: string;
+  /** Default per-call deadline in milliseconds. */
+  deadlineMs?: number;
+  retry?: Partial<RetryPolicy>;
+  /** Override the proto root (directory containing `udb/**`). */
+  protoRoot?: string;
+  /** Extra channel options forwarded to @grpc/grpc-js. */
+  channelOptions?: grpc.ChannelOptions;
+}
+
+/** Per-call overrides. */
+export interface CallOptions {
+  deadlineMs?: number;
+  meta?: Partial<UdbMetadata>;
+  /** Additional raw metadata headers merged onto the UdbMetadata headers. */
+  headers?: Record<string, string>;
+  /** Disable retry for this call (e.g. when the caller already retries). */
+  noRetry?: boolean;
+  /** AbortSignal to cancel the call / streams. */
+  signal?: AbortSignal;
+}
+
+// ── Typed errors ───────────────────────────────────────────────────────────────
+
+/** A decoded `ErrorDetail` from the `udb-error-detail-bin` trailer, when present.
+ *  Left as a loose record because the SDK does not depend on the generated
+ *  message classes (it forwards through the dynamic stubs). */
+export interface UdbErrorDetail {
+  code?: string;
+  reason?: string;
+  retryable?: boolean;
+  [key: string]: unknown;
+}
+
+/** Clean, typed error surfaced by every generated method. Wraps the underlying
+ *  gRPC ServiceError and the decoded UDB error trailer when the server sent one. */
+export class UdbError extends Error {
+  readonly code: grpc.status;
+  readonly rpc: string;
+  readonly detail?: UdbErrorDetail;
+  readonly cause?: grpc.ServiceError;
+
+  constructor(rpc: string, cause: grpc.ServiceError, detail?: UdbErrorDetail) {
+    const base = detail?.reason || cause.details || cause.message || "udb rpc failed";
+    super(`udb ${rpc}: ${base} (code=${grpc.status[cause.code] ?? cause.code})`);
+    this.name = "UdbError";
+    this.rpc = rpc;
+    this.code = cause.code;
+    this.detail = detail;
+    this.cause = cause;
+  }
+
+  get retryable(): boolean {
+    return Boolean(this.detail?.retryable);
+  }
+}
+
+const ERROR_DETAIL_TRAILER = "udb-error-detail-bin";
+
+function decodeErrorDetail(err: grpc.ServiceError): UdbErrorDetail | undefined {
+  const trailers = err.metadata;
+  if (!trailers) return undefined;
+  const raw = trailers.get(ERROR_DETAIL_TRAILER);
+  if (!raw || raw.length === 0) return undefined;
+  const buf = raw[0];
+  const bytes = typeof buf === "string" ? Buffer.from(buf, "binary") : (buf as Buffer);
+  // The wire payload is a protobuf ErrorDetail. The SDK avoids a hard dependency
+  // on the generated message; surface the raw bytes plus any text the server put
+  // in the standard string trailers so callers can decode if they need to.
+  const detail: UdbErrorDetail = { rawBytes: bytes };
+  const reason = trailers.get("udb-error-reason");
+  if (reason && reason.length) detail.reason = String(reason[0]);
+  const code = trailers.get("udb-error-code");
+  if (code && code.length) detail.code = String(code[0]);
+  return detail;
+}
+
+// ── Channel & service resolution ────────────────────────────────────────────────
+
+function buildCredentials(opts: UdbClientOptions): grpc.ChannelCredentials {
+  if (opts.tls) {
+    return grpc.credentials.createSsl(opts.tls.rootCerts, opts.tls.privateKey, opts.tls.certChain);
+  }
+  if (opts.secure) {
+    return grpc.credentials.createSsl();
+  }
+  return grpc.credentials.createInsecure();
+}
+
+/** Recursively collect every `.proto` under `root` so proto-loader can resolve
+ *  all services without the SDK hand-listing file paths. */
+function collectProtoFiles(root: string): string[] {
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith(".proto")) out.push(full);
+    }
+  };
+  const udbDir = path.join(root, "udb");
+  walk(fs.existsSync(udbDir) ? udbDir : root);
+  return out;
+}
+
+/** Walk a dotted service full-name (e.g. `udb.services.v1.DataBroker`) through a
+ *  loaded package object to its service constructor. */
+function resolveService(loaded: any, fullName: string): any {
+  let node = loaded;
+  for (const part of fullName.split(".")) {
+    node = node?.[part];
+    if (node == null) {
+      throw new Error(`udb: service '${fullName}' not found in loaded protos`);
+    }
+  }
+  return node;
+}
+
+// ── Core: shared channel, metadata, retry, and per-kind invokers ────────────────
+
+/**
+ * The robust core. Holds the loaded protos, lazily constructs per-service stubs,
+ * and exposes the four kind-specific invokers used by the generated wrappers.
+ * The generated, typed, per-service surface lives on {@link UdbGeneratedClient}.
+ */
+export class UdbCore {
+  readonly opts: UdbClientOptions;
+  private readonly retry: RetryPolicy;
+  private readonly creds: grpc.ChannelCredentials;
+  private readonly loaded: any;
+  private readonly stubs = new Map<string, any>();
+
+  constructor(opts: UdbClientOptions) {
+    this.opts = opts;
+    this.retry = { ...DEFAULT_RETRY_POLICY, ...(opts.retry ?? {}) };
+    this.creds = buildCredentials(opts);
+    const root = opts.protoRoot ?? defaultProtoRoot();
+    const includeDirs = [root, path.resolve(root, "../third_party/googleapis")];
+    const definition = protoLoader.loadSync(collectProtoFiles(root), {
+      keepCase: true,
+      longs: String,
+      enums: String,
+      defaults: true,
+      oneofs: true,
+      includeDirs,
+    });
+    this.loaded = grpc.loadPackageDefinition(definition);
+  }
+
+  /** Lazily construct (and cache) the dynamic stub for a service full-name. */
+  private stub(fullName: string): any {
+    let stub = this.stubs.get(fullName);
+    if (!stub) {
+      const Ctor = resolveService(this.loaded, fullName);
+      stub = new Ctor(this.opts.target, this.creds, this.opts.channelOptions ?? {});
+      this.stubs.set(fullName, stub);
+    }
+    return stub;
+  }
+
+  /** Build per-call grpc.Metadata: UdbMetadata headers + auth + request-id. */
+  private metadataFor(call?: CallOptions): grpc.Metadata {
+    const merged: UdbMetadata = { ...this.opts.meta, ...(call?.meta ?? {}) } as UdbMetadata;
+    const md = buildMetadata(merged);
+    if (this.opts.bearerToken) md.set("authorization", `Bearer ${this.opts.bearerToken}`);
+    if (this.opts.apiKey) md.set("x-api-key", this.opts.apiKey);
+    if (!md.get("x-request-id").length) {
+      md.set("x-request-id", `${merged.correlationId || "udb"}-${Date.now().toString(36)}`);
+    }
+    md.set("x-udb-sdk", `typescript/${UDB_SDK_VERSION}`);
+    md.set("x-udb-protocol-version", UDB_PROTOCOL_VERSION);
+    for (const [k, v] of Object.entries(call?.headers ?? {})) md.set(k, v);
+    return md;
+  }
+
+  private callMeta(call?: CallOptions): grpc.CallOptions {
+    const deadlineMs = call?.deadlineMs ?? this.opts.deadlineMs;
+    const options: grpc.CallOptions = {};
+    if (deadlineMs && deadlineMs > 0) options.deadline = new Date(Date.now() + deadlineMs);
+    return options;
+  }
+
+  private isRetryable(err: grpc.ServiceError): boolean {
+    return this.retry.retryableCodes.includes(err.code);
+  }
+
+  private backoff(attempt: number): number {
+    const base = this.retry.initialBackoffMs * Math.pow(this.retry.backoffMultiplier, attempt);
+    return Math.random() * Math.min(base, this.retry.maxBackoffMs); // full jitter
+  }
+
+  private delay(ms: number, signal?: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(resolve, ms);
+      if (signal) {
+        const onAbort = () => {
+          clearTimeout(t);
+          reject(new Error("udb: call aborted"));
+        };
+        if (signal.aborted) onAbort();
+        else signal.addEventListener("abort", onAbort, { once: true });
+      }
+    });
+  }
+
+  /** Unary call with retry/backoff and typed error mapping. */
+  async unary<TRes = any>(
+    fullName: string,
+    method: string,
+    request: any,
+    call?: CallOptions,
+  ): Promise<TRes> {
+    const stub = this.stub(fullName);
+    const retryEnabled = !call?.noRetry;
+    let attempt = 0;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      try {
+        return await new Promise<TRes>((resolve, reject) => {
+          stub[method](
+            request,
+            this.metadataFor(call),
+            this.callMeta(call),
+            (err: grpc.ServiceError | null, resp: TRes) => {
+              if (err) reject(err);
+              else resolve(resp);
+            },
+          );
+        });
+      } catch (e) {
+        const err = e as grpc.ServiceError;
+        if (retryEnabled && attempt + 1 < this.retry.maxAttempts && this.isRetryable(err)) {
+          await this.delay(this.backoff(attempt), call?.signal);
+          attempt += 1;
+          continue;
+        }
+        throw new UdbError(`${fullName}/${method}`, err, decodeErrorDetail(err));
+      }
+    }
+  }
+
+  /** Server-streaming call. Returns the readable call; consume with
+   *  `for await … of` or `.on('data', …)`. Errors are tagged as UdbError. Not
+   *  auto-retried — open a fresh call to retry. */
+  serverStream(
+    fullName: string,
+    method: string,
+    request: any,
+    call?: CallOptions,
+  ): grpc.ClientReadableStream<any> {
+    const stub = this.stub(fullName);
+    const stream = stub[method](
+      request,
+      this.metadataFor(call),
+      this.callMeta(call),
+    ) as grpc.ClientReadableStream<any>;
+    stream.on("error", (err: grpc.ServiceError) => {
+      (err as any).udb = new UdbError(`${fullName}/${method}`, err, decodeErrorDetail(err));
+    });
+    if (call?.signal) call.signal.addEventListener("abort", () => stream.cancel(), { once: true });
+    return stream;
+  }
+
+  /** Client-streaming call: write requests to `stream`, await the single
+   *  response via `response`. Never auto-retried. */
+  clientStream<TRes = any>(
+    fullName: string,
+    method: string,
+    call?: CallOptions,
+  ): { stream: grpc.ClientWritableStream<any>; response: Promise<TRes> } {
+    const stub = this.stub(fullName);
+    let stream!: grpc.ClientWritableStream<any>;
+    const response = new Promise<TRes>((resolve, reject) => {
+      stream = stub[method](
+        this.metadataFor(call),
+        this.callMeta(call),
+        (err: grpc.ServiceError | null, resp: TRes) => {
+          if (err) reject(new UdbError(`${fullName}/${method}`, err, decodeErrorDetail(err)));
+          else resolve(resp);
+        },
+      ) as grpc.ClientWritableStream<any>;
+    });
+    if (call?.signal) call.signal.addEventListener("abort", () => stream.cancel(), { once: true });
+    return { stream, response };
+  }
+
+  /** Bidirectional-streaming call. Never auto-retried. */
+  bidiStream(
+    fullName: string,
+    method: string,
+    call?: CallOptions,
+  ): grpc.ClientDuplexStream<any, any> {
+    const stub = this.stub(fullName);
+    const stream = stub[method](
+      this.metadataFor(call),
+      this.callMeta(call),
+    ) as grpc.ClientDuplexStream<any, any>;
+    stream.on("error", (err: grpc.ServiceError) => {
+      (err as any).udb = new UdbError(`${fullName}/${method}`, err, decodeErrorDetail(err));
+    });
+    if (call?.signal) call.signal.addEventListener("abort", () => stream.cancel(), { once: true });
+    return stream;
+  }
+
+  /** Close the underlying channels. */
+  close(): void {
+    for (const stub of this.stubs.values()) {
+      if (typeof stub.close === "function") stub.close();
+    }
+    this.stubs.clear();
+  }
+}
+
+// ── Generated per-service typed surfaces ────────────────────────────────────────
+//
+// One interface + one factory per service, each carrying one method per RPC. The
+// per-service interfaces are assembled into UdbGeneratedClient below. (The
+// generator does not nest blocks, so service interfaces, RPC method signatures,
+// and the factory bodies are emitted as separate top-level blocks keyed by the
+// per-RPC service-name placeholder available inside every per-RPC block.)
+
+// @@UDB_SERVICE_BEGIN
+/** Typed surface for the `{{SERVICE_FULL}}` service ({{SERVICE_RPC_COUNT}} RPC(s)). */
+export interface {{SERVICE_NAME}}Api {
+  readonly serviceFull: "{{SERVICE_FULL}}";
+}
+// @@UDB_SERVICE_END
+
+// Method signatures, appended to each service interface via declaration merging.
+// @@UDB_RPC_BEGIN kind=unary
+/** {{SERVICE_FULL}} · {{RPC_KIND}} · `{{RPC_PATH}}` · ({{RPC_INPUT_PKG}}.{{RPC_INPUT}}) → ({{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}) */
+export interface {{SERVICE_NAME}}Api {
+  {{RPC_SNAKE}}(request: any, call?: CallOptions): Promise<any>;
+}
+// @@UDB_RPC_END
+// @@UDB_RPC_BEGIN kind=server_streaming
+/** {{SERVICE_FULL}} · {{RPC_KIND}} · `{{RPC_PATH}}` · ({{RPC_INPUT_PKG}}.{{RPC_INPUT}}) → stream ({{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}) */
+export interface {{SERVICE_NAME}}Api {
+  {{RPC_SNAKE}}(request: any, call?: CallOptions): grpc.ClientReadableStream<any>;
+}
+// @@UDB_RPC_END
+// @@UDB_RPC_BEGIN kind=client_streaming
+/** {{SERVICE_FULL}} · {{RPC_KIND}} · `{{RPC_PATH}}` · stream ({{RPC_INPUT_PKG}}.{{RPC_INPUT}}) → ({{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}) */
+export interface {{SERVICE_NAME}}Api {
+  {{RPC_SNAKE}}(call?: CallOptions): { stream: grpc.ClientWritableStream<any>; response: Promise<any> };
+}
+// @@UDB_RPC_END
+// @@UDB_RPC_BEGIN kind=bidi
+/** {{SERVICE_FULL}} · {{RPC_KIND}} · `{{RPC_PATH}}` · stream ({{RPC_INPUT_PKG}}.{{RPC_INPUT}}) → stream ({{RPC_OUTPUT_PKG}}.{{RPC_OUTPUT}}) */
+export interface {{SERVICE_NAME}}Api {
+  {{RPC_SNAKE}}(call?: CallOptions): grpc.ClientDuplexStream<any, any>;
+}
+// @@UDB_RPC_END
+
+/**
+ * Build the typed surface for one service over a shared {@link UdbCore}.
+ * One `build<Service>Api` is emitted per service; each starts from the
+ * `serviceFull` tag and then has its RPC methods attached.
+ */
+// @@UDB_SERVICE_BEGIN
+export function build{{SERVICE_NAME}}Api(core: UdbCore): {{SERVICE_NAME}}Api {
+  const api: any = { serviceFull: "{{SERVICE_FULL}}" };
+  return api as {{SERVICE_NAME}}Api;
+}
+// @@UDB_SERVICE_END
+
+// Attach each RPC method to its service's built api object. These run after the
+// factories above (module-evaluation order) and mutate the prototype-free object
+// returned by build<Service>Api via a shared registry keyed by service full-name.
+const SERVICE_METHOD_INSTALLERS: Array<(core: UdbCore, api: any) => void> = [];
+
+// @@UDB_RPC_BEGIN kind=unary
+SERVICE_METHOD_INSTALLERS.push((core, api) => {
+  if (api.serviceFull !== "{{SERVICE_FULL}}") return;
+  api.{{RPC_SNAKE}} = (request: any, call?: CallOptions) =>
+    core.unary("{{SERVICE_FULL}}", "{{RPC_NAME}}", request, call);
+});
+// @@UDB_RPC_END
+// @@UDB_RPC_BEGIN kind=server_streaming
+SERVICE_METHOD_INSTALLERS.push((core, api) => {
+  if (api.serviceFull !== "{{SERVICE_FULL}}") return;
+  api.{{RPC_SNAKE}} = (request: any, call?: CallOptions) =>
+    core.serverStream("{{SERVICE_FULL}}", "{{RPC_NAME}}", request, call);
+});
+// @@UDB_RPC_END
+// @@UDB_RPC_BEGIN kind=client_streaming
+SERVICE_METHOD_INSTALLERS.push((core, api) => {
+  if (api.serviceFull !== "{{SERVICE_FULL}}") return;
+  api.{{RPC_SNAKE}} = (call?: CallOptions) =>
+    core.clientStream("{{SERVICE_FULL}}", "{{RPC_NAME}}", call);
+});
+// @@UDB_RPC_END
+// @@UDB_RPC_BEGIN kind=bidi
+SERVICE_METHOD_INSTALLERS.push((core, api) => {
+  if (api.serviceFull !== "{{SERVICE_FULL}}") return;
+  api.{{RPC_SNAKE}} = (call?: CallOptions) =>
+    core.bidiStream("{{SERVICE_FULL}}", "{{RPC_NAME}}", call);
+});
+// @@UDB_RPC_END
+
+function installMethods(core: UdbCore, api: any): void {
+  for (const install of SERVICE_METHOD_INSTALLERS) install(core, api);
+}
+
+/**
+ * Aggregate client exposing one typed sub-client per UDB service. All sub-clients
+ * share the same {@link UdbClientOptions} (target, credentials, metadata, retry).
+ *
+ * ```ts
+ * const udb = new UdbGeneratedClient({
+ *   target: "localhost:50051",
+ *   meta: { tenantId: "acme", purpose: "web", correlationId: "req-1" },
+ *   bearerToken: process.env.UDB_TOKEN,
+ * });
+ * const rs = await udb.DataBroker.select({ message_type: "acme.v1.Invoice", limit: 50 });
+ * ```
+ */
+export class UdbGeneratedClient {
+  readonly core: UdbCore;
+  // @@UDB_SERVICE_BEGIN
+  readonly {{SERVICE_NAME}}: {{SERVICE_NAME}}Api;
+  // @@UDB_SERVICE_END
+
+  constructor(opts: UdbClientOptions) {
+    this.core = new UdbCore(opts);
+    // @@UDB_SERVICE_BEGIN
+    {
+      const api = build{{SERVICE_NAME}}Api(this.core);
+      installMethods(this.core, api);
+      this.{{SERVICE_NAME}} = api;
+    }
+    // @@UDB_SERVICE_END
+  }
+
+  close(): void {
+    this.core.close();
+  }
+}

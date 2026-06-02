@@ -1,0 +1,494 @@
+"""Generated UDB SDK robustness layer — typed, retrying RPC wrappers.
+
+{{GENERATED_NOTE}}
+
+UDB version:      {{UDB_VERSION}}
+Protocol version: {{PROTOCOL_VERSION}}
+Services:         {{SERVICE_COUNT}}
+RPCs:             {{RPC_COUNT}}
+
+This module is a *forwarding* layer over the buf-generated gRPC service stubs
+under ``udb.*`` (the ``*_pb2_grpc`` modules). For every RPC across every UDB
+service it emits a wrapper that forwards to the underlying stub method of the
+same name while adding:
+
+  * a configurable per-call deadline / timeout,
+  * retry with exponential backoff + jitter on transient gRPC codes
+    (UNAVAILABLE, DEADLINE_EXCEEDED, RESOURCE_EXHAUSTED) — never for
+    client-streaming RPCs, which are not safely replayable,
+  * TLS / credential and channel wiring,
+  * request metadata (authorization / api-key / x-request-id and the full
+    :class:`udb_client.metadata.Metadata` header set),
+  * typed error mapping that unpacks the ``udb-error-detail-bin`` trailer into
+    :class:`UdbDetailedRpcError` when present, else a clean
+    :class:`udb_client.exceptions.UdbRpcError`.
+
+It COMPOSES WITH — and never overwrites — the hand-written
+:mod:`udb_client.client`, :mod:`udb_client.auth`, :mod:`udb_client.metadata`,
+:mod:`udb_client.negotiation`, and :mod:`udb_client.exceptions` modules; it
+imports them rather than re-implementing them.
+"""
+
+from __future__ import annotations
+
+import importlib
+import pkgutil
+import random
+import time
+import uuid
+from dataclasses import dataclass, field
+from typing import Any, Callable, Iterable, Iterator, Sequence
+
+import grpc
+
+from .exceptions import UdbConfigurationError, UdbError, UdbRpcError
+from .metadata import Metadata
+
+__all__ = [
+    "RetryPolicy",
+    "UdbDetailedRpcError",
+    "GeneratedClient",
+    # @@UDB_SERVICE_BEGIN
+    "{{SERVICE_NAME}}Client",
+    # @@UDB_SERVICE_END
+]
+
+# Default set of gRPC status codes that are safe to retry for idempotent RPCs.
+_RETRYABLE_CODES: frozenset[grpc.StatusCode] = frozenset(
+    {
+        grpc.StatusCode.UNAVAILABLE,
+        grpc.StatusCode.DEADLINE_EXCEEDED,
+        grpc.StatusCode.RESOURCE_EXHAUSTED,
+    }
+)
+
+# Binary trailer the broker uses to carry a structured ErrorDetail (Rule: the
+# server attaches `udb-error-detail-bin` with the serialized ErrorDetail proto).
+_ERROR_DETAIL_TRAILER = "udb-error-detail-bin"
+
+
+@dataclass(frozen=True)
+class RetryPolicy:
+    """Exponential-backoff-with-jitter retry policy for transient gRPC errors."""
+
+    max_attempts: int = 4
+    initial_backoff: float = 0.1
+    max_backoff: float = 5.0
+    multiplier: float = 2.0
+    jitter: float = 0.2
+    retryable_codes: frozenset[grpc.StatusCode] = field(default_factory=lambda: _RETRYABLE_CODES)
+
+    def should_retry(self, code: grpc.StatusCode, attempt: int) -> bool:
+        return attempt < self.max_attempts and code in self.retryable_codes
+
+    def backoff_for(self, attempt: int) -> float:
+        base = min(self.initial_backoff * (self.multiplier ** (attempt - 1)), self.max_backoff)
+        return base + random.uniform(0.0, base * self.jitter)
+
+
+class UdbDetailedRpcError(UdbRpcError):
+    """An :class:`UdbRpcError` enriched with the broker's ``ErrorDetail`` trailer.
+
+    ``detail`` is the raw bytes of the ``udb-error-detail-bin`` trailer when the
+    server provided one (callers may parse it with the appropriate generated
+    ``ErrorDetail`` message); otherwise ``None``.
+    """
+
+    def __init__(self, rpc_name: str, error: grpc.RpcError, detail: bytes | None):
+        super().__init__(rpc_name, error)
+        self.detail = detail
+
+
+def _extract_error_detail(error: grpc.RpcError) -> bytes | None:
+    trailers = None
+    getter = getattr(error, "trailing_metadata", None)
+    if callable(getter):
+        try:
+            trailers = getter()
+        except Exception:  # pragma: no cover - defensive
+            trailers = None
+    if not trailers:
+        return None
+    for key, value in trailers:
+        if key == _ERROR_DETAIL_TRAILER:
+            return value if isinstance(value, (bytes, bytearray)) else None
+    return None
+
+
+def _map_error(rpc_name: str, error: grpc.RpcError) -> UdbRpcError:
+    detail = _extract_error_detail(error)
+    if detail is not None:
+        return UdbDetailedRpcError(rpc_name, error, detail)
+    return UdbRpcError(rpc_name, error)
+
+
+def _discover_stub_class(service_pkg: str, service_name: str) -> type:
+    """Locate the buf-generated ``<service_name>Stub`` inside ``service_pkg``.
+
+    The gRPC stub module filename is the *proto file* basename (e.g.
+    ``authn_service_pb2_grpc``), which is not derivable from the service name —
+    so we import the package and scan its ``*_pb2_grpc`` submodules for the
+    class. Proto remains the source of truth; nothing is hand-listed.
+    """
+
+    pkg = importlib.import_module(service_pkg)
+    stub_name = f"{service_name}Stub"
+    # Fast path: already-imported attribute on the package.
+    found = getattr(pkg, stub_name, None)
+    if isinstance(found, type):
+        return found
+    search_paths = getattr(pkg, "__path__", None)
+    if search_paths is not None:
+        for mod in pkgutil.iter_modules(search_paths):
+            if not mod.name.endswith("_pb2_grpc"):
+                continue
+            module = importlib.import_module(f"{service_pkg}.{mod.name}")
+            candidate = getattr(module, stub_name, None)
+            if isinstance(candidate, type):
+                return candidate
+    raise UdbConfigurationError(
+        f"could not locate gRPC stub '{stub_name}' under package '{service_pkg}'. "
+        f"Run `buf generate` so the *_pb2_grpc modules are present."
+    )
+
+
+class _ServiceClientBase:
+    """Shared transport/robustness machinery for every generated service client.
+
+    Builds (or adopts) a gRPC channel, instantiates the discovered buf stub, and
+    provides the retrying ``_invoke_*`` helpers the per-RPC wrappers forward to.
+    """
+
+    _SERVICE_PKG: str = ""
+    _SERVICE_NAME: str = ""
+    _SERVICE_FULL: str = ""
+
+    def __init__(
+        self,
+        target: str = "",
+        metadata: Metadata | None = None,
+        *,
+        secure: bool = False,
+        root_certificates: bytes | None = None,
+        call_credentials: grpc.CallCredentials | None = None,
+        channel_credentials: grpc.ChannelCredentials | None = None,
+        channel_options: Sequence[tuple[str, Any]] | None = None,
+        timeout: float | None = 30.0,
+        retry: RetryPolicy | None = None,
+        api_key: str = "",
+        bearer_token: str = "",
+        channel: grpc.Channel | None = None,
+    ) -> None:
+        if not target and channel is None:
+            raise UdbConfigurationError("UDB target is required, e.g. '127.0.0.1:50051'")
+        self._metadata = metadata
+        self._timeout = timeout
+        self._retry = retry or RetryPolicy()
+        self._api_key = api_key
+        self._bearer_token = bearer_token
+        self._owns_channel = channel is None
+        if channel is None:
+            options = list(channel_options or ())
+            if channel_credentials is not None:
+                channel = grpc.secure_channel(target, channel_credentials, options=options)
+            elif secure:
+                creds = grpc.ssl_channel_credentials(root_certificates)
+                if call_credentials is not None:
+                    creds = grpc.composite_channel_credentials(creds, call_credentials)
+                channel = grpc.secure_channel(target, creds, options=options)
+            else:
+                channel = grpc.insecure_channel(target, options=options)
+        self._channel = channel
+        stub_cls = _discover_stub_class(self._SERVICE_PKG, self._SERVICE_NAME)
+        self._stub = stub_cls(channel)
+
+    # ── lifecycle ───────────────────────────────────────────────────────────
+    @property
+    def stub(self) -> Any:
+        """The raw buf-generated stub, for RPCs or knobs not surfaced here."""
+
+        return self._stub
+
+    def bind_metadata(self, metadata: Metadata) -> None:
+        self._metadata = metadata
+
+    def close(self) -> None:
+        if self._owns_channel:
+            self._channel.close()
+
+    def __enter__(self) -> "_ServiceClientBase":
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
+
+    # ── metadata assembly ────────────────────────────────────────────────────
+    def _effective_metadata(self, metadata: Metadata | None) -> Metadata | None:
+        return metadata or self._metadata
+
+    def _call_metadata(
+        self, metadata: Metadata | None, request_id: str | None
+    ) -> tuple[tuple[str, str], ...]:
+        headers: list[tuple[str, str]] = []
+        effective = self._effective_metadata(metadata)
+        if effective is not None:
+            headers.extend(effective.to_grpc_metadata())
+        if self._bearer_token:
+            headers.append(("authorization", f"Bearer {self._bearer_token}"))
+        if self._api_key:
+            headers.append(("x-udb-api-key", self._api_key))
+        headers.append(("x-request-id", request_id or uuid.uuid4().hex))
+        return tuple(headers)
+
+    # ── retrying invocation primitives ───────────────────────────────────────
+    def _invoke_unary(
+        self,
+        method: Callable[..., Any],
+        rpc_name: str,
+        request: Any,
+        *,
+        metadata: Metadata | None,
+        timeout: float | None,
+        retryable: bool,
+    ) -> Any:
+        attempt = 0
+        while True:
+            attempt += 1
+            request_id = uuid.uuid4().hex
+            try:
+                return method(
+                    request,
+                    metadata=self._call_metadata(metadata, request_id),
+                    timeout=self._timeout if timeout is None else timeout,
+                )
+            except grpc.RpcError as error:
+                code = error.code()
+                if retryable and self._retry.should_retry(code, attempt):
+                    time.sleep(self._retry.backoff_for(attempt))
+                    continue
+                raise _map_error(rpc_name, error) from error
+
+    def _invoke_server_streaming(
+        self,
+        method: Callable[..., Any],
+        rpc_name: str,
+        request: Any,
+        *,
+        metadata: Metadata | None,
+        timeout: float | None,
+        retryable: bool,
+    ) -> Iterator[Any]:
+        # Retry only applies before the first item is yielded; once streaming has
+        # begun a partial replay is not safe, so we surface errors as they occur.
+        attempt = 0
+        while True:
+            attempt += 1
+            request_id = uuid.uuid4().hex
+            stream = method(
+                request,
+                metadata=self._call_metadata(metadata, request_id),
+                timeout=self._timeout if timeout is None else timeout,
+            )
+            iterator = iter(stream)
+            try:
+                first = next(iterator)
+            except StopIteration:
+                return
+            except grpc.RpcError as error:
+                code = error.code()
+                if retryable and self._retry.should_retry(code, attempt):
+                    time.sleep(self._retry.backoff_for(attempt))
+                    continue
+                raise _map_error(rpc_name, error) from error
+
+            def _drain() -> Iterator[Any]:
+                yield first
+                try:
+                    for item in iterator:
+                        yield item
+                except grpc.RpcError as error:
+                    raise _map_error(rpc_name, error) from error
+
+            return _drain()
+
+    def _invoke_client_streaming(
+        self,
+        method: Callable[..., Any],
+        rpc_name: str,
+        request_iterator: Iterable[Any],
+        *,
+        metadata: Metadata | None,
+        timeout: float | None,
+    ) -> Any:
+        # Client-streaming / bidi requests are never auto-retried: the request
+        # iterator is generally not replayable.
+        request_id = uuid.uuid4().hex
+        try:
+            return method(
+                request_iterator,
+                metadata=self._call_metadata(metadata, request_id),
+                timeout=self._timeout if timeout is None else timeout,
+            )
+        except grpc.RpcError as error:
+            raise _map_error(rpc_name, error) from error
+
+
+# @@UDB_SERVICE_BEGIN
+class {{SERVICE_NAME}}Client(_ServiceClientBase):
+    """Robustness wrapper for the ``{{SERVICE_FULL}}`` service ({{SERVICE_RPC_COUNT}} RPC(s)).
+
+    Forwards to the buf-generated ``{{SERVICE_NAME}}Stub`` under
+    ``{{SERVICE_PKG}}`` with retry, deadlines, metadata, and typed errors.
+    """
+
+    _SERVICE_PKG = "{{SERVICE_PKG}}"
+    _SERVICE_NAME = "{{SERVICE_NAME}}"
+    _SERVICE_FULL = "{{SERVICE_FULL}}"
+
+    # ── unary RPCs ────────────────────────────────────────────────────────────
+    # @@UDB_RPC_BEGIN service={{SERVICE_NAME}} kind=unary
+    def {{RPC_SNAKE}}(
+        self,
+        request: Any,
+        *,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+        retry: bool = True,
+    ) -> Any:
+        """``{{RPC_NAME}}`` — unary call to ``{{RPC_PATH}}``.
+
+        Forwards ``{{RPC_INPUT}}`` ({{RPC_INPUT_PKG}}) and returns
+        ``{{RPC_OUTPUT}}`` ({{RPC_OUTPUT_PKG}}).
+        """
+
+        return self._invoke_unary(
+            self._stub.{{RPC_NAME}},
+            "{{RPC_NAME}}",
+            request,
+            metadata=metadata,
+            timeout=timeout,
+            retryable=retry,
+        )
+
+    # @@UDB_RPC_END
+
+    # ── server-streaming RPCs ─────────────────────────────────────────────────
+    # @@UDB_RPC_BEGIN service={{SERVICE_NAME}} kind=server_streaming
+    def {{RPC_SNAKE}}(
+        self,
+        request: Any,
+        *,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+        retry: bool = True,
+    ) -> Iterator[Any]:
+        """``{{RPC_NAME}}`` — server-streaming call to ``{{RPC_PATH}}``.
+
+        Forwards ``{{RPC_INPUT}}`` ({{RPC_INPUT_PKG}}) and yields
+        ``{{RPC_OUTPUT}}`` ({{RPC_OUTPUT_PKG}}) messages. Retry applies only
+        before the first message is received.
+        """
+
+        return self._invoke_server_streaming(
+            self._stub.{{RPC_NAME}},
+            "{{RPC_NAME}}",
+            request,
+            metadata=metadata,
+            timeout=timeout,
+            retryable=retry,
+        )
+
+    # @@UDB_RPC_END
+
+    # ── client-streaming RPCs ─────────────────────────────────────────────────
+    # @@UDB_RPC_BEGIN service={{SERVICE_NAME}} kind=client_streaming
+    def {{RPC_SNAKE}}(
+        self,
+        request_iterator: Iterable[Any],
+        *,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        """``{{RPC_NAME}}`` — client-streaming call to ``{{RPC_PATH}}``.
+
+        Consumes an iterator of ``{{RPC_INPUT}}`` ({{RPC_INPUT_PKG}}) and returns
+        ``{{RPC_OUTPUT}}`` ({{RPC_OUTPUT_PKG}}). Not auto-retried (request stream
+        is not replayable).
+        """
+
+        return self._invoke_client_streaming(
+            self._stub.{{RPC_NAME}},
+            "{{RPC_NAME}}",
+            request_iterator,
+            metadata=metadata,
+            timeout=timeout,
+        )
+
+    # @@UDB_RPC_END
+
+    # ── bidirectional-streaming RPCs ──────────────────────────────────────────
+    # @@UDB_RPC_BEGIN service={{SERVICE_NAME}} kind=bidi
+    def {{RPC_SNAKE}}(
+        self,
+        request_iterator: Iterable[Any],
+        *,
+        metadata: Metadata | None = None,
+        timeout: float | None = None,
+    ) -> Iterator[Any]:
+        """``{{RPC_NAME}}`` — bidirectional-streaming call to ``{{RPC_PATH}}``.
+
+        Consumes an iterator of ``{{RPC_INPUT}}`` ({{RPC_INPUT_PKG}}) and yields
+        ``{{RPC_OUTPUT}}`` ({{RPC_OUTPUT_PKG}}). Not auto-retried.
+        """
+
+        stream = self._invoke_client_streaming(
+            self._stub.{{RPC_NAME}},
+            "{{RPC_NAME}}",
+            request_iterator,
+            metadata=metadata,
+            timeout=timeout,
+        )
+        try:
+            for item in stream:
+                yield item
+        except grpc.RpcError as error:
+            raise _map_error("{{RPC_NAME}}", error) from error
+
+    # @@UDB_RPC_END
+
+# @@UDB_SERVICE_END
+
+
+class GeneratedClient:
+    """Aggregate facade exposing one robustness client per UDB service.
+
+    All sub-clients share the same channel/metadata/retry configuration, so a
+    single :class:`GeneratedClient` covers every RPC across every service.
+    """
+
+    def __init__(self, target: str = "", metadata: Metadata | None = None, **kwargs: Any) -> None:
+        self._kwargs = kwargs
+        self._target = target
+        self._metadata = metadata
+        # @@UDB_SERVICE_BEGIN
+        self.{{SERVICE_NAME}}: {{SERVICE_NAME}}Client = {{SERVICE_NAME}}Client(
+            target, metadata, **kwargs
+        )
+        # @@UDB_SERVICE_END
+
+    def bind_metadata(self, metadata: Metadata) -> None:
+        self._metadata = metadata
+        # @@UDB_SERVICE_BEGIN
+        self.{{SERVICE_NAME}}.bind_metadata(metadata)
+        # @@UDB_SERVICE_END
+
+    def close(self) -> None:
+        # @@UDB_SERVICE_BEGIN
+        self.{{SERVICE_NAME}}.close()
+        # @@UDB_SERVICE_END
+
+    def __enter__(self) -> "GeneratedClient":
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()

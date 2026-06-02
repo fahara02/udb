@@ -115,49 +115,10 @@ impl MigrationAuditStore for PostgresCanonicalStore {
     async fn ensure_migration_audit_tables(&self) -> SystemStoreResult<()> {
         let runs_rel = self.runs_rel();
         let ledger_rel = self.ledger_rel();
-        let stmts = [
-            format!(
-                r#"
-                CREATE TABLE IF NOT EXISTS {runs_rel} (
-                    run_id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                    project_id        TEXT NOT NULL DEFAULT '',
-                    catalog_version   TEXT NOT NULL DEFAULT '',
-                    state             TEXT NOT NULL DEFAULT 'DRY_RUN'
-                                      CHECK (state IN ('DRY_RUN','PREFLIGHT','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')),
-                    operations_hash   TEXT NOT NULL DEFAULT '',
-                    approval_token    TEXT NOT NULL DEFAULT '',
-                    started_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    finished_at       TIMESTAMPTZ,
-                    error             TEXT NOT NULL DEFAULT ''
-                )
-                "#
-            ),
-            format!(
-                r#"CREATE INDEX IF NOT EXISTS "idx_udb_migration_runs_project_state"
-                     ON {runs_rel} (project_id, state, started_at DESC)"#
-            ),
-            format!(
-                r#"
-                CREATE TABLE IF NOT EXISTS {ledger_rel} (
-                    id                BIGSERIAL PRIMARY KEY,
-                    run_id            UUID NOT NULL REFERENCES {runs_rel}(run_id) ON DELETE CASCADE,
-                    operation_index   INTEGER NOT NULL,
-                    backend           TEXT NOT NULL DEFAULT 'postgres',
-                    resource_uri      TEXT NOT NULL DEFAULT '',
-                    operation_kind    TEXT NOT NULL DEFAULT '',
-                    status            TEXT NOT NULL DEFAULT 'PENDING'
-                                      CHECK (status IN ('PENDING','APPLIED','VERIFIED','SKIPPED','FAILED','ROLLED_BACK')),
-                    rollback_json     JSONB NOT NULL DEFAULT '{{}}'::JSONB,
-                    error             TEXT NOT NULL DEFAULT '',
-                    applied_at        TIMESTAMPTZ
-                )
-                "#
-            ),
-            format!(
-                r#"CREATE INDEX IF NOT EXISTS "idx_udb_migration_op_ledger_run_idx"
-                     ON {ledger_rel} (run_id, operation_index)"#
-            ),
-        ];
+        // B.7: DDL strings come from the shared `sql_schema` renderer (single
+        // source of truth across SQL backends); the execute/error-handling
+        // loop below is unchanged.
+        let stmts = super::sql_schema::postgres_migration_audit_ddl(runs_rel, ledger_rel);
         for sql in stmts.iter() {
             sqlx::query(sql)
                 .execute(self.pg_pool())

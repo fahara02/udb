@@ -98,6 +98,11 @@ itself, and fits the feature-gated build model in `Cargo.toml`.
 | WebAuthn/passkeys | none | Add `webauthn-rs` behind `webauthn` feature | Server-side WebAuthn ceremonies are security-sensitive and should use a maintained WebAuthn library |
 | SCIM | none | Implement the SCIM model in proto/service code first | Do not assume a mature Rust SCIM server crate. Build typed resources, validation, and conformance tests around UDB native services |
 | Observability | `prometheus`, `opentelemetry`, `tracing`, `tower` | Keep | Capability health, driver probes, and latency histograms should reuse existing metrics/tracing stack |
+| Protobuf bytes optimization | `prost`, `tonic-build`, `bytes` already present | Use `prost_build::Config::bytes` for selected protocol `bytes` fields | Prost can generate `bytes::Bytes` instead of `Vec<u8>` for protobuf bytes fields; use it for object chunks and binary cell payloads after compatibility tests |
+| Record batch / columnar transport | none | Add UDB-native `RecordBatchV2` first; evaluate Arrow IPC/Flight later | Arrow has strong streaming/columnar standards, but UDB needs a backward-compatible broker protocol first |
+| SIMD base64 | `base64` scalar crate | Evaluate `base64-simd` behind `simd-codecs` | It provides runtime CPU feature detection by default and targets a real current hot path: binary payload/base64 conversion |
+| SIMD JSON | `serde_json` | Evaluate `simd-json` only for large generic-dispatch/document payloads | It uses unsafe SIMD and falls back when x86 AVX2/SSE4.2 are unavailable; do not put it on all JSON paths without profiling |
+| CRC/checksum acceleration | `sha2` and ad hoc hashes | Evaluate `crc32fast` for non-cryptographic chunk checksums only | CRC is useful for transport integrity; it must not replace admin audit hash chains or security hashes |
 
 ### Dependency Admission Checklist
 
@@ -189,6 +194,339 @@ Add a proto tooling phase only after the V2 capability schema stabilizes:
   reproducibility;
 - add descriptor-set snapshot tests so native service additions cannot silently
   disappear from reflection.
+
+## Protocol V2 Plan
+
+The current protocol is flexible, but the hot path still spends work converting
+between protobuf `Struct`, `serde_json::Value`, base64 strings, and buffered
+executor strings. This section defines a practical V2 protocol that keeps V1
+working while giving high-volume clients a cheaper path.
+
+Current code facts:
+
+- `proto/udb/services/v1/data_broker.proto` exposes unary and streaming RPCs,
+  including `Select`, `BatchSelect`, `PutObject`, `GetObject`, typed data-plane
+  RPCs, admin RPCs, and native-service entry points.
+- `src/runtime/executor_utils.rs` converts `prost_types::Struct` to and from
+  `serde_json::Value`.
+- `src/runtime/executors/mod.rs` has `query_stream`, but the default path wraps
+  a fully buffered `String`.
+- `src/runtime/service/handlers_data.rs` still base64-encodes object bytes for
+  generic `get_object` dispatch.
+- `src/runtime/core/setup_data.rs` has real object streaming for typed S3
+  `GetObject`, but typed `PutObject` still collects chunks before upload.
+
+### V2 Compatibility Rules
+
+1. Keep every existing V1 RPC and message field.
+2. Add new messages and RPCs with `V2` suffixes or additive optional fields.
+3. Never change protobuf field numbers or wire types.
+4. Reserve removed field numbers and names.
+5. Add client negotiation before using any V2-only encoding.
+6. SDKs must default to V1 until `GetProtocolSupport` or `GetCapabilities`
+   confirms V2 support.
+7. V2 must be useful without backend changes; backend-specific acceleration is
+   a later optimization.
+
+### Protocol Negotiation
+
+Add a compact protocol support response under `proto/udb/entity/v1/admin.proto`
+or a new `proto/udb/entity/v1/protocol.proto`:
+
+```proto
+message ProtocolSupport {
+  string min_protocol_version = 1;
+  string max_protocol_version = 2;
+  repeated string encodings = 3; // struct_json, record_batch_v2, arrow_ipc
+  repeated string compression = 4; // identity, gzip, zstd when supported
+  uint32 max_unary_request_bytes = 5;
+  uint32 max_unary_response_bytes = 6;
+  uint32 preferred_stream_chunk_bytes = 7;
+  bool supports_query_stream = 8;
+  bool supports_bytes_zero_copy = 9;
+  map<string, BackendProtocolSupport> backend = 10;
+}
+```
+
+Implementation path:
+
+1. Extend `GetCapabilities` first so no new endpoint is required.
+2. Add `GetProtocolSupport` only if the capabilities response becomes too large
+   or clients need cheap startup negotiation.
+3. Add SDK `CapabilityCache`/`ProtocolSupportCache` in `crates/udb-portable`
+   so browser/edge clients can make the same decisions as server SDKs.
+
+### RecordBatchV2
+
+Add a typed row-batch response beside `RecordSet`. Do not remove `RecordSet`.
+
+Recommended shape:
+
+```proto
+message RecordBatchV2 {
+  string message_type = 1;
+  string schema_version = 2;
+  repeated ColumnBatch columns = 3;
+  uint32 row_count = 4;
+  string next_page_token = 5;
+  udb.entity.v1.RequestContext request_context = 6;
+}
+
+message ColumnBatch {
+  string field_name = 1;
+  uint32 field_id = 2;
+  ColumnType type = 3;
+  bytes null_bitmap = 4;
+  oneof values {
+    Int64Column int64_values = 10;
+    DoubleColumn double_values = 11;
+    BoolColumn bool_values = 12;
+    StringColumn string_values = 13;
+    BytesColumn bytes_values = 14;
+    JsonColumn json_values = 15;
+  }
+}
+```
+
+Why this is grounded:
+
+- UDB already knows message schema and field metadata from the proto manifest.
+- SQL row conversion already probes typed values in `executor_utils.rs`.
+- Columnar batches reduce per-cell `Struct` allocation for large scans.
+- V1 `RecordSet` remains the fallback for small requests and dynamic clients.
+
+Acceptance:
+
+- Add `SelectV2` returning `stream RecordBatchV2` or add an encoding flag to
+  `Select` only if SDK compatibility stays clean.
+- Add `BatchSelectV2` only after `SelectV2` is stable.
+- Unit-test conversion from SQL rows to both `RecordSet` and `RecordBatchV2`.
+- Benchmark 1k, 10k, and 100k row reads against current `RecordSet`.
+- Expose `record_batch_v2` in protocol negotiation only when tests pass.
+
+### Bytes And Object Streaming
+
+Use protobuf `bytes` fields and `bytes::Bytes` where the Rust server can avoid
+copying. Prost supports configuring `bytes` fields to generate `Bytes` instead
+of `Vec<u8>` via `prost_build::Config::bytes`.
+
+Implementation path:
+
+1. Identify high-volume `bytes` fields:
+   - `Chunk.data`;
+   - binary SQL cells;
+   - object metadata checksums;
+   - optional encoded `RecordBatchV2` payloads.
+2. Add a build.rs/prost configuration plan that generates `Bytes` for selected
+   fields without breaking SDK generation.
+3. Update typed `PutObject` to stream provider uploads instead of collecting all
+   chunks first.
+4. Keep inline object caps for generic dispatch; generic JSON dispatch is not a
+   bulk object transport.
+5. Standardize object streaming across S3/MinIO/GCS/Azure Blob through
+   `ObjectExecutor::get_object_stream` and a future `put_object_stream`.
+
+Acceptance:
+
+- Large object upload/download never allocates the full object in the broker.
+- Generic dispatch refuses large inline object bodies and points users to typed
+  streaming object RPCs.
+- SDKs expose streaming APIs without buffering by default.
+
+### Compression
+
+gRPC supports compression negotiation, but compression should be explicit in
+UDB capability output because it changes CPU and latency behavior.
+
+Plan:
+
+1. Expose accepted compression algorithms in `ProtocolSupport`.
+2. Add server config for compression on large responses only.
+3. Do not compress small messages by default.
+4. Add per-RPC metrics:
+   - uncompressed bytes;
+   - compressed bytes;
+   - compression CPU time;
+   - compression algorithm.
+
+Acceptance:
+
+- Compression can be enabled by SDK or server policy.
+- Capability output shows whether a deployment accepts compressed requests.
+- Benchmarks show compression helps for large result sets before defaulting it
+  on.
+
+### Error Details And Retry Semantics
+
+Add typed error details so SDKs stop parsing strings:
+
+- `error_code`;
+- `backend`;
+- `operation`;
+- `capability_required`;
+- `retryable`;
+- `retry_after_ms`;
+- `policy_decision_id`;
+- `schema_version`;
+- `request_id`;
+- `correlation_id`.
+
+Use these for capability refusal, stale schema, quota, backpressure, policy
+denial, backend unavailable, saga retry, and DLQ replay errors.
+
+### Protocol V2 Milestones
+
+1. Add protocol support fields to capabilities.
+2. Add typed error details.
+3. Add `Bytes` generation for selected fields and prove SDK compatibility.
+4. Add `SelectV2`/`RecordBatchV2`.
+5. Add streaming query executor path that does not buffer a full JSON string.
+6. Add typed object upload streaming for S3/MinIO first, then GCS/Azure.
+7. Add SDK negotiation and fallback.
+8. Add performance dashboards and documentation generated from capabilities.
+
+## Native Acceleration And Assembly Plan
+
+This plan treats handwritten assembly as the last step, not the first. The
+grounded order is:
+
+1. Remove protocol-level allocations and buffering.
+2. Profile hot paths on Windows and Unix.
+3. Use maintained SIMD crates or `core::arch` intrinsics where they fit.
+4. Add handwritten `asm!` only for a small proven kernel that cannot be expressed
+   cleanly with intrinsics and has tests on every supported target.
+
+### Platform Support Goal
+
+UDB acceleration must support both Windows and Unix. That means every optimized
+kernel needs a scalar fallback plus OS/architecture gates.
+
+| Target family | UDB support policy | Implementation path |
+|---|---|---|
+| Windows x86_64 MSVC | Required | scalar fallback plus optional SSE4.2/AVX2/AVX-512 through `core::arch::x86_64` and `is_x86_feature_detected!` |
+| Linux x86_64 GNU/MUSL | Required | same x86 dispatch as Windows; CI should cover GNU and one MUSL build if releases target MUSL |
+| macOS x86_64 | Supported | same x86 dispatch; no Windows-specific assumptions |
+| Windows ARM64 / Arm64EC | Supported where Rust target is supported | scalar fallback plus optional AArch64/NEON via `core::arch::aarch64` and `is_aarch64_feature_detected!` where available |
+| Linux AArch64 | Required for ARM servers | scalar fallback plus NEON/AES/SHA feature-gated paths where available |
+| macOS AArch64 | Required for Apple Silicon dev machines | scalar fallback plus AArch64 intrinsics; avoid assuming Linux feature detection behavior |
+| Other architectures | Build must not break | scalar fallback only unless a maintainer adds a tested target |
+
+Rust facts:
+
+- Inline assembly is stable for x86/x86-64, ARM, AArch64/Arm64EC, RISC-V,
+  LoongArch, and s390x according to the Rust Reference.
+- `core::arch`/`std::arch` expose architecture intrinsics.
+- x86 runtime detection is available through `is_x86_feature_detected!`.
+- AArch64 runtime detection is available through `is_aarch64_feature_detected!`,
+  but feature availability and OS reporting must be tested per target.
+- Portable SIMD in the standard library is not a stable UDB baseline for the
+  current Rust toolchain, so do not make `std::simd` a required dependency path.
+
+### Candidate Hot Kernels
+
+Only optimize kernels that appear in profiles. Current code and reviews point
+to these candidates:
+
+| Kernel | Current source | First fix | SIMD/assembly option |
+|---|---|---|---|
+| Base64 decode for generic object bodies | `executor_utils::object_bytes_from_json` | Avoid base64 for bulk object transport; use streaming bytes | Evaluate `base64-simd` behind `simd-codecs` |
+| Base64 encode for generic object get / binary SQL cells | `handlers_data.rs`, `executor_utils::base64_cell` | Keep generic payloads small; use typed bytes fields | Evaluate `base64-simd`; do not hand-write first |
+| JSON parse for generic dispatch | `executor_utils::parse_sql_dispatch`, REST/object parsers | Reduce generic JSON dispatch on typed hot paths | Evaluate `simd-json` only for large payloads |
+| Audit page hash verification | canonical admin-audit stores | Batch verification and avoid allocation first | Intrinsics only if hashing library lacks CPU acceleration |
+| Non-cryptographic chunk checksum | future object streaming metadata | Add CRC only for transport integrity | Evaluate `crc32fast` |
+| Vector rerank / distance math | future local rerank path | Prefer backend-native vector search first | Add AVX2/NEON intrinsics only if UDB does local rerank |
+| UTF-8 validation | dynamic JSON/document inputs | Let parser validate first | Evaluate `simdutf8` only if validation is isolated and hot |
+
+Do not optimize:
+
+- database network I/O;
+- policy or capability paths that still rebuild snapshots;
+- row conversion that can be eliminated by `RecordBatchV2`;
+- object paths that should be streaming instead of inline.
+
+### Module Layout
+
+Add acceleration as a small isolated module:
+
+```text
+src/runtime/accel/
+  mod.rs
+  base64.rs
+  checksum.rs
+  json.rs
+  vector.rs
+  detect.rs
+  scalar.rs
+  x86_64.rs
+  aarch64.rs
+```
+
+Rules:
+
+1. Public APIs are safe Rust wrappers.
+2. Unsafe code lives only in arch-specific modules.
+3. Every optimized function has a scalar implementation with identical tests.
+4. Runtime dispatch is cached once per process, not checked inside tight loops.
+5. Features:
+   - `simd-codecs`;
+   - `simd-json`;
+   - `simd-checksum`;
+   - `simd-vector`;
+   - `asm-kernels` for rare handwritten assembly.
+6. `asm-kernels` is off by default.
+7. CI must compile scalar-only on every platform.
+8. CI must compile optimized features on Windows x86_64, Linux x86_64, and
+   Linux AArch64 before release.
+
+### Handwritten Assembly Admission Gate
+
+Do not add assembly because a path is "hot" in theory. Assembly is allowed only
+when all of these are true:
+
+1. A benchmark shows the kernel is a top CPU consumer after protocol and
+   allocation fixes.
+2. A maintained crate or `core::arch` intrinsic path cannot meet the target.
+3. The assembly kernel is smaller and clearer than equivalent intrinsics.
+4. The scalar fallback remains available.
+5. The function has property tests against random inputs.
+6. The function has cross-platform tests:
+   - Windows x86_64;
+   - Linux x86_64;
+   - at least one Unix AArch64 target;
+   - scalar fallback.
+7. The feature is opt-in and documented in `GetCapabilities`/doctor output if
+   it affects runtime behavior.
+
+### Benchmark Plan
+
+Add criterion benches before adding optimized code:
+
+- `benches/protocol_record_batch.rs`;
+- `benches/protocol_struct_recordset.rs`;
+- `benches/object_base64.rs`;
+- `benches/object_streaming.rs`;
+- `benches/generic_dispatch_json.rs`;
+- `benches/audit_hash_chain.rs`;
+- `benches/vector_rerank.rs` if local rerank is implemented.
+
+Metrics:
+
+- allocations per request;
+- peak resident bytes for large object upload/download;
+- rows/sec for `RecordSet` vs `RecordBatchV2`;
+- bytes/sec for base64 encode/decode;
+- CPU time by RPC and backend;
+- p50/p95/p99 latency;
+- compression ratio and CPU cost.
+
+Acceptance:
+
+- No SIMD/assembly feature may regress scalar correctness tests.
+- No optimized path may be the only implementation.
+- Protocol V2 must show a larger win than a low-level kernel before low-level
+  code is prioritized.
+- Windows and Unix compile jobs must pass before enabling any acceleration
+  feature in a release build.
 
 ## Target Backend Roles
 
@@ -1436,6 +1774,34 @@ Exit criteria:
 - Operators can see limitations and remediation steps.
 - Docs cannot drift from code silently.
 
+### Phase 9: Protocol V2 And Native Acceleration
+
+Deliverables:
+
+1. Protocol negotiation in `GetCapabilities` or `GetProtocolSupport`.
+2. Typed error details for capability, policy, quota, schema, retry, and backend
+   failures.
+3. `RecordBatchV2` and streaming `SelectV2` behind negotiation.
+4. Selected protobuf `bytes` fields generated as `bytes::Bytes` in Rust after
+   SDK compatibility tests.
+5. Provider-backed object upload streaming without full-body buffering.
+6. Criterion benches for current `RecordSet`, `RecordBatchV2`, object streams,
+   base64, generic JSON dispatch, audit hash verification, and vector rerank
+   if local rerank exists.
+7. `runtime/accel` module with scalar-first APIs and optional SIMD crates.
+8. Windows and Unix CI coverage for scalar and optimized builds.
+
+Exit criteria:
+
+- V1 clients keep working unchanged.
+- SDKs negotiate V2 and fall back to V1 automatically.
+- `RecordBatchV2` beats `RecordSet` on large typed reads in benchmarks.
+- Object streaming avoids full object buffering for upload and download.
+- No assembly is merged unless it passes the handwritten assembly admission
+  gate.
+- Windows x86_64, Linux x86_64, and Linux AArch64 compile optimized feature
+  sets before release.
+
 ## Test Strategy
 
 Local tests:
@@ -1446,6 +1812,9 @@ Local tests:
 - canonical store conformance with SQLite;
 - auth/native-service unit tests;
 - doc generation validation.
+- protocol V2 encode/decode compatibility tests;
+- V1/V2 SDK negotiation fallback tests;
+- scalar-vs-SIMD property tests for any accelerated kernel.
 
 Live tests behind env vars:
 
@@ -1464,6 +1833,15 @@ Required acceptance commands for code phases:
 cargo test --lib
 cargo run --bin udb-proto-parser -- compat-matrix
 cargo run --bin udb -- doctor
+```
+
+Protocol/performance acceptance commands:
+
+```powershell
+cargo bench --bench protocol_record_batch
+cargo bench --bench object_streaming
+cargo bench --bench object_base64
+cargo test --features simd-codecs --lib
 ```
 
 For live backend phases, use backend-specific env vars and run only that live
@@ -1490,6 +1868,17 @@ A canonical driver is done only when:
 - it has backup/restore and permission checks in doctor;
 - it emits admin/migration audit records;
 - its limitations are represented in V2 capability output.
+
+A protocol or acceleration feature is done only when:
+
+- V1 compatibility is preserved;
+- SDK fallback behavior is tested;
+- capability/protocol negotiation exposes the feature;
+- scalar fallback exists;
+- Windows and Unix builds compile;
+- benchmarks show the optimization is worth the maintenance cost;
+- unsafe code is isolated and documented if SIMD intrinsics or assembly are
+  used.
 
 ## Research Sources
 
@@ -1522,3 +1911,27 @@ public documentation on 2026-06-02:
   https://docs.cedarpolicy.com/
 - OPA Wasm:
   https://www.openpolicyagent.org/docs/wasm
+- Rust inline assembly reference:
+  https://dev-doc.rust-lang.org/reference/inline-assembly.html
+- Rust architecture intrinsics:
+  https://doc.rust-lang.org/stable/core/arch/
+- Rust x86 runtime feature detection:
+  https://dev-doc.rust-lang.org/beta/std/arch/macro.is_x86_feature_detected.html
+- Rust AArch64 runtime feature detection:
+  https://doc.rust-lang.org/std/arch/macro.is_aarch64_feature_detected.html
+- Prost `bytes::Bytes` generation:
+  https://docs.rs/prost-build/latest/prost_build/struct.Config.html
+- gRPC compression:
+  https://grpc.io/docs/guides/compression/
+- Tonic gRPC implementation docs:
+  https://docs.rs/tonic/latest/tonic/
+- `base64-simd`:
+  https://docs.rs/base64-simd/latest/base64_simd/
+- `simd-json`:
+  https://docs.rs/simd-json/latest/simd_json/
+- `crc32fast`:
+  https://docs.rs/crc32fast/latest/crc32fast/
+- Apache Arrow IPC:
+  https://arrow.apache.org/docs/format/Columnar.html
+- Apache Arrow Flight:
+  https://arrow.apache.org/docs/format/Flight.html

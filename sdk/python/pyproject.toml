@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "udb-client"
-version = "0.2.1"
+version = "0.3.0"
 description = "Python SDK for the UDB DataBroker gRPC API"
 readme = "README.md"
 license = "MIT"
@@ -41,6 +41,12 @@ dev = [
   "pytest>=9",
   "twine>=6.2",
 ]
+
+[project.scripts]
+# Installing `udb-client` exposes the version-matched `udb` CLI. The launcher
+# (rendered from sdk-templates/python by `udb sdk generate`) finds an `udb`
+# binary on PATH or downloads the matching GitHub release and execs it.
+udb = "udb_client._cli:main"
 
 [project.urls]
 Homepage = "https://github.com/fahara02/udb"

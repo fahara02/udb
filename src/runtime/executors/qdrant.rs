@@ -13,10 +13,29 @@ use crate::proto::{
 };
 
 use crate::runtime::executor_utils::{
-    build_probe, json_bool, json_i32, json_required_f32_vec, json_required_str,
+    build_probe, json_bool, json_i32, json_into_struct, json_required_f32_vec, json_required_str,
     json_scalar_to_string, json_to_struct, qdrant_status, store_option, store_option_i32,
     struct_to_json,
 };
+
+/// Build a `VectorPoint` from an OWNED qdrant result point (D.3). The point JSON
+/// is discarded right after, so the payload Struct is MOVED out via
+/// `Value::take` + `json_into_struct` instead of cloned.
+fn point_to_vector_point(mut point: JsonValue) -> VectorPoint {
+    let id = point
+        .get("id")
+        .map(json_scalar_to_string)
+        .unwrap_or_default();
+    let score = point
+        .get("score")
+        .and_then(JsonValue::as_f64)
+        .unwrap_or_default() as f32;
+    let payload = point
+        .get_mut("payload")
+        .map(JsonValue::take)
+        .and_then(json_into_struct);
+    VectorPoint { id, score, payload }
+}
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
@@ -192,25 +211,16 @@ impl QdrantHttpClient {
             .await
             .map_err(|err| tonic::Status::unavailable(format!("Qdrant search failed: {err}")))?;
         qdrant_status(response.status())?;
-        let payload: JsonValue = response.json().await.map_err(|err| {
+        let mut payload: JsonValue = response.json().await.map_err(|err| {
             tonic::Status::unavailable(format!("Qdrant response decode failed: {err}"))
         })?;
         let points = payload
-            .get("result")
-            .and_then(JsonValue::as_array)
+            .get_mut("result")
+            .and_then(JsonValue::as_array_mut)
+            .map(std::mem::take)
+            .unwrap_or_default()
             .into_iter()
-            .flatten()
-            .map(|point| VectorPoint {
-                id: point
-                    .get("id")
-                    .map(json_scalar_to_string)
-                    .unwrap_or_default(),
-                score: point
-                    .get("score")
-                    .and_then(JsonValue::as_f64)
-                    .unwrap_or_default() as f32,
-                payload: point.get("payload").and_then(json_to_struct),
-            })
+            .map(point_to_vector_point)
             .collect();
         Ok(VectorSet { points })
     }
@@ -387,7 +397,7 @@ impl QdrantHttpClient {
                 && resp.status().is_success()
                 && let Ok(payload) = resp.json::<JsonValue>().await
             {
-                let points = self.parse_query_response(&payload);
+                let points = self.parse_query_response(payload);
                 let reranked = if text_query.is_empty() {
                     points.into_iter().take(limit).collect()
                 } else {
@@ -427,23 +437,14 @@ impl QdrantHttpClient {
     }
 
     /// Parse the result array from a Qdrant `/points/query` response.
-    fn parse_query_response(&self, payload: &JsonValue) -> Vec<VectorPoint> {
+    fn parse_query_response(&self, mut payload: JsonValue) -> Vec<VectorPoint> {
         payload
-            .get("result")
-            .and_then(JsonValue::as_array)
+            .get_mut("result")
+            .and_then(JsonValue::as_array_mut)
+            .map(std::mem::take)
+            .unwrap_or_default()
             .into_iter()
-            .flatten()
-            .map(|point| VectorPoint {
-                id: point
-                    .get("id")
-                    .map(json_scalar_to_string)
-                    .unwrap_or_default(),
-                score: point
-                    .get("score")
-                    .and_then(JsonValue::as_f64)
-                    .unwrap_or_default() as f32,
-                payload: point.get("payload").and_then(json_to_struct),
-            })
+            .map(point_to_vector_point)
             .collect()
     }
 
@@ -664,36 +665,46 @@ impl SearchExecutor for QdrantExecutor {
 impl MutationExecutor for QdrantExecutor {
     /// `{"operation":"upsert"|"delete", "collection", ...}`.
     async fn mutate(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let spec: JsonValue = serde_json::from_str(request_json)
+        let mut spec: JsonValue = serde_json::from_str(request_json)
             .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
-        match spec
+        // Owned op string so the match doesn't hold a borrow of `spec` (the upsert
+        // arm needs `get_mut` to move the points array out).
+        let operation = spec
             .get("operation")
             .and_then(JsonValue::as_str)
             .unwrap_or("upsert")
-        {
+            .to_string();
+        match operation.as_str() {
             "upsert" | "upsert_points" => {
-                let collection = json_required_str(&spec, "collection")?;
+                let collection = json_required_str(&spec, "collection")?.to_string();
+                let idempotency_key = spec
+                    .get("idempotency_key")
+                    .and_then(JsonValue::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                // D.3: take the points array out of `spec` (owned) and move each
+                // payload Struct instead of cloning it.
                 let point_specs = spec
-                    .get("points")
-                    .and_then(JsonValue::as_array)
+                    .get_mut("points")
+                    .and_then(JsonValue::as_array_mut)
+                    .map(std::mem::take)
                     .ok_or_else(|| tonic::Status::invalid_argument("points must be an array"))?;
                 let mut points = Vec::with_capacity(point_specs.len());
-                for point in point_specs {
+                for mut point in point_specs {
                     points.push(VectorPointMutation {
-                        id: json_required_str(point, "id")?.to_string(),
-                        vector: json_required_f32_vec(point, "vector")?,
-                        payload: point.get("payload").and_then(json_to_struct),
+                        id: json_required_str(&point, "id")?.to_string(),
+                        vector: json_required_f32_vec(&point, "vector")?,
+                        payload: point
+                            .get_mut("payload")
+                            .map(JsonValue::take)
+                            .and_then(json_into_struct),
                     });
                 }
                 let request = VectorUpsertRequest {
                     context: None,
-                    collection: collection.to_string(),
+                    collection: collection.clone(),
                     points,
-                    idempotency_key: spec
-                        .get("idempotency_key")
-                        .and_then(JsonValue::as_str)
-                        .unwrap_or_default()
-                        .to_string(),
+                    idempotency_key,
                 };
                 self.0.upsert(&request).await?;
                 Ok(json!({

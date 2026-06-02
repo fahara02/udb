@@ -6,6 +6,7 @@ import public "udb/core/authn/entity/v1/enums.proto";
 import public "udb/core/authn/entity/v1/otp.proto";
 import public "udb/core/authn/entity/v1/session.proto";
 import public "udb/core/authn/entity/v1/user.proto";
+import public "udb/core/authn/entity/v1/webauthn.proto";
 
 option csharp_namespace = "udb.core.Authn.Entity.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";

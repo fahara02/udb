@@ -54,6 +54,8 @@ namespace Udb.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.RecordSet> __Marshaller_udb_entity_v1_RecordSet = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.RecordSet.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.RecordBatchV2> __Marshaller_udb_entity_v1_RecordBatchV2 = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.RecordBatchV2.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.UpsertRequest> __Marshaller_udb_entity_v1_UpsertRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.UpsertRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.MutationResponse> __Marshaller_udb_entity_v1_MutationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.MutationResponse.Parser));
@@ -257,6 +259,14 @@ namespace Udb.Services.V1 {
         "BatchSelect",
         __Marshaller_udb_entity_v1_SelectRequest,
         __Marshaller_udb_entity_v1_RecordSet);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Entity.V1.SelectRequest, global::Udb.Entity.V1.RecordBatchV2> __Method_SelectV2 = new grpc::Method<global::Udb.Entity.V1.SelectRequest, global::Udb.Entity.V1.RecordBatchV2>(
+        grpc::MethodType.ServerStreaming,
+        __ServiceName,
+        "SelectV2",
+        __Marshaller_udb_entity_v1_SelectRequest,
+        __Marshaller_udb_entity_v1_RecordBatchV2);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Entity.V1.UpsertRequest, global::Udb.Entity.V1.MutationResponse> __Method_Upsert = new grpc::Method<global::Udb.Entity.V1.UpsertRequest, global::Udb.Entity.V1.MutationResponse>(
@@ -866,6 +876,21 @@ namespace Udb.Services.V1 {
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task BatchSelect(grpc::IAsyncStreamReader<global::Udb.Entity.V1.SelectRequest> requestStream, grpc::IServerStreamWriter<global::Udb.Entity.V1.RecordSet> responseStream, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Additive typed columnar read. Reuses SelectRequest; streams RecordBatchV2.
+      /// Clients use this only when ProtocolSupport.encodings advertises
+      /// "record_batch_v2" and otherwise fall back to Select/RecordSet.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="responseStream">Used for sending responses back to the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>A task indicating completion of the handler.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task SelectV2(global::Udb.Entity.V1.SelectRequest request, grpc::IServerStreamWriter<global::Udb.Entity.V1.RecordBatchV2> responseStream, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1618,6 +1643,34 @@ namespace Udb.Services.V1 {
       public virtual grpc::AsyncDuplexStreamingCall<global::Udb.Entity.V1.SelectRequest, global::Udb.Entity.V1.RecordSet> BatchSelect(grpc::CallOptions options)
       {
         return CallInvoker.AsyncDuplexStreamingCall(__Method_BatchSelect, null, options);
+      }
+      /// <summary>
+      /// Additive typed columnar read. Reuses SelectRequest; streams RecordBatchV2.
+      /// Clients use this only when ProtocolSupport.encodings advertises
+      /// "record_batch_v2" and otherwise fall back to Select/RecordSet.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncServerStreamingCall<global::Udb.Entity.V1.RecordBatchV2> SelectV2(global::Udb.Entity.V1.SelectRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return SelectV2(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Additive typed columnar read. Reuses SelectRequest; streams RecordBatchV2.
+      /// Clients use this only when ProtocolSupport.encodings advertises
+      /// "record_batch_v2" and otherwise fall back to Select/RecordSet.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncServerStreamingCall<global::Udb.Entity.V1.RecordBatchV2> SelectV2(global::Udb.Entity.V1.SelectRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncServerStreamingCall(__Method_SelectV2, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::Udb.Entity.V1.MutationResponse Upsert(global::Udb.Entity.V1.UpsertRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
@@ -4027,6 +4080,7 @@ namespace Udb.Services.V1 {
       return grpc::ServerServiceDefinition.CreateBuilder()
           .AddMethod(__Method_Select, serviceImpl.Select)
           .AddMethod(__Method_BatchSelect, serviceImpl.BatchSelect)
+          .AddMethod(__Method_SelectV2, serviceImpl.SelectV2)
           .AddMethod(__Method_Upsert, serviceImpl.Upsert)
           .AddMethod(__Method_BatchUpsert, serviceImpl.BatchUpsert)
           .AddMethod(__Method_Delete, serviceImpl.Delete)
@@ -4111,6 +4165,7 @@ namespace Udb.Services.V1 {
     {
       serviceBinder.AddMethod(__Method_Select, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.SelectRequest, global::Udb.Entity.V1.RecordSet>(serviceImpl.Select));
       serviceBinder.AddMethod(__Method_BatchSelect, serviceImpl == null ? null : new grpc::DuplexStreamingServerMethod<global::Udb.Entity.V1.SelectRequest, global::Udb.Entity.V1.RecordSet>(serviceImpl.BatchSelect));
+      serviceBinder.AddMethod(__Method_SelectV2, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::Udb.Entity.V1.SelectRequest, global::Udb.Entity.V1.RecordBatchV2>(serviceImpl.SelectV2));
       serviceBinder.AddMethod(__Method_Upsert, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.UpsertRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.Upsert));
       serviceBinder.AddMethod(__Method_BatchUpsert, serviceImpl == null ? null : new grpc::DuplexStreamingServerMethod<global::Udb.Entity.V1.UpsertRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.BatchUpsert));
       serviceBinder.AddMethod(__Method_Delete, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.DeleteRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.Delete));

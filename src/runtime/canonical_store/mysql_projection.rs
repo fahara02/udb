@@ -128,59 +128,22 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
         // independently idempotent. `CREATE TABLE IF NOT EXISTS` +
         // `CREATE INDEX` (no IF NOT EXISTS in older MySQL — wrap in
         // a session var trick below).
-        let create_table = format!(
-            r#"
-            CREATE TABLE IF NOT EXISTS {TABLE} (
-                task_id            CHAR(36) NOT NULL PRIMARY KEY,
-                idempotency_key    VARCHAR(255) NOT NULL UNIQUE,
-                project_id         VARCHAR(255) NOT NULL DEFAULT '',
-                manifest_checksum  VARCHAR(255) NOT NULL DEFAULT '',
-                message_type       VARCHAR(255) NOT NULL DEFAULT '',
-                source_schema      VARCHAR(255) NOT NULL DEFAULT '',
-                source_table       VARCHAR(255) NOT NULL DEFAULT '',
-                source_row_key     JSON NOT NULL,
-                operation          VARCHAR(16) NOT NULL DEFAULT 'upsert',
-                target_backend     VARCHAR(64) NOT NULL DEFAULT '',
-                target_instance    VARCHAR(255) NOT NULL DEFAULT '',
-                projection_kind    VARCHAR(64) NOT NULL DEFAULT '',
-                resource_name      VARCHAR(255) NOT NULL DEFAULT '',
-                target_options     JSON NOT NULL,
-                source_payload     JSON NOT NULL,
-                source_checksum    VARCHAR(255) NOT NULL DEFAULT '',
-                status             VARCHAR(16) NOT NULL DEFAULT 'PENDING',
-                retry_count        INT NOT NULL DEFAULT 0,
-                last_error         TEXT NOT NULL,
-                next_retry_at      TIMESTAMP(6) NULL,
-                created_at         TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-                updated_at         TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-                completed_at       TIMESTAMP(6) NULL,
-                CONSTRAINT chk_{TABLE}_op CHECK (operation IN ('upsert','delete')),
-                CONSTRAINT chk_{TABLE}_status CHECK (status IN ('PENDING','IN_PROGRESS','COMPLETED','FAILED','DEAD_LETTER'))
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            "#
-        );
-        // CREATE INDEX IF NOT EXISTS was added in MySQL 8.0.29.
-        // For broader compatibility we attempt the create and
-        // tolerate the "already exists" error. sqlx surfaces that as
-        // a unique-key error; we match on substring.
-        let create_idx_status = format!(
-            "CREATE INDEX idx_{TABLE}_status_created_at \
-             ON {TABLE} (status, created_at)"
-        );
-        let create_idx_project_status = format!(
-            "CREATE INDEX idx_{TABLE}_project_status_created_at \
-             ON {TABLE} (project_id, status, created_at)"
-        );
-        let create_idx_backend = format!(
-            "CREATE INDEX idx_{TABLE}_backend_status \
-             ON {TABLE} (target_backend, target_instance, status)"
-        );
-        let add_next_retry =
-            format!("ALTER TABLE {TABLE} ADD COLUMN next_retry_at TIMESTAMP(6) NULL");
-        let create_idx_retry = format!(
-            "CREATE INDEX idx_{TABLE}_next_retry \
-             ON {TABLE} (status, next_retry_at)"
-        );
+        //
+        // B.7: the statement strings now come from the shared
+        // `sql_schema` renderer (single source of truth across SQL
+        // backends); the execute/error-tolerance logic below is
+        // unchanged. `CREATE INDEX IF NOT EXISTS` was added in MySQL
+        // 8.0.29, so for broader compatibility we attempt each create
+        // and tolerate the "already exists" / "Duplicate key name"
+        // errors below.
+        let super::sql_schema::MysqlProjectionTasksDdl {
+            create_table,
+            create_idx_status,
+            create_idx_project_status,
+            create_idx_backend,
+            add_next_retry,
+            create_idx_retry,
+        } = super::sql_schema::mysql_projection_tasks_ddl(TABLE);
         sqlx::query(&create_table)
             .execute(self.mysql_pool())
             .await

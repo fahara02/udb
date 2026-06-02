@@ -45,6 +45,23 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Additive typed columnar read. Reuses SelectRequest; streams RecordBatchV2.
+     * Clients use this only when ProtocolSupport.encodings advertises
+     * "record_batch_v2" and otherwise fall back to Select/RecordSet.
+     * @param \Udb\Entity\V1\SelectRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\ServerStreamingCall
+     */
+    public function SelectV2(\Udb\Entity\V1\SelectRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_serverStreamRequest('/udb.services.v1.DataBroker/SelectV2',
+        $argument,
+        ['\Udb\Entity\V1\RecordBatchV2', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * @param \Udb\Entity\V1\UpsertRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options

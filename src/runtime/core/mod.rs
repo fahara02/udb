@@ -96,8 +96,6 @@ use super::replica::{
 use super::system::{
     SystemCatalogInspection, SystemCatalogReport, ensure_system_catalog, inspect_system_catalog,
 };
-#[cfg(feature = "s3")]
-const GET_OBJECT_CHUNK_BYTES: usize = 256 * 1024;
 
 #[derive(Debug, Clone, Default)]
 pub struct RuntimeInitReport {
@@ -1508,12 +1506,18 @@ fn rows_to_record_set(
         .scopes
         .iter()
         .any(|scope| scope == "udb:pii:read" || scope == "udb:*" || scope == "*");
-    let mut proto_rows = Vec::new();
-    let mut records_json = Vec::new();
+    // Preallocate the result vectors to the known row count so the per-row push
+    // loop never reallocates+copies the growing Vec (matters for large result
+    // sets — the row-build path is the relational read hot path).
+    let mut proto_rows = Vec::with_capacity(rows.len());
+    let mut records_json = Vec::with_capacity(rows.len());
     for row in rows {
-        let mut fields = HashMap::new();
-        let mut json_row = serde_json::Map::new();
-        for (idx, column) in row.columns().iter().enumerate() {
+        // Size the per-row maps to the column count up front, so a wide row does
+        // not rehash/regrow its field map cell-by-cell.
+        let columns = row.columns();
+        let mut fields = HashMap::with_capacity(columns.len());
+        let mut json_row = serde_json::Map::with_capacity(columns.len());
+        for (idx, column) in columns.iter().enumerate() {
             let name = column.name().to_string();
             let mut json_value = row_value_to_json(&row, idx, column.type_info().name())?;
             if table

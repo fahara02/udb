@@ -1,0 +1,76 @@
+{
+  "timestamp": "20260602T132626Z",
+  "label": "D.3 parse_rest_dispatch body-move (Value::take)",
+  "git_commit": "8dd0cbf",
+  "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+  "os": "win32",
+  "results": {
+    "base64/base64_cell (encode)": {
+      "median_ns": 4142725.0,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 1999172042.5565298
+    },
+    "base64/object_bytes_from_json (decode)": {
+      "median_ns": 4383858.333333333,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 1889207946.576741
+    },
+    "dispatch_parse/parse_object_dispatch": {
+      "median_ns": 5039738.888888889,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 2295000446.451701
+    },
+    "dispatch_parse/parse_rest_dispatch": {
+      "median_ns": 5308620.0,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 198684592.22924227
+    },
+    "dispatch_parse/parse_sql_dispatch": {
+      "median_ns": 4504183.333333334,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 258452845.6878975
+    },
+    "live_mysql/read (point select)": {
+      "median_ns": 1800848.2578397212
+    },
+    "live_mysql/write (update)": {
+      "median_ns": 1621246.4646464647
+    },
+    "live_postgres/read (point select)": {
+      "median_ns": 1929016.6666666665
+    },
+    "live_postgres/write (update)": {
+      "median_ns": 2675080.0
+    },
+    "live_s3/get_object (16 kib)": {
+      "median_ns": 2332782.5,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 7023372.303247303
+    },
+    "live_s3/put_object (16 kib)": {
+      "median_ns": 14157516.666666666,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 1157265.1041672798
+    },
+    "merge_context/merge_context (proto + metadata)": {
+      "median_ns": 299.45920144850385,
+      "throughput_kind": "Elements",
+      "throughput_per_s": 3339353.0576550467
+    },
+    "struct_json/json_to_prost_value": {
+      "median_ns": 39577100.0,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 110790153.90213026
+    },
+    "struct_json/json_to_struct (write path)": {
+      "median_ns": 38648300.0,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 113452674.5031476
+    },
+    "struct_json/struct_to_json (read path)": {
+      "median_ns": 48267400.0,
+      "throughput_kind": "Bytes",
+      "throughput_per_s": 90842949.89993246
+    }
+  }
+}

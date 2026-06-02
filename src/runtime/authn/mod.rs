@@ -36,6 +36,8 @@ pub enum AuthnMethod {
     HeaderDev,
     /// Hybrid external identity provider (OIDC/Better Auth/etc.).
     External,
+    /// WebAuthn/passkey assertion verified by UDB.
+    WebAuthn,
 }
 
 impl AuthnMethod {
@@ -48,6 +50,7 @@ impl AuthnMethod {
             AuthnMethod::Mtls => "mtls",
             AuthnMethod::HeaderDev => "header_dev",
             AuthnMethod::External => "external",
+            AuthnMethod::WebAuthn => "webauthn",
         }
     }
 }

@@ -258,6 +258,14 @@ impl ClickHouseExecutor {
         "ClickHouse"
     }
 
+    /// B.10c: the database this executor's queries run against (sent as the
+    /// `X-ClickHouse-Database` header on every request). The canonical store
+    /// reuses this to build fully-qualified `` `db`.`table` `` identifiers and to
+    /// report its `database` to the runtime.
+    pub(crate) fn database(&self) -> &str {
+        &self.config.database
+    }
+
     /// Construct from environment variables.  Returns `None` when
     /// `UDB_COLUMN_DSN` / `UDB_COLUMN_HTTP_URL` are absent.
     pub fn from_env() -> Option<Self> {

@@ -128,49 +128,11 @@ impl MigrationAuditStore for SqliteCanonicalStore {
             .await
             .map_err(|e| SystemStoreError::query("sqlite", pragma, e))?;
 
-        let runs_ddl = format!(
-            r#"
-            CREATE TABLE IF NOT EXISTS {RUNS_TABLE} (
-                run_id            TEXT PRIMARY KEY,
-                project_id        TEXT NOT NULL DEFAULT '',
-                catalog_version   TEXT NOT NULL DEFAULT '',
-                state             TEXT NOT NULL DEFAULT 'DRY_RUN'
-                                  CHECK (state IN ('DRY_RUN','PREFLIGHT','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')),
-                operations_hash   TEXT NOT NULL DEFAULT '',
-                approval_token    TEXT NOT NULL DEFAULT '',
-                started_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                finished_at       TEXT,
-                error             TEXT NOT NULL DEFAULT ''
-            )
-            "#
-        );
-        let runs_idx = format!(
-            "CREATE INDEX IF NOT EXISTS idx_{RUNS_TABLE}_project_state \
-             ON {RUNS_TABLE} (project_id, state, started_at DESC)"
-        );
-        let ledger_ddl = format!(
-            r#"
-            CREATE TABLE IF NOT EXISTS {LEDGER_TABLE} (
-                id                INTEGER PRIMARY KEY AUTOINCREMENT,
-                run_id            TEXT NOT NULL,
-                operation_index   INTEGER NOT NULL,
-                backend           TEXT NOT NULL DEFAULT 'postgres',
-                resource_uri      TEXT NOT NULL DEFAULT '',
-                operation_kind    TEXT NOT NULL DEFAULT '',
-                status            TEXT NOT NULL DEFAULT 'PENDING'
-                                  CHECK (status IN ('PENDING','APPLIED','VERIFIED','SKIPPED','FAILED','ROLLED_BACK')),
-                rollback_json     TEXT NOT NULL DEFAULT '{{}}',
-                error             TEXT NOT NULL DEFAULT '',
-                applied_at        TEXT,
-                FOREIGN KEY (run_id) REFERENCES {RUNS_TABLE}(run_id) ON DELETE CASCADE
-            )
-            "#
-        );
-        let ledger_idx = format!(
-            "CREATE INDEX IF NOT EXISTS idx_{LEDGER_TABLE}_run_idx \
-             ON {LEDGER_TABLE} (run_id, operation_index)"
-        );
-        for sql in [runs_ddl, runs_idx, ledger_ddl, ledger_idx] {
+        // B.7: DDL strings come from the shared `sql_schema` renderer (single
+        // source of truth across SQL backends); the execute loop below is
+        // unchanged. The PRAGMA above is issued separately and is NOT part of
+        // the renderer.
+        for sql in super::sql_schema::sqlite_migration_audit_ddl(RUNS_TABLE, LEDGER_TABLE) {
             sqlx::query(&sql)
                 .execute(self.pool_ref())
                 .await

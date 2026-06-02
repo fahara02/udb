@@ -70,6 +70,8 @@ from udb.entity.v1.outbox_pb2 import EnqueueOutboxEventRequest as EnqueueOutboxE
 from udb.entity.v1.outbox_pb2 import EnqueueOutboxEventResponse as EnqueueOutboxEventResponse
 from udb.entity.v1.admin_pb2 import CapabilitiesRequest as CapabilitiesRequest
 from udb.entity.v1.admin_pb2 import CapabilitiesResponse as CapabilitiesResponse
+from udb.entity.v1.admin_pb2 import ProtocolSupport as ProtocolSupport
+from udb.entity.v1.admin_pb2 import BackendProtocolSupport as BackendProtocolSupport
 from udb.entity.v1.admin_pb2 import BackendCapabilityDescriptor as BackendCapabilityDescriptor
 from udb.entity.v1.admin_pb2 import BackendInstanceStatus as BackendInstanceStatus
 from udb.entity.v1.admin_pb2 import CatalogManifestRequest as CatalogManifestRequest

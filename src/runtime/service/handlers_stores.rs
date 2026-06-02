@@ -13,7 +13,7 @@
 //!   - clickhouse query        → bare array of rows;    mutate → {"affected_rows"}
 
 use super::*;
-use crate::runtime::executor_utils::{json_to_struct, struct_to_json};
+use crate::runtime::executor_utils::{json_into_struct, struct_to_json};
 
 impl DataBrokerService {
     /// Adapter over the shared dispatch core: pull the backend out of the typed
@@ -580,13 +580,27 @@ fn document_set_from_json(json: &str) -> crate::proto::DocumentSet {
 /// document / graph executors return a bare JSON array of row objects; this also
 /// tolerates `{"rows":[...]}` / `{"records":[...]}` / `{"documents":[...]}`.
 fn structs_from_result(json: &str) -> Vec<prost_types::Struct> {
-    let v = parse_json(json);
-    let array = v
-        .as_array()
-        .or_else(|| v.get("rows").and_then(serde_json::Value::as_array))
-        .or_else(|| v.get("records").and_then(serde_json::Value::as_array))
-        .or_else(|| v.get("documents").and_then(serde_json::Value::as_array));
+    let mut v = parse_json(json);
+    // The parsed result is discarded after this, so MOVE each row object into its
+    // proto Struct (`json_into_struct`) instead of borrow-and-clone-every-field
+    // (`json_to_struct`). Take the row array out by value; for the wrapper-object
+    // forms, `contains_key` (immutable) picks the slot before the `get_mut` move.
+    let array = match &mut v {
+        serde_json::Value::Array(items) => Some(std::mem::take(items)),
+        serde_json::Value::Object(map) => {
+            let slot = if map.contains_key("rows") {
+                map.get_mut("rows")
+            } else if map.contains_key("records") {
+                map.get_mut("records")
+            } else {
+                map.get_mut("documents")
+            };
+            slot.and_then(serde_json::Value::as_array_mut)
+                .map(std::mem::take)
+        }
+        _ => None,
+    };
     array
-        .map(|items| items.iter().filter_map(json_to_struct).collect())
+        .map(|items| items.into_iter().filter_map(json_into_struct).collect())
         .unwrap_or_default()
 }

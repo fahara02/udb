@@ -41,10 +41,12 @@ pub mod azureblob;
 // C9: Google Cloud Storage via the canonical `google-cloud-storage` crate.
 #[cfg(feature = "gcs")]
 pub mod gcs;
+#[cfg(all(test, feature = "s3"))]
+mod object_stream_live_tests;
 #[cfg(feature = "redis")]
 pub(crate) mod redis;
 #[cfg(feature = "s3")]
-pub(crate) mod s3; // Phase E: enum-dispatch handle (DispatchExecutor)
+pub(crate) mod s3; // Phase E: enum-dispatch handle (DispatchExecutor) // A.6 live MinIO streaming round-trip (env-gated, #[ignore])
 pub(crate) use handle::DispatchExecutor;
 
 // `DataBrokerRuntime` import was needed by the deleted `DefaultBackendExecutor`
@@ -98,6 +100,24 @@ pub trait ObjectExecutor: Send + Sync {
     }
     async fn put_object(&self, request_json: &str, bytes: Vec<u8>)
     -> Result<String, tonic::Status>;
+    /// Streaming upload (A.6). The default collects the byte stream into one
+    /// buffer and delegates to [`ObjectExecutor::put_object`], so backends that
+    /// cannot stream keep working unchanged. Real object stores (S3/MinIO, …)
+    /// override this to forward bytes to the provider without buffering the
+    /// whole object in UDB.
+    async fn put_object_stream(
+        &self,
+        request_json: &str,
+        stream: ExecutorByteStream,
+    ) -> Result<String, tonic::Status> {
+        use tokio_stream::StreamExt as _;
+        let mut stream = stream;
+        let mut body: Vec<u8> = Vec::new();
+        while let Some(chunk) = stream.next().await {
+            body.extend_from_slice(&chunk?);
+        }
+        self.put_object(request_json, body).await
+    }
     /// Remove an object by `{"bucket","object_key"|"key"}`. Only real object
     /// stores (S3/MinIO, GCS, Azure Blob) override this; other backends report
     /// `unimplemented` so callers never silently no-op a delete.
@@ -265,6 +285,18 @@ mod capability_tests {
         assert!(!c.supports_vector_search);
         assert!(!c.is_object_store);
         assert!(!c.is_migration_ledger_capable);
+    }
+
+    #[test]
+    fn mongodb_supports_resource_lifecycle() {
+        let c = cap("mongodb").unwrap();
+        assert!(c.supports_resource_lifecycle);
+    }
+
+    #[test]
+    fn clickhouse_supports_resource_lifecycle() {
+        let c = cap("clickhouse").unwrap();
+        assert!(c.supports_resource_lifecycle);
     }
 
     #[test]

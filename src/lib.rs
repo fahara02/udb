@@ -17,6 +17,11 @@ pub mod protocol;
 pub mod runtime;
 pub mod schema;
 
+// D.2: hidden, feature-gated benchmarking shims over hot `pub(crate)` helpers.
+#[cfg(feature = "bench-internals")]
+#[doc(hidden)]
+pub mod bench_internals;
+
 // ── Compatibility module aliases ─────────────────────────────────────────────
 pub use control::{
     auto_alter, engine, executor, lifecycle, notification, plan_approval, status, sync_config,

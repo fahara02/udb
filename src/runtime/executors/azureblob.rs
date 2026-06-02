@@ -28,9 +28,11 @@ use crate::runtime::backend_context::{
 };
 use crate::runtime::executor_utils::{build_probe, parse_object_dispatch, reject_oversized_object};
 use crate::runtime::executors::{
-    BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
-    ResourceAdminExecutor, SearchExecutor,
+    BackendExecutor, BackendHealth, BackendProbe, ExecutorByteStream, MutationExecutor,
+    ObjectExecutor, QueryExecutor, ResourceAdminExecutor, SearchExecutor,
 };
+
+use crate::runtime::config::azure_block_bytes;
 
 #[derive(Clone)]
 pub struct AzureBlobClient {
@@ -174,6 +176,91 @@ impl ObjectExecutor for AzureBlobExecutor {
         }
         put.await
             .map_err(|e| tonic::Status::internal(format!("azure blob put failed: {e}")))?;
+        Ok(serde_json::json!({ "ok": true, "container": container, "blob": blob }).to_string())
+    }
+
+    /// Streaming download (A.6): flatten `get().into_stream()` pages and each
+    /// page's `ResponseBody` into a single byte-chunk stream — no full-blob buffer.
+    async fn get_object_stream(
+        &self,
+        request_json: &str,
+    ) -> Result<ExecutorByteStream, tonic::Status> {
+        let (_op, container, blob, _) = parse_dispatch(request_json)?;
+        let blob_client = self.client.container(&container).blob_client(blob);
+        let mapped = async_stream::try_stream! {
+            use futures::StreamExt as _;
+            let mut pages = blob_client.get().into_stream();
+            while let Some(page) = pages.next().await {
+                let page = page
+                    .map_err(|e| tonic::Status::internal(format!("azure blob get failed: {e}")))?;
+                let mut data = page.data;
+                while let Some(chunk) = data.next().await {
+                    let bytes = chunk.map_err(|e| {
+                        tonic::Status::internal(format!("azure blob read failed: {e}"))
+                    })?;
+                    yield bytes;
+                }
+            }
+        };
+        Ok(Box::pin(mapped))
+    }
+
+    /// Streaming upload (A.6): stage the chunk stream as Azure blocks
+    /// (`put_block`) buffering at most one `UDB_AZURE_BLOCK_BYTES` block, then
+    /// commit with `put_block_list`. Block ids are fixed-width so all are equal
+    /// length (Azure requirement).
+    async fn put_object_stream(
+        &self,
+        request_json: &str,
+        stream: ExecutorByteStream,
+    ) -> Result<String, tonic::Status> {
+        use tokio_stream::StreamExt as _;
+        let (_op, container, blob, content_type) = parse_dispatch(request_json)?;
+        let blob_client = self.client.container(&container).blob_client(blob.clone());
+        let block_size = azure_block_bytes();
+        let mut stream = stream;
+        let mut buf: Vec<u8> = Vec::with_capacity(block_size);
+        let mut block_list = BlockList { blocks: Vec::new() };
+        let mut idx: u64 = 0;
+
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk?;
+            buf.extend_from_slice(&chunk);
+            if buf.len() < block_size {
+                continue;
+            }
+            let body = std::mem::replace(&mut buf, Vec::with_capacity(block_size));
+            let block_id = BlockId::new(format!("{idx:016}"));
+            blob_client
+                .put_block(block_id.clone(), body)
+                .await
+                .map_err(|e| tonic::Status::unavailable(format!("azure put_block failed: {e}")))?;
+            block_list
+                .blocks
+                .push(BlobBlockType::new_uncommitted(block_id));
+            idx += 1;
+        }
+        // Stage the trailing bytes as the final block. Also covers the empty-object
+        // case (no block staged yet) so the commit always has ≥1 block.
+        if !buf.is_empty() || block_list.blocks.is_empty() {
+            let block_id = BlockId::new(format!("{idx:016}"));
+            blob_client
+                .put_block(block_id.clone(), buf)
+                .await
+                .map_err(|e| {
+                    tonic::Status::unavailable(format!("azure put_block (final) failed: {e}"))
+                })?;
+            block_list
+                .blocks
+                .push(BlobBlockType::new_uncommitted(block_id));
+        }
+        let mut commit = blob_client.put_block_list(block_list);
+        if let Some(ct) = content_type {
+            commit = commit.content_type(ct);
+        }
+        commit
+            .await
+            .map_err(|e| tonic::Status::unavailable(format!("azure put_block_list failed: {e}")))?;
         Ok(serde_json::json!({ "ok": true, "container": container, "blob": blob }).to_string())
     }
 

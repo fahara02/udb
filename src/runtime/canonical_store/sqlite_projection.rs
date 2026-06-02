@@ -162,58 +162,12 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
         // DDL: every column the PG schema has, in SQLite dialect.
         // CHECK constraints enforce status + operation enums even
         // though SQLite is dynamically typed. Indexes mirror PG.
-        let stmts = [
-            format!(
-                r#"
-                CREATE TABLE IF NOT EXISTS {TABLE} (
-                    task_id          TEXT PRIMARY KEY,
-                    idempotency_key  TEXT NOT NULL UNIQUE,
-                    project_id       TEXT NOT NULL DEFAULT '',
-                    manifest_checksum TEXT NOT NULL DEFAULT '',
-                    message_type     TEXT NOT NULL DEFAULT '',
-                    source_schema    TEXT NOT NULL DEFAULT '',
-                    source_table     TEXT NOT NULL DEFAULT '',
-                    source_row_key   TEXT NOT NULL DEFAULT '{{}}',
-                    operation        TEXT NOT NULL DEFAULT 'upsert'
-                                     CHECK (operation IN ('upsert','delete')),
-                    target_backend   TEXT NOT NULL DEFAULT '',
-                    target_instance  TEXT NOT NULL DEFAULT '',
-                    projection_kind  TEXT NOT NULL DEFAULT '',
-                    resource_name    TEXT NOT NULL DEFAULT '',
-                    target_options   TEXT NOT NULL DEFAULT '[]',
-                    source_payload   TEXT NOT NULL DEFAULT '{{}}',
-                    source_checksum  TEXT NOT NULL DEFAULT '',
-                    status           TEXT NOT NULL DEFAULT 'PENDING'
-                                     CHECK (status IN ('PENDING','IN_PROGRESS','COMPLETED','FAILED','DEAD_LETTER')),
-                    retry_count      INTEGER NOT NULL DEFAULT 0,
-                    last_error       TEXT NOT NULL DEFAULT '',
-                    next_retry_at    TEXT,
-                    created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                    updated_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-                    completed_at     TEXT
-                )
-                "#
-            ),
-            // Index: claim queue scan by (status, created_at).
-            format!(
-                "CREATE INDEX IF NOT EXISTS idx_{TABLE}_status_created_at \
-                 ON {TABLE} (status, created_at)"
-            ),
-            format!(
-                "CREATE INDEX IF NOT EXISTS idx_{TABLE}_project_status_created_at \
-                 ON {TABLE} (project_id, status, created_at)"
-            ),
-            // Index: per-backend filter for worker pools.
-            format!(
-                "CREATE INDEX IF NOT EXISTS idx_{TABLE}_backend_status \
-                 ON {TABLE} (target_backend, target_instance, status)"
-            ),
-            format!("ALTER TABLE {TABLE} ADD COLUMN next_retry_at TEXT"),
-            format!(
-                "CREATE INDEX IF NOT EXISTS idx_{TABLE}_next_retry \
-                 ON {TABLE} (status, next_retry_at)"
-            ),
-        ];
+        //
+        // B.7: the statement strings now come from the shared
+        // `sql_schema` renderer (single source of truth across SQL
+        // backends); the execute/error-tolerance loop below is
+        // unchanged.
+        let stmts = super::sql_schema::sqlite_projection_tasks_ddl(TABLE);
         for sql in stmts.iter() {
             if let Err(e) = sqlx::query(sql).execute(self.pool_ref()).await {
                 let msg = e.to_string();

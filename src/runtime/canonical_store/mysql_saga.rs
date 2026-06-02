@@ -100,34 +100,13 @@ impl SagaStore for MysqlCanonicalStore {
     }
 
     async fn ensure_saga_tables(&self) -> SystemStoreResult<()> {
-        let create_table = format!(
-            r#"
-            CREATE TABLE IF NOT EXISTS {TABLE} (
-                saga_id              CHAR(36) NOT NULL PRIMARY KEY,
-                tx_id                VARCHAR(255) NOT NULL DEFAULT '',
-                tenant_id            VARCHAR(255) NOT NULL DEFAULT '',
-                correlation_id       VARCHAR(255) NOT NULL DEFAULT '',
-                status               VARCHAR(32) NOT NULL DEFAULT 'pending',
-                backend_instance     VARCHAR(255) NOT NULL DEFAULT '',
-                operation            VARCHAR(255) NOT NULL DEFAULT '',
-                current_step         INT NOT NULL DEFAULT 0,
-                retry_count          INT NOT NULL DEFAULT 0,
-                recovery_attempts    INT NOT NULL DEFAULT 0,
-                compensation_status  VARCHAR(32) NOT NULL DEFAULT 'none',
-                steps                JSON NOT NULL,
-                compensations        JSON NOT NULL,
-                last_error           TEXT NOT NULL,
-                created_at           TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-                updated_at           TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-                CONSTRAINT chk_{TABLE}_status CHECK (status IN ('indeterminate','in_progress','pending','committed','compensated','failed','in_doubt','failed_compensation','manual_review')),
-                CONSTRAINT chk_{TABLE}_comp_status CHECK (compensation_status IN ('none','completed','manual_review','retry_requested'))
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            "#
-        );
-        let create_idx = format!(
-            "CREATE INDEX idx_{TABLE}_tenant_status \
-             ON {TABLE} (tenant_id, status, updated_at)"
-        );
+        // B.7: DDL strings come from the shared `sql_schema` renderer (single
+        // source of truth across SQL backends); the execute/error-tolerance
+        // logic below is unchanged.
+        let super::sql_schema::MysqlSagasDdl {
+            create_table,
+            create_idx,
+        } = super::sql_schema::mysql_sagas_ddl(TABLE);
         sqlx::query(&create_table)
             .execute(self.mysql_pool())
             .await

@@ -5,7 +5,7 @@
 ## Install
 
 ```bash
-pip install udb-client==0.2.1
+pip install udb-client==0.3.0
 ```
 
 For local development from this repo, prefer `uv`:
@@ -107,7 +107,7 @@ For broker APIs without a convenience method, use `client.call("RpcName", reques
 Install the pydantic extra when you want request validation and editor-friendly models:
 
 ```bash
-pip install "udb-client[pydantic]==0.2.1"
+pip install "udb-client[pydantic]==0.3.0"
 ```
 
 ```python

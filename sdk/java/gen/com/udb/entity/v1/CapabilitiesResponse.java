@@ -40,6 +40,7 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.LazyStringArrayList.emptyList();
     backendInstances_ = java.util.Collections.emptyList();
     backendCapabilities_ = java.util.Collections.emptyList();
+    backendProtocolSupport_ = java.util.Collections.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -60,6 +61,7 @@ private static final long serialVersionUID = 0L;
             com.udb.entity.v1.CapabilitiesResponse.class, com.udb.entity.v1.CapabilitiesResponse.Builder.class);
   }
 
+  private int bitField0_;
   public static final int SCHEMA_CHECKSUM_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
   private volatile java.lang.Object schemaChecksum_ = "";
@@ -488,6 +490,124 @@ private static final long serialVersionUID = 0L;
     return backendCapabilities_.get(index);
   }
 
+  public static final int PROTOCOL_SUPPORT_FIELD_NUMBER = 9;
+  private com.udb.entity.v1.ProtocolSupport protocolSupport_;
+  /**
+   * <pre>
+   * V2 protocol negotiation metadata. Additive (field 9): old clients that
+   * only read fields 1-8 are unaffected; new clients use this to detect the
+   * supported protocol version range, wire encodings, compression, streaming
+   * support, and message-size limits before choosing a transport path.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+   * @return Whether the protocolSupport field is set.
+   */
+  @java.lang.Override
+  public boolean hasProtocolSupport() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * V2 protocol negotiation metadata. Additive (field 9): old clients that
+   * only read fields 1-8 are unaffected; new clients use this to detect the
+   * supported protocol version range, wire encodings, compression, streaming
+   * support, and message-size limits before choosing a transport path.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+   * @return The protocolSupport.
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.ProtocolSupport getProtocolSupport() {
+    return protocolSupport_ == null ? com.udb.entity.v1.ProtocolSupport.getDefaultInstance() : protocolSupport_;
+  }
+  /**
+   * <pre>
+   * V2 protocol negotiation metadata. Additive (field 9): old clients that
+   * only read fields 1-8 are unaffected; new clients use this to detect the
+   * supported protocol version range, wire encodings, compression, streaming
+   * support, and message-size limits before choosing a transport path.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.ProtocolSupportOrBuilder getProtocolSupportOrBuilder() {
+    return protocolSupport_ == null ? com.udb.entity.v1.ProtocolSupport.getDefaultInstance() : protocolSupport_;
+  }
+
+  public static final int BACKEND_PROTOCOL_SUPPORT_FIELD_NUMBER = 10;
+  @SuppressWarnings("serial")
+  private java.util.List<com.udb.entity.v1.BackendProtocolSupport> backendProtocolSupport_;
+  /**
+   * <pre>
+   * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+   * for a specific backend, whether server-streaming reads / object streaming
+   * are available and which wire encodings that backend can emit.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<com.udb.entity.v1.BackendProtocolSupport> getBackendProtocolSupportList() {
+    return backendProtocolSupport_;
+  }
+  /**
+   * <pre>
+   * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+   * for a specific backend, whether server-streaming reads / object streaming
+   * are available and which wire encodings that backend can emit.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends com.udb.entity.v1.BackendProtocolSupportOrBuilder> 
+      getBackendProtocolSupportOrBuilderList() {
+    return backendProtocolSupport_;
+  }
+  /**
+   * <pre>
+   * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+   * for a specific backend, whether server-streaming reads / object streaming
+   * are available and which wire encodings that backend can emit.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+   */
+  @java.lang.Override
+  public int getBackendProtocolSupportCount() {
+    return backendProtocolSupport_.size();
+  }
+  /**
+   * <pre>
+   * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+   * for a specific backend, whether server-streaming reads / object streaming
+   * are available and which wire encodings that backend can emit.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.BackendProtocolSupport getBackendProtocolSupport(int index) {
+    return backendProtocolSupport_.get(index);
+  }
+  /**
+   * <pre>
+   * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+   * for a specific backend, whether server-streaming reads / object streaming
+   * are available and which wire encodings that backend can emit.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.BackendProtocolSupportOrBuilder getBackendProtocolSupportOrBuilder(
+      int index) {
+    return backendProtocolSupport_.get(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -525,6 +645,12 @@ private static final long serialVersionUID = 0L;
     }
     for (int i = 0; i < backendCapabilities_.size(); i++) {
       output.writeMessage(8, backendCapabilities_.get(i));
+    }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      output.writeMessage(9, getProtocolSupport());
+    }
+    for (int i = 0; i < backendProtocolSupport_.size(); i++) {
+      output.writeMessage(10, backendProtocolSupport_.get(i));
     }
     getUnknownFields().writeTo(output);
   }
@@ -586,6 +712,19 @@ private static final long serialVersionUID = 0L;
           }
           size += 1 * count;
         }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(9, getProtocolSupport());
+    }
+
+        {
+          final int count = backendProtocolSupport_.size();
+          for (int i = 0; i < count; i++) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeMessageSizeNoTag(backendProtocolSupport_.get(i));
+          }
+          size += 1 * count;
+        }
     return size;
   }
   @java.lang.Override
@@ -626,6 +765,13 @@ private static final long serialVersionUID = 0L;
         .equals(other.getBackendInstancesList())) return false;
     if (!getBackendCapabilitiesList()
         .equals(other.getBackendCapabilitiesList())) return false;
+    if (hasProtocolSupport() != other.hasProtocolSupport()) return false;
+    if (hasProtocolSupport()) {
+      if (!getProtocolSupport()
+          .equals(other.getProtocolSupport())) return false;
+    }
+    if (!getBackendProtocolSupportList()
+        .equals(other.getBackendProtocolSupportList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -664,6 +810,14 @@ private static final long serialVersionUID = 0L;
     if (getBackendCapabilitiesCount() > 0) {
       hash = (37 * hash) + BACKEND_CAPABILITIES_FIELD_NUMBER;
       hash = (53 * hash) + getBackendCapabilitiesList().hashCode();
+    }
+    if (hasProtocolSupport()) {
+      hash = (37 * hash) + PROTOCOL_SUPPORT_FIELD_NUMBER;
+      hash = (53 * hash) + getProtocolSupport().hashCode();
+    }
+    if (getBackendProtocolSupportCount() > 0) {
+      hash = (37 * hash) + BACKEND_PROTOCOL_SUPPORT_FIELD_NUMBER;
+      hash = (53 * hash) + getBackendProtocolSupportList().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -784,13 +938,22 @@ private static final long serialVersionUID = 0L;
 
     // Construct using com.udb.entity.v1.CapabilitiesResponse.newBuilder()
     private Builder() {
-
+      maybeForceBuilderInitialization();
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       super(parent);
-
+      maybeForceBuilderInitialization();
+    }
+    private void maybeForceBuilderInitialization() {
+      if (com.google.protobuf.GeneratedMessage
+              .alwaysUseFieldBuilders) {
+        internalGetBackendInstancesFieldBuilder();
+        internalGetBackendCapabilitiesFieldBuilder();
+        internalGetProtocolSupportFieldBuilder();
+        internalGetBackendProtocolSupportFieldBuilder();
+      }
     }
     @java.lang.Override
     public Builder clear() {
@@ -820,6 +983,18 @@ private static final long serialVersionUID = 0L;
         backendCapabilitiesBuilder_.clear();
       }
       bitField0_ = (bitField0_ & ~0x00000080);
+      protocolSupport_ = null;
+      if (protocolSupportBuilder_ != null) {
+        protocolSupportBuilder_.dispose();
+        protocolSupportBuilder_ = null;
+      }
+      if (backendProtocolSupportBuilder_ == null) {
+        backendProtocolSupport_ = java.util.Collections.emptyList();
+      } else {
+        backendProtocolSupport_ = null;
+        backendProtocolSupportBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00000200);
       return this;
     }
 
@@ -871,6 +1046,15 @@ private static final long serialVersionUID = 0L;
       } else {
         result.backendCapabilities_ = backendCapabilitiesBuilder_.build();
       }
+      if (backendProtocolSupportBuilder_ == null) {
+        if (((bitField0_ & 0x00000200) != 0)) {
+          backendProtocolSupport_ = java.util.Collections.unmodifiableList(backendProtocolSupport_);
+          bitField0_ = (bitField0_ & ~0x00000200);
+        }
+        result.backendProtocolSupport_ = backendProtocolSupport_;
+      } else {
+        result.backendProtocolSupport_ = backendProtocolSupportBuilder_.build();
+      }
     }
 
     private void buildPartial0(com.udb.entity.v1.CapabilitiesResponse result) {
@@ -897,6 +1081,14 @@ private static final long serialVersionUID = 0L;
         supportedRpcs_.makeImmutable();
         result.supportedRpcs_ = supportedRpcs_;
       }
+      int to_bitField0_ = 0;
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.protocolSupport_ = protocolSupportBuilder_ == null
+            ? protocolSupport_
+            : protocolSupportBuilder_.build();
+        to_bitField0_ |= 0x00000001;
+      }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -1013,6 +1205,35 @@ private static final long serialVersionUID = 0L;
           }
         }
       }
+      if (other.hasProtocolSupport()) {
+        mergeProtocolSupport(other.getProtocolSupport());
+      }
+      if (backendProtocolSupportBuilder_ == null) {
+        if (!other.backendProtocolSupport_.isEmpty()) {
+          if (backendProtocolSupport_.isEmpty()) {
+            backendProtocolSupport_ = other.backendProtocolSupport_;
+            bitField0_ = (bitField0_ & ~0x00000200);
+          } else {
+            ensureBackendProtocolSupportIsMutable();
+            backendProtocolSupport_.addAll(other.backendProtocolSupport_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.backendProtocolSupport_.isEmpty()) {
+          if (backendProtocolSupportBuilder_.isEmpty()) {
+            backendProtocolSupportBuilder_.dispose();
+            backendProtocolSupportBuilder_ = null;
+            backendProtocolSupport_ = other.backendProtocolSupport_;
+            bitField0_ = (bitField0_ & ~0x00000200);
+            backendProtocolSupportBuilder_ = 
+              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                 internalGetBackendProtocolSupportFieldBuilder() : null;
+          } else {
+            backendProtocolSupportBuilder_.addAllMessages(other.backendProtocolSupport_);
+          }
+        }
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -1095,6 +1316,26 @@ private static final long serialVersionUID = 0L;
               }
               break;
             } // case 66
+            case 74: {
+              input.readMessage(
+                  internalGetProtocolSupportFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 74
+            case 82: {
+              com.udb.entity.v1.BackendProtocolSupport m =
+                  input.readMessage(
+                      com.udb.entity.v1.BackendProtocolSupport.parser(),
+                      extensionRegistry);
+              if (backendProtocolSupportBuilder_ == null) {
+                ensureBackendProtocolSupportIsMutable();
+                backendProtocolSupport_.add(m);
+              } else {
+                backendProtocolSupportBuilder_.addMessage(m);
+              }
+              break;
+            } // case 82
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2506,6 +2747,538 @@ private static final long serialVersionUID = 0L;
         backendCapabilities_ = null;
       }
       return backendCapabilitiesBuilder_;
+    }
+
+    private com.udb.entity.v1.ProtocolSupport protocolSupport_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.entity.v1.ProtocolSupport, com.udb.entity.v1.ProtocolSupport.Builder, com.udb.entity.v1.ProtocolSupportOrBuilder> protocolSupportBuilder_;
+    /**
+     * <pre>
+     * V2 protocol negotiation metadata. Additive (field 9): old clients that
+     * only read fields 1-8 are unaffected; new clients use this to detect the
+     * supported protocol version range, wire encodings, compression, streaming
+     * support, and message-size limits before choosing a transport path.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+     * @return Whether the protocolSupport field is set.
+     */
+    public boolean hasProtocolSupport() {
+      return ((bitField0_ & 0x00000100) != 0);
+    }
+    /**
+     * <pre>
+     * V2 protocol negotiation metadata. Additive (field 9): old clients that
+     * only read fields 1-8 are unaffected; new clients use this to detect the
+     * supported protocol version range, wire encodings, compression, streaming
+     * support, and message-size limits before choosing a transport path.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+     * @return The protocolSupport.
+     */
+    public com.udb.entity.v1.ProtocolSupport getProtocolSupport() {
+      if (protocolSupportBuilder_ == null) {
+        return protocolSupport_ == null ? com.udb.entity.v1.ProtocolSupport.getDefaultInstance() : protocolSupport_;
+      } else {
+        return protocolSupportBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * V2 protocol negotiation metadata. Additive (field 9): old clients that
+     * only read fields 1-8 are unaffected; new clients use this to detect the
+     * supported protocol version range, wire encodings, compression, streaming
+     * support, and message-size limits before choosing a transport path.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+     */
+    public Builder setProtocolSupport(com.udb.entity.v1.ProtocolSupport value) {
+      if (protocolSupportBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        protocolSupport_ = value;
+      } else {
+        protocolSupportBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * V2 protocol negotiation metadata. Additive (field 9): old clients that
+     * only read fields 1-8 are unaffected; new clients use this to detect the
+     * supported protocol version range, wire encodings, compression, streaming
+     * support, and message-size limits before choosing a transport path.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+     */
+    public Builder setProtocolSupport(
+        com.udb.entity.v1.ProtocolSupport.Builder builderForValue) {
+      if (protocolSupportBuilder_ == null) {
+        protocolSupport_ = builderForValue.build();
+      } else {
+        protocolSupportBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * V2 protocol negotiation metadata. Additive (field 9): old clients that
+     * only read fields 1-8 are unaffected; new clients use this to detect the
+     * supported protocol version range, wire encodings, compression, streaming
+     * support, and message-size limits before choosing a transport path.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+     */
+    public Builder mergeProtocolSupport(com.udb.entity.v1.ProtocolSupport value) {
+      if (protocolSupportBuilder_ == null) {
+        if (((bitField0_ & 0x00000100) != 0) &&
+          protocolSupport_ != null &&
+          protocolSupport_ != com.udb.entity.v1.ProtocolSupport.getDefaultInstance()) {
+          getProtocolSupportBuilder().mergeFrom(value);
+        } else {
+          protocolSupport_ = value;
+        }
+      } else {
+        protocolSupportBuilder_.mergeFrom(value);
+      }
+      if (protocolSupport_ != null) {
+        bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * V2 protocol negotiation metadata. Additive (field 9): old clients that
+     * only read fields 1-8 are unaffected; new clients use this to detect the
+     * supported protocol version range, wire encodings, compression, streaming
+     * support, and message-size limits before choosing a transport path.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+     */
+    public Builder clearProtocolSupport() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      protocolSupport_ = null;
+      if (protocolSupportBuilder_ != null) {
+        protocolSupportBuilder_.dispose();
+        protocolSupportBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * V2 protocol negotiation metadata. Additive (field 9): old clients that
+     * only read fields 1-8 are unaffected; new clients use this to detect the
+     * supported protocol version range, wire encodings, compression, streaming
+     * support, and message-size limits before choosing a transport path.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+     */
+    public com.udb.entity.v1.ProtocolSupport.Builder getProtocolSupportBuilder() {
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return internalGetProtocolSupportFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * V2 protocol negotiation metadata. Additive (field 9): old clients that
+     * only read fields 1-8 are unaffected; new clients use this to detect the
+     * supported protocol version range, wire encodings, compression, streaming
+     * support, and message-size limits before choosing a transport path.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+     */
+    public com.udb.entity.v1.ProtocolSupportOrBuilder getProtocolSupportOrBuilder() {
+      if (protocolSupportBuilder_ != null) {
+        return protocolSupportBuilder_.getMessageOrBuilder();
+      } else {
+        return protocolSupport_ == null ?
+            com.udb.entity.v1.ProtocolSupport.getDefaultInstance() : protocolSupport_;
+      }
+    }
+    /**
+     * <pre>
+     * V2 protocol negotiation metadata. Additive (field 9): old clients that
+     * only read fields 1-8 are unaffected; new clients use this to detect the
+     * supported protocol version range, wire encodings, compression, streaming
+     * support, and message-size limits before choosing a transport path.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ProtocolSupport protocol_support = 9 [json_name = "protocolSupport"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.entity.v1.ProtocolSupport, com.udb.entity.v1.ProtocolSupport.Builder, com.udb.entity.v1.ProtocolSupportOrBuilder> 
+        internalGetProtocolSupportFieldBuilder() {
+      if (protocolSupportBuilder_ == null) {
+        protocolSupportBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.udb.entity.v1.ProtocolSupport, com.udb.entity.v1.ProtocolSupport.Builder, com.udb.entity.v1.ProtocolSupportOrBuilder>(
+                getProtocolSupport(),
+                getParentForChildren(),
+                isClean());
+        protocolSupport_ = null;
+      }
+      return protocolSupportBuilder_;
+    }
+
+    private java.util.List<com.udb.entity.v1.BackendProtocolSupport> backendProtocolSupport_ =
+      java.util.Collections.emptyList();
+    private void ensureBackendProtocolSupportIsMutable() {
+      if (!((bitField0_ & 0x00000200) != 0)) {
+        backendProtocolSupport_ = new java.util.ArrayList<com.udb.entity.v1.BackendProtocolSupport>(backendProtocolSupport_);
+        bitField0_ |= 0x00000200;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.entity.v1.BackendProtocolSupport, com.udb.entity.v1.BackendProtocolSupport.Builder, com.udb.entity.v1.BackendProtocolSupportOrBuilder> backendProtocolSupportBuilder_;
+
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public java.util.List<com.udb.entity.v1.BackendProtocolSupport> getBackendProtocolSupportList() {
+      if (backendProtocolSupportBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(backendProtocolSupport_);
+      } else {
+        return backendProtocolSupportBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public int getBackendProtocolSupportCount() {
+      if (backendProtocolSupportBuilder_ == null) {
+        return backendProtocolSupport_.size();
+      } else {
+        return backendProtocolSupportBuilder_.getCount();
+      }
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public com.udb.entity.v1.BackendProtocolSupport getBackendProtocolSupport(int index) {
+      if (backendProtocolSupportBuilder_ == null) {
+        return backendProtocolSupport_.get(index);
+      } else {
+        return backendProtocolSupportBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public Builder setBackendProtocolSupport(
+        int index, com.udb.entity.v1.BackendProtocolSupport value) {
+      if (backendProtocolSupportBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureBackendProtocolSupportIsMutable();
+        backendProtocolSupport_.set(index, value);
+        onChanged();
+      } else {
+        backendProtocolSupportBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public Builder setBackendProtocolSupport(
+        int index, com.udb.entity.v1.BackendProtocolSupport.Builder builderForValue) {
+      if (backendProtocolSupportBuilder_ == null) {
+        ensureBackendProtocolSupportIsMutable();
+        backendProtocolSupport_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        backendProtocolSupportBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public Builder addBackendProtocolSupport(com.udb.entity.v1.BackendProtocolSupport value) {
+      if (backendProtocolSupportBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureBackendProtocolSupportIsMutable();
+        backendProtocolSupport_.add(value);
+        onChanged();
+      } else {
+        backendProtocolSupportBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public Builder addBackendProtocolSupport(
+        int index, com.udb.entity.v1.BackendProtocolSupport value) {
+      if (backendProtocolSupportBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureBackendProtocolSupportIsMutable();
+        backendProtocolSupport_.add(index, value);
+        onChanged();
+      } else {
+        backendProtocolSupportBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public Builder addBackendProtocolSupport(
+        com.udb.entity.v1.BackendProtocolSupport.Builder builderForValue) {
+      if (backendProtocolSupportBuilder_ == null) {
+        ensureBackendProtocolSupportIsMutable();
+        backendProtocolSupport_.add(builderForValue.build());
+        onChanged();
+      } else {
+        backendProtocolSupportBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public Builder addBackendProtocolSupport(
+        int index, com.udb.entity.v1.BackendProtocolSupport.Builder builderForValue) {
+      if (backendProtocolSupportBuilder_ == null) {
+        ensureBackendProtocolSupportIsMutable();
+        backendProtocolSupport_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        backendProtocolSupportBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public Builder addAllBackendProtocolSupport(
+        java.lang.Iterable<? extends com.udb.entity.v1.BackendProtocolSupport> values) {
+      if (backendProtocolSupportBuilder_ == null) {
+        ensureBackendProtocolSupportIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, backendProtocolSupport_);
+        onChanged();
+      } else {
+        backendProtocolSupportBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public Builder clearBackendProtocolSupport() {
+      if (backendProtocolSupportBuilder_ == null) {
+        backendProtocolSupport_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000200);
+        onChanged();
+      } else {
+        backendProtocolSupportBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public Builder removeBackendProtocolSupport(int index) {
+      if (backendProtocolSupportBuilder_ == null) {
+        ensureBackendProtocolSupportIsMutable();
+        backendProtocolSupport_.remove(index);
+        onChanged();
+      } else {
+        backendProtocolSupportBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public com.udb.entity.v1.BackendProtocolSupport.Builder getBackendProtocolSupportBuilder(
+        int index) {
+      return internalGetBackendProtocolSupportFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public com.udb.entity.v1.BackendProtocolSupportOrBuilder getBackendProtocolSupportOrBuilder(
+        int index) {
+      if (backendProtocolSupportBuilder_ == null) {
+        return backendProtocolSupport_.get(index);  } else {
+        return backendProtocolSupportBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public java.util.List<? extends com.udb.entity.v1.BackendProtocolSupportOrBuilder> 
+         getBackendProtocolSupportOrBuilderList() {
+      if (backendProtocolSupportBuilder_ != null) {
+        return backendProtocolSupportBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(backendProtocolSupport_);
+      }
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public com.udb.entity.v1.BackendProtocolSupport.Builder addBackendProtocolSupportBuilder() {
+      return internalGetBackendProtocolSupportFieldBuilder().addBuilder(
+          com.udb.entity.v1.BackendProtocolSupport.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public com.udb.entity.v1.BackendProtocolSupport.Builder addBackendProtocolSupportBuilder(
+        int index) {
+      return internalGetBackendProtocolSupportFieldBuilder().addBuilder(
+          index, com.udb.entity.v1.BackendProtocolSupport.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * Per-backend V2 protocol support. Additive (field 10). Lets a client know,
+     * for a specific backend, whether server-streaming reads / object streaming
+     * are available and which wire encodings that backend can emit.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
+     */
+    public java.util.List<com.udb.entity.v1.BackendProtocolSupport.Builder> 
+         getBackendProtocolSupportBuilderList() {
+      return internalGetBackendProtocolSupportFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.entity.v1.BackendProtocolSupport, com.udb.entity.v1.BackendProtocolSupport.Builder, com.udb.entity.v1.BackendProtocolSupportOrBuilder> 
+        internalGetBackendProtocolSupportFieldBuilder() {
+      if (backendProtocolSupportBuilder_ == null) {
+        backendProtocolSupportBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+            com.udb.entity.v1.BackendProtocolSupport, com.udb.entity.v1.BackendProtocolSupport.Builder, com.udb.entity.v1.BackendProtocolSupportOrBuilder>(
+                backendProtocolSupport_,
+                ((bitField0_ & 0x00000200) != 0),
+                getParentForChildren(),
+                isClean());
+        backendProtocolSupport_ = null;
+      }
+      return backendProtocolSupportBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.CapabilitiesResponse)

@@ -139,6 +139,26 @@ class AuthnServiceStub(object):
                 request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ConfirmMFAEnrollmentRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ConfirmMFAEnrollmentResponse.FromString,
                 _registered_method=True)
+        self.StartWebAuthnRegistration = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartWebAuthnRegistrationRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartWebAuthnRegistrationResponse.FromString,
+                _registered_method=True)
+        self.FinishWebAuthnRegistration = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnRegistrationRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnRegistrationResponse.FromString,
+                _registered_method=True)
+        self.StartWebAuthnAuthentication = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartWebAuthnAuthenticationRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartWebAuthnAuthenticationResponse.FromString,
+                _registered_method=True)
+        self.FinishWebAuthnAuthentication = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnAuthenticationRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnAuthenticationResponse.FromString,
+                _registered_method=True)
 
 
 class AuthnServiceServicer(object):
@@ -302,6 +322,31 @@ class AuthnServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def StartWebAuthnRegistration(self, request, context):
+        """── WebAuthn / passkeys ─────────────────────────────────────────────────
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def FinishWebAuthnRegistration(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StartWebAuthnAuthentication(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def FinishWebAuthnAuthentication(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AuthnServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -419,6 +464,26 @@ def add_AuthnServiceServicer_to_server(servicer, server):
                     servicer.ConfirmMFAEnrollment,
                     request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ConfirmMFAEnrollmentRequest.FromString,
                     response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ConfirmMFAEnrollmentResponse.SerializeToString,
+            ),
+            'StartWebAuthnRegistration': grpc.unary_unary_rpc_method_handler(
+                    servicer.StartWebAuthnRegistration,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartWebAuthnRegistrationRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartWebAuthnRegistrationResponse.SerializeToString,
+            ),
+            'FinishWebAuthnRegistration': grpc.unary_unary_rpc_method_handler(
+                    servicer.FinishWebAuthnRegistration,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnRegistrationRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnRegistrationResponse.SerializeToString,
+            ),
+            'StartWebAuthnAuthentication': grpc.unary_unary_rpc_method_handler(
+                    servicer.StartWebAuthnAuthentication,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartWebAuthnAuthenticationRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartWebAuthnAuthenticationResponse.SerializeToString,
+            ),
+            'FinishWebAuthnAuthentication': grpc.unary_unary_rpc_method_handler(
+                    servicer.FinishWebAuthnAuthentication,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnAuthenticationRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnAuthenticationResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -1052,6 +1117,114 @@ class AuthnService(object):
             '/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment',
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ConfirmMFAEnrollmentRequest.SerializeToString,
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ConfirmMFAEnrollmentResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StartWebAuthnRegistration(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartWebAuthnRegistrationRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartWebAuthnRegistrationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def FinishWebAuthnRegistration(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnRegistrationRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnRegistrationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StartWebAuthnAuthentication(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartWebAuthnAuthenticationRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartWebAuthnAuthenticationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def FinishWebAuthnAuthentication(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnAuthenticationRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnAuthenticationResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -37,6 +37,16 @@ public final class AdminProto extends com.google.protobuf.GeneratedFile {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_entity_v1_CapabilitiesResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_ProtocolSupport_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_ProtocolSupport_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_BackendProtocolSupport_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_BackendProtocolSupport_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_entity_v1_BackendCapabilityDescriptor_descriptor;
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -394,7 +404,7 @@ public final class AdminProto extends com.google.protobuf.GeneratedFile {
       "v1\032\033udb/entity/v1/context.proto\"m\n\023Capab" +
       "ilitiesRequest\0227\n\007context\030\001 \001(\0132\035.udb.en" +
       "tity.v1.RequestContextR\007context\022\035\n\nproje" +
-      "ct_id\030\002 \001(\tR\tprojectId\"\325\003\n\024CapabilitiesR" +
+      "ct_id\030\002 \001(\tR\tprojectId\"\201\005\n\024CapabilitiesR" +
       "esponse\022\'\n\017schema_checksum\030\001 \001(\tR\016schema" +
       "Checksum\022)\n\020protocol_version\030\002 \001(\tR\017prot" +
       "ocolVersion\022)\n\020enabled_backends\030\003 \003(\tR\017e" +
@@ -406,391 +416,412 @@ public final class AdminProto extends com.google.protobuf.GeneratedFile {
       "BackendInstanceStatusR\020backendInstances\022" +
       "]\n\024backend_capabilities\030\010 \003(\0132*.udb.enti" +
       "ty.v1.BackendCapabilityDescriptorR\023backe" +
-      "ndCapabilities\"\326\002\n\033BackendCapabilityDesc" +
-      "riptor\022\030\n\007backend\030\001 \001(\tR\007backend\022\022\n\004tier" +
-      "\030\002 \001(\tR\004tier\022\036\n\noperations\030\003 \003(\tR\noperat" +
-      "ions\0224\n\026unsupported_error_code\030\004 \001(\tR\024un" +
-      "supportedErrorCode\022+\n\021consistency_model\030" +
-      "\005 \001(\tR\020consistencyModel\022*\n\021max_payload_b" +
-      "ytes\030\006 \001(\003R\017maxPayloadBytes\022\037\n\013supports_" +
-      "xa\030\007 \001(\010R\nsupportsXa\0229\n\031supports_two_pha" +
-      "se_commit\030\010 \001(\010R\026supportsTwoPhaseCommit\"" +
-      "\223\004\n\025BackendInstanceStatus\022\030\n\007backend\030\001 \001" +
-      "(\tR\007backend\022#\n\rinstance_name\030\002 \001(\tR\014inst" +
-      "anceName\022\022\n\004role\030\003 \001(\tR\004role\022\030\n\007enabled\030" +
-      "\004 \001(\010R\007enabled\022\036\n\nconfigured\030\005 \001(\010R\nconf" +
-      "igured\022\034\n\tconnected\030\006 \001(\010R\tconnected\022\037\n\013" +
-      "read_weight\030\007 \001(\rR\nreadWeight\022!\n\014write_w" +
-      "eight\030\010 \001(\rR\013writeWeight\022H\n\006labels\030\t \003(\013" +
-      "20.udb.entity.v1.BackendInstanceStatus.L" +
-      "abelsEntryR\006labels\022\"\n\014capabilities\030\n \003(\t" +
-      "R\014capabilities\022%\n\016routing_status\030\013 \001(\tR\r" +
-      "routingStatus\022\030\n\007healthy\030\014 \001(\010R\007healthy\022" +
-      "!\n\014circuit_open\030\r \001(\010R\013circuitOpen\0329\n\013La" +
-      "belsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001" +
-      "(\tR\005value:\0028\001\"i\n\026CatalogManifestRequest\022" +
-      "7\n\007context\030\001 \001(\0132\035.udb.entity.v1.Request" +
-      "ContextR\007context\022\026\n\006redact\030\002 \001(\010R\006redact" +
-      "\">\n\027CatalogManifestResponse\022#\n\rmanifest_" +
-      "json\030\001 \001(\014R\014manifestJson\"\315\001\n\032MessageSche" +
-      "maLookupRequest\0227\n\007context\030\001 \001(\0132\035.udb.e" +
-      "ntity.v1.RequestContextR\007context\022\035\n\nproj" +
-      "ect_id\030\002 \001(\tR\tprojectId\022!\n\014message_type\030" +
-      "\003 \001(\tR\013messageType\0224\n\026client_catalog_ver" +
-      "sion\030\004 \001(\tR\024clientCatalogVersion\"\334\001\n\026Mes" +
-      "sageFieldDescriptor\022\022\n\004name\030\001 \001(\tR\004name\022" +
-      "\037\n\013column_name\030\002 \001(\tR\ncolumnName\022\035\n\nprot" +
-      "o_type\030\003 \001(\tR\tprotoType\022\031\n\010sql_type\030\004 \001(" +
-      "\tR\007sqlType\022\031\n\010not_null\030\005 \001(\010R\007notNull\022\035\n" +
-      "\nis_primary\030\006 \001(\010R\tisPrimary\022\031\n\010is_array" +
-      "\030\007 \001(\010R\007isArray\"\277\002\n\027MessageSchemaDescrip" +
-      "tor\022!\n\014message_type\030\001 \001(\tR\013messageType\022\035" +
-      "\n\nproject_id\030\002 \001(\tR\tprojectId\022\'\n\017catalog" +
-      "_version\030\003 \001(\tR\016catalogVersion\022+\n\021manife" +
-      "st_checksum\030\004 \001(\tR\020manifestChecksum\022\026\n\006s" +
-      "chema\030\005 \001(\tR\006schema\022\024\n\005table\030\006 \001(\tR\005tabl" +
-      "e\022\037\n\013primary_key\030\007 \003(\tR\nprimaryKey\022=\n\006fi" +
-      "elds\030\010 \003(\0132%.udb.entity.v1.MessageFieldD" +
-      "escriptorR\006fields\"]\n\033MessageSchemaLookup" +
-      "Response\022>\n\006schema\030\001 \001(\0132&.udb.entity.v1" +
-      ".MessageSchemaDescriptorR\006schema\"\250\001\n\030Mes" +
-      "sageSchemaListRequest\0227\n\007context\030\001 \001(\0132\035" +
-      ".udb.entity.v1.RequestContextR\007context\022\035" +
-      "\n\nproject_id\030\002 \001(\tR\tprojectId\0224\n\026client_" +
-      "catalog_version\030\003 \001(\tR\024clientCatalogVers" +
-      "ion\"\265\001\n\031MessageSchemaListResponse\022\035\n\npro" +
-      "ject_id\030\001 \001(\tR\tprojectId\022\'\n\017catalog_vers" +
-      "ion\030\002 \001(\tR\016catalogVersion\022+\n\021manifest_ch" +
-      "ecksum\030\003 \001(\tR\020manifestChecksum\022#\n\rmessag" +
-      "e_types\030\004 \003(\tR\014messageTypes\"\216\001\n\023HealthRe" +
-      "portRequest\0227\n\007context\030\001 \001(\0132\035.udb.entit" +
-      "y.v1.RequestContextR\007context\022\037\n\013with_pro" +
-      "bes\030\002 \001(\010R\nwithProbes\022\035\n\nproject_id\030\003 \001(" +
-      "\tR\tprojectId\"\255\003\n\024HealthReportResponse\022\026\n" +
-      "\006passed\030\001 \001(\010R\006passed\022/\n\023postgres_config" +
-      "ured\030\002 \001(\010R\022postgresConfigured\022)\n\020redis_" +
-      "configured\030\003 \001(\010R\017redisConfigured\022+\n\021qdr" +
-      "ant_configured\030\004 \001(\010R\020qdrantConfigured\022#" +
-      "\n\rs3_configured\030\005 \001(\010R\014s3Configured\022\026\n\006e" +
-      "rrors\030\006 \003(\tR\006errors\022\032\n\010warnings\030\007 \003(\tR\010w" +
-      "arnings\022\'\n\017privileges_json\030\010 \001(\014R\016privil" +
-      "egesJson\022\037\n\013probes_json\030\t \001(\014R\nprobesJso" +
-      "n\022Q\n\021backend_instances\030\n \003(\0132$.udb.entit" +
-      "y.v1.BackendInstanceStatusR\020backendInsta" +
-      "nces\"\325\002\n\026GenericDispatchRequest\0227\n\007conte" +
-      "xt\030\001 \001(\0132\035.udb.entity.v1.RequestContextR" +
-      "\007context\022\030\n\007backend\030\002 \001(\tR\007backend\022\034\n\top" +
-      "eration\030\003 \001(\tR\toperation\022#\n\rresource_kin" +
-      "d\030\004 \001(\tR\014resourceKind\022#\n\rresource_name\030\005" +
-      " \001(\tR\014resourceName\022!\n\014resource_uri\030\006 \001(\t" +
-      "R\013resourceUri\022\033\n\tspec_json\030\007 \001(\tR\010specJs" +
-      "on\022\'\n\017idempotency_key\030\010 \001(\tR\016idempotency" +
-      "Key\022\027\n\007dry_run\030\t \001(\010R\006dryRun\"\255\001\n\027Generic" +
-      "DispatchResponse\022\030\n\007backend\030\001 \001(\tR\007backe" +
-      "nd\022\034\n\toperation\030\002 \001(\tR\toperation\022!\n\014reso" +
-      "urce_uri\030\003 \001(\tR\013resourceUri\022\037\n\013result_js" +
-      "on\030\004 \001(\tR\nresultJson\022\026\n\006errors\030\005 \003(\tR\006er" +
-      "rors\"\355\001\n\024ResourceAdminRequest\0227\n\007context" +
-      "\030\001 \001(\0132\035.udb.entity.v1.RequestContextR\007c" +
-      "ontext\022\030\n\007backend\030\002 \001(\tR\007backend\022#\n\rreso" +
-      "urce_name\030\003 \001(\tR\014resourceName\022\033\n\tspec_js" +
-      "on\030\004 \001(\tR\010specJson\022\'\n\017idempotency_key\030\005 " +
-      "\001(\tR\016idempotencyKey\022\027\n\007dry_run\030\006 \001(\010R\006dr" +
-      "yRun\"N\n\024ResourceListResponse\022\030\n\007backend\030" +
-      "\001 \001(\tR\007backend\022\034\n\tresources\030\002 \003(\tR\tresou" +
-      "rces\"\324\001\n\023StageCatalogRequest\0227\n\007context\030" +
-      "\001 \001(\0132\035.udb.entity.v1.RequestContextR\007co" +
-      "ntext\022$\n\rmanifest_json\030\350\007 \001(\014R\014manifestJ" +
-      "son\022\035\n\nproject_id\030\002 \001(\tR\tprojectId\022\026\n\006re" +
-      "ason\030\003 \001(\tR\006reason\022\'\n\017idempotency_key\030\004 " +
-      "\001(\tR\016idempotencyKey\"\312\001\n\025CatalogVersionRe" +
-      "quest\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.R" +
-      "equestContextR\007context\022\035\n\nproject_id\030\002 \001" +
-      "(\tR\tprojectId\022\030\n\007version\030\003 \001(\tR\007version\022" +
-      "\026\n\006reason\030\004 \001(\tR\006reason\022\'\n\017idempotency_k" +
-      "ey\030\005 \001(\tR\016idempotencyKey\"\215\002\n\026CatalogVers" +
-      "ionResponse\022\035\n\ncatalog_id\030\001 \001(\tR\tcatalog" +
-      "Id\022\035\n\nproject_id\030\002 \001(\tR\tprojectId\022\030\n\007ver" +
-      "sion\030\003 \001(\tR\007version\022\026\n\006status\030\004 \001(\tR\006sta" +
-      "tus\022\'\n\017checksum_sha256\030\005 \001(\tR\016checksumSh" +
-      "a256\022&\n\017created_at_unix\030\006 \001(\003R\rcreatedAt" +
-      "Unix\022\026\n\006errors\030\007 \003(\tR\006errors\022\032\n\010warnings" +
-      "\030\010 \003(\tR\010warnings\"\216\001\n\031CatalogValidationRe" +
-      "sponse\022\024\n\005valid\030\001 \001(\010R\005valid\022\'\n\017checksum" +
-      "_sha256\030\002 \001(\tR\016checksumSha256\022\026\n\006errors\030" +
-      "\003 \003(\tR\006errors\022\032\n\010warnings\030\004 \003(\tR\010warning" +
-      "s\"\245\001\n\032CatalogVersionListResponse\022\035\n\nproj" +
-      "ect_id\030\001 \001(\tR\tprojectId\022A\n\010versions\030\002 \003(" +
-      "\0132%.udb.entity.v1.CatalogVersionResponse" +
-      "R\010versions\022%\n\016active_version\030\003 \001(\tR\racti" +
-      "veVersion\"\207\001\n\024MigrationPlanRequest\0227\n\007co" +
-      "ntext\030\001 \001(\0132\035.udb.entity.v1.RequestConte" +
-      "xtR\007context\022\035\n\nproject_id\030\002 \001(\tR\tproject" +
-      "Id\022\027\n\007dry_run\030\003 \001(\010R\006dryRun\"\230\002\n\025Migratio" +
-      "nPlanResponse\022\025\n\006run_id\030\001 \001(\tR\005runId\022\035\n\n" +
-      "project_id\030\002 \001(\tR\tprojectId\022\'\n\017catalog_v" +
-      "ersion\030\003 \001(\tR\016catalogVersion\022\024\n\005state\030\004 " +
-      "\001(\tR\005state\022\036\n\noperations\030\005 \003(\tR\noperatio" +
-      "ns\022\'\n\017requires_review\030\006 \003(\tR\016requiresRev" +
-      "iew\022\030\n\007blocked\030\007 \003(\tR\007blocked\022\'\n\017operati" +
-      "ons_hash\030\010 \001(\tR\016operationsHash\"\326\001\n\025Migra" +
-      "tionApplyRequest\0227\n\007context\030\001 \001(\0132\035.udb." +
-      "entity.v1.RequestContextR\007context\022\025\n\006run" +
-      "_id\030\002 \001(\tR\005runId\022\035\n\nproject_id\030\003 \001(\tR\tpr" +
-      "ojectId\022%\n\016approval_token\030\004 \001(\tR\rapprova" +
-      "lToken\022\'\n\017idempotency_key\030\005 \001(\tR\016idempot" +
-      "encyKey\"\255\001\n\023MigrationRunRequest\0227\n\007conte" +
-      "xt\030\001 \001(\0132\035.udb.entity.v1.RequestContextR" +
-      "\007context\022\025\n\006run_id\030\002 \001(\tR\005runId\022\035\n\nproje" +
-      "ct_id\030\003 \001(\tR\tprojectId\022\'\n\017idempotency_ke" +
-      "y\030\004 \001(\tR\016idempotencyKey\"\311\001\n\027MigrationRun" +
-      "ListRequest\0227\n\007context\030\001 \001(\0132\035.udb.entit" +
-      "y.v1.RequestContextR\007context\022\035\n\nproject_" +
-      "id\030\002 \001(\tR\tprojectId\022!\n\014state_filter\030\003 \001(" +
-      "\tR\013stateFilter\022\024\n\005limit\030\004 \001(\005R\005limit\022\035\n\n" +
-      "page_token\030\005 \001(\tR\tpageToken\"\237\001\n\030Migratio" +
-      "nRunListResponse\022:\n\004runs\030\001 \003(\0132&.udb.ent" +
-      "ity.v1.MigrationStatusResponseR\004runs\022&\n\017" +
-      "next_page_token\030\002 \001(\tR\rnextPageToken\022\037\n\013" +
-      "total_count\030\003 \001(\005R\ntotalCount\"\255\002\n\027Migrat" +
-      "ionStatusResponse\022\025\n\006run_id\030\001 \001(\tR\005runId" +
-      "\022\035\n\nproject_id\030\002 \001(\tR\tprojectId\022\'\n\017catal" +
-      "og_version\030\003 \001(\tR\016catalogVersion\022\024\n\005stat" +
-      "e\030\004 \001(\tR\005state\022\035\n\nstarted_at\030\005 \001(\tR\tstar" +
-      "tedAt\022\037\n\013finished_at\030\006 \001(\tR\nfinishedAt\022G" +
-      "\n\noperations\030\007 \003(\0132\'.udb.entity.v1.Migra" +
-      "tionOperationStatusR\noperations\022\024\n\005error" +
-      "\030\010 \001(\tR\005error\"\302\001\n\030MigrationOperationStat" +
-      "us\022\024\n\005index\030\001 \001(\005R\005index\022\030\n\007backend\030\002 \001(" +
-      "\tR\007backend\022!\n\014resource_uri\030\003 \001(\tR\013resour" +
-      "ceUri\022%\n\016operation_kind\030\004 \001(\tR\roperation" +
-      "Kind\022\026\n\006status\030\005 \001(\tR\006status\022\024\n\005error\030\006 " +
-      "\001(\tR\005error\"\271\001\n\016DlqListRequest\0227\n\007context" +
-      "\030\001 \001(\0132\035.udb.entity.v1.RequestContextR\007c" +
-      "ontext\022\024\n\005topic\030\002 \001(\tR\005topic\022#\n\rstatus_f" +
-      "ilter\030\003 \001(\tR\014statusFilter\022\024\n\005limit\030\004 \001(\005" +
-      "R\005limit\022\035\n\npage_token\030\005 \001(\tR\tpageToken\"\247" +
-      "\002\n\016DlqEventRecord\022\025\n\006dlq_id\030\001 \001(\tR\005dlqId" +
-      "\022\031\n\010event_id\030\002 \001(\tR\007eventId\022\024\n\005topic\030\003 \001" +
-      "(\tR\005topic\022!\n\014payload_json\030\004 \001(\014R\013payload" +
-      "Json\022\035\n\nerror_type\030\005 \001(\tR\terrorType\022#\n\re" +
-      "rror_message\030\006 \001(\tR\014errorMessage\022\026\n\006stat" +
-      "us\030\007 \001(\tR\006status\022&\n\017created_at_unix\030\010 \001(" +
-      "\003R\rcreatedAtUnix\022&\n\017updated_at_unix\030\t \001(" +
-      "\003R\rupdatedAtUnix\"\221\001\n\017DlqListResponse\0225\n\006" +
-      "events\030\001 \003(\0132\035.udb.entity.v1.DlqEventRec" +
-      "ordR\006events\022&\n\017next_page_token\030\002 \001(\tR\rne" +
-      "xtPageToken\022\037\n\013total_count\030\003 \001(\005R\ntotalC" +
-      "ount\"a\n\017DlqEventRequest\0227\n\007context\030\001 \001(\013" +
-      "2\035.udb.entity.v1.RequestContextR\007context" +
-      "\022\025\n\006dlq_id\030\002 \001(\tR\005dlqId\"G\n\020DlqEventRespo" +
-      "nse\0223\n\005event\030\001 \001(\0132\035.udb.entity.v1.DlqEv" +
-      "entRecordR\005event\"\246\001\n\020DlqActionRequest\0227\n" +
-      "\007context\030\001 \001(\0132\035.udb.entity.v1.RequestCo" +
-      "ntextR\007context\022\025\n\006dlq_id\030\002 \001(\tR\005dlqId\022*\n" +
-      "\021preserve_event_id\030\003 \001(\010R\017preserveEventI" +
-      "d\022\026\n\006reason\030\004 \001(\tR\006reason\"\244\002\n\032CdcRedacti" +
-      "onPreviewRequest\0227\n\007context\030\001 \001(\0132\035.udb." +
-      "entity.v1.RequestContextR\007context\022!\n\014mes" +
-      "sage_type\030\002 \001(\tR\013messageType\022\024\n\005topic\030\003 " +
-      "\001(\tR\005topic\022\035\n\nschema_uri\030\004 \001(\tR\tschemaUr" +
-      "i\022!\n\014payload_json\030\005 \001(\014R\013payloadJson\022%\n\016" +
-      "redaction_mode\030\006 \001(\tR\rredactionMode\022+\n\021r" +
-      "edaction_version\030\007 \001(\005R\020redactionVersion" +
-      "\"\340\001\n\033CdcRedactionPreviewResponse\022!\n\014payl" +
-      "oad_json\030\001 \001(\014R\013payloadJson\022\'\n\017redacted_" +
-      "fields\030\002 \003(\tR\016redactedFields\022%\n\016redactio" +
-      "n_mode\030\003 \001(\tR\rredactionMode\022+\n\021redaction" +
-      "_version\030\004 \001(\005R\020redactionVersion\022!\n\014woul" +
-      "d_redact\030\005 \001(\010R\013wouldRedact\"\212\002\n\032Projecti" +
-      "onDriftScanRequest\0227\n\007context\030\001 \001(\0132\035.ud" +
-      "b.entity.v1.RequestContextR\007context\022\035\n\np" +
-      "roject_id\030\002 \001(\tR\tprojectId\022!\n\014message_ty" +
-      "pe\030\003 \001(\tR\013messageType\022\033\n\tscan_mode\030\004 \001(\t" +
-      "R\010scanMode\022&\n\017rows_per_target\030\005 \001(\005R\rrow" +
-      "sPerTarget\022\026\n\006repair\030\006 \001(\010R\006repair\022\024\n\005li" +
-      "mit\030\007 \001(\005R\005limit\"\245\001\n\033ProjectionDriftDive" +
-      "rgentRow\022 \n\014row_key_json\030\001 \001(\014R\nrowKeyJs" +
-      "on\022\'\n\017source_checksum\030\002 \001(\tR\016sourceCheck" +
-      "sum\022\'\n\017target_checksum\030\003 \001(\tR\016targetChec" +
-      "ksum\022\022\n\004kind\030\004 \001(\tR\004kind\"\301\003\n\033ProjectionD" +
-      "riftTargetReport\022%\n\016target_backend\030\001 \001(\t" +
-      "R\rtargetBackend\022\'\n\017target_instance\030\002 \001(\t" +
-      "R\016targetInstance\022\'\n\017target_resource\030\003 \001(" +
-      "\tR\016targetResource\022.\n\023source_rows_scanned" +
-      "\030\004 \001(\005R\021sourceRowsScanned\022Q\n\016divergent_r" +
-      "ows\030\005 \003(\0132*.udb.entity.v1.ProjectionDrif" +
-      "tDivergentRowR\rdivergentRows\022$\n\016rows_to_" +
-      "repair\030\006 \001(\005R\014rowsToRepair\0220\n\024estimated_" +
-      "cost_units\030\007 \001(\001R\022estimatedCostUnits\0222\n\025" +
-      "repair_tasks_enqueued\030\010 \001(\003R\023repairTasks" +
-      "Enqueued\022\032\n\010warnings\030\t \003(\tR\010warnings\"\257\002\n" +
-      "\033ProjectionDriftScanResponse\022\035\n\nproject_" +
-      "id\030\001 \001(\tR\tprojectId\022!\n\014message_type\030\002 \001(" +
-      "\tR\013messageType\022\033\n\tscan_mode\030\003 \001(\tR\010scanM" +
-      "ode\022,\n\022source_rows_loaded\030\004 \001(\005R\020sourceR" +
-      "owsLoaded\022D\n\007reports\030\005 \003(\0132*.udb.entity." +
-      "v1.ProjectionDriftTargetReportR\007reports\022" +
-      "!\n\014summary_json\030\006 \001(\014R\013summaryJson\022\032\n\010wa" +
-      "rnings\030\007 \003(\tR\010warnings\"\244\002\n\017SagaListReque" +
-      "st\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Requ" +
-      "estContextR\007context\022(\n\020tenant_id_filter\030" +
-      "\002 \001(\tR\016tenantIdFilter\022#\n\rstatus_filter\030\003" +
-      " \001(\tR\014statusFilter\022 \n\014tx_id_filter\030\004 \001(\t" +
-      "R\ntxIdFilter\0222\n\025correlation_id_filter\030\005 " +
-      "\001(\tR\023correlationIdFilter\022\024\n\005limit\030\006 \001(\005R" +
-      "\005limit\022\035\n\npage_token\030\007 \001(\tR\tpageToken\"\366\002" +
-      "\n\nSagaRecord\022\027\n\007saga_id\030\001 \001(\tR\006sagaId\022\023\n" +
-      "\005tx_id\030\002 \001(\tR\004txId\022\033\n\ttenant_id\030\003 \001(\tR\010t" +
-      "enantId\022%\n\016correlation_id\030\004 \001(\tR\rcorrela" +
-      "tionId\022\026\n\006status\030\005 \001(\tR\006status\022!\n\014curren" +
-      "t_step\030\006 \001(\005R\013currentStep\022\035\n\nsteps_json\030" +
-      "\007 \001(\014R\tstepsJson\022-\n\022compensations_json\030\010" +
-      " \001(\014R\021compensationsJson\022\035\n\nlast_error\030\t " +
-      "\001(\tR\tlastError\022&\n\017created_at_unix\030\n \001(\003R" +
-      "\rcreatedAtUnix\022&\n\017updated_at_unix\030\013 \001(\003R" +
-      "\rupdatedAtUnix\"\214\001\n\020SagaListResponse\022/\n\005s" +
-      "agas\030\001 \003(\0132\031.udb.entity.v1.SagaRecordR\005s" +
-      "agas\022&\n\017next_page_token\030\002 \001(\tR\rnextPageT" +
-      "oken\022\037\n\013total_count\030\003 \001(\005R\ntotalCount\"\240\001" +
-      "\n\013SagaRequest\0227\n\007context\030\001 \001(\0132\035.udb.ent" +
-      "ity.v1.RequestContextR\007context\022\027\n\007saga_i" +
-      "d\030\002 \001(\tR\006sagaId\022\026\n\006reason\030\003 \001(\tR\006reason\022" +
-      "\'\n\017idempotency_key\030\004 \001(\tR\016idempotencyKey" +
-      "\"U\n\014SagaResponse\022-\n\004saga\030\001 \001(\0132\031.udb.ent" +
-      "ity.v1.SagaRecordR\004saga\022\026\n\006errors\030\002 \003(\tR" +
-      "\006errors\"\303\002\n\014PolicyRecord\022\033\n\tpolicy_id\030\001 " +
-      "\001(\003R\010policyId\022\026\n\006effect\030\002 \001(\tR\006effect\022)\n" +
-      "\020service_identity\030\003 \001(\tR\017serviceIdentity" +
-      "\022\033\n\ttenant_id\030\004 \001(\tR\010tenantId\022\030\n\007purpose" +
-      "\030\005 \001(\tR\007purpose\022!\n\014message_type\030\006 \001(\tR\013m" +
-      "essageType\022\034\n\toperation\030\007 \001(\tR\toperation" +
-      "\022%\n\016required_scope\030\010 \001(\tR\rrequiredScope\022" +
-      "\032\n\010priority\030\t \001(\005R\010priority\022\030\n\007enabled\030\n" +
-      " \001(\010R\007enabled\"\254\001\n\021PolicyListRequest\0227\n\007c" +
+      "ndCapabilities\022I\n\020protocol_support\030\t \001(\013" +
+      "2\036.udb.entity.v1.ProtocolSupportR\017protoc" +
+      "olSupport\022_\n\030backend_protocol_support\030\n " +
+      "\003(\0132%.udb.entity.v1.BackendProtocolSuppo" +
+      "rtR\026backendProtocolSupport\"\274\003\n\017ProtocolS" +
+      "upport\0220\n\024min_protocol_version\030\001 \001(\tR\022mi" +
+      "nProtocolVersion\0220\n\024max_protocol_version" +
+      "\030\002 \001(\tR\022maxProtocolVersion\022\034\n\tencodings\030" +
+      "\003 \003(\tR\tencodings\022 \n\013compression\030\004 \003(\tR\013c" +
+      "ompression\0228\n\030supports_streaming_reads\030\005" +
+      " \001(\010R\026supportsStreamingReads\022:\n\031supports" +
+      "_object_streaming\030\006 \001(\010R\027supportsObjectS" +
+      "treaming\0223\n\026max_recv_message_bytes\030\007 \001(\003" +
+      "R\023maxRecvMessageBytes\0223\n\026max_send_messag" +
+      "e_bytes\030\010 \001(\003R\023maxSendMessageBytes\022%\n\016su" +
+      "pported_rpcs\030\t \003(\tR\rsupportedRpcs\"\306\001\n\026Ba" +
+      "ckendProtocolSupport\022\030\n\007backend\030\001 \001(\tR\007b" +
+      "ackend\0228\n\030supports_streaming_reads\030\002 \001(\010" +
+      "R\026supportsStreamingReads\022:\n\031supports_obj" +
+      "ect_streaming\030\003 \001(\010R\027supportsObjectStrea" +
+      "ming\022\034\n\tencodings\030\004 \003(\tR\tencodings\"\326\002\n\033B" +
+      "ackendCapabilityDescriptor\022\030\n\007backend\030\001 " +
+      "\001(\tR\007backend\022\022\n\004tier\030\002 \001(\tR\004tier\022\036\n\noper" +
+      "ations\030\003 \003(\tR\noperations\0224\n\026unsupported_" +
+      "error_code\030\004 \001(\tR\024unsupportedErrorCode\022+" +
+      "\n\021consistency_model\030\005 \001(\tR\020consistencyMo" +
+      "del\022*\n\021max_payload_bytes\030\006 \001(\003R\017maxPaylo" +
+      "adBytes\022\037\n\013supports_xa\030\007 \001(\010R\nsupportsXa" +
+      "\0229\n\031supports_two_phase_commit\030\010 \001(\010R\026sup" +
+      "portsTwoPhaseCommit\"\223\004\n\025BackendInstanceS" +
+      "tatus\022\030\n\007backend\030\001 \001(\tR\007backend\022#\n\rinsta" +
+      "nce_name\030\002 \001(\tR\014instanceName\022\022\n\004role\030\003 \001" +
+      "(\tR\004role\022\030\n\007enabled\030\004 \001(\010R\007enabled\022\036\n\nco" +
+      "nfigured\030\005 \001(\010R\nconfigured\022\034\n\tconnected\030" +
+      "\006 \001(\010R\tconnected\022\037\n\013read_weight\030\007 \001(\rR\nr" +
+      "eadWeight\022!\n\014write_weight\030\010 \001(\rR\013writeWe" +
+      "ight\022H\n\006labels\030\t \003(\01320.udb.entity.v1.Bac" +
+      "kendInstanceStatus.LabelsEntryR\006labels\022\"" +
+      "\n\014capabilities\030\n \003(\tR\014capabilities\022%\n\016ro" +
+      "uting_status\030\013 \001(\tR\rroutingStatus\022\030\n\007hea" +
+      "lthy\030\014 \001(\010R\007healthy\022!\n\014circuit_open\030\r \001(" +
+      "\010R\013circuitOpen\0329\n\013LabelsEntry\022\020\n\003key\030\001 \001" +
+      "(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"i\n\026Cat" +
+      "alogManifestRequest\0227\n\007context\030\001 \001(\0132\035.u" +
+      "db.entity.v1.RequestContextR\007context\022\026\n\006" +
+      "redact\030\002 \001(\010R\006redact\">\n\027CatalogManifestR" +
+      "esponse\022#\n\rmanifest_json\030\001 \001(\014R\014manifest" +
+      "Json\"\315\001\n\032MessageSchemaLookupRequest\0227\n\007c" +
       "ontext\030\001 \001(\0132\035.udb.entity.v1.RequestCont" +
-      "extR\007context\022)\n\020include_disabled\030\002 \001(\010R\017" +
-      "includeDisabled\022\024\n\005limit\030\003 \001(\005R\005limit\022\035\n" +
-      "\npage_token\030\004 \001(\tR\tpageToken\"\226\001\n\022PolicyL" +
-      "istResponse\0227\n\010policies\030\001 \003(\0132\033.udb.enti" +
-      "ty.v1.PolicyRecordR\010policies\022&\n\017next_pag" +
-      "e_token\030\002 \001(\tR\rnextPageToken\022\037\n\013total_co" +
-      "unt\030\003 \001(\005R\ntotalCount\"\200\001\n\020PutPolicyReque" +
-      "st\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Requ" +
-      "estContextR\007context\0223\n\006policy\030\002 \001(\0132\033.ud" +
-      "b.entity.v1.PolicyRecordR\006policy\"e\n\rPoli" +
-      "cyRequest\0227\n\007context\030\001 \001(\0132\035.udb.entity." +
-      "v1.RequestContextR\007context\022\033\n\tpolicy_id\030" +
-      "\002 \001(\003R\010policyId\"H\n\022PolicyLintResponse\022\026\n" +
-      "\006passed\030\001 \001(\010R\006passed\022\032\n\010findings\030\002 \003(\tR" +
-      "\010findings\"\254\001\n\024EnsureProjectRequest\0227\n\007co" +
-      "ntext\030\001 \001(\0132\035.udb.entity.v1.RequestConte" +
-      "xtR\007context\022\035\n\nproject_id\030\002 \001(\tR\tproject" +
-      "Id\022\022\n\004name\030\003 \001(\tR\004name\022(\n\020cdc_topic_pref" +
-      "ix\030\004 \001(\tR\016cdcTopicPrefix\"\312\001\n\rProjectReco" +
-      "rd\022\035\n\nproject_id\030\001 \001(\tR\tprojectId\022\022\n\004nam" +
-      "e\030\002 \001(\tR\004name\022(\n\020cdc_topic_prefix\030\003 \001(\tR" +
-      "\016cdcTopicPrefix\0224\n\026active_catalog_versio" +
-      "n\030\004 \001(\tR\024activeCatalogVersion\022&\n\017created" +
-      "_at_unix\030\005 \001(\003R\rcreatedAtUnix\"\202\001\n\022Projec" +
-      "tListRequest\0227\n\007context\030\001 \001(\0132\035.udb.enti" +
-      "ty.v1.RequestContextR\007context\022\024\n\005limit\030\002" +
-      " \001(\005R\005limit\022\035\n\npage_token\030\003 \001(\tR\tpageTok" +
-      "en\"\230\001\n\023ProjectListResponse\0228\n\010projects\030\001" +
-      " \003(\0132\034.udb.entity.v1.ProjectRecordR\010proj" +
-      "ects\022&\n\017next_page_token\030\002 \001(\tR\rnextPageT" +
-      "oken\022\037\n\013total_count\030\003 \001(\005R\ntotalCount\"\246\001" +
-      "\n\023AdminSummaryRequest\0227\n\007context\030\001 \001(\0132\035" +
-      ".udb.entity.v1.RequestContextR\007context\022\035" +
-      "\n\nproject_id\030\002 \001(\tR\tprojectId\022\037\n\013with_pr" +
-      "obes\030\003 \001(\010R\nwithProbes\022\026\n\006redact\030\004 \001(\010R\006" +
-      "redact\"\300\002\n\024AdminAuditLogRequest\0227\n\007conte" +
+      "extR\007context\022\035\n\nproject_id\030\002 \001(\tR\tprojec" +
+      "tId\022!\n\014message_type\030\003 \001(\tR\013messageType\0224" +
+      "\n\026client_catalog_version\030\004 \001(\tR\024clientCa" +
+      "talogVersion\"\334\001\n\026MessageFieldDescriptor\022" +
+      "\022\n\004name\030\001 \001(\tR\004name\022\037\n\013column_name\030\002 \001(\t" +
+      "R\ncolumnName\022\035\n\nproto_type\030\003 \001(\tR\tprotoT" +
+      "ype\022\031\n\010sql_type\030\004 \001(\tR\007sqlType\022\031\n\010not_nu" +
+      "ll\030\005 \001(\010R\007notNull\022\035\n\nis_primary\030\006 \001(\010R\ti" +
+      "sPrimary\022\031\n\010is_array\030\007 \001(\010R\007isArray\"\277\002\n\027" +
+      "MessageSchemaDescriptor\022!\n\014message_type\030" +
+      "\001 \001(\tR\013messageType\022\035\n\nproject_id\030\002 \001(\tR\t" +
+      "projectId\022\'\n\017catalog_version\030\003 \001(\tR\016cata" +
+      "logVersion\022+\n\021manifest_checksum\030\004 \001(\tR\020m" +
+      "anifestChecksum\022\026\n\006schema\030\005 \001(\tR\006schema\022" +
+      "\024\n\005table\030\006 \001(\tR\005table\022\037\n\013primary_key\030\007 \003" +
+      "(\tR\nprimaryKey\022=\n\006fields\030\010 \003(\0132%.udb.ent" +
+      "ity.v1.MessageFieldDescriptorR\006fields\"]\n" +
+      "\033MessageSchemaLookupResponse\022>\n\006schema\030\001" +
+      " \001(\0132&.udb.entity.v1.MessageSchemaDescri" +
+      "ptorR\006schema\"\250\001\n\030MessageSchemaListReques" +
+      "t\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Reque" +
+      "stContextR\007context\022\035\n\nproject_id\030\002 \001(\tR\t" +
+      "projectId\0224\n\026client_catalog_version\030\003 \001(" +
+      "\tR\024clientCatalogVersion\"\265\001\n\031MessageSchem" +
+      "aListResponse\022\035\n\nproject_id\030\001 \001(\tR\tproje" +
+      "ctId\022\'\n\017catalog_version\030\002 \001(\tR\016catalogVe" +
+      "rsion\022+\n\021manifest_checksum\030\003 \001(\tR\020manife" +
+      "stChecksum\022#\n\rmessage_types\030\004 \003(\tR\014messa" +
+      "geTypes\"\216\001\n\023HealthReportRequest\0227\n\007conte" +
       "xt\030\001 \001(\0132\035.udb.entity.v1.RequestContextR" +
-      "\007context\022)\n\020operation_filter\030\002 \001(\tR\017oper" +
-      "ationFilter\022!\n\014actor_filter\030\003 \001(\tR\013actor" +
-      "Filter\022(\n\020tenant_id_filter\030\004 \001(\tR\016tenant" +
-      "IdFilter\022*\n\021project_id_filter\030\005 \001(\tR\017pro" +
-      "jectIdFilter\022\024\n\005limit\030\006 \001(\005R\005limit\022\035\n\npa" +
-      "ge_token\030\007 \001(\tR\tpageToken\022\026\n\006redact\030\010 \001(" +
-      "\010R\006redact\"\327\003\n\023AdminAuditLogRecord\022\031\n\010aud" +
-      "it_id\030\001 \001(\tR\007auditId\022\024\n\005actor\030\002 \001(\tR\005act" +
-      "or\022\034\n\toperation\030\003 \001(\tR\toperation\022\026\n\006targ" +
-      "et\030\004 \001(\tR\006target\022!\n\014request_json\030\005 \001(\014R\013" +
-      "requestJson\022\026\n\006result\030\006 \001(\tR\006result\022\033\n\tt" +
-      "enant_id\030\007 \001(\tR\010tenantId\022\035\n\nproject_id\030\010" +
-      " \001(\tR\tprojectId\022%\n\016correlation_id\030\t \001(\tR" +
-      "\rcorrelationId\022&\n\017created_at_unix\030\n \001(\003R" +
-      "\rcreatedAtUnix\022#\n\rprevious_hash\030\013 \001(\tR\014p" +
-      "reviousHash\022!\n\014current_hash\030\014 \001(\tR\013curre" +
-      "ntHash\022\"\n\rsigner_key_id\030\r \001(\tR\013signerKey" +
-      "Id\022\'\n\017external_anchor\030\016 \001(\tR\016externalAnc" +
-      "hor\"\230\001\n\025AdminAuditLogResponse\0226\n\004logs\030\001 " +
-      "\003(\0132\".udb.entity.v1.AdminAuditLogRecordR" +
-      "\004logs\022&\n\017next_page_token\030\002 \001(\tR\rnextPage" +
-      "Token\022\037\n\013total_count\030\003 \001(\005R\ntotalCount\"h" +
-      "\n\027AdminAuditVerifyRequest\0227\n\007context\030\001 \001" +
+      "\007context\022\037\n\013with_probes\030\002 \001(\010R\nwithProbe" +
+      "s\022\035\n\nproject_id\030\003 \001(\tR\tprojectId\"\255\003\n\024Hea" +
+      "lthReportResponse\022\026\n\006passed\030\001 \001(\010R\006passe" +
+      "d\022/\n\023postgres_configured\030\002 \001(\010R\022postgres" +
+      "Configured\022)\n\020redis_configured\030\003 \001(\010R\017re" +
+      "disConfigured\022+\n\021qdrant_configured\030\004 \001(\010" +
+      "R\020qdrantConfigured\022#\n\rs3_configured\030\005 \001(" +
+      "\010R\014s3Configured\022\026\n\006errors\030\006 \003(\tR\006errors\022" +
+      "\032\n\010warnings\030\007 \003(\tR\010warnings\022\'\n\017privilege" +
+      "s_json\030\010 \001(\014R\016privilegesJson\022\037\n\013probes_j" +
+      "son\030\t \001(\014R\nprobesJson\022Q\n\021backend_instanc" +
+      "es\030\n \003(\0132$.udb.entity.v1.BackendInstance" +
+      "StatusR\020backendInstances\"\325\002\n\026GenericDisp" +
+      "atchRequest\0227\n\007context\030\001 \001(\0132\035.udb.entit" +
+      "y.v1.RequestContextR\007context\022\030\n\007backend\030" +
+      "\002 \001(\tR\007backend\022\034\n\toperation\030\003 \001(\tR\topera" +
+      "tion\022#\n\rresource_kind\030\004 \001(\tR\014resourceKin" +
+      "d\022#\n\rresource_name\030\005 \001(\tR\014resourceName\022!" +
+      "\n\014resource_uri\030\006 \001(\tR\013resourceUri\022\033\n\tspe" +
+      "c_json\030\007 \001(\tR\010specJson\022\'\n\017idempotency_ke" +
+      "y\030\010 \001(\tR\016idempotencyKey\022\027\n\007dry_run\030\t \001(\010" +
+      "R\006dryRun\"\255\001\n\027GenericDispatchResponse\022\030\n\007" +
+      "backend\030\001 \001(\tR\007backend\022\034\n\toperation\030\002 \001(" +
+      "\tR\toperation\022!\n\014resource_uri\030\003 \001(\tR\013reso" +
+      "urceUri\022\037\n\013result_json\030\004 \001(\tR\nresultJson" +
+      "\022\026\n\006errors\030\005 \003(\tR\006errors\"\355\001\n\024ResourceAdm" +
+      "inRequest\0227\n\007context\030\001 \001(\0132\035.udb.entity." +
+      "v1.RequestContextR\007context\022\030\n\007backend\030\002 " +
+      "\001(\tR\007backend\022#\n\rresource_name\030\003 \001(\tR\014res" +
+      "ourceName\022\033\n\tspec_json\030\004 \001(\tR\010specJson\022\'" +
+      "\n\017idempotency_key\030\005 \001(\tR\016idempotencyKey\022" +
+      "\027\n\007dry_run\030\006 \001(\010R\006dryRun\"N\n\024ResourceList" +
+      "Response\022\030\n\007backend\030\001 \001(\tR\007backend\022\034\n\tre" +
+      "sources\030\002 \003(\tR\tresources\"\324\001\n\023StageCatalo" +
+      "gRequest\0227\n\007context\030\001 \001(\0132\035.udb.entity.v" +
+      "1.RequestContextR\007context\022$\n\rmanifest_js" +
+      "on\030\350\007 \001(\014R\014manifestJson\022\035\n\nproject_id\030\002 " +
+      "\001(\tR\tprojectId\022\026\n\006reason\030\003 \001(\tR\006reason\022\'" +
+      "\n\017idempotency_key\030\004 \001(\tR\016idempotencyKey\"" +
+      "\312\001\n\025CatalogVersionRequest\0227\n\007context\030\001 \001" +
       "(\0132\035.udb.entity.v1.RequestContextR\007conte" +
-      "xt\022\024\n\005limit\030\002 \001(\005R\005limit\"\213\003\n\030AdminAuditV" +
-      "erifyResponse\022\026\n\006passed\030\001 \001(\010R\006passed\022#\n" +
-      "\rchecked_count\030\002 \001(\005R\014checkedCount\0221\n\025fi" +
-      "rst_broken_audit_id\030\003 \001(\tR\022firstBrokenAu" +
-      "ditId\022\026\n\006reason\030\004 \001(\tR\006reason\0224\n\026expecte" +
-      "d_previous_hash\030\005 \001(\tR\024expectedPreviousH" +
-      "ash\0220\n\024actual_previous_hash\030\006 \001(\tR\022actua" +
-      "lPreviousHash\0222\n\025expected_current_hash\030\007" +
-      " \001(\tR\023expectedCurrentHash\022.\n\023actual_curr" +
-      "ent_hash\030\010 \001(\tR\021actualCurrentHash\022\033\n\tlas" +
-      "t_hash\030\t \001(\tR\010lastHash\"\303\005\n\023AdminBackendS" +
-      "ummary\022\030\n\007backend\030\001 \001(\tR\007backend\022\026\n\006stat" +
-      "us\030\002 \001(\tR\006status\022\034\n\ttransport\030\003 \001(\tR\ttra" +
-      "nsport\022+\n\021consistency_model\030\004 \001(\tR\020consi" +
-      "stencyModel\0223\n\025supports_transactions\030\005 \001" +
-      "(\010R\024supportsTransactions\022:\n\031supports_sch" +
-      "ema_migration\030\006 \001(\010R\027supportsSchemaMigra" +
-      "tion\0224\n\026supports_vector_search\030\007 \001(\010R\024su" +
-      "pportsVectorSearch\0224\n\026supports_hybrid_se" +
-      "arch\030\010 \001(\010R\024supportsHybridSearch\022*\n\021max_" +
-      "payload_bytes\030\t \001(\003R\017maxPayloadBytes\022\031\n\010" +
-      "probe_ok\030\n \001(\010R\007probeOk\022(\n\020probe_latency" +
-      "_ms\030\013 \001(\003R\016probeLatencyMs\022#\n\rinstance_na" +
-      "me\030\014 \001(\tR\014instanceName\022\022\n\004role\030\r \001(\tR\004ro" +
-      "le\022F\n\006labels\030\016 \003(\0132..udb.entity.v1.Admin" +
-      "BackendSummary.LabelsEntryR\006labels\022%\n\016ro" +
-      "uting_status\030\017 \001(\tR\rroutingStatus\0329\n\013Lab" +
-      "elsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(" +
-      "\tR\005value:\0028\001\"\361\001\n\017AdminCdcSummary\022\033\n\tis_l" +
-      "eader\030\001 \001(\010R\010isLeader\022\026\n\006paused\030\002 \001(\010R\006p" +
-      "aused\022\033\n\tslot_name\030\003 \001(\tR\010slotName\022\"\n\rla" +
-      "st_event_id\030\004 \001(\tR\013lastEventId\022\037\n\013lag_se" +
-      "conds\030\005 \001(\001R\nlagSeconds\022!\n\014outbox_depth\030" +
-      "\006 \001(\003R\013outboxDepth\022$\n\016dlq_open_count\030\007 \001" +
-      "(\003R\014dlqOpenCount\"\310\001\n\020AdminSagaSummary\022\026\n" +
-      "\006active\030\001 \001(\003R\006active\022 \n\013compensated\030\002 \001" +
-      "(\003R\013compensated\022/\n\023failed_compensation\030\003" +
-      " \001(\003R\022failedCompensation\022#\n\rmanual_revie" +
-      "w\030\004 \001(\003R\014manualReview\022$\n\rindeterminate\030\005" +
-      " \001(\003R\rindeterminate\"\241\002\n\023AdminCatalogSumm" +
-      "ary\022\035\n\nproject_id\030\001 \001(\tR\tprojectId\022%\n\016ac" +
-      "tive_version\030\002 \001(\tR\ractiveVersion\022\'\n\017act" +
-      "ive_checksum\030\003 \001(\tR\016activeChecksum\022!\n\014ac" +
-      "tive_since\030\004 \001(\tR\013activeSince\022\037\n\013table_c" +
-      "ount\030\005 \001(\005R\ntableCount\022\037\n\013store_count\030\006 " +
-      "\001(\005R\nstoreCount\0226\n\027pending_migration_sta" +
-      "te\030\007 \001(\tR\025pendingMigrationState\"\370\002\n\024Admi" +
-      "nSummaryResponse\022<\n\007catalog\030\001 \003(\0132\".udb." +
-      "entity.v1.AdminCatalogSummaryR\007catalog\0220" +
-      "\n\003cdc\030\002 \001(\0132\036.udb.entity.v1.AdminCdcSumm" +
-      "aryR\003cdc\0225\n\005sagas\030\003 \001(\0132\037.udb.entity.v1." +
-      "AdminSagaSummaryR\005sagas\022>\n\010backends\030\004 \003(" +
-      "\0132\".udb.entity.v1.AdminBackendSummaryR\010b" +
-      "ackends\022.\n\023active_policy_count\030\005 \001(\005R\021ac" +
-      "tivePolicyCount\022-\n\023snapshot_at_unix_ms\030\006" +
-      " \001(\003R\020snapshotAtUnixMs\022\032\n\010warnings\030\007 \003(\t" +
-      "R\010warningsB\260\001\n\021com.udb.entity.v1B\nAdminP" +
-      "rotoP\001Z9github.com/fahara02/udb/sdk/go/g" +
-      "en/udb/entity/v1;entityv1\242\002\003UEX\252\002\rUdb.En" +
-      "tity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPBMetadat",
-      "a\\Entity\\V1\352\002\017Udb::Entity::V1b\006proto3"
+      "xt\022\035\n\nproject_id\030\002 \001(\tR\tprojectId\022\030\n\007ver" +
+      "sion\030\003 \001(\tR\007version\022\026\n\006reason\030\004 \001(\tR\006rea" +
+      "son\022\'\n\017idempotency_key\030\005 \001(\tR\016idempotenc" +
+      "yKey\"\215\002\n\026CatalogVersionResponse\022\035\n\ncatal" +
+      "og_id\030\001 \001(\tR\tcatalogId\022\035\n\nproject_id\030\002 \001" +
+      "(\tR\tprojectId\022\030\n\007version\030\003 \001(\tR\007version\022" +
+      "\026\n\006status\030\004 \001(\tR\006status\022\'\n\017checksum_sha2" +
+      "56\030\005 \001(\tR\016checksumSha256\022&\n\017created_at_u" +
+      "nix\030\006 \001(\003R\rcreatedAtUnix\022\026\n\006errors\030\007 \003(\t" +
+      "R\006errors\022\032\n\010warnings\030\010 \003(\tR\010warnings\"\216\001\n" +
+      "\031CatalogValidationResponse\022\024\n\005valid\030\001 \001(" +
+      "\010R\005valid\022\'\n\017checksum_sha256\030\002 \001(\tR\016check" +
+      "sumSha256\022\026\n\006errors\030\003 \003(\tR\006errors\022\032\n\010war" +
+      "nings\030\004 \003(\tR\010warnings\"\245\001\n\032CatalogVersion" +
+      "ListResponse\022\035\n\nproject_id\030\001 \001(\tR\tprojec" +
+      "tId\022A\n\010versions\030\002 \003(\0132%.udb.entity.v1.Ca" +
+      "talogVersionResponseR\010versions\022%\n\016active" +
+      "_version\030\003 \001(\tR\ractiveVersion\"\207\001\n\024Migrat" +
+      "ionPlanRequest\0227\n\007context\030\001 \001(\0132\035.udb.en" +
+      "tity.v1.RequestContextR\007context\022\035\n\nproje" +
+      "ct_id\030\002 \001(\tR\tprojectId\022\027\n\007dry_run\030\003 \001(\010R" +
+      "\006dryRun\"\230\002\n\025MigrationPlanResponse\022\025\n\006run" +
+      "_id\030\001 \001(\tR\005runId\022\035\n\nproject_id\030\002 \001(\tR\tpr" +
+      "ojectId\022\'\n\017catalog_version\030\003 \001(\tR\016catalo" +
+      "gVersion\022\024\n\005state\030\004 \001(\tR\005state\022\036\n\noperat" +
+      "ions\030\005 \003(\tR\noperations\022\'\n\017requires_revie" +
+      "w\030\006 \003(\tR\016requiresReview\022\030\n\007blocked\030\007 \003(\t" +
+      "R\007blocked\022\'\n\017operations_hash\030\010 \001(\tR\016oper" +
+      "ationsHash\"\326\001\n\025MigrationApplyRequest\0227\n\007" +
+      "context\030\001 \001(\0132\035.udb.entity.v1.RequestCon" +
+      "textR\007context\022\025\n\006run_id\030\002 \001(\tR\005runId\022\035\n\n" +
+      "project_id\030\003 \001(\tR\tprojectId\022%\n\016approval_" +
+      "token\030\004 \001(\tR\rapprovalToken\022\'\n\017idempotenc" +
+      "y_key\030\005 \001(\tR\016idempotencyKey\"\255\001\n\023Migratio" +
+      "nRunRequest\0227\n\007context\030\001 \001(\0132\035.udb.entit" +
+      "y.v1.RequestContextR\007context\022\025\n\006run_id\030\002" +
+      " \001(\tR\005runId\022\035\n\nproject_id\030\003 \001(\tR\tproject" +
+      "Id\022\'\n\017idempotency_key\030\004 \001(\tR\016idempotency" +
+      "Key\"\311\001\n\027MigrationRunListRequest\0227\n\007conte" +
+      "xt\030\001 \001(\0132\035.udb.entity.v1.RequestContextR" +
+      "\007context\022\035\n\nproject_id\030\002 \001(\tR\tprojectId\022" +
+      "!\n\014state_filter\030\003 \001(\tR\013stateFilter\022\024\n\005li" +
+      "mit\030\004 \001(\005R\005limit\022\035\n\npage_token\030\005 \001(\tR\tpa" +
+      "geToken\"\237\001\n\030MigrationRunListResponse\022:\n\004" +
+      "runs\030\001 \003(\0132&.udb.entity.v1.MigrationStat" +
+      "usResponseR\004runs\022&\n\017next_page_token\030\002 \001(" +
+      "\tR\rnextPageToken\022\037\n\013total_count\030\003 \001(\005R\nt" +
+      "otalCount\"\255\002\n\027MigrationStatusResponse\022\025\n" +
+      "\006run_id\030\001 \001(\tR\005runId\022\035\n\nproject_id\030\002 \001(\t" +
+      "R\tprojectId\022\'\n\017catalog_version\030\003 \001(\tR\016ca" +
+      "talogVersion\022\024\n\005state\030\004 \001(\tR\005state\022\035\n\nst" +
+      "arted_at\030\005 \001(\tR\tstartedAt\022\037\n\013finished_at" +
+      "\030\006 \001(\tR\nfinishedAt\022G\n\noperations\030\007 \003(\0132\'" +
+      ".udb.entity.v1.MigrationOperationStatusR" +
+      "\noperations\022\024\n\005error\030\010 \001(\tR\005error\"\302\001\n\030Mi" +
+      "grationOperationStatus\022\024\n\005index\030\001 \001(\005R\005i" +
+      "ndex\022\030\n\007backend\030\002 \001(\tR\007backend\022!\n\014resour" +
+      "ce_uri\030\003 \001(\tR\013resourceUri\022%\n\016operation_k" +
+      "ind\030\004 \001(\tR\roperationKind\022\026\n\006status\030\005 \001(\t" +
+      "R\006status\022\024\n\005error\030\006 \001(\tR\005error\"\271\001\n\016DlqLi" +
+      "stRequest\0227\n\007context\030\001 \001(\0132\035.udb.entity." +
+      "v1.RequestContextR\007context\022\024\n\005topic\030\002 \001(" +
+      "\tR\005topic\022#\n\rstatus_filter\030\003 \001(\tR\014statusF" +
+      "ilter\022\024\n\005limit\030\004 \001(\005R\005limit\022\035\n\npage_toke" +
+      "n\030\005 \001(\tR\tpageToken\"\247\002\n\016DlqEventRecord\022\025\n" +
+      "\006dlq_id\030\001 \001(\tR\005dlqId\022\031\n\010event_id\030\002 \001(\tR\007" +
+      "eventId\022\024\n\005topic\030\003 \001(\tR\005topic\022!\n\014payload" +
+      "_json\030\004 \001(\014R\013payloadJson\022\035\n\nerror_type\030\005" +
+      " \001(\tR\terrorType\022#\n\rerror_message\030\006 \001(\tR\014" +
+      "errorMessage\022\026\n\006status\030\007 \001(\tR\006status\022&\n\017" +
+      "created_at_unix\030\010 \001(\003R\rcreatedAtUnix\022&\n\017" +
+      "updated_at_unix\030\t \001(\003R\rupdatedAtUnix\"\221\001\n" +
+      "\017DlqListResponse\0225\n\006events\030\001 \003(\0132\035.udb.e" +
+      "ntity.v1.DlqEventRecordR\006events\022&\n\017next_" +
+      "page_token\030\002 \001(\tR\rnextPageToken\022\037\n\013total" +
+      "_count\030\003 \001(\005R\ntotalCount\"a\n\017DlqEventRequ" +
+      "est\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Req" +
+      "uestContextR\007context\022\025\n\006dlq_id\030\002 \001(\tR\005dl" +
+      "qId\"G\n\020DlqEventResponse\0223\n\005event\030\001 \001(\0132\035" +
+      ".udb.entity.v1.DlqEventRecordR\005event\"\246\001\n" +
+      "\020DlqActionRequest\0227\n\007context\030\001 \001(\0132\035.udb" +
+      ".entity.v1.RequestContextR\007context\022\025\n\006dl" +
+      "q_id\030\002 \001(\tR\005dlqId\022*\n\021preserve_event_id\030\003" +
+      " \001(\010R\017preserveEventId\022\026\n\006reason\030\004 \001(\tR\006r" +
+      "eason\"\244\002\n\032CdcRedactionPreviewRequest\0227\n\007" +
+      "context\030\001 \001(\0132\035.udb.entity.v1.RequestCon" +
+      "textR\007context\022!\n\014message_type\030\002 \001(\tR\013mes" +
+      "sageType\022\024\n\005topic\030\003 \001(\tR\005topic\022\035\n\nschema" +
+      "_uri\030\004 \001(\tR\tschemaUri\022!\n\014payload_json\030\005 " +
+      "\001(\014R\013payloadJson\022%\n\016redaction_mode\030\006 \001(\t" +
+      "R\rredactionMode\022+\n\021redaction_version\030\007 \001" +
+      "(\005R\020redactionVersion\"\340\001\n\033CdcRedactionPre" +
+      "viewResponse\022!\n\014payload_json\030\001 \001(\014R\013payl" +
+      "oadJson\022\'\n\017redacted_fields\030\002 \003(\tR\016redact" +
+      "edFields\022%\n\016redaction_mode\030\003 \001(\tR\rredact" +
+      "ionMode\022+\n\021redaction_version\030\004 \001(\005R\020reda" +
+      "ctionVersion\022!\n\014would_redact\030\005 \001(\010R\013woul" +
+      "dRedact\"\212\002\n\032ProjectionDriftScanRequest\0227" +
+      "\n\007context\030\001 \001(\0132\035.udb.entity.v1.RequestC" +
+      "ontextR\007context\022\035\n\nproject_id\030\002 \001(\tR\tpro" +
+      "jectId\022!\n\014message_type\030\003 \001(\tR\013messageTyp" +
+      "e\022\033\n\tscan_mode\030\004 \001(\tR\010scanMode\022&\n\017rows_p" +
+      "er_target\030\005 \001(\005R\rrowsPerTarget\022\026\n\006repair" +
+      "\030\006 \001(\010R\006repair\022\024\n\005limit\030\007 \001(\005R\005limit\"\245\001\n" +
+      "\033ProjectionDriftDivergentRow\022 \n\014row_key_" +
+      "json\030\001 \001(\014R\nrowKeyJson\022\'\n\017source_checksu" +
+      "m\030\002 \001(\tR\016sourceChecksum\022\'\n\017target_checks" +
+      "um\030\003 \001(\tR\016targetChecksum\022\022\n\004kind\030\004 \001(\tR\004" +
+      "kind\"\301\003\n\033ProjectionDriftTargetReport\022%\n\016" +
+      "target_backend\030\001 \001(\tR\rtargetBackend\022\'\n\017t" +
+      "arget_instance\030\002 \001(\tR\016targetInstance\022\'\n\017" +
+      "target_resource\030\003 \001(\tR\016targetResource\022.\n" +
+      "\023source_rows_scanned\030\004 \001(\005R\021sourceRowsSc" +
+      "anned\022Q\n\016divergent_rows\030\005 \003(\0132*.udb.enti" +
+      "ty.v1.ProjectionDriftDivergentRowR\rdiver" +
+      "gentRows\022$\n\016rows_to_repair\030\006 \001(\005R\014rowsTo" +
+      "Repair\0220\n\024estimated_cost_units\030\007 \001(\001R\022es" +
+      "timatedCostUnits\0222\n\025repair_tasks_enqueue" +
+      "d\030\010 \001(\003R\023repairTasksEnqueued\022\032\n\010warnings" +
+      "\030\t \003(\tR\010warnings\"\257\002\n\033ProjectionDriftScan" +
+      "Response\022\035\n\nproject_id\030\001 \001(\tR\tprojectId\022" +
+      "!\n\014message_type\030\002 \001(\tR\013messageType\022\033\n\tsc" +
+      "an_mode\030\003 \001(\tR\010scanMode\022,\n\022source_rows_l" +
+      "oaded\030\004 \001(\005R\020sourceRowsLoaded\022D\n\007reports" +
+      "\030\005 \003(\0132*.udb.entity.v1.ProjectionDriftTa" +
+      "rgetReportR\007reports\022!\n\014summary_json\030\006 \001(" +
+      "\014R\013summaryJson\022\032\n\010warnings\030\007 \003(\tR\010warnin" +
+      "gs\"\244\002\n\017SagaListRequest\0227\n\007context\030\001 \001(\0132" +
+      "\035.udb.entity.v1.RequestContextR\007context\022" +
+      "(\n\020tenant_id_filter\030\002 \001(\tR\016tenantIdFilte" +
+      "r\022#\n\rstatus_filter\030\003 \001(\tR\014statusFilter\022 " +
+      "\n\014tx_id_filter\030\004 \001(\tR\ntxIdFilter\0222\n\025corr" +
+      "elation_id_filter\030\005 \001(\tR\023correlationIdFi" +
+      "lter\022\024\n\005limit\030\006 \001(\005R\005limit\022\035\n\npage_token" +
+      "\030\007 \001(\tR\tpageToken\"\366\002\n\nSagaRecord\022\027\n\007saga" +
+      "_id\030\001 \001(\tR\006sagaId\022\023\n\005tx_id\030\002 \001(\tR\004txId\022\033" +
+      "\n\ttenant_id\030\003 \001(\tR\010tenantId\022%\n\016correlati" +
+      "on_id\030\004 \001(\tR\rcorrelationId\022\026\n\006status\030\005 \001" +
+      "(\tR\006status\022!\n\014current_step\030\006 \001(\005R\013curren" +
+      "tStep\022\035\n\nsteps_json\030\007 \001(\014R\tstepsJson\022-\n\022" +
+      "compensations_json\030\010 \001(\014R\021compensationsJ" +
+      "son\022\035\n\nlast_error\030\t \001(\tR\tlastError\022&\n\017cr" +
+      "eated_at_unix\030\n \001(\003R\rcreatedAtUnix\022&\n\017up" +
+      "dated_at_unix\030\013 \001(\003R\rupdatedAtUnix\"\214\001\n\020S" +
+      "agaListResponse\022/\n\005sagas\030\001 \003(\0132\031.udb.ent" +
+      "ity.v1.SagaRecordR\005sagas\022&\n\017next_page_to" +
+      "ken\030\002 \001(\tR\rnextPageToken\022\037\n\013total_count\030" +
+      "\003 \001(\005R\ntotalCount\"\240\001\n\013SagaRequest\0227\n\007con" +
+      "text\030\001 \001(\0132\035.udb.entity.v1.RequestContex" +
+      "tR\007context\022\027\n\007saga_id\030\002 \001(\tR\006sagaId\022\026\n\006r" +
+      "eason\030\003 \001(\tR\006reason\022\'\n\017idempotency_key\030\004" +
+      " \001(\tR\016idempotencyKey\"U\n\014SagaResponse\022-\n\004" +
+      "saga\030\001 \001(\0132\031.udb.entity.v1.SagaRecordR\004s" +
+      "aga\022\026\n\006errors\030\002 \003(\tR\006errors\"\303\002\n\014PolicyRe" +
+      "cord\022\033\n\tpolicy_id\030\001 \001(\003R\010policyId\022\026\n\006eff" +
+      "ect\030\002 \001(\tR\006effect\022)\n\020service_identity\030\003 " +
+      "\001(\tR\017serviceIdentity\022\033\n\ttenant_id\030\004 \001(\tR" +
+      "\010tenantId\022\030\n\007purpose\030\005 \001(\tR\007purpose\022!\n\014m" +
+      "essage_type\030\006 \001(\tR\013messageType\022\034\n\toperat" +
+      "ion\030\007 \001(\tR\toperation\022%\n\016required_scope\030\010" +
+      " \001(\tR\rrequiredScope\022\032\n\010priority\030\t \001(\005R\010p" +
+      "riority\022\030\n\007enabled\030\n \001(\010R\007enabled\"\254\001\n\021Po" +
+      "licyListRequest\0227\n\007context\030\001 \001(\0132\035.udb.e" +
+      "ntity.v1.RequestContextR\007context\022)\n\020incl" +
+      "ude_disabled\030\002 \001(\010R\017includeDisabled\022\024\n\005l" +
+      "imit\030\003 \001(\005R\005limit\022\035\n\npage_token\030\004 \001(\tR\tp" +
+      "ageToken\"\226\001\n\022PolicyListResponse\0227\n\010polic" +
+      "ies\030\001 \003(\0132\033.udb.entity.v1.PolicyRecordR\010" +
+      "policies\022&\n\017next_page_token\030\002 \001(\tR\rnextP" +
+      "ageToken\022\037\n\013total_count\030\003 \001(\005R\ntotalCoun" +
+      "t\"\200\001\n\020PutPolicyRequest\0227\n\007context\030\001 \001(\0132" +
+      "\035.udb.entity.v1.RequestContextR\007context\022" +
+      "3\n\006policy\030\002 \001(\0132\033.udb.entity.v1.PolicyRe" +
+      "cordR\006policy\"e\n\rPolicyRequest\0227\n\007context" +
+      "\030\001 \001(\0132\035.udb.entity.v1.RequestContextR\007c" +
+      "ontext\022\033\n\tpolicy_id\030\002 \001(\003R\010policyId\"H\n\022P" +
+      "olicyLintResponse\022\026\n\006passed\030\001 \001(\010R\006passe" +
+      "d\022\032\n\010findings\030\002 \003(\tR\010findings\"\254\001\n\024Ensure" +
+      "ProjectRequest\0227\n\007context\030\001 \001(\0132\035.udb.en" +
+      "tity.v1.RequestContextR\007context\022\035\n\nproje" +
+      "ct_id\030\002 \001(\tR\tprojectId\022\022\n\004name\030\003 \001(\tR\004na" +
+      "me\022(\n\020cdc_topic_prefix\030\004 \001(\tR\016cdcTopicPr" +
+      "efix\"\312\001\n\rProjectRecord\022\035\n\nproject_id\030\001 \001" +
+      "(\tR\tprojectId\022\022\n\004name\030\002 \001(\tR\004name\022(\n\020cdc" +
+      "_topic_prefix\030\003 \001(\tR\016cdcTopicPrefix\0224\n\026a" +
+      "ctive_catalog_version\030\004 \001(\tR\024activeCatal" +
+      "ogVersion\022&\n\017created_at_unix\030\005 \001(\003R\rcrea" +
+      "tedAtUnix\"\202\001\n\022ProjectListRequest\0227\n\007cont" +
+      "ext\030\001 \001(\0132\035.udb.entity.v1.RequestContext" +
+      "R\007context\022\024\n\005limit\030\002 \001(\005R\005limit\022\035\n\npage_" +
+      "token\030\003 \001(\tR\tpageToken\"\230\001\n\023ProjectListRe" +
+      "sponse\0228\n\010projects\030\001 \003(\0132\034.udb.entity.v1" +
+      ".ProjectRecordR\010projects\022&\n\017next_page_to" +
+      "ken\030\002 \001(\tR\rnextPageToken\022\037\n\013total_count\030" +
+      "\003 \001(\005R\ntotalCount\"\246\001\n\023AdminSummaryReques" +
+      "t\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Reque" +
+      "stContextR\007context\022\035\n\nproject_id\030\002 \001(\tR\t" +
+      "projectId\022\037\n\013with_probes\030\003 \001(\010R\nwithProb" +
+      "es\022\026\n\006redact\030\004 \001(\010R\006redact\"\300\002\n\024AdminAudi" +
+      "tLogRequest\0227\n\007context\030\001 \001(\0132\035.udb.entit" +
+      "y.v1.RequestContextR\007context\022)\n\020operatio" +
+      "n_filter\030\002 \001(\tR\017operationFilter\022!\n\014actor" +
+      "_filter\030\003 \001(\tR\013actorFilter\022(\n\020tenant_id_" +
+      "filter\030\004 \001(\tR\016tenantIdFilter\022*\n\021project_" +
+      "id_filter\030\005 \001(\tR\017projectIdFilter\022\024\n\005limi" +
+      "t\030\006 \001(\005R\005limit\022\035\n\npage_token\030\007 \001(\tR\tpage" +
+      "Token\022\026\n\006redact\030\010 \001(\010R\006redact\"\327\003\n\023AdminA" +
+      "uditLogRecord\022\031\n\010audit_id\030\001 \001(\tR\007auditId" +
+      "\022\024\n\005actor\030\002 \001(\tR\005actor\022\034\n\toperation\030\003 \001(" +
+      "\tR\toperation\022\026\n\006target\030\004 \001(\tR\006target\022!\n\014" +
+      "request_json\030\005 \001(\014R\013requestJson\022\026\n\006resul" +
+      "t\030\006 \001(\tR\006result\022\033\n\ttenant_id\030\007 \001(\tR\010tena" +
+      "ntId\022\035\n\nproject_id\030\010 \001(\tR\tprojectId\022%\n\016c" +
+      "orrelation_id\030\t \001(\tR\rcorrelationId\022&\n\017cr" +
+      "eated_at_unix\030\n \001(\003R\rcreatedAtUnix\022#\n\rpr" +
+      "evious_hash\030\013 \001(\tR\014previousHash\022!\n\014curre" +
+      "nt_hash\030\014 \001(\tR\013currentHash\022\"\n\rsigner_key" +
+      "_id\030\r \001(\tR\013signerKeyId\022\'\n\017external_ancho" +
+      "r\030\016 \001(\tR\016externalAnchor\"\230\001\n\025AdminAuditLo" +
+      "gResponse\0226\n\004logs\030\001 \003(\0132\".udb.entity.v1." +
+      "AdminAuditLogRecordR\004logs\022&\n\017next_page_t" +
+      "oken\030\002 \001(\tR\rnextPageToken\022\037\n\013total_count" +
+      "\030\003 \001(\005R\ntotalCount\"h\n\027AdminAuditVerifyRe" +
+      "quest\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.R" +
+      "equestContextR\007context\022\024\n\005limit\030\002 \001(\005R\005l" +
+      "imit\"\213\003\n\030AdminAuditVerifyResponse\022\026\n\006pas" +
+      "sed\030\001 \001(\010R\006passed\022#\n\rchecked_count\030\002 \001(\005" +
+      "R\014checkedCount\0221\n\025first_broken_audit_id\030" +
+      "\003 \001(\tR\022firstBrokenAuditId\022\026\n\006reason\030\004 \001(" +
+      "\tR\006reason\0224\n\026expected_previous_hash\030\005 \001(" +
+      "\tR\024expectedPreviousHash\0220\n\024actual_previo" +
+      "us_hash\030\006 \001(\tR\022actualPreviousHash\0222\n\025exp" +
+      "ected_current_hash\030\007 \001(\tR\023expectedCurren" +
+      "tHash\022.\n\023actual_current_hash\030\010 \001(\tR\021actu" +
+      "alCurrentHash\022\033\n\tlast_hash\030\t \001(\tR\010lastHa" +
+      "sh\"\303\005\n\023AdminBackendSummary\022\030\n\007backend\030\001 " +
+      "\001(\tR\007backend\022\026\n\006status\030\002 \001(\tR\006status\022\034\n\t" +
+      "transport\030\003 \001(\tR\ttransport\022+\n\021consistenc" +
+      "y_model\030\004 \001(\tR\020consistencyModel\0223\n\025suppo" +
+      "rts_transactions\030\005 \001(\010R\024supportsTransact" +
+      "ions\022:\n\031supports_schema_migration\030\006 \001(\010R" +
+      "\027supportsSchemaMigration\0224\n\026supports_vec" +
+      "tor_search\030\007 \001(\010R\024supportsVectorSearch\0224" +
+      "\n\026supports_hybrid_search\030\010 \001(\010R\024supports" +
+      "HybridSearch\022*\n\021max_payload_bytes\030\t \001(\003R" +
+      "\017maxPayloadBytes\022\031\n\010probe_ok\030\n \001(\010R\007prob" +
+      "eOk\022(\n\020probe_latency_ms\030\013 \001(\003R\016probeLate" +
+      "ncyMs\022#\n\rinstance_name\030\014 \001(\tR\014instanceNa" +
+      "me\022\022\n\004role\030\r \001(\tR\004role\022F\n\006labels\030\016 \003(\0132." +
+      ".udb.entity.v1.AdminBackendSummary.Label" +
+      "sEntryR\006labels\022%\n\016routing_status\030\017 \001(\tR\r" +
+      "routingStatus\0329\n\013LabelsEntry\022\020\n\003key\030\001 \001(" +
+      "\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\361\001\n\017Adm" +
+      "inCdcSummary\022\033\n\tis_leader\030\001 \001(\010R\010isLeade" +
+      "r\022\026\n\006paused\030\002 \001(\010R\006paused\022\033\n\tslot_name\030\003" +
+      " \001(\tR\010slotName\022\"\n\rlast_event_id\030\004 \001(\tR\013l" +
+      "astEventId\022\037\n\013lag_seconds\030\005 \001(\001R\nlagSeco" +
+      "nds\022!\n\014outbox_depth\030\006 \001(\003R\013outboxDepth\022$" +
+      "\n\016dlq_open_count\030\007 \001(\003R\014dlqOpenCount\"\310\001\n" +
+      "\020AdminSagaSummary\022\026\n\006active\030\001 \001(\003R\006activ" +
+      "e\022 \n\013compensated\030\002 \001(\003R\013compensated\022/\n\023f" +
+      "ailed_compensation\030\003 \001(\003R\022failedCompensa" +
+      "tion\022#\n\rmanual_review\030\004 \001(\003R\014manualRevie" +
+      "w\022$\n\rindeterminate\030\005 \001(\003R\rindeterminate\"",
+      "\241\002\n\023AdminCatalogSummary\022\035\n\nproject_id\030\001 " +
+      "\001(\tR\tprojectId\022%\n\016active_version\030\002 \001(\tR\r" +
+      "activeVersion\022\'\n\017active_checksum\030\003 \001(\tR\016" +
+      "activeChecksum\022!\n\014active_since\030\004 \001(\tR\013ac" +
+      "tiveSince\022\037\n\013table_count\030\005 \001(\005R\ntableCou" +
+      "nt\022\037\n\013store_count\030\006 \001(\005R\nstoreCount\0226\n\027p" +
+      "ending_migration_state\030\007 \001(\tR\025pendingMig" +
+      "rationState\"\370\002\n\024AdminSummaryResponse\022<\n\007" +
+      "catalog\030\001 \003(\0132\".udb.entity.v1.AdminCatal" +
+      "ogSummaryR\007catalog\0220\n\003cdc\030\002 \001(\0132\036.udb.en" +
+      "tity.v1.AdminCdcSummaryR\003cdc\0225\n\005sagas\030\003 " +
+      "\001(\0132\037.udb.entity.v1.AdminSagaSummaryR\005sa" +
+      "gas\022>\n\010backends\030\004 \003(\0132\".udb.entity.v1.Ad" +
+      "minBackendSummaryR\010backends\022.\n\023active_po" +
+      "licy_count\030\005 \001(\005R\021activePolicyCount\022-\n\023s" +
+      "napshot_at_unix_ms\030\006 \001(\003R\020snapshotAtUnix" +
+      "Ms\022\032\n\010warnings\030\007 \003(\tR\010warningsB\260\001\n\021com.u" +
+      "db.entity.v1B\nAdminProtoP\001Z9github.com/f" +
+      "ahara02/udb/sdk/go/gen/udb/entity/v1;ent" +
+      "ityv1\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity" +
+      "\\V1\342\002\031Udb\\GPBMetadata\\Entity\\V1\352\002\017Udb::E" +
+      "ntity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -808,15 +839,27 @@ public final class AdminProto extends com.google.protobuf.GeneratedFile {
     internal_static_udb_entity_v1_CapabilitiesResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CapabilitiesResponse_descriptor,
-        new java.lang.String[] { "SchemaChecksum", "ProtocolVersion", "EnabledBackends", "DegradedBackends", "SystemCatalogRelations", "SupportedRpcs", "BackendInstances", "BackendCapabilities", });
-    internal_static_udb_entity_v1_BackendCapabilityDescriptor_descriptor =
+        new java.lang.String[] { "SchemaChecksum", "ProtocolVersion", "EnabledBackends", "DegradedBackends", "SystemCatalogRelations", "SupportedRpcs", "BackendInstances", "BackendCapabilities", "ProtocolSupport", "BackendProtocolSupport", });
+    internal_static_udb_entity_v1_ProtocolSupport_descriptor =
       getDescriptor().getMessageType(2);
+    internal_static_udb_entity_v1_ProtocolSupport_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_ProtocolSupport_descriptor,
+        new java.lang.String[] { "MinProtocolVersion", "MaxProtocolVersion", "Encodings", "Compression", "SupportsStreamingReads", "SupportsObjectStreaming", "MaxRecvMessageBytes", "MaxSendMessageBytes", "SupportedRpcs", });
+    internal_static_udb_entity_v1_BackendProtocolSupport_descriptor =
+      getDescriptor().getMessageType(3);
+    internal_static_udb_entity_v1_BackendProtocolSupport_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_BackendProtocolSupport_descriptor,
+        new java.lang.String[] { "Backend", "SupportsStreamingReads", "SupportsObjectStreaming", "Encodings", });
+    internal_static_udb_entity_v1_BackendCapabilityDescriptor_descriptor =
+      getDescriptor().getMessageType(4);
     internal_static_udb_entity_v1_BackendCapabilityDescriptor_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_BackendCapabilityDescriptor_descriptor,
         new java.lang.String[] { "Backend", "Tier", "Operations", "UnsupportedErrorCode", "ConsistencyModel", "MaxPayloadBytes", "SupportsXa", "SupportsTwoPhaseCommit", });
     internal_static_udb_entity_v1_BackendInstanceStatus_descriptor =
-      getDescriptor().getMessageType(3);
+      getDescriptor().getMessageType(5);
     internal_static_udb_entity_v1_BackendInstanceStatus_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_BackendInstanceStatus_descriptor,
@@ -828,367 +871,367 @@ public final class AdminProto extends com.google.protobuf.GeneratedFile {
         internal_static_udb_entity_v1_BackendInstanceStatus_LabelsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_udb_entity_v1_CatalogManifestRequest_descriptor =
-      getDescriptor().getMessageType(4);
+      getDescriptor().getMessageType(6);
     internal_static_udb_entity_v1_CatalogManifestRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CatalogManifestRequest_descriptor,
         new java.lang.String[] { "Context", "Redact", });
     internal_static_udb_entity_v1_CatalogManifestResponse_descriptor =
-      getDescriptor().getMessageType(5);
+      getDescriptor().getMessageType(7);
     internal_static_udb_entity_v1_CatalogManifestResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CatalogManifestResponse_descriptor,
         new java.lang.String[] { "ManifestJson", });
     internal_static_udb_entity_v1_MessageSchemaLookupRequest_descriptor =
-      getDescriptor().getMessageType(6);
+      getDescriptor().getMessageType(8);
     internal_static_udb_entity_v1_MessageSchemaLookupRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MessageSchemaLookupRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "MessageType", "ClientCatalogVersion", });
     internal_static_udb_entity_v1_MessageFieldDescriptor_descriptor =
-      getDescriptor().getMessageType(7);
+      getDescriptor().getMessageType(9);
     internal_static_udb_entity_v1_MessageFieldDescriptor_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MessageFieldDescriptor_descriptor,
         new java.lang.String[] { "Name", "ColumnName", "ProtoType", "SqlType", "NotNull", "IsPrimary", "IsArray", });
     internal_static_udb_entity_v1_MessageSchemaDescriptor_descriptor =
-      getDescriptor().getMessageType(8);
+      getDescriptor().getMessageType(10);
     internal_static_udb_entity_v1_MessageSchemaDescriptor_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MessageSchemaDescriptor_descriptor,
         new java.lang.String[] { "MessageType", "ProjectId", "CatalogVersion", "ManifestChecksum", "Schema", "Table", "PrimaryKey", "Fields", });
     internal_static_udb_entity_v1_MessageSchemaLookupResponse_descriptor =
-      getDescriptor().getMessageType(9);
+      getDescriptor().getMessageType(11);
     internal_static_udb_entity_v1_MessageSchemaLookupResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MessageSchemaLookupResponse_descriptor,
         new java.lang.String[] { "Schema", });
     internal_static_udb_entity_v1_MessageSchemaListRequest_descriptor =
-      getDescriptor().getMessageType(10);
+      getDescriptor().getMessageType(12);
     internal_static_udb_entity_v1_MessageSchemaListRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MessageSchemaListRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "ClientCatalogVersion", });
     internal_static_udb_entity_v1_MessageSchemaListResponse_descriptor =
-      getDescriptor().getMessageType(11);
+      getDescriptor().getMessageType(13);
     internal_static_udb_entity_v1_MessageSchemaListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MessageSchemaListResponse_descriptor,
         new java.lang.String[] { "ProjectId", "CatalogVersion", "ManifestChecksum", "MessageTypes", });
     internal_static_udb_entity_v1_HealthReportRequest_descriptor =
-      getDescriptor().getMessageType(12);
+      getDescriptor().getMessageType(14);
     internal_static_udb_entity_v1_HealthReportRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_HealthReportRequest_descriptor,
         new java.lang.String[] { "Context", "WithProbes", "ProjectId", });
     internal_static_udb_entity_v1_HealthReportResponse_descriptor =
-      getDescriptor().getMessageType(13);
+      getDescriptor().getMessageType(15);
     internal_static_udb_entity_v1_HealthReportResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_HealthReportResponse_descriptor,
         new java.lang.String[] { "Passed", "PostgresConfigured", "RedisConfigured", "QdrantConfigured", "S3Configured", "Errors", "Warnings", "PrivilegesJson", "ProbesJson", "BackendInstances", });
     internal_static_udb_entity_v1_GenericDispatchRequest_descriptor =
-      getDescriptor().getMessageType(14);
+      getDescriptor().getMessageType(16);
     internal_static_udb_entity_v1_GenericDispatchRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_GenericDispatchRequest_descriptor,
         new java.lang.String[] { "Context", "Backend", "Operation", "ResourceKind", "ResourceName", "ResourceUri", "SpecJson", "IdempotencyKey", "DryRun", });
     internal_static_udb_entity_v1_GenericDispatchResponse_descriptor =
-      getDescriptor().getMessageType(15);
+      getDescriptor().getMessageType(17);
     internal_static_udb_entity_v1_GenericDispatchResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_GenericDispatchResponse_descriptor,
         new java.lang.String[] { "Backend", "Operation", "ResourceUri", "ResultJson", "Errors", });
     internal_static_udb_entity_v1_ResourceAdminRequest_descriptor =
-      getDescriptor().getMessageType(16);
+      getDescriptor().getMessageType(18);
     internal_static_udb_entity_v1_ResourceAdminRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ResourceAdminRequest_descriptor,
         new java.lang.String[] { "Context", "Backend", "ResourceName", "SpecJson", "IdempotencyKey", "DryRun", });
     internal_static_udb_entity_v1_ResourceListResponse_descriptor =
-      getDescriptor().getMessageType(17);
+      getDescriptor().getMessageType(19);
     internal_static_udb_entity_v1_ResourceListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ResourceListResponse_descriptor,
         new java.lang.String[] { "Backend", "Resources", });
     internal_static_udb_entity_v1_StageCatalogRequest_descriptor =
-      getDescriptor().getMessageType(18);
+      getDescriptor().getMessageType(20);
     internal_static_udb_entity_v1_StageCatalogRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_StageCatalogRequest_descriptor,
         new java.lang.String[] { "Context", "ManifestJson", "ProjectId", "Reason", "IdempotencyKey", });
     internal_static_udb_entity_v1_CatalogVersionRequest_descriptor =
-      getDescriptor().getMessageType(19);
+      getDescriptor().getMessageType(21);
     internal_static_udb_entity_v1_CatalogVersionRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CatalogVersionRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "Version", "Reason", "IdempotencyKey", });
     internal_static_udb_entity_v1_CatalogVersionResponse_descriptor =
-      getDescriptor().getMessageType(20);
+      getDescriptor().getMessageType(22);
     internal_static_udb_entity_v1_CatalogVersionResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CatalogVersionResponse_descriptor,
         new java.lang.String[] { "CatalogId", "ProjectId", "Version", "Status", "ChecksumSha256", "CreatedAtUnix", "Errors", "Warnings", });
     internal_static_udb_entity_v1_CatalogValidationResponse_descriptor =
-      getDescriptor().getMessageType(21);
+      getDescriptor().getMessageType(23);
     internal_static_udb_entity_v1_CatalogValidationResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CatalogValidationResponse_descriptor,
         new java.lang.String[] { "Valid", "ChecksumSha256", "Errors", "Warnings", });
     internal_static_udb_entity_v1_CatalogVersionListResponse_descriptor =
-      getDescriptor().getMessageType(22);
+      getDescriptor().getMessageType(24);
     internal_static_udb_entity_v1_CatalogVersionListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CatalogVersionListResponse_descriptor,
         new java.lang.String[] { "ProjectId", "Versions", "ActiveVersion", });
     internal_static_udb_entity_v1_MigrationPlanRequest_descriptor =
-      getDescriptor().getMessageType(23);
+      getDescriptor().getMessageType(25);
     internal_static_udb_entity_v1_MigrationPlanRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationPlanRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "DryRun", });
     internal_static_udb_entity_v1_MigrationPlanResponse_descriptor =
-      getDescriptor().getMessageType(24);
+      getDescriptor().getMessageType(26);
     internal_static_udb_entity_v1_MigrationPlanResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationPlanResponse_descriptor,
         new java.lang.String[] { "RunId", "ProjectId", "CatalogVersion", "State", "Operations", "RequiresReview", "Blocked", "OperationsHash", });
     internal_static_udb_entity_v1_MigrationApplyRequest_descriptor =
-      getDescriptor().getMessageType(25);
+      getDescriptor().getMessageType(27);
     internal_static_udb_entity_v1_MigrationApplyRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationApplyRequest_descriptor,
         new java.lang.String[] { "Context", "RunId", "ProjectId", "ApprovalToken", "IdempotencyKey", });
     internal_static_udb_entity_v1_MigrationRunRequest_descriptor =
-      getDescriptor().getMessageType(26);
+      getDescriptor().getMessageType(28);
     internal_static_udb_entity_v1_MigrationRunRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationRunRequest_descriptor,
         new java.lang.String[] { "Context", "RunId", "ProjectId", "IdempotencyKey", });
     internal_static_udb_entity_v1_MigrationRunListRequest_descriptor =
-      getDescriptor().getMessageType(27);
+      getDescriptor().getMessageType(29);
     internal_static_udb_entity_v1_MigrationRunListRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationRunListRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "StateFilter", "Limit", "PageToken", });
     internal_static_udb_entity_v1_MigrationRunListResponse_descriptor =
-      getDescriptor().getMessageType(28);
+      getDescriptor().getMessageType(30);
     internal_static_udb_entity_v1_MigrationRunListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationRunListResponse_descriptor,
         new java.lang.String[] { "Runs", "NextPageToken", "TotalCount", });
     internal_static_udb_entity_v1_MigrationStatusResponse_descriptor =
-      getDescriptor().getMessageType(29);
+      getDescriptor().getMessageType(31);
     internal_static_udb_entity_v1_MigrationStatusResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationStatusResponse_descriptor,
         new java.lang.String[] { "RunId", "ProjectId", "CatalogVersion", "State", "StartedAt", "FinishedAt", "Operations", "Error", });
     internal_static_udb_entity_v1_MigrationOperationStatus_descriptor =
-      getDescriptor().getMessageType(30);
+      getDescriptor().getMessageType(32);
     internal_static_udb_entity_v1_MigrationOperationStatus_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationOperationStatus_descriptor,
         new java.lang.String[] { "Index", "Backend", "ResourceUri", "OperationKind", "Status", "Error", });
     internal_static_udb_entity_v1_DlqListRequest_descriptor =
-      getDescriptor().getMessageType(31);
+      getDescriptor().getMessageType(33);
     internal_static_udb_entity_v1_DlqListRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_DlqListRequest_descriptor,
         new java.lang.String[] { "Context", "Topic", "StatusFilter", "Limit", "PageToken", });
     internal_static_udb_entity_v1_DlqEventRecord_descriptor =
-      getDescriptor().getMessageType(32);
+      getDescriptor().getMessageType(34);
     internal_static_udb_entity_v1_DlqEventRecord_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_DlqEventRecord_descriptor,
         new java.lang.String[] { "DlqId", "EventId", "Topic", "PayloadJson", "ErrorType", "ErrorMessage", "Status", "CreatedAtUnix", "UpdatedAtUnix", });
     internal_static_udb_entity_v1_DlqListResponse_descriptor =
-      getDescriptor().getMessageType(33);
+      getDescriptor().getMessageType(35);
     internal_static_udb_entity_v1_DlqListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_DlqListResponse_descriptor,
         new java.lang.String[] { "Events", "NextPageToken", "TotalCount", });
     internal_static_udb_entity_v1_DlqEventRequest_descriptor =
-      getDescriptor().getMessageType(34);
+      getDescriptor().getMessageType(36);
     internal_static_udb_entity_v1_DlqEventRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_DlqEventRequest_descriptor,
         new java.lang.String[] { "Context", "DlqId", });
     internal_static_udb_entity_v1_DlqEventResponse_descriptor =
-      getDescriptor().getMessageType(35);
+      getDescriptor().getMessageType(37);
     internal_static_udb_entity_v1_DlqEventResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_DlqEventResponse_descriptor,
         new java.lang.String[] { "Event", });
     internal_static_udb_entity_v1_DlqActionRequest_descriptor =
-      getDescriptor().getMessageType(36);
+      getDescriptor().getMessageType(38);
     internal_static_udb_entity_v1_DlqActionRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_DlqActionRequest_descriptor,
         new java.lang.String[] { "Context", "DlqId", "PreserveEventId", "Reason", });
     internal_static_udb_entity_v1_CdcRedactionPreviewRequest_descriptor =
-      getDescriptor().getMessageType(37);
+      getDescriptor().getMessageType(39);
     internal_static_udb_entity_v1_CdcRedactionPreviewRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CdcRedactionPreviewRequest_descriptor,
         new java.lang.String[] { "Context", "MessageType", "Topic", "SchemaUri", "PayloadJson", "RedactionMode", "RedactionVersion", });
     internal_static_udb_entity_v1_CdcRedactionPreviewResponse_descriptor =
-      getDescriptor().getMessageType(38);
+      getDescriptor().getMessageType(40);
     internal_static_udb_entity_v1_CdcRedactionPreviewResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CdcRedactionPreviewResponse_descriptor,
         new java.lang.String[] { "PayloadJson", "RedactedFields", "RedactionMode", "RedactionVersion", "WouldRedact", });
     internal_static_udb_entity_v1_ProjectionDriftScanRequest_descriptor =
-      getDescriptor().getMessageType(39);
+      getDescriptor().getMessageType(41);
     internal_static_udb_entity_v1_ProjectionDriftScanRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ProjectionDriftScanRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "MessageType", "ScanMode", "RowsPerTarget", "Repair", "Limit", });
     internal_static_udb_entity_v1_ProjectionDriftDivergentRow_descriptor =
-      getDescriptor().getMessageType(40);
+      getDescriptor().getMessageType(42);
     internal_static_udb_entity_v1_ProjectionDriftDivergentRow_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ProjectionDriftDivergentRow_descriptor,
         new java.lang.String[] { "RowKeyJson", "SourceChecksum", "TargetChecksum", "Kind", });
     internal_static_udb_entity_v1_ProjectionDriftTargetReport_descriptor =
-      getDescriptor().getMessageType(41);
+      getDescriptor().getMessageType(43);
     internal_static_udb_entity_v1_ProjectionDriftTargetReport_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ProjectionDriftTargetReport_descriptor,
         new java.lang.String[] { "TargetBackend", "TargetInstance", "TargetResource", "SourceRowsScanned", "DivergentRows", "RowsToRepair", "EstimatedCostUnits", "RepairTasksEnqueued", "Warnings", });
     internal_static_udb_entity_v1_ProjectionDriftScanResponse_descriptor =
-      getDescriptor().getMessageType(42);
+      getDescriptor().getMessageType(44);
     internal_static_udb_entity_v1_ProjectionDriftScanResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ProjectionDriftScanResponse_descriptor,
         new java.lang.String[] { "ProjectId", "MessageType", "ScanMode", "SourceRowsLoaded", "Reports", "SummaryJson", "Warnings", });
     internal_static_udb_entity_v1_SagaListRequest_descriptor =
-      getDescriptor().getMessageType(43);
+      getDescriptor().getMessageType(45);
     internal_static_udb_entity_v1_SagaListRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_SagaListRequest_descriptor,
         new java.lang.String[] { "Context", "TenantIdFilter", "StatusFilter", "TxIdFilter", "CorrelationIdFilter", "Limit", "PageToken", });
     internal_static_udb_entity_v1_SagaRecord_descriptor =
-      getDescriptor().getMessageType(44);
+      getDescriptor().getMessageType(46);
     internal_static_udb_entity_v1_SagaRecord_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_SagaRecord_descriptor,
         new java.lang.String[] { "SagaId", "TxId", "TenantId", "CorrelationId", "Status", "CurrentStep", "StepsJson", "CompensationsJson", "LastError", "CreatedAtUnix", "UpdatedAtUnix", });
     internal_static_udb_entity_v1_SagaListResponse_descriptor =
-      getDescriptor().getMessageType(45);
+      getDescriptor().getMessageType(47);
     internal_static_udb_entity_v1_SagaListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_SagaListResponse_descriptor,
         new java.lang.String[] { "Sagas", "NextPageToken", "TotalCount", });
     internal_static_udb_entity_v1_SagaRequest_descriptor =
-      getDescriptor().getMessageType(46);
+      getDescriptor().getMessageType(48);
     internal_static_udb_entity_v1_SagaRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_SagaRequest_descriptor,
         new java.lang.String[] { "Context", "SagaId", "Reason", "IdempotencyKey", });
     internal_static_udb_entity_v1_SagaResponse_descriptor =
-      getDescriptor().getMessageType(47);
+      getDescriptor().getMessageType(49);
     internal_static_udb_entity_v1_SagaResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_SagaResponse_descriptor,
         new java.lang.String[] { "Saga", "Errors", });
     internal_static_udb_entity_v1_PolicyRecord_descriptor =
-      getDescriptor().getMessageType(48);
+      getDescriptor().getMessageType(50);
     internal_static_udb_entity_v1_PolicyRecord_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_PolicyRecord_descriptor,
         new java.lang.String[] { "PolicyId", "Effect", "ServiceIdentity", "TenantId", "Purpose", "MessageType", "Operation", "RequiredScope", "Priority", "Enabled", });
     internal_static_udb_entity_v1_PolicyListRequest_descriptor =
-      getDescriptor().getMessageType(49);
+      getDescriptor().getMessageType(51);
     internal_static_udb_entity_v1_PolicyListRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_PolicyListRequest_descriptor,
         new java.lang.String[] { "Context", "IncludeDisabled", "Limit", "PageToken", });
     internal_static_udb_entity_v1_PolicyListResponse_descriptor =
-      getDescriptor().getMessageType(50);
+      getDescriptor().getMessageType(52);
     internal_static_udb_entity_v1_PolicyListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_PolicyListResponse_descriptor,
         new java.lang.String[] { "Policies", "NextPageToken", "TotalCount", });
     internal_static_udb_entity_v1_PutPolicyRequest_descriptor =
-      getDescriptor().getMessageType(51);
+      getDescriptor().getMessageType(53);
     internal_static_udb_entity_v1_PutPolicyRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_PutPolicyRequest_descriptor,
         new java.lang.String[] { "Context", "Policy", });
     internal_static_udb_entity_v1_PolicyRequest_descriptor =
-      getDescriptor().getMessageType(52);
+      getDescriptor().getMessageType(54);
     internal_static_udb_entity_v1_PolicyRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_PolicyRequest_descriptor,
         new java.lang.String[] { "Context", "PolicyId", });
     internal_static_udb_entity_v1_PolicyLintResponse_descriptor =
-      getDescriptor().getMessageType(53);
+      getDescriptor().getMessageType(55);
     internal_static_udb_entity_v1_PolicyLintResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_PolicyLintResponse_descriptor,
         new java.lang.String[] { "Passed", "Findings", });
     internal_static_udb_entity_v1_EnsureProjectRequest_descriptor =
-      getDescriptor().getMessageType(54);
+      getDescriptor().getMessageType(56);
     internal_static_udb_entity_v1_EnsureProjectRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_EnsureProjectRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "Name", "CdcTopicPrefix", });
     internal_static_udb_entity_v1_ProjectRecord_descriptor =
-      getDescriptor().getMessageType(55);
+      getDescriptor().getMessageType(57);
     internal_static_udb_entity_v1_ProjectRecord_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ProjectRecord_descriptor,
         new java.lang.String[] { "ProjectId", "Name", "CdcTopicPrefix", "ActiveCatalogVersion", "CreatedAtUnix", });
     internal_static_udb_entity_v1_ProjectListRequest_descriptor =
-      getDescriptor().getMessageType(56);
+      getDescriptor().getMessageType(58);
     internal_static_udb_entity_v1_ProjectListRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ProjectListRequest_descriptor,
         new java.lang.String[] { "Context", "Limit", "PageToken", });
     internal_static_udb_entity_v1_ProjectListResponse_descriptor =
-      getDescriptor().getMessageType(57);
+      getDescriptor().getMessageType(59);
     internal_static_udb_entity_v1_ProjectListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ProjectListResponse_descriptor,
         new java.lang.String[] { "Projects", "NextPageToken", "TotalCount", });
     internal_static_udb_entity_v1_AdminSummaryRequest_descriptor =
-      getDescriptor().getMessageType(58);
+      getDescriptor().getMessageType(60);
     internal_static_udb_entity_v1_AdminSummaryRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminSummaryRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "WithProbes", "Redact", });
     internal_static_udb_entity_v1_AdminAuditLogRequest_descriptor =
-      getDescriptor().getMessageType(59);
+      getDescriptor().getMessageType(61);
     internal_static_udb_entity_v1_AdminAuditLogRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminAuditLogRequest_descriptor,
         new java.lang.String[] { "Context", "OperationFilter", "ActorFilter", "TenantIdFilter", "ProjectIdFilter", "Limit", "PageToken", "Redact", });
     internal_static_udb_entity_v1_AdminAuditLogRecord_descriptor =
-      getDescriptor().getMessageType(60);
+      getDescriptor().getMessageType(62);
     internal_static_udb_entity_v1_AdminAuditLogRecord_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminAuditLogRecord_descriptor,
         new java.lang.String[] { "AuditId", "Actor", "Operation", "Target", "RequestJson", "Result", "TenantId", "ProjectId", "CorrelationId", "CreatedAtUnix", "PreviousHash", "CurrentHash", "SignerKeyId", "ExternalAnchor", });
     internal_static_udb_entity_v1_AdminAuditLogResponse_descriptor =
-      getDescriptor().getMessageType(61);
+      getDescriptor().getMessageType(63);
     internal_static_udb_entity_v1_AdminAuditLogResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminAuditLogResponse_descriptor,
         new java.lang.String[] { "Logs", "NextPageToken", "TotalCount", });
     internal_static_udb_entity_v1_AdminAuditVerifyRequest_descriptor =
-      getDescriptor().getMessageType(62);
+      getDescriptor().getMessageType(64);
     internal_static_udb_entity_v1_AdminAuditVerifyRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminAuditVerifyRequest_descriptor,
         new java.lang.String[] { "Context", "Limit", });
     internal_static_udb_entity_v1_AdminAuditVerifyResponse_descriptor =
-      getDescriptor().getMessageType(63);
+      getDescriptor().getMessageType(65);
     internal_static_udb_entity_v1_AdminAuditVerifyResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminAuditVerifyResponse_descriptor,
         new java.lang.String[] { "Passed", "CheckedCount", "FirstBrokenAuditId", "Reason", "ExpectedPreviousHash", "ActualPreviousHash", "ExpectedCurrentHash", "ActualCurrentHash", "LastHash", });
     internal_static_udb_entity_v1_AdminBackendSummary_descriptor =
-      getDescriptor().getMessageType(64);
+      getDescriptor().getMessageType(66);
     internal_static_udb_entity_v1_AdminBackendSummary_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminBackendSummary_descriptor,
@@ -1200,25 +1243,25 @@ public final class AdminProto extends com.google.protobuf.GeneratedFile {
         internal_static_udb_entity_v1_AdminBackendSummary_LabelsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_udb_entity_v1_AdminCdcSummary_descriptor =
-      getDescriptor().getMessageType(65);
+      getDescriptor().getMessageType(67);
     internal_static_udb_entity_v1_AdminCdcSummary_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminCdcSummary_descriptor,
         new java.lang.String[] { "IsLeader", "Paused", "SlotName", "LastEventId", "LagSeconds", "OutboxDepth", "DlqOpenCount", });
     internal_static_udb_entity_v1_AdminSagaSummary_descriptor =
-      getDescriptor().getMessageType(66);
+      getDescriptor().getMessageType(68);
     internal_static_udb_entity_v1_AdminSagaSummary_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminSagaSummary_descriptor,
         new java.lang.String[] { "Active", "Compensated", "FailedCompensation", "ManualReview", "Indeterminate", });
     internal_static_udb_entity_v1_AdminCatalogSummary_descriptor =
-      getDescriptor().getMessageType(67);
+      getDescriptor().getMessageType(69);
     internal_static_udb_entity_v1_AdminCatalogSummary_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminCatalogSummary_descriptor,
         new java.lang.String[] { "ProjectId", "ActiveVersion", "ActiveChecksum", "ActiveSince", "TableCount", "StoreCount", "PendingMigrationState", });
     internal_static_udb_entity_v1_AdminSummaryResponse_descriptor =
-      getDescriptor().getMessageType(68);
+      getDescriptor().getMessageType(70);
     internal_static_udb_entity_v1_AdminSummaryResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminSummaryResponse_descriptor,

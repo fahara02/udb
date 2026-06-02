@@ -26,13 +26,15 @@ from udb.core.authn.entity.v1 import enums_pb2 as udb_dot_core_dot_authn_dot_ent
 from udb.core.authn.entity.v1 import otp_pb2 as udb_dot_core_dot_authn_dot_entity_dot_v1_dot_otp__pb2
 from udb.core.authn.entity.v1 import session_pb2 as udb_dot_core_dot_authn_dot_entity_dot_v1_dot_session__pb2
 from udb.core.authn.entity.v1 import user_pb2 as udb_dot_core_dot_authn_dot_entity_dot_v1_dot_user__pb2
+from udb.core.authn.entity.v1 import webauthn_pb2 as udb_dot_core_dot_authn_dot_entity_dot_v1_dot_webauthn__pb2
 
 from udb.core.authn.entity.v1.enums_pb2 import *
 from udb.core.authn.entity.v1.otp_pb2 import *
 from udb.core.authn.entity.v1.session_pb2 import *
 from udb.core.authn.entity.v1.user_pb2 import *
+from udb.core.authn.entity.v1.webauthn_pb2 import *
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'udb/core/authn/entity/v1/entities.proto\x12\x18udb.core.authn.entity.v1\x1a$udb/core/authn/entity/v1/enums.proto\x1a\"udb/core/authn/entity/v1/otp.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.protoB\xf8\x01\n\x1c\x63om.udb.core.authn.entity.v1B\rEntitiesProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1P\x00P\x01P\x02P\x03\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'udb/core/authn/entity/v1/entities.proto\x12\x18udb.core.authn.entity.v1\x1a$udb/core/authn/entity/v1/enums.proto\x1a\"udb/core/authn/entity/v1/otp.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.proto\x1a\'udb/core/authn/entity/v1/webauthn.protoB\xf8\x01\n\x1c\x63om.udb.core.authn.entity.v1B\rEntitiesProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1P\x00P\x01P\x02P\x03P\x04\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)

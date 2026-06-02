@@ -148,6 +148,26 @@ analytics/spark/_out/
 analytics/spark/_spark_out/
 analytics/spark/**/_chk/
 
+# ── Benchmark dataset & profiles (D.2) ───────────────────────────────────────
+# `data/gen_bench_data.py` generates up to ~1 GiB of NDJSON for the hot-path
+# benches; the data is regenerable and must never be committed. Keep the
+# generator script (and an optional README) tracked.
+/data/*
+!/data/gen_bench_data.py
+!/data/README.md
+# dhat heap-profile output from `examples/dhat_hotpath`.
+dhat-heap.json
+dhat-heap.json.*
+# Vibrant chart artifacts rendered by scripts/bench_charts.py (regenerable).
+/bench-artifacts/
+# Python bytecode cache (e.g. scripts/__pycache__).
+__pycache__/
+*.pyc
+# Raw bench stdout captures (transient).
+/live_bench_raw.txt
+/hp2.txt
+# Criterion saved baselines/reports live under target/ (already ignored).
+
 # ── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db

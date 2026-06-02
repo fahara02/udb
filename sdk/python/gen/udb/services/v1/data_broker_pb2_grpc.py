@@ -7,6 +7,7 @@ from udb.entity.v1 import blob_pb2 as udb_dot_entity_dot_v1_dot_blob__pb2
 from udb.entity.v1 import cdc_pb2 as udb_dot_entity_dot_v1_dot_cdc__pb2
 from udb.entity.v1 import mutation_pb2 as udb_dot_entity_dot_v1_dot_mutation__pb2
 from udb.entity.v1 import outbox_pb2 as udb_dot_entity_dot_v1_dot_outbox__pb2
+from udb.entity.v1 import record_batch_pb2 as udb_dot_entity_dot_v1_dot_record__batch__pb2
 from udb.entity.v1 import relational_pb2 as udb_dot_entity_dot_v1_dot_relational__pb2
 from udb.entity.v1 import stores_pb2 as udb_dot_entity_dot_v1_dot_stores__pb2
 from udb.entity.v1 import tx_pb2 as udb_dot_entity_dot_v1_dot_tx__pb2
@@ -34,6 +35,11 @@ class DataBrokerStub(object):
                 '/udb.services.v1.DataBroker/BatchSelect',
                 request_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.SelectRequest.SerializeToString,
                 response_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.RecordSet.FromString,
+                _registered_method=True)
+        self.SelectV2 = channel.unary_stream(
+                '/udb.services.v1.DataBroker/SelectV2',
+                request_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.SelectRequest.SerializeToString,
+                response_deserializer=udb_dot_entity_dot_v1_dot_record__batch__pb2.RecordBatchV2.FromString,
                 _registered_method=True)
         self.Upsert = channel.unary_unary(
                 '/udb.services.v1.DataBroker/Upsert',
@@ -416,6 +422,15 @@ class DataBrokerServicer(object):
 
     def BatchSelect(self, request_iterator, context):
         """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SelectV2(self, request, context):
+        """Additive typed columnar read. Reuses SelectRequest; streams RecordBatchV2.
+        Clients use this only when ProtocolSupport.encodings advertises
+        "record_batch_v2" and otherwise fall back to Select/RecordSet.
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -929,6 +944,11 @@ def add_DataBrokerServicer_to_server(servicer, server):
                     request_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.SelectRequest.FromString,
                     response_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.RecordSet.SerializeToString,
             ),
+            'SelectV2': grpc.unary_stream_rpc_method_handler(
+                    servicer.SelectV2,
+                    request_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.SelectRequest.FromString,
+                    response_serializer=udb_dot_entity_dot_v1_dot_record__batch__pb2.RecordBatchV2.SerializeToString,
+            ),
             'Upsert': grpc.unary_unary_rpc_method_handler(
                     servicer.Upsert,
                     request_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.UpsertRequest.FromString,
@@ -1351,6 +1371,33 @@ class DataBroker(object):
             '/udb.services.v1.DataBroker/BatchSelect',
             udb_dot_entity_dot_v1_dot_relational__pb2.SelectRequest.SerializeToString,
             udb_dot_entity_dot_v1_dot_relational__pb2.RecordSet.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SelectV2(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/udb.services.v1.DataBroker/SelectV2',
+            udb_dot_entity_dot_v1_dot_relational__pb2.SelectRequest.SerializeToString,
+            udb_dot_entity_dot_v1_dot_record__batch__pb2.RecordBatchV2.FromString,
             options,
             channel_credentials,
             insecure,

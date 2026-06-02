@@ -22,6 +22,22 @@ use crate::runtime::executor_utils::qi_runtime;
 /// binary so native migration works for any user project without copying protos.
 static NATIVE_PROTO_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/proto/udb/core");
 
+/// The *entire* UDB proto contract (`proto/udb/**`): the annotation contract
+/// (`udb/core/**`), broker wire surface (`udb/entity/**`, `udb/services/**`),
+/// and event envelopes (`udb/events/**`). Embedded so `udb proto export` and
+/// `udb sdk generate` can materialize the full version-matched tree without a
+/// repo clone or registry. (Deliberately a superset of `NATIVE_PROTO_DIR`; the
+/// double-embed of `core/**` is a few tens of KB and keeps native-catalog schema
+/// parsing scoped to `core/**` only.)
+static FULL_PROTO_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/proto/udb");
+
+/// Vendored third-party protos the UDB contract imports (`google/api/{annotations,
+/// http,field_behavior}`). Embedded so an exported tree compiles offline with bare
+/// `protoc -I <out>` — buf users resolve these via `deps` instead, but `protoc`
+/// users have no registry. The google well-known types (`google/protobuf/*`) ship
+/// with every protoc/buf toolchain and are intentionally not vendored.
+static THIRD_PARTY_PROTO_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/third_party/googleapis");
+
 /// Recursively parse every embedded `*.proto` into `ProtoSchema`s. Entity protos
 /// yield table schemas via their `pg_table` annotations; service/event protos
 /// simply yield none.
@@ -41,6 +57,95 @@ fn collect(dir: &Dir<'_>, config: &ParserConfig, out: &mut Vec<ProtoSchema>) {
     for sub in dir.dirs() {
         collect(sub, config, out);
     }
+}
+
+/// Every embedded UDB proto file as `(import_path, contents)`, where
+/// `import_path` is the path users write in an `import "…"` line — i.e. rooted
+/// at `udb/core/…` (the embedded `NATIVE_PROTO_DIR` is `proto/udb/core`, so each
+/// file's path is relative to that and re-prefixed with `udb/core/`).
+///
+/// This backs `udb proto export`: the annotation contract (`udb/core/common/v1/
+/// db.proto` and the sibling types it references) and the broker/service protos
+/// are compiled into the binary, so a user can materialize a version-matched
+/// proto tree without cloning the repo or depending on a registry.
+pub fn embedded_proto_files() -> Vec<(String, &'static [u8])> {
+    fn walk(dir: &Dir<'static>, out: &mut Vec<(String, &'static [u8])>) {
+        for file in dir.files() {
+            if file.path().extension().and_then(|ext| ext.to_str()) == Some("proto") {
+                let rel = file.path().to_string_lossy().replace('\\', "/");
+                out.push((format!("udb/core/{rel}"), file.contents()));
+            }
+        }
+        for sub in dir.dirs() {
+            walk(sub, out);
+        }
+    }
+    let mut out = Vec::new();
+    walk(&NATIVE_PROTO_DIR, &mut out);
+    out.sort_by(|a, b| a.0.cmp(&b.0));
+    out
+}
+
+/// Every embedded UDB proto file across the *full* contract as
+/// `(import_path, contents)`, where `import_path` is rooted at `udb/…` — exactly
+/// the string a user writes in an `import "…"` line. Superset of
+/// [`embedded_proto_files`]; this is what `udb proto export` materializes so the
+/// broker wire surface (`udb/entity`, `udb/services`, `udb/events`) is present,
+/// not just the annotation contract.
+pub fn embedded_broker_protos() -> Vec<(String, &'static [u8])> {
+    fn walk(dir: &Dir<'static>, out: &mut Vec<(String, &'static [u8])>) {
+        for file in dir.files() {
+            if file.path().extension().and_then(|ext| ext.to_str()) == Some("proto") {
+                let rel = file.path().to_string_lossy().replace('\\', "/");
+                out.push((format!("udb/{rel}"), file.contents()));
+            }
+        }
+        for sub in dir.dirs() {
+            walk(sub, out);
+        }
+    }
+    let mut out = Vec::new();
+    walk(&FULL_PROTO_DIR, &mut out);
+    out.sort_by(|a, b| a.0.cmp(&b.0));
+    out
+}
+
+/// Vendored third-party protos as `(import_path, contents)` rooted at the import
+/// path the UDB contract uses (`google/api/annotations.proto`, …). Written
+/// alongside the UDB tree by `udb proto export` so offline `protoc -I <out>`
+/// resolves the google/api imports.
+pub fn embedded_third_party_protos() -> Vec<(String, &'static [u8])> {
+    fn walk(dir: &Dir<'static>, out: &mut Vec<(String, &'static [u8])>) {
+        for file in dir.files() {
+            if file.path().extension().and_then(|ext| ext.to_str()) == Some("proto") {
+                let rel = file.path().to_string_lossy().replace('\\', "/");
+                out.push((rel, file.contents()));
+            }
+        }
+        for sub in dir.dirs() {
+            walk(sub, out);
+        }
+    }
+    let mut out = Vec::new();
+    walk(&THIRD_PARTY_PROTO_DIR, &mut out);
+    out.sort_by(|a, b| a.0.cmp(&b.0));
+    out
+}
+
+/// The prost-encoded `FileDescriptorSet` for the whole UDB wire contract, embedded
+/// at build time (`OUT_DIR/udb_descriptor.bin`). `udb sdk generate` decodes this to
+/// enumerate the RPC surface — proto stays the single source of truth, no second
+/// hand-maintained RPC list.
+pub fn embedded_file_descriptor_set() -> &'static [u8] {
+    tonic::include_file_descriptor_set!("udb_descriptor")
+}
+
+/// The UDB wire-protocol version the running binary speaks (single source:
+/// `crate::runtime::service::UDB_PROTOCOL_VERSION`). Exposed so the CLI (bin
+/// crate) can stamp generated SDKs with a version that always matches the
+/// binary, rather than re-declaring the constant.
+pub fn protocol_version() -> &'static str {
+    crate::runtime::service::UDB_PROTOCOL_VERSION
 }
 
 pub(crate) fn native_schemas() -> &'static Vec<ProtoSchema> {
@@ -298,6 +403,8 @@ mod tests {
             "CREATE TABLE IF NOT EXISTS \"udb_authn\".\"users\"",
             "CREATE TABLE IF NOT EXISTS \"udb_authn\".\"sessions\"",
             "CREATE TABLE IF NOT EXISTS \"udb_authn\".\"otps\"",
+            "CREATE TABLE IF NOT EXISTS \"udb_authn\".\"webauthn_credentials\"",
+            "CREATE TABLE IF NOT EXISTS \"udb_authn\".\"webauthn_challenges\"",
             "CREATE TABLE IF NOT EXISTS \"udb_authn\".\"api_keys\"",
             "CREATE TABLE IF NOT EXISTS \"udb_authz\".\"policy_rules\"",
         ] {
@@ -318,6 +425,16 @@ mod tests {
             ("udb.core.authn.entity.v1.User", "udb_authn", "users"),
             ("udb.core.authn.entity.v1.Session", "udb_authn", "sessions"),
             ("udb.core.authn.entity.v1.OTP", "udb_authn", "otps"),
+            (
+                "udb.core.authn.entity.v1.WebAuthnCredential",
+                "udb_authn",
+                "webauthn_credentials",
+            ),
+            (
+                "udb.core.authn.entity.v1.WebAuthnChallenge",
+                "udb_authn",
+                "webauthn_challenges",
+            ),
             ("udb.core.apikey.entity.v1.ApiKey", "udb_authn", "api_keys"),
         ];
         for (message, expected_schema, expected_table) in cases {
@@ -360,6 +477,27 @@ mod tests {
                     "delivery_address",
                     "expires_at",
                     "status",
+                ][..],
+            ),
+            (
+                "udb.core.authn.entity.v1.WebAuthnCredential",
+                &[
+                    "credential_id",
+                    "user_id",
+                    "passkey_json",
+                    "tenant_id",
+                    "last_used_at",
+                ][..],
+            ),
+            (
+                "udb.core.authn.entity.v1.WebAuthnChallenge",
+                &[
+                    "challenge_id",
+                    "user_id",
+                    "ceremony",
+                    "state_json",
+                    "expires_at",
+                    "consumed_at",
                 ][..],
             ),
             (

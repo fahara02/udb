@@ -16,7 +16,7 @@ class CapabilitiesRequest(_message.Message):
     def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., project_id: _Optional[str] = ...) -> None: ...
 
 class CapabilitiesResponse(_message.Message):
-    __slots__ = ("schema_checksum", "protocol_version", "enabled_backends", "degraded_backends", "system_catalog_relations", "supported_rpcs", "backend_instances", "backend_capabilities")
+    __slots__ = ("schema_checksum", "protocol_version", "enabled_backends", "degraded_backends", "system_catalog_relations", "supported_rpcs", "backend_instances", "backend_capabilities", "protocol_support", "backend_protocol_support")
     SCHEMA_CHECKSUM_FIELD_NUMBER: _ClassVar[int]
     PROTOCOL_VERSION_FIELD_NUMBER: _ClassVar[int]
     ENABLED_BACKENDS_FIELD_NUMBER: _ClassVar[int]
@@ -25,6 +25,8 @@ class CapabilitiesResponse(_message.Message):
     SUPPORTED_RPCS_FIELD_NUMBER: _ClassVar[int]
     BACKEND_INSTANCES_FIELD_NUMBER: _ClassVar[int]
     BACKEND_CAPABILITIES_FIELD_NUMBER: _ClassVar[int]
+    PROTOCOL_SUPPORT_FIELD_NUMBER: _ClassVar[int]
+    BACKEND_PROTOCOL_SUPPORT_FIELD_NUMBER: _ClassVar[int]
     schema_checksum: str
     protocol_version: str
     enabled_backends: _containers.RepeatedScalarFieldContainer[str]
@@ -33,7 +35,43 @@ class CapabilitiesResponse(_message.Message):
     supported_rpcs: _containers.RepeatedScalarFieldContainer[str]
     backend_instances: _containers.RepeatedCompositeFieldContainer[BackendInstanceStatus]
     backend_capabilities: _containers.RepeatedCompositeFieldContainer[BackendCapabilityDescriptor]
-    def __init__(self, schema_checksum: _Optional[str] = ..., protocol_version: _Optional[str] = ..., enabled_backends: _Optional[_Iterable[str]] = ..., degraded_backends: _Optional[_Iterable[str]] = ..., system_catalog_relations: _Optional[_Iterable[str]] = ..., supported_rpcs: _Optional[_Iterable[str]] = ..., backend_instances: _Optional[_Iterable[_Union[BackendInstanceStatus, _Mapping]]] = ..., backend_capabilities: _Optional[_Iterable[_Union[BackendCapabilityDescriptor, _Mapping]]] = ...) -> None: ...
+    protocol_support: ProtocolSupport
+    backend_protocol_support: _containers.RepeatedCompositeFieldContainer[BackendProtocolSupport]
+    def __init__(self, schema_checksum: _Optional[str] = ..., protocol_version: _Optional[str] = ..., enabled_backends: _Optional[_Iterable[str]] = ..., degraded_backends: _Optional[_Iterable[str]] = ..., system_catalog_relations: _Optional[_Iterable[str]] = ..., supported_rpcs: _Optional[_Iterable[str]] = ..., backend_instances: _Optional[_Iterable[_Union[BackendInstanceStatus, _Mapping]]] = ..., backend_capabilities: _Optional[_Iterable[_Union[BackendCapabilityDescriptor, _Mapping]]] = ..., protocol_support: _Optional[_Union[ProtocolSupport, _Mapping]] = ..., backend_protocol_support: _Optional[_Iterable[_Union[BackendProtocolSupport, _Mapping]]] = ...) -> None: ...
+
+class ProtocolSupport(_message.Message):
+    __slots__ = ("min_protocol_version", "max_protocol_version", "encodings", "compression", "supports_streaming_reads", "supports_object_streaming", "max_recv_message_bytes", "max_send_message_bytes", "supported_rpcs")
+    MIN_PROTOCOL_VERSION_FIELD_NUMBER: _ClassVar[int]
+    MAX_PROTOCOL_VERSION_FIELD_NUMBER: _ClassVar[int]
+    ENCODINGS_FIELD_NUMBER: _ClassVar[int]
+    COMPRESSION_FIELD_NUMBER: _ClassVar[int]
+    SUPPORTS_STREAMING_READS_FIELD_NUMBER: _ClassVar[int]
+    SUPPORTS_OBJECT_STREAMING_FIELD_NUMBER: _ClassVar[int]
+    MAX_RECV_MESSAGE_BYTES_FIELD_NUMBER: _ClassVar[int]
+    MAX_SEND_MESSAGE_BYTES_FIELD_NUMBER: _ClassVar[int]
+    SUPPORTED_RPCS_FIELD_NUMBER: _ClassVar[int]
+    min_protocol_version: str
+    max_protocol_version: str
+    encodings: _containers.RepeatedScalarFieldContainer[str]
+    compression: _containers.RepeatedScalarFieldContainer[str]
+    supports_streaming_reads: bool
+    supports_object_streaming: bool
+    max_recv_message_bytes: int
+    max_send_message_bytes: int
+    supported_rpcs: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, min_protocol_version: _Optional[str] = ..., max_protocol_version: _Optional[str] = ..., encodings: _Optional[_Iterable[str]] = ..., compression: _Optional[_Iterable[str]] = ..., supports_streaming_reads: bool = ..., supports_object_streaming: bool = ..., max_recv_message_bytes: _Optional[int] = ..., max_send_message_bytes: _Optional[int] = ..., supported_rpcs: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class BackendProtocolSupport(_message.Message):
+    __slots__ = ("backend", "supports_streaming_reads", "supports_object_streaming", "encodings")
+    BACKEND_FIELD_NUMBER: _ClassVar[int]
+    SUPPORTS_STREAMING_READS_FIELD_NUMBER: _ClassVar[int]
+    SUPPORTS_OBJECT_STREAMING_FIELD_NUMBER: _ClassVar[int]
+    ENCODINGS_FIELD_NUMBER: _ClassVar[int]
+    backend: str
+    supports_streaming_reads: bool
+    supports_object_streaming: bool
+    encodings: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, backend: _Optional[str] = ..., supports_streaming_reads: bool = ..., supports_object_streaming: bool = ..., encodings: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class BackendCapabilityDescriptor(_message.Message):
     __slots__ = ("backend", "tier", "operations", "unsupported_error_code", "consistency_model", "max_payload_bytes", "supports_xa", "supports_two_phase_commit")

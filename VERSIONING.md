@@ -95,3 +95,16 @@ module in a subdirectory; its version still follows the same UDB release number.
 C# (NuGet) and Java (Maven Central) are version-checked but their publish
 workflows are not yet wired. Add them with the same shared `v*.*.*` trigger when
 `NUGET_API_KEY` and Sonatype / `MAVEN_*` + GPG signing secrets are ready.
+
+## Binary Auth Feature Contract
+
+GitHub Release binaries are built from the portable backend feature set plus
+`oidc,webauthn` on Linux x86_64, Windows x86_64/MSVC, macOS Apple Silicon, and
+macOS x86_64. The CI `auth-release-binary` matrix checks the same targets before
+a release tag can ship.
+
+WebAuthn uses `webauthn-rs` and vendored OpenSSL, so Windows release builds
+install Strawberry Perl, NASM, and initialize the MSVC toolchain before Cargo
+runs. Linux and macOS runners install their Perl/NASM/CMake/Ninja prerequisites
+explicitly. This keeps the published CLI/broker binaries independent of the
+developer workstation's local Perl/OpenSSL state.

@@ -18,6 +18,8 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  RELEASE_BINARY_FEATURES: >-
+    postgres,mysql,sqlite,qdrant,s3,mongodb,neo4j,clickhouse,redis,elasticsearch,weaviate,pinecone,azureblob,gcs,otel,runtime-logging,http-client,oidc,webauthn
 
 jobs:
   # ── Rust build + test + clippy across OSes ────────────────────────
@@ -53,6 +55,68 @@ jobs:
         # to `-D warnings` once the count is at zero.
         continue-on-error: true
         run: cargo clippy --locked --all-targets
+
+  # ── Shipped binary feature gate: portable broker + real OIDC/WebAuthn ─────
+  auth-release-binary:
+    name: Auth binary (${{ matrix.asset }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset: linux-amd64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            asset: windows-amd64
+          - os: macos-14
+            target: aarch64-apple-darwin
+            asset: darwin-arm64
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            asset: darwin-amd64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: auth-${{ matrix.target }}
+
+      - name: Install auth build deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake clang perl nasm ninja-build pkg-config libssl-dev
+
+      - name: Install auth build deps (macOS)
+        if: runner.os == 'macOS'
+        run: brew install cmake nasm ninja
+
+      - name: Install auth build deps (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install strawberryperl nasm --no-progress -y
+          "C:\Strawberry\perl\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Configure MSVC build tools (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Check shipped auth binary feature set
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            export PATH="/c/Strawberry/perl/bin:/c/Program Files/NASM:${PATH}"
+          fi
+          cargo check --locked --target ${{ matrix.target }} \
+            --bin udb-proto-parser \
+            --no-default-features --features "${RELEASE_BINARY_FEATURES}"
 
   # ── Slim postgres-only build + dep-graph guard ────────────────────
   slim-build:

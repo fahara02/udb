@@ -249,6 +249,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::configure()
         .build_server(true)
         .build_client(true)
+        // A.5: generate selected high-volume bytes fields as `bytes::Bytes` so
+        // the Rust server can pass object chunks / row keys without copying.
+        // Server-side (tonic_build) only — SDKs generate from Buf and are
+        // unaffected; the wire format is identical (`bytes` is `bytes`).
+        .bytes([
+            ".udb.entity.v1.Chunk.data",
+            ".udb.entity.v1.ProjectionDriftDivergentRow.row_key_json",
+        ])
         .file_descriptor_set_path(&descriptor_path)
         .compile_protos(&proto_files, &includes)?;
 

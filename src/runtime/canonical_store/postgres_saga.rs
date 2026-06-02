@@ -94,36 +94,10 @@ impl SagaStore for PostgresCanonicalStore {
 
     async fn ensure_saga_tables(&self) -> SystemStoreResult<()> {
         let rel = self.saga_relation_ref();
-        let stmts = [
-            format!(
-                r#"
-                CREATE TABLE IF NOT EXISTS {rel} (
-                    saga_id              UUID PRIMARY KEY,
-                    tx_id                TEXT NOT NULL DEFAULT '',
-                    tenant_id            TEXT NOT NULL DEFAULT '',
-                    correlation_id       TEXT NOT NULL DEFAULT '',
-                    status               TEXT NOT NULL DEFAULT 'pending'
-                                         CHECK (status IN ('indeterminate','in_progress','pending','committed','compensated','failed','in_doubt','failed_compensation','manual_review')),
-                    backend_instance     TEXT NOT NULL DEFAULT '',
-                    operation            TEXT NOT NULL DEFAULT '',
-                    current_step         INTEGER NOT NULL DEFAULT 0,
-                    retry_count          INTEGER NOT NULL DEFAULT 0,
-                    recovery_attempts    INTEGER NOT NULL DEFAULT 0,
-                    compensation_status  TEXT NOT NULL DEFAULT 'none'
-                                         CHECK (compensation_status IN ('none','completed','manual_review','retry_requested')),
-                    steps                JSONB NOT NULL DEFAULT '[]'::JSONB,
-                    compensations        JSONB NOT NULL DEFAULT '[]'::JSONB,
-                    last_error           TEXT NOT NULL DEFAULT '',
-                    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                )
-                "#
-            ),
-            format!(
-                r#"CREATE INDEX IF NOT EXISTS "idx_udb_sagas_tenant_status"
-                     ON {rel} (tenant_id, status, updated_at DESC)"#
-            ),
-        ];
+        // B.7: DDL strings come from the shared `sql_schema` renderer (single
+        // source of truth across SQL backends); the execute/error-handling
+        // loop below is unchanged.
+        let stmts = super::sql_schema::postgres_sagas_ddl(rel);
         for sql in stmts.iter() {
             sqlx::query(sql)
                 .execute(self.pg_pool())

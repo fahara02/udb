@@ -7,6 +7,7 @@ import "udb/entity/v1/blob.proto";
 import "udb/entity/v1/cdc.proto";
 import "udb/entity/v1/mutation.proto";
 import "udb/entity/v1/outbox.proto";
+import "udb/entity/v1/record_batch.proto";
 import "udb/entity/v1/relational.proto";
 import "udb/entity/v1/stores.proto";
 import "udb/entity/v1/tx.proto";
@@ -25,6 +26,10 @@ service DataBroker {
   // ── Relational ─────────────────────────────────────────────────────────────
   rpc Select(udb.entity.v1.SelectRequest) returns (udb.entity.v1.RecordSet) {}
   rpc BatchSelect(stream udb.entity.v1.SelectRequest) returns (stream udb.entity.v1.RecordSet) {}
+  // Additive typed columnar read. Reuses SelectRequest; streams RecordBatchV2.
+  // Clients use this only when ProtocolSupport.encodings advertises
+  // "record_batch_v2" and otherwise fall back to Select/RecordSet.
+  rpc SelectV2(udb.entity.v1.SelectRequest) returns (stream udb.entity.v1.RecordBatchV2) {}
   rpc Upsert(udb.entity.v1.UpsertRequest) returns (udb.entity.v1.MutationResponse) {}
   rpc BatchUpsert(stream udb.entity.v1.UpsertRequest) returns (stream udb.entity.v1.MutationResponse) {}
   // Delete rows without raw SQL.
