@@ -281,6 +281,7 @@ jobs:
           # Deterministic OpenAPI metadata fixup (title/version/scope) so the
           # committed swagger matches generation output (TODO_PASS2 #144/#145).
           node scripts/openapi-postprocess.mjs
+          node scripts/sdk-codegen-postprocess.mjs
           if ! git diff --quiet -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api; then
             echo "::error::Committed SDK stubs are stale. Run 'buf generate --include-imports' and commit the result."
             git diff --stat -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api
