@@ -1,27 +1,39 @@
 # UDB Java SDK
 
-This wrapper centralizes UDB gRPC metadata for Java services. Generate the Java
-protobuf classes first:
+Artifact: `dev.udb:udb-java-client`
 
-```powershell
-..\scripts\gen_sdk.ps1
-```
+Current manifest version: `0.2.1-SNAPSHOT`
 
-```bash
-../scripts/gen_sdk.sh
-```
+Release target: `0.2.1`
 
-Generated classes are written to `sdk/java/gen/java`. Add that directory as a
-generated source root in your build, or copy the generated package into your
-application build.
+Runtime: Java 17+
 
-The wrapper expects generated classes for:
+This wrapper centralizes UDB gRPC metadata for Java services and compiles the
+committed generated protobuf classes under `sdk/java/gen`.
 
-- `com.udb.entity.v1.Types`
-- `com.udb.services.v1.DataBrokerGrpc`
-
-Run the example after generating stubs and starting UDB:
+Maven Central publishing is still release-pipeline work. Until the public
+artifact is published, build and test from this checkout:
 
 ```bash
 mvn -f sdk/java/pom.xml test
 ```
+
+After proto changes, regenerate from the repo root:
+
+```powershell
+.\scripts\gen_sdk.ps1
+```
+
+```bash
+./scripts/gen_sdk.sh
+```
+
+The wrapper expects generated classes for the DataBroker and native
+control-plane services, including:
+
+- `com.udb.entity.v1.Types`
+- `com.udb.services.v1.DataBrokerGrpc`
+- `com.udb.core.authn.services.v1.*`
+- `com.udb.core.authz.services.v1.*`
+
+Use the root README for a concise client example.

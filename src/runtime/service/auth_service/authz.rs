@@ -494,8 +494,27 @@ impl AuthzServiceImpl {
     }
 
     pub fn with_postgres(mut self, pool: Option<PgPool>) -> Self {
+        let has_pool = pool.is_some();
         self.pg_pool = pool;
+        // A durable Postgres pool is the source of truth. The constructor seeds
+        // `snapshot_loaded_at = Some(now)` over the (possibly empty) in-memory
+        // snapshot, which would otherwise be served as "fresh" for the whole TTL
+        // and suppress the first load from Postgres. Force the next read to load
+        // the real snapshot from PG.
+        if has_pool {
+            self.invalidate_snapshot_cache();
+        }
         self
+    }
+
+    /// Invalidate the cached authz snapshot so the next `current_snapshot()`
+    /// reloads from Postgres. Called after every authz mutation so the writing
+    /// node enforces its own writes immediately (read-your-writes) instead of
+    /// serving a stale snapshot until the TTL elapses.
+    fn invalidate_snapshot_cache(&self) {
+        if let Ok(mut guard) = self.snapshot_loaded_at.lock() {
+            *guard = None;
+        }
     }
 
     pub(crate) fn with_event_sink(mut self, sink: Arc<dyn AuthEventSink>) -> Self {
@@ -999,6 +1018,7 @@ impl AuthzService for AuthzServiceImpl {
         } else {
             self.require_snapshot_fallback()?;
         }
+        self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::AuthMutationResponse {
             ok: true,
             message: "role binding stored".to_string(),
@@ -1063,6 +1083,7 @@ impl AuthzService for AuthzServiceImpl {
         } else {
             self.require_snapshot_fallback()?;
         }
+        self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::AuthMutationResponse {
             ok: true,
             message: "relationship tuple stored".to_string(),
@@ -1171,6 +1192,7 @@ impl AuthzService for AuthzServiceImpl {
         } else {
             self.require_snapshot_fallback()?;
         }
+        self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::AuthMutationResponse {
             ok: true,
             message: "authz policy stored".to_string(),
@@ -1361,6 +1383,7 @@ impl AuthzService for AuthzServiceImpl {
             }),
         ))
         .await;
+        self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::CreateRoleResponse {
             role: Some(authz_entity_pb::Role {
                 role_id,
@@ -1460,6 +1483,7 @@ impl AuthzService for AuthzServiceImpl {
             }),
         ))
         .await;
+        self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::AssignRoleResponse {
             user_role: Some(authz_entity_pb::UserRole {
                 user_role_id,
@@ -1563,6 +1587,7 @@ impl AuthzService for AuthzServiceImpl {
         } else {
             self.require_snapshot_fallback()?;
         }
+        self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::CreatePolicyRuleResponse {
             policy: Some(authz_entity_pb::PolicyRule {
                 domain: req.domain,
@@ -1742,6 +1767,7 @@ impl AuthzService for AuthzServiceImpl {
             ))
             .await;
         }
+        self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::RevokeRoleResponse { revoked }))
     }
     async fn list_user_roles(
@@ -1961,6 +1987,7 @@ impl AuthzService for AuthzServiceImpl {
             }),
         ))
         .await;
+        self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::UpdateRoleResponse {
             role: Some(role),
         }))
@@ -2006,6 +2033,7 @@ impl AuthzService for AuthzServiceImpl {
             .await
             .map_err(|err| Status::internal(format!("delete role assignments failed: {err}")))?;
         }
+        self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::DeleteRoleResponse {
             deleted: result.rows_affected() > 0,
         }))
@@ -2153,6 +2181,7 @@ impl AuthzService for AuthzServiceImpl {
         } else {
             self.require_snapshot_fallback()?;
         }
+        self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::DeletePolicyRuleResponse {
             deleted,
         }))

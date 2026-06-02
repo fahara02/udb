@@ -595,11 +595,17 @@ Source: [`src/runtime/authn/`](src/runtime/authn), [`src/runtime/authz/`](src/ru
 
 ## Protocol And SDKs
 
-The UDB-owned broker contract is:
+The UDB-owned protocol is versioned separately from the crate and SDK package
+versions. The current wire protocol is
+[`1.0.0`](sdk/UDB_PROTOCOL_VERSION), and the current crate/SDK release tracked
+by [`versions.json`](versions.json) is `0.2.1`.
+
+Canonical proto sources:
 
 - [`proto/udb/entity/v1/types.proto`](proto/udb/entity/v1/types.proto)
 - [`proto/udb/events/v1/udb_events.proto`](proto/udb/events/v1/udb_events.proto)
 - [`proto/udb/services/v1/data_broker.proto`](proto/udb/services/v1/data_broker.proto)
+- [`proto/udb/core/**`](proto/udb/core) for the native Authn/Authz/ApiKey/Tenant/Notification/Analytics services
 
 The build script compiles those with `tonic-build` and writes a generated
 `protocol.rs` include under Cargo's `OUT_DIR`.
@@ -614,40 +620,40 @@ Generate SDKs:
 ./scripts/gen_sdk.sh
 ```
 
-SDK folders:
+Release and install matrix:
 
-| SDK | Path |
-|---|---|
-| Go | [`sdk/go`](sdk/go/README.md) |
-| Python | [`sdk/python`](sdk/python/README.md) |
-| TypeScript | [`sdk/typescript`](sdk/typescript/README.md) |
-| C# | [`sdk/csharp`](sdk/csharp/README.md) |
-| Java | [`sdk/java`](sdk/java/README.md) |
-| PHP / Laravel | [`sdk/php`](sdk/php/README.md) |
+| SDK | Current release | Install | Runtime requirements | Notes |
+|---|---:|---|---|---|
+| Go | `0.2.1` | `go get github.com/fahara02/udb/sdk/go@v0.2.1` | Go 1.22+, `grpc`, `protobuf` | Generated stubs plus `udbclient` metadata/auth helpers |
+| Python | `0.2.1` | `pip install udb-client==0.2.1` | Python 3.10+, `grpcio`, `protobuf` | Sync and async clients, optional `pydantic` extra |
+| TypeScript / Node | `0.2.1` | `npm i @udb_plus/sdk@0.2.1` | Node 18+, `@grpc/grpc-js` | Runtime proto loader, package entry points `@udb_plus/sdk`, `/client`, `/auth` |
+| PHP / Laravel | `0.2.1` | `composer require fahara02/udb-laravel:^0.2.1` | PHP 8.1+, `ext-grpc`, Laravel 10/11/12 | ServiceProvider, Facade, middleware, typed exceptions |
+| C# | `0.2.1` | `dotnet add package Udb.Client --version 0.2.1` | .NET 8, `Grpc.Net.Client` | Package id and version are set; NuGet publishing is part of the release pipeline |
+| Java | `0.2.1-SNAPSHOT` today, `0.2.1` target | `dev.udb:udb-java-client` | Java 17, gRPC Java | Manifest is still snapshot; Maven Central release wiring is in progress |
 
-Protocol version: [`sdk/UDB_PROTOCOL_VERSION`](sdk/UDB_PROTOCOL_VERSION).
+Every SDK sends the same request metadata headers:
 
-## 🚀 Quickstart Per Language
+- `x-tenant-id`
+- `x-user-id`
+- `x-purpose`
+- `x-correlation-id`
+- `x-scopes`
+- `x-service-identity`
+- `x-udb-project-id`
+- `x-udb-client-catalog-version`
 
-Most SDKs ship generated stubs (in each SDK's `gen/` dir — no regen needed to
-consume), a thin **broker client** that attaches the request metadata headers
-(`x-tenant-id`, `x-user-id`, `x-purpose`, `x-correlation-id`, `x-scopes`,
-`x-service-identity`, `x-udb-project-id`, `x-udb-client-catalog-version`), and an
-**auth client** (`Authenticate` + `Authorize`/`can`). To regenerate after editing
-protos: `buf generate` (or `scripts/gen_sdk.{ps1,sh}`).
+Most SDKs ship committed generated stubs in `gen/`, so consumers do not need
+`buf` or `protoc`. Regenerate only after changing protos:
+`buf generate`, `scripts/gen_sdk.ps1`, or `scripts/gen_sdk.sh`.
 
-> **TypeScript note:** the Node SDK (`@udb_plus/sdk`) loads the protos
-> **dynamically** at runtime via `@grpc/proto-loader` (the `.proto` files are
-> bundled into the package and resolved by `protoRoot.ts`) — you consume it
-> through the package entry points (`@udb_plus/sdk`, `/client`, `/auth`), not by
-> importing the `gen/` stubs. The committed `sdk/typescript/gen/**` tree is a
-> buf drift-parity artifact (kept in lockstep with the protos by CI) and is
-> intentionally excluded from the published package and the build; it requires
-> `@bufbuild/protobuf` and is **not** part of the SDK's runtime. See
-> [`sdk/typescript/gen/README.md`](sdk/typescript/gen/README.md).
+TypeScript is the exception: `@udb_plus/sdk` loads bundled `.proto` files at
+runtime through `@grpc/proto-loader`. Use package entry points, not
+`sdk/typescript/gen/**`; that generated tree exists for drift parity.
+
+## Quickstart Per Language
 
 <details open>
-<summary><b>🐹 Go</b> — <code>go get github.com/fahara02/udb/sdk/go</code></summary>
+<summary><b>Go</b> - <code>go get github.com/fahara02/udb/sdk/go@v0.2.1</code></summary>
 
 ```go
 import (
@@ -659,21 +665,25 @@ import (
 )
 
 conn, _ := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
-meta := udbclient.Metadata{TenantID: "acme", UserID: "user-1", Purpose: "web.request",
-    Scopes: []string{"udb:read", "udb:write"}, ServiceIdentity: "billing.api",
-    ClientCatalogVersion: udbclient.ProtocolVersion}
+meta := udbclient.Metadata{
+    TenantID: "acme", UserID: "user-1", Purpose: "web.request",
+    Scopes: []string{"udb:read", "udb:write"},
+    ServiceIdentity: "billing.api", ProjectID: "default",
+    ClientCatalogVersion: udbclient.ProtocolVersion,
+}
 
 udb := udbclient.New(conn, meta)
 rs, _ := udb.Select(ctx, &entityv1.SelectRequest{MessageType: "acme.billing.v1.Invoice", Limit: 50})
 
 auth := udbclient.NewAuthClient(conn, meta)
 allowed, decision, _ := auth.Can(ctx, &authzv1.ResourceRef{MessageType: "acme.billing.v1.Invoice"}, "read", "")
-// native fast path: grant, _ := auth.NativeAccess(ctx, res, "data.select", ""); udbclient.WithNativeTx(ctx, db, grant, fn)
 ```
+
+Guide: [`sdk/go/README.md`](sdk/go/README.md).
 </details>
 
 <details>
-<summary><b>🐍 Python</b> — <code>pip install udb-client</code></summary>
+<summary><b>Python</b> - <code>pip install udb-client==0.2.1</code></summary>
 
 ```python
 from udb_client import Metadata, UdbClient, decode_records
@@ -693,10 +703,13 @@ with UdbClient("127.0.0.1:50051", meta) as udb:
 with UdbAuthClient("127.0.0.1:50051", meta) as auth:
     allowed, decision = auth.can(authz.ResourceRef(message_type="acme.billing.v1.Customer"), "read")
 ```
+
+Install `pip install "udb-client[pydantic]==0.2.1"` when you want the optional
+validated command models. Guide: [`sdk/python/README.md`](sdk/python/README.md).
 </details>
 
 <details>
-<summary><b>🟦 TypeScript</b> — <code>npm i @grpc/grpc-js @grpc/proto-loader</code></summary>
+<summary><b>TypeScript / Node</b> - <code>npm i @udb_plus/sdk@0.2.1</code></summary>
 
 ```ts
 import { dataBrokerClient, metadata, UdbMetadata } from "@udb_plus/sdk/client";
@@ -712,10 +725,19 @@ broker.Select({ message_type: "acme.billing.v1.Invoice", limit: 50 }, metadata(m
 const auth = new UdbAuthClient("localhost:50051", meta);
 const [allowed, decision] = await auth.can({ message_type: "acme.billing.v1.Invoice" }, "read");
 ```
+
+Guide: [`sdk/typescript/README.md`](sdk/typescript/README.md).
 </details>
 
 <details>
-<summary><b>☕ Java</b> — Maven <code>dev.udb:udb-java-client</code> (Java 17)</summary>
+<summary><b>Java</b> - Maven <code>dev.udb:udb-java-client</code>, Java 17</summary>
+
+Current manifest version is `0.2.1-SNAPSHOT`; the release target is `0.2.1`.
+Until Maven Central publish wiring is complete, build from the repo checkout:
+
+```bash
+mvn -f sdk/java/pom.xml test
+```
 
 ```java
 import dev.udb.client.*;
@@ -733,10 +755,12 @@ try (UdbAuthClient auth = new UdbAuthClient("localhost:50051", meta)) {
     var d = auth.can(ResourceRef.newBuilder().setMessageType("acme.billing.v1.Invoice").build(), "read", "");
 }
 ```
+
+Guide: [`sdk/java/README.md`](sdk/java/README.md).
 </details>
 
 <details>
-<summary><b>🟣 C#</b> — NuGet, target <code>net8.0</code></summary>
+<summary><b>C#</b> - NuGet package <code>Udb.Client</code>, target <code>net8.0</code></summary>
 
 ```csharp
 using Udb.Client; using Udb.Entity.V1;
@@ -750,10 +774,12 @@ RecordSet rs = await udb.SelectAsync(new SelectRequest { MessageType = "acme.bil
 await using var auth = new UdbAuthClient("http://localhost:50051", /* same meta */ default!);
 var (allowed, decision) = await auth.CanAsync(new AuthzV1.ResourceRef { MessageType = "acme.billing.v1.Invoice" }, "read");
 ```
+
+Guide: [`sdk/csharp/README.md`](sdk/csharp/README.md).
 </details>
 
 <details>
-<summary><b>🐘 PHP / Laravel</b> — <code>composer require fahara02/udb-laravel</code> (needs <code>ext-grpc</code>)</summary>
+<summary><b>PHP / Laravel</b> - <code>composer require fahara02/udb-laravel:^0.2.1</code></summary>
 
 ```php
 use Fahara02\UdbLaravel\Facades\Udb;
@@ -766,12 +792,21 @@ $rs = Udb::select((new SelectRequest())->setMessageType('acme.billing.v1.Invoice
 [$allowed, $decision] = app(\Fahara02\UdbLaravel\UdbAuthClient::class)
     ->can((new ResourceRef())->setMessageType('acme.billing.v1.Invoice'), 'read');
 ```
+
+Requires PHP 8.1+, `ext-grpc`, and Laravel 10/11/12. Guide:
+[`sdk/php/README.md`](sdk/php/README.md).
 </details>
 
-> Native fast-path transaction helpers (`WithNativeTx`/`native_transaction`/`withNativeTx`)
-> and a local TTL authz cache (`AuthzCache`) ship in the Go, Python, and TypeScript
-> SDKs; C#/Java/PHP expose `nativeAccess` + `getPolicyBundle` and apply the grant's
-> `set_config` session vars manually. Full per-language detail: each SDK's README.
+Native fast-path helpers and offline authz caches are available where the SDK
+has wrapper support:
+
+- Go, Python, and TypeScript expose native-access helpers and local authz-cache
+  APIs.
+- C#, Java, and PHP expose native access and policy bundle RPCs through their
+  generated/native wrappers, with per-language helper coverage still catching
+  up.
+- All SDKs can call the raw generated gRPC stubs for RPCs that do not yet have a
+  convenience method.
 
 ## Testing
 

@@ -8,7 +8,7 @@ every call.
 ## Install
 
 ```bash
-go get github.com/fahara02/udb/sdk/go@latest
+go get github.com/fahara02/udb/sdk/go@v0.2.1
 ```
 
 Generated protobuf stubs are committed under `sdk/go/gen/`, so

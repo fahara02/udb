@@ -66,9 +66,21 @@ function processTriple(name, file, expected, re, { snapshotOk = false } = {}) {
 // ── Component manifest versions ──────────────────────────────────────────────
 processTriple("udb (crate)", "Cargo.toml", C.udb.version, /(^version = ")([^"]*)(")/m);
 processTriple("sdk-python", "sdk/python/pyproject.toml", C["sdk-python"].version, /(\[project\][\s\S]*?\nversion = ")([^"]*)(")/);
+processTriple(
+  "sdk-python lock",
+  "sdk/python/uv.lock",
+  C["sdk-python"].version,
+  /(\[\[package\]\]\s*\nname = "udb-client"\s*\nversion = ")([^"]*)(")/,
+);
 processTriple("sdk-typescript", "sdk/typescript/package.json", C["sdk-typescript"].version, /("version":\s*")([^"]*)(")/);
 processTriple("sdk-csharp", "sdk/csharp/Udb.Client/Udb.Client.csproj", C["sdk-csharp"].version, /(<Version>)([^<]*)(<\/Version>)/);
 processTriple("sdk-java", "sdk/java/pom.xml", C["sdk-java"].version, /(<version>)([^<]*)(<\/version>)/, { snapshotOk: true });
+processTriple(
+  "openapi",
+  "api/udb-broker.swagger.json",
+  C.udb.version,
+  /("info":\s*\{\s*\n\s*"title":\s*"[^"]*",\s*\n\s*"version":\s*")([^"]*)(")/,
+);
 
 // go / php are git-tag-driven (no manifest version field). Their release version
 // still follows the main UDB version; here we only note the intended version.

@@ -84,8 +84,9 @@ jobs:
             target: aarch64-apple-darwin
             asset: udb-proto-parser-darwin-arm64
             ext: ''
-          # Intel macOS (x86_64). macos-13 runners are Intel hosts.
-          - os: macos-13
+          # Intel macOS (x86_64). macos-13 is retired; macos-15-intel is the
+          # standard GitHub-hosted Intel label while x64 macOS remains available.
+          - os: macos-15-intel
             target: x86_64-apple-darwin
             asset: udb-proto-parser-darwin-amd64
             ext: ''
