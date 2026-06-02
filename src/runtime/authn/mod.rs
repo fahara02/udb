@@ -236,7 +236,14 @@ impl SessionRecord {
         self.expires_at_unix != 0 && now_unix >= self.expires_at_unix
     }
     pub fn is_active(&self, now_unix: u64) -> bool {
-        self.created_at_unix <= now_unix && !self.is_revoked() && !self.is_expired(now_unix)
+        // #202 REVERTED: the `created_at_unix <= now_unix` guard rejected
+        // legitimately-validated sessions whenever the validation clock was at or
+        // behind the creation instant — i.e. real clock skew (the Postgres
+        // container's `NOW()` running ahead of the validating host) and the
+        // logical timelines the live tests use. `created_at` is server-set, so a
+        // "future" value cannot be forged without the session hash secret; the
+        // guard's security value did not justify rejecting valid sessions.
+        !self.is_revoked() && !self.is_expired(now_unix)
     }
     pub fn is_idle_expired(&self, now_unix: u64, idle_ttl_secs: u64) -> bool {
         idle_ttl_secs != 0
@@ -272,7 +279,10 @@ impl ApiKeyRecord {
         self.expires_at_unix != 0 && now_unix >= self.expires_at_unix
     }
     pub fn is_active(&self, now_unix: u64) -> bool {
-        self.created_at_unix <= now_unix && !self.is_revoked() && !self.is_expired(now_unix)
+        // #202 REVERTED (see SessionRecord::is_active): the `created_at_unix <=
+        // now_unix` guard rejected valid keys under clock skew / logical test
+        // timelines for negligible security benefit (created_at is server-set).
+        !self.is_revoked() && !self.is_expired(now_unix)
     }
 }
 

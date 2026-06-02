@@ -11,17 +11,17 @@ public interface MessageSchemaLookupResponseOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
-   * @return Whether the descriptor field is set.
+   * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
+   * @return Whether the schema field is set.
    */
-  boolean hasDescriptor();
+  boolean hasSchema();
   /**
-   * <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
-   * @return The descriptor.
+   * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
+   * @return The schema.
    */
-  com.udb.entity.v1.MessageSchemaDescriptor getDescriptor();
+  com.udb.entity.v1.MessageSchemaDescriptor getSchema();
   /**
-   * <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
+   * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
    */
-  com.udb.entity.v1.MessageSchemaDescriptorOrBuilder getDescriptorOrBuilder();
+  com.udb.entity.v1.MessageSchemaDescriptorOrBuilder getSchemaOrBuilder();
 }

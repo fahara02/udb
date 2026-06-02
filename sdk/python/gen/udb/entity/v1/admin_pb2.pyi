@@ -157,10 +157,10 @@ class MessageSchemaDescriptor(_message.Message):
     def __init__(self, message_type: _Optional[str] = ..., project_id: _Optional[str] = ..., catalog_version: _Optional[str] = ..., manifest_checksum: _Optional[str] = ..., schema: _Optional[str] = ..., table: _Optional[str] = ..., primary_key: _Optional[_Iterable[str]] = ..., fields: _Optional[_Iterable[_Union[MessageFieldDescriptor, _Mapping]]] = ...) -> None: ...
 
 class MessageSchemaLookupResponse(_message.Message):
-    __slots__ = ("descriptor",)
-    DESCRIPTOR_FIELD_NUMBER: _ClassVar[int]
-    descriptor: MessageSchemaDescriptor
-    def __init__(self, descriptor: _Optional[_Union[MessageSchemaDescriptor, _Mapping]] = ...) -> None: ...
+    __slots__ = ("schema",)
+    SCHEMA_FIELD_NUMBER: _ClassVar[int]
+    schema: MessageSchemaDescriptor
+    def __init__(self, schema: _Optional[_Union[MessageSchemaDescriptor, _Mapping]] = ...) -> None: ...
 
 class MessageSchemaListRequest(_message.Message):
     __slots__ = ("context", "project_id", "client_catalog_version")

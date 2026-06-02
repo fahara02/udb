@@ -845,10 +845,10 @@ fn admin_audit_request_json_for_response(
     if redacted {
         return value;
     }
-    match crate::runtime::cdc::encryption::StaticKeyResolver::from_env() {
-        Some(resolver) => crate::runtime::cdc::decrypt_encrypted_json_fields(
+    match crate::runtime::cdc::CdcConfig::current().encryption_key_resolver {
+        Some(ref resolver) => crate::runtime::cdc::decrypt_encrypted_json_fields(
             value,
-            &resolver,
+            resolver,
             crate::runtime::cdc::encryption::DecryptScope::Audit,
         ),
         None => value,

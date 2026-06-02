@@ -922,7 +922,12 @@ mod tests {
             // Stage 1 auth config — `AuthnConfig::from_env` reads `UDB_SESSION_*`
             // at construction, the same startup-config category as `security.rs`.
             "src/runtime/authn/",
+            "src/runtime/authz/",
+            "src/runtime/canonical_store/dialect.rs",
             "src/runtime/cdc/mod.rs",
+            "src/runtime/cdc/source.rs",
+            "src/runtime/cdc/encryption.rs",
+            "src/runtime/cdc/engine_dlq.rs",
             "src/runtime/cdc/engine_tail.rs",
             "src/runtime/channels.rs",
             "src/runtime/config/",
@@ -940,6 +945,7 @@ mod tests {
             "src/runtime/executor_utils.rs",
             "src/runtime/executors/clickhouse.rs",
             "src/runtime/executors/http.rs",
+            "src/runtime/executors/mssql.rs",
             "src/runtime/executors/mongodb.rs",
             "src/runtime/executors/neo4j.rs",
             // Native-service catalog reads `UDB_NATIVE_AUTH` (native services

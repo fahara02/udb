@@ -51,13 +51,26 @@ jobs:
           fi
           echo "Tag and Cargo.toml both at $tag"
 
+      - name: Check crates.io version availability
+        id: crate_version
+        run: |
+          version="${GITHUB_REF#refs/tags/v}"
+          if curl -fsS "https://crates.io/api/v1/crates/udb/${version}" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "udb ${version} already exists on crates.io; publish steps will be skipped."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run the default test suite before publishing
         run: cargo test --locked --lib
 
       - name: cargo publish --dry-run
+        if: steps.crate_version.outputs.exists != 'true'
         run: cargo publish --dry-run
 
       - name: cargo publish
+        if: steps.crate_version.outputs.exists != 'true'
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: cargo publish

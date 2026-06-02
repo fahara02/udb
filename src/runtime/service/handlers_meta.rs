@@ -284,7 +284,7 @@ impl DataBrokerService {
             "LookupMessageSchema",
             started,
             Ok(Response::new(MessageSchemaLookupResponse {
-                descriptor: Some(message_descriptor_to_proto(descriptor)),
+                schema: Some(message_descriptor_to_proto(descriptor)),
             })),
         )
     }

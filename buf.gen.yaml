@@ -32,7 +32,7 @@ plugins:
     out: sdk/php/gen
 
   # ── TypeScript SDK ─────────────────────────────────────────────────
-  - remote: buf.build/bufbuild/es
+  - remote: buf.build/bufbuild/es:v2.12.0
     out: sdk/typescript/gen
     opt: [target=ts]
 
@@ -83,5 +83,5 @@ plugins:
   # ── Java SDK ───────────────────────────────────────────────────────
   - remote: buf.build/protocolbuffers/java
     out: sdk/java/gen
-  - remote: buf.build/grpc/java
+  - remote: buf.build/grpc/java:v1.81.0
     out: sdk/java/gen

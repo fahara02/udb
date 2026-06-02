@@ -393,9 +393,10 @@ mod tests {
         // 1. Health check
         exec.ping().await.expect("ping");
 
-        // 2. CREATE TABLE via mutate
-        let _ = exec
-            .mutate(r#"{"sql":"CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT, qty INTEGER)","params":[]}"#)
+        // 2. Create fixture schema directly; generic mutate is intentionally
+        // restricted to DML verbs.
+        sqlx::query("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT, qty INTEGER)")
+            .execute(&exec.pool)
             .await
             .expect("create");
 
@@ -440,8 +441,8 @@ mod tests {
     #[tokio::test]
     async fn transaction_commits_multiple_statements() {
         let exec = SqliteExecutor::with_pool(pool().await);
-        let _ = exec
-            .mutate(r#"{"sql":"CREATE TABLE t (n INTEGER)","params":[]}"#)
+        sqlx::query("CREATE TABLE t (n INTEGER)")
+            .execute(&exec.pool)
             .await
             .unwrap();
         let resp = exec

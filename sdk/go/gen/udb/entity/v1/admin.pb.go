@@ -786,7 +786,7 @@ func (x *MessageSchemaDescriptor) GetFields() []*MessageFieldDescriptor {
 
 type MessageSchemaLookupResponse struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
-	Descriptor_   *MessageSchemaDescriptor `protobuf:"bytes,1,opt,name=descriptor,proto3" json:"descriptor,omitempty"`
+	Schema        *MessageSchemaDescriptor `protobuf:"bytes,1,opt,name=schema,proto3" json:"schema,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -821,9 +821,9 @@ func (*MessageSchemaLookupResponse) Descriptor() ([]byte, []int) {
 	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *MessageSchemaLookupResponse) GetDescriptor_() *MessageSchemaDescriptor {
+func (x *MessageSchemaLookupResponse) GetSchema() *MessageSchemaDescriptor {
 	if x != nil {
-		return x.Descriptor_
+		return x.Schema
 	}
 	return nil
 }
@@ -5615,11 +5615,9 @@ const file_udb_entity_v1_admin_proto_rawDesc = "" +
 	"\x05table\x18\x06 \x01(\tR\x05table\x12\x1f\n" +
 	"\vprimary_key\x18\a \x03(\tR\n" +
 	"primaryKey\x12=\n" +
-	"\x06fields\x18\b \x03(\v2%.udb.entity.v1.MessageFieldDescriptorR\x06fields\"e\n" +
-	"\x1bMessageSchemaLookupResponse\x12F\n" +
-	"\n" +
-	"descriptor\x18\x01 \x01(\v2&.udb.entity.v1.MessageSchemaDescriptorR\n" +
-	"descriptor\"\xa8\x01\n" +
+	"\x06fields\x18\b \x03(\v2%.udb.entity.v1.MessageFieldDescriptorR\x06fields\"]\n" +
+	"\x1bMessageSchemaLookupResponse\x12>\n" +
+	"\x06schema\x18\x01 \x01(\v2&.udb.entity.v1.MessageSchemaDescriptorR\x06schema\"\xa8\x01\n" +
 	"\x18MessageSchemaListRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x1d\n" +
 	"\n" +
@@ -6156,7 +6154,7 @@ var file_udb_entity_v1_admin_proto_depIdxs = []int32{
 	71, // 4: udb.entity.v1.CatalogManifestRequest.context:type_name -> udb.entity.v1.RequestContext
 	71, // 5: udb.entity.v1.MessageSchemaLookupRequest.context:type_name -> udb.entity.v1.RequestContext
 	7,  // 6: udb.entity.v1.MessageSchemaDescriptor.fields:type_name -> udb.entity.v1.MessageFieldDescriptor
-	8,  // 7: udb.entity.v1.MessageSchemaLookupResponse.descriptor:type_name -> udb.entity.v1.MessageSchemaDescriptor
+	8,  // 7: udb.entity.v1.MessageSchemaLookupResponse.schema:type_name -> udb.entity.v1.MessageSchemaDescriptor
 	71, // 8: udb.entity.v1.MessageSchemaListRequest.context:type_name -> udb.entity.v1.RequestContext
 	71, // 9: udb.entity.v1.HealthReportRequest.context:type_name -> udb.entity.v1.RequestContext
 	3,  // 10: udb.entity.v1.HealthReportResponse.backend_instances:type_name -> udb.entity.v1.BackendInstanceStatus

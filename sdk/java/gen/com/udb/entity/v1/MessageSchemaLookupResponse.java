@@ -49,30 +49,30 @@ private static final long serialVersionUID = 0L;
   }
 
   private int bitField0_;
-  public static final int DESCRIPTOR_FIELD_NUMBER = 1;
-  private com.udb.entity.v1.MessageSchemaDescriptor descriptor_;
+  public static final int SCHEMA_FIELD_NUMBER = 1;
+  private com.udb.entity.v1.MessageSchemaDescriptor schema_;
   /**
-   * <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
-   * @return Whether the descriptor field is set.
+   * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
+   * @return Whether the schema field is set.
    */
   @java.lang.Override
-  public boolean hasDescriptor() {
+  public boolean hasSchema() {
     return ((bitField0_ & 0x00000001) != 0);
   }
   /**
-   * <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
-   * @return The descriptor.
+   * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
+   * @return The schema.
    */
   @java.lang.Override
-  public com.udb.entity.v1.MessageSchemaDescriptor getDescriptor() {
-    return descriptor_ == null ? com.udb.entity.v1.MessageSchemaDescriptor.getDefaultInstance() : descriptor_;
+  public com.udb.entity.v1.MessageSchemaDescriptor getSchema() {
+    return schema_ == null ? com.udb.entity.v1.MessageSchemaDescriptor.getDefaultInstance() : schema_;
   }
   /**
-   * <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
+   * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
    */
   @java.lang.Override
-  public com.udb.entity.v1.MessageSchemaDescriptorOrBuilder getDescriptorOrBuilder() {
-    return descriptor_ == null ? com.udb.entity.v1.MessageSchemaDescriptor.getDefaultInstance() : descriptor_;
+  public com.udb.entity.v1.MessageSchemaDescriptorOrBuilder getSchemaOrBuilder() {
+    return schema_ == null ? com.udb.entity.v1.MessageSchemaDescriptor.getDefaultInstance() : schema_;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -90,7 +90,7 @@ private static final long serialVersionUID = 0L;
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
     if (((bitField0_ & 0x00000001) != 0)) {
-      output.writeMessage(1, getDescriptor());
+      output.writeMessage(1, getSchema());
     }
     getUnknownFields().writeTo(output);
   }
@@ -98,7 +98,7 @@ private static final long serialVersionUID = 0L;
     int size = 0;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
-        .computeMessageSize(1, getDescriptor());
+        .computeMessageSize(1, getSchema());
     }
     return size;
   }
@@ -124,10 +124,10 @@ private static final long serialVersionUID = 0L;
     }
     com.udb.entity.v1.MessageSchemaLookupResponse other = (com.udb.entity.v1.MessageSchemaLookupResponse) obj;
 
-    if (hasDescriptor() != other.hasDescriptor()) return false;
-    if (hasDescriptor()) {
-      if (!getDescriptor()
-          .equals(other.getDescriptor())) return false;
+    if (hasSchema() != other.hasSchema()) return false;
+    if (hasSchema()) {
+      if (!getSchema()
+          .equals(other.getSchema())) return false;
     }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
@@ -140,9 +140,9 @@ private static final long serialVersionUID = 0L;
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    if (hasDescriptor()) {
-      hash = (37 * hash) + DESCRIPTOR_FIELD_NUMBER;
-      hash = (53 * hash) + getDescriptor().hashCode();
+    if (hasSchema()) {
+      hash = (37 * hash) + SCHEMA_FIELD_NUMBER;
+      hash = (53 * hash) + getSchema().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -274,17 +274,17 @@ private static final long serialVersionUID = 0L;
     private void maybeForceBuilderInitialization() {
       if (com.google.protobuf.GeneratedMessage
               .alwaysUseFieldBuilders) {
-        internalGetDescriptorFieldBuilder();
+        internalGetSchemaFieldBuilder();
       }
     }
     @java.lang.Override
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
-      descriptor_ = null;
-      if (descriptorBuilder_ != null) {
-        descriptorBuilder_.dispose();
-        descriptorBuilder_ = null;
+      schema_ = null;
+      if (schemaBuilder_ != null) {
+        schemaBuilder_.dispose();
+        schemaBuilder_ = null;
       }
       return this;
     }
@@ -321,9 +321,9 @@ private static final long serialVersionUID = 0L;
       int from_bitField0_ = bitField0_;
       int to_bitField0_ = 0;
       if (((from_bitField0_ & 0x00000001) != 0)) {
-        result.descriptor_ = descriptorBuilder_ == null
-            ? descriptor_
-            : descriptorBuilder_.build();
+        result.schema_ = schemaBuilder_ == null
+            ? schema_
+            : schemaBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
       result.bitField0_ |= to_bitField0_;
@@ -341,8 +341,8 @@ private static final long serialVersionUID = 0L;
 
     public Builder mergeFrom(com.udb.entity.v1.MessageSchemaLookupResponse other) {
       if (other == com.udb.entity.v1.MessageSchemaLookupResponse.getDefaultInstance()) return this;
-      if (other.hasDescriptor()) {
-        mergeDescriptor(other.getDescriptor());
+      if (other.hasSchema()) {
+        mergeSchema(other.getSchema());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -372,7 +372,7 @@ private static final long serialVersionUID = 0L;
               break;
             case 10: {
               input.readMessage(
-                  internalGetDescriptorFieldBuilder().getBuilder(),
+                  internalGetSchemaFieldBuilder().getBuilder(),
                   extensionRegistry);
               bitField0_ |= 0x00000001;
               break;
@@ -394,125 +394,125 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private com.udb.entity.v1.MessageSchemaDescriptor descriptor_;
+    private com.udb.entity.v1.MessageSchemaDescriptor schema_;
     private com.google.protobuf.SingleFieldBuilder<
-        com.udb.entity.v1.MessageSchemaDescriptor, com.udb.entity.v1.MessageSchemaDescriptor.Builder, com.udb.entity.v1.MessageSchemaDescriptorOrBuilder> descriptorBuilder_;
+        com.udb.entity.v1.MessageSchemaDescriptor, com.udb.entity.v1.MessageSchemaDescriptor.Builder, com.udb.entity.v1.MessageSchemaDescriptorOrBuilder> schemaBuilder_;
     /**
-     * <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
-     * @return Whether the descriptor field is set.
+     * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
+     * @return Whether the schema field is set.
      */
-    public boolean hasDescriptor() {
+    public boolean hasSchema() {
       return ((bitField0_ & 0x00000001) != 0);
     }
     /**
-     * <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
-     * @return The descriptor.
+     * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
+     * @return The schema.
      */
-    public com.udb.entity.v1.MessageSchemaDescriptor getDescriptor() {
-      if (descriptorBuilder_ == null) {
-        return descriptor_ == null ? com.udb.entity.v1.MessageSchemaDescriptor.getDefaultInstance() : descriptor_;
+    public com.udb.entity.v1.MessageSchemaDescriptor getSchema() {
+      if (schemaBuilder_ == null) {
+        return schema_ == null ? com.udb.entity.v1.MessageSchemaDescriptor.getDefaultInstance() : schema_;
       } else {
-        return descriptorBuilder_.getMessage();
+        return schemaBuilder_.getMessage();
       }
     }
     /**
-     * <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
+     * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
      */
-    public Builder setDescriptor(com.udb.entity.v1.MessageSchemaDescriptor value) {
-      if (descriptorBuilder_ == null) {
+    public Builder setSchema(com.udb.entity.v1.MessageSchemaDescriptor value) {
+      if (schemaBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
         }
-        descriptor_ = value;
+        schema_ = value;
       } else {
-        descriptorBuilder_.setMessage(value);
+        schemaBuilder_.setMessage(value);
       }
       bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
     /**
-     * <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
+     * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
      */
-    public Builder setDescriptor(
+    public Builder setSchema(
         com.udb.entity.v1.MessageSchemaDescriptor.Builder builderForValue) {
-      if (descriptorBuilder_ == null) {
-        descriptor_ = builderForValue.build();
+      if (schemaBuilder_ == null) {
+        schema_ = builderForValue.build();
       } else {
-        descriptorBuilder_.setMessage(builderForValue.build());
+        schemaBuilder_.setMessage(builderForValue.build());
       }
       bitField0_ |= 0x00000001;
       onChanged();
       return this;
     }
     /**
-     * <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
+     * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
      */
-    public Builder mergeDescriptor(com.udb.entity.v1.MessageSchemaDescriptor value) {
-      if (descriptorBuilder_ == null) {
+    public Builder mergeSchema(com.udb.entity.v1.MessageSchemaDescriptor value) {
+      if (schemaBuilder_ == null) {
         if (((bitField0_ & 0x00000001) != 0) &&
-          descriptor_ != null &&
-          descriptor_ != com.udb.entity.v1.MessageSchemaDescriptor.getDefaultInstance()) {
-          getDescriptorBuilder().mergeFrom(value);
+          schema_ != null &&
+          schema_ != com.udb.entity.v1.MessageSchemaDescriptor.getDefaultInstance()) {
+          getSchemaBuilder().mergeFrom(value);
         } else {
-          descriptor_ = value;
+          schema_ = value;
         }
       } else {
-        descriptorBuilder_.mergeFrom(value);
+        schemaBuilder_.mergeFrom(value);
       }
-      if (descriptor_ != null) {
+      if (schema_ != null) {
         bitField0_ |= 0x00000001;
         onChanged();
       }
       return this;
     }
     /**
-     * <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
+     * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
      */
-    public Builder clearDescriptor() {
+    public Builder clearSchema() {
       bitField0_ = (bitField0_ & ~0x00000001);
-      descriptor_ = null;
-      if (descriptorBuilder_ != null) {
-        descriptorBuilder_.dispose();
-        descriptorBuilder_ = null;
+      schema_ = null;
+      if (schemaBuilder_ != null) {
+        schemaBuilder_.dispose();
+        schemaBuilder_ = null;
       }
       onChanged();
       return this;
     }
     /**
-     * <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
+     * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
      */
-    public com.udb.entity.v1.MessageSchemaDescriptor.Builder getDescriptorBuilder() {
+    public com.udb.entity.v1.MessageSchemaDescriptor.Builder getSchemaBuilder() {
       bitField0_ |= 0x00000001;
       onChanged();
-      return internalGetDescriptorFieldBuilder().getBuilder();
+      return internalGetSchemaFieldBuilder().getBuilder();
     }
     /**
-     * <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
+     * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
      */
-    public com.udb.entity.v1.MessageSchemaDescriptorOrBuilder getDescriptorOrBuilder() {
-      if (descriptorBuilder_ != null) {
-        return descriptorBuilder_.getMessageOrBuilder();
+    public com.udb.entity.v1.MessageSchemaDescriptorOrBuilder getSchemaOrBuilder() {
+      if (schemaBuilder_ != null) {
+        return schemaBuilder_.getMessageOrBuilder();
       } else {
-        return descriptor_ == null ?
-            com.udb.entity.v1.MessageSchemaDescriptor.getDefaultInstance() : descriptor_;
+        return schema_ == null ?
+            com.udb.entity.v1.MessageSchemaDescriptor.getDefaultInstance() : schema_;
       }
     }
     /**
-     * <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
+     * <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
         com.udb.entity.v1.MessageSchemaDescriptor, com.udb.entity.v1.MessageSchemaDescriptor.Builder, com.udb.entity.v1.MessageSchemaDescriptorOrBuilder> 
-        internalGetDescriptorFieldBuilder() {
-      if (descriptorBuilder_ == null) {
-        descriptorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+        internalGetSchemaFieldBuilder() {
+      if (schemaBuilder_ == null) {
+        schemaBuilder_ = new com.google.protobuf.SingleFieldBuilder<
             com.udb.entity.v1.MessageSchemaDescriptor, com.udb.entity.v1.MessageSchemaDescriptor.Builder, com.udb.entity.v1.MessageSchemaDescriptorOrBuilder>(
-                getDescriptor(),
+                getSchema(),
                 getParentForChildren(),
                 isClean());
-        descriptor_ = null;
+        schema_ = null;
       }
-      return descriptorBuilder_;
+      return schemaBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.MessageSchemaLookupResponse)

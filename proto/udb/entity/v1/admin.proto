@@ -108,7 +108,7 @@ message MessageSchemaDescriptor {
 }
 
 message MessageSchemaLookupResponse {
-  MessageSchemaDescriptor descriptor = 1;
+  MessageSchemaDescriptor schema = 1;
 }
 
 message MessageSchemaListRequest {

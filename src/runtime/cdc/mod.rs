@@ -79,6 +79,8 @@ pub struct CdcConfig {
     pub producer_linger_ms: u64,
     pub producer_batch_messages: u64,
     pub idempotency_key_prefix: String,
+    #[serde(skip)]
+    pub encryption_key_resolver: Option<encryption::StaticKeyResolver>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -209,6 +211,7 @@ impl Default for CdcConfig {
             producer_linger_ms: DEFAULT_CDC_PRODUCER_LINGER_MS,
             producer_batch_messages: DEFAULT_CDC_PRODUCER_BATCH_MESSAGES,
             idempotency_key_prefix: DEFAULT_CDC_IDEMPOTENCY_KEY_PREFIX.to_string(),
+            encryption_key_resolver: None,
         }
     }
 }
@@ -333,6 +336,7 @@ impl CdcConfig {
                 .unwrap_or(defaults.producer_batch_messages),
             idempotency_key_prefix: std::env::var("UDB_CDC_IDEMPOTENCY_KEY_PREFIX")
                 .unwrap_or(defaults.idempotency_key_prefix),
+            encryption_key_resolver: crate::runtime::cdc::encryption::StaticKeyResolver::from_env(),
         };
         config.normalize();
         config

@@ -296,7 +296,9 @@ mod tests {
         for st in SagaStatus::all() {
             apply_saga_summary_bucket(&mut s, "postgres", st.as_str(), 1).unwrap();
         }
-        assert_eq!(s.total(), 8);
+        // One bucket per status — count-robust so adding a status (e.g. InDoubt)
+        // doesn't silently stale this assertion.
+        assert_eq!(s.total() as usize, SagaStatus::all().len());
     }
 
     #[test]

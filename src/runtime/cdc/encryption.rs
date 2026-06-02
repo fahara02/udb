@@ -53,7 +53,7 @@ use std::sync::Arc;
 /// Versions let an operator roll keys without re-encrypting historical
 /// CDC payloads — old envelopes carry their version and a consumer
 /// looks up the right key by `(key_id, key_version)`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CdcEncryptionKey {
     pub key_id: String,
     pub key_version: u32,
@@ -82,7 +82,7 @@ pub trait CdcKeyResolver: Send + Sync {
 
 /// In-memory resolver used by tests and by small deployments that
 /// configure keys statically.
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct StaticKeyResolver {
     keys: Vec<CdcEncryptionKey>,
     active_index: Option<usize>,

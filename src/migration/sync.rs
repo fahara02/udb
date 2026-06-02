@@ -975,15 +975,15 @@ mod tests {
     const SIMPLE_PROTO: &str = r#"
 syntax = "proto3";
 package example.test.entity.v1;
-import "example/examplecore/common/v1/db.proto";
+import "udb/core/common/v1/db.proto";
 message Widget {
-  option (example.examplecore.common.v1.table) = {
+  option (udb.core.common.v1.pg_table) = {
     table_name: "widgets"
     schema_name: "app"
     migration_order: 10
     is_table: true
   };
-  string widget_id = 1 [(example.examplecore.common.v1.column) = {
+  string widget_id = 1 [(udb.core.common.v1.pg_column) = {
     column_name: "widget_id"
     sql_type: "UUID"
     primary_key: true
@@ -1109,7 +1109,10 @@ message Widget {
                         patch_sql_files(&path);
                     } else if path.extension().and_then(|e| e.to_str()) == Some("sql") {
                         let content = fs::read_to_string(&path).unwrap();
-                        let patched = format!("{content}\n-- stale marker\n");
+                        let patched = content.replace(
+                            "-- UDB:proto_manifest_checksum=",
+                            "-- UDB:proto_manifest_checksum=STALE_",
+                        );
                         fs::write(&path, patched).unwrap();
                     }
                 }
@@ -1206,34 +1209,34 @@ message Widget {
     const MULTI_BACKEND_PROTO: &str = r#"
 syntax = "proto3";
 package example.test.multi.v1;
-import "example/examplecore/common/v1/db.proto";
+import "udb/core/common/v1/db.proto";
 message Embedding {
-  option (example.examplecore.common.v1.table) = {
+  option (udb.core.common.v1.pg_table) = {
     table_name: "embeddings"
     schema_name: "app"
     migration_order: 1
     is_table: true
   };
-  option (example.examplecore.common.v1.vector_store) = {
+  option (udb.core.common.v1.vector_store) = {
     backend: VECTOR_BACKEND_QDRANT
     collection_name: "embeddings"
     dimension: 768
     distance: VECTOR_DISTANCE_COSINE
   };
-  option (example.examplecore.common.v1.cache) = {
+  option (udb.core.common.v1.cache) = {
     backend: CACHE_BACKEND_REDIS
     key_pattern: "app:embed:{id}"
     ttl_seconds: 3600
   };
-  string id = 1 [(example.examplecore.common.v1.column) = {
+  string id = 1 [(udb.core.common.v1.pg_column) = {
     column_name: "id"
     sql_type: "UUID"
     primary_key: true
     not_null: true
   }];
   string s3_uri = 2 [
-    (example.examplecore.common.v1.column) = { column_name: "s3_uri" sql_type: "TEXT" },
-    (example.examplecore.common.v1.storage) = {
+    (udb.core.common.v1.pg_column) = { column_name: "s3_uri" sql_type: "TEXT" },
+    (udb.core.common.v1.storage) = {
       backend: STORAGE_BACKEND_MINIO
       bucket_env_key: "EMBED_BUCKET"
       key_prefix: "embeddings/"

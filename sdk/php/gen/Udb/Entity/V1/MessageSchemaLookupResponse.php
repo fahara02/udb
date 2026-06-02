@@ -15,9 +15,9 @@ use Google\Protobuf\RepeatedField;
 class MessageSchemaLookupResponse extends \Google\Protobuf\Internal\Message
 {
     /**
-     * Generated from protobuf field <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
+     * Generated from protobuf field <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
      */
-    protected $descriptor = null;
+    protected $schema = null;
 
     /**
      * Constructor.
@@ -25,7 +25,7 @@ class MessageSchemaLookupResponse extends \Google\Protobuf\Internal\Message
      * @param array $data {
      *     Optional. Data for populating the Message object.
      *
-     *     @type \Udb\Entity\V1\MessageSchemaDescriptor $descriptor
+     *     @type \Udb\Entity\V1\MessageSchemaDescriptor $schema
      * }
      */
     public function __construct($data = NULL) {
@@ -34,32 +34,32 @@ class MessageSchemaLookupResponse extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
+     * Generated from protobuf field <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
      * @return \Udb\Entity\V1\MessageSchemaDescriptor|null
      */
-    public function getDescriptor()
+    public function getSchema()
     {
-        return $this->descriptor;
+        return $this->schema;
     }
 
-    public function hasDescriptor()
+    public function hasSchema()
     {
-        return isset($this->descriptor);
+        return isset($this->schema);
     }
 
-    public function clearDescriptor()
+    public function clearSchema()
     {
-        unset($this->descriptor);
+        unset($this->schema);
     }
 
     /**
-     * Generated from protobuf field <code>.udb.entity.v1.MessageSchemaDescriptor descriptor = 1 [json_name = "descriptor"];</code>
+     * Generated from protobuf field <code>.udb.entity.v1.MessageSchemaDescriptor schema = 1 [json_name = "schema"];</code>
      * @param \Udb\Entity\V1\MessageSchemaDescriptor $var
      * @return $this
      */
-    public function setDescriptor(\Udb\Entity\V1\MessageSchemaDescriptor|null $var)
+    public function setSchema(\Udb\Entity\V1\MessageSchemaDescriptor|null $var)
     {
-        $this->descriptor = $var;
+        $this->schema = $var;
 
         return $this;
     }

@@ -406,7 +406,7 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
         let sql = format!(
             r#"UPDATE {rel}
                SET status = $1, retry_count = $2, last_error = $3,
-                   next_retry_at = CASE WHEN $1 = 'FAILED' THEN NOW() + ($5::TEXT || ' seconds')::INTERVAL ELSE NULL END,
+                   next_retry_at = NULL,
                    updated_at = NOW()
                WHERE task_id = $4"#
         );
@@ -415,7 +415,6 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
             .bind(new_retry_count)
             .bind(error)
             .bind(task_id)
-            .bind(projection_retry_delay_secs(new_retry_count))
             .execute(self.pg_pool())
             .await
             .map_err(|e| SystemStoreError::query("postgres", sql.clone(), e))?;

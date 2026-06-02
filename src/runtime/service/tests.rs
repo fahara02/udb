@@ -479,7 +479,7 @@ async fn lookup_message_schema_returns_descriptor() {
     let resp = svc.lookup_message_schema(req).await.unwrap();
     let descriptor = resp
         .get_ref()
-        .descriptor
+        .schema
         .as_ref()
         .expect("descriptor should be present");
     assert_eq!(descriptor.message_type, "Payment");

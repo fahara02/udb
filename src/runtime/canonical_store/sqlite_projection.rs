@@ -396,10 +396,7 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
              SET status = ?,
                  retry_count = ?,
                  last_error = ?,
-                 next_retry_at = CASE
-                    WHEN ? = 'FAILED' THEN strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '+' || ? || ' seconds')
-                    ELSE NULL
-                 END,
+                 next_retry_at = NULL,
                  updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
              WHERE task_id = ?"
         );
@@ -408,8 +405,6 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
             .bind(new_status.as_str())
             .bind(new_retry_count)
             .bind(error)
-            .bind(new_status.as_str())
-            .bind(projection_retry_delay_secs(new_retry_count))
             .bind(&task_id_text)
             .execute(self.pool_ref())
             .await

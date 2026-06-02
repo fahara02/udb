@@ -55,6 +55,19 @@ jobs:
         working-directory: sdk/typescript
         run: npm install --no-audit --no-fund
 
+      - name: Check npm version availability
+        id: npm_version
+        working-directory: sdk/typescript
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if npm view "@udb_plus/sdk@${version}" version --silent >/dev/null 2>&1; then
+            echo "@udb_plus/sdk ${version} is already published; publish steps will be skipped."
+            echo "exists=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+
       - name: Type check
         working-directory: sdk/typescript
         run: npm run typecheck
@@ -68,10 +81,12 @@ jobs:
         run: npm run build
 
       - name: Publish dry run
+        if: steps.npm_version.outputs.exists != 'true'
         working-directory: sdk/typescript
         run: npm publish --dry-run --access public
 
       - name: Publish to npm
+        if: steps.npm_version.outputs.exists != 'true'
         working-directory: sdk/typescript
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

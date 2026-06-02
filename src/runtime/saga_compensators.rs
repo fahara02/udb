@@ -536,16 +536,21 @@ pub async fn dispatch_compensations(
             }),
         }
     }
+    // Compensators EXECUTE in reverse (undo last-first, above), but the
+    // returned outcomes are ordered to match the input `steps` so the recovery
+    // worker can map outcome[i] → step[i] (the `out.push` loop above filled
+    // `out` in reverse-execution order). Restore input order here.
+    out.reverse();
     out
 }
 
 /// Convenience: did **every** step succeed? The recovery worker uses this to
 /// decide whether to mark the saga `compensated`. An empty set (a saga with no
-/// compensation steps, or a null/absent `compensations` field) is vacuously
-/// successful — there is nothing to undo, so it must NOT be treated as a failure
-/// (doing so poisoned such sagas into `manual_review`).
+/// compensation steps. An empty list is not compensated; callers with no
+/// compensations should handle that state before asking whether every step
+/// finished successfully.
 pub fn all_compensated(outcomes: &[StepOutcome]) -> bool {
-    outcomes.iter().all(StepOutcome::is_success)
+    !outcomes.is_empty() && outcomes.iter().all(StepOutcome::is_success)
 }
 
 // ── SQL canonical-store compensators (NW-deep) ────────────────────────────────

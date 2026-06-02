@@ -7,10 +7,10 @@ import io.grpc.Metadata;
 import io.grpc.stub.MetadataUtils;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import com.udb.entity.v1.Types.MutationResponse;
-import com.udb.entity.v1.Types.RecordSet;
-import com.udb.entity.v1.Types.SelectRequest;
-import com.udb.entity.v1.Types.UpsertRequest;
+import com.udb.entity.v1.MutationResponse;
+import com.udb.entity.v1.RecordSet;
+import com.udb.entity.v1.SelectRequest;
+import com.udb.entity.v1.UpsertRequest;
 import com.udb.services.v1.DataBrokerGrpc;
 
 public final class UdbClient implements AutoCloseable {

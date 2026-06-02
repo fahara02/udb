@@ -710,14 +710,13 @@ pub struct BackendCapability {
 ///   (`udb_outbox_events`, `udb_sagas`, `udb_projection_tasks`,
 ///   `udb_migration_runs`) AND can serve as a write durability
 ///   anchor (produces a token that fence/receipt logic can wait on).
-///   Postgres, MySQL, SQLite, MongoDB.
+///   Postgres, MySQL, and SQLite currently satisfy this contract.
 /// - **`Projection`** — the backend is a write target downstream of a
 ///   canonical store. It cannot host system tables or produce a
 ///   durability token. Qdrant, Redis, S3, Memcached, object stores.
-/// - **`Both`** — the backend can play either role. ClickHouse and
-///   Neo4j are durable enough to host system tables (so they can be
-///   canonical for some deployments) but also work well as projection
-///   targets (analytics / graph views of canonical data).
+/// - **`Both`** — the backend can play either role. No backend currently
+///   advertises `Both`; future durable stores must implement the full
+///   canonical-store contract before using it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BackendRole {

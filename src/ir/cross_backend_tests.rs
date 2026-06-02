@@ -142,9 +142,12 @@ fn same_logical_read_compiles_to_postgres_and_mongo() {
             assert_eq!(path, "/action/find");
             assert_eq!(body["collection"], "customers");
             // C7/C8: the Mongo compiler now wraps the user filter in
-            // a `$and` together with the active context's
-            // `_tenant_id` predicate. Outer shape:
-            //   { $and: [ <user_filter>, { _tenant_id: "acme-1" } ] }
+            // a `$and` together with the active context's tenant
+            // predicate. The manifest declares a real `tenant_id`
+            // column, so the compiler injects under that resolved
+            // column name (the synthetic `_tenant_id` fallback is only
+            // used when no tenant column is declared). Outer shape:
+            //   { $and: [ <user_filter>, { tenant_id: "acme-1" } ] }
             // The user filter is itself an `$and` over the original
             // two equality predicates the test built.
             let outer_and = body["filter"]["$and"].as_array().expect("outer $and");
@@ -155,7 +158,7 @@ fn same_logical_read_compiles_to_postgres_and_mongo() {
             assert_eq!(inner_and[0]["tenant_id"]["$eq"], "acme-1");
             assert_eq!(inner_and[1]["email"]["$eq"], "alice@acme.com");
             // [1] is the context-injected tenant predicate.
-            assert_eq!(outer_and[1]["_tenant_id"], "acme-1");
+            assert_eq!(outer_and[1]["tenant_id"], "acme-1");
             // Projection sets both fields to 1.
             assert_eq!(body["projection"]["id"], 1);
             assert_eq!(body["projection"]["name"], 1);

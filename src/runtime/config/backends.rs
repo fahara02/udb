@@ -362,7 +362,7 @@ pub enum AuditSinkKind {
 ///   `UDB_AUDIT_KAFKA_BROKERS`    — comma-separated brokers when sink=kafka
 ///   `UDB_AUDIT_PG_TABLE`         — fully-qualified table name when sink=postgres
 ///   `UDB_AUDIT_MIN_SEVERITY`     — minimum severity to emit (`info`|`warn`|`error`); default `info`
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AuditSinkConfig {
     pub kind: AuditSinkKind,
@@ -376,6 +376,23 @@ pub struct AuditSinkConfig {
     pub pg_table: Option<String>,
     /// Minimum severity to emit.  Accepts `"info"`, `"warn"`, `"error"`.
     pub min_severity: String,
+}
+
+impl Default for AuditSinkConfig {
+    /// Default audit config: the documented `min_severity` default is `info`.
+    /// A derived `Default` would leave `min_severity` empty, which `validate()`
+    /// (correctly) rejects — so an audit section absent from `backends.yaml`
+    /// would fail validation. Pin the documented default here instead.
+    fn default() -> Self {
+        Self {
+            kind: AuditSinkKind::default(),
+            file_path: None,
+            kafka_topic: None,
+            kafka_brokers: None,
+            pg_table: None,
+            min_severity: "info".to_string(),
+        }
+    }
 }
 
 impl AuditSinkConfig {
@@ -392,8 +409,10 @@ impl AuditSinkConfig {
             "postgres" | "pg" => AuditSinkKind::Postgres,
             _ => AuditSinkKind::None,
         };
-        let min_severity =
-            std::env::var("UDB_AUDIT_MIN_SEVERITY").unwrap_or_else(|_| "info".to_string());
+        let min_severity = std::env::var("UDB_AUDIT_MIN_SEVERITY")
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| "info".to_string());
         Self {
             kind,
             file_path: std::env::var("UDB_AUDIT_FILE_PATH")
@@ -488,7 +507,8 @@ impl AuditSinkConfig {
             _ => {}
         }
         match self.min_severity.as_str() {
-            "info" | "warn" | "error" => {}
+            // Empty = unset → falls back to the documented `info` default.
+            "" | "info" | "warn" | "error" => {}
             other => errors.push(format!(
                 "UDB_AUDIT_MIN_SEVERITY='{other}' is not valid; use 'info', 'warn', or 'error'"
             )),

@@ -255,14 +255,16 @@ impl ProjectionEngine {
         hasher.update(target_instance.as_bytes());
         hasher.update(b"|");
         hasher.update(manifest_checksum.as_bytes());
-        // #166: source_checksum is intentionally NOT hashed. Including it minted a
-        // NEW task for every source-row version, so FAILED/DEAD tasks for prior
-        // versions accumulated forever under churn. The key now identifies one
-        // task per (project, source row, operation, target, manifest); the
-        // checksum is still stored on the task row for change detection, and a
-        // re-projection of an updated row updates that one task instead of
-        // creating a new one.
-        let _ = source_checksum;
+        // #166 REVERTED: source_checksum MUST be part of the key. The
+        // `projection_acceptance_tests::idempotency_key_changes_at_each_correctness_boundary`
+        // contract requires a changed source payload to mint a distinct task —
+        // otherwise an updated row whose (project, row, op, target, manifest) key
+        // matches an already-COMPLETED task is deduped and SKIPPED, leaving the
+        // projection target stale (silent data loss). The accumulation concern
+        // (FAILED/DEAD tasks per version) is a GC problem, not a reason to weaken
+        // the correctness key.
+        hasher.update(b"|");
+        hasher.update(source_checksum.as_bytes());
         format!("{:x}", hasher.finalize())
     }
 
@@ -1688,11 +1690,11 @@ mod tests {
     }
 
     #[test]
-    fn idempotency_key_stable_across_source_checksum() {
-        // #166: the idempotency key must NOT change when only the source-row
-        // value (and thus its checksum) changes — otherwise every update mints a
-        // new task and stale FAILED/DEAD tasks accumulate. Re-projecting an
-        // updated row reuses the one task per (source row, target).
+    fn idempotency_key_changes_with_source_checksum() {
+        // #166 REVERTED: the idempotency key MUST change when the source-row value
+        // (and thus its checksum) changes — otherwise an updated row whose key
+        // matches an already-COMPLETED task is deduped/skipped and the projection
+        // target is left stale (see `projection_acceptance_tests`).
         let key = json!({"id":"p1"});
         let first = ProjectionEngine::idempotency_key(
             "tenant",
@@ -1714,6 +1716,6 @@ mod tests {
             "catalog1",
             &ProjectionEngine::source_checksum(&json!({"id":"p1","name":"Grace"})),
         );
-        assert_eq!(first, second);
+        assert_ne!(first, second);
     }
 }

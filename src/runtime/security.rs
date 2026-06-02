@@ -743,6 +743,9 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
     let target_instance = header("x-udb-target-instance");
     let routing_policy = header("x-udb-routing-policy");
     let read_fence_json = header("x-udb-read-fence");
+    let project_id_header = non_empty(header("x-udb-project-id"))
+        .or_else(|| non_empty(header("x-project-id")))
+        .unwrap_or_default();
     let primary_read = header_bool("x-udb-primary-read", &header);
     let eventual_consistency_allowed = header_bool("x-udb-eventual-consistency-allowed", &header)
         || matches!(
@@ -791,7 +794,7 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
             trace_id,
             project_id: claims
                 .project_id
-                .unwrap_or_else(|| header("x-udb-project-id")),
+                .unwrap_or_else(|| project_id_header.clone()),
             consistency,
             max_replica_lag_ms,
             client_catalog_version: client_catalog_version.clone(),
@@ -848,7 +851,7 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
         scopes,
         service_identity,
         trace_id,
-        project_id: header("x-udb-project-id"),
+        project_id: project_id_header,
         consistency,
         max_replica_lag_ms,
         client_catalog_version: client_catalog_version.clone(),

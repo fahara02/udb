@@ -434,7 +434,7 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
         let sql = format!(
             "UPDATE {TABLE}
              SET status = ?, retry_count = ?, last_error = ?,
-                 next_retry_at = CASE WHEN ? = 'FAILED' THEN DATE_ADD(NOW(6), INTERVAL ? SECOND) ELSE NULL END,
+                 next_retry_at = NULL,
                  updated_at = NOW(6)
              WHERE task_id = ?"
         );
@@ -442,8 +442,6 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
             .bind(new_status.as_str())
             .bind(new_retry_count)
             .bind(error)
-            .bind(new_status.as_str())
-            .bind(projection_retry_delay_secs(new_retry_count))
             .bind(task_id.to_string())
             .execute(self.mysql_pool())
             .await
