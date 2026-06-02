@@ -82,6 +82,18 @@ fn authz_v2_enabled() -> bool {
     })
 }
 
+fn startup_bool_env(key: &str) -> bool {
+    std::env::var(key)
+        .ok()
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
+
 /// Fold the uniform RPC prologue shared by ~46 handlers: start the timing
 /// clock, extract the [`SecurityContext`] from request metadata, and run the
 /// standard `authorize(security, "*", method)` gate. On any failure it returns
@@ -1229,7 +1241,22 @@ pub async fn serve(
     // Item 8: time the startup migration run and emit the (now wired) migration
     // metrics — run count by terminal status + run duration.
     let lifecycle_started = Instant::now();
-    match run_startup_lifecycle(&runtime, &manifest, &schemas, false, false).await {
+    let startup_force_sync = startup_bool_env("UDB_STARTUP_FORCE_SYNC");
+    let startup_dry_run = startup_bool_env("UDB_STARTUP_DRY_RUN");
+    tracing::info!(
+        startup_force_sync,
+        startup_dry_run,
+        "running UDB startup lifecycle"
+    );
+    match run_startup_lifecycle(
+        &runtime,
+        &manifest,
+        &schemas,
+        startup_force_sync,
+        startup_dry_run,
+    )
+    .await
+    {
         Ok(report) => {
             let elapsed = lifecycle_started.elapsed().as_secs_f64();
             metrics.inc_runs_total("completed");

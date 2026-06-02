@@ -131,6 +131,8 @@ jobs:
       UDB_PROJECTION_WORKER_ENABLED: "false"
       UDB_RECONCILIATION_ENABLED: "false"
       UDB_SAGA_RECOVERY_ENABLED: "false"
+      UDB_STARTUP_FORCE_SYNC: "true"
+      UDB_STARTUP_DRY_RUN: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
