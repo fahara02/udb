@@ -7,6 +7,7 @@ namespace Udb\Events\V1;
 
 use Google\Protobuf\Internal\GPBType;
 use Google\Protobuf\Internal\GPBUtil;
+use Google\Protobuf\RepeatedField;
 
 /**
  * Canonical inner envelope wrapping every native domain event stored in the
@@ -287,3 +288,4 @@ class EventEnvelope extends \Google\Protobuf\Internal\Message
     }
 
 }
+
