@@ -5,7 +5,6 @@
 
 namespace Udb\Events\V1;
 
-use Google\Protobuf\Internal\GPBType;
 use Google\Protobuf\Internal\GPBUtil;
 
 /**

@@ -10,6 +10,7 @@ function rewrite(path, transform) {
 
 rewrite("sdk/php/gen/Udb/Events/V1/EventEnvelope.php", (text) =>
   text
+    .replace(/^use Google\\Protobuf\\Internal\\GPBType;\r?\n/m, "")
     .replace(/^use Google\\Protobuf\\RepeatedField;\r?\n/m, "")
     .replace(/\r?\n+$/u, "\n"),
 );
