@@ -817,6 +817,20 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
+     * @param \Udb\Entity\V1\ProjectionDriftScanRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\ProjectionDriftScanResponse>
+     */
+    public function ScanProjectionDrift(\Udb\Entity\V1\ProjectionDriftScanRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/ScanProjectionDrift',
+        $argument,
+        ['\Udb\Entity\V1\ProjectionDriftScanResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * Saga administration.
      * @param \Udb\Entity\V1\SagaListRequest $argument input argument
      * @param array $metadata metadata

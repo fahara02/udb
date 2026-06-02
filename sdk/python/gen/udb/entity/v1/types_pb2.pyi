@@ -107,6 +107,10 @@ from udb.entity.v1.admin_pb2 import DlqEventResponse as DlqEventResponse
 from udb.entity.v1.admin_pb2 import DlqActionRequest as DlqActionRequest
 from udb.entity.v1.admin_pb2 import CdcRedactionPreviewRequest as CdcRedactionPreviewRequest
 from udb.entity.v1.admin_pb2 import CdcRedactionPreviewResponse as CdcRedactionPreviewResponse
+from udb.entity.v1.admin_pb2 import ProjectionDriftScanRequest as ProjectionDriftScanRequest
+from udb.entity.v1.admin_pb2 import ProjectionDriftDivergentRow as ProjectionDriftDivergentRow
+from udb.entity.v1.admin_pb2 import ProjectionDriftTargetReport as ProjectionDriftTargetReport
+from udb.entity.v1.admin_pb2 import ProjectionDriftScanResponse as ProjectionDriftScanResponse
 from udb.entity.v1.admin_pb2 import SagaListRequest as SagaListRequest
 from udb.entity.v1.admin_pb2 import SagaRecord as SagaRecord
 from udb.entity.v1.admin_pb2 import SagaListResponse as SagaListResponse

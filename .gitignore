@@ -112,6 +112,7 @@ configs/*.yaml
 !configs/ci.yaml
 !configs/redis.yaml
 *.pem
+!src/runtime/testdata/*.pem
 *.key
 *.crt
 udb_laravel_deploy_key

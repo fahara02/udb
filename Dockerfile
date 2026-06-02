@@ -2,8 +2,8 @@
 #
 # UDB broker image. Builds the `udb-proto-parser` binary from the ROOT crate
 # (Cargo.toml + src/ live at the repo root; there is no src/udb/ crate) and runs
-# it as the gRPC broker. `build.rs` vendors protoc via `protoc-bin-vendored`, so
-# no google/api proto vendoring is needed here.
+# it as the gRPC broker. `build.rs` vendors protoc via `protoc-bin-vendored`, and
+# the google/api annotation protos are checked in under third_party/googleapis.
 
 FROM rust:1.91-bookworm AS builder
 
@@ -21,6 +21,7 @@ COPY Cargo.toml Cargo.lock build.rs ./
 COPY crates ./crates
 COPY src ./src
 COPY proto ./proto
+COPY third_party ./third_party
 COPY configs ./configs
 # `[[bench]] core_bench` resolves to benches/core_bench.rs; cargo needs the file
 # to exist when it parses the manifest, even for a --bin build.
@@ -47,9 +48,11 @@ WORKDIR /app
 COPY --from=builder /tmp/udb-proto-parser /usr/local/bin/udb-proto-parser
 COPY --from=builder /usr/local/bin/grpc_health_probe /usr/local/bin/grpc_health_probe
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-# UDB-owned proto + default configs. Application schemas (e.g. the acme_billing
-# example) are mounted in at runtime and served via an overridden CMD.
+# UDB-owned proto + vendored imports + default configs. Application schemas
+# (e.g. the acme_billing example) are mounted in at runtime and served via an
+# overridden CMD.
 COPY proto ./proto
+COPY third_party ./third_party
 COPY configs ./configs
 
 ENV RUST_LOG=info \

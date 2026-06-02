@@ -397,7 +397,6 @@ pub(crate) fn json_bool(value: &JsonValue, key: &str) -> Option<bool> {
 
 /// Decode inline object bytes from a generic-dispatch request body
 /// (`data_base64`/`content_base64` or `data_text`/`content_text`).
-#[cfg(any(feature = "s3", test))]
 pub(crate) fn object_bytes_from_json(value: &JsonValue) -> Result<Vec<u8>, tonic::Status> {
     if let Some(base64_value) = value
         .get("data_base64")

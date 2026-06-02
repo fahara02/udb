@@ -1721,6 +1721,37 @@ public final class DataBrokerGrpc {
     return getPreviewCdcRedactionMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.ProjectionDriftScanRequest,
+      com.udb.entity.v1.ProjectionDriftScanResponse> getScanProjectionDriftMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ScanProjectionDrift",
+      requestType = com.udb.entity.v1.ProjectionDriftScanRequest.class,
+      responseType = com.udb.entity.v1.ProjectionDriftScanResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.entity.v1.ProjectionDriftScanRequest,
+      com.udb.entity.v1.ProjectionDriftScanResponse> getScanProjectionDriftMethod() {
+    io.grpc.MethodDescriptor<com.udb.entity.v1.ProjectionDriftScanRequest, com.udb.entity.v1.ProjectionDriftScanResponse> getScanProjectionDriftMethod;
+    if ((getScanProjectionDriftMethod = DataBrokerGrpc.getScanProjectionDriftMethod) == null) {
+      synchronized (DataBrokerGrpc.class) {
+        if ((getScanProjectionDriftMethod = DataBrokerGrpc.getScanProjectionDriftMethod) == null) {
+          DataBrokerGrpc.getScanProjectionDriftMethod = getScanProjectionDriftMethod =
+              io.grpc.MethodDescriptor.<com.udb.entity.v1.ProjectionDriftScanRequest, com.udb.entity.v1.ProjectionDriftScanResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ScanProjectionDrift"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.entity.v1.ProjectionDriftScanRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.entity.v1.ProjectionDriftScanResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DataBrokerMethodDescriptorSupplier("ScanProjectionDrift"))
+              .build();
+        }
+      }
+    }
+    return getScanProjectionDriftMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.SagaListRequest,
       com.udb.entity.v1.SagaListResponse> getListSagasMethod;
 
@@ -2856,6 +2887,13 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     */
+    default void scanProjectionDrift(com.udb.entity.v1.ProjectionDriftScanRequest request,
+        io.grpc.stub.StreamObserver<com.udb.entity.v1.ProjectionDriftScanResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getScanProjectionDriftMethod(), responseObserver);
+    }
+
+    /**
      * <pre>
      * Saga administration.
      * </pre>
@@ -3592,6 +3630,14 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     */
+    public void scanProjectionDrift(com.udb.entity.v1.ProjectionDriftScanRequest request,
+        io.grpc.stub.StreamObserver<com.udb.entity.v1.ProjectionDriftScanResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getScanProjectionDriftMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
      * <pre>
      * Saga administration.
      * </pre>
@@ -4291,6 +4337,13 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     */
+    public com.udb.entity.v1.ProjectionDriftScanResponse scanProjectionDrift(com.udb.entity.v1.ProjectionDriftScanRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getScanProjectionDriftMethod(), getCallOptions(), request);
+    }
+
+    /**
      * <pre>
      * Saga administration.
      * </pre>
@@ -4915,6 +4968,13 @@ public final class DataBrokerGrpc {
     public com.udb.entity.v1.CdcRedactionPreviewResponse previewCdcRedaction(com.udb.entity.v1.CdcRedactionPreviewRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getPreviewCdcRedactionMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.entity.v1.ProjectionDriftScanResponse scanProjectionDrift(com.udb.entity.v1.ProjectionDriftScanRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getScanProjectionDriftMethod(), getCallOptions(), request);
     }
 
     /**
@@ -5577,6 +5637,14 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.entity.v1.ProjectionDriftScanResponse> scanProjectionDrift(
+        com.udb.entity.v1.ProjectionDriftScanRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getScanProjectionDriftMethod(), getCallOptions()), request);
+    }
+
+    /**
      * <pre>
      * Saga administration.
      * </pre>
@@ -5813,30 +5881,31 @@ public final class DataBrokerGrpc {
   private static final int METHODID_RESUME_CDC = 47;
   private static final int METHODID_STEP_DOWN_CDC_LEADER = 48;
   private static final int METHODID_PREVIEW_CDC_REDACTION = 49;
-  private static final int METHODID_LIST_SAGAS = 50;
-  private static final int METHODID_GET_SAGA = 51;
-  private static final int METHODID_RETRY_SAGA_COMPENSATION = 52;
-  private static final int METHODID_MARK_SAGA_REVIEWED = 53;
-  private static final int METHODID_LIST_POLICIES = 54;
-  private static final int METHODID_PUT_POLICY = 55;
-  private static final int METHODID_DELETE_POLICY = 56;
-  private static final int METHODID_RELOAD_POLICIES = 57;
-  private static final int METHODID_LINT_POLICIES = 58;
-  private static final int METHODID_GET_CAPABILITIES = 59;
-  private static final int METHODID_GET_CATALOG_MANIFEST = 60;
-  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 61;
-  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 62;
-  private static final int METHODID_GET_HEALTH_REPORT = 63;
-  private static final int METHODID_ENSURE_PROJECT = 64;
-  private static final int METHODID_LIST_PROJECTS = 65;
-  private static final int METHODID_GET_ADMIN_SUMMARY = 66;
-  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 67;
-  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 68;
-  private static final int METHODID_BATCH_SELECT = 69;
-  private static final int METHODID_BATCH_UPSERT = 70;
-  private static final int METHODID_VECTOR_BATCH_UPSERT = 71;
-  private static final int METHODID_PUT_OBJECT = 72;
-  private static final int METHODID_BEGIN_TX = 73;
+  private static final int METHODID_SCAN_PROJECTION_DRIFT = 50;
+  private static final int METHODID_LIST_SAGAS = 51;
+  private static final int METHODID_GET_SAGA = 52;
+  private static final int METHODID_RETRY_SAGA_COMPENSATION = 53;
+  private static final int METHODID_MARK_SAGA_REVIEWED = 54;
+  private static final int METHODID_LIST_POLICIES = 55;
+  private static final int METHODID_PUT_POLICY = 56;
+  private static final int METHODID_DELETE_POLICY = 57;
+  private static final int METHODID_RELOAD_POLICIES = 58;
+  private static final int METHODID_LINT_POLICIES = 59;
+  private static final int METHODID_GET_CAPABILITIES = 60;
+  private static final int METHODID_GET_CATALOG_MANIFEST = 61;
+  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 62;
+  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 63;
+  private static final int METHODID_GET_HEALTH_REPORT = 64;
+  private static final int METHODID_ENSURE_PROJECT = 65;
+  private static final int METHODID_LIST_PROJECTS = 66;
+  private static final int METHODID_GET_ADMIN_SUMMARY = 67;
+  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 68;
+  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 69;
+  private static final int METHODID_BATCH_SELECT = 70;
+  private static final int METHODID_BATCH_UPSERT = 71;
+  private static final int METHODID_VECTOR_BATCH_UPSERT = 72;
+  private static final int METHODID_PUT_OBJECT = 73;
+  private static final int METHODID_BEGIN_TX = 74;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -6054,6 +6123,10 @@ public final class DataBrokerGrpc {
         case METHODID_PREVIEW_CDC_REDACTION:
           serviceImpl.previewCdcRedaction((com.udb.entity.v1.CdcRedactionPreviewRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.entity.v1.CdcRedactionPreviewResponse>) responseObserver);
+          break;
+        case METHODID_SCAN_PROJECTION_DRIFT:
+          serviceImpl.scanProjectionDrift((com.udb.entity.v1.ProjectionDriftScanRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.entity.v1.ProjectionDriftScanResponse>) responseObserver);
           break;
         case METHODID_LIST_SAGAS:
           serviceImpl.listSagas((com.udb.entity.v1.SagaListRequest) request,
@@ -6550,6 +6623,13 @@ public final class DataBrokerGrpc {
               com.udb.entity.v1.CdcRedactionPreviewResponse>(
                 service, METHODID_PREVIEW_CDC_REDACTION)))
         .addMethod(
+          getScanProjectionDriftMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.entity.v1.ProjectionDriftScanRequest,
+              com.udb.entity.v1.ProjectionDriftScanResponse>(
+                service, METHODID_SCAN_PROJECTION_DRIFT)))
+        .addMethod(
           getListSagasMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
@@ -6785,6 +6865,7 @@ public final class DataBrokerGrpc {
               .addMethod(getResumeCdcMethod())
               .addMethod(getStepDownCdcLeaderMethod())
               .addMethod(getPreviewCdcRedactionMethod())
+              .addMethod(getScanProjectionDriftMethod())
               .addMethod(getListSagasMethod())
               .addMethod(getGetSagaMethod())
               .addMethod(getRetrySagaCompensationMethod())

@@ -17,8 +17,11 @@ mod authn_user_live;
 mod authz_admin_live;
 mod authz_rbac_live;
 mod authz_rebac_live;
+#[cfg(feature = "kafka")]
 mod cdc_live;
+#[cfg(feature = "kafka")]
 mod events_live;
+#[cfg(feature = "kafka")]
 mod notification_events_live;
 mod notification_live;
 mod support;

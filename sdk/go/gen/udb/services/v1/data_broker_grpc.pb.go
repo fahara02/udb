@@ -76,6 +76,7 @@ const (
 	DataBroker_ResumeCdc_FullMethodName               = "/udb.services.v1.DataBroker/ResumeCdc"
 	DataBroker_StepDownCdcLeader_FullMethodName       = "/udb.services.v1.DataBroker/StepDownCdcLeader"
 	DataBroker_PreviewCdcRedaction_FullMethodName     = "/udb.services.v1.DataBroker/PreviewCdcRedaction"
+	DataBroker_ScanProjectionDrift_FullMethodName     = "/udb.services.v1.DataBroker/ScanProjectionDrift"
 	DataBroker_ListSagas_FullMethodName               = "/udb.services.v1.DataBroker/ListSagas"
 	DataBroker_GetSaga_FullMethodName                 = "/udb.services.v1.DataBroker/GetSaga"
 	DataBroker_RetrySagaCompensation_FullMethodName   = "/udb.services.v1.DataBroker/RetrySagaCompensation"
@@ -202,6 +203,7 @@ type DataBrokerClient interface {
 	ResumeCdc(ctx context.Context, in *v1.CdcControlRequest, opts ...grpc.CallOption) (*v1.CdcStatusResponse, error)
 	StepDownCdcLeader(ctx context.Context, in *v1.CdcControlRequest, opts ...grpc.CallOption) (*v1.CdcStatusResponse, error)
 	PreviewCdcRedaction(ctx context.Context, in *v1.CdcRedactionPreviewRequest, opts ...grpc.CallOption) (*v1.CdcRedactionPreviewResponse, error)
+	ScanProjectionDrift(ctx context.Context, in *v1.ProjectionDriftScanRequest, opts ...grpc.CallOption) (*v1.ProjectionDriftScanResponse, error)
 	// Saga administration.
 	ListSagas(ctx context.Context, in *v1.SagaListRequest, opts ...grpc.CallOption) (*v1.SagaListResponse, error)
 	GetSaga(ctx context.Context, in *v1.SagaRequest, opts ...grpc.CallOption) (*v1.SagaResponse, error)
@@ -830,6 +832,16 @@ func (c *dataBrokerClient) PreviewCdcRedaction(ctx context.Context, in *v1.CdcRe
 	return out, nil
 }
 
+func (c *dataBrokerClient) ScanProjectionDrift(ctx context.Context, in *v1.ProjectionDriftScanRequest, opts ...grpc.CallOption) (*v1.ProjectionDriftScanResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.ProjectionDriftScanResponse)
+	err := c.cc.Invoke(ctx, DataBroker_ScanProjectionDrift_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dataBrokerClient) ListSagas(ctx context.Context, in *v1.SagaListRequest, opts ...grpc.CallOption) (*v1.SagaListResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.SagaListResponse)
@@ -1125,6 +1137,7 @@ type DataBrokerServer interface {
 	ResumeCdc(context.Context, *v1.CdcControlRequest) (*v1.CdcStatusResponse, error)
 	StepDownCdcLeader(context.Context, *v1.CdcControlRequest) (*v1.CdcStatusResponse, error)
 	PreviewCdcRedaction(context.Context, *v1.CdcRedactionPreviewRequest) (*v1.CdcRedactionPreviewResponse, error)
+	ScanProjectionDrift(context.Context, *v1.ProjectionDriftScanRequest) (*v1.ProjectionDriftScanResponse, error)
 	// Saga administration.
 	ListSagas(context.Context, *v1.SagaListRequest) (*v1.SagaListResponse, error)
 	GetSaga(context.Context, *v1.SagaRequest) (*v1.SagaResponse, error)
@@ -1333,6 +1346,9 @@ func (UnimplementedDataBrokerServer) StepDownCdcLeader(context.Context, *v1.CdcC
 }
 func (UnimplementedDataBrokerServer) PreviewCdcRedaction(context.Context, *v1.CdcRedactionPreviewRequest) (*v1.CdcRedactionPreviewResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PreviewCdcRedaction not implemented")
+}
+func (UnimplementedDataBrokerServer) ScanProjectionDrift(context.Context, *v1.ProjectionDriftScanRequest) (*v1.ProjectionDriftScanResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ScanProjectionDrift not implemented")
 }
 func (UnimplementedDataBrokerServer) ListSagas(context.Context, *v1.SagaListRequest) (*v1.SagaListResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSagas not implemented")
@@ -2332,6 +2348,24 @@ func _DataBroker_PreviewCdcRedaction_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DataBroker_ScanProjectionDrift_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.ProjectionDriftScanRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).ScanProjectionDrift(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_ScanProjectionDrift_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).ScanProjectionDrift(ctx, req.(*v1.ProjectionDriftScanRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DataBroker_ListSagas_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1.SagaListRequest)
 	if err := dec(in); err != nil {
@@ -2872,6 +2906,10 @@ var DataBroker_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PreviewCdcRedaction",
 			Handler:    _DataBroker_PreviewCdcRedaction_Handler,
+		},
+		{
+			MethodName: "ScanProjectionDrift",
+			Handler:    _DataBroker_ScanProjectionDrift_Handler,
 		},
 		{
 			MethodName: "ListSagas",

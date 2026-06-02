@@ -568,6 +568,76 @@ class CdcRedactionPreviewResponse(_message.Message):
     would_redact: bool
     def __init__(self, payload_json: _Optional[bytes] = ..., redacted_fields: _Optional[_Iterable[str]] = ..., redaction_mode: _Optional[str] = ..., redaction_version: _Optional[int] = ..., would_redact: bool = ...) -> None: ...
 
+class ProjectionDriftScanRequest(_message.Message):
+    __slots__ = ("context", "project_id", "message_type", "scan_mode", "rows_per_target", "repair", "limit")
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_TYPE_FIELD_NUMBER: _ClassVar[int]
+    SCAN_MODE_FIELD_NUMBER: _ClassVar[int]
+    ROWS_PER_TARGET_FIELD_NUMBER: _ClassVar[int]
+    REPAIR_FIELD_NUMBER: _ClassVar[int]
+    LIMIT_FIELD_NUMBER: _ClassVar[int]
+    context: _context_pb2.RequestContext
+    project_id: str
+    message_type: str
+    scan_mode: str
+    rows_per_target: int
+    repair: bool
+    limit: int
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., project_id: _Optional[str] = ..., message_type: _Optional[str] = ..., scan_mode: _Optional[str] = ..., rows_per_target: _Optional[int] = ..., repair: bool = ..., limit: _Optional[int] = ...) -> None: ...
+
+class ProjectionDriftDivergentRow(_message.Message):
+    __slots__ = ("row_key_json", "source_checksum", "target_checksum", "kind")
+    ROW_KEY_JSON_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_CHECKSUM_FIELD_NUMBER: _ClassVar[int]
+    TARGET_CHECKSUM_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    row_key_json: bytes
+    source_checksum: str
+    target_checksum: str
+    kind: str
+    def __init__(self, row_key_json: _Optional[bytes] = ..., source_checksum: _Optional[str] = ..., target_checksum: _Optional[str] = ..., kind: _Optional[str] = ...) -> None: ...
+
+class ProjectionDriftTargetReport(_message.Message):
+    __slots__ = ("target_backend", "target_instance", "target_resource", "source_rows_scanned", "divergent_rows", "rows_to_repair", "estimated_cost_units", "repair_tasks_enqueued", "warnings")
+    TARGET_BACKEND_FIELD_NUMBER: _ClassVar[int]
+    TARGET_INSTANCE_FIELD_NUMBER: _ClassVar[int]
+    TARGET_RESOURCE_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_ROWS_SCANNED_FIELD_NUMBER: _ClassVar[int]
+    DIVERGENT_ROWS_FIELD_NUMBER: _ClassVar[int]
+    ROWS_TO_REPAIR_FIELD_NUMBER: _ClassVar[int]
+    ESTIMATED_COST_UNITS_FIELD_NUMBER: _ClassVar[int]
+    REPAIR_TASKS_ENQUEUED_FIELD_NUMBER: _ClassVar[int]
+    WARNINGS_FIELD_NUMBER: _ClassVar[int]
+    target_backend: str
+    target_instance: str
+    target_resource: str
+    source_rows_scanned: int
+    divergent_rows: _containers.RepeatedCompositeFieldContainer[ProjectionDriftDivergentRow]
+    rows_to_repair: int
+    estimated_cost_units: float
+    repair_tasks_enqueued: int
+    warnings: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, target_backend: _Optional[str] = ..., target_instance: _Optional[str] = ..., target_resource: _Optional[str] = ..., source_rows_scanned: _Optional[int] = ..., divergent_rows: _Optional[_Iterable[_Union[ProjectionDriftDivergentRow, _Mapping]]] = ..., rows_to_repair: _Optional[int] = ..., estimated_cost_units: _Optional[float] = ..., repair_tasks_enqueued: _Optional[int] = ..., warnings: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class ProjectionDriftScanResponse(_message.Message):
+    __slots__ = ("project_id", "message_type", "scan_mode", "source_rows_loaded", "reports", "summary_json", "warnings")
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_TYPE_FIELD_NUMBER: _ClassVar[int]
+    SCAN_MODE_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_ROWS_LOADED_FIELD_NUMBER: _ClassVar[int]
+    REPORTS_FIELD_NUMBER: _ClassVar[int]
+    SUMMARY_JSON_FIELD_NUMBER: _ClassVar[int]
+    WARNINGS_FIELD_NUMBER: _ClassVar[int]
+    project_id: str
+    message_type: str
+    scan_mode: str
+    source_rows_loaded: int
+    reports: _containers.RepeatedCompositeFieldContainer[ProjectionDriftTargetReport]
+    summary_json: bytes
+    warnings: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, project_id: _Optional[str] = ..., message_type: _Optional[str] = ..., scan_mode: _Optional[str] = ..., source_rows_loaded: _Optional[int] = ..., reports: _Optional[_Iterable[_Union[ProjectionDriftTargetReport, _Mapping]]] = ..., summary_json: _Optional[bytes] = ..., warnings: _Optional[_Iterable[str]] = ...) -> None: ...
+
 class SagaListRequest(_message.Message):
     __slots__ = ("context", "tenant_id_filter", "status_filter", "tx_id_filter", "correlation_id_filter", "limit", "page_token")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]

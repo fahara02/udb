@@ -184,6 +184,10 @@ namespace Udb.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.CdcRedactionPreviewResponse> __Marshaller_udb_entity_v1_CdcRedactionPreviewResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.CdcRedactionPreviewResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.ProjectionDriftScanRequest> __Marshaller_udb_entity_v1_ProjectionDriftScanRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.ProjectionDriftScanRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.ProjectionDriftScanResponse> __Marshaller_udb_entity_v1_ProjectionDriftScanResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.ProjectionDriftScanResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.SagaListRequest> __Marshaller_udb_entity_v1_SagaListRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.SagaListRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.SagaListResponse> __Marshaller_udb_entity_v1_SagaListResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.SagaListResponse.Parser));
@@ -677,6 +681,14 @@ namespace Udb.Services.V1 {
         "PreviewCdcRedaction",
         __Marshaller_udb_entity_v1_CdcRedactionPreviewRequest,
         __Marshaller_udb_entity_v1_CdcRedactionPreviewResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Entity.V1.ProjectionDriftScanRequest, global::Udb.Entity.V1.ProjectionDriftScanResponse> __Method_ScanProjectionDrift = new grpc::Method<global::Udb.Entity.V1.ProjectionDriftScanRequest, global::Udb.Entity.V1.ProjectionDriftScanResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ScanProjectionDrift",
+        __Marshaller_udb_entity_v1_ProjectionDriftScanRequest,
+        __Marshaller_udb_entity_v1_ProjectionDriftScanResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Entity.V1.SagaListRequest, global::Udb.Entity.V1.SagaListResponse> __Method_ListSagas = new grpc::Method<global::Udb.Entity.V1.SagaListRequest, global::Udb.Entity.V1.SagaListResponse>(
@@ -1335,6 +1347,12 @@ namespace Udb.Services.V1 {
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.CdcRedactionPreviewResponse> PreviewCdcRedaction(global::Udb.Entity.V1.CdcRedactionPreviewRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.ProjectionDriftScanResponse> ScanProjectionDrift(global::Udb.Entity.V1.ProjectionDriftScanRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -3313,6 +3331,26 @@ namespace Udb.Services.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_PreviewCdcRedaction, null, options, request);
       }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.ProjectionDriftScanResponse ScanProjectionDrift(global::Udb.Entity.V1.ProjectionDriftScanRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ScanProjectionDrift(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.ProjectionDriftScanResponse ScanProjectionDrift(global::Udb.Entity.V1.ProjectionDriftScanRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ScanProjectionDrift, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.ProjectionDriftScanResponse> ScanProjectionDriftAsync(global::Udb.Entity.V1.ProjectionDriftScanRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ScanProjectionDriftAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.ProjectionDriftScanResponse> ScanProjectionDriftAsync(global::Udb.Entity.V1.ProjectionDriftScanRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ScanProjectionDrift, null, options, request);
+      }
       /// <summary>
       /// Saga administration.
       /// </summary>
@@ -4042,6 +4080,7 @@ namespace Udb.Services.V1 {
           .AddMethod(__Method_ResumeCdc, serviceImpl.ResumeCdc)
           .AddMethod(__Method_StepDownCdcLeader, serviceImpl.StepDownCdcLeader)
           .AddMethod(__Method_PreviewCdcRedaction, serviceImpl.PreviewCdcRedaction)
+          .AddMethod(__Method_ScanProjectionDrift, serviceImpl.ScanProjectionDrift)
           .AddMethod(__Method_ListSagas, serviceImpl.ListSagas)
           .AddMethod(__Method_GetSaga, serviceImpl.GetSaga)
           .AddMethod(__Method_RetrySagaCompensation, serviceImpl.RetrySagaCompensation)
@@ -4125,6 +4164,7 @@ namespace Udb.Services.V1 {
       serviceBinder.AddMethod(__Method_ResumeCdc, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.CdcControlRequest, global::Udb.Entity.V1.CdcStatusResponse>(serviceImpl.ResumeCdc));
       serviceBinder.AddMethod(__Method_StepDownCdcLeader, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.CdcControlRequest, global::Udb.Entity.V1.CdcStatusResponse>(serviceImpl.StepDownCdcLeader));
       serviceBinder.AddMethod(__Method_PreviewCdcRedaction, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.CdcRedactionPreviewRequest, global::Udb.Entity.V1.CdcRedactionPreviewResponse>(serviceImpl.PreviewCdcRedaction));
+      serviceBinder.AddMethod(__Method_ScanProjectionDrift, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.ProjectionDriftScanRequest, global::Udb.Entity.V1.ProjectionDriftScanResponse>(serviceImpl.ScanProjectionDrift));
       serviceBinder.AddMethod(__Method_ListSagas, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.SagaListRequest, global::Udb.Entity.V1.SagaListResponse>(serviceImpl.ListSagas));
       serviceBinder.AddMethod(__Method_GetSaga, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.SagaRequest, global::Udb.Entity.V1.SagaResponse>(serviceImpl.GetSaga));
       serviceBinder.AddMethod(__Method_RetrySagaCompensation, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.SagaRequest, global::Udb.Entity.V1.SagaResponse>(serviceImpl.RetrySagaCompensation));

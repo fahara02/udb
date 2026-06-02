@@ -300,6 +300,11 @@ class DataBrokerStub(object):
                 request_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.CdcRedactionPreviewRequest.SerializeToString,
                 response_deserializer=udb_dot_entity_dot_v1_dot_admin__pb2.CdcRedactionPreviewResponse.FromString,
                 _registered_method=True)
+        self.ScanProjectionDrift = channel.unary_unary(
+                '/udb.services.v1.DataBroker/ScanProjectionDrift',
+                request_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.ProjectionDriftScanRequest.SerializeToString,
+                response_deserializer=udb_dot_entity_dot_v1_dot_admin__pb2.ProjectionDriftScanResponse.FromString,
+                _registered_method=True)
         self.ListSagas = channel.unary_unary(
                 '/udb.services.v1.DataBroker/ListSagas',
                 request_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.SagaListRequest.SerializeToString,
@@ -775,6 +780,12 @@ class DataBrokerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ScanProjectionDrift(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def ListSagas(self, request, context):
         """Saga administration.
         """
@@ -1182,6 +1193,11 @@ def add_DataBrokerServicer_to_server(servicer, server):
                     servicer.PreviewCdcRedaction,
                     request_deserializer=udb_dot_entity_dot_v1_dot_admin__pb2.CdcRedactionPreviewRequest.FromString,
                     response_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.CdcRedactionPreviewResponse.SerializeToString,
+            ),
+            'ScanProjectionDrift': grpc.unary_unary_rpc_method_handler(
+                    servicer.ScanProjectionDrift,
+                    request_deserializer=udb_dot_entity_dot_v1_dot_admin__pb2.ProjectionDriftScanRequest.FromString,
+                    response_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.ProjectionDriftScanResponse.SerializeToString,
             ),
             'ListSagas': grpc.unary_unary_rpc_method_handler(
                     servicer.ListSagas,
@@ -2766,6 +2782,33 @@ class DataBroker(object):
             '/udb.services.v1.DataBroker/PreviewCdcRedaction',
             udb_dot_entity_dot_v1_dot_admin__pb2.CdcRedactionPreviewRequest.SerializeToString,
             udb_dot_entity_dot_v1_dot_admin__pb2.CdcRedactionPreviewResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ScanProjectionDrift(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.services.v1.DataBroker/ScanProjectionDrift',
+            udb_dot_entity_dot_v1_dot_admin__pb2.ProjectionDriftScanRequest.SerializeToString,
+            udb_dot_entity_dot_v1_dot_admin__pb2.ProjectionDriftScanResponse.FromString,
             options,
             channel_credentials,
             insecure,
