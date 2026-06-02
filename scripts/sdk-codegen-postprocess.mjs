@@ -12,6 +12,7 @@ rewrite("sdk/php/gen/Udb/Events/V1/EventEnvelope.php", (text) =>
   text
     .replace(/^use Google\\Protobuf\\Internal\\GPBType;\r?\n/m, "")
     .replace(/^use Google\\Protobuf\\RepeatedField;\r?\n/m, "")
+    .replace(/(`payload`\.\r?\n) \*\r?\n( \* This formalizes)/u, "$1$2")
     .replace(/\r?\n+$/u, "\n"),
 );
 
