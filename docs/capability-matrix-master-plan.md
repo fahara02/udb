@@ -27,9 +27,10 @@ backend expose the maximum truthful capability set it can support:
   traits and the canonical `SystemStores` bundle where possible.
 - Do not advertise a capability until a compiler path, executor path, runtime
   admission path, and test path prove it.
-- Do not promote Redis, Memcached, Elasticsearch, S3, GCS, Azure Blob, Qdrant,
-  Weaviate, or Pinecone to canonical storage unless their durability and
-  coordination contract changes materially.
+- Do not promote Memcached or object stores to canonical storage unless their
+  durability and coordination contract changes materially. Redis and the
+  vector/search family may be canonical only through the compiled
+  `SystemStores` adapters and startup durability checks in `src/backend/mod.rs`.
 - Do not use a hidden Postgres sidecar to claim that another backend is
   canonical. If the backend cannot hold UDB system state itself, mark it as
   projection or auxiliary.
@@ -45,15 +46,15 @@ backend expose the maximum truthful capability set it can support:
 | `src/runtime/canonical_store/system_store.rs` | Shared traits for projection tasks, saga, admin audit, migration audit | Keep as contract boundary; add smaller helper traits only if tests require them |
 | `src/runtime/canonical_store/conformance.rs` | Canonical-store contract tests | Expand into backend-parameterized conformance suites and live-test feature gates |
 | `src/runtime/canonical_store/dialect.rs` | Shared SQL helper functions | Promote into a full SQL canonical dialect with DDL, JSON, locks, claim, pagination, and upsert rendering |
-| `src/runtime/canonical_store/{postgres,mysql,sqlite}.rs` | Reference canonical implementations | Refactor common behavior into SQL core modules; leave backend-specific dialect logic thin |
+| `src/runtime/canonical_store/{postgres,mysql,sqlite,mssql}.rs` | SQL canonical implementations | Keep common behavior in shared SQL helpers; leave backend-specific dialect logic thin |
 | `src/runtime/core/mod.rs` | Canonical store registry and `register_full_canonical_store` | Register new stores only after conformance is wired |
-| `src/runtime/core/setup_data.rs` | Backend setup and canonical registration | Add MSSQL, MongoDB, Cassandra, Neo4j registration gates in this file, not ad hoc callers |
+| `src/runtime/core/setup_data.rs` | Backend setup and canonical registration | Keep feature and topology gates centralized; object-store canonical candidates stay refused until their feasibility profile is proven |
 | `src/runtime/executors/mod.rs` | Executor traits and dispatch model | Avoid adding direct backend branches outside the executor registry |
 | `src/runtime/executors/handle.rs` | `DispatchExecutor` routing | Reuse plugin `DispatchFactory`; add operations through traits before match arms |
-| `src/runtime/executors/mssql.rs` | SQL Server query, mutation, resource, session-context behavior | Build `MssqlCanonicalStore` on its client and transaction behavior |
-| `src/runtime/executors/mongodb.rs` | MongoDB native driver, transactions, change streams, resource lifecycle | Build `MongoCanonicalStore` using native sessions and collection validators |
-| `src/runtime/executors/cassandra.rs` | CQL executor using `scylla` | Build tunable canonical profile with LWT and quorum semantics |
-| `src/runtime/executors/neo4j.rs` | Cypher executor | Build graph-native system model and ReBAC backing store |
+| `src/runtime/executors/mssql.rs` | SQL Server query, mutation, resource, session-context behavior | Keep Tiberius canonical behavior covered by live conformance |
+| `src/runtime/executors/mongodb.rs` | MongoDB native driver, transactions, change streams, resource lifecycle | Keep canonical registration behind `mongodb-native` and majority semantics |
+| `src/runtime/executors/cassandra.rs` | CQL executor using `scylla` | Keep LWT/quorum canonical behavior explicit in capability evidence |
+| `src/runtime/executors/neo4j.rs` | Cypher executor | Keep graph-native system model and ReBAC backing store evidence together |
 | `src/runtime/executors/{s3,minio,gcs,azureblob}.rs` | Object executor path | Add consistent streaming, multipart, presign, metadata, retention, and lifecycle capability reporting |
 | `src/ir/compile/*.rs` | Backend typed operation compilers | Capability V2 evidence must point at compiler support, not just executor availability |
 | `src/runtime/consistency.rs` and `src/runtime/consistency_fence.rs` | Read fence and consistency model | Add backend durability-token evidence and admission tests |
@@ -87,7 +88,7 @@ itself, and fits the feature-gated build model in `Cargo.toml`.
 | GCS | `google-cloud-storage = 0.22` | Keep | Official Google Rust storage client exists in repo and supports upload/download/integrity behavior |
 | Azure Blob | `azure_core`, `azure_storage`, `azure_storage_blobs = 0.21` | Do not blindly upgrade | Newer Azure Rust storage crates may require Rust 1.88 while UDB declares Rust 1.85; upgrade only with an MSRV decision |
 | Unified object abstraction | none | Optional: evaluate OpenDAL first, `object_store` second | UDB already needs cloud-specific features. OpenDAL can reduce duplicate common object code; keep official SDK adapters for presign, legal hold, retention, and provider-specific controls |
-| Qdrant / Weaviate / Pinecone / Elasticsearch | REST executors over `reqwest` | Keep REST unless an official Rust SDK materially improves typed capability evidence | Do not add SDKs just for convenience; vector/search features are projection-plane |
+| Qdrant / Weaviate / Pinecone / Elasticsearch | REST executors over `reqwest` plus shared vector/search `SystemStores` adapter | Keep REST unless an official Rust SDK materially improves typed capability evidence | Do not add SDKs just for convenience; canonical claims must stay tied to adapter conformance and startup checks |
 | Kafka / CDC | `rdkafka`, vendored Postgres replication helpers | Keep | Already feature-gated and tied to outbox/CDC paths |
 | gRPC / SDK generation | `tonic`, `prost`, `tonic-build`, descriptor reflection | Keep; add SDK generation around existing protos | Public SDKs must come from `proto/udb/**`, not hand-written JSON wrappers |
 | Rust embedded SDK | `src/embedded.rs`, generated tonic clients, `udb-portable` | Expand | Provide `udb::sdk` convenience clients that wrap generated clients and portable capability negotiation |
@@ -535,16 +536,16 @@ Acceptance:
 | Postgres | Canonical | Canonical reference | Best reference for system tables, leases, outbox, saga, audit, read fences, RLS |
 | MySQL / MariaDB | Canonical | Canonical | Keep parity with Postgres through shared SQL canonical core |
 | SQLite | Canonical | Embedded/dev canonical | Keep constrained; no HA claims |
-| SQL Server | Projection | Canonical P0 | Strong SQL, transactions, locks, session context, mature backup story |
-| MongoDB | Projection | Canonical P0 when replica set/transactions enabled | Native transactions, change streams, collection validators |
-| Cassandra / Scylla | Projection | Tunable canonical P1 | LWT and quorum can support a narrower system-state profile |
-| Neo4j | Projection | Graph-native canonical P1 | Strong for relationship auth and graph workloads; needs strict system model |
-| ClickHouse | Projection | Append-canonical analytics profile P2 | Excellent append/audit/analytics; weak for mutable coordination |
-| Elasticsearch | Projection/search | Search/projection only | No general UDB lease/saga/audit canonical contract |
-| Redis | Projection/cache | Cache/stream/auxiliary coordination only | Useful for rate limits and mirrors, not durable system state |
+| SQL Server | Canonical | Canonical | Tiberius-backed system store, transactions, locks, session context, mature backup story |
+| MongoDB | Projection by default; canonical with `mongodb-native` | Canonical only with native driver and majority topology | Native transactions, change streams, collection validators |
+| Cassandra / Scylla | Canonical in `cassandra` builds | Tunable canonical | LWT and quorum provide the system-state coordination contract |
+| Neo4j | Canonical in `neo4j` builds | Graph-native canonical | Strong for relationship auth and graph workloads; transactional Cypher backs system state |
+| ClickHouse | Canonical append/analytics profile in `clickhouse` builds | Append-canonical analytics profile | Excellent append/audit/analytics; multi-writer CAS caveat remains documented |
+| Elasticsearch | Canonical in `elasticsearch` builds | Search/vector-system canonical adapter | Shared search-system adapter stores UDB system state in a dedicated index |
+| Redis | Canonical in `redis` builds after durable AOF startup checks | Durable cache/stream canonical profile | Useful for rate limits and mirrors; canonical role depends on AOF/fsync durability |
 | Memcached | Projection/cache | Cache only | No durable coordination model |
-| S3 / MinIO / Azure Blob / GCS | Projection/object | Object plane | Streaming, metadata, lifecycle, retention, presign |
-| Qdrant / Weaviate / Pinecone | Projection/vector | Vector plane | Search/vector features, not system-state authority |
+| S3 / MinIO / Azure Blob / GCS | Projection/object; canonical candidates | Object plane plus feasibility profile | Streaming, metadata, lifecycle, retention, presign; canonical gating remains conditional writes, fencing, listing recovery, and multipart safety |
+| Qdrant / Weaviate / Pinecone | Canonical in matching vector builds | Vector-system canonical adapter | Dedicated collection/class/namespace plus serialized adapter operations back system-state contracts |
 
 ## Capability Matrix V2
 
@@ -669,31 +670,25 @@ Fields:
 - `quota`: storage, operations, throughput, tenants, projects.
 - `cost`: approximate storage and operation accounting.
 
-## Capability Matrix Implementation Steps
+## Capability Matrix Maintenance Steps
 
-1. Add V2 structs in `src/backend/mod.rs` next to existing
-   `BackendCapability`. Keep old fields and map them from V2 so older callers
-   keep working.
-2. Add `BackendCapabilityEvidence` in `src/backend/plugin.rs` with fields for
+The V2 capability structs, V1 derivation, `BackendKind::capability_matrix_entry`,
+`GetCapabilities`, `udb doctor`, and `udb-proto-parser compat-matrix` are now
+wired to the same source-of-truth matrix in `src/backend/mod.rs`.
+
+1. Keep `BackendCapabilityEvidence` in `src/backend/plugin.rs` populated with
    compiler module, executor module, canonical-store module, tests, feature
    flag, and known limitations.
-3. Update each plugin in `src/backend/plugins/*.rs` to return V2 evidence from
-   a shared helper. Do not duplicate long structs in every plugin.
-4. Update `BackendKind::capabilities()` to derive V1 from V2, not the reverse.
-5. Update `BackendKind::capability_matrix_entry()` to include a serialized V2
-   blob or new typed fields.
-6. Extend `proto/udb/entity/v1/admin.proto` with versioned capability fields.
-   Preserve existing `BackendCapabilityDescriptor` fields.
-7. Update `src/runtime/service/handlers_meta.rs` so `GetCapabilities` returns
-   V1 fields plus V2 details.
-8. Update `src/cli/doctor.rs` and `udb-proto-parser compat-matrix` to print the
-   same V2 matrix.
-9. Add matrix consistency tests in `src/backend/mod.rs`:
+2. Update each plugin in `src/backend/plugins/*.rs` through shared helpers. Do
+   not duplicate long structs in every plugin.
+3. Preserve existing `BackendCapabilityDescriptor` fields when adding any new
+   protocol capability detail.
+4. Keep matrix consistency tests in `src/backend/mod.rs`:
    - every supported operation has compiler or executor evidence;
    - every canonical backend has `SystemStores` evidence;
    - every `supports_xa` backend is accepted by `src/runtime/xa.rs`;
    - every native access claim has a `BackendContextEnforcer` story.
-10. Add docs generation or docs validation so README tables cannot drift.
+5. Add docs generation or docs validation so README tables cannot drift.
 
 Acceptance:
 

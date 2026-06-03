@@ -7,7 +7,7 @@
 <a href="proto/README.md"><img alt="gRPC + Protobuf" src="https://img.shields.io/badge/API-gRPC%20%2B%20Protobuf-2563eb?logo=grpc&logoColor=white"></a>
 <a href="sdk/UDB_PROTOCOL_VERSION"><img alt="Protocol 1.0.0" src="https://img.shields.io/badge/protocol-1.0.0-059669"></a>
 <a href="#-backend-matrix"><img alt="18 backend kinds" src="https://img.shields.io/badge/backends-18-7c3aed"></a>
-<a href="#-supported-features"><img alt="75 DataBroker RPCs" src="https://img.shields.io/badge/DataBroker-75%20RPCs-0f766e"></a>
+<a href="#-supported-features"><img alt="76 DataBroker RPCs" src="https://img.shields.io/badge/DataBroker-76%20RPCs-0f766e"></a>
 <a href="#native-control-plane"><img alt="77 native control-plane RPCs" src="https://img.shields.io/badge/control%20plane-77%20RPCs-c2410c"></a>
 <a href="#-quickstart-per-language"><img alt="SDKs for six languages" src="https://img.shields.io/badge/SDKs-Go%20%C2%B7%20Python%20%C2%B7%20TS%20%C2%B7%20Java%20%C2%B7%20C%23%20%C2%B7%20PHP-334155"></a>
 <a href="LICENSE"><img alt="License MIT" src="https://img.shields.io/badge/license-MIT-555"></a>
@@ -49,7 +49,7 @@ UDB centralizes those concerns:
 
 ## ⚡ Supported Features
 
-Data plane (`DataBroker`, 75 RPCs):
+Data plane (`DataBroker`, 76 RPCs):
 
 - **Relational** CRUD + batch (`Select`/`BatchSelect`/`Upsert`/`BatchUpsert`/`Delete`).
 - **Vector** search / hybrid search / upsert (Qdrant, Weaviate, Pinecone, Elasticsearch knn).
@@ -83,36 +83,44 @@ you are getting — and it is the baseline we are levelling **up**, not down.
 | Area | Status | Notes |
 |---|---|---|
 | Proto parser, catalog, drift, migrations | 🟢 Stable | Hand-written parser, deterministic checksums, audited apply ledger |
-| DataBroker data plane (75 RPCs) | 🟢 Stable | Relational, vector, object, cache, document, graph, column |
+| DataBroker data plane (76 RPCs) | 🟢 Stable | Relational, vector, object, cache, document, graph, column |
 | Native control plane (Authn/Authz/ApiKey/Tenant/Notification/Analytics) | 🟢 Stable | Proto-driven, Postgres-backed, fail-closed, protected by bearer auth on its own listener |
-| Postgres / MySQL / SQLite canonical stores | 🟢 Stable | Full system-store traits (outbox, saga, audit, leases) |
+| Canonical `SystemStores` | 🟢 Stable | SQL core plus feature-gated MSSQL, Redis, Cassandra, Neo4j, Qdrant, ClickHouse, vector/search adapters, and native MongoDB |
 | CDC to Kafka (transactional outbox, DLQ, topic policy) | 🟢 Stable | At-least-once and exactly-once (Kafka transactions) modes |
 | 2PC / XA, sagas with recovery | 🟡 Beta | Postgres 2PC and MySQL XA behind `UDB_2PC_ENABLED` |
-| Vector / object / document / graph / column backends | 🟡 Beta | Reached as projection targets via typed and generic dispatch |
+| Vector / document / graph / column backends | 🟢 Stable | Canonical where `SystemStores` evidence exists; otherwise projection-only and fail-closed |
+| Object stores and Memcached | 🟡 Beta | Full data-plane targets; object-store canonical profile remains conditional-write gated, Memcached is explicitly projection-only |
 | SDKs (Go, Python, TypeScript, Java, C#, PHP) | 🟡 Beta | Go/Python/TS/PHP publish today; C#/Java version-checked, publish wiring in progress |
 
 **Backend support tiers.** The runtime distinguishes a backend's *role* from its
 *reachability*:
 
 - **Canonical** — can host UDB's own system tables and act as the write-durability
-  anchor. Today: **Postgres, MySQL, SQLite** (they implement the full
-  `SystemStores` trait set).
+  anchor because a full `SystemStores` implementation is compiled in and admitted
+  by `CANONICAL_SYSTEM_STORE_BACKENDS`.
 - **Projection** — a first-class read/write target reached through typed RPCs
-  and/or generic dispatch, but not (yet) a canonical store. Today: the other 15
-  backends. This is a truthful *current* state, not a permanent ceiling.
+  and/or generic dispatch, but not admitted as a canonical system-store host in
+  the current build/profile.
 
-**Roadmap — toward full backend support**
+In the normal default build, canonical support is much wider than the old SQL
+trio: Postgres, MySQL, SQLite, SQL Server, Redis, Cassandra, Neo4j, Qdrant,
+ClickHouse, Weaviate, Pinecone, and Elasticsearch are canonical-capable in code.
+MongoDB becomes canonical in `mongodb-native` builds against a replica set or
+sharded cluster. Object stores remain projection targets until their conditional
+write/listing/fencing profile is proven; Memcached is explicitly not a canonical
+state backend.
 
-- 🎯 Promote MSSQL, MongoDB, ClickHouse, and Neo4j from projection to **canonical**
-  by implementing their `SystemStores` (outbox + advisory leases + saga/audit/
-  migration stores), so any of them can anchor a deployment.
-- 🎯 First-class typed routing for the remaining vector backends
-  (Weaviate / Pinecone / Elasticsearch) and object backends (Azure Blob / GCS),
-  not just Qdrant and S3/MinIO.
+**Remaining backend promotion work**
+
+- 🎯 Prove the object-store canonical profile for S3/MinIO, Azure Blob, and GCS:
+  conditional writes, generation/etag fencing, listing recovery, and multipart
+  safety.
+- 🎯 Keep native MongoDB canonical support behind `mongodb-native` until the
+  deployment topology proves majority write/read semantics.
+- 🎯 Keep Redis canonical registration gated on a durable AOF profile; otherwise
+  it stays a cache/projection target at runtime.
 - 🎯 Finish C# (NuGet) and Java (Maven Central) publish pipelines on the shared
   release tag.
-- 🎯 Extend the direct typed object APIs beyond S3/MinIO; S3/MinIO `GetObject`
-  already streams from the storage byte stream without full-body buffering.
 
 **Source of truth** (the matrix is generated from code, never hand-maintained):
 
@@ -122,8 +130,9 @@ you are getting — and it is the baseline we are levelling **up**, not down.
 - [`src/ir/compile/`](src/ir/compile) — backend-specific IR compilers
 - [`Cargo.toml`](Cargo.toml) — default and optional feature graph
 
-The code recognizes **18 backend kinds**, all enabled in the default feature set;
-a slim build compiles only what you need, e.g. `--no-default-features --features postgres`.
+The code recognizes **18 backend kinds**. The default feature set enables the
+full broker surface except the native MongoDB driver profile; a slim build
+compiles only what you need, e.g. `--no-default-features --features postgres`.
 Inspect the live capability matrix any time with
 `cargo run --bin udb-proto-parser -- compat-matrix` (JSON straight from `src/backend/mod.rs`).
 
@@ -173,7 +182,7 @@ For a normal gRPC call:
 11. Metrics, audit, CDC, projection, saga, or DLQ paths record side effects as
     configured.
 
-The `DataBroker` data-plane contract defines 75 RPCs in
+The `DataBroker` data-plane contract defines 76 RPCs in
 [`proto/udb/services/v1/data_broker.proto`](proto/udb/services/v1/data_broker.proto).
 They cover relational, vector, object, cache, document, graph, time-series,
 analytical, transaction/2PC, CDC, resource admin, catalog, migration, DLQ, saga,
@@ -258,44 +267,47 @@ UDB separates backend identity from runtime availability:
 - `Backend` plugin structs register backend-specific setup, generation, and
   conformance contracts.
 
-The code declares **18 `BackendKind` variants** (`src/backend/mod.rs`), all enabled
-in the default feature set. `RLS` is how per-tenant context is enforced
-(Postgres/MySQL/SQLite session GUCs, key-prefix for KV/object, filter predicate
-for document/vector). Slim builds compile a subset, e.g.
+The code declares **18 `BackendKind` variants** (`src/backend/mod.rs`). Default
+features compile the full broker surface except `mongodb-native`; slim builds
+compile a subset, e.g.
 `--no-default-features --features postgres`.
 
-| Backend | Tier | Feature flag | Role | Operations | Txn / 2PC | RLS |
-|---|---|---|---|---|---|---|
-| Postgres | SQL | `postgres` (always on) | 🟢 canonical | relational CRUD, tx | yes / **2PC** | session GUC |
-| MySQL | SQL | `mysql` | 🟢 canonical | relational CRUD, tx | yes / **XA+2PC** | session GUC |
-| SQLite | SQL | `sqlite` | 🟢 canonical | relational CRUD, tx | yes / — | context table |
-| SQL Server | SQL | `mssql` | projection 🎯 | relational CRUD, tx | yes / — | `SESSION_CONTEXT` |
-| MongoDB | document | `mongodb` | projection 🎯 | document find/upsert, tx | yes / — | filter |
-| ClickHouse | column | `clickhouse` | projection 🎯 | analytical query, mutate | — | session setting |
-| Neo4j | graph | `neo4j` | projection 🎯 | graph query/mutate, tx | yes / — | Cypher param |
-| Qdrant | vector | `qdrant` | projection | vector search/upsert | — | filter |
-| Weaviate | vector | `weaviate` | projection | vector + hybrid search | — | filter |
-| Pinecone | vector | `pinecone` | projection | vector + hybrid search | — | filter |
-| Elasticsearch | search | `elasticsearch` | projection | search + hybrid | — | filter |
-| Redis | cache | `redis` | projection | cache get/set/del/scan | — | key prefix |
-| Memcached | cache | `memcached` | projection | cache get/set | — | key prefix |
-| S3 | object | `s3` | projection | object put/get/presign | — | key prefix |
-| MinIO | object | `s3` | projection | object put/get/presign | — | key prefix |
-| Azure Blob | object | `azureblob` | projection | object put/get | — | key prefix |
-| Google Cloud Storage | object | `gcs` | projection | object put/get | — | key prefix |
-| Cassandra / ScyllaDB | column | `cassandra` | projection | wide-column query/mutate | LWT only | partition key |
+| Backend | Tier | Feature flag | Role in matching build | Lifecycle | Operations / notes |
+|---|---|---|---|---|---|
+| Postgres | SQL | `postgres` (always on) | 🟢 canonical | catalog migration | relational CRUD, tx, RLS, 2PC |
+| MySQL | SQL | `mysql` | 🟢 canonical | catalog migration | relational CRUD, tx, XA/2PC |
+| SQLite | SQL | `sqlite` | 🟢 canonical | catalog migration | embedded relational CRUD, tx, dev/test canonical store |
+| SQL Server | SQL | `mssql` | 🟢 canonical | compiler-mediated | Tiberius canonical store, relational CRUD, tx, `SESSION_CONTEXT` |
+| MongoDB | document | `mongodb` / `mongodb-native` | projection; 🟢 canonical with `mongodb-native` | native when native driver is compiled | Data API/scalar projection by default; replica-set/sharded native store with majority semantics |
+| ClickHouse | SQL/column | `clickhouse` | 🟢 canonical | native | analytical query/mutate, ReplacingMergeTree versioned-CAS store, eventual consistency |
+| Neo4j | graph | `neo4j` | 🟢 canonical | native | graph query/mutate, transactional Cypher system store |
+| Cassandra / ScyllaDB | column | `cassandra` | 🟢 canonical | compiler-mediated | wide-column query/mutate, LWT-backed system store |
+| Qdrant | vector | `qdrant` | 🟢 canonical | native | vector search/upsert, dedicated system collection, strongly ordered writes |
+| Weaviate | vector | `weaviate` | 🟢 canonical | native | vector + hybrid search, shared vector-system store adapter |
+| Pinecone | vector | `pinecone` | 🟢 canonical | native | vector + hybrid search, shared vector-system store adapter |
+| Elasticsearch | document/search | `elasticsearch` | 🟢 canonical | native | search + hybrid/knn, shared vector/search system-store adapter |
+| Redis | cache | `redis` | 🟢 canonical when durable AOF profile passes startup checks | none for resource lifecycle | cache get/set/del/scan plus native Redis `SystemStores`; runtime refuses unsafe durability profiles |
+| Memcached | cache | `memcached` | projection only | none | cache get/set; explicitly unsupported for canonical state |
+| S3 | object | `s3` | projection; canonical candidate | native | streaming put/get, presigned URL, multipart; canonical profile gated on conditional writes/fencing |
+| MinIO | object | `s3` | projection; canonical candidate | native | S3-compatible streaming put/get/presign/multipart |
+| Azure Blob | object | `azureblob` | projection; canonical candidate | native | streaming put/get with staged blocks |
+| Google Cloud Storage | object | `gcs` | projection; canonical candidate | native | streaming put/get |
 
 > **Role legend** — 🟢 **canonical**: implements the full `SystemStores` trait set
 > and can anchor a deployment (host UDB's system tables, outbox, saga/audit/lease
 > state). **projection**: a first-class read/write target reached via typed RPCs
-> and/or generic dispatch. **🎯**: durable engine on the [roadmap](#project-status)
-> to be promoted to canonical. This reflects what the code registers today, not a
-> permanent ceiling.
+> and/or generic dispatch. **canonical candidate**: the feasibility profile is
+> documented in `BackendKind::canonical_feasibility_profile`, but the backend is
+> not on `CANONICAL_SYSTEM_STORE_BACKENDS` yet.
 
-Postgres is always compiled (never feature-gated); the other 17 are gated. MinIO
-and S3 share the `s3` feature. `src/backend/mod.rs` is the single source of truth for
-the full `BackendCapability` matrix (transactions, XA/2PC, RLS, vector/hybrid search,
-TTL, object-store, migration-ledger, consistency model) — print it with
+Postgres is always compiled (never feature-gated); the other 17 backend surfaces
+are gated. MinIO and S3 share the `s3` feature. `mongodb-native` is intentionally
+separate from `mongodb`: the ordinary HTTP/Data-API build remains projection,
+while the native driver build can host `SystemStores` after topology checks.
+`src/backend/mod.rs` is the single source of truth for the full V1/V2 capability
+matrix (native executor, compiler-mediated path, lifecycle mode, `SystemStores`,
+transactions, XA/2PC, RLS, vector/hybrid search, TTL, object-store,
+migration-ledger, consistency model) — print it with
 `cargo run --bin udb-proto-parser -- compat-matrix`.
 
 ### Canonical Stores
@@ -310,7 +322,9 @@ The newer peer-to-peer work introduces:
 - `DurabilityToken`
 - `SystemStores`
 - `CanonicalStoreRegistry`
-- Postgres, MySQL, and SQLite implementations for system-store traits
+- SQL canonical stores: Postgres, MySQL, SQLite, SQL Server
+- Native non-SQL canonical stores/adapters: Redis, Cassandra, Neo4j, Qdrant,
+  ClickHouse, Weaviate, Pinecone, Elasticsearch, and native MongoDB
 
 Key files:
 
@@ -319,6 +333,9 @@ Key files:
 - [`src/runtime/canonical_store/postgres.rs`](src/runtime/canonical_store/postgres.rs)
 - [`src/runtime/canonical_store/mysql.rs`](src/runtime/canonical_store/mysql.rs)
 - [`src/runtime/canonical_store/sqlite.rs`](src/runtime/canonical_store/sqlite.rs)
+- [`src/runtime/canonical_store/mssql.rs`](src/runtime/canonical_store/mssql.rs)
+- [`src/runtime/canonical_store/qdrant.rs`](src/runtime/canonical_store/qdrant.rs)
+- [`src/runtime/canonical_store/vector_system.rs`](src/runtime/canonical_store/vector_system.rs)
 - [`docs/architecture.md`](docs/architecture.md)
 
 Do not read "universal DB layer" as "every backend has identical semantics."
@@ -521,8 +538,13 @@ Common optional env variables:
 | `UDB_BACKEND_INSTANCES` | Named backend instance descriptor list |
 | `UDB_REDIS_DSN` | Redis cache/rate-limit/idempotency |
 | `UDB_QDRANT_URL` | Qdrant vector backend |
+| `UDB_WEAVIATE_DSN`, `UDB_PINECONE_DSN`, `UDB_ELASTIC_DSN` | Vector/search backends and vector-system canonical adapters |
+| `UDB_MSSQL_DSN` | SQL Server relational backend and canonical store |
+| `UDB_CASSANDRA_DSN` | Cassandra/ScyllaDB wide-column backend and LWT-backed canonical store |
 | `UDB_MINIO_ENDPOINT`, `UDB_MINIO_ACCESS_KEY`, `UDB_MINIO_SECRET_KEY` | MinIO/S3-compatible object storage |
+| `UDB_AZUREBLOB_DSN`, `UDB_GCS_DSN` | Azure Blob / GCS object storage |
 | `UDB_NOSQL_DSN`, `UDB_NOSQL_API_URL` | MongoDB/Atlas Data API backend |
+| `UDB_MONGODB_DSN` or `UDB_NOSQL_DSN` | Native MongoDB canonical profile (`mongodb-native`) |
 | `UDB_GRAPH_DSN`, `UDB_GRAPH_HTTP_URL` | Neo4j graph backend |
 | `UDB_COLUMN_DSN`, `UDB_COLUMN_HTTP_URL` | ClickHouse column backend |
 | `UDB_KAFKA_BROKERS` | Kafka brokers for CDC |
@@ -588,7 +610,7 @@ when no PG pool is configured; their tables are generated from the embedded
 `proto/udb/core/**` manifest through the normal migration path.
 
 <p align="center">
-  <img src="docs/assets/control-plane.svg" alt="UDB topology: apps reach the public DataBroker listener (75 RPCs); a trusted PEP reaches the isolated internal control-plane listener (6 services, 77 RPCs); both reach the 18 backends and emit events to Kafka." width="940">
+  <img src="docs/assets/control-plane.svg" alt="UDB topology: apps reach the public DataBroker listener (76 RPCs); a trusted PEP reaches the isolated internal control-plane listener (6 services, 77 RPCs); both reach the 18 backends and emit events to Kafka." width="940">
 </p>
 
 | Service | Proto | RPCs | What it does |

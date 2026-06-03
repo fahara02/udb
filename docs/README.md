@@ -23,6 +23,9 @@ can reuse:
 
 The root [README.md](../README.md) explains the project at a high level.
 The complete environment template is [../.env.example](../.env.example).
+For the live backend capability matrix, run
+`cargo run --bin udb-proto-parser -- compat-matrix`; it is emitted from
+`src/backend/mod.rs`, the same source used by `GetCapabilities`.
 
 ## Source Of Truth
 

@@ -6,7 +6,7 @@ authentication + authorization authority in front of the databases it brokers,
 rather than delegating identity and access decisions to each calling service.
 
 <p align="center">
-  <img src="assets/control-plane.svg" alt="UDB topology: apps reach the public DataBroker listener (75 RPCs); a trusted PEP reaches the isolated internal control-plane listener (Authn, Authz, ApiKey, Tenant, Notification, Analytics, 77 RPCs); the internal plane serves the public plane via Authorize/GetNativeAccess; both reach the 18 backends and emit events to Kafka." width="940">
+  <img src="assets/control-plane.svg" alt="UDB topology: apps reach the public DataBroker listener (76 RPCs); a trusted PEP reaches the isolated internal control-plane listener (Authn, Authz, ApiKey, Tenant, Notification, Analytics, 77 RPCs); the internal plane serves the public plane via Authorize/GetNativeAccess; both reach the 18 backends and emit events to Kafka." width="940">
 </p>
 
 ## Network isolation
