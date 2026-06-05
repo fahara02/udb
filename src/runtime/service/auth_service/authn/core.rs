@@ -283,6 +283,8 @@ impl AuthnServiceImpl {
                 now_unix(),
             )
             .await?;
-        Ok(Response::new(authn_pb::AdminResetPasswordResponse { otp_id }))
+        Ok(Response::new(authn_pb::AdminResetPasswordResponse {
+            otp_id,
+        }))
     }
 }

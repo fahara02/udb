@@ -25,7 +25,10 @@ impl AuthnServiceImpl {
             .ok_or_else(|| Status::unauthenticated("invalid or expired api key"))?;
             let principal = principal_from_api_key(&rec);
             return Ok(Response::new(authn_pb::AuthnResponse {
-                principal: Some(authn_principal_to_pb(&principal, rec.expires_at_unix as i64)),
+                principal: Some(authn_principal_to_pb(
+                    &principal,
+                    rec.expires_at_unix as i64,
+                )),
                 session_id: String::new(),
                 access_token: String::new(),
                 expires_at_unix: rec.expires_at_unix as i64,
@@ -48,7 +51,10 @@ impl AuthnServiceImpl {
             .ok_or_else(|| Status::unauthenticated("invalid or expired session"))?;
             let principal = principal_from_session(&rec);
             return Ok(Response::new(authn_pb::AuthnResponse {
-                principal: Some(authn_principal_to_pb(&principal, rec.expires_at_unix as i64)),
+                principal: Some(authn_principal_to_pb(
+                    &principal,
+                    rec.expires_at_unix as i64,
+                )),
                 session_id: req.session_id,
                 access_token: String::new(),
                 expires_at_unix: rec.expires_at_unix as i64,
@@ -204,7 +210,11 @@ impl AuthnServiceImpl {
         // unknown / inactive / locked accounts apart) AND before any MFA second
         // factor is considered. An MFA code (totp_code / mfa_otp_id) is purely
         // additive — it can never stand in for the password.
-        if !authn::verify_password(&req.password, &self.password_hash_key(), &user.password_hash) {
+        if !authn::verify_password(
+            &req.password,
+            &self.password_hash_key(),
+            &user.password_hash,
+        ) {
             user.failed_login_count += 1;
             let now_locked = user.failed_login_count >= MAX_FAILED_LOGINS;
             let attempt_count = user.failed_login_count;

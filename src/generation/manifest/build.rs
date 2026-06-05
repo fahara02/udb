@@ -1233,10 +1233,7 @@ mod oneof_check_tests {
         ];
         let table = table_from_schema(&schema);
         assert!(
-            !table
-                .checks
-                .iter()
-                .any(|c| c.name == "chk_accounts_bal"),
+            !table.checks.iter().any(|c| c.name == "chk_accounts_bal"),
             "unsafe column check_constraint must be omitted from the manifest"
         );
     }

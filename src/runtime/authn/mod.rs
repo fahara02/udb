@@ -2061,7 +2061,13 @@ impl PostgresUserStore {
             ),
             recovery_codes_model: native_model(
                 "udb.core.authn.entity.v1.RecoveryCode",
-                &["recovery_code_id", "user_id", "code_hash", "used_at", "created_at"],
+                &[
+                    "recovery_code_id",
+                    "user_id",
+                    "code_hash",
+                    "used_at",
+                    "created_at",
+                ],
             ),
             mfa_policies_model: native_model(
                 "udb.core.authn.entity.v1.MfaPolicy",
@@ -2882,13 +2888,15 @@ pub async fn deliver_otp(channel: &str, address: &str, code: &str, otp_type: i32
     };
     #[cfg(feature = "http-client")]
     {
-        let mut builder = otp_delivery_client().post(url.trim()).json(&serde_json::json!({
-            "channel": channel,
-            "address": address,
-            "code": code,
-            "otp_type": otp_type,
-            "user_id": user_id,
-        }));
+        let mut builder = otp_delivery_client()
+            .post(url.trim())
+            .json(&serde_json::json!({
+                "channel": channel,
+                "address": address,
+                "code": code,
+                "otp_type": otp_type,
+                "user_id": user_id,
+            }));
         if let Ok(auth) = std::env::var("UDB_OTP_DELIVERY_AUTH_HEADER") {
             if !auth.trim().is_empty() {
                 builder = builder.header("authorization", auth);

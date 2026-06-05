@@ -455,6 +455,8 @@ impl AuthnServiceImpl {
                 now,
             )
             .await?;
-        Ok(Response::new(authn_pb::SendPhoneVerificationResponse { otp_id }))
+        Ok(Response::new(authn_pb::SendPhoneVerificationResponse {
+            otp_id,
+        }))
     }
 }

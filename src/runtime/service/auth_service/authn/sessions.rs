@@ -27,7 +27,10 @@ fn validate_session_response(
         device_id: rec.client_fingerprint.clone(),
         token_id: rec.session_id_hash.chars().take(24).collect(),
         session_type: authn_entity_pb::SessionType::ServerSide as i32,
-        principal: Some(authn_principal_to_pb(&principal, rec.expires_at_unix as i64)),
+        principal: Some(authn_principal_to_pb(
+            &principal,
+            rec.expires_at_unix as i64,
+        )),
         project_id: rec.project_id.clone(),
         scopes: rec.scopes.clone(),
         attributes: [
@@ -62,7 +65,10 @@ fn validate_api_key_response(rec: Option<authn::ApiKeyRecord>) -> authn_pb::Vali
         device_id: String::new(),
         token_id: rec.key_prefix.clone(),
         session_type: authn_entity_pb::SessionType::ApiKey as i32,
-        principal: Some(authn_principal_to_pb(&principal, rec.expires_at_unix as i64)),
+        principal: Some(authn_principal_to_pb(
+            &principal,
+            rec.expires_at_unix as i64,
+        )),
         project_id: rec.project_id.clone(),
         scopes: rec.scopes.clone(),
         attributes: Default::default(),
@@ -160,9 +166,15 @@ impl AuthnServiceImpl {
         } else {
             self.config.session_ttl_secs
         };
-        match authn::refresh_session(self.sessions.as_ref(), &req.session_id, &self.hash_key(), now, ttl)
-            .await
-            .map_err(Status::internal)?
+        match authn::refresh_session(
+            self.sessions.as_ref(),
+            &req.session_id,
+            &self.hash_key(),
+            now,
+            ttl,
+        )
+        .await
+        .map_err(Status::internal)?
         {
             Some(rec) => Ok(Response::new(authn_pb::RefreshSessionResponse {
                 expires_at_unix: rec.expires_at_unix as i64,
@@ -432,7 +444,9 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::ValidateCsrfResponse>, Status> {
         let req = request.into_inner();
         if req.session_id.trim().is_empty() || req.csrf_token.trim().is_empty() {
-            return Ok(Response::new(authn_pb::ValidateCsrfResponse { valid: false }));
+            return Ok(Response::new(authn_pb::ValidateCsrfResponse {
+                valid: false,
+            }));
         }
         let now = now_unix();
         // Signed double-submit cookie pattern: the CSRF token is a keyed HMAC

@@ -217,7 +217,6 @@ impl AuthnServiceImpl {
         authn::hash_secret(&format!("csrf:{session_id}"), &self.hash_key())
     }
 
-
     #[cfg(feature = "webauthn")]
     fn require_pg_pool(&self) -> Result<&PgPool, Status> {
         self.pg_pool.as_ref().ok_or_else(|| {
