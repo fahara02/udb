@@ -30,6 +30,11 @@ use crate::runtime::native_catalog::{NativeModel, native_model};
 
 use super::events::{self, AuthEvent, AuthEventSink, topics};
 
+// Topic submodules: inherent `impl AuthzServiceImpl` blocks (+ helpers); the
+// single `impl AuthzService` trait block below delegates to them.
+mod audit;
+mod tuples;
+
 fn policy_rule_model() -> NativeModel {
     native_model(
         "udb.core.authz.entity.v1.PolicyRule",
@@ -165,24 +170,6 @@ fn user_role_select_projection(model: &NativeModel) -> String {
     .join(", ")
 }
 
-fn audit_select_projection(model: &NativeModel) -> String {
-    [
-        model.text("decision_audit_id"),
-        model.text("user_id"),
-        model.text_or_empty("domain"),
-        model.text_or_empty("object"),
-        model.text_or_empty("action"),
-        model.select("effect"),
-        model.select("decision_source"),
-        model.text_or_empty("matched_rule"),
-        model.text_or_empty("reason"),
-        model.text_or_empty("ip_address"),
-        model.text_or_empty("correlation_id"),
-        model.text_or_empty("tenant_id"),
-    ]
-    .join(", ")
-}
-
 fn policy_rule_select_projection(model: &NativeModel) -> String {
     [
         model.text("policy_id"),
@@ -217,7 +204,7 @@ fn stable_audit_user_uuid(principal: &Principal) -> Uuid {
     stable_uuid_from_subject(subject)
 }
 
-fn stable_uuid_from_subject(subject: &str) -> Uuid {
+pub(super) fn stable_uuid_from_subject(subject: &str) -> Uuid {
     if let Ok(uuid) = Uuid::parse_str(subject) {
         return uuid;
     }
@@ -228,12 +215,12 @@ fn stable_uuid_from_subject(subject: &str) -> Uuid {
     Uuid::from_bytes(bytes)
 }
 
-fn parse_uuid_field(field_name: &str, value: &str) -> Result<Uuid, Status> {
+pub(super) fn parse_uuid_field(field_name: &str, value: &str) -> Result<Uuid, Status> {
     Uuid::parse_str(value)
         .map_err(|_| Status::invalid_argument(format!("{field_name} must be a UUID")))
 }
 
-fn timestamp_unix_field(
+pub(super) fn timestamp_unix_field(
     field_name: &str,
     value: Option<prost_types::Timestamp>,
 ) -> Result<Option<i64>, Status> {
@@ -259,14 +246,6 @@ fn tenant_from_domain(tenant_id: &str, domain: &str) -> String {
         }
     } else {
         domain.to_string()
-    }
-}
-
-fn tuple_scope_tenant(tenant: &str, project: &str) -> String {
-    if !tenant.trim().is_empty() {
-        tenant.to_string()
-    } else {
-        project.to_string()
     }
 }
 
@@ -341,24 +320,11 @@ fn effect_to_db(effect: Effect) -> &'static str {
     }
 }
 
-fn effect_from_db(value: &str) -> i32 {
+pub(super) fn effect_from_db(value: &str) -> i32 {
     match value {
         "ALLOW" | "allow" | "POLICY_EFFECT_ALLOW" => authz_entity_pb::PolicyEffect::Allow as i32,
         "DENY" | "deny" | "POLICY_EFFECT_DENY" => authz_entity_pb::PolicyEffect::Deny as i32,
         _ => authz_entity_pb::PolicyEffect::Unspecified as i32,
-    }
-}
-
-fn decision_source_from_db(value: &str) -> i32 {
-    match value {
-        "ROLE_POLICY" | "DECISION_SOURCE_ROLE_POLICY" => {
-            authz_entity_pb::DecisionSource::RolePolicy as i32
-        }
-        "DIRECT_POLICY" | "DECISION_SOURCE_DIRECT_POLICY" => {
-            authz_entity_pb::DecisionSource::DirectPolicy as i32
-        }
-        "NO_MATCH" | "DECISION_SOURCE_NO_MATCH" => authz_entity_pb::DecisionSource::NoMatch as i32,
-        _ => authz_entity_pb::DecisionSource::Unspecified as i32,
     }
 }
 
@@ -406,30 +372,6 @@ fn user_role_from_row(row: &sqlx::postgres::PgRow) -> Result<authz_entity_pb::Us
         updated_at: None,
         created_by: row.try_get("created_by").map_err(map)?,
         tenant_id: row.try_get("tenant").map_err(map)?,
-    })
-}
-
-/// Map an `access_decision_audits` row to the `AccessDecisionAudit` entity.
-fn audit_from_row(
-    row: &sqlx::postgres::PgRow,
-) -> Result<authz_entity_pb::AccessDecisionAudit, Status> {
-    let map = |e: sqlx::Error| Status::internal(format!("decode access audit failed: {e}"));
-    Ok(authz_entity_pb::AccessDecisionAudit {
-        decision_audit_id: row.try_get("decision_audit_id").map_err(map)?,
-        user_id: row.try_get("user_id").map_err(map)?,
-        domain: row.try_get("domain").map_err(map)?,
-        object: row.try_get("object").map_err(map)?,
-        action: row.try_get("action").map_err(map)?,
-        effect: effect_from_db(&row.try_get::<String, _>("effect").map_err(map)?),
-        decision_source: decision_source_from_db(
-            &row.try_get::<String, _>("decision_source").map_err(map)?,
-        ),
-        matched_rule: row.try_get("matched_rule").map_err(map)?,
-        reason: row.try_get("reason").map_err(map)?,
-        ip_address: row.try_get("ip_address").map_err(map)?,
-        correlation_id: row.try_get("correlation_id").map_err(map)?,
-        decided_at: None,
-        tenant_id: row.try_get("tenant_id").map_err(map)?,
     })
 }
 
@@ -511,7 +453,7 @@ impl AuthzServiceImpl {
     /// reloads from Postgres. Called after every authz mutation so the writing
     /// node enforces its own writes immediately (read-your-writes) instead of
     /// serving a stale snapshot until the TTL elapses.
-    fn invalidate_snapshot_cache(&self) {
+    pub(super) fn invalidate_snapshot_cache(&self) {
         if let Ok(mut guard) = self.snapshot_loaded_at.lock() {
             *guard = None;
         }
@@ -522,14 +464,14 @@ impl AuthzServiceImpl {
         self
     }
 
-    async fn emit_event(&self, event: AuthEvent) {
+    pub(super) async fn emit_event(&self, event: AuthEvent) {
         let topic = event.topic;
         if let Err(err) = self.event_sink.emit(event).await {
             tracing::warn!(topic, error = %err, "failed to publish authz event");
         }
     }
 
-    async fn decide_with_snapshot(
+    pub(super) async fn decide_with_snapshot(
         &self,
         snapshot: &AuthzSnapshot,
         principal: &Principal,
@@ -551,29 +493,29 @@ impl AuthzServiceImpl {
             .await
     }
 
-    fn policies_model(&self) -> NativeModel {
+    pub(super) fn policies_model(&self) -> NativeModel {
         policy_rule_model()
     }
 
-    fn relationship_tuples_model(&self) -> NativeModel {
+    pub(super) fn relationship_tuples_model(&self) -> NativeModel {
         policy_tuple_model()
     }
 
-    fn roles_model(&self) -> NativeModel {
+    pub(super) fn roles_model(&self) -> NativeModel {
         role_model()
     }
 
-    fn user_roles_model(&self) -> NativeModel {
+    pub(super) fn user_roles_model(&self) -> NativeModel {
         user_role_model()
     }
 
-    fn audits_model(&self) -> NativeModel {
+    pub(super) fn audits_model(&self) -> NativeModel {
         access_decision_audit_model()
     }
 
     /// Role/assignment/audit management is durable-only: fail closed when no
     /// Postgres pool is configured.
-    fn require_pool(&self) -> Result<&PgPool, Status> {
+    pub(super) fn require_pool(&self) -> Result<&PgPool, Status> {
         self.pg_pool.as_ref().ok_or_else(|| {
             Status::failed_precondition(
                 "this operation requires a Postgres-backed auth store (no PG pool configured)",
@@ -586,7 +528,7 @@ impl AuthzServiceImpl {
     /// table. Errors are logged, never surfaced — auditing must not block the
     /// decision path. The UUID `user_id` column accepts any principal subject by
     /// deriving a stable UUID from it (service/external identities aren't UUIDs).
-    async fn write_decision_audit(
+    pub(super) async fn write_decision_audit(
         &self,
         principal: &Principal,
         resource: &ResourceRef,
@@ -651,7 +593,7 @@ impl AuthzServiceImpl {
 
     /// Native authz reads and mutations require a Postgres-backed store. There is
     /// no in-memory fallback, so a missing pool fails closed.
-    fn require_snapshot_fallback(&self) -> Result<(), Status> {
+    pub(super) fn require_snapshot_fallback(&self) -> Result<(), Status> {
         Err(Status::failed_precondition(
             "native authz requires a Postgres-backed auth store",
         ))
@@ -831,7 +773,7 @@ impl AuthzServiceImpl {
         }))
     }
 
-    async fn current_snapshot(&self) -> Result<Arc<AuthzSnapshot>, Status> {
+    pub(super) async fn current_snapshot(&self) -> Result<Arc<AuthzSnapshot>, Status> {
         let cached_is_fresh = self
             .snapshot_loaded_at
             .lock()
@@ -969,125 +911,14 @@ impl AuthzService for AuthzServiceImpl {
         &self,
         request: Request<authz_pb::PutRoleBindingRequest>,
     ) -> Result<Response<authz_pb::AuthMutationResponse>, Status> {
-        let binding = request
-            .into_inner()
-            .binding
-            .ok_or_else(|| Status::invalid_argument("binding is required"))?;
-        if binding.subject.trim().is_empty() || binding.role.trim().is_empty() {
-            return Err(Status::invalid_argument(
-                "binding subject and role are required",
-            ));
-        }
-        let scope_tenant = tuple_scope_tenant(&binding.tenant, &binding.project);
-        if scope_tenant.trim().is_empty() {
-            return Err(Status::invalid_argument(
-                "binding tenant or project is required",
-            ));
-        }
-        let condition = serde_json::json!({
-            "source": binding.source,
-            "expires_at_unix": binding.expires_at_unix,
-        })
-        .to_string();
-        if let Some(pool) = &self.pg_pool {
-            let tuple = self.relationship_tuples_model();
-            let rel = tuple.relation.clone();
-            sqlx::query(&format!(
-                "INSERT INTO {rel} ({tuple_kind}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}, {condition}, {tenant_id}, {project_id}) \
-                 VALUES ('grouping', $1, $3, '', $2, '', $5, $3, $4) \
-                 ON CONFLICT ({tuple_kind}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}) \
-                 DO UPDATE SET {condition} = EXCLUDED.{condition}, {tenant_id} = EXCLUDED.{tenant_id}, {project_id} = EXCLUDED.{project_id}",
-                tuple_kind = tuple.q("tuple_kind"),
-                subject = tuple.q("subject"),
-                domain_col = tuple.q("domain"),
-                object_col = tuple.q("object"),
-                action_col = tuple.q("action"),
-                effect_col = tuple.q("effect"),
-                condition = tuple.q("condition"),
-                tenant_id = tuple.q("tenant_id"),
-                project_id = tuple.q("project_id"),
-            ))
-            .bind(&binding.subject)
-            .bind(&binding.role)
-            .bind(&scope_tenant)
-            .bind(&binding.project)
-            .bind(&condition)
-            .execute(pool)
-            .await
-            .map_err(|err| Status::internal(format!("store role binding failed: {err}")))?;
-        } else {
-            self.require_snapshot_fallback()?;
-        }
-        self.invalidate_snapshot_cache();
-        Ok(Response::new(authz_pb::AuthMutationResponse {
-            ok: true,
-            message: "role binding stored".to_string(),
-        }))
+        self.put_role_binding_impl(request).await
     }
 
     async fn put_relationship(
         &self,
         request: Request<authz_pb::PutRelationshipRequest>,
     ) -> Result<Response<authz_pb::AuthMutationResponse>, Status> {
-        let tuple = request
-            .into_inner()
-            .tuple
-            .ok_or_else(|| Status::invalid_argument("tuple is required"))?;
-        if tuple.subject.trim().is_empty()
-            || tuple.relation.trim().is_empty()
-            || tuple.object.trim().is_empty()
-        {
-            return Err(Status::invalid_argument(
-                "tuple subject, relation, and object are required",
-            ));
-        }
-        let scope_tenant = tuple_scope_tenant(&tuple.tenant, &tuple.project);
-        if scope_tenant.trim().is_empty() {
-            return Err(Status::invalid_argument(
-                "tuple tenant or project is required",
-            ));
-        }
-        let condition = serde_json::json!({
-            "source": tuple.source,
-            "version": tuple.version,
-            "expires_at_unix": tuple.expires_at_unix,
-        })
-        .to_string();
-        if let Some(pool) = &self.pg_pool {
-            let tuple_model = self.relationship_tuples_model();
-            let rel = tuple_model.relation.clone();
-            sqlx::query(&format!(
-                "INSERT INTO {rel} ({tuple_kind}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}, {condition}, {tenant_id}, {project_id}) \
-                 VALUES ('relationship', $1, $4, $3, $2, '', $6, $4, $5) \
-                 ON CONFLICT ({tuple_kind}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}) \
-                 DO UPDATE SET {condition} = EXCLUDED.{condition}, {tenant_id} = EXCLUDED.{tenant_id}, {project_id} = EXCLUDED.{project_id}",
-                tuple_kind = tuple_model.q("tuple_kind"),
-                subject = tuple_model.q("subject"),
-                domain_col = tuple_model.q("domain"),
-                object_col = tuple_model.q("object"),
-                action_col = tuple_model.q("action"),
-                effect_col = tuple_model.q("effect"),
-                condition = tuple_model.q("condition"),
-                tenant_id = tuple_model.q("tenant_id"),
-                project_id = tuple_model.q("project_id"),
-            ))
-            .bind(&tuple.subject)
-            .bind(&tuple.relation)
-            .bind(&tuple.object)
-            .bind(&scope_tenant)
-            .bind(&tuple.project)
-            .bind(&condition)
-            .execute(pool)
-            .await
-            .map_err(|err| Status::internal(format!("store relationship tuple failed: {err}")))?;
-        } else {
-            self.require_snapshot_fallback()?;
-        }
-        self.invalidate_snapshot_cache();
-        Ok(Response::new(authz_pb::AuthMutationResponse {
-            ok: true,
-            message: "relationship tuple stored".to_string(),
-        }))
+        self.put_relationship_impl(request).await
     }
 
     async fn put_authz_policy(
@@ -1657,80 +1488,7 @@ impl AuthzService for AuthzServiceImpl {
         &self,
         request: Request<authz_pb::ListAccessDecisionAuditsRequest>,
     ) -> Result<Response<authz_pb::ListAccessDecisionAuditsResponse>, Status> {
-        let req = request.into_inner();
-        let pool = self.require_pool()?;
-        let audit_model = self.audits_model();
-        let rel = audit_model.relation.clone();
-        let projection = audit_select_projection(&audit_model);
-        let user_filter = if req.user_id.trim().is_empty() {
-            None
-        } else {
-            Some(stable_uuid_from_subject(&req.user_id))
-        };
-        // Honor the caller's page request with a hard cap so a single call can
-        // neither ignore pagination nor pull an unbounded result set.
-        const MAX_PAGE_SIZE: i32 = 500;
-        let page_size = req
-            .page
-            .as_ref()
-            .map(|p| p.page_size)
-            .filter(|&n| n > 0)
-            .unwrap_or(100)
-            .min(MAX_PAGE_SIZE) as i64;
-        let page_num = req
-            .page
-            .as_ref()
-            .map(|p| p.page)
-            .filter(|&n| n > 0)
-            .unwrap_or(1) as i64;
-        let offset = (page_num - 1).max(0) * page_size;
-        let rows = sqlx::query(&format!(
-            "SELECT {projection} \
-             FROM {rel} \
-             WHERE ($1::UUID IS NULL OR {user_id} = $1) \
-               AND ($2 = '' OR {domain_col} = $2) \
-               AND ($3 = '' OR {correlation_id} = $3) \
-             ORDER BY {decided_at} DESC \
-             LIMIT $4 OFFSET $5",
-            user_id = audit_model.q("user_id"),
-            domain_col = audit_model.q("domain"),
-            correlation_id = audit_model.q("correlation_id"),
-            decided_at = audit_model.q("decided_at"),
-        ))
-        .bind(user_filter)
-        .bind(&req.domain)
-        .bind(&req.correlation_id)
-        .bind(page_size)
-        .bind(offset)
-        .fetch_all(pool)
-        .await
-        .map_err(|err| Status::internal(format!("list access audits failed: {err}")))?;
-        let mut all = Vec::with_capacity(rows.len());
-        for row in &rows {
-            all.push(audit_from_row(row)?);
-        }
-        // The SQL already applied LIMIT/OFFSET, so `all` IS this page — do NOT
-        // re-paginate in memory (that returned empty for page >= 2). Total comes
-        // from a COUNT over the same filters so has_next is correct.
-        let total: i64 = sqlx::query_scalar(&format!(
-            "SELECT COUNT(*) FROM {rel} \
-             WHERE ($1::UUID IS NULL OR {user_id} = $1) \
-               AND ($2 = '' OR {domain_col} = $2) \
-               AND ($3 = '' OR {correlation_id} = $3)",
-            user_id = audit_model.q("user_id"),
-            domain_col = audit_model.q("domain"),
-            correlation_id = audit_model.q("correlation_id"),
-        ))
-        .bind(user_filter)
-        .bind(&req.domain)
-        .bind(&req.correlation_id)
-        .fetch_one(pool)
-        .await
-        .map_err(|err| Status::internal(format!("count access audits failed: {err}")))?;
-        Ok(Response::new(authz_pb::ListAccessDecisionAuditsResponse {
-            page: Some(page_response(total as usize, req.page.as_ref())),
-            audits: all,
-        }))
+        self.list_access_decision_audits_impl(request).await
     }
     async fn revoke_role(
         &self,

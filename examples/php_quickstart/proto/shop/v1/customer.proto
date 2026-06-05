@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package shop.v1;
+
+// Brought into this project by `udb proto export` (see README step 1).
+// This is the *real* UDB annotation contract — the same one the broker
+// embeds — so the table you describe here is the table the broker creates.
+import "udb/core/common/v1/db.proto";
+
+option php_namespace = "PhpQuickstart\\Shop\\V1";
+option php_metadata_namespace = "PhpQuickstart\\GPBMetadata\\Shop\\V1";
+
+// A single, deliberately tiny table. One message == one table.
+// `message_type` on every CRUD call is the fully-qualified proto name:
+// "shop.v1.Customer".
+message Customer {
+  option (udb.core.common.v1.table) = {
+    table_name: "customers"
+    schema_name: "shop"
+    migration_order: 10
+    is_table: true
+    comment: "Customers managed by the UDB PHP quickstart"
+  };
+
+  string customer_id = 1 [(udb.core.common.v1.column) = {
+    column_name: "customer_id"
+    sql_type: "UUID"
+    primary_key: true
+    default_value: "gen_random_uuid()"
+  }];
+
+  string email = 2 [(udb.core.common.v1.column) = {
+    column_name: "email"
+    sql_type: "VARCHAR(320)"
+    not_null: true
+    unique: true
+  }];
+
+  string full_name = 3 [(udb.core.common.v1.column) = {
+    column_name: "full_name"
+    sql_type: "TEXT"
+  }];
+
+  int64 loyalty_points = 4 [(udb.core.common.v1.column) = {
+    column_name: "loyalty_points"
+    sql_type: "BIGINT"
+    not_null: true
+    default_value: "0"
+  }];
+
+  string created_at = 5 [(udb.core.common.v1.column) = {
+    column_name: "created_at"
+    sql_type: "TIMESTAMPTZ"
+    not_null: true
+    default_value: "now()"
+    exclude_from_insert: true
+    exclude_from_update: true
+  }];
+}

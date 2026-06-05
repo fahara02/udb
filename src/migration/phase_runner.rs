@@ -261,16 +261,25 @@ pub async fn run_to_completion(
     })
 }
 
-/// C (2026-05-30): in-memory `PhaseLedger` for tests + non-durable
-/// deployments. Production paths inject a Postgres-backed ledger;
-/// this struct lets callers exercise `apply_artifacts_phased`
-/// without a database. Stores rows behind a `Mutex` so the trait
-/// methods stay `&self`.
+/// C (2026-05-30): in-memory `PhaseLedger` for orchestration UNIT TESTS only.
+/// Stores rows behind a `Mutex` so the trait methods stay `&self`.
+///
+/// IN-MEMORY-AUDIT [A1, no-in-memory rule]: now `#[cfg(test)]`-gated so it is
+/// NOT compiled into the shipped binary (it was previously `pub` and shippable).
+/// REMAINING FEATURE GAP (O4 — a missing feature, not an in-memory bug): no
+/// durable Postgres-backed `PhaseLedger` exists yet and the production apply path
+/// uses the non-phased `apply_artifacts_audited`, so online/phased migrations have
+/// no crash-resumable state in production. Tracked as Wave A3 in
+/// PARSER_AST_MIGRATION_MASTER_PLAN.md (add a canonical-store
+/// `udb_migration_phase_ledger` + route `apply_migration` through
+/// `apply_artifacts_phased`).
+#[cfg(test)]
 #[derive(Default, Debug)]
 pub struct MemoryPhaseLedger {
     rows: std::sync::Mutex<Vec<PhaseRecord>>,
 }
 
+#[cfg(test)]
 #[async_trait]
 impl PhaseLedger for MemoryPhaseLedger {
     async fn load(&self, run_id: &str) -> Result<Vec<PhaseRecord>, String> {

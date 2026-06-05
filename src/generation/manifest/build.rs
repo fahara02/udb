@@ -76,6 +76,17 @@ fn validate_rls_expression(value: &str) -> Result<(), &'static str> {
     Ok(())
 }
 
+/// Same safety contract as [`validate_rls_expression`]: reject any
+/// user-supplied SQL fragment that could break out of the surrounding
+/// statement (statement separators, comment/block delimiters, NUL bytes,
+/// unbalanced quotes/parens). Applied to column `check_constraint` values,
+/// which are otherwise embedded RAW into `ADD CONSTRAINT ... CHECK (...)`
+/// (render_ext.rs) and inline `CONSTRAINT ... CHECK (...)` on CREATE TABLE
+/// (sql/mod.rs) — neither of which quotes or escapes the expression.
+fn validate_check_expression(value: &str) -> Result<(), &'static str> {
+    validate_rls_expression(value)
+}
+
 pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
     let mut columns: Vec<_> = schema.columns.iter().map(column_from_proto).collect();
     columns.sort_by_key(|col| col.field_number);
@@ -108,14 +119,34 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
     foreign_keys.dedup_by(|a, b| fk_key(a) == fk_key(b));
 
     let mut warnings = Vec::new();
-    let mut checks: Vec<_> = columns
-        .iter()
-        .filter(|col| !col.check_constraint.trim().is_empty())
-        .map(|col| ManifestCheck {
+    // Column-level CHECK expressions are author-supplied SQL embedded raw into
+    // DDL. Validate each the same way RLS expressions are validated; drop (with
+    // a warning) any that carries a statement-breaking token rather than emit
+    // an injectable constraint. This closes the gap where enum-derived CHECKs
+    // and RLS expressions were guarded but free-form check_constraint was not.
+    let mut checks: Vec<ManifestCheck> = Vec::new();
+    for col in &columns {
+        if col.check_constraint.trim().is_empty() {
+            continue;
+        }
+        if let Err(reason) = validate_check_expression(&col.check_constraint) {
+            warnings.push(format!(
+                "{}.{} check_constraint omitted: {}",
+                schema.table_name, col.column_name, reason
+            ));
+            tracing::warn!(
+                table = %schema.table_name,
+                column = %col.column_name,
+                reason = %reason,
+                "dropping unsafe check_constraint from generated DDL"
+            );
+            continue;
+        }
+        checks.push(ManifestCheck {
             name: format!("chk_{}_{}", schema.table_name, col.column_name),
             expression: col.check_constraint.clone(),
-        })
-        .collect();
+        });
+    }
     for column in &columns {
         if column.check_constraint.trim().is_empty() && !column.enum_values.is_empty() {
             let mut values = column.enum_values.clone();
@@ -1181,5 +1212,51 @@ mod oneof_check_tests {
         schema.columns = vec![col("id", 1, ""), col("name", 2, "")];
         let table = table_from_schema(&schema);
         assert!(table.checks.iter().all(|c| !c.name.ends_with("_oneof")));
+    }
+
+    fn col_check(name: &str, field_number: i32, check: &str) -> ProtoColumn {
+        ProtoColumn {
+            check_constraint: check.to_string(),
+            ..col(name, field_number, "")
+        }
+    }
+
+    #[test]
+    fn malicious_check_constraint_is_dropped_not_emitted() {
+        // A statement-breaking CHECK expression must never reach the raw
+        // `ADD CONSTRAINT ... CHECK (...)` emitter.
+        let mut schema = ProtoSchema::new("Acct");
+        schema.table_name = "accounts".to_string();
+        schema.columns = vec![
+            col("id", 1, ""),
+            col_check("bal", 2, "bal > 0); DROP TABLE accounts; --"),
+        ];
+        let table = table_from_schema(&schema);
+        assert!(
+            !table
+                .checks
+                .iter()
+                .any(|c| c.name == "chk_accounts_bal"),
+            "unsafe column check_constraint must be omitted from the manifest"
+        );
+    }
+
+    #[test]
+    fn benign_check_constraint_survives() {
+        // Quotes and parentheses are legitimate in CHECK expressions and must
+        // pass — the guard rejects only statement-breaking tokens.
+        let mut schema = ProtoSchema::new("Acct");
+        schema.table_name = "accounts".to_string();
+        schema.columns = vec![
+            col("id", 1, ""),
+            col_check("status", 2, "status IN ('active', 'closed')"),
+        ];
+        let table = table_from_schema(&schema);
+        let chk = table
+            .checks
+            .iter()
+            .find(|c| c.name == "chk_accounts_status")
+            .expect("benign check_constraint should be emitted");
+        assert_eq!(chk.expression, "status IN ('active', 'closed')");
     }
 }

@@ -13,39 +13,88 @@
 <a href="LICENSE"><img alt="License MIT" src="https://img.shields.io/badge/license-MIT-555"></a>
 </p>
 
-UDB is a Rust implementation of a proto-driven data broker. It reads project-owned
-`.proto` schemas, extracts storage annotations, builds a catalog manifest, generates
-migration/bootstrap artifacts, and serves those schemas through a neutral gRPC
-`DataBroker` API — fronted by a native auth/authz control plane.
+UDB is a data broker for teams that already think in schemas.
+
+You describe your domain in normal `.proto` files, add UDB annotations for where
+the data should live, and run one broker in front of your databases, object
+stores, caches, vector stores, and graph/document systems. Your application calls
+one gRPC API. UDB handles routing, tenant context, authorization, migrations,
+CDC, and backend-specific details.
 
 <p align="center">
   <img src="docs/assets/architecture-pipeline.svg" alt="UDB architecture: project protos are parsed into a catalog manifest that drives build-time generation and the per-request DataBroker runtime pipeline (authn/authz → admission → neutral IR → executor → 18 backends)." width="900">
 </p>
 
-This repo is not only a parser and not only a gRPC server. It is a crate,
-binary, runtime, protocol module, SDK workspace, backend plugin inventory,
-operation IR, migration engine, and a set of operational runbooks. It also has
-visible architectural history: early UDB was Postgres anchored, and the current
-codebase is in a peer-to-peer transition where canonical stores are explicit
-traits instead of implicit `PgPool` access.
+## Why UDB Exists
 
-## What This Project Is
+Most growing products end up with the same shape of problem:
 
-UDB tries to solve a specific problem: many services want to read and write
-business data, vectors, blobs, cache entries, CDC events, and admin/catalog
-state, but every service talking directly to every database creates drift in
-authorization, migrations, tenant isolation, observability, and retry behavior.
+- user data in Postgres or MySQL;
+- search in Elasticsearch;
+- embeddings in Qdrant, Weaviate, or Pinecone;
+- files in S3, MinIO, Azure Blob, or GCS;
+- cache/session data in Redis;
+- analytics in ClickHouse;
+- project-specific auth, tenant, audit, and migration rules scattered through
+  every service.
 
-UDB centralizes those concerns:
+That works for a while. Then every service has to remember the same security
+headers, retry rules, schema version, RLS policy, object naming convention,
+audit trail, and backend quirks.
 
-- Project schemas stay in normal project-owned proto packages.
-- UDB annotations describe relational tables, object fields, vector stores,
-  caches, document stores, graph stores, time-series/column stores, and security.
-- The broker exposes one UDB-owned gRPC contract under `proto/udb/...`.
-- Runtime requests carry tenant, purpose, scopes, service identity, project id,
-  and catalog version metadata.
-- Backends are reached through a neutral logical IR and feature-gated plugin
-  modules instead of service code hand-writing each database dialect.
+UDB puts that contract in one place. Your app sends "select invoices", "upsert
+this customer", "store this object", "search these vectors", or "can this user
+read this resource?" The broker checks the request, resolves the active catalog,
+talks to the right backend, and returns a typed response.
+
+## How It Feels
+
+Your project owns the domain model:
+
+```proto
+syntax = "proto3";
+package acme.billing.v1;
+
+import "udb/core/common/v1/db.proto";
+
+message Invoice {
+  option (udb.core.common.v1.pg_table) = {
+    table: "invoices"
+    schema: "billing"
+  };
+
+  string invoice_id = 1 [(udb.core.common.v1.pg_column) = {
+    primary_key: true
+    sql_type: "text"
+  }];
+
+  string customer_id = 2;
+  int64 total_cents = 3;
+}
+```
+
+Then application code uses the SDK for its language:
+
+```python
+from udb_client import Metadata, UdbClient, decode_records
+
+meta = Metadata(
+    tenant_id="acme",
+    user_id="user-1",
+    purpose="billing.api",
+    scopes=("udb:read", "udb:write"),
+    service_identity="billing-service",
+    project_id="billing",
+)
+
+with UdbClient("127.0.0.1:50051", meta) as udb:
+    rows = udb.select(message_type="acme.billing.v1.Invoice", limit=50)
+    print(decode_records(rows))
+```
+
+The same model can route relational data, objects, vectors, cache entries, graph
+edges, document records, and analytics operations without each service learning
+every backend dialect.
 
 ## ⚡ Supported Features
 
@@ -72,11 +121,9 @@ All native control-plane CRUD is **proto-driven** (table + column shape resolved
 
 ## Project Status
 
-UDB is built **capability-honest by design**: every backend advertises exactly
-what it can do through a typed capability matrix (`BackendCapability`), and the
-runtime refuses operations a backend does not actually support rather than
-failing silently. That honesty is a feature — you always know which guarantees
-you are getting — and it is the baseline we are levelling **up**, not down.
+UDB is usable today as a broker, CLI, protocol, and SDK set. It is also a young
+open-source project: the core data plane, auth/control plane, migrations, and
+published SDKs are the focus; packaging and production polish are still moving.
 
 **Maturity at a glance**
 
@@ -92,49 +139,10 @@ you are getting — and it is the baseline we are levelling **up**, not down.
 | Object stores and Memcached | 🟡 Beta | Full data-plane targets; object-store canonical profile remains conditional-write gated, Memcached is explicitly projection-only |
 | SDKs (Go, Python, TypeScript, Java, C#, PHP) | 🟡 Beta | Go/Python/TS/PHP publish today; C#/Java version-checked, publish wiring in progress |
 
-**Backend support tiers.** The runtime distinguishes a backend's *role* from its
-*reachability*:
-
-- **Canonical** — can host UDB's own system tables and act as the write-durability
-  anchor because a full `SystemStores` implementation is compiled in and admitted
-  by `CANONICAL_SYSTEM_STORE_BACKENDS`.
-- **Projection** — a first-class read/write target reached through typed RPCs
-  and/or generic dispatch, but not admitted as a canonical system-store host in
-  the current build/profile.
-
-In the normal default build, canonical support is much wider than the old SQL
-trio: Postgres, MySQL, SQLite, SQL Server, Redis, Cassandra, Neo4j, Qdrant,
-ClickHouse, Weaviate, Pinecone, and Elasticsearch are canonical-capable in code.
-MongoDB becomes canonical in `mongodb-native` builds against a replica set or
-sharded cluster. Object stores remain projection targets until their conditional
-write/listing/fencing profile is proven; Memcached is explicitly not a canonical
-state backend.
-
-**Remaining backend promotion work**
-
-- 🎯 Prove the object-store canonical profile for S3/MinIO, Azure Blob, and GCS:
-  conditional writes, generation/etag fencing, listing recovery, and multipart
-  safety.
-- 🎯 Keep native MongoDB canonical support behind `mongodb-native` until the
-  deployment topology proves majority write/read semantics.
-- 🎯 Keep Redis canonical registration gated on a durable AOF profile; otherwise
-  it stays a cache/projection target at runtime.
-- 🎯 Finish C# (NuGet) and Java (Maven Central) publish pipelines on the shared
-  release tag.
-
-**Source of truth** (the matrix is generated from code, never hand-maintained):
-
-- [`src/backend/mod.rs`](src/backend/mod.rs) — `BackendKind`, tier, role, capability matrix, operation support
-- [`src/backend/plugins/mod.rs`](src/backend/plugins/mod.rs) — compiled plugin inventory
-- [`src/runtime/executors/`](src/runtime/executors) — runtime executor modules
-- [`src/ir/compile/`](src/ir/compile) — backend-specific IR compilers
-- [`Cargo.toml`](Cargo.toml) — default and optional feature graph
-
-The code recognizes **18 backend kinds**. The default feature set enables the
-full broker surface except the native MongoDB driver profile; a slim build
-compiles only what you need, e.g. `--no-default-features --features postgres`.
-Inspect the live capability matrix any time with
-`cargo run --bin udb-proto-parser -- compat-matrix` (JSON straight from `src/backend/mod.rs`).
+UDB is intentionally honest about backend capability. A backend is only offered
+for an operation when the broker knows how to execute it. If a backend cannot
+provide a required guarantee, the broker refuses the call instead of guessing.
+The full backend table lives in [Backend Matrix](#-backend-matrix).
 
 ## Codebase Map
 
@@ -297,18 +305,14 @@ compile a subset, e.g.
 > and can anchor a deployment (host UDB's system tables, outbox, saga/audit/lease
 > state). **projection**: a first-class read/write target reached via typed RPCs
 > and/or generic dispatch. **canonical candidate**: the feasibility profile is
-> documented in `BackendKind::canonical_feasibility_profile`, but the backend is
-> not on `CANONICAL_SYSTEM_STORE_BACKENDS` yet.
+> known, but the backend is not accepted as a system-state anchor yet.
 
 Postgres is always compiled (never feature-gated); the other 17 backend surfaces
 are gated. MinIO and S3 share the `s3` feature. `mongodb-native` is intentionally
 separate from `mongodb`: the ordinary HTTP/Data-API build remains projection,
 while the native driver build can host `SystemStores` after topology checks.
-`src/backend/mod.rs` is the single source of truth for the full V1/V2 capability
-matrix (native executor, compiler-mediated path, lifecycle mode, `SystemStores`,
-transactions, XA/2PC, RLS, vector/hybrid search, TTL, object-store,
-migration-ledger, consistency model) — print it with
-`cargo run --bin udb-proto-parser -- compat-matrix`.
+To inspect the exact capability report for the current binary, run
+`udb compat-matrix` or `cargo run --bin udb-proto-parser -- compat-matrix`.
 
 ### Canonical Stores
 
@@ -384,7 +388,7 @@ Related files:
 | [`src/migration`](src/migration) | Migration diff/apply/sync/phase-runner |
 | [`src/control`](src/control) | Startup lifecycle, FSM, approval, hooks, notifications |
 | [`proto`](proto/README.md) | UDB-owned gRPC/protobuf contract |
-| [`sdk`](sdk/README.md) | Generated/wrapped clients |
+| [`sdk`](sdk/README.md) | Language clients and CLI launchers |
 | [`examples`](examples) | Arbitrary project, multi-project, and toy plugin examples |
 | [`configs`](configs) | YAML config examples |
 | [`docs`](docs) | Operational docs, security, upgrade history, runbooks |
@@ -650,40 +654,49 @@ Source: [`src/runtime/authn/`](src/runtime/authn), [`src/runtime/authz/`](src/ru
 The UDB-owned protocol is versioned separately from the crate and SDK package
 versions. The current wire protocol is
 [`1.0.0`](sdk/UDB_PROTOCOL_VERSION), and the current crate/SDK release tracked
-by [`versions.json`](versions.json) is `0.3.0`.
+by [`versions.json`](versions.json) is `0.3.1`.
 
-Canonical proto sources:
+The SDKs are the easiest way to talk to UDB. They do three useful things:
 
-- [`proto/udb/entity/v1/types.proto`](proto/udb/entity/v1/types.proto)
-- [`proto/udb/events/v1/udb_events.proto`](proto/udb/events/v1/udb_events.proto)
-- [`proto/udb/services/v1/data_broker.proto`](proto/udb/services/v1/data_broker.proto)
-- [`proto/udb/core/**`](proto/udb/core) for the native Authn/Authz/ApiKey/Tenant/Notification/Analytics services
+- attach the required tenant/user/purpose/scope metadata on every gRPC call;
+- expose convenient `select`, `upsert`, auth, and raw broker clients;
+- install or wrap a version-matched `udb` CLI so you can use broker tools from
+  your app project.
 
-The build script compiles those with `tonic-build` and writes a generated
-`protocol.rs` include under Cargo's `OUT_DIR`.
-
-Generate SDKs:
-
-```powershell
-.\scripts\gen_sdk.ps1
-```
-
-```bash
-./scripts/gen_sdk.sh
-```
-
-Release and install matrix:
+Install one SDK:
 
 | SDK | Current release | Install | Runtime requirements | Notes |
 |---|---:|---|---|---|
-| Go | `0.3.0` | `go get github.com/fahara02/udb/sdk/go@v0.3.0` | Go 1.22+, `grpc`, `protobuf` | Generated stubs plus `udbclient` metadata/auth helpers |
-| Python | `0.3.0` | `pip install udb-client==0.3.0` | Python 3.10+, `grpcio`, `protobuf` | Sync and async clients, optional `pydantic` extra |
-| TypeScript / Node | `0.3.0` | `npm i @udb_plus/sdk@0.3.0` | Node 18+, `@grpc/grpc-js` | Runtime proto loader, package entry points `@udb_plus/sdk`, `/client`, `/auth` |
-| PHP / Laravel | `0.3.0` | `composer require fahara02/udb-laravel:^0.3.0` | PHP 8.1+, `ext-grpc`, Laravel 10/11/12 | ServiceProvider, Facade, middleware, typed exceptions |
-| C# | `0.3.0` | `dotnet add package Udb.Client --version 0.3.0` | .NET 8, `Grpc.Net.Client` | Package id and version are set; NuGet publishing is part of the release pipeline |
-| Java | `0.3.0-SNAPSHOT` today, `0.3.0` target | `dev.udb:udb-java-client` | Java 17, gRPC Java | Manifest is still snapshot; Maven Central release wiring is in progress |
+| Go | `0.3.1` | `go get github.com/fahara02/udb/sdk/go@v0.3.1` | Go 1.22+, `grpc`, `protobuf` | Use `udbclient`; install CLI with `go install github.com/fahara02/udb/sdk/go/cmd/udb@v0.3.1` |
+| Python | `0.3.1` | `pip install udb-client==0.3.1` | Python 3.10+, `grpcio`, `protobuf` | Sync/async clients, optional `pydantic`, `udb` CLI entry point |
+| TypeScript / Node | `0.3.1` | `npm i @udb_plus/sdk@0.3.1` | Node 18+, `@grpc/grpc-js` | Import `@udb_plus/sdk/client` and `/auth`; use `npx udb ...` for the CLI |
+| PHP / Laravel | `0.3.1` | `composer require fahara02/udb-laravel:^0.3.1` | PHP 8.1+, `ext-grpc`, Laravel 10/11/12 | ServiceProvider, Facade, middleware, typed exceptions, `vendor/bin/udb` |
+| C# | `0.3.1` | `dotnet add package Udb.Client --version 0.3.1` | .NET 8, `Grpc.Net.Client` | Client package plus companion `Udb.Cli` tool |
+| Java | `0.3.1-SNAPSHOT` today, `0.3.1` target | `dev.udb:udb-java-client` | Java 17, gRPC Java | Build from checkout until Maven Central publishing lands |
 
-Every SDK sends the same request metadata headers:
+To write application protos with UDB annotations, export the shared UDB proto
+contract into your project:
+
+```bash
+udb proto export
+```
+
+That creates or refreshes `proto/udb/**`, vendors the small `google/api/**`
+imports needed for offline `protoc`, and can merge the required `buf.yaml`
+entries. Your project can then import:
+
+```proto
+import "udb/core/common/v1/db.proto";
+```
+
+Use the exported annotation protos in your app schemas, then start the broker
+against your proto root:
+
+```bash
+udb serve proto "" 0.0.0.0:50051
+```
+
+Every SDK sends the same request metadata:
 
 - `x-tenant-id`
 - `x-user-id`
@@ -694,18 +707,14 @@ Every SDK sends the same request metadata headers:
 - `x-udb-project-id`
 - `x-udb-client-catalog-version`
 
-Most SDKs ship committed generated stubs in `gen/`, so consumers do not need
-`buf` or `protoc`. Regenerate only after changing protos:
-`buf generate`, `scripts/gen_sdk.ps1`, or `scripts/gen_sdk.sh`.
-
-TypeScript is the exception: `@udb_plus/sdk` loads bundled `.proto` files at
-runtime through `@grpc/proto-loader`. Use package entry points, not
-`sdk/typescript/gen/**`; that generated tree exists for drift parity.
+For normal use you do not run SDK generation. Install the package, export the
+UDB protos when you need annotations, write your project protos, and call the
+broker.
 
 ## Quickstart Per Language
 
 <details open>
-<summary><b>Go</b> - <code>go get github.com/fahara02/udb/sdk/go@v0.3.0</code></summary>
+<summary><b>Go</b> - <code>go get github.com/fahara02/udb/sdk/go@v0.3.1</code></summary>
 
 ```go
 import (
@@ -735,7 +744,7 @@ Guide: [`sdk/go/README.md`](sdk/go/README.md).
 </details>
 
 <details>
-<summary><b>Python</b> - <code>pip install udb-client==0.3.0</code></summary>
+<summary><b>Python</b> - <code>pip install udb-client==0.3.1</code></summary>
 
 ```python
 from udb_client import Metadata, UdbClient, decode_records
@@ -756,12 +765,12 @@ with UdbAuthClient("127.0.0.1:50051", meta) as auth:
     allowed, decision = auth.can(authz.ResourceRef(message_type="acme.billing.v1.Customer"), "read")
 ```
 
-Install `pip install "udb-client[pydantic]==0.3.0"` when you want the optional
+Install `pip install "udb-client[pydantic]==0.3.1"` when you want the optional
 validated command models. Guide: [`sdk/python/README.md`](sdk/python/README.md).
 </details>
 
 <details>
-<summary><b>TypeScript / Node</b> - <code>npm i @udb_plus/sdk@0.3.0</code></summary>
+<summary><b>TypeScript / Node</b> - <code>npm i @udb_plus/sdk@0.3.1</code></summary>
 
 ```ts
 import { dataBrokerClient, metadata, UdbMetadata } from "@udb_plus/sdk/client";
@@ -784,7 +793,7 @@ Guide: [`sdk/typescript/README.md`](sdk/typescript/README.md).
 <details>
 <summary><b>Java</b> - Maven <code>dev.udb:udb-java-client</code>, Java 17</summary>
 
-Current manifest version is `0.3.0-SNAPSHOT`; the release target is `0.3.0`.
+Current manifest version is `0.3.1-SNAPSHOT`; the release target is `0.3.1`.
 Until Maven Central publish wiring is complete, build from the repo checkout:
 
 ```bash
@@ -831,7 +840,7 @@ Guide: [`sdk/csharp/README.md`](sdk/csharp/README.md).
 </details>
 
 <details>
-<summary><b>PHP / Laravel</b> - <code>composer require fahara02/udb-laravel:^0.3.0</code></summary>
+<summary><b>PHP / Laravel</b> - <code>composer require fahara02/udb-laravel:^0.3.1</code></summary>
 
 ```php
 use Fahara02\UdbLaravel\Facades\Udb;
@@ -849,16 +858,10 @@ Requires PHP 8.1+, `ext-grpc`, and Laravel 10/11/12. Guide:
 [`sdk/php/README.md`](sdk/php/README.md).
 </details>
 
-Native fast-path helpers and offline authz caches are available where the SDK
-has wrapper support:
-
-- Go, Python, and TypeScript expose native-access helpers and local authz-cache
-  APIs.
-- C#, Java, and PHP expose native access and policy bundle RPCs through their
-  generated/native wrappers, with per-language helper coverage still catching
-  up.
-- All SDKs can call the raw generated gRPC stubs for RPCs that do not yet have a
-  convenience method.
+Each SDK has the same basic job: carry request metadata, call the broker, and
+make the native auth/authz APIs reachable in that language. Some languages have
+more convenience helpers than others, but every SDK can still call the full gRPC
+surface when you need an RPC that does not yet have a wrapper method.
 
 ## Testing
 

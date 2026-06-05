@@ -26,18 +26,20 @@ namespace udb.core.Authn.Entity.V1 {
           string.Concat(
             "Cid1ZGIvY29yZS9hdXRobi9lbnRpdHkvdjEvZW50aXRpZXMucHJvdG8SGHVk",
             "Yi5jb3JlLmF1dGhuLmVudGl0eS52MRokdWRiL2NvcmUvYXV0aG4vZW50aXR5",
-            "L3YxL2VudW1zLnByb3RvGiJ1ZGIvY29yZS9hdXRobi9lbnRpdHkvdjEvb3Rw",
-            "LnByb3RvGiZ1ZGIvY29yZS9hdXRobi9lbnRpdHkvdjEvc2Vzc2lvbi5wcm90",
-            "bxojdWRiL2NvcmUvYXV0aG4vZW50aXR5L3YxL3VzZXIucHJvdG8aJ3VkYi9j",
-            "b3JlL2F1dGhuL2VudGl0eS92MS93ZWJhdXRobi5wcm90b0L4AQocY29tLnVk",
-            "Yi5jb3JlLmF1dGhuLmVudGl0eS52MUINRW50aXRpZXNQcm90b1ABWkRnaXRo",
-            "dWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2F1dGhu",
-            "L2VudGl0eS92MTtlbnRpdHl2MaICBFVDQUWqAhh1ZGIuY29yZS5BdXRobi5F",
-            "bnRpdHkuVjHKAhhVZGJcQ29yZVxBdXRoblxFbnRpdHlcVjHiAiRVZGJcR1BC",
-            "TWV0YWRhdGFcQ29yZVxBdXRoblxFbnRpdHlcVjHqAhxVZGI6OkNvcmU6OkF1",
-            "dGhuOjpFbnRpdHk6OlYxUABQAVACUANQBGIGcHJvdG8z"));
+            "L3YxL2VudW1zLnByb3RvGil1ZGIvY29yZS9hdXRobi9lbnRpdHkvdjEvbWZh",
+            "X3BvbGljeS5wcm90bxoidWRiL2NvcmUvYXV0aG4vZW50aXR5L3YxL290cC5w",
+            "cm90bxosdWRiL2NvcmUvYXV0aG4vZW50aXR5L3YxL3JlY292ZXJ5X2NvZGUu",
+            "cHJvdG8aJnVkYi9jb3JlL2F1dGhuL2VudGl0eS92MS9zZXNzaW9uLnByb3Rv",
+            "GiN1ZGIvY29yZS9hdXRobi9lbnRpdHkvdjEvdXNlci5wcm90bxondWRiL2Nv",
+            "cmUvYXV0aG4vZW50aXR5L3YxL3dlYmF1dGhuLnByb3RvQvgBChxjb20udWRi",
+            "LmNvcmUuYXV0aG4uZW50aXR5LnYxQg1FbnRpdGllc1Byb3RvUAFaRGdpdGh1",
+            "Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvYXV0aG4v",
+            "ZW50aXR5L3YxO2VudGl0eXYxogIEVUNBRaoCGHVkYi5jb3JlLkF1dGhuLkVu",
+            "dGl0eS5WMcoCGFVkYlxDb3JlXEF1dGhuXEVudGl0eVxWMeICJFVkYlxHUEJN",
+            "ZXRhZGF0YVxDb3JlXEF1dGhuXEVudGl0eVxWMeoCHFVkYjo6Q29yZTo6QXV0",
+            "aG46OkVudGl0eTo6VjFQAFABUAJQA1AEUAVQBmIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { global::udb.core.Authn.Entity.V1.EnumsReflection.Descriptor, global::udb.core.Authn.Entity.V1.OtpReflection.Descriptor, global::udb.core.Authn.Entity.V1.SessionReflection.Descriptor, global::udb.core.Authn.Entity.V1.UserReflection.Descriptor, global::udb.core.Authn.Entity.V1.WebauthnReflection.Descriptor, },
+          new pbr::FileDescriptor[] { global::udb.core.Authn.Entity.V1.EnumsReflection.Descriptor, global::udb.core.Authn.Entity.V1.MfaPolicyReflection.Descriptor, global::udb.core.Authn.Entity.V1.OtpReflection.Descriptor, global::udb.core.Authn.Entity.V1.RecoveryCodeReflection.Descriptor, global::udb.core.Authn.Entity.V1.SessionReflection.Descriptor, global::udb.core.Authn.Entity.V1.UserReflection.Descriptor, global::udb.core.Authn.Entity.V1.WebauthnReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, null));
     }
     #endregion

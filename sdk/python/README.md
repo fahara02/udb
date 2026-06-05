@@ -1,32 +1,40 @@
 # UDB Python SDK
 
-`udb-client` is the Python SDK for the UDB DataBroker gRPC API. It ships the generated protobuf bindings plus a small sync/async client that injects UDB metadata, builds common CRUD/vector/blob requests, and exposes the raw generated stub for every broker RPC.
+`udb-client` is the Python client for UDB. It gives you sync and async clients,
+metadata handling, common CRUD helpers, optional Pydantic models, raw access to
+every broker RPC, and a version-matched `udb` CLI launcher.
 
 ## Install
 
 ```bash
-pip install udb-client==0.3.0
+pip install udb-client==0.3.1
 ```
 
-For local development from this repo, prefer `uv`:
+Optional validated command models:
 
 ```bash
-cd sdk/python
-uv sync --extra dev
-uv run python scripts/generate_protos.py
-uv run pytest
-uv run pyrefly check
+pip install "udb-client[pydantic]==0.3.1"
 ```
 
-The same flow with pip:
+Runtime: Python 3.10+
+
+## Export UDB Protos For Your App
+
+After installation, the `udb` command is available. Use it from your app project
+to copy UDB's annotation and broker protos into your own proto tree:
 
 ```bash
-cd sdk/python
-python -m pip install -e ".[dev]"
-python scripts/generate_protos.py
-pytest
-pyrefly check
+udb proto export
 ```
+
+Then your project schemas can import:
+
+```proto
+import "udb/core/common/v1/db.proto";
+```
+
+Run `udb proto export` again whenever you upgrade the SDK/CLI. It keeps the UDB
+annotation protos and your installed CLI version together.
 
 ## Basic CRUD
 
@@ -34,23 +42,21 @@ pyrefly check
 from udb_client import Metadata, UdbClient, decode_records
 
 meta = Metadata(
-    tenant_id="tenant-1",
+    tenant_id="acme",
     user_id="user-1",
-    purpose="billing.demo",
-    correlation_id="demo-001",
+    purpose="billing.api",
+    correlation_id="request-001",
     scopes=("udb:read", "udb:write"),
-    service_identity="python.example",
+    service_identity="billing-service",
     project_id="billing",
 )
 
 with UdbClient("127.0.0.1:50051", meta) as udb:
-    udb.warmup()
-
     udb.upsert(
         message_type="acme.billing.v1.Customer",
         record={
             "customer_id": "cus_001",
-            "tenant_id": "tenant-1",
+            "tenant_id": "acme",
             "name": "Ada Lovelace",
             "email": "ada@example.com",
         },
@@ -64,11 +70,6 @@ with UdbClient("127.0.0.1:50051", meta) as udb:
         limit=1,
     )
     print(decode_records(rows))
-
-    udb.delete(
-        message_type="acme.billing.v1.Customer",
-        filter={"customer_id": "cus_001"},
-    )
 ```
 
 ## Async
@@ -76,70 +77,57 @@ with UdbClient("127.0.0.1:50051", meta) as udb:
 ```python
 from udb_client import Metadata, UdbAsyncClient
 
-async with UdbAsyncClient("127.0.0.1:50051", Metadata(
-    tenant_id="tenant-1",
+meta = Metadata(
+    tenant_id="acme",
     purpose="billing.worker",
     correlation_id="job-42",
     scopes=("udb:read", "udb:write"),
-    service_identity="python.worker",
+    service_identity="billing-worker",
     project_id="billing",
-)) as udb:
+)
+
+async with UdbAsyncClient("127.0.0.1:50051", meta) as udb:
     await udb.upsert(
         message_type="acme.billing.v1.Customer",
-        record={"customer_id": "cus_002", "tenant_id": "tenant-1"},
+        record={"customer_id": "cus_002", "tenant_id": "acme"},
         conflict_fields=("customer_id",),
+    )
+```
+
+## Authz Check
+
+```python
+from udb_client.auth import UdbAuthClient
+from udb.core.authz.services.v1 import core_pb2 as authz
+
+with UdbAuthClient("127.0.0.1:50051", meta) as auth:
+    allowed, decision = auth.can(
+        authz.ResourceRef(message_type="acme.billing.v1.Customer"),
+        "read",
     )
 ```
 
 ## Full API Access
 
-The generated protobuf modules are included:
+For broker APIs without a convenience method, use `client.call("RpcName",
+request)` for unary RPCs with metadata/error handling, or `client.stub` for raw
+streaming and advanced calls.
+
+The generated protobuf modules are included for request/response types:
 
 ```python
 from udb.entity.v1 import types_pb2
 from udb.services.v1 import data_broker_pb2_grpc
 ```
 
-For broker APIs without a convenience method, use `client.call("RpcName", request)` for unary RPCs with metadata/error handling, or `client.stub` for raw streaming and advanced calls.
+## Local SDK Development
 
-## Optional Pydantic Models
-
-Install the pydantic extra when you want request validation and editor-friendly models:
-
-```bash
-pip install "udb-client[pydantic]==0.3.0"
-```
-
-```python
-from udb_client import UdbClient
-from udb_client.models import MetadataModel, UpsertCommand
-
-meta = MetadataModel(
-    tenant_id="tenant-1",
-    purpose="billing.demo",
-    correlation_id="demo-001",
-    scopes=("udb:write",),
-    project_id="billing",
-).to_metadata()
-
-command = UpsertCommand(
-    message_type="acme.billing.v1.Customer",
-    record={"customer_id": "cus_001", "tenant_id": "tenant-1"},
-    conflict_fields=("customer_id",),
-)
-
-with UdbClient("127.0.0.1:50051", meta) as udb:
-    udb.upsert(command.to_proto())
-```
-
-## Regenerate Protobuf Bindings
-
-Run this after changing files under `proto/udb`:
+Consumers do not need this. Use it only when editing the SDK itself:
 
 ```bash
 cd sdk/python
 python -m pip install -e ".[dev]"
 python scripts/generate_protos.py
+pytest
+pyrefly check
 ```
-
-Generated `udb/.../*_pb2.py`, `*_pb2_grpc.py`, and `*.pyi` files are committed so pip users do not need `grpcio-tools`.

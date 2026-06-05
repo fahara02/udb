@@ -120,8 +120,10 @@ public interface LoginRequestOrBuilder extends
   /**
    * <pre>
    * MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
-   * When mfa_otp_id is non-empty the credential check is skipped and the service
-   * instead consumes the MFA session token and validates the TOTP code.
+   * The password (first factor) is ALWAYS verified; these only supply the second
+   * factor and never substitute for it. Provide totp_code for an authenticator app,
+   * or mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA
+   * email/SMS code previously issued to this same user.
    * </pre>
    *
    * <code>string mfa_otp_id = 8 [json_name = "mfaOtpId"];</code>
@@ -131,8 +133,10 @@ public interface LoginRequestOrBuilder extends
   /**
    * <pre>
    * MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
-   * When mfa_otp_id is non-empty the credential check is skipped and the service
-   * instead consumes the MFA session token and validates the TOTP code.
+   * The password (first factor) is ALWAYS verified; these only supply the second
+   * factor and never substitute for it. Provide totp_code for an authenticator app,
+   * or mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA
+   * email/SMS code previously issued to this same user.
    * </pre>
    *
    * <code>string mfa_otp_id = 8 [json_name = "mfaOtpId"];</code>
@@ -143,7 +147,7 @@ public interface LoginRequestOrBuilder extends
 
   /**
    * <pre>
-   * 6-digit TOTP code from the user's authenticator app
+   * 6-digit TOTP code, or the one-time code when mfa_otp_id is set
    * </pre>
    *
    * <code>string totp_code = 9 [json_name = "totpCode"];</code>
@@ -152,7 +156,7 @@ public interface LoginRequestOrBuilder extends
   java.lang.String getTotpCode();
   /**
    * <pre>
-   * 6-digit TOTP code from the user's authenticator app
+   * 6-digit TOTP code, or the one-time code when mfa_otp_id is set
    * </pre>
    *
    * <code>string totp_code = 9 [json_name = "totpCode"];</code>
@@ -196,4 +200,24 @@ public interface LoginRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getAccessSurfaceBytes();
+
+  /**
+   * <pre>
+   * single-use MFA recovery/backup code (alternative second factor)
+   * </pre>
+   *
+   * <code>string recovery_code = 13 [json_name = "recoveryCode"];</code>
+   * @return The recoveryCode.
+   */
+  java.lang.String getRecoveryCode();
+  /**
+   * <pre>
+   * single-use MFA recovery/backup code (alternative second factor)
+   * </pre>
+   *
+   * <code>string recovery_code = 13 [json_name = "recoveryCode"];</code>
+   * @return The bytes for recoveryCode.
+   */
+  com.google.protobuf.ByteString
+      getRecoveryCodeBytes();
 }

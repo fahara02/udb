@@ -4,13 +4,30 @@
 //! running an advanced **PERM** model (request / policy / role / effect /
 //! matchers): RBAC with tenant domains and glob resource/action matching via
 //! `keyMatch2`. Deny override is enforced before Casbin because Rust Casbin's
-//! built-in effector does not support the combined deny/allow expression.
+//! built-in effector does not reliably apply the combined deny/allow expression
+//! when deny lines are loaded into the enforcer (verified: doing so lets a broad
+//! allow win over an explicit deny). Only Allow lines enter the enforcer; an
+//! explicit matched Deny short-circuits in Rust beforehand.
 //!
 //! ABAC gates that the Casbin RBAC matcher does not express — required scopes,
 //! attribute conditions, ReBAC relationship tuples, and purpose — pre-filter
 //! which policies enter the enforcer. Casbin then drives subject/role/resource/
 //! action/domain matching and the allow/deny effect.
+//!
+//! ## Operator-configurable model
+//! The Casbin model is NOT hardcoded: an operator may supply their own
+//! `model.conf` via `UDB_AUTHZ_CASBIN_MODEL_PATH` (file) or `UDB_AUTHZ_CASBIN_MODEL`
+//! (inline text); absent both, the embedded [`CASBIN_MODEL`] default is used.
+//! Any Casbin matcher / effect / role-definition and any built-in function
+//! (`keyMatch`, `keyMatch2/3/4`, `regexMatch`, `globMatch`, `ipMatch`) are
+//! honored. The **request/policy token contract** the loader maps UDB rows onto
+//! is fixed: requests are `r = sub, dom, obj, act`; DB-derived policy lines are
+//! `p = sub, dom, obj, act, eft`; the role grouping is `g = _, _`
+//! (subject → role). Custom models must keep this token shape; everything else
+//! (matchers, effect, functions) is free. [`validate_casbin_model`] parse-checks
+//! the configured model at startup so a malformed override fails fast.
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
@@ -49,10 +66,84 @@ fn slot(value: &str) -> String {
     }
 }
 
+/// Resolve the active Casbin model text: an operator-supplied file
+/// (`UDB_AUTHZ_CASBIN_MODEL_PATH`) wins, then inline text
+/// (`UDB_AUTHZ_CASBIN_MODEL`), else the embedded [`CASBIN_MODEL`] default. An
+/// unreadable path is logged and falls through to the next source (startup
+/// [`validate_casbin_model`] is the place that hard-fails a misconfig).
+fn resolve_casbin_model_text() -> Cow<'static, str> {
+    if let Ok(path) = std::env::var("UDB_AUTHZ_CASBIN_MODEL_PATH") {
+        let path = path.trim();
+        if !path.is_empty() {
+            match std::fs::read_to_string(path) {
+                Ok(text) => return Cow::Owned(text),
+                Err(err) => tracing::error!(
+                    %err,
+                    path,
+                    "UDB_AUTHZ_CASBIN_MODEL_PATH unreadable; falling back to inline/default authz model"
+                ),
+            }
+        }
+    }
+    match std::env::var("UDB_AUTHZ_CASBIN_MODEL") {
+        Ok(text) if !text.trim().is_empty() => Cow::Owned(text),
+        _ => Cow::Borrowed(CASBIN_MODEL),
+    }
+}
+
+/// Parsed-model cache keyed by model-text content hash. Parsing a `DefaultModel`
+/// is not free; the configured model rarely changes, so cache it rather than
+/// reparse per decision. `DefaultModel` is `Clone`.
+fn model_cache() -> &'static tokio::sync::Mutex<HashMap<String, DefaultModel>> {
+    static CACHE: OnceLock<tokio::sync::Mutex<HashMap<String, DefaultModel>>> = OnceLock::new();
+    CACHE.get_or_init(|| tokio::sync::Mutex::new(HashMap::new()))
+}
+
+fn model_text_hash(model_text: &str) -> String {
+    format!("{:x}", Sha256::digest(model_text.as_bytes()))
+}
+
+async fn load_model(model_text: &str) -> Result<DefaultModel, String> {
+    let key = model_text_hash(model_text);
+    if let Some(model) = model_cache().lock().await.get(&key).cloned() {
+        return Ok(model);
+    }
+    let model = DefaultModel::from_str(model_text)
+        .await
+        .map_err(|err| format!("model parse: {err}"))?;
+    let mut cache = model_cache().lock().await;
+    Ok(cache.entry(key).or_insert(model).clone())
+}
+
+/// Parse-check the operator-configured Casbin model so a malformed custom model
+/// fails at startup instead of denying every request at runtime. Call this from
+/// the service startup lifecycle.
+pub(crate) async fn validate_casbin_model() -> Result<(), String> {
+    let text = resolve_casbin_model_text();
+    DefaultModel::from_str(&text)
+        .await
+        .map(|_| ())
+        .map_err(|err| format!("invalid UDB authz Casbin model: {err}"))
+}
+
 impl AuthzSnapshot {
     /// Authorize `req` through a real Casbin enforcer built from this snapshot.
     /// This is the production decision path for the native `AuthzService`.
     pub(crate) async fn casbin_authorize(&self, req: &AuthzQuery<'_>) -> Decision {
+        // The Casbin model is operator-configurable; resolve it per call (parsed
+        // models are cached by content hash, so a swap takes effect without a
+        // restart and steady-state cost is a hashmap lookup).
+        let model_text = resolve_casbin_model_text();
+        self.casbin_authorize_with_model(&model_text, req).await
+    }
+
+    /// Decision core shared by the configurable [`casbin_authorize`] entry point
+    /// and by tests that pin an explicit model.
+    pub(crate) async fn casbin_authorize_with_model(
+        &self,
+        model_text: &str,
+        req: &AuthzQuery<'_>,
+    ) -> Decision {
         let decision_id = self.decision_id(req);
 
         // Dev-only default-allow applies only when there is genuinely no policy.
@@ -117,13 +208,9 @@ impl AuthzSnapshot {
             };
         }
 
-        static MODEL: tokio::sync::OnceCell<DefaultModel> = tokio::sync::OnceCell::const_new();
-        let model = match MODEL
-            .get_or_try_init(|| async { DefaultModel::from_str(CASBIN_MODEL).await })
-            .await
-        {
-            Ok(model) => model.clone(),
-            Err(err) => return self.casbin_error(decision_id, &format!("model parse: {err}")),
+        let model = match load_model(model_text).await {
+            Ok(model) => model,
+            Err(err) => return self.casbin_error(decision_id, &err),
         };
         let subject = if principal.subject.trim().is_empty() {
             principal.principal_id.clone()
@@ -136,11 +223,19 @@ impl AuthzSnapshot {
             .filter(|id| !id.trim().is_empty() && *id != subject)
             .map(ToString::to_string)
             .collect();
-        let enforcer =
-            match cached_enforcer(model, &applicable, &roles, &subject, &identities).await {
-                Ok(enforcer) => enforcer,
-                Err(err) => return self.casbin_error(decision_id, &err),
-            };
+        let enforcer = match cached_enforcer(
+            model,
+            model_text,
+            &applicable,
+            &roles,
+            &subject,
+            &identities,
+        )
+        .await
+        {
+            Ok(enforcer) => enforcer,
+            Err(err) => return self.casbin_error(decision_id, &err),
+        };
 
         let dom = slot(&principal.tenant_id);
         // Match AuthzSnapshot::resource_match, which tests the policy resource
@@ -232,12 +327,15 @@ fn enforcer_cache() -> &'static tokio::sync::Mutex<HashMap<String, Arc<Enforcer>
 
 async fn cached_enforcer(
     model: DefaultModel,
+    model_text: &str,
     applicable: &[&AuthzPolicy],
     roles: &[String],
     subject: &str,
     identities: &[String],
 ) -> Result<Arc<Enforcer>, String> {
-    let key = casbin_policy_set_hash(applicable, roles, subject, identities);
+    // The cache key includes the model hash: a model swap must not return an
+    // enforcer built under the previous model.
+    let key = casbin_policy_set_hash(model_text, applicable, roles, subject, identities);
     if let Some(enforcer) = enforcer_cache().lock().await.get(&key).cloned() {
         return Ok(enforcer);
     }
@@ -287,12 +385,13 @@ async fn cached_enforcer(
 }
 
 fn casbin_policy_set_hash(
+    model_text: &str,
     applicable: &[&AuthzPolicy],
     roles: &[String],
     subject: &str,
     identities: &[String],
 ) -> String {
-    let mut parts = Vec::new();
+    let mut parts = vec![format!("m|{}", model_text_hash(model_text))];
     for p in applicable.iter().filter(|p| p.effect == Effect::Allow) {
         parts.push(format!(
             "p|{}|{}|{}|{}|{}|{}",
@@ -433,6 +532,74 @@ mod tests {
         assert!(
             !decision.allowed,
             "explicit deny must override the broad allow"
+        );
+    }
+
+    #[tokio::test]
+    async fn default_casbin_model_validates() {
+        validate_casbin_model()
+            .await
+            .expect("embedded default model must parse");
+    }
+
+    #[tokio::test]
+    async fn operator_supplied_model_overrides_default_matcher() {
+        let mut snap = AuthzSnapshot::default();
+        snap.version = "v1".to_string();
+        // An Allow policy scoped to a specific subject; the default model denies
+        // any other subject (no role link, subject mismatch).
+        snap.policies.push(AuthzPolicy {
+            id: "p1".to_string(),
+            effect: Effect::Allow,
+            subject: "specific-user".to_string(),
+            tenant: "acme".to_string(),
+            action: "data.select".to_string(),
+            resource: "invoice".to_string(),
+            ..Default::default()
+        });
+        let attrs = BTreeMap::new();
+        let resource = ResourceRef::message("invoice");
+        let stranger = Principal {
+            subject: "stranger".to_string(),
+            tenant_id: "acme".to_string(),
+            ..Default::default()
+        };
+
+        // Baseline: the embedded default model denies the subject mismatch.
+        let default_decision = snap
+            .casbin_authorize(&query(&stranger, &resource, "data.select", &attrs))
+            .await;
+        assert!(
+            !default_decision.allowed,
+            "default PERM model must deny a subject/role mismatch"
+        );
+
+        // An operator-supplied model whose matcher ignores subject/obj/act must
+        // change the outcome — proving the model is honored, not hardcoded.
+        let permissive = r#"[request_definition]
+r = sub, dom, obj, act
+
+[policy_definition]
+p = sub, dom, obj, act, eft
+
+[role_definition]
+g = _, _
+
+[policy_effect]
+e = some(where (p_eft == allow)) && !some(where (p_eft == deny))
+
+[matchers]
+m = (p.dom == "*" || r.dom == p.dom)
+"#;
+        let custom_decision = snap
+            .casbin_authorize_with_model(
+                permissive,
+                &query(&stranger, &resource, "data.select", &attrs),
+            )
+            .await;
+        assert!(
+            custom_decision.allowed,
+            "operator-supplied model must override the default matcher"
         );
     }
 }

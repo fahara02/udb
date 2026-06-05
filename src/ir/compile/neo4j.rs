@@ -457,6 +457,14 @@ impl Compiler for Neo4jCompiler {
         }
         super::util::validate_aggregate_aliases(&op.aggregates)?;
         let table = self.resolve_table(&op.message_type, ctx)?;
+        // #151: a GROUP BY field resolving to an aggregate alias name would emit
+        // two identically-keyed RETURN columns. Reject (SQL backends already do).
+        let group_names: Vec<&str> = op
+            .group_by
+            .iter()
+            .map(|f| self.field_for(table, f, &op.message_type))
+            .collect::<Result<Vec<_>, _>>()?;
+        super::util::validate_no_groupby_alias_collision(&group_names, &op.aggregates)?;
         let label = Self::label_for(table);
         let mut bind = CypherBind::new();
 

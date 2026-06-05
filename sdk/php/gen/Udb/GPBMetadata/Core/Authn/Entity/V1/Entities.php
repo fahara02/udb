@@ -16,12 +16,14 @@ class Entities
           return;
         }
         \Udb\GPBMetadata\Core\Authn\Entity\V1\Enums::initOnce();
+        \Udb\GPBMetadata\Core\Authn\Entity\V1\MfaPolicy::initOnce();
         \Udb\GPBMetadata\Core\Authn\Entity\V1\Otp::initOnce();
+        \Udb\GPBMetadata\Core\Authn\Entity\V1\RecoveryCode::initOnce();
         \Udb\GPBMetadata\Core\Authn\Entity\V1\Session::initOnce();
         \Udb\GPBMetadata\Core\Authn\Entity\V1\User::initOnce();
         \Udb\GPBMetadata\Core\Authn\Entity\V1\Webauthn::initOnce();
         $pool->internalAddGeneratedFile(
-            "\x0A\xEA\x03\x0A'udb/core/authn/entity/v1/entities.proto\x12\x18udb.core.authn.entity.v1\x1A\"udb/core/authn/entity/v1/otp.proto\x1A&udb/core/authn/entity/v1/session.proto\x1A#udb/core/authn/entity/v1/user.proto\x1A'udb/core/authn/entity/v1/webauthn.protoB\xF8\x01\x0A\x1Ccom.udb.core.authn.entity.v1B\x0DEntitiesProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xA2\x02\x04UCAE\xAA\x02\x18udb.core.Authn.Entity.V1\xCA\x02\x18Udb\\Core\\Authn\\Entity\\V1\xE2\x02\$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xEA\x02\x1CUdb::Core::Authn::Entity::V1P\x00P\x01P\x02P\x03P\x04b\x06proto3"
+            "\x0A\xC7\x04\x0A'udb/core/authn/entity/v1/entities.proto\x12\x18udb.core.authn.entity.v1\x1A)udb/core/authn/entity/v1/mfa_policy.proto\x1A\"udb/core/authn/entity/v1/otp.proto\x1A,udb/core/authn/entity/v1/recovery_code.proto\x1A&udb/core/authn/entity/v1/session.proto\x1A#udb/core/authn/entity/v1/user.proto\x1A'udb/core/authn/entity/v1/webauthn.protoB\xF8\x01\x0A\x1Ccom.udb.core.authn.entity.v1B\x0DEntitiesProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xA2\x02\x04UCAE\xAA\x02\x18udb.core.Authn.Entity.V1\xCA\x02\x18Udb\\Core\\Authn\\Entity\\V1\xE2\x02\$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xEA\x02\x1CUdb::Core::Authn::Entity::V1P\x00P\x01P\x02P\x03P\x04P\x05P\x06b\x06proto3"
         , true);
 
         static::$is_initialized = true;

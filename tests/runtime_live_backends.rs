@@ -8,22 +8,17 @@ use std::env;
 use std::time::Duration;
 use uuid::Uuid;
 
-fn integration_enabled() -> bool {
-    env::var("UDB_INTEGRATION_TESTS")
-        .map(|v| matches!(v.as_str(), "1" | "true" | "yes"))
-        .unwrap_or(false)
-}
-
 macro_rules! live_backend_test {
     ($name:ident, $body:expr) => {
+        // Honest gate: `#[ignore]` makes a default `cargo test` report these as
+        // IGNORED (not passed). They run only under `-- --ignored` against live
+        // backends (UDB_INTEGRATION_* env); with no stack the body fails loudly.
+        // This replaced an env-gated early `return` that PASSED green without
+        // ever touching a backend (false coverage) — and this crate was not even
+        // invoked by CI, so it was false-green everywhere.
         #[tokio::test]
+        #[ignore = "live backends required: run with `-- --ignored` and UDB_INTEGRATION_* env"]
         async fn $name() {
-            if !integration_enabled() {
-                eprintln!(
-                    "[integration] skipped: set UDB_INTEGRATION_TESTS=1 to run against live backends"
-                );
-                return;
-            }
             $body.await;
         }
     };

@@ -424,6 +424,14 @@ impl Compiler for MongoDbCompiler {
         }
         super::util::validate_aggregate_aliases(&op.aggregates)?;
         let table = self.resolve_table(&op.message_type, ctx)?;
+        // #151: a GROUP BY field resolving to an aggregate alias name would emit
+        // two identically-keyed result fields. Reject (SQL backends already do).
+        let group_names: Vec<&str> = op
+            .group_by
+            .iter()
+            .map(|f| self.field_for(table, f, &op.message_type))
+            .collect::<Result<Vec<_>, _>>()?;
+        super::util::validate_no_groupby_alias_collision(&group_names, &op.aggregates)?;
 
         // Build a Mongo aggregation pipeline:
         //   [$match, $group, $match (HAVING), $sort, $skip, $limit].
@@ -1147,5 +1155,35 @@ mod tests {
         // No outer $and wrap — the tenant injection is a no-op.
         assert!(body["filter"].get("$and").is_none());
         assert_eq!(body["filter"]["email"]["$eq"], "a@b.com");
+    }
+
+    #[test]
+    fn aggregate_groupby_alias_collision_is_rejected() {
+        // #151: a GROUP BY field colliding with an aggregate alias would emit
+        // two identically-keyed result fields. The shared validator must reject
+        // it on Mongo just as it does on the SQL backends.
+        use crate::ir::operations::{AggregateExpr, AggregateFunc, LogicalAggregate};
+        let m = fixture_manifest();
+        let ctx = CompileContext::new(&m);
+        let agg = LogicalAggregate {
+            message_type: "acme.billing.v1.Customer".into(),
+            filter: None,
+            group_by: vec!["name".into()],
+            aggregates: vec![AggregateExpr {
+                func: AggregateFunc::Count,
+                field: "*".into(),
+                alias: "name".into(), // collides with the GROUP BY column
+            }],
+            having: None,
+            sort: vec![],
+            pagination: None,
+        };
+        let err = MongoDbCompiler.compile_aggregate(&agg, &ctx).unwrap_err();
+        match err {
+            CompileError::Malformed { reason } => {
+                assert!(reason.contains("collides with a GROUP BY column"))
+            }
+            other => panic!("expected Malformed, got {other:?}"),
+        }
     }
 }

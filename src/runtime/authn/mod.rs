@@ -578,6 +578,7 @@ enum_db_mapping! {
     Login2fa => "LOGIN_2FA",
     PasswordReset => "PASSWORD_RESET",
     SensitiveOperation => "SENSITIVE_OPERATION",
+    PhoneVerification => "PHONE_VERIFICATION",
 }
 
 enum_db_mapping! {
@@ -828,6 +829,59 @@ pub trait UserStore: Send + Sync {
     async fn put_otp(&self, record: OtpRecord) -> Result<(), String>;
     async fn get_otp(&self, otp_id: &str) -> Result<Option<OtpRecord>, String>;
     async fn update_otp(&self, record: OtpRecord) -> Result<(), String>;
+    /// Most recent OTP `created_at_unix` for (user, otp_type), used for send /
+    /// resend cooldown enforcement. Default `None` (cooldown not enforced) —
+    /// overridden by the Postgres store.
+    async fn latest_otp_created_at(
+        &self,
+        _user_id: &str,
+        _otp_type: i32,
+    ) -> Result<Option<u64>, String> {
+        Ok(None)
+    }
+    /// Atomically flip a PENDING OTP to USED, returning true only for the caller
+    /// that won the race. Guarantees single-use even under concurrent submissions
+    /// of the same otp_id. Default fails closed (no consume).
+    async fn consume_otp_pending(&self, _otp_id: &str, _now_unix: u64) -> Result<bool, String> {
+        Ok(false)
+    }
+    /// Replace the user's MFA recovery codes with `code_hashes` (prior codes are
+    /// discarded). Default fails closed; overridden by the Postgres store.
+    async fn replace_recovery_codes(
+        &self,
+        _user_id: &str,
+        _code_hashes: &[String],
+    ) -> Result<(), String> {
+        Err("recovery codes require the Postgres user store".to_string())
+    }
+    /// Atomically consume one unused recovery code matching `code_hash` for the
+    /// user, returning true on a successful single-use match. Default: no match.
+    async fn consume_recovery_code(
+        &self,
+        _user_id: &str,
+        _code_hash: &str,
+        _now_unix: u64,
+    ) -> Result<bool, String> {
+        Ok(false)
+    }
+    /// Upsert the per-tenant MFA-enforcement policy. Default fails closed.
+    async fn put_mfa_policy(&self, _tenant_id: &str, _require_mfa: bool) -> Result<(), String> {
+        Err("MFA policy requires the Postgres user store".to_string())
+    }
+    /// Whether the tenant requires MFA for password login. Default: false (no
+    /// policy store) — enforcement is additive and must never fail open here.
+    async fn tenant_requires_mfa(&self, _tenant_id: &str) -> Result<bool, String> {
+        Ok(false)
+    }
+    /// Set the user's phone number (clearing any prior verification). Default
+    /// fails closed; overridden by the Postgres store.
+    async fn set_user_phone(&self, _user_id: &str, _phone: &str) -> Result<(), String> {
+        Err("phone verification requires the Postgres user store".to_string())
+    }
+    /// Mark the user's phone number verified. Default fails closed.
+    async fn mark_phone_verified(&self, _user_id: &str, _now_unix: u64) -> Result<(), String> {
+        Err("phone verification requires the Postgres user store".to_string())
+    }
 }
 
 /// Store placeholder used when native auth is enabled without Postgres wiring.
@@ -1948,6 +2002,8 @@ pub struct PostgresUserStore {
     pool: PgPool,
     users_model: NativeModel,
     otps_model: NativeModel,
+    recovery_codes_model: NativeModel,
+    mfa_policies_model: NativeModel,
 }
 
 impl PostgresUserStore {
@@ -1981,6 +2037,8 @@ impl PostgresUserStore {
                     "external_provider_id",
                     "external_subject",
                     "profile_attributes_json",
+                    "phone",
+                    "phone_verified_at",
                 ],
             ),
             otps_model: native_model(
@@ -2001,6 +2059,20 @@ impl PostgresUserStore {
                     "correlation_id",
                 ],
             ),
+            recovery_codes_model: native_model(
+                "udb.core.authn.entity.v1.RecoveryCode",
+                &["recovery_code_id", "user_id", "code_hash", "used_at", "created_at"],
+            ),
+            mfa_policies_model: native_model(
+                "udb.core.authn.entity.v1.MfaPolicy",
+                &[
+                    "policy_id",
+                    "tenant_id",
+                    "require_mfa",
+                    "created_at",
+                    "updated_at",
+                ],
+            ),
         }
     }
 
@@ -2010,6 +2082,10 @@ impl PostgresUserStore {
 
     fn otps_relation(&self) -> String {
         self.otps_model.relation.clone()
+    }
+
+    fn recovery_codes_relation(&self) -> String {
+        self.recovery_codes_model.relation.clone()
     }
 
     fn user_select_projection(&self) -> String {
@@ -2317,6 +2393,178 @@ impl UserStore for PostgresUserStore {
     async fn update_otp(&self, record: OtpRecord) -> Result<(), String> {
         self.put_otp(record).await
     }
+
+    async fn latest_otp_created_at(
+        &self,
+        user_id: &str,
+        otp_type: i32,
+    ) -> Result<Option<u64>, String> {
+        let rel = self.otps_relation();
+        let user_col = self.otps_model.q("user_id");
+        let type_col = self.otps_model.q("otp_type");
+        let created_col = self.otps_model.q("created_at");
+        // `created_at` is a TIMESTAMP and `otp_type` is stored as its short token
+        // (see `otp_type_to_db`), so match on the token and project the max as epoch.
+        let epoch: Option<i64> = sqlx::query_scalar(&format!(
+            "SELECT EXTRACT(EPOCH FROM MAX({created_col}))::BIGINT \
+             FROM {rel} WHERE {user_col} = $1::UUID AND {type_col} = $2"
+        ))
+        .bind(user_id)
+        .bind(otp_type_to_db(otp_type))
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|err| format!("latest otp lookup failed: {err}"))?;
+        Ok(epoch.map(|v| v.max(0) as u64))
+    }
+
+    async fn consume_otp_pending(&self, otp_id: &str, now_unix: u64) -> Result<bool, String> {
+        let rel = self.otps_relation();
+        let id_col = self.otps_model.q("otp_id");
+        let status_col = self.otps_model.q("status");
+        let used_col = self.otps_model.q("used_at");
+        // Single-use: only a PENDING row flips, and RETURNING proves exactly one
+        // caller consumes even under concurrent submissions of the same otp_id.
+        let consumed: Option<String> = sqlx::query_scalar(&format!(
+            "UPDATE {rel} SET {status_col} = $3, {used_col} = to_timestamp($2::DOUBLE PRECISION) \
+             WHERE {id_col} = $1::UUID AND {status_col} = $4 RETURNING {id_col}::text"
+        ))
+        .bind(otp_id)
+        .bind(now_unix as i64)
+        .bind(otp_status_to_db(authn_entity_pb::OtpStatus::Used as i32))
+        .bind(otp_status_to_db(authn_entity_pb::OtpStatus::Pending as i32))
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|err| format!("consume otp failed: {err}"))?;
+        Ok(consumed.is_some())
+    }
+
+    async fn replace_recovery_codes(
+        &self,
+        user_id: &str,
+        code_hashes: &[String],
+    ) -> Result<(), String> {
+        let rel = self.recovery_codes_relation();
+        let user_col = self.recovery_codes_model.q("user_id");
+        let code_col = self.recovery_codes_model.q("code_hash");
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|err| format!("recovery codes tx begin failed: {err}"))?;
+        sqlx::query(&format!("DELETE FROM {rel} WHERE {user_col} = $1::UUID"))
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| format!("recovery codes clear failed: {err}"))?;
+        for hash in code_hashes {
+            sqlx::query(&format!(
+                "INSERT INTO {rel} ({user_col}, {code_col}) VALUES ($1::UUID, $2)"
+            ))
+            .bind(user_id)
+            .bind(hash)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| format!("recovery code insert failed: {err}"))?;
+        }
+        tx.commit()
+            .await
+            .map_err(|err| format!("recovery codes tx commit failed: {err}"))
+    }
+
+    async fn consume_recovery_code(
+        &self,
+        user_id: &str,
+        code_hash: &str,
+        now_unix: u64,
+    ) -> Result<bool, String> {
+        let rel = self.recovery_codes_relation();
+        let user_col = self.recovery_codes_model.q("user_id");
+        let code_col = self.recovery_codes_model.q("code_hash");
+        let used_col = self.recovery_codes_model.q("used_at");
+        let id_col = self.recovery_codes_model.q("recovery_code_id");
+        // Single-use: only an unused row flips, and the RETURNING proves exactly
+        // one consume even under concurrent attempts.
+        let consumed: Option<uuid::Uuid> = sqlx::query_scalar(&format!(
+            "UPDATE {rel} SET {used_col} = to_timestamp($3::DOUBLE PRECISION) \
+             WHERE {user_col} = $1::UUID AND {code_col} = $2 AND {used_col} IS NULL \
+             RETURNING {id_col}"
+        ))
+        .bind(user_id)
+        .bind(code_hash)
+        .bind(now_unix as i64)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|err| format!("recovery code consume failed: {err}"))?;
+        Ok(consumed.is_some())
+    }
+
+    async fn put_mfa_policy(&self, tenant_id: &str, require_mfa: bool) -> Result<(), String> {
+        let rel = self.mfa_policies_model.relation.clone();
+        let tenant_col = self.mfa_policies_model.q("tenant_id");
+        let require_col = self.mfa_policies_model.q("require_mfa");
+        let updated_col = self.mfa_policies_model.q("updated_at");
+        sqlx::query(&format!(
+            "INSERT INTO {rel} ({tenant_col}, {require_col}) VALUES ($1, $2) \
+             ON CONFLICT ({tenant_col}) DO UPDATE SET {require_col} = EXCLUDED.{require_col}, \
+             {updated_col} = CURRENT_TIMESTAMP"
+        ))
+        .bind(tenant_id)
+        .bind(require_mfa)
+        .execute(&self.pool)
+        .await
+        .map_err(|err| format!("put mfa policy failed: {err}"))?;
+        Ok(())
+    }
+
+    async fn tenant_requires_mfa(&self, tenant_id: &str) -> Result<bool, String> {
+        let rel = self.mfa_policies_model.relation.clone();
+        let tenant_col = self.mfa_policies_model.q("tenant_id");
+        let require_col = self.mfa_policies_model.q("require_mfa");
+        let value: Option<bool> = sqlx::query_scalar(&format!(
+            "SELECT {require_col} FROM {rel} WHERE {tenant_col} = $1"
+        ))
+        .bind(tenant_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|err| format!("get mfa policy failed: {err}"))?;
+        Ok(value.unwrap_or(false))
+    }
+
+    async fn set_user_phone(&self, user_id: &str, phone: &str) -> Result<(), String> {
+        let rel = self.users_relation();
+        let phone_col = self.users_model.q("phone");
+        let verified_col = self.users_model.q("phone_verified_at");
+        let updated_col = self.users_model.q("updated_at");
+        let id_col = self.users_model.q("user_id");
+        // Setting/replacing the number clears any prior verification.
+        sqlx::query(&format!(
+            "UPDATE {rel} SET {phone_col} = $2, {verified_col} = NULL, \
+             {updated_col} = CURRENT_TIMESTAMP WHERE {id_col} = $1::UUID"
+        ))
+        .bind(user_id)
+        .bind(phone)
+        .execute(&self.pool)
+        .await
+        .map_err(|err| format!("set user phone failed: {err}"))?;
+        Ok(())
+    }
+
+    async fn mark_phone_verified(&self, user_id: &str, now_unix: u64) -> Result<(), String> {
+        let rel = self.users_relation();
+        let verified_col = self.users_model.q("phone_verified_at");
+        let updated_col = self.users_model.q("updated_at");
+        let id_col = self.users_model.q("user_id");
+        sqlx::query(&format!(
+            "UPDATE {rel} SET {verified_col} = to_timestamp($2::DOUBLE PRECISION), \
+             {updated_col} = CURRENT_TIMESTAMP WHERE {id_col} = $1::UUID"
+        ))
+        .bind(user_id)
+        .bind(now_unix as i64)
+        .execute(&self.pool)
+        .await
+        .map_err(|err| format!("mark phone verified failed: {err}"))?;
+        Ok(())
+    }
 }
 
 impl PostgresUserStore {
@@ -2518,12 +2766,176 @@ pub fn password_hash_needs_upgrade(stored_hash: &str) -> bool {
     !stored_hash.is_empty() && !stored_hash.starts_with("$argon2")
 }
 
+/// Password complexity policy, configurable via env — makes real the contract
+/// the authn proto advertises ("Min 10 chars; 1 upper, 1 lower, 1 digit, 1
+/// special"). Centralized so every password-setting RPC enforces the same rules
+/// instead of an ad-hoc length check per call site.
+#[derive(Debug, Clone)]
+pub struct PasswordPolicy {
+    pub min_length: usize,
+    pub max_length: usize,
+    pub require_upper: bool,
+    pub require_lower: bool,
+    pub require_digit: bool,
+    pub require_symbol: bool,
+}
+
+impl Default for PasswordPolicy {
+    fn default() -> Self {
+        Self {
+            min_length: 10,
+            max_length: 1024,
+            require_upper: true,
+            require_lower: true,
+            require_digit: true,
+            require_symbol: true,
+        }
+    }
+}
+
+impl PasswordPolicy {
+    /// Read the policy from the environment, falling back to the secure default.
+    /// Knobs: `UDB_PASSWORD_MIN_LENGTH`, `UDB_PASSWORD_MAX_LENGTH`,
+    /// `UDB_PASSWORD_REQUIRE_{UPPER,LOWER,DIGIT,SYMBOL}`.
+    pub fn from_env() -> Self {
+        let d = Self::default();
+        Self {
+            min_length: password_env_usize("UDB_PASSWORD_MIN_LENGTH", d.min_length),
+            max_length: password_env_usize("UDB_PASSWORD_MAX_LENGTH", d.max_length),
+            require_upper: password_env_flag("UDB_PASSWORD_REQUIRE_UPPER", d.require_upper),
+            require_lower: password_env_flag("UDB_PASSWORD_REQUIRE_LOWER", d.require_lower),
+            require_digit: password_env_flag("UDB_PASSWORD_REQUIRE_DIGIT", d.require_digit),
+            require_symbol: password_env_flag("UDB_PASSWORD_REQUIRE_SYMBOL", d.require_symbol),
+        }
+    }
+
+    /// Validate `password`, returning a human-readable reason on rejection.
+    pub fn validate(&self, password: &str) -> Result<(), String> {
+        let len = password.chars().count();
+        if len < self.min_length {
+            return Err(format!(
+                "password must be at least {} characters",
+                self.min_length
+            ));
+        }
+        if len > self.max_length {
+            return Err(format!(
+                "password must be at most {} characters",
+                self.max_length
+            ));
+        }
+        if self.require_upper && !password.chars().any(char::is_uppercase) {
+            return Err("password must contain an uppercase letter".to_string());
+        }
+        if self.require_lower && !password.chars().any(char::is_lowercase) {
+            return Err("password must contain a lowercase letter".to_string());
+        }
+        if self.require_digit && !password.chars().any(|c| c.is_ascii_digit()) {
+            return Err("password must contain a digit".to_string());
+        }
+        if self.require_symbol
+            && !password
+                .chars()
+                .any(|c| !c.is_alphanumeric() && !c.is_whitespace())
+        {
+            return Err("password must contain a symbol".to_string());
+        }
+        Ok(())
+    }
+}
+
+fn password_env_usize(key: &str, default: usize) -> usize {
+    std::env::var(key)
+        .ok()
+        .and_then(|v| v.trim().parse().ok())
+        .unwrap_or(default)
+}
+
+fn password_env_flag(key: &str, default: bool) -> bool {
+    match std::env::var(key) {
+        Ok(v) => matches!(
+            v.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        ),
+        Err(_) => default,
+    }
+}
+
+/// Best-effort outbound OTP delivery to the operator's channel gateway via a
+/// generic HTTP webhook. The operator sets `UDB_OTP_DELIVERY_WEBHOOK_URL` (and
+/// optionally `UDB_OTP_DELIVERY_AUTH_HEADER`) to their email/SMS relay; UDB POSTs
+/// `{channel, address, code, otp_type, user_id}` as JSON. Delivery never fails
+/// OTP issuance — the OTP is already persisted and the caller holds the otp_id —
+/// so a gateway outage degrades to "not delivered" rather than blocking auth.
+/// With no webhook configured, delivery is skipped with a warning (the code is
+/// still retrievable via the otp_id in dev/test).
+pub async fn deliver_otp(channel: &str, address: &str, code: &str, otp_type: i32, user_id: &str) {
+    let Some(url) = std::env::var("UDB_OTP_DELIVERY_WEBHOOK_URL")
+        .ok()
+        .filter(|u| !u.trim().is_empty())
+    else {
+        tracing::warn!(
+            channel,
+            "OTP delivery webhook not configured (UDB_OTP_DELIVERY_WEBHOOK_URL); OTP persisted but not sent"
+        );
+        return;
+    };
+    #[cfg(feature = "http-client")]
+    {
+        let mut builder = otp_delivery_client().post(url.trim()).json(&serde_json::json!({
+            "channel": channel,
+            "address": address,
+            "code": code,
+            "otp_type": otp_type,
+            "user_id": user_id,
+        }));
+        if let Ok(auth) = std::env::var("UDB_OTP_DELIVERY_AUTH_HEADER") {
+            if !auth.trim().is_empty() {
+                builder = builder.header("authorization", auth);
+            }
+        }
+        match builder.send().await {
+            Ok(resp) if resp.status().is_success() => {
+                tracing::info!(channel, "OTP delivered via webhook");
+            }
+            Ok(resp) => tracing::error!(
+                status = %resp.status(),
+                channel,
+                "OTP delivery webhook returned non-success status"
+            ),
+            Err(err) => {
+                tracing::error!(error = %err, channel, "OTP delivery webhook request failed");
+            }
+        }
+    }
+    #[cfg(not(feature = "http-client"))]
+    {
+        let _ = (address, code, otp_type, user_id);
+        tracing::error!(
+            channel,
+            "OTP delivery webhook configured but this build lacks the http-client feature"
+        );
+    }
+}
+
+#[cfg(feature = "http-client")]
+fn otp_delivery_client() -> &'static reqwest::Client {
+    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+    CLIENT.get_or_init(reqwest::Client::new)
+}
+
 pub fn hash_otp_code(code: &str, hash_key: &[u8]) -> String {
     hash_secret(&format!("otp:{}", code.trim()), hash_key)
 }
 
 pub fn verify_otp_code(code: &str, hash_key: &[u8], stored_hash: &str) -> bool {
     !stored_hash.is_empty() && constant_time_eq(&hash_otp_code(code, hash_key), stored_hash)
+}
+
+/// Keyed digest of an MFA recovery code; consumed by matching this hash against
+/// stored rows (never stored or compared in plaintext).
+pub fn hash_recovery_code(code: &str, hash_key: &[u8]) -> String {
+    hash_secret(&format!("recovery:{}", code.trim()), hash_key)
 }
 
 #[cfg(test)]

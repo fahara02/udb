@@ -130,6 +130,14 @@ class User extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string external_references_json = 26 [json_name = "externalReferencesJson", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $external_references_json = '';
+    /**
+     * Generated from protobuf field <code>string phone = 27 [json_name = "phone", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $phone = '';
+    /**
+     * Generated from protobuf field <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $phone_verified_at = null;
 
     /**
      * Constructor.
@@ -165,6 +173,8 @@ class User extends \Google\Protobuf\Internal\Message
      *     @type string $timezone
      *     @type string $profile_attributes_json
      *     @type string $external_references_json
+     *     @type string $phone
+     *     @type \Google\Protobuf\Timestamp $phone_verified_at
      * }
      */
     public function __construct($data = NULL) {
@@ -801,6 +811,59 @@ class User extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, true);
         $this->external_references_json = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string phone = 27 [json_name = "phone", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getPhone()
+    {
+        return $this->phone;
+    }
+
+    /**
+     * Generated from protobuf field <code>string phone = 27 [json_name = "phone", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setPhone(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->phone = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = {</code>
+     * @return \Google\Protobuf\Timestamp|null
+     */
+    public function getPhoneVerifiedAt()
+    {
+        return $this->phone_verified_at;
+    }
+
+    public function hasPhoneVerifiedAt()
+    {
+        return isset($this->phone_verified_at);
+    }
+
+    public function clearPhoneVerifiedAt()
+    {
+        unset($this->phone_verified_at);
+    }
+
+    /**
+     * Generated from protobuf field <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = {</code>
+     * @param \Google\Protobuf\Timestamp $var
+     * @return $this
+     */
+    public function setPhoneVerifiedAt(\Google\Protobuf\Timestamp|null $var)
+    {
+        $this->phone_verified_at = $var;
 
         return $this;
     }

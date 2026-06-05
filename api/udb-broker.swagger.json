@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "UDB Control-Plane API",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "description": "HTTP/JSON (gRPC-gateway) surface for UDB control-plane services. The core DataBroker data-plane RPCs are gRPC-native and are not represented here."
   },
   "tags": [
@@ -828,6 +828,210 @@
         ]
       }
     },
+    "/v1/auth/.well-known/jwks.json": {
+      "get": {
+        "summary": "JSON Web Key Set for verifying UDB-issued JWTs. Public.",
+        "operationId": "AuthnService_GetJwks",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetJwksResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "context.tenant.tenantId",
+            "description": "Tenant or account boundary chosen by the caller or resolved by UDB.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.tenant.organizationId",
+            "description": "Optional owning organization/workspace above the tenant boundary.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.tenant.projectId",
+            "description": "Project/application namespace inside the tenant.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.tenant.environment",
+            "description": "Deployment environment, for example prod, staging, dev, or test.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.tenant.region",
+            "description": "Region, shard, or residency boundary when routing matters.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.tenant.partitionId",
+            "description": "Optional data partition or workspace identifier for fine-grained isolation.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.tenant.accessSurface",
+            "description": "UI/API surface or workload channel such as web, mobile, api, worker.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.tenant.attributes",
+            "description": "Consumer-defined labels for policy routing and audit enrichment.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.requestId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.correlationId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.userId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.headers",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.traceId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.spanId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.ipAddress",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.userAgent",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.timestamp",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "context.principalId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.serviceIdentity",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.scopes",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "context.roles",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "context.purpose",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.idempotencyKey",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.clientCatalogVersion",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.consistency",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.attributes",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.traceparent",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
     "/v1/auth/authenticate": {
       "post": {
         "summary": "── Authentication ───────────────────────────────────────────────────────",
@@ -1079,6 +1283,72 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/v1ChangePasswordRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/auth/password:forgot": {
+      "post": {
+        "summary": "User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the\naccount's channel). Public — no bearer required.",
+        "operationId": "AuthnService_ForgotPassword",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ForgotPasswordResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ForgotPasswordRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/auth/password:reset": {
+      "post": {
+        "summary": "Complete a password reset with the OTP from ForgotPassword (no current\npassword required). Public — the OTP is the proof of control.",
+        "operationId": "AuthnService_ResetPassword",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ResetPasswordResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ResetPasswordRequest"
             }
           }
         ],
@@ -1405,6 +1675,286 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/AuthnServiceRefreshSessionBody"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/auth/tenants/{tenantId}/mfa-policy": {
+      "get": {
+        "summary": "Read the per-tenant MFA enforcement policy.",
+        "operationId": "AuthnService_GetMfaPolicy",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetMfaPolicyResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "context.tenant.tenantId",
+            "description": "Tenant or account boundary chosen by the caller or resolved by UDB.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.tenant.organizationId",
+            "description": "Optional owning organization/workspace above the tenant boundary.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.tenant.projectId",
+            "description": "Project/application namespace inside the tenant.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.tenant.environment",
+            "description": "Deployment environment, for example prod, staging, dev, or test.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.tenant.region",
+            "description": "Region, shard, or residency boundary when routing matters.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.tenant.partitionId",
+            "description": "Optional data partition or workspace identifier for fine-grained isolation.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.tenant.accessSurface",
+            "description": "UI/API surface or workload channel such as web, mobile, api, worker.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.tenant.attributes",
+            "description": "Consumer-defined labels for policy routing and audit enrichment.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.requestId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.correlationId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.userId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.headers",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.traceId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.spanId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.ipAddress",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.userAgent",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.timestamp",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "context.principalId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.serviceIdentity",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.scopes",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "context.roles",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "context.purpose",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.idempotencyKey",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.clientCatalogVersion",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.consistency",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.attributes",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "context.traceparent",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      },
+      "put": {
+        "summary": "Set the per-tenant MFA enforcement policy.",
+        "operationId": "AuthnService_PutMfaPolicy",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PutMfaPolicyResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AuthnServicePutMfaPolicyBody"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/auth/token:introspect": {
+      "post": {
+        "summary": "OAuth2-style token introspection for a UDB-issued JWT.",
+        "operationId": "AuthnService_IntrospectToken",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1IntrospectTokenResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1IntrospectTokenRequest"
             }
           }
         ],
@@ -1781,6 +2331,84 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/AuthnServiceAdminResetPasswordBody"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/auth/users/{userId}/phone:verify": {
+      "post": {
+        "summary": "Set the user's phone number and send an SMS verification OTP. Complete with\nVerifyOTP (the response is verified the same way as email).",
+        "operationId": "AuthnService_SendPhoneVerification",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SendPhoneVerificationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AuthnServiceSendPhoneVerificationBody"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
+    "/v1/auth/users/{userId}/recovery-codes:generate": {
+      "post": {
+        "summary": "Generate a fresh set of single-use MFA recovery/backup codes (returned once;\nany prior codes for the user are invalidated).",
+        "operationId": "AuthnService_GenerateRecoveryCodes",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GenerateRecoveryCodesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AuthnServiceGenerateRecoveryCodesBody"
             }
           }
         ],
@@ -3811,12 +4439,48 @@
         }
       }
     },
+    "AuthnServiceGenerateRecoveryCodesBody": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "format": "int32",
+          "title": "number of codes to generate (server clamps to a sane range; default 10)"
+        },
+        "context": {
+          "$ref": "#/definitions/coreCommonV1RequestContext"
+        }
+      }
+    },
+    "AuthnServicePutMfaPolicyBody": {
+      "type": "object",
+      "properties": {
+        "requireMfa": {
+          "type": "boolean"
+        },
+        "context": {
+          "$ref": "#/definitions/coreCommonV1RequestContext"
+        }
+      }
+    },
     "AuthnServiceRefreshSessionBody": {
       "type": "object",
       "properties": {
         "ttlSeconds": {
           "type": "string",
           "format": "int64"
+        }
+      }
+    },
+    "AuthnServiceSendPhoneVerificationBody": {
+      "type": "object",
+      "properties": {
+        "phone": {
+          "type": "string",
+          "title": "E.164 number to set + verify"
+        },
+        "context": {
+          "$ref": "#/definitions/coreCommonV1RequestContext"
         }
       }
     },
@@ -5507,6 +6171,43 @@
         }
       }
     },
+    "v1ForgotPasswordRequest": {
+      "type": "object",
+      "properties": {
+        "identifier": {
+          "type": "string",
+          "title": "username or email"
+        },
+        "context": {
+          "$ref": "#/definitions/coreCommonV1RequestContext"
+        }
+      }
+    },
+    "v1ForgotPasswordResponse": {
+      "type": "object",
+      "properties": {
+        "otpId": {
+          "type": "string",
+          "description": "Id of the PASSWORD_RESET OTP issued (empty when the account is unknown; the\nresponse shape is uniform so it is not an account-enumeration oracle)."
+        }
+      }
+    },
+    "v1GenerateRecoveryCodesResponse": {
+      "type": "object",
+      "properties": {
+        "codes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Plaintext codes, returned exactly ONCE. Only keyed hashes are stored; any\npreviously-issued codes for the user are invalidated."
+        },
+        "generated": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
     "v1GetApiKeyResponse": {
       "type": "object",
       "properties": {
@@ -5568,6 +6269,26 @@
             "type": "object",
             "$ref": "#/definitions/v1ExecutorPerformanceSummary"
           }
+        }
+      }
+    },
+    "v1GetJwksResponse": {
+      "type": "object",
+      "properties": {
+        "jwksJson": {
+          "type": "string",
+          "title": "RFC 7517 JWK Set document for verifying UDB-issued JWTs"
+        }
+      }
+    },
+    "v1GetMfaPolicyResponse": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "requireMfa": {
+          "type": "boolean"
         }
       }
     },
@@ -5728,6 +6449,44 @@
       "properties": {
         "user": {
           "$ref": "#/definitions/v1User"
+        }
+      }
+    },
+    "v1IntrospectTokenRequest": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string"
+        },
+        "context": {
+          "$ref": "#/definitions/coreCommonV1RequestContext"
+        }
+      }
+    },
+    "v1IntrospectTokenResponse": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "serviceIdentity": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "expiresAtUnix": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -5953,11 +6712,11 @@
         },
         "mfaOtpId": {
           "type": "string",
-          "description": "MFA step-2 fields — set on the second Login call after receiving mfa_required=true.\nWhen mfa_otp_id is non-empty the credential check is skipped and the service\ninstead consumes the MFA session token and validates the TOTP code.\n\npending MFA session token from step-1 LoginResponse.mfa_otp_id"
+          "description": "MFA step-2 fields — set on the second Login call after receiving mfa_required=true.\nThe password (first factor) is ALWAYS verified; these only supply the second\nfactor and never substitute for it. Provide totp_code for an authenticator app,\nor mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA\nemail/SMS code previously issued to this same user.\n\nid of a LOGIN_2FA OTP issued to this user (email/SMS second factor)"
         },
         "totpCode": {
           "type": "string",
-          "title": "6-digit TOTP code from the user's authenticator app"
+          "title": "6-digit TOTP code, or the one-time code when mfa_otp_id is set"
         },
         "tenantHint": {
           "type": "string"
@@ -5967,6 +6726,10 @@
         },
         "accessSurface": {
           "type": "string"
+        },
+        "recoveryCode": {
+          "type": "string",
+          "title": "single-use MFA recovery/backup code (alternative second factor)"
         }
       }
     },
@@ -6001,11 +6764,11 @@
         },
         "mfaRequired": {
           "type": "boolean",
-          "title": "true = client must present OTP before access"
+          "title": "true = client must re-call Login with password + second factor"
         },
         "mfaOtpId": {
           "type": "string",
-          "title": "OTP ID to complete MFA"
+          "title": "reserved for a future server-issued MFA challenge id (currently empty)"
         }
       }
     },
@@ -6311,10 +7074,11 @@
         "OTP_TYPE_EMAIL_VERIFICATION",
         "OTP_TYPE_LOGIN_2FA",
         "OTP_TYPE_PASSWORD_RESET",
-        "OTP_TYPE_SENSITIVE_OPERATION"
+        "OTP_TYPE_SENSITIVE_OPERATION",
+        "OTP_TYPE_PHONE_VERIFICATION"
       ],
       "default": "OTP_TYPE_UNSPECIFIED",
-      "description": " - OTP_TYPE_EMAIL_VERIFICATION: New account email confirmation\n - OTP_TYPE_LOGIN_2FA: Login second-factor (email OTP)\n - OTP_TYPE_PASSWORD_RESET: Password reset\n - OTP_TYPE_SENSITIVE_OPERATION: Step-up auth for a protected action."
+      "description": " - OTP_TYPE_EMAIL_VERIFICATION: New account email confirmation\n - OTP_TYPE_LOGIN_2FA: Login second-factor (email OTP)\n - OTP_TYPE_PASSWORD_RESET: Password reset\n - OTP_TYPE_SENSITIVE_OPERATION: Step-up auth for a protected action.\n - OTP_TYPE_PHONE_VERIFICATION: Phone-number confirmation via SMS OTP."
     },
     "v1PageRequest": {
       "type": "object",
@@ -6553,6 +7317,17 @@
         }
       }
     },
+    "v1PutMfaPolicyResponse": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "requireMfa": {
+          "type": "boolean"
+        }
+      }
+    },
     "v1PutRelationshipRequest": {
       "type": "object",
       "properties": {
@@ -6744,6 +7519,35 @@
         "attemptsRemaining": {
           "type": "integer",
           "format": "int32"
+        }
+      }
+    },
+    "v1ResetPasswordRequest": {
+      "type": "object",
+      "properties": {
+        "otpId": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "newPassword": {
+          "type": "string"
+        },
+        "context": {
+          "$ref": "#/definitions/coreCommonV1RequestContext"
+        }
+      }
+    },
+    "v1ResetPasswordResponse": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "changedAtUnix": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -7048,6 +7852,14 @@
           "type": "integer",
           "format": "int32",
           "title": "Wait before next resend"
+        }
+      }
+    },
+    "v1SendPhoneVerificationResponse": {
+      "type": "object",
+      "properties": {
+        "otpId": {
+          "type": "string"
         }
       }
     },
@@ -7602,6 +8414,13 @@
         },
         "externalReferencesJson": {
           "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "phoneVerifiedAt": {
+          "type": "string",
+          "format": "date-time"
         }
       },
       "description": "---------------------------------------------------------------------------\nUser — a human, service, workload, or externally-mapped account that can be\nauthenticated by UDB and authorized by the UDB policy engine.\n\nMigration order 1 in schema udb_authn.\nThe password_hash uses bcrypt (cost ≥ 12).\nAll PII fields are masked in application logs via (pii) + (log_masked).\n---------------------------------------------------------------------------"

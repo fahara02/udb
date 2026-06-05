@@ -42,6 +42,14 @@ const (
 	AuthnService_ValidateCSRF_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/ValidateCSRF"
 	AuthnService_EnrollMFA_FullMethodName                    = "/udb.core.authn.services.v1.AuthnService/EnrollMFA"
 	AuthnService_ConfirmMFAEnrollment_FullMethodName         = "/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment"
+	AuthnService_GenerateRecoveryCodes_FullMethodName        = "/udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes"
+	AuthnService_PutMfaPolicy_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/PutMfaPolicy"
+	AuthnService_GetMfaPolicy_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/GetMfaPolicy"
+	AuthnService_ForgotPassword_FullMethodName               = "/udb.core.authn.services.v1.AuthnService/ForgotPassword"
+	AuthnService_ResetPassword_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/ResetPassword"
+	AuthnService_IntrospectToken_FullMethodName              = "/udb.core.authn.services.v1.AuthnService/IntrospectToken"
+	AuthnService_SendPhoneVerification_FullMethodName        = "/udb.core.authn.services.v1.AuthnService/SendPhoneVerification"
+	AuthnService_GetJwks_FullMethodName                      = "/udb.core.authn.services.v1.AuthnService/GetJwks"
 	AuthnService_StartWebAuthnRegistration_FullMethodName    = "/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration"
 	AuthnService_FinishWebAuthnRegistration_FullMethodName   = "/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration"
 	AuthnService_StartWebAuthnAuthentication_FullMethodName  = "/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication"
@@ -96,6 +104,26 @@ type AuthnServiceClient interface {
 	EnrollMFA(ctx context.Context, in *EnrollMFARequest, opts ...grpc.CallOption) (*EnrollMFAResponse, error)
 	// Step 2: confirm with first TOTP code (or email OTP)
 	ConfirmMFAEnrollment(ctx context.Context, in *ConfirmMFAEnrollmentRequest, opts ...grpc.CallOption) (*ConfirmMFAEnrollmentResponse, error)
+	// Generate a fresh set of single-use MFA recovery/backup codes (returned once;
+	// any prior codes for the user are invalidated).
+	GenerateRecoveryCodes(ctx context.Context, in *GenerateRecoveryCodesRequest, opts ...grpc.CallOption) (*GenerateRecoveryCodesResponse, error)
+	// Set the per-tenant MFA enforcement policy.
+	PutMfaPolicy(ctx context.Context, in *PutMfaPolicyRequest, opts ...grpc.CallOption) (*PutMfaPolicyResponse, error)
+	// Read the per-tenant MFA enforcement policy.
+	GetMfaPolicy(ctx context.Context, in *GetMfaPolicyRequest, opts ...grpc.CallOption) (*GetMfaPolicyResponse, error)
+	// User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the
+	// account's channel). Public — no bearer required.
+	ForgotPassword(ctx context.Context, in *ForgotPasswordRequest, opts ...grpc.CallOption) (*ForgotPasswordResponse, error)
+	// Complete a password reset with the OTP from ForgotPassword (no current
+	// password required). Public — the OTP is the proof of control.
+	ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error)
+	// OAuth2-style token introspection for a UDB-issued JWT.
+	IntrospectToken(ctx context.Context, in *IntrospectTokenRequest, opts ...grpc.CallOption) (*IntrospectTokenResponse, error)
+	// Set the user's phone number and send an SMS verification OTP. Complete with
+	// VerifyOTP (the response is verified the same way as email).
+	SendPhoneVerification(ctx context.Context, in *SendPhoneVerificationRequest, opts ...grpc.CallOption) (*SendPhoneVerificationResponse, error)
+	// JSON Web Key Set for verifying UDB-issued JWTs. Public.
+	GetJwks(ctx context.Context, in *GetJwksRequest, opts ...grpc.CallOption) (*GetJwksResponse, error)
 	// ── WebAuthn / passkeys ─────────────────────────────────────────────────
 	StartWebAuthnRegistration(ctx context.Context, in *StartWebAuthnRegistrationRequest, opts ...grpc.CallOption) (*StartWebAuthnRegistrationResponse, error)
 	FinishWebAuthnRegistration(ctx context.Context, in *FinishWebAuthnRegistrationRequest, opts ...grpc.CallOption) (*FinishWebAuthnRegistrationResponse, error)
@@ -341,6 +369,86 @@ func (c *authnServiceClient) ConfirmMFAEnrollment(ctx context.Context, in *Confi
 	return out, nil
 }
 
+func (c *authnServiceClient) GenerateRecoveryCodes(ctx context.Context, in *GenerateRecoveryCodesRequest, opts ...grpc.CallOption) (*GenerateRecoveryCodesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GenerateRecoveryCodesResponse)
+	err := c.cc.Invoke(ctx, AuthnService_GenerateRecoveryCodes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) PutMfaPolicy(ctx context.Context, in *PutMfaPolicyRequest, opts ...grpc.CallOption) (*PutMfaPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PutMfaPolicyResponse)
+	err := c.cc.Invoke(ctx, AuthnService_PutMfaPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) GetMfaPolicy(ctx context.Context, in *GetMfaPolicyRequest, opts ...grpc.CallOption) (*GetMfaPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetMfaPolicyResponse)
+	err := c.cc.Invoke(ctx, AuthnService_GetMfaPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) ForgotPassword(ctx context.Context, in *ForgotPasswordRequest, opts ...grpc.CallOption) (*ForgotPasswordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ForgotPasswordResponse)
+	err := c.cc.Invoke(ctx, AuthnService_ForgotPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResetPasswordResponse)
+	err := c.cc.Invoke(ctx, AuthnService_ResetPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) IntrospectToken(ctx context.Context, in *IntrospectTokenRequest, opts ...grpc.CallOption) (*IntrospectTokenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IntrospectTokenResponse)
+	err := c.cc.Invoke(ctx, AuthnService_IntrospectToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) SendPhoneVerification(ctx context.Context, in *SendPhoneVerificationRequest, opts ...grpc.CallOption) (*SendPhoneVerificationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SendPhoneVerificationResponse)
+	err := c.cc.Invoke(ctx, AuthnService_SendPhoneVerification_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) GetJwks(ctx context.Context, in *GetJwksRequest, opts ...grpc.CallOption) (*GetJwksResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetJwksResponse)
+	err := c.cc.Invoke(ctx, AuthnService_GetJwks_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authnServiceClient) StartWebAuthnRegistration(ctx context.Context, in *StartWebAuthnRegistrationRequest, opts ...grpc.CallOption) (*StartWebAuthnRegistrationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(StartWebAuthnRegistrationResponse)
@@ -429,6 +537,26 @@ type AuthnServiceServer interface {
 	EnrollMFA(context.Context, *EnrollMFARequest) (*EnrollMFAResponse, error)
 	// Step 2: confirm with first TOTP code (or email OTP)
 	ConfirmMFAEnrollment(context.Context, *ConfirmMFAEnrollmentRequest) (*ConfirmMFAEnrollmentResponse, error)
+	// Generate a fresh set of single-use MFA recovery/backup codes (returned once;
+	// any prior codes for the user are invalidated).
+	GenerateRecoveryCodes(context.Context, *GenerateRecoveryCodesRequest) (*GenerateRecoveryCodesResponse, error)
+	// Set the per-tenant MFA enforcement policy.
+	PutMfaPolicy(context.Context, *PutMfaPolicyRequest) (*PutMfaPolicyResponse, error)
+	// Read the per-tenant MFA enforcement policy.
+	GetMfaPolicy(context.Context, *GetMfaPolicyRequest) (*GetMfaPolicyResponse, error)
+	// User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the
+	// account's channel). Public — no bearer required.
+	ForgotPassword(context.Context, *ForgotPasswordRequest) (*ForgotPasswordResponse, error)
+	// Complete a password reset with the OTP from ForgotPassword (no current
+	// password required). Public — the OTP is the proof of control.
+	ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error)
+	// OAuth2-style token introspection for a UDB-issued JWT.
+	IntrospectToken(context.Context, *IntrospectTokenRequest) (*IntrospectTokenResponse, error)
+	// Set the user's phone number and send an SMS verification OTP. Complete with
+	// VerifyOTP (the response is verified the same way as email).
+	SendPhoneVerification(context.Context, *SendPhoneVerificationRequest) (*SendPhoneVerificationResponse, error)
+	// JSON Web Key Set for verifying UDB-issued JWTs. Public.
+	GetJwks(context.Context, *GetJwksRequest) (*GetJwksResponse, error)
 	// ── WebAuthn / passkeys ─────────────────────────────────────────────────
 	StartWebAuthnRegistration(context.Context, *StartWebAuthnRegistrationRequest) (*StartWebAuthnRegistrationResponse, error)
 	FinishWebAuthnRegistration(context.Context, *FinishWebAuthnRegistrationRequest) (*FinishWebAuthnRegistrationResponse, error)
@@ -511,6 +639,30 @@ func (UnimplementedAuthnServiceServer) EnrollMFA(context.Context, *EnrollMFARequ
 }
 func (UnimplementedAuthnServiceServer) ConfirmMFAEnrollment(context.Context, *ConfirmMFAEnrollmentRequest) (*ConfirmMFAEnrollmentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ConfirmMFAEnrollment not implemented")
+}
+func (UnimplementedAuthnServiceServer) GenerateRecoveryCodes(context.Context, *GenerateRecoveryCodesRequest) (*GenerateRecoveryCodesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GenerateRecoveryCodes not implemented")
+}
+func (UnimplementedAuthnServiceServer) PutMfaPolicy(context.Context, *PutMfaPolicyRequest) (*PutMfaPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PutMfaPolicy not implemented")
+}
+func (UnimplementedAuthnServiceServer) GetMfaPolicy(context.Context, *GetMfaPolicyRequest) (*GetMfaPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetMfaPolicy not implemented")
+}
+func (UnimplementedAuthnServiceServer) ForgotPassword(context.Context, *ForgotPasswordRequest) (*ForgotPasswordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ForgotPassword not implemented")
+}
+func (UnimplementedAuthnServiceServer) ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResetPassword not implemented")
+}
+func (UnimplementedAuthnServiceServer) IntrospectToken(context.Context, *IntrospectTokenRequest) (*IntrospectTokenResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method IntrospectToken not implemented")
+}
+func (UnimplementedAuthnServiceServer) SendPhoneVerification(context.Context, *SendPhoneVerificationRequest) (*SendPhoneVerificationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SendPhoneVerification not implemented")
+}
+func (UnimplementedAuthnServiceServer) GetJwks(context.Context, *GetJwksRequest) (*GetJwksResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetJwks not implemented")
 }
 func (UnimplementedAuthnServiceServer) StartWebAuthnRegistration(context.Context, *StartWebAuthnRegistrationRequest) (*StartWebAuthnRegistrationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method StartWebAuthnRegistration not implemented")
@@ -958,6 +1110,150 @@ func _AuthnService_ConfirmMFAEnrollment_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthnService_GenerateRecoveryCodes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GenerateRecoveryCodesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).GenerateRecoveryCodes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_GenerateRecoveryCodes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).GenerateRecoveryCodes(ctx, req.(*GenerateRecoveryCodesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_PutMfaPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PutMfaPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).PutMfaPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_PutMfaPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).PutMfaPolicy(ctx, req.(*PutMfaPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_GetMfaPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMfaPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).GetMfaPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_GetMfaPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).GetMfaPolicy(ctx, req.(*GetMfaPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_ForgotPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ForgotPasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).ForgotPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_ForgotPassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).ForgotPassword(ctx, req.(*ForgotPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_ResetPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetPasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).ResetPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_ResetPassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).ResetPassword(ctx, req.(*ResetPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_IntrospectToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IntrospectTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).IntrospectToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_IntrospectToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).IntrospectToken(ctx, req.(*IntrospectTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_SendPhoneVerification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendPhoneVerificationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).SendPhoneVerification(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_SendPhoneVerification_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).SendPhoneVerification(ctx, req.(*SendPhoneVerificationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_GetJwks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetJwksRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).GetJwks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_GetJwks_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).GetJwks(ctx, req.(*GetJwksRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthnService_StartWebAuthnRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(StartWebAuthnRegistrationRequest)
 	if err := dec(in); err != nil {
@@ -1128,6 +1424,38 @@ var AuthnService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ConfirmMFAEnrollment",
 			Handler:    _AuthnService_ConfirmMFAEnrollment_Handler,
+		},
+		{
+			MethodName: "GenerateRecoveryCodes",
+			Handler:    _AuthnService_GenerateRecoveryCodes_Handler,
+		},
+		{
+			MethodName: "PutMfaPolicy",
+			Handler:    _AuthnService_PutMfaPolicy_Handler,
+		},
+		{
+			MethodName: "GetMfaPolicy",
+			Handler:    _AuthnService_GetMfaPolicy_Handler,
+		},
+		{
+			MethodName: "ForgotPassword",
+			Handler:    _AuthnService_ForgotPassword_Handler,
+		},
+		{
+			MethodName: "ResetPassword",
+			Handler:    _AuthnService_ResetPassword_Handler,
+		},
+		{
+			MethodName: "IntrospectToken",
+			Handler:    _AuthnService_IntrospectToken_Handler,
+		},
+		{
+			MethodName: "SendPhoneVerification",
+			Handler:    _AuthnService_SendPhoneVerification_Handler,
+		},
+		{
+			MethodName: "GetJwks",
+			Handler:    _AuthnService_GetJwks_Handler,
 		},
 		{
 			MethodName: "StartWebAuthnRegistration",

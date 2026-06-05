@@ -359,6 +359,130 @@ class AuthnServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Generate a fresh set of single-use MFA recovery/backup codes (returned once;
+     * any prior codes for the user are invalidated).
+     * @param \Udb\Core\Authn\Services\V1\GenerateRecoveryCodesRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\GenerateRecoveryCodesResponse>
+     */
+    public function GenerateRecoveryCodes(\Udb\Core\Authn\Services\V1\GenerateRecoveryCodesRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\GenerateRecoveryCodesResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Set the per-tenant MFA enforcement policy.
+     * @param \Udb\Core\Authn\Services\V1\PutMfaPolicyRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\PutMfaPolicyResponse>
+     */
+    public function PutMfaPolicy(\Udb\Core\Authn\Services\V1\PutMfaPolicyRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/PutMfaPolicy',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\PutMfaPolicyResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Read the per-tenant MFA enforcement policy.
+     * @param \Udb\Core\Authn\Services\V1\GetMfaPolicyRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\GetMfaPolicyResponse>
+     */
+    public function GetMfaPolicy(\Udb\Core\Authn\Services\V1\GetMfaPolicyRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/GetMfaPolicy',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\GetMfaPolicyResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the
+     * account's channel). Public — no bearer required.
+     * @param \Udb\Core\Authn\Services\V1\ForgotPasswordRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\ForgotPasswordResponse>
+     */
+    public function ForgotPassword(\Udb\Core\Authn\Services\V1\ForgotPasswordRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/ForgotPassword',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\ForgotPasswordResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Complete a password reset with the OTP from ForgotPassword (no current
+     * password required). Public — the OTP is the proof of control.
+     * @param \Udb\Core\Authn\Services\V1\ResetPasswordRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\ResetPasswordResponse>
+     */
+    public function ResetPassword(\Udb\Core\Authn\Services\V1\ResetPasswordRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/ResetPassword',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\ResetPasswordResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * OAuth2-style token introspection for a UDB-issued JWT.
+     * @param \Udb\Core\Authn\Services\V1\IntrospectTokenRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\IntrospectTokenResponse>
+     */
+    public function IntrospectToken(\Udb\Core\Authn\Services\V1\IntrospectTokenRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/IntrospectToken',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\IntrospectTokenResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Set the user's phone number and send an SMS verification OTP. Complete with
+     * VerifyOTP (the response is verified the same way as email).
+     * @param \Udb\Core\Authn\Services\V1\SendPhoneVerificationRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\SendPhoneVerificationResponse>
+     */
+    public function SendPhoneVerification(\Udb\Core\Authn\Services\V1\SendPhoneVerificationRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/SendPhoneVerification',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\SendPhoneVerificationResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * JSON Web Key Set for verifying UDB-issued JWTs. Public.
+     * @param \Udb\Core\Authn\Services\V1\GetJwksRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\GetJwksResponse>
+     */
+    public function GetJwks(\Udb\Core\Authn\Services\V1\GetJwksRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/GetJwks',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\GetJwksResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * ── WebAuthn / passkeys ─────────────────────────────────────────────────
      * @param \Udb\Core\Authn\Services\V1\StartWebAuthnRegistrationRequest $argument input argument
      * @param array $metadata metadata

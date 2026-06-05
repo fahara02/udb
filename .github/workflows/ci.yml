@@ -495,7 +495,7 @@ jobs:
           done
 
       - name: Compile native + integration tests
-        run: cargo test --locked --no-run --lib --test integration_tests
+        run: cargo test --locked --no-run --lib --test integration_tests --test runtime_live_backends
 
       - name: Native service live tests
         # --test-threads=1: the live tests share Postgres schemas and
@@ -508,6 +508,10 @@ jobs:
         run: cargo test --locked --lib -- --ignored --nocapture --test-threads=1
 
       - name: Integration harness (CDC, sagas, backends)
+        # The integration crates gate their tests with `#[ignore]` (honest skip
+        # outside a live stack), so they MUST be run with `--ignored` here — the
+        # env vars below provide the live DSNs. Without `--ignored` these tests
+        # would not execute at all.
         env:
           UDB_INTEGRATION_TESTS: "1"
           UDB_INTEGRATION_PG_DSN: postgres://udb:udb@localhost:55432/udb
@@ -515,7 +519,7 @@ jobs:
           UDB_INTEGRATION_REDIS_URL: redis://localhost:56379
           UDB_INTEGRATION_QDRANT_URL: http://localhost:56333
           UDB_INTEGRATION_MINIO_ENDPOINT: http://localhost:59000
-        run: cargo test --locked --test integration_tests -- --nocapture
+        run: cargo test --locked --test integration_tests --test runtime_live_backends -- --ignored --nocapture
 
       - name: Dump stack logs on failure
         if: failure()

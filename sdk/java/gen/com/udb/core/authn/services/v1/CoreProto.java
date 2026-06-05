@@ -287,6 +287,86 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_authn_services_v1_ConfirmMFAEnrollmentResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_GenerateRecoveryCodesRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_GenerateRecoveryCodesRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_GenerateRecoveryCodesResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_GenerateRecoveryCodesResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_PutMfaPolicyRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_PutMfaPolicyRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_PutMfaPolicyResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_PutMfaPolicyResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_GetMfaPolicyRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_GetMfaPolicyRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_GetMfaPolicyResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_GetMfaPolicyResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_ForgotPasswordRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_ForgotPasswordRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_ForgotPasswordResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_ForgotPasswordResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_ResetPasswordRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_ResetPasswordRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_ResetPasswordResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_ResetPasswordResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_IntrospectTokenRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_IntrospectTokenRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_IntrospectTokenResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_IntrospectTokenResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_GetJwksRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_GetJwksRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_GetJwksResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_GetJwksResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_SendPhoneVerificationRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_SendPhoneVerificationRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_services_v1_SendPhoneVerificationResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_services_v1_SendPhoneVerificationResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -458,7 +538,7 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
       "Token\022&\n\017expires_at_unix\030\004 \001(\003R\rexpiresA" +
       "tUnix\0221\n\024relationship_version\030\005 \001(\tR\023rel" +
       "ationshipVersion\022\032\n\010warnings\030\006 \003(\tR\010warn" +
-      "ings\"\257\003\n\014LoginRequest\022\032\n\010username\030\001 \001(\tR" +
+      "ings\"\324\003\n\014LoginRequest\022\032\n\010username\030\001 \001(\tR" +
       "\010username\022\032\n\010password\030\002 \001(\tR\010password\022E\n" +
       "\013device_type\030\003 \001(\0162$.udb.core.authn.enti" +
       "ty.v1.DeviceTypeR\ndeviceType\022\037\n\013device_n" +
@@ -468,153 +548,197 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
       "otp_id\030\010 \001(\tR\010mfaOtpId\022\033\n\ttotp_code\030\t \001(" +
       "\tR\010totpCode\022\037\n\013tenant_hint\030\n \001(\tR\ntenant" +
       "Hint\022!\n\014project_hint\030\013 \001(\tR\013projectHint\022" +
-      "%\n\016access_surface\030\014 \001(\tR\raccessSurface\"\313" +
-      "\002\n\rLoginResponse\022\027\n\007user_id\030\001 \001(\tR\006userI" +
-      "d\022\035\n\nsession_id\030\002 \001(\tR\tsessionId\022!\n\014acce" +
-      "ss_token\030\003 \001(\tR\013accessToken\022#\n\rrefresh_t" +
-      "oken\030\004 \001(\tR\014refreshToken\0225\n\027access_token" +
-      "_expires_in\030\005 \001(\005R\024accessTokenExpiresIn\022" +
-      "#\n\rsession_token\030\006 \001(\tR\014sessionToken\022\035\n\n" +
-      "csrf_token\030\007 \001(\tR\tcsrfToken\022!\n\014mfa_requi" +
-      "red\030\010 \001(\010R\013mfaRequired\022\034\n\nmfa_otp_id\030\t \001" +
-      "(\tR\010mfaOtpId\"Y\n\023RefreshTokenRequest\022#\n\rr" +
-      "efresh_token\030\001 \001(\tR\014refreshToken\022\035\n\nsess" +
-      "ion_id\030\002 \001(\tR\tsessionId\"p\n\024RefreshTokenR" +
-      "esponse\022!\n\014access_token\030\001 \001(\tR\013accessTok" +
-      "en\0225\n\027access_token_expires_in\030\002 \001(\005R\024acc" +
-      "essTokenExpiresIn\"\264\001\n\rLogoutRequest\022\035\n\ns" +
-      "ession_id\030\001 \001(\tR\tsessionId\022!\n\014all_sessio" +
-      "ns\030\002 \001(\010R\013allSessions\022#\n\rrevoke_reason\030\003" +
-      " \001(\tR\014revokeReason\022<\n\007context\030\004 \001(\0132\".ud" +
-      "b.core.common.v1.RequestContextR\007context" +
-      "\";\n\016LogoutResponse\022)\n\020sessions_revoked\030\001" +
-      " \001(\005R\017sessionsRevoked\"\323\001\n\025ChangePassword" +
-      "Request\022\027\n\007user_id\030\001 \001(\tR\006userId\022)\n\020curr" +
-      "ent_password\030\002 \001(\tR\017currentPassword\022!\n\014n" +
-      "ew_password\030\003 \001(\tR\013newPassword\022\025\n\006otp_id" +
-      "\030\004 \001(\tR\005otpId\022<\n\007context\030\005 \001(\0132\".udb.cor" +
-      "e.common.v1.RequestContextR\007context\"\217\001\n\026" +
-      "ChangePasswordResponse\022\027\n\007user_id\030\001 \001(\tR" +
-      "\006userId\0229\n\nchanged_at\030\002 \001(\0132\032.google.pro" +
-      "tobuf.TimestampR\tchangedAt\022!\n\014operation_" +
-      "id\030\003 \001(\tR\013operationId\"p\n\024ValidateTokenRe" +
-      "quest\022\024\n\005token\030\001 \001(\tR\005token\022B\n\ntoken_typ" +
-      "e\030\002 \001(\0162#.udb.core.authn.entity.v1.Token" +
-      "TypeR\ttokenType\"\344\005\n\025ValidateTokenRespons" +
-      "e\022\024\n\005valid\030\001 \001(\010R\005valid\022\027\n\007user_id\030\002 \001(\t" +
-      "R\006userId\022\035\n\nsession_id\030\003 \001(\tR\tsessionId\022" +
-      "H\n\014account_kind\030\004 \001(\0162%.udb.core.authn.e" +
-      "ntity.v1.AccountKindR\013accountKind\022\033\n\tten" +
-      "ant_id\030\005 \001(\tR\010tenantId\022\024\n\005roles\030\006 \003(\tR\005r" +
-      "oles\0229\n\nexpires_at\030\007 \001(\0132\032.google.protob" +
-      "uf.TimestampR\texpiresAt\022%\n\016access_surfac" +
-      "e\030\010 \001(\tR\raccessSurface\022\033\n\tdevice_id\030\t \001(" +
-      "\tR\010deviceId\022\031\n\010token_id\030\n \001(\tR\007tokenId\022H" +
-      "\n\014session_type\030\013 \001(\0162%.udb.core.authn.en" +
-      "tity.v1.SessionTypeR\013sessionType\022C\n\tprin" +
-      "cipal\030\014 \001(\0132%.udb.core.authn.services.v1" +
-      ".PrincipalR\tprincipal\022\035\n\nproject_id\030\r \001(" +
-      "\tR\tprojectId\022\026\n\006scopes\030\016 \003(\tR\006scopes\022a\n\n" +
-      "attributes\030\017 \003(\0132A.udb.core.authn.servic" +
-      "es.v1.ValidateTokenResponse.AttributesEn" +
-      "tryR\nattributes\032=\n\017AttributesEntry\022\020\n\003ke" +
-      "y\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\253" +
-      "\001\n\024CreateSessionRequest\022C\n\tprincipal\030\001 \001" +
-      "(\0132%.udb.core.authn.services.v1.Principa" +
-      "lR\tprincipal\022\037\n\013ttl_seconds\030\002 \001(\003R\nttlSe" +
-      "conds\022-\n\022client_fingerprint\030\003 \001(\tR\021clien" +
-      "tFingerprint\"^\n\025CreateSessionResponse\022\035\n" +
-      "\nsession_id\030\001 \001(\tR\tsessionId\022&\n\017expires_" +
-      "at_unix\030\002 \001(\003R\rexpiresAtUnix\"W\n\025RefreshS" +
-      "essionRequest\022\035\n\nsession_id\030\001 \001(\tR\tsessi" +
-      "onId\022\037\n\013ttl_seconds\030\002 \001(\003R\nttlSeconds\"X\n" +
-      "\026RefreshSessionResponse\022&\n\017expires_at_un" +
-      "ix\030\001 \001(\003R\rexpiresAtUnix\022\026\n\006active\030\002 \001(\010R" +
-      "\006active\"2\n\021GetSessionRequest\022\035\n\nsession_" +
-      "id\030\001 \001(\tR\tsessionId\"Q\n\022GetSessionRespons" +
-      "e\022;\n\007session\030\001 \001(\0132!.udb.core.authn.enti" +
-      "ty.v1.SessionR\007session\"\204\001\n\023ListSessionsR" +
-      "equest\022\027\n\007user_id\030\001 \001(\tR\006userId\022\037\n\013activ" +
-      "e_only\030\002 \001(\010R\nactiveOnly\0223\n\004page\030\003 \001(\0132\037" +
-      ".udb.core.common.v1.PageRequestR\004page\"\213\001" +
-      "\n\024ListSessionsResponse\022=\n\010sessions\030\001 \003(\013" +
-      "2!.udb.core.authn.entity.v1.SessionR\010ses" +
-      "sions\0224\n\004page\030\002 \001(\0132 .udb.core.common.v1" +
-      ".PageResponseR\004page\"\347\001\n\024RevokeSessionReq" +
-      "uest\022\035\n\nsession_id\030\001 \001(\tR\tsessionId\022#\n\rr" +
-      "evoke_reason\030\002 \001(\tR\014revokeReason\022<\n\007cont" +
-      "ext\030\003 \001(\0132\".udb.core.common.v1.RequestCo" +
-      "ntextR\007context\022!\n\014principal_id\030\004 \001(\tR\013pr" +
-      "incipalId\022*\n\021all_for_principal\030\005 \001(\010R\017al" +
-      "lForPrincipal\"\271\001\n\025RevokeSessionResponse\022" +
-      "\035\n\nsession_id\030\001 \001(\tR\tsessionId\0229\n\nrevoke" +
-      "d_at\030\002 \001(\0132\032.google.protobuf.TimestampR\t" +
-      "revokedAt\022!\n\014operation_id\030\003 \001(\tR\013operati" +
-      "onId\022#\n\rrevoked_count\030\004 \001(\005R\014revokedCoun" +
-      "t\"S\n\023ValidateCSRFRequest\022\035\n\nsession_id\030\001" +
-      " \001(\tR\tsessionId\022\035\n\ncsrf_token\030\002 \001(\tR\tcsr" +
-      "fToken\",\n\024ValidateCSRFResponse\022\024\n\005valid\030" +
-      "\001 \001(\010R\005valid\"\256\001\n\020EnrollMFARequest\022\027\n\007use" +
-      "r_id\030\001 \001(\tR\006userId\022C\n\010mfa_type\030\002 \001(\0162(.u" +
-      "db.core.authn.entity.v1.AuthFactorKindR\007" +
-      "mfaType\022<\n\007context\030\003 \001(\0132\".udb.core.comm" +
-      "on.v1.RequestContextR\007context\"x\n\021EnrollM" +
-      "FAResponse\022\037\n\013totp_secret\030\001 \001(\tR\ntotpSec" +
-      "ret\022\036\n\013totp_qr_uri\030\002 \001(\tR\ttotpQrUri\022\"\n\rv" +
-      "erify_otp_id\030\003 \001(\tR\013verifyOtpId\"\237\001\n\033Conf" +
-      "irmMFAEnrollmentRequest\022\027\n\007user_id\030\001 \001(\t" +
-      "R\006userId\022\025\n\006otp_id\030\002 \001(\tR\005otpId\022\022\n\004code\030" +
-      "\003 \001(\tR\004code\022<\n\007context\030\004 \001(\0132\".udb.core." +
-      "common.v1.RequestContextR\007context\":\n\034Con" +
-      "firmMFAEnrollmentResponse\022\032\n\010enrolled\030\001 " +
-      "\001(\010R\010enrolled\"\313\001\n StartWebAuthnRegistrat" +
-      "ionRequest\022\027\n\007user_id\030\001 \001(\tR\006userId\022\024\n\005l" +
-      "abel\030\002 \001(\tR\005label\022\033\n\ttenant_id\030\003 \001(\tR\010te" +
-      "nantId\022\035\n\nproject_id\030\004 \001(\tR\tprojectId\022<\n" +
-      "\007context\030\005 \001(\0132\".udb.core.common.v1.Requ" +
-      "estContextR\007context\"\313\001\n!StartWebAuthnReg" +
-      "istrationResponse\022!\n\014challenge_id\030\001 \001(\tR" +
-      "\013challengeId\022[\n+public_key_credential_cr" +
-      "eation_options_json\030\002 \001(\tR&publicKeyCred" +
-      "entialCreationOptionsJson\022&\n\017expires_at_" +
-      "unix\030\003 \001(\003R\rexpiresAtUnix\"\327\001\n!FinishWebA" +
-      "uthnRegistrationRequest\022!\n\014challenge_id\030" +
-      "\001 \001(\tR\013challengeId\022;\n\032public_key_credent" +
-      "ial_json\030\002 \001(\tR\027publicKeyCredentialJson\022" +
-      "\024\n\005label\030\003 \001(\tR\005label\022<\n\007context\030\004 \001(\0132\"" +
-      ".udb.core.common.v1.RequestContextR\007cont" +
-      "ext\"\202\001\n\"FinishWebAuthnRegistrationRespon" +
-      "se\022\036\n\nregistered\030\001 \001(\010R\nregistered\022#\n\rcr" +
-      "edential_id\030\002 \001(\tR\014credentialId\022\027\n\007user_" +
-      "id\030\003 \001(\tR\006userId\"\267\001\n\"StartWebAuthnAuthen" +
-      "ticationRequest\022\027\n\007user_id\030\001 \001(\tR\006userId" +
-      "\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId\022\035\n\nproject" +
-      "_id\030\003 \001(\tR\tprojectId\022<\n\007context\030\004 \001(\0132\"." +
-      "udb.core.common.v1.RequestContextR\007conte" +
-      "xt\"\313\001\n#StartWebAuthnAuthenticationRespon" +
-      "se\022!\n\014challenge_id\030\001 \001(\tR\013challengeId\022Y\n" +
-      "*public_key_credential_request_options_j" +
-      "son\030\002 \001(\tR%publicKeyCredentialRequestOpt" +
-      "ionsJson\022&\n\017expires_at_unix\030\003 \001(\003R\rexpir" +
-      "esAtUnix\"\303\001\n#FinishWebAuthnAuthenticatio" +
-      "nRequest\022!\n\014challenge_id\030\001 \001(\tR\013challeng" +
-      "eId\022;\n\032public_key_credential_json\030\002 \001(\tR" +
-      "\027publicKeyCredentialJson\022<\n\007context\030\003 \001(" +
-      "\0132\".udb.core.common.v1.RequestContextR\007c" +
-      "ontext\"\372\001\n$FinishWebAuthnAuthenticationR" +
-      "esponse\022C\n\tprincipal\030\001 \001(\0132%.udb.core.au" +
-      "thn.services.v1.PrincipalR\tprincipal\022\035\n\n" +
-      "session_id\030\002 \001(\tR\tsessionId\022!\n\014access_to" +
-      "ken\030\003 \001(\tR\013accessToken\022&\n\017expires_at_uni" +
-      "x\030\004 \001(\003R\rexpiresAtUnix\022#\n\rcredential_id\030" +
-      "\005 \001(\tR\014credentialIdB\202\002\n\036com.udb.core.aut" +
-      "hn.services.v1B\tCoreProtoP\001ZHgithub.com/" +
-      "fahara02/udb/sdk/go/gen/udb/core/authn/s" +
-      "ervices/v1;servicesv1\242\002\004UCAS\252\002\032udb.core." +
-      "Authn.Services.V1\312\002\032Udb\\Core\\Authn\\Servi" +
-      "ces\\V1\342\002&Udb\\GPBMetadata\\Core\\Authn\\Serv" +
-      "ices\\V1\352\002\036Udb::Core::Authn::Services::V1" +
-      "b\006proto3"
+      "%\n\016access_surface\030\014 \001(\tR\raccessSurface\022#" +
+      "\n\rrecovery_code\030\r \001(\tR\014recoveryCode\"\313\002\n\r" +
+      "LoginResponse\022\027\n\007user_id\030\001 \001(\tR\006userId\022\035" +
+      "\n\nsession_id\030\002 \001(\tR\tsessionId\022!\n\014access_" +
+      "token\030\003 \001(\tR\013accessToken\022#\n\rrefresh_toke" +
+      "n\030\004 \001(\tR\014refreshToken\0225\n\027access_token_ex" +
+      "pires_in\030\005 \001(\005R\024accessTokenExpiresIn\022#\n\r" +
+      "session_token\030\006 \001(\tR\014sessionToken\022\035\n\ncsr" +
+      "f_token\030\007 \001(\tR\tcsrfToken\022!\n\014mfa_required" +
+      "\030\010 \001(\010R\013mfaRequired\022\034\n\nmfa_otp_id\030\t \001(\tR" +
+      "\010mfaOtpId\"Y\n\023RefreshTokenRequest\022#\n\rrefr" +
+      "esh_token\030\001 \001(\tR\014refreshToken\022\035\n\nsession" +
+      "_id\030\002 \001(\tR\tsessionId\"p\n\024RefreshTokenResp" +
+      "onse\022!\n\014access_token\030\001 \001(\tR\013accessToken\022" +
+      "5\n\027access_token_expires_in\030\002 \001(\005R\024access" +
+      "TokenExpiresIn\"\264\001\n\rLogoutRequest\022\035\n\nsess" +
+      "ion_id\030\001 \001(\tR\tsessionId\022!\n\014all_sessions\030" +
+      "\002 \001(\010R\013allSessions\022#\n\rrevoke_reason\030\003 \001(" +
+      "\tR\014revokeReason\022<\n\007context\030\004 \001(\0132\".udb.c" +
+      "ore.common.v1.RequestContextR\007context\";\n" +
+      "\016LogoutResponse\022)\n\020sessions_revoked\030\001 \001(" +
+      "\005R\017sessionsRevoked\"\323\001\n\025ChangePasswordReq" +
+      "uest\022\027\n\007user_id\030\001 \001(\tR\006userId\022)\n\020current" +
+      "_password\030\002 \001(\tR\017currentPassword\022!\n\014new_" +
+      "password\030\003 \001(\tR\013newPassword\022\025\n\006otp_id\030\004 " +
+      "\001(\tR\005otpId\022<\n\007context\030\005 \001(\0132\".udb.core.c" +
+      "ommon.v1.RequestContextR\007context\"\217\001\n\026Cha" +
+      "ngePasswordResponse\022\027\n\007user_id\030\001 \001(\tR\006us" +
+      "erId\0229\n\nchanged_at\030\002 \001(\0132\032.google.protob" +
+      "uf.TimestampR\tchangedAt\022!\n\014operation_id\030" +
+      "\003 \001(\tR\013operationId\"p\n\024ValidateTokenReque" +
+      "st\022\024\n\005token\030\001 \001(\tR\005token\022B\n\ntoken_type\030\002" +
+      " \001(\0162#.udb.core.authn.entity.v1.TokenTyp" +
+      "eR\ttokenType\"\344\005\n\025ValidateTokenResponse\022\024" +
+      "\n\005valid\030\001 \001(\010R\005valid\022\027\n\007user_id\030\002 \001(\tR\006u" +
+      "serId\022\035\n\nsession_id\030\003 \001(\tR\tsessionId\022H\n\014" +
+      "account_kind\030\004 \001(\0162%.udb.core.authn.enti" +
+      "ty.v1.AccountKindR\013accountKind\022\033\n\ttenant" +
+      "_id\030\005 \001(\tR\010tenantId\022\024\n\005roles\030\006 \003(\tR\005role" +
+      "s\0229\n\nexpires_at\030\007 \001(\0132\032.google.protobuf." +
+      "TimestampR\texpiresAt\022%\n\016access_surface\030\010" +
+      " \001(\tR\raccessSurface\022\033\n\tdevice_id\030\t \001(\tR\010" +
+      "deviceId\022\031\n\010token_id\030\n \001(\tR\007tokenId\022H\n\014s" +
+      "ession_type\030\013 \001(\0162%.udb.core.authn.entit" +
+      "y.v1.SessionTypeR\013sessionType\022C\n\tprincip" +
+      "al\030\014 \001(\0132%.udb.core.authn.services.v1.Pr" +
+      "incipalR\tprincipal\022\035\n\nproject_id\030\r \001(\tR\t" +
+      "projectId\022\026\n\006scopes\030\016 \003(\tR\006scopes\022a\n\natt" +
+      "ributes\030\017 \003(\0132A.udb.core.authn.services." +
+      "v1.ValidateTokenResponse.AttributesEntry" +
+      "R\nattributes\032=\n\017AttributesEntry\022\020\n\003key\030\001" +
+      " \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\253\001\n\024" +
+      "CreateSessionRequest\022C\n\tprincipal\030\001 \001(\0132" +
+      "%.udb.core.authn.services.v1.PrincipalR\t" +
+      "principal\022\037\n\013ttl_seconds\030\002 \001(\003R\nttlSecon" +
+      "ds\022-\n\022client_fingerprint\030\003 \001(\tR\021clientFi" +
+      "ngerprint\"^\n\025CreateSessionResponse\022\035\n\nse" +
+      "ssion_id\030\001 \001(\tR\tsessionId\022&\n\017expires_at_" +
+      "unix\030\002 \001(\003R\rexpiresAtUnix\"W\n\025RefreshSess" +
+      "ionRequest\022\035\n\nsession_id\030\001 \001(\tR\tsessionI" +
+      "d\022\037\n\013ttl_seconds\030\002 \001(\003R\nttlSeconds\"X\n\026Re" +
+      "freshSessionResponse\022&\n\017expires_at_unix\030" +
+      "\001 \001(\003R\rexpiresAtUnix\022\026\n\006active\030\002 \001(\010R\006ac" +
+      "tive\"2\n\021GetSessionRequest\022\035\n\nsession_id\030" +
+      "\001 \001(\tR\tsessionId\"Q\n\022GetSessionResponse\022;" +
+      "\n\007session\030\001 \001(\0132!.udb.core.authn.entity." +
+      "v1.SessionR\007session\"\204\001\n\023ListSessionsRequ" +
+      "est\022\027\n\007user_id\030\001 \001(\tR\006userId\022\037\n\013active_o" +
+      "nly\030\002 \001(\010R\nactiveOnly\0223\n\004page\030\003 \001(\0132\037.ud" +
+      "b.core.common.v1.PageRequestR\004page\"\213\001\n\024L" +
+      "istSessionsResponse\022=\n\010sessions\030\001 \003(\0132!." +
+      "udb.core.authn.entity.v1.SessionR\010sessio" +
+      "ns\0224\n\004page\030\002 \001(\0132 .udb.core.common.v1.Pa" +
+      "geResponseR\004page\"\347\001\n\024RevokeSessionReques" +
+      "t\022\035\n\nsession_id\030\001 \001(\tR\tsessionId\022#\n\rrevo" +
+      "ke_reason\030\002 \001(\tR\014revokeReason\022<\n\007context" +
+      "\030\003 \001(\0132\".udb.core.common.v1.RequestConte" +
+      "xtR\007context\022!\n\014principal_id\030\004 \001(\tR\013princ" +
+      "ipalId\022*\n\021all_for_principal\030\005 \001(\010R\017allFo" +
+      "rPrincipal\"\271\001\n\025RevokeSessionResponse\022\035\n\n" +
+      "session_id\030\001 \001(\tR\tsessionId\0229\n\nrevoked_a" +
+      "t\030\002 \001(\0132\032.google.protobuf.TimestampR\trev" +
+      "okedAt\022!\n\014operation_id\030\003 \001(\tR\013operationI" +
+      "d\022#\n\rrevoked_count\030\004 \001(\005R\014revokedCount\"S" +
+      "\n\023ValidateCSRFRequest\022\035\n\nsession_id\030\001 \001(" +
+      "\tR\tsessionId\022\035\n\ncsrf_token\030\002 \001(\tR\tcsrfTo" +
+      "ken\",\n\024ValidateCSRFResponse\022\024\n\005valid\030\001 \001" +
+      "(\010R\005valid\"\256\001\n\020EnrollMFARequest\022\027\n\007user_i" +
+      "d\030\001 \001(\tR\006userId\022C\n\010mfa_type\030\002 \001(\0162(.udb." +
+      "core.authn.entity.v1.AuthFactorKindR\007mfa" +
+      "Type\022<\n\007context\030\003 \001(\0132\".udb.core.common." +
+      "v1.RequestContextR\007context\"x\n\021EnrollMFAR" +
+      "esponse\022\037\n\013totp_secret\030\001 \001(\tR\ntotpSecret" +
+      "\022\036\n\013totp_qr_uri\030\002 \001(\tR\ttotpQrUri\022\"\n\rveri" +
+      "fy_otp_id\030\003 \001(\tR\013verifyOtpId\"\237\001\n\033Confirm" +
+      "MFAEnrollmentRequest\022\027\n\007user_id\030\001 \001(\tR\006u" +
+      "serId\022\025\n\006otp_id\030\002 \001(\tR\005otpId\022\022\n\004code\030\003 \001" +
+      "(\tR\004code\022<\n\007context\030\004 \001(\0132\".udb.core.com" +
+      "mon.v1.RequestContextR\007context\":\n\034Confir" +
+      "mMFAEnrollmentResponse\022\032\n\010enrolled\030\001 \001(\010" +
+      "R\010enrolled\"\213\001\n\034GenerateRecoveryCodesRequ" +
+      "est\022\027\n\007user_id\030\001 \001(\tR\006userId\022\024\n\005count\030\002 " +
+      "\001(\005R\005count\022<\n\007context\030\003 \001(\0132\".udb.core.c" +
+      "ommon.v1.RequestContextR\007context\"S\n\035Gene" +
+      "rateRecoveryCodesResponse\022\024\n\005codes\030\001 \003(\t" +
+      "R\005codes\022\034\n\tgenerated\030\002 \001(\005R\tgenerated\"\221\001" +
+      "\n\023PutMfaPolicyRequest\022\033\n\ttenant_id\030\001 \001(\t" +
+      "R\010tenantId\022\037\n\013require_mfa\030\002 \001(\010R\nrequire" +
+      "Mfa\022<\n\007context\030\003 \001(\0132\".udb.core.common.v" +
+      "1.RequestContextR\007context\"T\n\024PutMfaPolic" +
+      "yResponse\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037" +
+      "\n\013require_mfa\030\002 \001(\010R\nrequireMfa\"p\n\023GetMf" +
+      "aPolicyRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenan" +
+      "tId\022<\n\007context\030\002 \001(\0132\".udb.core.common.v" +
+      "1.RequestContextR\007context\"T\n\024GetMfaPolic" +
+      "yResponse\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037" +
+      "\n\013require_mfa\030\002 \001(\010R\nrequireMfa\"u\n\025Forgo" +
+      "tPasswordRequest\022\036\n\nidentifier\030\001 \001(\tR\nid" +
+      "entifier\022<\n\007context\030\002 \001(\0132\".udb.core.com" +
+      "mon.v1.RequestContextR\007context\"/\n\026Forgot" +
+      "PasswordResponse\022\025\n\006otp_id\030\001 \001(\tR\005otpId\"" +
+      "\242\001\n\024ResetPasswordRequest\022\025\n\006otp_id\030\001 \001(\t" +
+      "R\005otpId\022\022\n\004code\030\002 \001(\tR\004code\022!\n\014new_passw" +
+      "ord\030\003 \001(\tR\013newPassword\022<\n\007context\030\004 \001(\0132" +
+      "\".udb.core.common.v1.RequestContextR\007con" +
+      "text\"X\n\025ResetPasswordResponse\022\027\n\007user_id" +
+      "\030\001 \001(\tR\006userId\022&\n\017changed_at_unix\030\002 \001(\003R" +
+      "\rchangedAtUnix\"l\n\026IntrospectTokenRequest" +
+      "\022\024\n\005token\030\001 \001(\tR\005token\022<\n\007context\030\002 \001(\0132" +
+      "\".udb.core.common.v1.RequestContextR\007con" +
+      "text\"\323\001\n\027IntrospectTokenResponse\022\026\n\006acti" +
+      "ve\030\001 \001(\010R\006active\022\030\n\007subject\030\002 \001(\tR\007subje" +
+      "ct\022\033\n\ttenant_id\030\003 \001(\tR\010tenantId\022)\n\020servi" +
+      "ce_identity\030\004 \001(\tR\017serviceIdentity\022\026\n\006sc" +
+      "opes\030\005 \003(\tR\006scopes\022&\n\017expires_at_unix\030\006 " +
+      "\001(\003R\rexpiresAtUnix\"N\n\016GetJwksRequest\022<\n\007" +
+      "context\030\001 \001(\0132\".udb.core.common.v1.Reque" +
+      "stContextR\007context\".\n\017GetJwksResponse\022\033\n" +
+      "\tjwks_json\030\001 \001(\tR\010jwksJson\"\213\001\n\034SendPhone" +
+      "VerificationRequest\022\027\n\007user_id\030\001 \001(\tR\006us" +
+      "erId\022\024\n\005phone\030\002 \001(\tR\005phone\022<\n\007context\030\003 " +
+      "\001(\0132\".udb.core.common.v1.RequestContextR" +
+      "\007context\"6\n\035SendPhoneVerificationRespons" +
+      "e\022\025\n\006otp_id\030\001 \001(\tR\005otpId\"\313\001\n StartWebAut" +
+      "hnRegistrationRequest\022\027\n\007user_id\030\001 \001(\tR\006" +
+      "userId\022\024\n\005label\030\002 \001(\tR\005label\022\033\n\ttenant_i" +
+      "d\030\003 \001(\tR\010tenantId\022\035\n\nproject_id\030\004 \001(\tR\tp" +
+      "rojectId\022<\n\007context\030\005 \001(\0132\".udb.core.com" +
+      "mon.v1.RequestContextR\007context\"\313\001\n!Start" +
+      "WebAuthnRegistrationResponse\022!\n\014challeng" +
+      "e_id\030\001 \001(\tR\013challengeId\022[\n+public_key_cr" +
+      "edential_creation_options_json\030\002 \001(\tR&pu" +
+      "blicKeyCredentialCreationOptionsJson\022&\n\017" +
+      "expires_at_unix\030\003 \001(\003R\rexpiresAtUnix\"\327\001\n" +
+      "!FinishWebAuthnRegistrationRequest\022!\n\014ch" +
+      "allenge_id\030\001 \001(\tR\013challengeId\022;\n\032public_" +
+      "key_credential_json\030\002 \001(\tR\027publicKeyCred" +
+      "entialJson\022\024\n\005label\030\003 \001(\tR\005label\022<\n\007cont" +
+      "ext\030\004 \001(\0132\".udb.core.common.v1.RequestCo" +
+      "ntextR\007context\"\202\001\n\"FinishWebAuthnRegistr" +
+      "ationResponse\022\036\n\nregistered\030\001 \001(\010R\nregis" +
+      "tered\022#\n\rcredential_id\030\002 \001(\tR\014credential" +
+      "Id\022\027\n\007user_id\030\003 \001(\tR\006userId\"\267\001\n\"StartWeb" +
+      "AuthnAuthenticationRequest\022\027\n\007user_id\030\001 " +
+      "\001(\tR\006userId\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId" +
+      "\022\035\n\nproject_id\030\003 \001(\tR\tprojectId\022<\n\007conte" +
+      "xt\030\004 \001(\0132\".udb.core.common.v1.RequestCon" +
+      "textR\007context\"\313\001\n#StartWebAuthnAuthentic" +
+      "ationResponse\022!\n\014challenge_id\030\001 \001(\tR\013cha" +
+      "llengeId\022Y\n*public_key_credential_reques" +
+      "t_options_json\030\002 \001(\tR%publicKeyCredentia" +
+      "lRequestOptionsJson\022&\n\017expires_at_unix\030\003" +
+      " \001(\003R\rexpiresAtUnix\"\303\001\n#FinishWebAuthnAu" +
+      "thenticationRequest\022!\n\014challenge_id\030\001 \001(" +
+      "\tR\013challengeId\022;\n\032public_key_credential_" +
+      "json\030\002 \001(\tR\027publicKeyCredentialJson\022<\n\007c" +
+      "ontext\030\003 \001(\0132\".udb.core.common.v1.Reques" +
+      "tContextR\007context\"\372\001\n$FinishWebAuthnAuth" +
+      "enticationResponse\022C\n\tprincipal\030\001 \001(\0132%." +
+      "udb.core.authn.services.v1.PrincipalR\tpr" +
+      "incipal\022\035\n\nsession_id\030\002 \001(\tR\tsessionId\022!" +
+      "\n\014access_token\030\003 \001(\tR\013accessToken\022&\n\017exp" +
+      "ires_at_unix\030\004 \001(\003R\rexpiresAtUnix\022#\n\rcre" +
+      "dential_id\030\005 \001(\tR\014credentialIdB\202\002\n\036com.u" +
+      "db.core.authn.services.v1B\tCoreProtoP\001ZH" +
+      "github.com/fahara02/udb/sdk/go/gen/udb/c" +
+      "ore/authn/services/v1;servicesv1\242\002\004UCAS\252" +
+      "\002\032udb.core.Authn.Services.V1\312\002\032Udb\\Core\\" +
+      "Authn\\Services\\V1\342\002&Udb\\GPBMetadata\\Core" +
+      "\\Authn\\Services\\V1\352\002\036Udb::Core::Authn::S" +
+      "ervices::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -781,7 +905,7 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
     internal_static_udb_core_authn_services_v1_LoginRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_services_v1_LoginRequest_descriptor,
-        new java.lang.String[] { "Username", "Password", "DeviceType", "DeviceName", "IpAddress", "UserAgent", "DeviceId", "MfaOtpId", "TotpCode", "TenantHint", "ProjectHint", "AccessSurface", });
+        new java.lang.String[] { "Username", "Password", "DeviceType", "DeviceName", "IpAddress", "UserAgent", "DeviceId", "MfaOtpId", "TotpCode", "TenantHint", "ProjectHint", "AccessSurface", "RecoveryCode", });
     internal_static_udb_core_authn_services_v1_LoginResponse_descriptor =
       getDescriptor().getMessageType(22);
     internal_static_udb_core_authn_services_v1_LoginResponse_fieldAccessorTable = new
@@ -938,50 +1062,146 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_services_v1_ConfirmMFAEnrollmentResponse_descriptor,
         new java.lang.String[] { "Enrolled", });
-    internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationRequest_descriptor =
+    internal_static_udb_core_authn_services_v1_GenerateRecoveryCodesRequest_descriptor =
       getDescriptor().getMessageType(47);
+    internal_static_udb_core_authn_services_v1_GenerateRecoveryCodesRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_GenerateRecoveryCodesRequest_descriptor,
+        new java.lang.String[] { "UserId", "Count", "Context", });
+    internal_static_udb_core_authn_services_v1_GenerateRecoveryCodesResponse_descriptor =
+      getDescriptor().getMessageType(48);
+    internal_static_udb_core_authn_services_v1_GenerateRecoveryCodesResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_GenerateRecoveryCodesResponse_descriptor,
+        new java.lang.String[] { "Codes", "Generated", });
+    internal_static_udb_core_authn_services_v1_PutMfaPolicyRequest_descriptor =
+      getDescriptor().getMessageType(49);
+    internal_static_udb_core_authn_services_v1_PutMfaPolicyRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_PutMfaPolicyRequest_descriptor,
+        new java.lang.String[] { "TenantId", "RequireMfa", "Context", });
+    internal_static_udb_core_authn_services_v1_PutMfaPolicyResponse_descriptor =
+      getDescriptor().getMessageType(50);
+    internal_static_udb_core_authn_services_v1_PutMfaPolicyResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_PutMfaPolicyResponse_descriptor,
+        new java.lang.String[] { "TenantId", "RequireMfa", });
+    internal_static_udb_core_authn_services_v1_GetMfaPolicyRequest_descriptor =
+      getDescriptor().getMessageType(51);
+    internal_static_udb_core_authn_services_v1_GetMfaPolicyRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_GetMfaPolicyRequest_descriptor,
+        new java.lang.String[] { "TenantId", "Context", });
+    internal_static_udb_core_authn_services_v1_GetMfaPolicyResponse_descriptor =
+      getDescriptor().getMessageType(52);
+    internal_static_udb_core_authn_services_v1_GetMfaPolicyResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_GetMfaPolicyResponse_descriptor,
+        new java.lang.String[] { "TenantId", "RequireMfa", });
+    internal_static_udb_core_authn_services_v1_ForgotPasswordRequest_descriptor =
+      getDescriptor().getMessageType(53);
+    internal_static_udb_core_authn_services_v1_ForgotPasswordRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_ForgotPasswordRequest_descriptor,
+        new java.lang.String[] { "Identifier", "Context", });
+    internal_static_udb_core_authn_services_v1_ForgotPasswordResponse_descriptor =
+      getDescriptor().getMessageType(54);
+    internal_static_udb_core_authn_services_v1_ForgotPasswordResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_ForgotPasswordResponse_descriptor,
+        new java.lang.String[] { "OtpId", });
+    internal_static_udb_core_authn_services_v1_ResetPasswordRequest_descriptor =
+      getDescriptor().getMessageType(55);
+    internal_static_udb_core_authn_services_v1_ResetPasswordRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_ResetPasswordRequest_descriptor,
+        new java.lang.String[] { "OtpId", "Code", "NewPassword", "Context", });
+    internal_static_udb_core_authn_services_v1_ResetPasswordResponse_descriptor =
+      getDescriptor().getMessageType(56);
+    internal_static_udb_core_authn_services_v1_ResetPasswordResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_ResetPasswordResponse_descriptor,
+        new java.lang.String[] { "UserId", "ChangedAtUnix", });
+    internal_static_udb_core_authn_services_v1_IntrospectTokenRequest_descriptor =
+      getDescriptor().getMessageType(57);
+    internal_static_udb_core_authn_services_v1_IntrospectTokenRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_IntrospectTokenRequest_descriptor,
+        new java.lang.String[] { "Token", "Context", });
+    internal_static_udb_core_authn_services_v1_IntrospectTokenResponse_descriptor =
+      getDescriptor().getMessageType(58);
+    internal_static_udb_core_authn_services_v1_IntrospectTokenResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_IntrospectTokenResponse_descriptor,
+        new java.lang.String[] { "Active", "Subject", "TenantId", "ServiceIdentity", "Scopes", "ExpiresAtUnix", });
+    internal_static_udb_core_authn_services_v1_GetJwksRequest_descriptor =
+      getDescriptor().getMessageType(59);
+    internal_static_udb_core_authn_services_v1_GetJwksRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_GetJwksRequest_descriptor,
+        new java.lang.String[] { "Context", });
+    internal_static_udb_core_authn_services_v1_GetJwksResponse_descriptor =
+      getDescriptor().getMessageType(60);
+    internal_static_udb_core_authn_services_v1_GetJwksResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_GetJwksResponse_descriptor,
+        new java.lang.String[] { "JwksJson", });
+    internal_static_udb_core_authn_services_v1_SendPhoneVerificationRequest_descriptor =
+      getDescriptor().getMessageType(61);
+    internal_static_udb_core_authn_services_v1_SendPhoneVerificationRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_SendPhoneVerificationRequest_descriptor,
+        new java.lang.String[] { "UserId", "Phone", "Context", });
+    internal_static_udb_core_authn_services_v1_SendPhoneVerificationResponse_descriptor =
+      getDescriptor().getMessageType(62);
+    internal_static_udb_core_authn_services_v1_SendPhoneVerificationResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_services_v1_SendPhoneVerificationResponse_descriptor,
+        new java.lang.String[] { "OtpId", });
+    internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationRequest_descriptor =
+      getDescriptor().getMessageType(63);
     internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationRequest_descriptor,
         new java.lang.String[] { "UserId", "Label", "TenantId", "ProjectId", "Context", });
     internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationResponse_descriptor =
-      getDescriptor().getMessageType(48);
+      getDescriptor().getMessageType(64);
     internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_services_v1_StartWebAuthnRegistrationResponse_descriptor,
         new java.lang.String[] { "ChallengeId", "PublicKeyCredentialCreationOptionsJson", "ExpiresAtUnix", });
     internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationRequest_descriptor =
-      getDescriptor().getMessageType(49);
+      getDescriptor().getMessageType(65);
     internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationRequest_descriptor,
         new java.lang.String[] { "ChallengeId", "PublicKeyCredentialJson", "Label", "Context", });
     internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationResponse_descriptor =
-      getDescriptor().getMessageType(50);
+      getDescriptor().getMessageType(66);
     internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_services_v1_FinishWebAuthnRegistrationResponse_descriptor,
         new java.lang.String[] { "Registered", "CredentialId", "UserId", });
     internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationRequest_descriptor =
-      getDescriptor().getMessageType(51);
+      getDescriptor().getMessageType(67);
     internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationRequest_descriptor,
         new java.lang.String[] { "UserId", "TenantId", "ProjectId", "Context", });
     internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationResponse_descriptor =
-      getDescriptor().getMessageType(52);
+      getDescriptor().getMessageType(68);
     internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_services_v1_StartWebAuthnAuthenticationResponse_descriptor,
         new java.lang.String[] { "ChallengeId", "PublicKeyCredentialRequestOptionsJson", "ExpiresAtUnix", });
     internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationRequest_descriptor =
-      getDescriptor().getMessageType(53);
+      getDescriptor().getMessageType(69);
     internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationRequest_descriptor,
         new java.lang.String[] { "ChallengeId", "PublicKeyCredentialJson", "Context", });
     internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationResponse_descriptor =
-      getDescriptor().getMessageType(54);
+      getDescriptor().getMessageType(70);
     internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_services_v1_FinishWebAuthnAuthenticationResponse_descriptor,

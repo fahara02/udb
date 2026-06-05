@@ -510,6 +510,14 @@ fn unix_now() -> u64 {
 
 #[cfg(feature = "http-client")]
 fn fetch_jwks(url: &str) -> Result<JwkSet, String> {
+    // Refuse plaintext JWKS URLs: an http(s)-downgraded or MITM'd JWKS lets an
+    // attacker inject their own signing keys and forge tokens. Verification keys
+    // must be fetched over TLS.
+    if !url.trim().to_ascii_lowercase().starts_with("https://") {
+        return Err(format!(
+            "JWKS URL must use https:// (refusing non-TLS endpoint to prevent key-injection MITM): {url}"
+        ));
+    }
     reqwest::blocking::get(url)
         .map_err(|err| format!("JWKS fetch failed: {err}"))?
         .error_for_status()

@@ -40,6 +40,7 @@ private static final long serialVersionUID = 0L;
     tenantHint_ = "";
     projectHint_ = "";
     accessSurface_ = "";
+    recoveryCode_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -342,8 +343,10 @@ private static final long serialVersionUID = 0L;
   /**
    * <pre>
    * MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
-   * When mfa_otp_id is non-empty the credential check is skipped and the service
-   * instead consumes the MFA session token and validates the TOTP code.
+   * The password (first factor) is ALWAYS verified; these only supply the second
+   * factor and never substitute for it. Provide totp_code for an authenticator app,
+   * or mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA
+   * email/SMS code previously issued to this same user.
    * </pre>
    *
    * <code>string mfa_otp_id = 8 [json_name = "mfaOtpId"];</code>
@@ -365,8 +368,10 @@ private static final long serialVersionUID = 0L;
   /**
    * <pre>
    * MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
-   * When mfa_otp_id is non-empty the credential check is skipped and the service
-   * instead consumes the MFA session token and validates the TOTP code.
+   * The password (first factor) is ALWAYS verified; these only supply the second
+   * factor and never substitute for it. Provide totp_code for an authenticator app,
+   * or mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA
+   * email/SMS code previously issued to this same user.
    * </pre>
    *
    * <code>string mfa_otp_id = 8 [json_name = "mfaOtpId"];</code>
@@ -392,7 +397,7 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object totpCode_ = "";
   /**
    * <pre>
-   * 6-digit TOTP code from the user's authenticator app
+   * 6-digit TOTP code, or the one-time code when mfa_otp_id is set
    * </pre>
    *
    * <code>string totp_code = 9 [json_name = "totpCode"];</code>
@@ -413,7 +418,7 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * 6-digit TOTP code from the user's authenticator app
+   * 6-digit TOTP code, or the one-time code when mfa_otp_id is set
    * </pre>
    *
    * <code>string totp_code = 9 [json_name = "totpCode"];</code>
@@ -551,6 +556,53 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int RECOVERY_CODE_FIELD_NUMBER = 13;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object recoveryCode_ = "";
+  /**
+   * <pre>
+   * single-use MFA recovery/backup code (alternative second factor)
+   * </pre>
+   *
+   * <code>string recovery_code = 13 [json_name = "recoveryCode"];</code>
+   * @return The recoveryCode.
+   */
+  @java.lang.Override
+  public java.lang.String getRecoveryCode() {
+    java.lang.Object ref = recoveryCode_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      recoveryCode_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * single-use MFA recovery/backup code (alternative second factor)
+   * </pre>
+   *
+   * <code>string recovery_code = 13 [json_name = "recoveryCode"];</code>
+   * @return The bytes for recoveryCode.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRecoveryCodeBytes() {
+    java.lang.Object ref = recoveryCode_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      recoveryCode_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -601,6 +653,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(accessSurface_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 12, accessSurface_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(recoveryCode_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 13, recoveryCode_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -641,6 +696,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(accessSurface_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(12, accessSurface_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(recoveryCode_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(13, recoveryCode_);
     }
     return size;
   }
@@ -689,6 +747,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getProjectHint())) return false;
     if (!getAccessSurface()
         .equals(other.getAccessSurface())) return false;
+    if (!getRecoveryCode()
+        .equals(other.getRecoveryCode())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -724,6 +784,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getProjectHint().hashCode();
     hash = (37 * hash) + ACCESS_SURFACE_FIELD_NUMBER;
     hash = (53 * hash) + getAccessSurface().hashCode();
+    hash = (37 * hash) + RECOVERY_CODE_FIELD_NUMBER;
+    hash = (53 * hash) + getRecoveryCode().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -867,6 +929,7 @@ private static final long serialVersionUID = 0L;
       tenantHint_ = "";
       projectHint_ = "";
       accessSurface_ = "";
+      recoveryCode_ = "";
       return this;
     }
 
@@ -935,6 +998,9 @@ private static final long serialVersionUID = 0L;
       }
       if (((from_bitField0_ & 0x00000800) != 0)) {
         result.accessSurface_ = accessSurface_;
+      }
+      if (((from_bitField0_ & 0x00001000) != 0)) {
+        result.recoveryCode_ = recoveryCode_;
       }
     }
 
@@ -1006,6 +1072,11 @@ private static final long serialVersionUID = 0L;
       if (!other.getAccessSurface().isEmpty()) {
         accessSurface_ = other.accessSurface_;
         bitField0_ |= 0x00000800;
+        onChanged();
+      }
+      if (!other.getRecoveryCode().isEmpty()) {
+        recoveryCode_ = other.recoveryCode_;
+        bitField0_ |= 0x00001000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1094,6 +1165,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000800;
               break;
             } // case 98
+            case 106: {
+              recoveryCode_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00001000;
+              break;
+            } // case 106
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1659,8 +1735,10 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
-     * When mfa_otp_id is non-empty the credential check is skipped and the service
-     * instead consumes the MFA session token and validates the TOTP code.
+     * The password (first factor) is ALWAYS verified; these only supply the second
+     * factor and never substitute for it. Provide totp_code for an authenticator app,
+     * or mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA
+     * email/SMS code previously issued to this same user.
      * </pre>
      *
      * <code>string mfa_otp_id = 8 [json_name = "mfaOtpId"];</code>
@@ -1681,8 +1759,10 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
-     * When mfa_otp_id is non-empty the credential check is skipped and the service
-     * instead consumes the MFA session token and validates the TOTP code.
+     * The password (first factor) is ALWAYS verified; these only supply the second
+     * factor and never substitute for it. Provide totp_code for an authenticator app,
+     * or mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA
+     * email/SMS code previously issued to this same user.
      * </pre>
      *
      * <code>string mfa_otp_id = 8 [json_name = "mfaOtpId"];</code>
@@ -1704,8 +1784,10 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
-     * When mfa_otp_id is non-empty the credential check is skipped and the service
-     * instead consumes the MFA session token and validates the TOTP code.
+     * The password (first factor) is ALWAYS verified; these only supply the second
+     * factor and never substitute for it. Provide totp_code for an authenticator app,
+     * or mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA
+     * email/SMS code previously issued to this same user.
      * </pre>
      *
      * <code>string mfa_otp_id = 8 [json_name = "mfaOtpId"];</code>
@@ -1723,8 +1805,10 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
-     * When mfa_otp_id is non-empty the credential check is skipped and the service
-     * instead consumes the MFA session token and validates the TOTP code.
+     * The password (first factor) is ALWAYS verified; these only supply the second
+     * factor and never substitute for it. Provide totp_code for an authenticator app,
+     * or mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA
+     * email/SMS code previously issued to this same user.
      * </pre>
      *
      * <code>string mfa_otp_id = 8 [json_name = "mfaOtpId"];</code>
@@ -1739,8 +1823,10 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
-     * When mfa_otp_id is non-empty the credential check is skipped and the service
-     * instead consumes the MFA session token and validates the TOTP code.
+     * The password (first factor) is ALWAYS verified; these only supply the second
+     * factor and never substitute for it. Provide totp_code for an authenticator app,
+     * or mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA
+     * email/SMS code previously issued to this same user.
      * </pre>
      *
      * <code>string mfa_otp_id = 8 [json_name = "mfaOtpId"];</code>
@@ -1760,7 +1846,7 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object totpCode_ = "";
     /**
      * <pre>
-     * 6-digit TOTP code from the user's authenticator app
+     * 6-digit TOTP code, or the one-time code when mfa_otp_id is set
      * </pre>
      *
      * <code>string totp_code = 9 [json_name = "totpCode"];</code>
@@ -1780,7 +1866,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * 6-digit TOTP code from the user's authenticator app
+     * 6-digit TOTP code, or the one-time code when mfa_otp_id is set
      * </pre>
      *
      * <code>string totp_code = 9 [json_name = "totpCode"];</code>
@@ -1801,7 +1887,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * 6-digit TOTP code from the user's authenticator app
+     * 6-digit TOTP code, or the one-time code when mfa_otp_id is set
      * </pre>
      *
      * <code>string totp_code = 9 [json_name = "totpCode"];</code>
@@ -1818,7 +1904,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * 6-digit TOTP code from the user's authenticator app
+     * 6-digit TOTP code, or the one-time code when mfa_otp_id is set
      * </pre>
      *
      * <code>string totp_code = 9 [json_name = "totpCode"];</code>
@@ -1832,7 +1918,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * 6-digit TOTP code from the user's authenticator app
+     * 6-digit TOTP code, or the one-time code when mfa_otp_id is set
      * </pre>
      *
      * <code>string totp_code = 9 [json_name = "totpCode"];</code>
@@ -2061,6 +2147,98 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       accessSurface_ = value;
       bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object recoveryCode_ = "";
+    /**
+     * <pre>
+     * single-use MFA recovery/backup code (alternative second factor)
+     * </pre>
+     *
+     * <code>string recovery_code = 13 [json_name = "recoveryCode"];</code>
+     * @return The recoveryCode.
+     */
+    public java.lang.String getRecoveryCode() {
+      java.lang.Object ref = recoveryCode_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        recoveryCode_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * single-use MFA recovery/backup code (alternative second factor)
+     * </pre>
+     *
+     * <code>string recovery_code = 13 [json_name = "recoveryCode"];</code>
+     * @return The bytes for recoveryCode.
+     */
+    public com.google.protobuf.ByteString
+        getRecoveryCodeBytes() {
+      java.lang.Object ref = recoveryCode_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        recoveryCode_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * single-use MFA recovery/backup code (alternative second factor)
+     * </pre>
+     *
+     * <code>string recovery_code = 13 [json_name = "recoveryCode"];</code>
+     * @param value The recoveryCode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRecoveryCode(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      recoveryCode_ = value;
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * single-use MFA recovery/backup code (alternative second factor)
+     * </pre>
+     *
+     * <code>string recovery_code = 13 [json_name = "recoveryCode"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRecoveryCode() {
+      recoveryCode_ = getDefaultInstance().getRecoveryCode();
+      bitField0_ = (bitField0_ & ~0x00001000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * single-use MFA recovery/backup code (alternative second factor)
+     * </pre>
+     *
+     * <code>string recovery_code = 13 [json_name = "recoveryCode"];</code>
+     * @param value The bytes for recoveryCode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRecoveryCodeBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      recoveryCode_ = value;
+      bitField0_ |= 0x00001000;
       onChanged();
       return this;
     }

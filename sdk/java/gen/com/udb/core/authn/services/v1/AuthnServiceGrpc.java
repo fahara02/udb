@@ -735,6 +735,254 @@ public final class AuthnServiceGrpc {
     return getConfirmMFAEnrollmentMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest,
+      com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse> getGenerateRecoveryCodesMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GenerateRecoveryCodes",
+      requestType = com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest.class,
+      responseType = com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest,
+      com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse> getGenerateRecoveryCodesMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest, com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse> getGenerateRecoveryCodesMethod;
+    if ((getGenerateRecoveryCodesMethod = AuthnServiceGrpc.getGenerateRecoveryCodesMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getGenerateRecoveryCodesMethod = AuthnServiceGrpc.getGenerateRecoveryCodesMethod) == null) {
+          AuthnServiceGrpc.getGenerateRecoveryCodesMethod = getGenerateRecoveryCodesMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest, com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GenerateRecoveryCodes"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("GenerateRecoveryCodes"))
+              .build();
+        }
+      }
+    }
+    return getGenerateRecoveryCodesMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.PutMfaPolicyRequest,
+      com.udb.core.authn.services.v1.PutMfaPolicyResponse> getPutMfaPolicyMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "PutMfaPolicy",
+      requestType = com.udb.core.authn.services.v1.PutMfaPolicyRequest.class,
+      responseType = com.udb.core.authn.services.v1.PutMfaPolicyResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.PutMfaPolicyRequest,
+      com.udb.core.authn.services.v1.PutMfaPolicyResponse> getPutMfaPolicyMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.PutMfaPolicyRequest, com.udb.core.authn.services.v1.PutMfaPolicyResponse> getPutMfaPolicyMethod;
+    if ((getPutMfaPolicyMethod = AuthnServiceGrpc.getPutMfaPolicyMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getPutMfaPolicyMethod = AuthnServiceGrpc.getPutMfaPolicyMethod) == null) {
+          AuthnServiceGrpc.getPutMfaPolicyMethod = getPutMfaPolicyMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.PutMfaPolicyRequest, com.udb.core.authn.services.v1.PutMfaPolicyResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "PutMfaPolicy"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.PutMfaPolicyRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.PutMfaPolicyResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("PutMfaPolicy"))
+              .build();
+        }
+      }
+    }
+    return getPutMfaPolicyMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GetMfaPolicyRequest,
+      com.udb.core.authn.services.v1.GetMfaPolicyResponse> getGetMfaPolicyMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetMfaPolicy",
+      requestType = com.udb.core.authn.services.v1.GetMfaPolicyRequest.class,
+      responseType = com.udb.core.authn.services.v1.GetMfaPolicyResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GetMfaPolicyRequest,
+      com.udb.core.authn.services.v1.GetMfaPolicyResponse> getGetMfaPolicyMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GetMfaPolicyRequest, com.udb.core.authn.services.v1.GetMfaPolicyResponse> getGetMfaPolicyMethod;
+    if ((getGetMfaPolicyMethod = AuthnServiceGrpc.getGetMfaPolicyMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getGetMfaPolicyMethod = AuthnServiceGrpc.getGetMfaPolicyMethod) == null) {
+          AuthnServiceGrpc.getGetMfaPolicyMethod = getGetMfaPolicyMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.GetMfaPolicyRequest, com.udb.core.authn.services.v1.GetMfaPolicyResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetMfaPolicy"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.GetMfaPolicyRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.GetMfaPolicyResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("GetMfaPolicy"))
+              .build();
+        }
+      }
+    }
+    return getGetMfaPolicyMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ForgotPasswordRequest,
+      com.udb.core.authn.services.v1.ForgotPasswordResponse> getForgotPasswordMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ForgotPassword",
+      requestType = com.udb.core.authn.services.v1.ForgotPasswordRequest.class,
+      responseType = com.udb.core.authn.services.v1.ForgotPasswordResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ForgotPasswordRequest,
+      com.udb.core.authn.services.v1.ForgotPasswordResponse> getForgotPasswordMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ForgotPasswordRequest, com.udb.core.authn.services.v1.ForgotPasswordResponse> getForgotPasswordMethod;
+    if ((getForgotPasswordMethod = AuthnServiceGrpc.getForgotPasswordMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getForgotPasswordMethod = AuthnServiceGrpc.getForgotPasswordMethod) == null) {
+          AuthnServiceGrpc.getForgotPasswordMethod = getForgotPasswordMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.ForgotPasswordRequest, com.udb.core.authn.services.v1.ForgotPasswordResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ForgotPassword"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ForgotPasswordRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ForgotPasswordResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("ForgotPassword"))
+              .build();
+        }
+      }
+    }
+    return getForgotPasswordMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ResetPasswordRequest,
+      com.udb.core.authn.services.v1.ResetPasswordResponse> getResetPasswordMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ResetPassword",
+      requestType = com.udb.core.authn.services.v1.ResetPasswordRequest.class,
+      responseType = com.udb.core.authn.services.v1.ResetPasswordResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ResetPasswordRequest,
+      com.udb.core.authn.services.v1.ResetPasswordResponse> getResetPasswordMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ResetPasswordRequest, com.udb.core.authn.services.v1.ResetPasswordResponse> getResetPasswordMethod;
+    if ((getResetPasswordMethod = AuthnServiceGrpc.getResetPasswordMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getResetPasswordMethod = AuthnServiceGrpc.getResetPasswordMethod) == null) {
+          AuthnServiceGrpc.getResetPasswordMethod = getResetPasswordMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.ResetPasswordRequest, com.udb.core.authn.services.v1.ResetPasswordResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ResetPassword"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ResetPasswordRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ResetPasswordResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("ResetPassword"))
+              .build();
+        }
+      }
+    }
+    return getResetPasswordMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.IntrospectTokenRequest,
+      com.udb.core.authn.services.v1.IntrospectTokenResponse> getIntrospectTokenMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "IntrospectToken",
+      requestType = com.udb.core.authn.services.v1.IntrospectTokenRequest.class,
+      responseType = com.udb.core.authn.services.v1.IntrospectTokenResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.IntrospectTokenRequest,
+      com.udb.core.authn.services.v1.IntrospectTokenResponse> getIntrospectTokenMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.IntrospectTokenRequest, com.udb.core.authn.services.v1.IntrospectTokenResponse> getIntrospectTokenMethod;
+    if ((getIntrospectTokenMethod = AuthnServiceGrpc.getIntrospectTokenMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getIntrospectTokenMethod = AuthnServiceGrpc.getIntrospectTokenMethod) == null) {
+          AuthnServiceGrpc.getIntrospectTokenMethod = getIntrospectTokenMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.IntrospectTokenRequest, com.udb.core.authn.services.v1.IntrospectTokenResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "IntrospectToken"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.IntrospectTokenRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.IntrospectTokenResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("IntrospectToken"))
+              .build();
+        }
+      }
+    }
+    return getIntrospectTokenMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.SendPhoneVerificationRequest,
+      com.udb.core.authn.services.v1.SendPhoneVerificationResponse> getSendPhoneVerificationMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "SendPhoneVerification",
+      requestType = com.udb.core.authn.services.v1.SendPhoneVerificationRequest.class,
+      responseType = com.udb.core.authn.services.v1.SendPhoneVerificationResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.SendPhoneVerificationRequest,
+      com.udb.core.authn.services.v1.SendPhoneVerificationResponse> getSendPhoneVerificationMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.SendPhoneVerificationRequest, com.udb.core.authn.services.v1.SendPhoneVerificationResponse> getSendPhoneVerificationMethod;
+    if ((getSendPhoneVerificationMethod = AuthnServiceGrpc.getSendPhoneVerificationMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getSendPhoneVerificationMethod = AuthnServiceGrpc.getSendPhoneVerificationMethod) == null) {
+          AuthnServiceGrpc.getSendPhoneVerificationMethod = getSendPhoneVerificationMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.SendPhoneVerificationRequest, com.udb.core.authn.services.v1.SendPhoneVerificationResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "SendPhoneVerification"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.SendPhoneVerificationRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.SendPhoneVerificationResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("SendPhoneVerification"))
+              .build();
+        }
+      }
+    }
+    return getSendPhoneVerificationMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GetJwksRequest,
+      com.udb.core.authn.services.v1.GetJwksResponse> getGetJwksMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetJwks",
+      requestType = com.udb.core.authn.services.v1.GetJwksRequest.class,
+      responseType = com.udb.core.authn.services.v1.GetJwksResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GetJwksRequest,
+      com.udb.core.authn.services.v1.GetJwksResponse> getGetJwksMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GetJwksRequest, com.udb.core.authn.services.v1.GetJwksResponse> getGetJwksMethod;
+    if ((getGetJwksMethod = AuthnServiceGrpc.getGetJwksMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getGetJwksMethod = AuthnServiceGrpc.getGetJwksMethod) == null) {
+          AuthnServiceGrpc.getGetJwksMethod = getGetJwksMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.GetJwksRequest, com.udb.core.authn.services.v1.GetJwksResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetJwks"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.GetJwksRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.GetJwksResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("GetJwks"))
+              .build();
+        }
+      }
+    }
+    return getGetJwksMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest,
       com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse> getStartWebAuthnRegistrationMethod;
 
@@ -1123,6 +1371,90 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
+     * Generate a fresh set of single-use MFA recovery/backup codes (returned once;
+     * any prior codes for the user are invalidated).
+     * </pre>
+     */
+    default void generateRecoveryCodes(com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGenerateRecoveryCodesMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Set the per-tenant MFA enforcement policy.
+     * </pre>
+     */
+    default void putMfaPolicy(com.udb.core.authn.services.v1.PutMfaPolicyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.PutMfaPolicyResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getPutMfaPolicyMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Read the per-tenant MFA enforcement policy.
+     * </pre>
+     */
+    default void getMfaPolicy(com.udb.core.authn.services.v1.GetMfaPolicyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GetMfaPolicyResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetMfaPolicyMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the
+     * account's channel). Public — no bearer required.
+     * </pre>
+     */
+    default void forgotPassword(com.udb.core.authn.services.v1.ForgotPasswordRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ForgotPasswordResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getForgotPasswordMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Complete a password reset with the OTP from ForgotPassword (no current
+     * password required). Public — the OTP is the proof of control.
+     * </pre>
+     */
+    default void resetPassword(com.udb.core.authn.services.v1.ResetPasswordRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ResetPasswordResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getResetPasswordMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * OAuth2-style token introspection for a UDB-issued JWT.
+     * </pre>
+     */
+    default void introspectToken(com.udb.core.authn.services.v1.IntrospectTokenRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.IntrospectTokenResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getIntrospectTokenMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Set the user's phone number and send an SMS verification OTP. Complete with
+     * VerifyOTP (the response is verified the same way as email).
+     * </pre>
+     */
+    default void sendPhoneVerification(com.udb.core.authn.services.v1.SendPhoneVerificationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.SendPhoneVerificationResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getSendPhoneVerificationMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * JSON Web Key Set for verifying UDB-issued JWTs. Public.
+     * </pre>
+     */
+    default void getJwks(com.udb.core.authn.services.v1.GetJwksRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GetJwksResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetJwksMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * ── WebAuthn / passkeys ─────────────────────────────────────────────────
      * </pre>
      */
@@ -1414,6 +1746,98 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
+     * Generate a fresh set of single-use MFA recovery/backup codes (returned once;
+     * any prior codes for the user are invalidated).
+     * </pre>
+     */
+    public void generateRecoveryCodes(com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGenerateRecoveryCodesMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Set the per-tenant MFA enforcement policy.
+     * </pre>
+     */
+    public void putMfaPolicy(com.udb.core.authn.services.v1.PutMfaPolicyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.PutMfaPolicyResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getPutMfaPolicyMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Read the per-tenant MFA enforcement policy.
+     * </pre>
+     */
+    public void getMfaPolicy(com.udb.core.authn.services.v1.GetMfaPolicyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GetMfaPolicyResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetMfaPolicyMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the
+     * account's channel). Public — no bearer required.
+     * </pre>
+     */
+    public void forgotPassword(com.udb.core.authn.services.v1.ForgotPasswordRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ForgotPasswordResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getForgotPasswordMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Complete a password reset with the OTP from ForgotPassword (no current
+     * password required). Public — the OTP is the proof of control.
+     * </pre>
+     */
+    public void resetPassword(com.udb.core.authn.services.v1.ResetPasswordRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ResetPasswordResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getResetPasswordMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * OAuth2-style token introspection for a UDB-issued JWT.
+     * </pre>
+     */
+    public void introspectToken(com.udb.core.authn.services.v1.IntrospectTokenRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.IntrospectTokenResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getIntrospectTokenMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Set the user's phone number and send an SMS verification OTP. Complete with
+     * VerifyOTP (the response is verified the same way as email).
+     * </pre>
+     */
+    public void sendPhoneVerification(com.udb.core.authn.services.v1.SendPhoneVerificationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.SendPhoneVerificationResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getSendPhoneVerificationMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * JSON Web Key Set for verifying UDB-issued JWTs. Public.
+     * </pre>
+     */
+    public void getJwks(com.udb.core.authn.services.v1.GetJwksRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GetJwksResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetJwksMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * ── WebAuthn / passkeys ─────────────────────────────────────────────────
      * </pre>
      */
@@ -1665,6 +2089,90 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
+     * Generate a fresh set of single-use MFA recovery/backup codes (returned once;
+     * any prior codes for the user are invalidated).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse generateRecoveryCodes(com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGenerateRecoveryCodesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Set the per-tenant MFA enforcement policy.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.PutMfaPolicyResponse putMfaPolicy(com.udb.core.authn.services.v1.PutMfaPolicyRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getPutMfaPolicyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Read the per-tenant MFA enforcement policy.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.GetMfaPolicyResponse getMfaPolicy(com.udb.core.authn.services.v1.GetMfaPolicyRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetMfaPolicyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the
+     * account's channel). Public — no bearer required.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ForgotPasswordResponse forgotPassword(com.udb.core.authn.services.v1.ForgotPasswordRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getForgotPasswordMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Complete a password reset with the OTP from ForgotPassword (no current
+     * password required). Public — the OTP is the proof of control.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ResetPasswordResponse resetPassword(com.udb.core.authn.services.v1.ResetPasswordRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getResetPasswordMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * OAuth2-style token introspection for a UDB-issued JWT.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.IntrospectTokenResponse introspectToken(com.udb.core.authn.services.v1.IntrospectTokenRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getIntrospectTokenMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Set the user's phone number and send an SMS verification OTP. Complete with
+     * VerifyOTP (the response is verified the same way as email).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.SendPhoneVerificationResponse sendPhoneVerification(com.udb.core.authn.services.v1.SendPhoneVerificationRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getSendPhoneVerificationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * JSON Web Key Set for verifying UDB-issued JWTs. Public.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.GetJwksResponse getJwks(com.udb.core.authn.services.v1.GetJwksRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetJwksMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * ── WebAuthn / passkeys ─────────────────────────────────────────────────
      * </pre>
      */
@@ -1908,6 +2416,90 @@ public final class AuthnServiceGrpc {
     public com.udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse confirmMFAEnrollment(com.udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getConfirmMFAEnrollmentMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Generate a fresh set of single-use MFA recovery/backup codes (returned once;
+     * any prior codes for the user are invalidated).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse generateRecoveryCodes(com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGenerateRecoveryCodesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Set the per-tenant MFA enforcement policy.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.PutMfaPolicyResponse putMfaPolicy(com.udb.core.authn.services.v1.PutMfaPolicyRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getPutMfaPolicyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Read the per-tenant MFA enforcement policy.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.GetMfaPolicyResponse getMfaPolicy(com.udb.core.authn.services.v1.GetMfaPolicyRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetMfaPolicyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the
+     * account's channel). Public — no bearer required.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ForgotPasswordResponse forgotPassword(com.udb.core.authn.services.v1.ForgotPasswordRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getForgotPasswordMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Complete a password reset with the OTP from ForgotPassword (no current
+     * password required). Public — the OTP is the proof of control.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ResetPasswordResponse resetPassword(com.udb.core.authn.services.v1.ResetPasswordRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getResetPasswordMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * OAuth2-style token introspection for a UDB-issued JWT.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.IntrospectTokenResponse introspectToken(com.udb.core.authn.services.v1.IntrospectTokenRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getIntrospectTokenMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Set the user's phone number and send an SMS verification OTP. Complete with
+     * VerifyOTP (the response is verified the same way as email).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.SendPhoneVerificationResponse sendPhoneVerification(com.udb.core.authn.services.v1.SendPhoneVerificationRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getSendPhoneVerificationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * JSON Web Key Set for verifying UDB-issued JWTs. Public.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.GetJwksResponse getJwks(com.udb.core.authn.services.v1.GetJwksRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetJwksMethod(), getCallOptions(), request);
     }
 
     /**
@@ -2182,6 +2774,98 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
+     * Generate a fresh set of single-use MFA recovery/backup codes (returned once;
+     * any prior codes for the user are invalidated).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse> generateRecoveryCodes(
+        com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGenerateRecoveryCodesMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Set the per-tenant MFA enforcement policy.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.PutMfaPolicyResponse> putMfaPolicy(
+        com.udb.core.authn.services.v1.PutMfaPolicyRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getPutMfaPolicyMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Read the per-tenant MFA enforcement policy.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.GetMfaPolicyResponse> getMfaPolicy(
+        com.udb.core.authn.services.v1.GetMfaPolicyRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetMfaPolicyMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the
+     * account's channel). Public — no bearer required.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ForgotPasswordResponse> forgotPassword(
+        com.udb.core.authn.services.v1.ForgotPasswordRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getForgotPasswordMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Complete a password reset with the OTP from ForgotPassword (no current
+     * password required). Public — the OTP is the proof of control.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ResetPasswordResponse> resetPassword(
+        com.udb.core.authn.services.v1.ResetPasswordRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getResetPasswordMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * OAuth2-style token introspection for a UDB-issued JWT.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.IntrospectTokenResponse> introspectToken(
+        com.udb.core.authn.services.v1.IntrospectTokenRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getIntrospectTokenMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Set the user's phone number and send an SMS verification OTP. Complete with
+     * VerifyOTP (the response is verified the same way as email).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.SendPhoneVerificationResponse> sendPhoneVerification(
+        com.udb.core.authn.services.v1.SendPhoneVerificationRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getSendPhoneVerificationMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * JSON Web Key Set for verifying UDB-issued JWTs. Public.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.GetJwksResponse> getJwks(
+        com.udb.core.authn.services.v1.GetJwksRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetJwksMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * ── WebAuthn / passkeys ─────────────────────────────────────────────────
      * </pre>
      */
@@ -2239,10 +2923,18 @@ public final class AuthnServiceGrpc {
   private static final int METHODID_VALIDATE_CSRF = 20;
   private static final int METHODID_ENROLL_MFA = 21;
   private static final int METHODID_CONFIRM_MFAENROLLMENT = 22;
-  private static final int METHODID_START_WEB_AUTHN_REGISTRATION = 23;
-  private static final int METHODID_FINISH_WEB_AUTHN_REGISTRATION = 24;
-  private static final int METHODID_START_WEB_AUTHN_AUTHENTICATION = 25;
-  private static final int METHODID_FINISH_WEB_AUTHN_AUTHENTICATION = 26;
+  private static final int METHODID_GENERATE_RECOVERY_CODES = 23;
+  private static final int METHODID_PUT_MFA_POLICY = 24;
+  private static final int METHODID_GET_MFA_POLICY = 25;
+  private static final int METHODID_FORGOT_PASSWORD = 26;
+  private static final int METHODID_RESET_PASSWORD = 27;
+  private static final int METHODID_INTROSPECT_TOKEN = 28;
+  private static final int METHODID_SEND_PHONE_VERIFICATION = 29;
+  private static final int METHODID_GET_JWKS = 30;
+  private static final int METHODID_START_WEB_AUTHN_REGISTRATION = 31;
+  private static final int METHODID_FINISH_WEB_AUTHN_REGISTRATION = 32;
+  private static final int METHODID_START_WEB_AUTHN_AUTHENTICATION = 33;
+  private static final int METHODID_FINISH_WEB_AUTHN_AUTHENTICATION = 34;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -2352,6 +3044,38 @@ public final class AuthnServiceGrpc {
         case METHODID_CONFIRM_MFAENROLLMENT:
           serviceImpl.confirmMFAEnrollment((com.udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse>) responseObserver);
+          break;
+        case METHODID_GENERATE_RECOVERY_CODES:
+          serviceImpl.generateRecoveryCodes((com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse>) responseObserver);
+          break;
+        case METHODID_PUT_MFA_POLICY:
+          serviceImpl.putMfaPolicy((com.udb.core.authn.services.v1.PutMfaPolicyRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.PutMfaPolicyResponse>) responseObserver);
+          break;
+        case METHODID_GET_MFA_POLICY:
+          serviceImpl.getMfaPolicy((com.udb.core.authn.services.v1.GetMfaPolicyRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GetMfaPolicyResponse>) responseObserver);
+          break;
+        case METHODID_FORGOT_PASSWORD:
+          serviceImpl.forgotPassword((com.udb.core.authn.services.v1.ForgotPasswordRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ForgotPasswordResponse>) responseObserver);
+          break;
+        case METHODID_RESET_PASSWORD:
+          serviceImpl.resetPassword((com.udb.core.authn.services.v1.ResetPasswordRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ResetPasswordResponse>) responseObserver);
+          break;
+        case METHODID_INTROSPECT_TOKEN:
+          serviceImpl.introspectToken((com.udb.core.authn.services.v1.IntrospectTokenRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.IntrospectTokenResponse>) responseObserver);
+          break;
+        case METHODID_SEND_PHONE_VERIFICATION:
+          serviceImpl.sendPhoneVerification((com.udb.core.authn.services.v1.SendPhoneVerificationRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.SendPhoneVerificationResponse>) responseObserver);
+          break;
+        case METHODID_GET_JWKS:
+          serviceImpl.getJwks((com.udb.core.authn.services.v1.GetJwksRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GetJwksResponse>) responseObserver);
           break;
         case METHODID_START_WEB_AUTHN_REGISTRATION:
           serviceImpl.startWebAuthnRegistration((com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest) request,
@@ -2549,6 +3273,62 @@ public final class AuthnServiceGrpc {
               com.udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse>(
                 service, METHODID_CONFIRM_MFAENROLLMENT)))
         .addMethod(
+          getGenerateRecoveryCodesMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest,
+              com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse>(
+                service, METHODID_GENERATE_RECOVERY_CODES)))
+        .addMethod(
+          getPutMfaPolicyMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.PutMfaPolicyRequest,
+              com.udb.core.authn.services.v1.PutMfaPolicyResponse>(
+                service, METHODID_PUT_MFA_POLICY)))
+        .addMethod(
+          getGetMfaPolicyMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.GetMfaPolicyRequest,
+              com.udb.core.authn.services.v1.GetMfaPolicyResponse>(
+                service, METHODID_GET_MFA_POLICY)))
+        .addMethod(
+          getForgotPasswordMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.ForgotPasswordRequest,
+              com.udb.core.authn.services.v1.ForgotPasswordResponse>(
+                service, METHODID_FORGOT_PASSWORD)))
+        .addMethod(
+          getResetPasswordMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.ResetPasswordRequest,
+              com.udb.core.authn.services.v1.ResetPasswordResponse>(
+                service, METHODID_RESET_PASSWORD)))
+        .addMethod(
+          getIntrospectTokenMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.IntrospectTokenRequest,
+              com.udb.core.authn.services.v1.IntrospectTokenResponse>(
+                service, METHODID_INTROSPECT_TOKEN)))
+        .addMethod(
+          getSendPhoneVerificationMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.SendPhoneVerificationRequest,
+              com.udb.core.authn.services.v1.SendPhoneVerificationResponse>(
+                service, METHODID_SEND_PHONE_VERIFICATION)))
+        .addMethod(
+          getGetJwksMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.GetJwksRequest,
+              com.udb.core.authn.services.v1.GetJwksResponse>(
+                service, METHODID_GET_JWKS)))
+        .addMethod(
           getStartWebAuthnRegistrationMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
@@ -2647,6 +3427,14 @@ public final class AuthnServiceGrpc {
               .addMethod(getValidateCSRFMethod())
               .addMethod(getEnrollMFAMethod())
               .addMethod(getConfirmMFAEnrollmentMethod())
+              .addMethod(getGenerateRecoveryCodesMethod())
+              .addMethod(getPutMfaPolicyMethod())
+              .addMethod(getGetMfaPolicyMethod())
+              .addMethod(getForgotPasswordMethod())
+              .addMethod(getResetPasswordMethod())
+              .addMethod(getIntrospectTokenMethod())
+              .addMethod(getSendPhoneVerificationMethod())
+              .addMethod(getGetJwksMethod())
               .addMethod(getStartWebAuthnRegistrationMethod())
               .addMethod(getFinishWebAuthnRegistrationMethod())
               .addMethod(getStartWebAuthnAuthenticationMethod())

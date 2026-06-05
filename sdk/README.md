@@ -1,64 +1,85 @@
 # UDB SDKs
 
-This directory contains the generated stubs and thin language wrappers for the
-UDB gRPC protocol.
+UDB SDKs are small language clients for a running UDB broker. They are meant for
+application developers, not only for people working inside this repository.
 
-Current protocol version: [`UDB_PROTOCOL_VERSION`](UDB_PROTOCOL_VERSION) =
-`1.0.0`.
+Use an SDK when your service needs to:
 
-Current crate/SDK release from [`../versions.json`](../versions.json): `0.3.0`.
+- call the UDB `DataBroker` API for reads, writes, objects, vectors, cache, and
+  admin/catalog operations;
+- call the native auth/authz services;
+- attach the required tenant, user, purpose, scope, project, and catalog-version
+  metadata on every request;
+- use the version-matched `udb` CLI from inside your own project.
 
-## Release Matrix
+Current wire protocol: [`1.0.0`](UDB_PROTOCOL_VERSION)
 
-| SDK | Package | Version | Install | Guide |
-|---|---|---:|---|---|
-| Go | `github.com/fahara02/udb/sdk/go` | `0.3.0` | `go get github.com/fahara02/udb/sdk/go@v0.3.0` | [`go/README.md`](go/README.md) |
-| Python | `udb-client` | `0.3.0` | `pip install udb-client==0.3.0` | [`python/README.md`](python/README.md) |
-| TypeScript / Node | `@udb_plus/sdk` | `0.3.0` | `npm i @udb_plus/sdk@0.3.0` | [`typescript/README.md`](typescript/README.md) |
-| PHP / Laravel | `fahara02/udb-laravel` | `0.3.0` | `composer require fahara02/udb-laravel:^0.3.0` | [`php/README.md`](php/README.md) |
-| C# | `Udb.Client` | `0.3.0` | `dotnet add package Udb.Client --version 0.3.0` | [`csharp/README.md`](csharp/README.md) |
-| Java | `dev.udb:udb-java-client` | `0.3.0-SNAPSHOT` today | build with `mvn -f sdk/java/pom.xml test` until Maven Central release wiring is complete | [`java/README.md`](java/README.md) |
+Current SDK release: `0.3.1`
 
-Go, Python, TypeScript, and PHP are the published-first SDKs. C# and Java have
-versioned manifests and committed stubs; their public package publishing is
-tracked as release pipeline work.
+## Install
 
-## Protocol Sources
+| Language | Package | Install |
+|---|---|---|
+| Go | `github.com/fahara02/udb/sdk/go` | `go get github.com/fahara02/udb/sdk/go@v0.3.1` |
+| Python | `udb-client` | `pip install udb-client==0.3.1` |
+| TypeScript / Node | `@udb_plus/sdk` | `npm i @udb_plus/sdk@0.3.1` |
+| PHP / Laravel | `fahara02/udb-laravel` | `composer require fahara02/udb-laravel:^0.3.1` |
+| C# | `Udb.Client` | `dotnet add package Udb.Client --version 0.3.1` |
+| Java | `dev.udb:udb-java-client` | build with `mvn -f sdk/java/pom.xml test` until Maven Central publishing lands |
 
-The generated clients come from:
+## The Shared Flow
 
-- [`../proto/udb/entity/v1/types.proto`](../proto/udb/entity/v1/types.proto)
-- [`../proto/udb/events/v1/udb_events.proto`](../proto/udb/events/v1/udb_events.proto)
-- [`../proto/udb/services/v1/data_broker.proto`](../proto/udb/services/v1/data_broker.proto)
-- [`../proto/udb/core/**`](../proto/udb/core)
-
-Regenerate after proto changes:
-
-```powershell
-.\scripts\gen_sdk.ps1
-```
+1. Install the SDK for your language.
+2. Use the bundled `udb` CLI launcher, or install the matching CLI binary.
+3. Export UDB's annotation and broker protos into your app:
 
 ```bash
-./scripts/gen_sdk.sh
+udb proto export
 ```
 
-Consumers do not need generation tools for normal use; each SDK commits its
-generated `gen/` surface, except the TypeScript runtime package, which loads the
-bundled `.proto` files dynamically through `@grpc/proto-loader`.
+4. In your own `.proto` files, import the annotations:
 
-## Required Metadata
+```proto
+import "udb/core/common/v1/db.proto";
+```
 
-Every client should send:
+5. Start UDB with your proto root:
 
-- `x-tenant-id`
-- `x-user-id`
-- `x-purpose`
-- `x-correlation-id`
-- `x-scopes`
-- `x-service-identity`
-- `x-udb-project-id`
-- `x-udb-client-catalog-version`
+```bash
+udb serve proto "" 0.0.0.0:50051
+```
 
-The wrapper clients centralize these headers. Use raw generated stubs only when
-you need an RPC that does not yet have a convenience method, and still attach the
-same metadata.
+6. Use the SDK to call `Select`, `Upsert`, authz checks, object APIs, vector
+   search, and the rest of the broker surface.
+
+`udb proto export` is safe to run again. It refreshes `proto/udb/**`, vendors the
+small `google/api/**` imports needed for offline `protoc`, and can merge the
+required `buf.yaml` entries without replacing your own project config.
+
+## Metadata
+
+Every UDB request carries context. The SDKs keep this boring on purpose: create
+one metadata object near your request boundary and reuse it.
+
+Required or commonly used fields:
+
+- tenant id
+- user id, when there is an end user
+- purpose, such as `web.request` or `billing.worker`
+- correlation id
+- scopes
+- service identity
+- project id
+- client catalog/protocol version
+
+## Language Guides
+
+- [Go](go/README.md)
+- [Python](python/README.md)
+- [TypeScript / Node](typescript/README.md)
+- [PHP / Laravel](php/README.md)
+- [C#](csharp/README.md)
+- [Java](java/README.md)
+
+You do not need to run `protoc`, `buf`, or SDK generation just to use a client.
+Install the package for your language and start with that language guide.

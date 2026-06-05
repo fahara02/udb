@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package udb.core.authn.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+
+option csharp_namespace = "udb.core.Authn.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";
+option java_package = "com.udb.core.authn.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// RecoveryCode — single-use MFA recovery/backup code.
+//
+// Migration order 6. A set of codes is generated at MFA enrollment (or
+// regeneration); each is stored only as a keyed hash and consumed at most once
+// as an alternative MFA second factor when the user has lost their authenticator.
+// ---------------------------------------------------------------------------
+message RecoveryCode {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "recovery_codes"
+    schema_name: "udb_authn"
+    migration_order: 6
+    is_table: true
+    comment: "Hashed single-use MFA recovery/backup codes"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: false
+    replica_hint: "primary"
+  };
+
+  string recovery_code_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "recovery_code_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string user_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "user_id" sql_type: "UUID" not_null: true comment: "FK to udb_authn.users.user_id" foreign_key: { references_table: "users" references_schema: "udb_authn" references_column: "user_id" on_delete: REFERENTIAL_ACTION_CASCADE constraint_name: "fk_recovery_codes_user_id" } index: { index_name: "idx_recovery_codes_user" index_type: "BTREE" columns: "user_id" } }];
+
+  // Keyed digest of the recovery code; never stored in plaintext.
+  string code_hash = 3 [(udb.core.common.v1.pg_column) = { column_name: "code_hash" sql_type: "VARCHAR(128)" not_null: true comment: "Keyed HMAC digest of the recovery code" }];
+
+  google.protobuf.Timestamp used_at = 4 [(udb.core.common.v1.pg_column) = { column_name: "used_at" sql_type: "TIMESTAMPTZ" comment: "Timestamp the code was consumed; NULL while unused" }];
+
+  google.protobuf.Timestamp created_at = 5 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+}

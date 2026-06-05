@@ -37,31 +37,37 @@ public final class EntitiesProto extends com.google.protobuf.GeneratedFile {
     java.lang.String[] descriptorData = {
       "\n\'udb/core/authn/entity/v1/entities.prot" +
       "o\022\030udb.core.authn.entity.v1\032$udb/core/au" +
-      "thn/entity/v1/enums.proto\032\"udb/core/auth" +
-      "n/entity/v1/otp.proto\032&udb/core/authn/en" +
-      "tity/v1/session.proto\032#udb/core/authn/en" +
-      "tity/v1/user.proto\032\'udb/core/authn/entit" +
-      "y/v1/webauthn.protoB\370\001\n\034com.udb.core.aut" +
-      "hn.entity.v1B\rEntitiesProtoP\001ZDgithub.co" +
-      "m/fahara02/udb/sdk/go/gen/udb/core/authn" +
-      "/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Au" +
-      "thn.Entity.V1\312\002\030Udb\\Core\\Authn\\Entity\\V1" +
-      "\342\002$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\352" +
-      "\002\034Udb::Core::Authn::Entity::V1P\000P\001P\002P\003P\004" +
-      "b\006proto3"
+      "thn/entity/v1/enums.proto\032)udb/core/auth" +
+      "n/entity/v1/mfa_policy.proto\032\"udb/core/a" +
+      "uthn/entity/v1/otp.proto\032,udb/core/authn" +
+      "/entity/v1/recovery_code.proto\032&udb/core" +
+      "/authn/entity/v1/session.proto\032#udb/core" +
+      "/authn/entity/v1/user.proto\032\'udb/core/au" +
+      "thn/entity/v1/webauthn.protoB\370\001\n\034com.udb" +
+      ".core.authn.entity.v1B\rEntitiesProtoP\001ZD" +
+      "github.com/fahara02/udb/sdk/go/gen/udb/c" +
+      "ore/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030ud" +
+      "b.core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\" +
+      "Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\E" +
+      "ntity\\V1\352\002\034Udb::Core::Authn::Entity::V1P" +
+      "\000P\001P\002P\003P\004P\005P\006b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.udb.core.authn.entity.v1.EnumsProto.getDescriptor(),
+          com.udb.core.authn.entity.v1.MfaPolicyProto.getDescriptor(),
           com.udb.core.authn.entity.v1.OtpProto.getDescriptor(),
+          com.udb.core.authn.entity.v1.RecoveryCodeProto.getDescriptor(),
           com.udb.core.authn.entity.v1.SessionProto.getDescriptor(),
           com.udb.core.authn.entity.v1.UserProto.getDescriptor(),
           com.udb.core.authn.entity.v1.WebauthnProto.getDescriptor(),
         });
     descriptor.resolveAllFeaturesImmutable();
     com.udb.core.authn.entity.v1.EnumsProto.getDescriptor();
+    com.udb.core.authn.entity.v1.MfaPolicyProto.getDescriptor();
     com.udb.core.authn.entity.v1.OtpProto.getDescriptor();
+    com.udb.core.authn.entity.v1.RecoveryCodeProto.getDescriptor();
     com.udb.core.authn.entity.v1.SessionProto.getDescriptor();
     com.udb.core.authn.entity.v1.UserProto.getDescriptor();
     com.udb.core.authn.entity.v1.WebauthnProto.getDescriptor();

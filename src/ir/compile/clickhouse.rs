@@ -425,6 +425,14 @@ impl Compiler for ClickHouseCompiler {
         }
         super::util::validate_aggregate_aliases(&op.aggregates)?;
         let table = self.resolve_table(&op.message_type, ctx)?;
+        // #151: a GROUP BY column resolving to an aggregate alias name would emit
+        // two identically-keyed result columns. Reject (SQL backends already do).
+        let group_names: Vec<&str> = op
+            .group_by
+            .iter()
+            .map(|f| self.column_for(table, f, &op.message_type))
+            .collect::<Result<Vec<_>, _>>()?;
+        super::util::validate_no_groupby_alias_collision(&group_names, &op.aggregates)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
         let mut select_parts: Vec<String> = Vec::new();

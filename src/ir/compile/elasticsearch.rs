@@ -426,6 +426,14 @@ impl Compiler for ElasticsearchCompiler {
         }
         super::util::validate_aggregate_aliases(&op.aggregates)?;
         let table = self.resolve_table(&op.message_type, ctx)?;
+        // #151: a GROUP BY field resolving to an aggregate alias name would emit
+        // two identically-keyed result buckets. Reject (SQL backends already do).
+        let group_names: Vec<&str> = op
+            .group_by
+            .iter()
+            .map(|f| self.field_for(table, f, &op.message_type))
+            .collect::<Result<Vec<_>, _>>()?;
+        super::util::validate_no_groupby_alias_collision(&group_names, &op.aggregates)?;
         let index = Self::index_for(table);
 
         // Pre-aggregation filter (WHERE before GROUP BY).

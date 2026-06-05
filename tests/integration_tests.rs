@@ -17,22 +17,17 @@ use uuid::Uuid;
 
 // ── Guard ─────────────────────────────────────────────────────────────────────
 
-fn integration_enabled() -> bool {
-    env::var("UDB_INTEGRATION_TESTS")
-        .map(|v| matches!(v.as_str(), "1" | "true" | "yes"))
-        .unwrap_or(false)
-}
-
 macro_rules! integration_test {
     ($name:ident, $body:expr) => {
+        // Honest gate: `#[ignore]` makes a default `cargo test` report these as
+        // IGNORED (not passed). They run only under `-- --ignored` against a live
+        // stack (docker-compose.integration.yml + UDB_INTEGRATION_* env); with no
+        // stack the body connects to the default DSNs and fails loudly. This
+        // replaced an env-gated early `return` that PASSED green without ever
+        // touching a database (false coverage).
         #[tokio::test]
+        #[ignore = "live stack required: run with `-- --ignored` and UDB_INTEGRATION_* env (docker-compose.integration.yml)"]
         async fn $name() {
-            if !integration_enabled() {
-                eprintln!(
-                    "[integration] skipped: set UDB_INTEGRATION_TESTS=1 to run against a live stack"
-                );
-                return;
-            }
             $body.await;
         }
     };

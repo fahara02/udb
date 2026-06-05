@@ -314,7 +314,7 @@ class AuthnResponse(_message.Message):
     def __init__(self, principal: _Optional[_Union[Principal, _Mapping]] = ..., session_id: _Optional[str] = ..., access_token: _Optional[str] = ..., expires_at_unix: _Optional[int] = ..., relationship_version: _Optional[str] = ..., warnings: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class LoginRequest(_message.Message):
-    __slots__ = ("username", "password", "device_type", "device_name", "ip_address", "user_agent", "device_id", "mfa_otp_id", "totp_code", "tenant_hint", "project_hint", "access_surface")
+    __slots__ = ("username", "password", "device_type", "device_name", "ip_address", "user_agent", "device_id", "mfa_otp_id", "totp_code", "tenant_hint", "project_hint", "access_surface", "recovery_code")
     USERNAME_FIELD_NUMBER: _ClassVar[int]
     PASSWORD_FIELD_NUMBER: _ClassVar[int]
     DEVICE_TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -327,6 +327,7 @@ class LoginRequest(_message.Message):
     TENANT_HINT_FIELD_NUMBER: _ClassVar[int]
     PROJECT_HINT_FIELD_NUMBER: _ClassVar[int]
     ACCESS_SURFACE_FIELD_NUMBER: _ClassVar[int]
+    RECOVERY_CODE_FIELD_NUMBER: _ClassVar[int]
     username: str
     password: str
     device_type: _enums_pb2.DeviceType
@@ -339,7 +340,8 @@ class LoginRequest(_message.Message):
     tenant_hint: str
     project_hint: str
     access_surface: str
-    def __init__(self, username: _Optional[str] = ..., password: _Optional[str] = ..., device_type: _Optional[_Union[_enums_pb2.DeviceType, str]] = ..., device_name: _Optional[str] = ..., ip_address: _Optional[str] = ..., user_agent: _Optional[str] = ..., device_id: _Optional[str] = ..., mfa_otp_id: _Optional[str] = ..., totp_code: _Optional[str] = ..., tenant_hint: _Optional[str] = ..., project_hint: _Optional[str] = ..., access_surface: _Optional[str] = ...) -> None: ...
+    recovery_code: str
+    def __init__(self, username: _Optional[str] = ..., password: _Optional[str] = ..., device_type: _Optional[_Union[_enums_pb2.DeviceType, str]] = ..., device_name: _Optional[str] = ..., ip_address: _Optional[str] = ..., user_agent: _Optional[str] = ..., device_id: _Optional[str] = ..., mfa_otp_id: _Optional[str] = ..., totp_code: _Optional[str] = ..., tenant_hint: _Optional[str] = ..., project_hint: _Optional[str] = ..., access_surface: _Optional[str] = ..., recovery_code: _Optional[str] = ...) -> None: ...
 
 class LoginResponse(_message.Message):
     __slots__ = ("user_id", "session_id", "access_token", "refresh_token", "access_token_expires_in", "session_token", "csrf_token", "mfa_required", "mfa_otp_id")
@@ -611,6 +613,144 @@ class ConfirmMFAEnrollmentResponse(_message.Message):
     ENROLLED_FIELD_NUMBER: _ClassVar[int]
     enrolled: bool
     def __init__(self, enrolled: bool = ...) -> None: ...
+
+class GenerateRecoveryCodesRequest(_message.Message):
+    __slots__ = ("user_id", "count", "context")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    COUNT_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    count: int
+    context: _types_pb2.RequestContext
+    def __init__(self, user_id: _Optional[str] = ..., count: _Optional[int] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class GenerateRecoveryCodesResponse(_message.Message):
+    __slots__ = ("codes", "generated")
+    CODES_FIELD_NUMBER: _ClassVar[int]
+    GENERATED_FIELD_NUMBER: _ClassVar[int]
+    codes: _containers.RepeatedScalarFieldContainer[str]
+    generated: int
+    def __init__(self, codes: _Optional[_Iterable[str]] = ..., generated: _Optional[int] = ...) -> None: ...
+
+class PutMfaPolicyRequest(_message.Message):
+    __slots__ = ("tenant_id", "require_mfa", "context")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    REQUIRE_MFA_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    require_mfa: bool
+    context: _types_pb2.RequestContext
+    def __init__(self, tenant_id: _Optional[str] = ..., require_mfa: bool = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class PutMfaPolicyResponse(_message.Message):
+    __slots__ = ("tenant_id", "require_mfa")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    REQUIRE_MFA_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    require_mfa: bool
+    def __init__(self, tenant_id: _Optional[str] = ..., require_mfa: bool = ...) -> None: ...
+
+class GetMfaPolicyRequest(_message.Message):
+    __slots__ = ("tenant_id", "context")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    context: _types_pb2.RequestContext
+    def __init__(self, tenant_id: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class GetMfaPolicyResponse(_message.Message):
+    __slots__ = ("tenant_id", "require_mfa")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    REQUIRE_MFA_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    require_mfa: bool
+    def __init__(self, tenant_id: _Optional[str] = ..., require_mfa: bool = ...) -> None: ...
+
+class ForgotPasswordRequest(_message.Message):
+    __slots__ = ("identifier", "context")
+    IDENTIFIER_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    identifier: str
+    context: _types_pb2.RequestContext
+    def __init__(self, identifier: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class ForgotPasswordResponse(_message.Message):
+    __slots__ = ("otp_id",)
+    OTP_ID_FIELD_NUMBER: _ClassVar[int]
+    otp_id: str
+    def __init__(self, otp_id: _Optional[str] = ...) -> None: ...
+
+class ResetPasswordRequest(_message.Message):
+    __slots__ = ("otp_id", "code", "new_password", "context")
+    OTP_ID_FIELD_NUMBER: _ClassVar[int]
+    CODE_FIELD_NUMBER: _ClassVar[int]
+    NEW_PASSWORD_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    otp_id: str
+    code: str
+    new_password: str
+    context: _types_pb2.RequestContext
+    def __init__(self, otp_id: _Optional[str] = ..., code: _Optional[str] = ..., new_password: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class ResetPasswordResponse(_message.Message):
+    __slots__ = ("user_id", "changed_at_unix")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    CHANGED_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    changed_at_unix: int
+    def __init__(self, user_id: _Optional[str] = ..., changed_at_unix: _Optional[int] = ...) -> None: ...
+
+class IntrospectTokenRequest(_message.Message):
+    __slots__ = ("token", "context")
+    TOKEN_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    token: str
+    context: _types_pb2.RequestContext
+    def __init__(self, token: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class IntrospectTokenResponse(_message.Message):
+    __slots__ = ("active", "subject", "tenant_id", "service_identity", "scopes", "expires_at_unix")
+    ACTIVE_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    SERVICE_IDENTITY_FIELD_NUMBER: _ClassVar[int]
+    SCOPES_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    active: bool
+    subject: str
+    tenant_id: str
+    service_identity: str
+    scopes: _containers.RepeatedScalarFieldContainer[str]
+    expires_at_unix: int
+    def __init__(self, active: bool = ..., subject: _Optional[str] = ..., tenant_id: _Optional[str] = ..., service_identity: _Optional[str] = ..., scopes: _Optional[_Iterable[str]] = ..., expires_at_unix: _Optional[int] = ...) -> None: ...
+
+class GetJwksRequest(_message.Message):
+    __slots__ = ("context",)
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    context: _types_pb2.RequestContext
+    def __init__(self, context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class GetJwksResponse(_message.Message):
+    __slots__ = ("jwks_json",)
+    JWKS_JSON_FIELD_NUMBER: _ClassVar[int]
+    jwks_json: str
+    def __init__(self, jwks_json: _Optional[str] = ...) -> None: ...
+
+class SendPhoneVerificationRequest(_message.Message):
+    __slots__ = ("user_id", "phone", "context")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    PHONE_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    phone: str
+    context: _types_pb2.RequestContext
+    def __init__(self, user_id: _Optional[str] = ..., phone: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class SendPhoneVerificationResponse(_message.Message):
+    __slots__ = ("otp_id",)
+    OTP_ID_FIELD_NUMBER: _ClassVar[int]
+    otp_id: str
+    def __init__(self, otp_id: _Optional[str] = ...) -> None: ...
 
 class StartWebAuthnRegistrationRequest(_message.Message):
     __slots__ = ("user_id", "label", "tenant_id", "project_id", "context")

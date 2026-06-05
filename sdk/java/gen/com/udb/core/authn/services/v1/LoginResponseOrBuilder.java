@@ -120,7 +120,7 @@ public interface LoginResponseOrBuilder extends
 
   /**
    * <pre>
-   * true = client must present OTP before access
+   * true = client must re-call Login with password + second factor
    * </pre>
    *
    * <code>bool mfa_required = 8 [json_name = "mfaRequired"];</code>
@@ -130,7 +130,7 @@ public interface LoginResponseOrBuilder extends
 
   /**
    * <pre>
-   * OTP ID to complete MFA
+   * reserved for a future server-issued MFA challenge id (currently empty)
    * </pre>
    *
    * <code>string mfa_otp_id = 9 [json_name = "mfaOtpId"];</code>
@@ -139,7 +139,7 @@ public interface LoginResponseOrBuilder extends
   java.lang.String getMfaOtpId();
   /**
    * <pre>
-   * OTP ID to complete MFA
+   * reserved for a future server-issued MFA challenge id (currently empty)
    * </pre>
    *
    * <code>string mfa_otp_id = 9 [json_name = "mfaOtpId"];</code>

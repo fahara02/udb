@@ -61,6 +61,8 @@ type User struct {
 	Timezone               string                 `protobuf:"bytes,24,opt,name=timezone,proto3" json:"timezone,omitempty"`
 	ProfileAttributesJson  string                 `protobuf:"bytes,25,opt,name=profile_attributes_json,json=profileAttributesJson,proto3" json:"profile_attributes_json,omitempty"`
 	ExternalReferencesJson string                 `protobuf:"bytes,26,opt,name=external_references_json,json=externalReferencesJson,proto3" json:"external_references_json,omitempty"`
+	Phone                  string                 `protobuf:"bytes,27,opt,name=phone,proto3" json:"phone,omitempty"`
+	PhoneVerifiedAt        *timestamppb.Timestamp `protobuf:"bytes,28,opt,name=phone_verified_at,json=phoneVerifiedAt,proto3" json:"phone_verified_at,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -277,11 +279,25 @@ func (x *User) GetExternalReferencesJson() string {
 	return ""
 }
 
+func (x *User) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
+}
+
+func (x *User) GetPhoneVerifiedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.PhoneVerifiedAt
+	}
+	return nil
+}
+
 var File_udb_core_authn_entity_v1_user_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"#udb/core/authn/entity/v1/user.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb8\x1f\n" +
+	"#udb/core/authn/entity/v1/user.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xf3!\n" +
 	"\x04User\x12C\n" +
 	"\auser_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
 	"\auser_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06userId\x12\xbc\x01\n" +
@@ -357,7 +373,11 @@ const file_udb_core_authn_entity_v1_user_proto_rawDesc = "" +
 	"\x17profile_attributes_json\x18\x19 \x01(\tBd\x82\xb7\x18`\n" +
 	"\x17profile_attributes_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ-Project-defined non-secret profile attributesx\x01R\x15profileAttributesJson\x12\x9d\x01\n" +
 	"\x18external_references_json\x18\x1a \x01(\tBc\x82\xb7\x18_\n" +
-	"\x18external_references_json\x12\x05JSONB\x18\x01:\v'[]'::jsonbZ+External system references for this accountx\x01R\x16externalReferencesJson:\xf7\x04\xa2\xb5\x187\b\x01\x12\x12udb:user:{user_id}\x18\xac\x02 \x01(\x01:\x12REDIS_CLUSTER_ADDRB\x04user\xfa\xb6\x18\xb7\x04\n" +
+	"\x18external_references_json\x12\x05JSONB\x18\x01:\v'[]'::jsonbZ+External system references for this accountx\x01R\x16externalReferencesJson\x12\x94\x01\n" +
+	"\x05phone\x18\x1b \x01(\tB~е\x18\x01\xe0\xb5\x18\x01\x82\xb6\x18 Authentication and communication\x82\xb7\x18N\n" +
+	"\x05phone\x12\vVARCHAR(32)Z8E.164 phone number for SMS OTP delivery and verificationR\x05phone\x12\xa1\x01\n" +
+	"\x11phone_verified_at\x18\x1c \x01(\v2\x1a.google.protobuf.TimestampBY\x82\xb7\x18U\n" +
+	"\x11phone_verified_at\x12\vTIMESTAMPTZZ3Timestamp the phone number was verified via SMS OTPR\x0fphoneVerifiedAt:\xf7\x04\xa2\xb5\x187\b\x01\x12\x12udb:user:{user_id}\x18\xac\x02 \x01(\x01:\x12REDIS_CLUSTER_ADDRB\x04user\xfa\xb6\x18\xb7\x04\n" +
 	"\x05users\x12\tudb_authn\x18\x01 \x01*HAccounts authenticated by UDB or mapped from external identity providers0\x018\x01@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x9a\x01\x12\n" +
 	"\bpgcrypto\x12\x06public\x9a\x01\x11\n" +
@@ -402,11 +422,12 @@ var file_udb_core_authn_entity_v1_user_proto_depIdxs = []int32{
 	3, // 5: udb.core.authn.entity.v1.User.created_at:type_name -> google.protobuf.Timestamp
 	3, // 6: udb.core.authn.entity.v1.User.updated_at:type_name -> google.protobuf.Timestamp
 	3, // 7: udb.core.authn.entity.v1.User.deleted_at:type_name -> google.protobuf.Timestamp
-	8, // [8:8] is the sub-list for method output_type
-	8, // [8:8] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	3, // 8: udb.core.authn.entity.v1.User.phone_verified_at:type_name -> google.protobuf.Timestamp
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_authn_entity_v1_user_proto_init() }

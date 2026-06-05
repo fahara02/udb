@@ -24,8 +24,8 @@ var File_udb_core_authn_entity_v1_entities_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_entities_proto_rawDesc = "" +
 	"\n" +
-	"'udb/core/authn/entity/v1/entities.proto\x12\x18udb.core.authn.entity.v1\x1a$udb/core/authn/entity/v1/enums.proto\x1a\"udb/core/authn/entity/v1/otp.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.proto\x1a'udb/core/authn/entity/v1/webauthn.protoB\xf8\x01\n" +
-	"\x1ccom.udb.core.authn.entity.v1B\rEntitiesProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1P\x00P\x01P\x02P\x03P\x04b\x06proto3"
+	"'udb/core/authn/entity/v1/entities.proto\x12\x18udb.core.authn.entity.v1\x1a$udb/core/authn/entity/v1/enums.proto\x1a)udb/core/authn/entity/v1/mfa_policy.proto\x1a\"udb/core/authn/entity/v1/otp.proto\x1a,udb/core/authn/entity/v1/recovery_code.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.proto\x1a'udb/core/authn/entity/v1/webauthn.protoB\xf8\x01\n" +
+	"\x1ccom.udb.core.authn.entity.v1B\rEntitiesProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1P\x00P\x01P\x02P\x03P\x04P\x05P\x06b\x06proto3"
 
 var file_udb_core_authn_entity_v1_entities_proto_goTypes = []any{}
 var file_udb_core_authn_entity_v1_entities_proto_depIdxs = []int32{
@@ -42,7 +42,9 @@ func file_udb_core_authn_entity_v1_entities_proto_init() {
 		return
 	}
 	file_udb_core_authn_entity_v1_enums_proto_init()
+	file_udb_core_authn_entity_v1_mfa_policy_proto_init()
 	file_udb_core_authn_entity_v1_otp_proto_init()
+	file_udb_core_authn_entity_v1_recovery_code_proto_init()
 	file_udb_core_authn_entity_v1_session_proto_init()
 	file_udb_core_authn_entity_v1_user_proto_init()
 	file_udb_core_authn_entity_v1_webauthn_proto_init()

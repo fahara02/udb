@@ -527,7 +527,21 @@ impl<'a> ProtoParser<'a> {
             }
             self.consume(); // =
             let number = if self.cur().kind == TokenKind::Number {
-                let n = self.cur().value.parse::<i32>().unwrap_or_default();
+                let tok = self.cur().clone();
+                let n = match tok.value.parse::<i32>() {
+                    Ok(v) => v,
+                    Err(_) => {
+                        self.diagnostic_at(
+                            &tok,
+                            "db_enum_value_number_invalid",
+                            &format!(
+                                "enum value '{value_name}' has an unparseable number '{}'; defaulting to 0",
+                                tok.value
+                            ),
+                        );
+                        0
+                    }
+                };
                 self.consume();
                 n
             } else {
@@ -855,7 +869,25 @@ impl<'a> ProtoParser<'a> {
                 TokenKind::Number => {
                     // Number literal → reserved field NUMBER. May be
                     // followed by `to N` (range) or `to max`.
-                    let start: i32 = self.consume().value.parse().unwrap_or_default();
+                    let start_tok = self.consume();
+                    // A reserved number that silently became 0 (i32 overflow /
+                    // malformed literal) would leave the slot it was meant to
+                    // protect unreserved, defeating the add_column reserved-reuse
+                    // guard. Diagnose and skip rather than push a bogus range.
+                    let start: i32 = match start_tok.value.parse() {
+                        Ok(v) => v,
+                        Err(_) => {
+                            self.diagnostic_at(
+                                &start_tok,
+                                "db_reserved_number_invalid",
+                                &format!(
+                                    "reserved field number '{}' is not a valid i32; ignoring",
+                                    start_tok.value
+                                ),
+                            );
+                            continue;
+                        }
+                    };
                     let mut end = start;
                     if self.cur().is_ident("to") {
                         self.consume();

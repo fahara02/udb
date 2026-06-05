@@ -22,7 +22,7 @@ That means the Laravel app does not need to know whether the data is in Postgres
 
 This package makes UDB feel natural inside Laravel:
 
-- `composer require fahara02/udb-laravel:^0.3.0`
+- `composer require fahara02/udb-laravel:^0.3.1`
 - set `UDB_ENDPOINT` in `.env`
 - call `Udb::select()`, `Udb::upsert()`, or `Udb::delete()`
 - use typed generated PHP classes for requests and responses
@@ -43,10 +43,23 @@ This package makes UDB feel natural inside Laravel:
 ## Installation
 
 ```bash
-composer require fahara02/udb-laravel:^0.3.0
+composer require fahara02/udb-laravel:^0.3.1
 ```
 
 The service provider is auto-discovered by Laravel. The `Udb` facade is registered automatically. By default, the package also adds middleware to the `web` and `api` route groups so each request can carry tenant and user context into UDB.
+
+The package also installs a version-matched CLI launcher at `vendor/bin/udb`.
+Use it from your Laravel project when you need UDB's shared annotation protos:
+
+```bash
+vendor/bin/udb proto export
+```
+
+After that, your app-owned `.proto` files can import:
+
+```proto
+import "udb/core/common/v1/db.proto";
+```
 
 Publish the config file when you need to override defaults:
 

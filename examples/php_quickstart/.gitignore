@@ -1,0 +1,20 @@
+# Everything here is reproducible from `customer.proto` + the scripts.
+# Run `scripts/export-protos.ps1` then `scripts/generate.ps1` to regenerate.
+
+# Vendored UDB protos brought in by `udb proto export` (step 1).
+/proto/udb/
+/third_party/
+
+# Generated PHP models (buf generate) and migrations.
+/gen/
+/db_ops/
+
+# Composer + buf lockfiles / deps.
+/vendor/
+/buf.lock
+/.composer-tmp/
+/.udb/
+
+# Transient broker/diagnostic logs.
+*.log
+/.probe.log

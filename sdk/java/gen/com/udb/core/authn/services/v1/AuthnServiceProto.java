@@ -39,7 +39,7 @@ public final class AuthnServiceProto extends com.google.protobuf.GeneratedFile {
       "ce.proto\022\032udb.core.authn.services.v1\032\034go" +
       "ogle/api/annotations.proto\032%udb/core/aut" +
       "hn/services/v1/core.proto\032!udb/core/comm" +
-      "on/v1/security.proto2\240%\n\014AuthnService\022\230\001" +
+      "on/v1/security.proto2\3500\n\014AuthnService\022\230\001" +
       "\n\nCreateUser\022-.udb.core.authn.services.v" +
       "1.CreateUserRequest\032..udb.core.authn.ser" +
       "vices.v1.CreateUserResponse\"+\312\363\030\004\010\002 \001\322\363\030" +
@@ -136,7 +136,44 @@ public final class AuthnServiceProto extends com.google.protobuf.GeneratedFile {
       "rmMFAEnrollmentRequest\0328.udb.core.authn." +
       "services.v1.ConfirmMFAEnrollmentResponse" +
       "\"A\312\363\030\004\010\002 \001\322\363\030\006\010\001\020\001 \001\202\323\344\223\002)\"$/v1/auth/use" +
-      "rs/{user_id}/mfa:confirm:\001*\022\341\001\n\031StartWeb" +
+      "rs/{user_id}/mfa:confirm:\001*\022\333\001\n\025Generate" +
+      "RecoveryCodes\0228.udb.core.authn.services." +
+      "v1.GenerateRecoveryCodesRequest\0329.udb.co" +
+      "re.authn.services.v1.GenerateRecoveryCod" +
+      "esResponse\"M\312\363\030\004\010\002 \001\322\363\030\006\010\001\020\001 \001\202\323\344\223\0025\"0/v" +
+      "1/auth/users/{user_id}/recovery-codes:ge" +
+      "nerate:\001*\022\267\001\n\014PutMfaPolicy\022/.udb.core.au" +
+      "thn.services.v1.PutMfaPolicyRequest\0320.ud" +
+      "b.core.authn.services.v1.PutMfaPolicyRes" +
+      "ponse\"D\312\363\030\004\010\002 \001\322\363\030\006\010\001\020\001 \001\202\323\344\223\002,\032\'/v1/aut" +
+      "h/tenants/{tenant_id}/mfa-policy:\001*\022\264\001\n\014" +
+      "GetMfaPolicy\022/.udb.core.authn.services.v" +
+      "1.GetMfaPolicyRequest\0320.udb.core.authn.s" +
+      "ervices.v1.GetMfaPolicyResponse\"A\312\363\030\004\010\002 " +
+      "\001\322\363\030\006\010\001\020\001 \001\202\323\344\223\002)\022\'/v1/auth/tenants/{ten" +
+      "ant_id}/mfa-policy\022\254\001\n\016ForgotPassword\0221." +
+      "udb.core.authn.services.v1.ForgotPasswor" +
+      "dRequest\0322.udb.core.authn.services.v1.Fo" +
+      "rgotPasswordResponse\"3\312\363\030\002\010\001\322\363\030\006\010\001\020\001 \001\202\323" +
+      "\344\223\002\035\"\030/v1/auth/password:forgot:\001*\022\250\001\n\rRe" +
+      "setPassword\0220.udb.core.authn.services.v1" +
+      ".ResetPasswordRequest\0321.udb.core.authn.s" +
+      "ervices.v1.ResetPasswordResponse\"2\312\363\030\002\010\001" +
+      "\322\363\030\006\010\001\020\001 \001\202\323\344\223\002\034\"\027/v1/auth/password:rese" +
+      "t:\001*\022\260\001\n\017IntrospectToken\0222.udb.core.auth" +
+      "n.services.v1.IntrospectTokenRequest\0323.u" +
+      "db.core.authn.services.v1.IntrospectToke" +
+      "nResponse\"4\312\363\030\002\010\002\322\363\030\006\010\001\020\001 \001\202\323\344\223\002\036\"\031/v1/a" +
+      "uth/token:introspect:\001*\022\320\001\n\025SendPhoneVer" +
+      "ification\0228.udb.core.authn.services.v1.S" +
+      "endPhoneVerificationRequest\0329.udb.core.a" +
+      "uthn.services.v1.SendPhoneVerificationRe" +
+      "sponse\"B\312\363\030\004\010\002 \001\322\363\030\006\010\001\020\001 \001\202\323\344\223\002*\"%/v1/au" +
+      "th/users/{user_id}/phone:verify:\001*\022\226\001\n\007G" +
+      "etJwks\022*.udb.core.authn.services.v1.GetJ" +
+      "wksRequest\032+.udb.core.authn.services.v1." +
+      "GetJwksResponse\"2\312\363\030\002\010\001\322\363\030\002\020\001\202\323\344\223\002 \022\036/v1" +
+      "/auth/.well-known/jwks.json\022\341\001\n\031StartWeb" +
       "AuthnRegistration\022<.udb.core.authn.servi" +
       "ces.v1.StartWebAuthnRegistrationRequest\032" +
       "=.udb.core.authn.services.v1.StartWebAut" +

@@ -20,6 +20,7 @@ use crate::runtime::security::{AbacPolicy, PolicyEffect, SecurityContext};
 
 /// Real Casbin-driven enforcement of the snapshot via a PERM model.
 mod casbin_engine;
+pub(crate) use casbin_engine::validate_casbin_model;
 
 /// Stage 2: signed policy bundles for local SDK authorization caches (item 139).
 pub mod bundle;

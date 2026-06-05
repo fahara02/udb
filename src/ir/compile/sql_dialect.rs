@@ -344,6 +344,27 @@ impl<D: SqlDialect> SqlCompiler<D> {
                 if values.is_empty() {
                     return Ok(D::having_false_literal().to_string());
                 }
+                // Same scalar/NULL contract as `render_filter`'s InList: a
+                // nested Array/Json would bind a structure to one placeholder
+                // (malformed SQL / bind error), and SQL `IN (NULL)` never
+                // matches — use IsNull explicitly.
+                for value in values {
+                    if matches!(value, LogicalValue::Array(_) | LogicalValue::Json(_)) {
+                        return Err(CompileError::Malformed {
+                            reason: format!(
+                                "HAVING IN list for field '{field}' accepts scalar values only; got {}",
+                                value.type_token()
+                            ),
+                        });
+                    }
+                    if value.is_null() {
+                        return Err(CompileError::Malformed {
+                            reason: format!(
+                                "HAVING IN list for field '{field}' cannot contain NULL; use IsNull explicitly"
+                            ),
+                        });
+                    }
+                }
                 let token = Self::resolve_having_field(field, op, table, &op.message_type)?;
                 let placeholders = values
                     .iter()

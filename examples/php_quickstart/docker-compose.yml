@@ -1,0 +1,36 @@
+name: udb-php-quickstart
+
+# The quickstart only exercises relational CRUD, so the only data backend it
+# needs is PostgreSQL. Redis is included because the broker uses it for caching
+# and rate limiting; everything else (vectors, objects, graph, …) is left out.
+#
+# The UDB broker itself runs on your host from the binary you built (see the
+# README "Run the broker" step) and connects to these containers on localhost.
+
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+    image: udb-quickstart-postgres-partman:16
+    environment:
+      POSTGRES_DB: udb
+      POSTGRES_USER: udb
+      POSTGRES_PASSWORD: udb
+    ports:
+      - "${UDB_POSTGRES_PORT:-55432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U udb -d udb"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${UDB_REDIS_PORT:-56379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20

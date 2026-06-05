@@ -47,6 +47,14 @@ public enum OTPType
    * <code>OTP_TYPE_SENSITIVE_OPERATION = 4;</code>
    */
   OTP_TYPE_SENSITIVE_OPERATION(4),
+  /**
+   * <pre>
+   * Phone-number confirmation via SMS OTP.
+   * </pre>
+   *
+   * <code>OTP_TYPE_PHONE_VERIFICATION = 5;</code>
+   */
+  OTP_TYPE_PHONE_VERIFICATION(5),
   UNRECOGNIZED(-1),
   ;
 
@@ -95,6 +103,14 @@ public enum OTPType
    * <code>OTP_TYPE_SENSITIVE_OPERATION = 4;</code>
    */
   public static final int OTP_TYPE_SENSITIVE_OPERATION_VALUE = 4;
+  /**
+   * <pre>
+   * Phone-number confirmation via SMS OTP.
+   * </pre>
+   *
+   * <code>OTP_TYPE_PHONE_VERIFICATION = 5;</code>
+   */
+  public static final int OTP_TYPE_PHONE_VERIFICATION_VALUE = 5;
 
 
   public final int getNumber() {
@@ -126,6 +142,7 @@ public enum OTPType
       case 2: return OTP_TYPE_LOGIN_2FA;
       case 3: return OTP_TYPE_PASSWORD_RESET;
       case 4: return OTP_TYPE_SENSITIVE_OPERATION;
+      case 5: return OTP_TYPE_PHONE_VERIFICATION;
       default: return null;
     }
   }

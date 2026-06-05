@@ -2,6 +2,17 @@ use super::*;
 
 const KEY: &[u8] = b"test-hash-secret";
 
+#[test]
+fn password_policy_enforces_complexity() {
+    let policy = PasswordPolicy::default();
+    assert!(policy.validate("CorrectHorse1!").is_ok());
+    assert!(policy.validate("Ab1!").is_err(), "too short");
+    assert!(policy.validate("correcthorse1!").is_err(), "no uppercase");
+    assert!(policy.validate("CORRECTHORSE1!").is_err(), "no lowercase");
+    assert!(policy.validate("CorrectHorse!!").is_err(), "no digit");
+    assert!(policy.validate("CorrectHorse12").is_err(), "no symbol");
+}
+
 // ── Live-Postgres test harness ───────────────────────────────────────────────
 // In-memory stores are forbidden — they pass while the real Postgres path is
 // broken. The store-level tests below run against a live Postgres (gated by

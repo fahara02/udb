@@ -269,6 +269,7 @@ const (
 	OTPType_OTP_TYPE_LOGIN_2FA           OTPType = 2 // Login second-factor (email OTP)
 	OTPType_OTP_TYPE_PASSWORD_RESET      OTPType = 3 // Password reset
 	OTPType_OTP_TYPE_SENSITIVE_OPERATION OTPType = 4 // Step-up auth for a protected action.
+	OTPType_OTP_TYPE_PHONE_VERIFICATION  OTPType = 5 // Phone-number confirmation via SMS OTP.
 )
 
 // Enum value maps for OTPType.
@@ -279,6 +280,7 @@ var (
 		2: "OTP_TYPE_LOGIN_2FA",
 		3: "OTP_TYPE_PASSWORD_RESET",
 		4: "OTP_TYPE_SENSITIVE_OPERATION",
+		5: "OTP_TYPE_PHONE_VERIFICATION",
 	}
 	OTPType_value = map[string]int32{
 		"OTP_TYPE_UNSPECIFIED":         0,
@@ -286,6 +288,7 @@ var (
 		"OTP_TYPE_LOGIN_2FA":           2,
 		"OTP_TYPE_PASSWORD_RESET":      3,
 		"OTP_TYPE_SENSITIVE_OPERATION": 4,
+		"OTP_TYPE_PHONE_VERIFICATION":  5,
 	}
 )
 
@@ -654,13 +657,14 @@ const file_udb_core_authn_entity_v1_enums_proto_rawDesc = "" +
 	"\x13DEVICE_TYPE_DESKTOP\x10\x03\x12\x16\n" +
 	"\x12DEVICE_TYPE_MOBILE\x10\x04\x12\x16\n" +
 	"\x12DEVICE_TYPE_WORKER\x10\x05\x12\x13\n" +
-	"\x0fDEVICE_TYPE_CLI\x10\x06*\x9b\x01\n" +
+	"\x0fDEVICE_TYPE_CLI\x10\x06*\xbc\x01\n" +
 	"\aOTPType\x12\x18\n" +
 	"\x14OTP_TYPE_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bOTP_TYPE_EMAIL_VERIFICATION\x10\x01\x12\x16\n" +
 	"\x12OTP_TYPE_LOGIN_2FA\x10\x02\x12\x1b\n" +
 	"\x17OTP_TYPE_PASSWORD_RESET\x10\x03\x12 \n" +
-	"\x1cOTP_TYPE_SENSITIVE_OPERATION\x10\x04*\x88\x01\n" +
+	"\x1cOTP_TYPE_SENSITIVE_OPERATION\x10\x04\x12\x1f\n" +
+	"\x1bOTP_TYPE_PHONE_VERIFICATION\x10\x05*\x88\x01\n" +
 	"\tOTPStatus\x12\x1a\n" +
 	"\x16OTP_STATUS_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12OTP_STATUS_PENDING\x10\x01\x12\x13\n" +

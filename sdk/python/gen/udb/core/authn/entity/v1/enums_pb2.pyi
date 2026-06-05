@@ -49,6 +49,7 @@ class OTPType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     OTP_TYPE_LOGIN_2FA: _ClassVar[OTPType]
     OTP_TYPE_PASSWORD_RESET: _ClassVar[OTPType]
     OTP_TYPE_SENSITIVE_OPERATION: _ClassVar[OTPType]
+    OTP_TYPE_PHONE_VERIFICATION: _ClassVar[OTPType]
 
 class OTPStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -129,6 +130,7 @@ OTP_TYPE_EMAIL_VERIFICATION: OTPType
 OTP_TYPE_LOGIN_2FA: OTPType
 OTP_TYPE_PASSWORD_RESET: OTPType
 OTP_TYPE_SENSITIVE_OPERATION: OTPType
+OTP_TYPE_PHONE_VERIFICATION: OTPType
 OTP_STATUS_UNSPECIFIED: OTPStatus
 OTP_STATUS_PENDING: OTPStatus
 OTP_STATUS_USED: OTPStatus

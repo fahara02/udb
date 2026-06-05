@@ -21,6 +21,15 @@ impl ExecutionReport {
     }
 }
 
+/// IN-MEMORY-AUDIT [A2 — test/simulation helper, NOT a production lie]: this is
+/// the only `ProvisioningExecutor` impl, but it was VERIFIED that no production
+/// path drives provisioning through this trait — the control plane provisions via
+/// the migration artifact / `ApplyTarget` path (`control/lifecycle.rs`), not here.
+/// This struct is a simulation helper consumed by `tests/parser_tests.rs`, which
+/// is why it stays `pub`/re-exported. It is honestly named `Fake` and records
+/// ensured resource URIs in a `BTreeSet`. No production fix required; if the
+/// `ProvisioningExecutor` abstraction is to stay, it should either gain a real
+/// executor or be consolidated away (remediation doctrine). See INMEMORY_AUDIT.md.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct FakeProvisioningExecutor {
     pub resources: BTreeSet<String>,

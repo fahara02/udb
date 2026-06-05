@@ -40,6 +40,12 @@ class OTPType
      * Generated from protobuf enum <code>OTP_TYPE_SENSITIVE_OPERATION = 4;</code>
      */
     const OTP_TYPE_SENSITIVE_OPERATION = 4;
+    /**
+     * Phone-number confirmation via SMS OTP.
+     *
+     * Generated from protobuf enum <code>OTP_TYPE_PHONE_VERIFICATION = 5;</code>
+     */
+    const OTP_TYPE_PHONE_VERIFICATION = 5;
 
     private static $valueToName = [
         self::OTP_TYPE_UNSPECIFIED => 'OTP_TYPE_UNSPECIFIED',
@@ -47,6 +53,7 @@ class OTPType
         self::OTP_TYPE_LOGIN_2FA => 'OTP_TYPE_LOGIN_2FA',
         self::OTP_TYPE_PASSWORD_RESET => 'OTP_TYPE_PASSWORD_RESET',
         self::OTP_TYPE_SENSITIVE_OPERATION => 'OTP_TYPE_SENSITIVE_OPERATION',
+        self::OTP_TYPE_PHONE_VERIFICATION => 'OTP_TYPE_PHONE_VERIFICATION',
     ];
 
     public static function name($value)

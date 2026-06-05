@@ -54,6 +54,7 @@ enum OTPType {
   OTP_TYPE_LOGIN_2FA = 2; // Login second-factor (email OTP)
   OTP_TYPE_PASSWORD_RESET = 3; // Password reset
   OTP_TYPE_SENSITIVE_OPERATION = 4; // Step-up auth for a protected action.
+  OTP_TYPE_PHONE_VERIFICATION = 5; // Phone-number confirmation via SMS OTP.
 }
 
 enum OTPStatus {

@@ -50,14 +50,16 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
     protected $device_id = '';
     /**
      * MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
-     * When mfa_otp_id is non-empty the credential check is skipped and the service
-     * instead consumes the MFA session token and validates the TOTP code.
+     * The password (first factor) is ALWAYS verified; these only supply the second
+     * factor and never substitute for it. Provide totp_code for an authenticator app,
+     * or mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA
+     * email/SMS code previously issued to this same user.
      *
      * Generated from protobuf field <code>string mfa_otp_id = 8 [json_name = "mfaOtpId"];</code>
      */
     protected $mfa_otp_id = '';
     /**
-     * 6-digit TOTP code from the user's authenticator app
+     * 6-digit TOTP code, or the one-time code when mfa_otp_id is set
      *
      * Generated from protobuf field <code>string totp_code = 9 [json_name = "totpCode"];</code>
      */
@@ -74,6 +76,12 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string access_surface = 12 [json_name = "accessSurface"];</code>
      */
     protected $access_surface = '';
+    /**
+     * single-use MFA recovery/backup code (alternative second factor)
+     *
+     * Generated from protobuf field <code>string recovery_code = 13 [json_name = "recoveryCode"];</code>
+     */
+    protected $recovery_code = '';
 
     /**
      * Constructor.
@@ -93,13 +101,17 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      *           client device fingerprint (optional; for JWT device binding)
      *     @type string $mfa_otp_id
      *           MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
-     *           When mfa_otp_id is non-empty the credential check is skipped and the service
-     *           instead consumes the MFA session token and validates the TOTP code.
+     *           The password (first factor) is ALWAYS verified; these only supply the second
+     *           factor and never substitute for it. Provide totp_code for an authenticator app,
+     *           or mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA
+     *           email/SMS code previously issued to this same user.
      *     @type string $totp_code
-     *           6-digit TOTP code from the user's authenticator app
+     *           6-digit TOTP code, or the one-time code when mfa_otp_id is set
      *     @type string $tenant_hint
      *     @type string $project_hint
      *     @type string $access_surface
+     *     @type string $recovery_code
+     *           single-use MFA recovery/backup code (alternative second factor)
      * }
      */
     public function __construct($data = NULL) {
@@ -275,8 +287,10 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
-     * When mfa_otp_id is non-empty the credential check is skipped and the service
-     * instead consumes the MFA session token and validates the TOTP code.
+     * The password (first factor) is ALWAYS verified; these only supply the second
+     * factor and never substitute for it. Provide totp_code for an authenticator app,
+     * or mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA
+     * email/SMS code previously issued to this same user.
      *
      * Generated from protobuf field <code>string mfa_otp_id = 8 [json_name = "mfaOtpId"];</code>
      * @return string
@@ -288,8 +302,10 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
-     * When mfa_otp_id is non-empty the credential check is skipped and the service
-     * instead consumes the MFA session token and validates the TOTP code.
+     * The password (first factor) is ALWAYS verified; these only supply the second
+     * factor and never substitute for it. Provide totp_code for an authenticator app,
+     * or mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA
+     * email/SMS code previously issued to this same user.
      *
      * Generated from protobuf field <code>string mfa_otp_id = 8 [json_name = "mfaOtpId"];</code>
      * @param string $var
@@ -304,7 +320,7 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * 6-digit TOTP code from the user's authenticator app
+     * 6-digit TOTP code, or the one-time code when mfa_otp_id is set
      *
      * Generated from protobuf field <code>string totp_code = 9 [json_name = "totpCode"];</code>
      * @return string
@@ -315,7 +331,7 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * 6-digit TOTP code from the user's authenticator app
+     * 6-digit TOTP code, or the one-time code when mfa_otp_id is set
      *
      * Generated from protobuf field <code>string totp_code = 9 [json_name = "totpCode"];</code>
      * @param string $var
@@ -391,6 +407,32 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, true);
         $this->access_surface = $var;
+
+        return $this;
+    }
+
+    /**
+     * single-use MFA recovery/backup code (alternative second factor)
+     *
+     * Generated from protobuf field <code>string recovery_code = 13 [json_name = "recoveryCode"];</code>
+     * @return string
+     */
+    public function getRecoveryCode()
+    {
+        return $this->recovery_code;
+    }
+
+    /**
+     * single-use MFA recovery/backup code (alternative second factor)
+     *
+     * Generated from protobuf field <code>string recovery_code = 13 [json_name = "recoveryCode"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRecoveryCode(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->recovery_code = $var;
 
         return $this;
     }

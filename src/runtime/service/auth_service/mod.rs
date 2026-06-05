@@ -9,8 +9,9 @@
 //! session lifecycle, JWT signing + refresh, TOTP MFA, CSRF validation,
 //! `Authorize`/`GetNativeAccess`/`GetPolicyBundle`, the `Put*`/`Lint` mutators,
 //! the snapshot-backed policy/check endpoints, role/policy CRUD, and API-key
-//! lifecycle + usage stats. Every RPC in these services is implemented; the only
-//! deferred authn primitive is outbound OTP delivery (needs an external channel).
+//! lifecycle + usage stats. Every RPC in these services is implemented. Outbound
+//! OTP delivery is wired via a best-effort HTTP webhook to the operator's channel
+//! gateway (`UDB_OTP_DELIVERY_WEBHOOK_URL`); see `authn::deliver_otp`.
 //!
 //! gRPC handlers return the concrete generated response types; the REST
 //! `ApiResponse`/`RawJsonResponse` envelope (`core/common/v1`) is applied by the

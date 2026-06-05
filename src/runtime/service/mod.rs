@@ -1211,6 +1211,11 @@ pub async fn serve(
             "PostgreSQL startup health gate failed: UDB_PG_DSN/DATABASE_URL is required".into(),
         );
     }
+    // Fail fast on a malformed operator-supplied Casbin model (UDB_AUTHZ_CASBIN_MODEL[_PATH])
+    // rather than denying every authorization at runtime.
+    crate::runtime::authz::validate_casbin_model()
+        .await
+        .map_err(|err| std::io::Error::other(format!("authz startup gate failed: {err}")))?;
     if !runtime.qdrant_configured() {
         tracing::warn!("Qdrant startup health gate degraded: vector RPCs will return UNAVAILABLE");
     }

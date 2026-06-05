@@ -131,4 +131,8 @@ message User {
   string profile_attributes_json = 25 [(udb.core.common.v1.pg_column) = { column_name: "profile_attributes_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Project-defined non-secret profile attributes" }];
 
   string external_references_json = 26 [(udb.core.common.v1.pg_column) = { column_name: "external_references_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" comment: "External system references for this account" }];
+
+  string phone = 27 [(udb.core.common.v1.pg_column) = { column_name: "phone" sql_type: "VARCHAR(32)" comment: "E.164 phone number for SMS OTP delivery and verification" }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.data_purpose) = "Authentication and communication"];
+
+  google.protobuf.Timestamp phone_verified_at = 28 [(udb.core.common.v1.pg_column) = { column_name: "phone_verified_at" sql_type: "TIMESTAMPTZ" comment: "Timestamp the phone number was verified via SMS OTP" }];
 }

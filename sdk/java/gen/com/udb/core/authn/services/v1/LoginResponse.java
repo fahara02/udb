@@ -334,7 +334,7 @@ private static final long serialVersionUID = 0L;
   private boolean mfaRequired_ = false;
   /**
    * <pre>
-   * true = client must present OTP before access
+   * true = client must re-call Login with password + second factor
    * </pre>
    *
    * <code>bool mfa_required = 8 [json_name = "mfaRequired"];</code>
@@ -350,7 +350,7 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object mfaOtpId_ = "";
   /**
    * <pre>
-   * OTP ID to complete MFA
+   * reserved for a future server-issued MFA challenge id (currently empty)
    * </pre>
    *
    * <code>string mfa_otp_id = 9 [json_name = "mfaOtpId"];</code>
@@ -371,7 +371,7 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * OTP ID to complete MFA
+   * reserved for a future server-issued MFA challenge id (currently empty)
    * </pre>
    *
    * <code>string mfa_otp_id = 9 [json_name = "mfaOtpId"];</code>
@@ -1425,7 +1425,7 @@ private static final long serialVersionUID = 0L;
     private boolean mfaRequired_ ;
     /**
      * <pre>
-     * true = client must present OTP before access
+     * true = client must re-call Login with password + second factor
      * </pre>
      *
      * <code>bool mfa_required = 8 [json_name = "mfaRequired"];</code>
@@ -1437,7 +1437,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * true = client must present OTP before access
+     * true = client must re-call Login with password + second factor
      * </pre>
      *
      * <code>bool mfa_required = 8 [json_name = "mfaRequired"];</code>
@@ -1453,7 +1453,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * true = client must present OTP before access
+     * true = client must re-call Login with password + second factor
      * </pre>
      *
      * <code>bool mfa_required = 8 [json_name = "mfaRequired"];</code>
@@ -1469,7 +1469,7 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object mfaOtpId_ = "";
     /**
      * <pre>
-     * OTP ID to complete MFA
+     * reserved for a future server-issued MFA challenge id (currently empty)
      * </pre>
      *
      * <code>string mfa_otp_id = 9 [json_name = "mfaOtpId"];</code>
@@ -1489,7 +1489,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * OTP ID to complete MFA
+     * reserved for a future server-issued MFA challenge id (currently empty)
      * </pre>
      *
      * <code>string mfa_otp_id = 9 [json_name = "mfaOtpId"];</code>
@@ -1510,7 +1510,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * OTP ID to complete MFA
+     * reserved for a future server-issued MFA challenge id (currently empty)
      * </pre>
      *
      * <code>string mfa_otp_id = 9 [json_name = "mfaOtpId"];</code>
@@ -1527,7 +1527,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * OTP ID to complete MFA
+     * reserved for a future server-issued MFA challenge id (currently empty)
      * </pre>
      *
      * <code>string mfa_otp_id = 9 [json_name = "mfaOtpId"];</code>
@@ -1541,7 +1541,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * OTP ID to complete MFA
+     * reserved for a future server-issued MFA challenge id (currently empty)
      * </pre>
      *
      * <code>string mfa_otp_id = 9 [json_name = "mfaOtpId"];</code>

@@ -1,0 +1,22 @@
+{
+    "name": "fahara02/udb-php-quickstart-example",
+    "description": "Minimal UDB PHP quickstart: export the UDB protos, define one table, do CRUD. A second script adds native authn + authz over the same code.",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "fahara02/udb-laravel": "dev-main"
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/fahara02/udb-laravel.git"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "PhpQuickstart\\": "gen/PhpQuickstart/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

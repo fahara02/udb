@@ -57,6 +57,7 @@ private static final long serialVersionUID = 0L;
     timezone_ = "";
     profileAttributesJson_ = "";
     externalReferencesJson_ = "";
+    phone_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -928,6 +929,71 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int PHONE_FIELD_NUMBER = 27;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object phone_ = "";
+  /**
+   * <code>string phone = 27 [json_name = "phone", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The phone.
+   */
+  @java.lang.Override
+  public java.lang.String getPhone() {
+    java.lang.Object ref = phone_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      phone_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string phone = 27 [json_name = "phone", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for phone.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getPhoneBytes() {
+    java.lang.Object ref = phone_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      phone_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int PHONE_VERIFIED_AT_FIELD_NUMBER = 28;
+  private com.google.protobuf.Timestamp phoneVerifiedAt_;
+  /**
+   * <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return Whether the phoneVerifiedAt field is set.
+   */
+  @java.lang.Override
+  public boolean hasPhoneVerifiedAt() {
+    return ((bitField0_ & 0x00000040) != 0);
+  }
+  /**
+   * <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The phoneVerifiedAt.
+   */
+  @java.lang.Override
+  public com.google.protobuf.Timestamp getPhoneVerifiedAt() {
+    return phoneVerifiedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : phoneVerifiedAt_;
+  }
+  /**
+   * <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   */
+  @java.lang.Override
+  public com.google.protobuf.TimestampOrBuilder getPhoneVerifiedAtOrBuilder() {
+    return phoneVerifiedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : phoneVerifiedAt_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -1019,6 +1085,12 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalReferencesJson_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 26, externalReferencesJson_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(phone_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 27, phone_);
+    }
+    if (((bitField0_ & 0x00000040) != 0)) {
+      output.writeMessage(28, getPhoneVerifiedAt());
     }
     getUnknownFields().writeTo(output);
   }
@@ -1112,6 +1184,13 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalReferencesJson_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(26, externalReferencesJson_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(phone_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(27, phone_);
+    }
+    if (((bitField0_ & 0x00000040) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(28, getPhoneVerifiedAt());
+    }
     return size;
   }
   @java.lang.Override
@@ -1204,6 +1283,13 @@ private static final long serialVersionUID = 0L;
         .equals(other.getProfileAttributesJson())) return false;
     if (!getExternalReferencesJson()
         .equals(other.getExternalReferencesJson())) return false;
+    if (!getPhone()
+        .equals(other.getPhone())) return false;
+    if (hasPhoneVerifiedAt() != other.hasPhoneVerifiedAt()) return false;
+    if (hasPhoneVerifiedAt()) {
+      if (!getPhoneVerifiedAt()
+          .equals(other.getPhoneVerifiedAt())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -1280,6 +1366,12 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getProfileAttributesJson().hashCode();
     hash = (37 * hash) + EXTERNAL_REFERENCES_JSON_FIELD_NUMBER;
     hash = (53 * hash) + getExternalReferencesJson().hashCode();
+    hash = (37 * hash) + PHONE_FIELD_NUMBER;
+    hash = (53 * hash) + getPhone().hashCode();
+    if (hasPhoneVerifiedAt()) {
+      hash = (37 * hash) + PHONE_VERIFIED_AT_FIELD_NUMBER;
+      hash = (53 * hash) + getPhoneVerifiedAt().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1427,6 +1519,7 @@ private static final long serialVersionUID = 0L;
         internalGetCreatedAtFieldBuilder();
         internalGetUpdatedAtFieldBuilder();
         internalGetDeletedAtFieldBuilder();
+        internalGetPhoneVerifiedAtFieldBuilder();
       }
     }
     @java.lang.Override
@@ -1483,6 +1576,12 @@ private static final long serialVersionUID = 0L;
       timezone_ = "";
       profileAttributesJson_ = "";
       externalReferencesJson_ = "";
+      phone_ = "";
+      phoneVerifiedAt_ = null;
+      if (phoneVerifiedAtBuilder_ != null) {
+        phoneVerifiedAtBuilder_.dispose();
+        phoneVerifiedAtBuilder_ = null;
+      }
       return this;
     }
 
@@ -1613,6 +1712,15 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x02000000) != 0)) {
         result.externalReferencesJson_ = externalReferencesJson_;
       }
+      if (((from_bitField0_ & 0x04000000) != 0)) {
+        result.phone_ = phone_;
+      }
+      if (((from_bitField0_ & 0x08000000) != 0)) {
+        result.phoneVerifiedAt_ = phoneVerifiedAtBuilder_ == null
+            ? phoneVerifiedAt_
+            : phoneVerifiedAtBuilder_.build();
+        to_bitField0_ |= 0x00000040;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1737,6 +1845,14 @@ private static final long serialVersionUID = 0L;
         externalReferencesJson_ = other.externalReferencesJson_;
         bitField0_ |= 0x02000000;
         onChanged();
+      }
+      if (!other.getPhone().isEmpty()) {
+        phone_ = other.phone_;
+        bitField0_ |= 0x04000000;
+        onChanged();
+      }
+      if (other.hasPhoneVerifiedAt()) {
+        mergePhoneVerifiedAt(other.getPhoneVerifiedAt());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1906,6 +2022,18 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x02000000;
               break;
             } // case 210
+            case 218: {
+              phone_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x04000000;
+              break;
+            } // case 218
+            case 226: {
+              input.readMessage(
+                  internalGetPhoneVerifiedAtFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x08000000;
+              break;
+            } // case 226
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -3999,6 +4127,199 @@ private static final long serialVersionUID = 0L;
       bitField0_ |= 0x02000000;
       onChanged();
       return this;
+    }
+
+    private java.lang.Object phone_ = "";
+    /**
+     * <code>string phone = 27 [json_name = "phone", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The phone.
+     */
+    public java.lang.String getPhone() {
+      java.lang.Object ref = phone_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        phone_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string phone = 27 [json_name = "phone", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for phone.
+     */
+    public com.google.protobuf.ByteString
+        getPhoneBytes() {
+      java.lang.Object ref = phone_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        phone_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string phone = 27 [json_name = "phone", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The phone to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPhone(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      phone_ = value;
+      bitField0_ |= 0x04000000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string phone = 27 [json_name = "phone", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPhone() {
+      phone_ = getDefaultInstance().getPhone();
+      bitField0_ = (bitField0_ & ~0x04000000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string phone = 27 [json_name = "phone", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for phone to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPhoneBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      phone_ = value;
+      bitField0_ |= 0x04000000;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.Timestamp phoneVerifiedAt_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> phoneVerifiedAtBuilder_;
+    /**
+     * <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return Whether the phoneVerifiedAt field is set.
+     */
+    public boolean hasPhoneVerifiedAt() {
+      return ((bitField0_ & 0x08000000) != 0);
+    }
+    /**
+     * <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The phoneVerifiedAt.
+     */
+    public com.google.protobuf.Timestamp getPhoneVerifiedAt() {
+      if (phoneVerifiedAtBuilder_ == null) {
+        return phoneVerifiedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : phoneVerifiedAt_;
+      } else {
+        return phoneVerifiedAtBuilder_.getMessage();
+      }
+    }
+    /**
+     * <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder setPhoneVerifiedAt(com.google.protobuf.Timestamp value) {
+      if (phoneVerifiedAtBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        phoneVerifiedAt_ = value;
+      } else {
+        phoneVerifiedAtBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x08000000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder setPhoneVerifiedAt(
+        com.google.protobuf.Timestamp.Builder builderForValue) {
+      if (phoneVerifiedAtBuilder_ == null) {
+        phoneVerifiedAt_ = builderForValue.build();
+      } else {
+        phoneVerifiedAtBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x08000000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder mergePhoneVerifiedAt(com.google.protobuf.Timestamp value) {
+      if (phoneVerifiedAtBuilder_ == null) {
+        if (((bitField0_ & 0x08000000) != 0) &&
+          phoneVerifiedAt_ != null &&
+          phoneVerifiedAt_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
+          getPhoneVerifiedAtBuilder().mergeFrom(value);
+        } else {
+          phoneVerifiedAt_ = value;
+        }
+      } else {
+        phoneVerifiedAtBuilder_.mergeFrom(value);
+      }
+      if (phoneVerifiedAt_ != null) {
+        bitField0_ |= 0x08000000;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder clearPhoneVerifiedAt() {
+      bitField0_ = (bitField0_ & ~0x08000000);
+      phoneVerifiedAt_ = null;
+      if (phoneVerifiedAtBuilder_ != null) {
+        phoneVerifiedAtBuilder_.dispose();
+        phoneVerifiedAtBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public com.google.protobuf.Timestamp.Builder getPhoneVerifiedAtBuilder() {
+      bitField0_ |= 0x08000000;
+      onChanged();
+      return internalGetPhoneVerifiedAtFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public com.google.protobuf.TimestampOrBuilder getPhoneVerifiedAtOrBuilder() {
+      if (phoneVerifiedAtBuilder_ != null) {
+        return phoneVerifiedAtBuilder_.getMessageOrBuilder();
+      } else {
+        return phoneVerifiedAt_ == null ?
+            com.google.protobuf.Timestamp.getDefaultInstance() : phoneVerifiedAt_;
+      }
+    }
+    /**
+     * <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        internalGetPhoneVerifiedAtFieldBuilder() {
+      if (phoneVerifiedAtBuilder_ == null) {
+        phoneVerifiedAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>(
+                getPhoneVerifiedAt(),
+                getParentForChildren(),
+                isClean());
+        phoneVerifiedAt_ = null;
+      }
+      return phoneVerifiedAtBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.authn.entity.v1.User)

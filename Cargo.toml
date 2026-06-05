@@ -8,7 +8,7 @@ resolver = "2"
 
 [package]
 name = "udb"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 rust-version = "1.85"
 description = "Universal Data Broker — a Rust gRPC broker over multiple databases (Postgres, MySQL, SQLite, MongoDB, ClickHouse, Cassandra, MSSQL, Redis, Qdrant, S3, Neo4j, …) with per-tenant RLS, 2PC, sagas, and CDC."
@@ -195,6 +195,9 @@ uuid = { version = "1", features = ["serde", "v4"] }
 wildmatch = "2.3"
 x509-parser = "0.16"
 jsonwebtoken = "9"
+# Pure-Rust RSA (already in the tree transitively) — used to publish a JWK Set
+# for verifying UDB-issued RS256 tokens (authn GetJwks).
+rsa = { version = "0.9", features = ["pem"] }
 dotenvy = "0.15"
 arc-swap = "1.9.1"
 urlencoding = "2"

@@ -22,7 +22,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/core/authn/services/v1/core.proto.
  */
 export const file_udb_core_authn_services_v1_core: GenFile = /*@__PURE__*/
-  fileDesc("CiV1ZGIvY29yZS9hdXRobi9zZXJ2aWNlcy92MS9jb3JlLnByb3RvEhp1ZGIuY29yZS5hdXRobi5zZXJ2aWNlcy52MSLGAwoRQ3JlYXRlVXNlclJlcXVlc3QSEAoIdXNlcm5hbWUYASABKAkSDQoFZW1haWwYAiABKAkSEAoIcGFzc3dvcmQYAyABKAkSEQoJdGVuYW50X2lkGAQgASgJEhEKCWZ1bGxfbmFtZRgFIAEoCRIzCgdjb250ZXh0GAYgASgLMiIudWRiLmNvcmUuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0EjsKDGFjY291bnRfa2luZBgHIAEoDjIlLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5BY2NvdW50S2luZBISCgpwcm9qZWN0X2lkGAggASgJEhwKFGV4dGVybmFsX3Byb3ZpZGVyX2lkGAkgASgJEhgKEGV4dGVybmFsX3N1YmplY3QYCiABKAkSYAoScHJvZmlsZV9hdHRyaWJ1dGVzGAsgAygLMkQudWRiLmNvcmUuYXV0aG4uc2VydmljZXMudjEuQ3JlYXRlVXNlclJlcXVlc3QuUHJvZmlsZUF0dHJpYnV0ZXNFbnRyeRo4ChZQcm9maWxlQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiUgoSQ3JlYXRlVXNlclJlc3BvbnNlEiwKBHVzZXIYASABKAsyHi51ZGIuY29yZS5hdXRobi5lbnRpdHkudjEuVXNlchIOCgZvdHBfaWQYAiABKAkiQgoOR2V0VXNlclJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRINCgVlbWFpbBgDIAEoCSI/Cg9HZXRVc2VyUmVzcG9uc2USLAoEdXNlchgBIAEoCzIeLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5Vc2VyIscBChBMaXN0VXNlcnNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRI7CgxhY2NvdW50X2tpbmQYAiABKA4yJS51ZGIuY29yZS5hdXRobi5lbnRpdHkudjEuQWNjb3VudEtpbmQSNAoGc3RhdHVzGAMgASgOMiQudWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLlVzZXJTdGF0dXMSLQoEcGFnZRgEIAEoCzIfLnVkYi5jb3JlLmNvbW1vbi52MS5QYWdlUmVxdWVzdCJyChFMaXN0VXNlcnNSZXNwb25zZRItCgV1c2VycxgBIAMoCzIeLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5Vc2VyEi4KBHBhZ2UYAiABKAsyIC51ZGIuY29yZS5jb21tb24udjEuUGFnZVJlc3BvbnNlIrMDChFVcGRhdGVVc2VyUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEhEKCWZ1bGxfbmFtZRgCIAEoCRINCgVlbWFpbBgDIAEoCRIRCgl0ZW5hbnRfaWQYBCABKAkSMwoHY29udGV4dBgFIAEoCzIiLnVkYi5jb3JlLmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBI7CgxhY2NvdW50X2tpbmQYBiABKA4yJS51ZGIuY29yZS5hdXRobi5lbnRpdHkudjEuQWNjb3VudEtpbmQSEgoKcHJvamVjdF9pZBgHIAEoCRJgChJwcm9maWxlX2F0dHJpYnV0ZXMYCCADKAsyRC51ZGIuY29yZS5hdXRobi5zZXJ2aWNlcy52MS5VcGRhdGVVc2VyUmVxdWVzdC5Qcm9maWxlQXR0cmlidXRlc0VudHJ5EhwKFGV4dGVybmFsX3Byb3ZpZGVyX2lkGAkgASgJEhgKEGV4dGVybmFsX3N1YmplY3QYCiABKAkaOAoWUHJvZmlsZUF0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIkIKElVwZGF0ZVVzZXJSZXNwb25zZRIsCgR1c2VyGAEgASgLMh4udWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLlVzZXIiqQEKF0NoYW5nZVVzZXJTdGF0dXNSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSOAoKbmV3X3N0YXR1cxgCIAEoDjIkLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5Vc2VyU3RhdHVzEg4KBnJlYXNvbhgDIAEoCRIzCgdjb250ZXh0GAQgASgLMiIudWRiLmNvcmUuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0IkgKGENoYW5nZVVzZXJTdGF0dXNSZXNwb25zZRIsCgR1c2VyGAEgASgLMh4udWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLlVzZXIiYQoZQWRtaW5SZXNldFBhc3N3b3JkUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEjMKB2NvbnRleHQYAiABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQiLAoaQWRtaW5SZXNldFBhc3N3b3JkUmVzcG9uc2USDgoGb3RwX2lkGAEgASgJIqMBCg5TZW5kT1RQUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEjMKCG90cF90eXBlGAIgASgOMiEudWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLk9UUFR5cGUSFgoOY29ycmVsYXRpb25faWQYAyABKAkSMwoHY29udGV4dBgEIAEoCzIiLnVkYi5jb3JlLmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dCJXCg9TZW5kT1RQUmVzcG9uc2USDgoGb3RwX2lkGAEgASgJEhoKEmV4cGlyZXNfaW5fc2Vjb25kcxgCIAEoBRIYChBjb29sZG93bl9zZWNvbmRzGAMgASgFIjAKEFZlcmlmeU9UUFJlcXVlc3QSDgoGb3RwX2lkGAEgASgJEgwKBGNvZGUYAiABKAkiawoRVmVyaWZ5T1RQUmVzcG9uc2USEAoIdmVyaWZpZWQYASABKAgSDwoHdXNlcl9pZBgCIAEoCRIzCghvdHBfdHlwZRgDIAEoDjIhLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5PVFBUeXBlIjsKEFJlc2VuZE9UUFJlcXVlc3QSFwoPb3JpZ2luYWxfb3RwX2lkGAEgASgJEg4KBnJlYXNvbhgCIAEoCSJ1ChFSZXNlbmRPVFBSZXNwb25zZRIOCgZvdHBfaWQYASABKAkSGgoSZXhwaXJlc19pbl9zZWNvbmRzGAIgASgFEhgKEGNvb2xkb3duX3NlY29uZHMYAyABKAUSGgoSYXR0ZW1wdHNfcmVtYWluaW5nGAQgASgFIrEDCglQcmluY2lwYWwSFAoMcHJpbmNpcGFsX2lkGAEgASgJEg8KB3N1YmplY3QYAiABKAkSDwoHdXNlcl9pZBgDIAEoCRIYChBzZXJ2aWNlX2lkZW50aXR5GAQgASgJEhEKCXRlbmFudF9pZBgFIAEoCRISCgpwcm9qZWN0X2lkGAYgASgJEg4KBnNjb3BlcxgHIAMoCRINCgVyb2xlcxgIIAMoCRITCgtwcm92aWRlcl9pZBgJIAEoCRITCgthdXRoX21ldGhvZBgKIAEoCRIXCg9leHBpcmVzX2F0X3VuaXgYCyABKAMSOwoMYWNjb3VudF9raW5kGAwgASgOMiUudWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLkFjY291bnRLaW5kEg4KBmRvbWFpbhgNIAEoCRJJCgphdHRyaWJ1dGVzGA4gAygLMjUudWRiLmNvcmUuYXV0aG4uc2VydmljZXMudjEuUHJpbmNpcGFsLkF0dHJpYnV0ZXNFbnRyeRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASLBAwoMQXV0aG5SZXF1ZXN0EhQKDGJlYXJlcl90b2tlbhgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEg8KB2FwaV9rZXkYAyABKAkSHAoUZXh0ZXJuYWxfcHJvdmlkZXJfaWQYBCABKAkSFgoOZXh0ZXJuYWxfdG9rZW4YBSABKAkSEwoLdGVuYW50X2hpbnQYBiABKAkSFAoMcHJvamVjdF9oaW50GAcgASgJEhgKEHJlcXVlc3RlZF9zY29wZXMYCCADKAkSTAoKYXR0cmlidXRlcxgJIAMoCzI4LnVkYi5jb3JlLmF1dGhuLnNlcnZpY2VzLnYxLkF1dGhuUmVxdWVzdC5BdHRyaWJ1dGVzRW50cnkSRQoPY3JlZGVudGlhbF90eXBlGAogASgOMiwudWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLkF1dGhDcmVkZW50aWFsVHlwZRIRCgljbGllbnRfaWQYCyABKAkSEAoIYXVkaWVuY2UYDCABKAkSDgoGaXNzdWVyGA0gASgJGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIrwBCg1BdXRoblJlc3BvbnNlEjgKCXByaW5jaXBhbBgBIAEoCzIlLnVkYi5jb3JlLmF1dGhuLnNlcnZpY2VzLnYxLlByaW5jaXBhbBISCgpzZXNzaW9uX2lkGAIgASgJEhQKDGFjY2Vzc190b2tlbhgDIAEoCRIXCg9leHBpcmVzX2F0X3VuaXgYBCABKAMSHAoUcmVsYXRpb25zaGlwX3ZlcnNpb24YBSABKAkSEAoId2FybmluZ3MYBiADKAkipwIKDExvZ2luUmVxdWVzdBIQCgh1c2VybmFtZRgBIAEoCRIQCghwYXNzd29yZBgCIAEoCRI5CgtkZXZpY2VfdHlwZRgDIAEoDjIkLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5EZXZpY2VUeXBlEhMKC2RldmljZV9uYW1lGAQgASgJEhIKCmlwX2FkZHJlc3MYBSABKAkSEgoKdXNlcl9hZ2VudBgGIAEoCRIRCglkZXZpY2VfaWQYByABKAkSEgoKbWZhX290cF9pZBgIIAEoCRIRCgl0b3RwX2NvZGUYCSABKAkSEwoLdGVuYW50X2hpbnQYCiABKAkSFAoMcHJvamVjdF9oaW50GAsgASgJEhYKDmFjY2Vzc19zdXJmYWNlGAwgASgJItcBCg1Mb2dpblJlc3BvbnNlEg8KB3VzZXJfaWQYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCRIUCgxhY2Nlc3NfdG9rZW4YAyABKAkSFQoNcmVmcmVzaF90b2tlbhgEIAEoCRIfChdhY2Nlc3NfdG9rZW5fZXhwaXJlc19pbhgFIAEoBRIVCg1zZXNzaW9uX3Rva2VuGAYgASgJEhIKCmNzcmZfdG9rZW4YByABKAkSFAoMbWZhX3JlcXVpcmVkGAggASgIEhIKCm1mYV9vdHBfaWQYCSABKAkiQAoTUmVmcmVzaFRva2VuUmVxdWVzdBIVCg1yZWZyZXNoX3Rva2VuGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkiTQoUUmVmcmVzaFRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEh8KF2FjY2Vzc190b2tlbl9leHBpcmVzX2luGAIgASgFIoUBCg1Mb2dvdXRSZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkSFAoMYWxsX3Nlc3Npb25zGAIgASgIEhUKDXJldm9rZV9yZWFzb24YAyABKAkSMwoHY29udGV4dBgEIAEoCzIiLnVkYi5jb3JlLmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dCIqCg5Mb2dvdXRSZXNwb25zZRIYChBzZXNzaW9uc19yZXZva2VkGAEgASgFIp0BChVDaGFuZ2VQYXNzd29yZFJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIYChBjdXJyZW50X3Bhc3N3b3JkGAIgASgJEhQKDG5ld19wYXNzd29yZBgDIAEoCRIOCgZvdHBfaWQYBCABKAkSMwoHY29udGV4dBgFIAEoCzIiLnVkYi5jb3JlLmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dCJvChZDaGFuZ2VQYXNzd29yZFJlc3BvbnNlEg8KB3VzZXJfaWQYASABKAkSLgoKY2hhbmdlZF9hdBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFAoMb3BlcmF0aW9uX2lkGAMgASgJIl4KFFZhbGlkYXRlVG9rZW5SZXF1ZXN0Eg0KBXRva2VuGAEgASgJEjcKCnRva2VuX3R5cGUYAiABKA4yIy51ZGIuY29yZS5hdXRobi5lbnRpdHkudjEuVG9rZW5UeXBlIrwEChVWYWxpZGF0ZVRva2VuUmVzcG9uc2USDQoFdmFsaWQYASABKAgSDwoHdXNlcl9pZBgCIAEoCRISCgpzZXNzaW9uX2lkGAMgASgJEjsKDGFjY291bnRfa2luZBgEIAEoDjIlLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5BY2NvdW50S2luZBIRCgl0ZW5hbnRfaWQYBSABKAkSDQoFcm9sZXMYBiADKAkSLgoKZXhwaXJlc19hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFgoOYWNjZXNzX3N1cmZhY2UYCCABKAkSEQoJZGV2aWNlX2lkGAkgASgJEhAKCHRva2VuX2lkGAogASgJEjsKDHNlc3Npb25fdHlwZRgLIAEoDjIlLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5TZXNzaW9uVHlwZRI4CglwcmluY2lwYWwYDCABKAsyJS51ZGIuY29yZS5hdXRobi5zZXJ2aWNlcy52MS5QcmluY2lwYWwSEgoKcHJvamVjdF9pZBgNIAEoCRIOCgZzY29wZXMYDiADKAkSVQoKYXR0cmlidXRlcxgPIAMoCzJBLnVkYi5jb3JlLmF1dGhuLnNlcnZpY2VzLnYxLlZhbGlkYXRlVG9rZW5SZXNwb25zZS5BdHRyaWJ1dGVzRW50cnkaMQoPQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEigQEKFENyZWF0ZVNlc3Npb25SZXF1ZXN0EjgKCXByaW5jaXBhbBgBIAEoCzIlLnVkYi5jb3JlLmF1dGhuLnNlcnZpY2VzLnYxLlByaW5jaXBhbBITCgt0dGxfc2Vjb25kcxgCIAEoAxIaChJjbGllbnRfZmluZ2VycHJpbnQYAyABKAkiRAoVQ3JlYXRlU2Vzc2lvblJlc3BvbnNlEhIKCnNlc3Npb25faWQYASABKAkSFwoPZXhwaXJlc19hdF91bml4GAIgASgDIkAKFVJlZnJlc2hTZXNzaW9uUmVxdWVzdBISCgpzZXNzaW9uX2lkGAEgASgJEhMKC3R0bF9zZWNvbmRzGAIgASgDIkEKFlJlZnJlc2hTZXNzaW9uUmVzcG9uc2USFwoPZXhwaXJlc19hdF91bml4GAEgASgDEg4KBmFjdGl2ZRgCIAEoCCInChFHZXRTZXNzaW9uUmVxdWVzdBISCgpzZXNzaW9uX2lkGAEgASgJIkgKEkdldFNlc3Npb25SZXNwb25zZRIyCgdzZXNzaW9uGAEgASgLMiEudWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLlNlc3Npb24iagoTTGlzdFNlc3Npb25zUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEhMKC2FjdGl2ZV9vbmx5GAIgASgIEi0KBHBhZ2UYAyABKAsyHy51ZGIuY29yZS5jb21tb24udjEuUGFnZVJlcXVlc3QiewoUTGlzdFNlc3Npb25zUmVzcG9uc2USMwoIc2Vzc2lvbnMYASADKAsyIS51ZGIuY29yZS5hdXRobi5lbnRpdHkudjEuU2Vzc2lvbhIuCgRwYWdlGAIgASgLMiAudWRiLmNvcmUuY29tbW9uLnYxLlBhZ2VSZXNwb25zZSKnAQoUUmV2b2tlU2Vzc2lvblJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCRIVCg1yZXZva2VfcmVhc29uGAIgASgJEjMKB2NvbnRleHQYAyABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQSFAoMcHJpbmNpcGFsX2lkGAQgASgJEhkKEWFsbF9mb3JfcHJpbmNpcGFsGAUgASgIIogBChVSZXZva2VTZXNzaW9uUmVzcG9uc2USEgoKc2Vzc2lvbl9pZBgBIAEoCRIuCgpyZXZva2VkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIUCgxvcGVyYXRpb25faWQYAyABKAkSFQoNcmV2b2tlZF9jb3VudBgEIAEoBSI9ChNWYWxpZGF0ZUNTUkZSZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkSEgoKY3NyZl90b2tlbhgCIAEoCSIlChRWYWxpZGF0ZUNTUkZSZXNwb25zZRINCgV2YWxpZBgBIAEoCCKUAQoQRW5yb2xsTUZBUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEjoKCG1mYV90eXBlGAIgASgOMigudWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLkF1dGhGYWN0b3JLaW5kEjMKB2NvbnRleHQYAyABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQiVAoRRW5yb2xsTUZBUmVzcG9uc2USEwoLdG90cF9zZWNyZXQYASABKAkSEwoLdG90cF9xcl91cmkYAiABKAkSFQoNdmVyaWZ5X290cF9pZBgDIAEoCSKBAQobQ29uZmlybU1GQUVucm9sbG1lbnRSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSDgoGb3RwX2lkGAIgASgJEgwKBGNvZGUYAyABKAkSMwoHY29udGV4dBgEIAEoCzIiLnVkYi5jb3JlLmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dCIwChxDb25maXJtTUZBRW5yb2xsbWVudFJlc3BvbnNlEhAKCGVucm9sbGVkGAEgASgIIp4BCiBTdGFydFdlYkF1dGhuUmVnaXN0cmF0aW9uUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEg0KBWxhYmVsGAIgASgJEhEKCXRlbmFudF9pZBgDIAEoCRISCgpwcm9qZWN0X2lkGAQgASgJEjMKB2NvbnRleHQYBSABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQihwEKIVN0YXJ0V2ViQXV0aG5SZWdpc3RyYXRpb25SZXNwb25zZRIUCgxjaGFsbGVuZ2VfaWQYASABKAkSMworcHVibGljX2tleV9jcmVkZW50aWFsX2NyZWF0aW9uX29wdGlvbnNfanNvbhgCIAEoCRIXCg9leHBpcmVzX2F0X3VuaXgYAyABKAMioQEKIUZpbmlzaFdlYkF1dGhuUmVnaXN0cmF0aW9uUmVxdWVzdBIUCgxjaGFsbGVuZ2VfaWQYASABKAkSIgoacHVibGljX2tleV9jcmVkZW50aWFsX2pzb24YAiABKAkSDQoFbGFiZWwYAyABKAkSMwoHY29udGV4dBgEIAEoCzIiLnVkYi5jb3JlLmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dCJgCiJGaW5pc2hXZWJBdXRoblJlZ2lzdHJhdGlvblJlc3BvbnNlEhIKCnJlZ2lzdGVyZWQYASABKAgSFQoNY3JlZGVudGlhbF9pZBgCIAEoCRIPCgd1c2VyX2lkGAMgASgJIpEBCiJTdGFydFdlYkF1dGhuQXV0aGVudGljYXRpb25SZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSEQoJdGVuYW50X2lkGAIgASgJEhIKCnByb2plY3RfaWQYAyABKAkSMwoHY29udGV4dBgEIAEoCzIiLnVkYi5jb3JlLmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dCKIAQojU3RhcnRXZWJBdXRobkF1dGhlbnRpY2F0aW9uUmVzcG9uc2USFAoMY2hhbGxlbmdlX2lkGAEgASgJEjIKKnB1YmxpY19rZXlfY3JlZGVudGlhbF9yZXF1ZXN0X29wdGlvbnNfanNvbhgCIAEoCRIXCg9leHBpcmVzX2F0X3VuaXgYAyABKAMilAEKI0ZpbmlzaFdlYkF1dGhuQXV0aGVudGljYXRpb25SZXF1ZXN0EhQKDGNoYWxsZW5nZV9pZBgBIAEoCRIiChpwdWJsaWNfa2V5X2NyZWRlbnRpYWxfanNvbhgCIAEoCRIzCgdjb250ZXh0GAMgASgLMiIudWRiLmNvcmUuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0IroBCiRGaW5pc2hXZWJBdXRobkF1dGhlbnRpY2F0aW9uUmVzcG9uc2USOAoJcHJpbmNpcGFsGAEgASgLMiUudWRiLmNvcmUuYXV0aG4uc2VydmljZXMudjEuUHJpbmNpcGFsEhIKCnNlc3Npb25faWQYAiABKAkSFAoMYWNjZXNzX3Rva2VuGAMgASgJEhcKD2V4cGlyZXNfYXRfdW5peBgEIAEoAxIVCg1jcmVkZW50aWFsX2lkGAUgASgJQoICCh5jb20udWRiLmNvcmUuYXV0aG4uc2VydmljZXMudjFCCUNvcmVQcm90b1ABWkhnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2F1dGhuL3NlcnZpY2VzL3YxO3NlcnZpY2VzdjGiAgRVQ0FTqgIadWRiLmNvcmUuQXV0aG4uU2VydmljZXMuVjHKAhpVZGJcQ29yZVxBdXRoblxTZXJ2aWNlc1xWMeICJlVkYlxHUEJNZXRhZGF0YVxDb3JlXEF1dGhuXFNlcnZpY2VzXFYx6gIeVWRiOjpDb3JlOjpBdXRobjo6U2VydmljZXM6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_udb_core_authn_entity_v1_enums, file_udb_core_authn_entity_v1_session, file_udb_core_authn_entity_v1_user, file_udb_core_common_v1_dto, file_udb_core_common_v1_types]);
+  fileDesc("CiV1ZGIvY29yZS9hdXRobi9zZXJ2aWNlcy92MS9jb3JlLnByb3RvEhp1ZGIuY29yZS5hdXRobi5zZXJ2aWNlcy52MSLGAwoRQ3JlYXRlVXNlclJlcXVlc3QSEAoIdXNlcm5hbWUYASABKAkSDQoFZW1haWwYAiABKAkSEAoIcGFzc3dvcmQYAyABKAkSEQoJdGVuYW50X2lkGAQgASgJEhEKCWZ1bGxfbmFtZRgFIAEoCRIzCgdjb250ZXh0GAYgASgLMiIudWRiLmNvcmUuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0EjsKDGFjY291bnRfa2luZBgHIAEoDjIlLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5BY2NvdW50S2luZBISCgpwcm9qZWN0X2lkGAggASgJEhwKFGV4dGVybmFsX3Byb3ZpZGVyX2lkGAkgASgJEhgKEGV4dGVybmFsX3N1YmplY3QYCiABKAkSYAoScHJvZmlsZV9hdHRyaWJ1dGVzGAsgAygLMkQudWRiLmNvcmUuYXV0aG4uc2VydmljZXMudjEuQ3JlYXRlVXNlclJlcXVlc3QuUHJvZmlsZUF0dHJpYnV0ZXNFbnRyeRo4ChZQcm9maWxlQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiUgoSQ3JlYXRlVXNlclJlc3BvbnNlEiwKBHVzZXIYASABKAsyHi51ZGIuY29yZS5hdXRobi5lbnRpdHkudjEuVXNlchIOCgZvdHBfaWQYAiABKAkiQgoOR2V0VXNlclJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRINCgVlbWFpbBgDIAEoCSI/Cg9HZXRVc2VyUmVzcG9uc2USLAoEdXNlchgBIAEoCzIeLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5Vc2VyIscBChBMaXN0VXNlcnNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRI7CgxhY2NvdW50X2tpbmQYAiABKA4yJS51ZGIuY29yZS5hdXRobi5lbnRpdHkudjEuQWNjb3VudEtpbmQSNAoGc3RhdHVzGAMgASgOMiQudWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLlVzZXJTdGF0dXMSLQoEcGFnZRgEIAEoCzIfLnVkYi5jb3JlLmNvbW1vbi52MS5QYWdlUmVxdWVzdCJyChFMaXN0VXNlcnNSZXNwb25zZRItCgV1c2VycxgBIAMoCzIeLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5Vc2VyEi4KBHBhZ2UYAiABKAsyIC51ZGIuY29yZS5jb21tb24udjEuUGFnZVJlc3BvbnNlIrMDChFVcGRhdGVVc2VyUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEhEKCWZ1bGxfbmFtZRgCIAEoCRINCgVlbWFpbBgDIAEoCRIRCgl0ZW5hbnRfaWQYBCABKAkSMwoHY29udGV4dBgFIAEoCzIiLnVkYi5jb3JlLmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBI7CgxhY2NvdW50X2tpbmQYBiABKA4yJS51ZGIuY29yZS5hdXRobi5lbnRpdHkudjEuQWNjb3VudEtpbmQSEgoKcHJvamVjdF9pZBgHIAEoCRJgChJwcm9maWxlX2F0dHJpYnV0ZXMYCCADKAsyRC51ZGIuY29yZS5hdXRobi5zZXJ2aWNlcy52MS5VcGRhdGVVc2VyUmVxdWVzdC5Qcm9maWxlQXR0cmlidXRlc0VudHJ5EhwKFGV4dGVybmFsX3Byb3ZpZGVyX2lkGAkgASgJEhgKEGV4dGVybmFsX3N1YmplY3QYCiABKAkaOAoWUHJvZmlsZUF0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIkIKElVwZGF0ZVVzZXJSZXNwb25zZRIsCgR1c2VyGAEgASgLMh4udWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLlVzZXIiqQEKF0NoYW5nZVVzZXJTdGF0dXNSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSOAoKbmV3X3N0YXR1cxgCIAEoDjIkLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5Vc2VyU3RhdHVzEg4KBnJlYXNvbhgDIAEoCRIzCgdjb250ZXh0GAQgASgLMiIudWRiLmNvcmUuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0IkgKGENoYW5nZVVzZXJTdGF0dXNSZXNwb25zZRIsCgR1c2VyGAEgASgLMh4udWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLlVzZXIiYQoZQWRtaW5SZXNldFBhc3N3b3JkUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEjMKB2NvbnRleHQYAiABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQiLAoaQWRtaW5SZXNldFBhc3N3b3JkUmVzcG9uc2USDgoGb3RwX2lkGAEgASgJIqMBCg5TZW5kT1RQUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEjMKCG90cF90eXBlGAIgASgOMiEudWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLk9UUFR5cGUSFgoOY29ycmVsYXRpb25faWQYAyABKAkSMwoHY29udGV4dBgEIAEoCzIiLnVkYi5jb3JlLmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dCJXCg9TZW5kT1RQUmVzcG9uc2USDgoGb3RwX2lkGAEgASgJEhoKEmV4cGlyZXNfaW5fc2Vjb25kcxgCIAEoBRIYChBjb29sZG93bl9zZWNvbmRzGAMgASgFIjAKEFZlcmlmeU9UUFJlcXVlc3QSDgoGb3RwX2lkGAEgASgJEgwKBGNvZGUYAiABKAkiawoRVmVyaWZ5T1RQUmVzcG9uc2USEAoIdmVyaWZpZWQYASABKAgSDwoHdXNlcl9pZBgCIAEoCRIzCghvdHBfdHlwZRgDIAEoDjIhLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5PVFBUeXBlIjsKEFJlc2VuZE9UUFJlcXVlc3QSFwoPb3JpZ2luYWxfb3RwX2lkGAEgASgJEg4KBnJlYXNvbhgCIAEoCSJ1ChFSZXNlbmRPVFBSZXNwb25zZRIOCgZvdHBfaWQYASABKAkSGgoSZXhwaXJlc19pbl9zZWNvbmRzGAIgASgFEhgKEGNvb2xkb3duX3NlY29uZHMYAyABKAUSGgoSYXR0ZW1wdHNfcmVtYWluaW5nGAQgASgFIrEDCglQcmluY2lwYWwSFAoMcHJpbmNpcGFsX2lkGAEgASgJEg8KB3N1YmplY3QYAiABKAkSDwoHdXNlcl9pZBgDIAEoCRIYChBzZXJ2aWNlX2lkZW50aXR5GAQgASgJEhEKCXRlbmFudF9pZBgFIAEoCRISCgpwcm9qZWN0X2lkGAYgASgJEg4KBnNjb3BlcxgHIAMoCRINCgVyb2xlcxgIIAMoCRITCgtwcm92aWRlcl9pZBgJIAEoCRITCgthdXRoX21ldGhvZBgKIAEoCRIXCg9leHBpcmVzX2F0X3VuaXgYCyABKAMSOwoMYWNjb3VudF9raW5kGAwgASgOMiUudWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLkFjY291bnRLaW5kEg4KBmRvbWFpbhgNIAEoCRJJCgphdHRyaWJ1dGVzGA4gAygLMjUudWRiLmNvcmUuYXV0aG4uc2VydmljZXMudjEuUHJpbmNpcGFsLkF0dHJpYnV0ZXNFbnRyeRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASLBAwoMQXV0aG5SZXF1ZXN0EhQKDGJlYXJlcl90b2tlbhgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEg8KB2FwaV9rZXkYAyABKAkSHAoUZXh0ZXJuYWxfcHJvdmlkZXJfaWQYBCABKAkSFgoOZXh0ZXJuYWxfdG9rZW4YBSABKAkSEwoLdGVuYW50X2hpbnQYBiABKAkSFAoMcHJvamVjdF9oaW50GAcgASgJEhgKEHJlcXVlc3RlZF9zY29wZXMYCCADKAkSTAoKYXR0cmlidXRlcxgJIAMoCzI4LnVkYi5jb3JlLmF1dGhuLnNlcnZpY2VzLnYxLkF1dGhuUmVxdWVzdC5BdHRyaWJ1dGVzRW50cnkSRQoPY3JlZGVudGlhbF90eXBlGAogASgOMiwudWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLkF1dGhDcmVkZW50aWFsVHlwZRIRCgljbGllbnRfaWQYCyABKAkSEAoIYXVkaWVuY2UYDCABKAkSDgoGaXNzdWVyGA0gASgJGjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIrwBCg1BdXRoblJlc3BvbnNlEjgKCXByaW5jaXBhbBgBIAEoCzIlLnVkYi5jb3JlLmF1dGhuLnNlcnZpY2VzLnYxLlByaW5jaXBhbBISCgpzZXNzaW9uX2lkGAIgASgJEhQKDGFjY2Vzc190b2tlbhgDIAEoCRIXCg9leHBpcmVzX2F0X3VuaXgYBCABKAMSHAoUcmVsYXRpb25zaGlwX3ZlcnNpb24YBSABKAkSEAoId2FybmluZ3MYBiADKAkivgIKDExvZ2luUmVxdWVzdBIQCgh1c2VybmFtZRgBIAEoCRIQCghwYXNzd29yZBgCIAEoCRI5CgtkZXZpY2VfdHlwZRgDIAEoDjIkLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5EZXZpY2VUeXBlEhMKC2RldmljZV9uYW1lGAQgASgJEhIKCmlwX2FkZHJlc3MYBSABKAkSEgoKdXNlcl9hZ2VudBgGIAEoCRIRCglkZXZpY2VfaWQYByABKAkSEgoKbWZhX290cF9pZBgIIAEoCRIRCgl0b3RwX2NvZGUYCSABKAkSEwoLdGVuYW50X2hpbnQYCiABKAkSFAoMcHJvamVjdF9oaW50GAsgASgJEhYKDmFjY2Vzc19zdXJmYWNlGAwgASgJEhUKDXJlY292ZXJ5X2NvZGUYDSABKAki1wEKDUxvZ2luUmVzcG9uc2USDwoHdXNlcl9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEhQKDGFjY2Vzc190b2tlbhgDIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAQgASgJEh8KF2FjY2Vzc190b2tlbl9leHBpcmVzX2luGAUgASgFEhUKDXNlc3Npb25fdG9rZW4YBiABKAkSEgoKY3NyZl90b2tlbhgHIAEoCRIUCgxtZmFfcmVxdWlyZWQYCCABKAgSEgoKbWZhX290cF9pZBgJIAEoCSJAChNSZWZyZXNoVG9rZW5SZXF1ZXN0EhUKDXJlZnJlc2hfdG9rZW4YASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCSJNChRSZWZyZXNoVG9rZW5SZXNwb25zZRIUCgxhY2Nlc3NfdG9rZW4YASABKAkSHwoXYWNjZXNzX3Rva2VuX2V4cGlyZXNfaW4YAiABKAUihQEKDUxvZ291dFJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCRIUCgxhbGxfc2Vzc2lvbnMYAiABKAgSFQoNcmV2b2tlX3JlYXNvbhgDIAEoCRIzCgdjb250ZXh0GAQgASgLMiIudWRiLmNvcmUuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0IioKDkxvZ291dFJlc3BvbnNlEhgKEHNlc3Npb25zX3Jldm9rZWQYASABKAUinQEKFUNoYW5nZVBhc3N3b3JkUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEhgKEGN1cnJlbnRfcGFzc3dvcmQYAiABKAkSFAoMbmV3X3Bhc3N3b3JkGAMgASgJEg4KBm90cF9pZBgEIAEoCRIzCgdjb250ZXh0GAUgASgLMiIudWRiLmNvcmUuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0Im8KFkNoYW5nZVBhc3N3b3JkUmVzcG9uc2USDwoHdXNlcl9pZBgBIAEoCRIuCgpjaGFuZ2VkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIUCgxvcGVyYXRpb25faWQYAyABKAkiXgoUVmFsaWRhdGVUb2tlblJlcXVlc3QSDQoFdG9rZW4YASABKAkSNwoKdG9rZW5fdHlwZRgCIAEoDjIjLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5Ub2tlblR5cGUivAQKFVZhbGlkYXRlVG9rZW5SZXNwb25zZRINCgV2YWxpZBgBIAEoCBIPCgd1c2VyX2lkGAIgASgJEhIKCnNlc3Npb25faWQYAyABKAkSOwoMYWNjb3VudF9raW5kGAQgASgOMiUudWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLkFjY291bnRLaW5kEhEKCXRlbmFudF9pZBgFIAEoCRINCgVyb2xlcxgGIAMoCRIuCgpleHBpcmVzX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIWCg5hY2Nlc3Nfc3VyZmFjZRgIIAEoCRIRCglkZXZpY2VfaWQYCSABKAkSEAoIdG9rZW5faWQYCiABKAkSOwoMc2Vzc2lvbl90eXBlGAsgASgOMiUudWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxLlNlc3Npb25UeXBlEjgKCXByaW5jaXBhbBgMIAEoCzIlLnVkYi5jb3JlLmF1dGhuLnNlcnZpY2VzLnYxLlByaW5jaXBhbBISCgpwcm9qZWN0X2lkGA0gASgJEg4KBnNjb3BlcxgOIAMoCRJVCgphdHRyaWJ1dGVzGA8gAygLMkEudWRiLmNvcmUuYXV0aG4uc2VydmljZXMudjEuVmFsaWRhdGVUb2tlblJlc3BvbnNlLkF0dHJpYnV0ZXNFbnRyeRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASKBAQoUQ3JlYXRlU2Vzc2lvblJlcXVlc3QSOAoJcHJpbmNpcGFsGAEgASgLMiUudWRiLmNvcmUuYXV0aG4uc2VydmljZXMudjEuUHJpbmNpcGFsEhMKC3R0bF9zZWNvbmRzGAIgASgDEhoKEmNsaWVudF9maW5nZXJwcmludBgDIAEoCSJEChVDcmVhdGVTZXNzaW9uUmVzcG9uc2USEgoKc2Vzc2lvbl9pZBgBIAEoCRIXCg9leHBpcmVzX2F0X3VuaXgYAiABKAMiQAoVUmVmcmVzaFNlc3Npb25SZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkSEwoLdHRsX3NlY29uZHMYAiABKAMiQQoWUmVmcmVzaFNlc3Npb25SZXNwb25zZRIXCg9leHBpcmVzX2F0X3VuaXgYASABKAMSDgoGYWN0aXZlGAIgASgIIicKEUdldFNlc3Npb25SZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkiSAoSR2V0U2Vzc2lvblJlc3BvbnNlEjIKB3Nlc3Npb24YASABKAsyIS51ZGIuY29yZS5hdXRobi5lbnRpdHkudjEuU2Vzc2lvbiJqChNMaXN0U2Vzc2lvbnNSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSEwoLYWN0aXZlX29ubHkYAiABKAgSLQoEcGFnZRgDIAEoCzIfLnVkYi5jb3JlLmNvbW1vbi52MS5QYWdlUmVxdWVzdCJ7ChRMaXN0U2Vzc2lvbnNSZXNwb25zZRIzCghzZXNzaW9ucxgBIAMoCzIhLnVkYi5jb3JlLmF1dGhuLmVudGl0eS52MS5TZXNzaW9uEi4KBHBhZ2UYAiABKAsyIC51ZGIuY29yZS5jb21tb24udjEuUGFnZVJlc3BvbnNlIqcBChRSZXZva2VTZXNzaW9uUmVxdWVzdBISCgpzZXNzaW9uX2lkGAEgASgJEhUKDXJldm9rZV9yZWFzb24YAiABKAkSMwoHY29udGV4dBgDIAEoCzIiLnVkYi5jb3JlLmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dBIUCgxwcmluY2lwYWxfaWQYBCABKAkSGQoRYWxsX2Zvcl9wcmluY2lwYWwYBSABKAgiiAEKFVJldm9rZVNlc3Npb25SZXNwb25zZRISCgpzZXNzaW9uX2lkGAEgASgJEi4KCnJldm9rZWRfYXQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDG9wZXJhdGlvbl9pZBgDIAEoCRIVCg1yZXZva2VkX2NvdW50GAQgASgFIj0KE1ZhbGlkYXRlQ1NSRlJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCRISCgpjc3JmX3Rva2VuGAIgASgJIiUKFFZhbGlkYXRlQ1NSRlJlc3BvbnNlEg0KBXZhbGlkGAEgASgIIpQBChBFbnJvbGxNRkFSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSOgoIbWZhX3R5cGUYAiABKA4yKC51ZGIuY29yZS5hdXRobi5lbnRpdHkudjEuQXV0aEZhY3RvcktpbmQSMwoHY29udGV4dBgDIAEoCzIiLnVkYi5jb3JlLmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dCJUChFFbnJvbGxNRkFSZXNwb25zZRITCgt0b3RwX3NlY3JldBgBIAEoCRITCgt0b3RwX3FyX3VyaRgCIAEoCRIVCg12ZXJpZnlfb3RwX2lkGAMgASgJIoEBChtDb25maXJtTUZBRW5yb2xsbWVudFJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIOCgZvdHBfaWQYAiABKAkSDAoEY29kZRgDIAEoCRIzCgdjb250ZXh0GAQgASgLMiIudWRiLmNvcmUuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0IjAKHENvbmZpcm1NRkFFbnJvbGxtZW50UmVzcG9uc2USEAoIZW5yb2xsZWQYASABKAgicwocR2VuZXJhdGVSZWNvdmVyeUNvZGVzUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEg0KBWNvdW50GAIgASgFEjMKB2NvbnRleHQYAyABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQiQQodR2VuZXJhdGVSZWNvdmVyeUNvZGVzUmVzcG9uc2USDQoFY29kZXMYASADKAkSEQoJZ2VuZXJhdGVkGAIgASgFInIKE1B1dE1mYVBvbGljeVJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhMKC3JlcXVpcmVfbWZhGAIgASgIEjMKB2NvbnRleHQYAyABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQiPgoUUHV0TWZhUG9saWN5UmVzcG9uc2USEQoJdGVuYW50X2lkGAEgASgJEhMKC3JlcXVpcmVfbWZhGAIgASgIIl0KE0dldE1mYVBvbGljeVJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEjMKB2NvbnRleHQYAiABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQiPgoUR2V0TWZhUG9saWN5UmVzcG9uc2USEQoJdGVuYW50X2lkGAEgASgJEhMKC3JlcXVpcmVfbWZhGAIgASgIImAKFUZvcmdvdFBhc3N3b3JkUmVxdWVzdBISCgppZGVudGlmaWVyGAEgASgJEjMKB2NvbnRleHQYAiABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQiKAoWRm9yZ290UGFzc3dvcmRSZXNwb25zZRIOCgZvdHBfaWQYASABKAkifwoUUmVzZXRQYXNzd29yZFJlcXVlc3QSDgoGb3RwX2lkGAEgASgJEgwKBGNvZGUYAiABKAkSFAoMbmV3X3Bhc3N3b3JkGAMgASgJEjMKB2NvbnRleHQYBCABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQiQQoVUmVzZXRQYXNzd29yZFJlc3BvbnNlEg8KB3VzZXJfaWQYASABKAkSFwoPY2hhbmdlZF9hdF91bml4GAIgASgDIlwKFkludHJvc3BlY3RUb2tlblJlcXVlc3QSDQoFdG9rZW4YASABKAkSMwoHY29udGV4dBgCIAEoCzIiLnVkYi5jb3JlLmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dCKQAQoXSW50cm9zcGVjdFRva2VuUmVzcG9uc2USDgoGYWN0aXZlGAEgASgIEg8KB3N1YmplY3QYAiABKAkSEQoJdGVuYW50X2lkGAMgASgJEhgKEHNlcnZpY2VfaWRlbnRpdHkYBCABKAkSDgoGc2NvcGVzGAUgAygJEhcKD2V4cGlyZXNfYXRfdW5peBgGIAEoAyJFCg5HZXRKd2tzUmVxdWVzdBIzCgdjb250ZXh0GAEgASgLMiIudWRiLmNvcmUuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0IiQKD0dldEp3a3NSZXNwb25zZRIRCglqd2tzX2pzb24YASABKAkicwocU2VuZFBob25lVmVyaWZpY2F0aW9uUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEg0KBXBob25lGAIgASgJEjMKB2NvbnRleHQYAyABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQiLwodU2VuZFBob25lVmVyaWZpY2F0aW9uUmVzcG9uc2USDgoGb3RwX2lkGAEgASgJIp4BCiBTdGFydFdlYkF1dGhuUmVnaXN0cmF0aW9uUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEg0KBWxhYmVsGAIgASgJEhEKCXRlbmFudF9pZBgDIAEoCRISCgpwcm9qZWN0X2lkGAQgASgJEjMKB2NvbnRleHQYBSABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQihwEKIVN0YXJ0V2ViQXV0aG5SZWdpc3RyYXRpb25SZXNwb25zZRIUCgxjaGFsbGVuZ2VfaWQYASABKAkSMworcHVibGljX2tleV9jcmVkZW50aWFsX2NyZWF0aW9uX29wdGlvbnNfanNvbhgCIAEoCRIXCg9leHBpcmVzX2F0X3VuaXgYAyABKAMioQEKIUZpbmlzaFdlYkF1dGhuUmVnaXN0cmF0aW9uUmVxdWVzdBIUCgxjaGFsbGVuZ2VfaWQYASABKAkSIgoacHVibGljX2tleV9jcmVkZW50aWFsX2pzb24YAiABKAkSDQoFbGFiZWwYAyABKAkSMwoHY29udGV4dBgEIAEoCzIiLnVkYi5jb3JlLmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dCJgCiJGaW5pc2hXZWJBdXRoblJlZ2lzdHJhdGlvblJlc3BvbnNlEhIKCnJlZ2lzdGVyZWQYASABKAgSFQoNY3JlZGVudGlhbF9pZBgCIAEoCRIPCgd1c2VyX2lkGAMgASgJIpEBCiJTdGFydFdlYkF1dGhuQXV0aGVudGljYXRpb25SZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSEQoJdGVuYW50X2lkGAIgASgJEhIKCnByb2plY3RfaWQYAyABKAkSMwoHY29udGV4dBgEIAEoCzIiLnVkYi5jb3JlLmNvbW1vbi52MS5SZXF1ZXN0Q29udGV4dCKIAQojU3RhcnRXZWJBdXRobkF1dGhlbnRpY2F0aW9uUmVzcG9uc2USFAoMY2hhbGxlbmdlX2lkGAEgASgJEjIKKnB1YmxpY19rZXlfY3JlZGVudGlhbF9yZXF1ZXN0X29wdGlvbnNfanNvbhgCIAEoCRIXCg9leHBpcmVzX2F0X3VuaXgYAyABKAMilAEKI0ZpbmlzaFdlYkF1dGhuQXV0aGVudGljYXRpb25SZXF1ZXN0EhQKDGNoYWxsZW5nZV9pZBgBIAEoCRIiChpwdWJsaWNfa2V5X2NyZWRlbnRpYWxfanNvbhgCIAEoCRIzCgdjb250ZXh0GAMgASgLMiIudWRiLmNvcmUuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0IroBCiRGaW5pc2hXZWJBdXRobkF1dGhlbnRpY2F0aW9uUmVzcG9uc2USOAoJcHJpbmNpcGFsGAEgASgLMiUudWRiLmNvcmUuYXV0aG4uc2VydmljZXMudjEuUHJpbmNpcGFsEhIKCnNlc3Npb25faWQYAiABKAkSFAoMYWNjZXNzX3Rva2VuGAMgASgJEhcKD2V4cGlyZXNfYXRfdW5peBgEIAEoAxIVCg1jcmVkZW50aWFsX2lkGAUgASgJQoICCh5jb20udWRiLmNvcmUuYXV0aG4uc2VydmljZXMudjFCCUNvcmVQcm90b1ABWkhnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2F1dGhuL3NlcnZpY2VzL3YxO3NlcnZpY2VzdjGiAgRVQ0FTqgIadWRiLmNvcmUuQXV0aG4uU2VydmljZXMuVjHKAhpVZGJcQ29yZVxBdXRoblxTZXJ2aWNlc1xWMeICJlVkYlxHUEJNZXRhZGF0YVxDb3JlXEF1dGhuXFNlcnZpY2VzXFYx6gIeVWRiOjpDb3JlOjpBdXRobjo6U2VydmljZXM6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_udb_core_authn_entity_v1_enums, file_udb_core_authn_entity_v1_session, file_udb_core_authn_entity_v1_user, file_udb_core_common_v1_dto, file_udb_core_common_v1_types]);
 
 /**
  * @generated from message udb.core.authn.services.v1.CreateUserRequest
@@ -813,17 +813,19 @@ export type LoginRequest = Message<"udb.core.authn.services.v1.LoginRequest"> & 
 
   /**
    * MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
-   * When mfa_otp_id is non-empty the credential check is skipped and the service
-   * instead consumes the MFA session token and validates the TOTP code.
+   * The password (first factor) is ALWAYS verified; these only supply the second
+   * factor and never substitute for it. Provide totp_code for an authenticator app,
+   * or mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA
+   * email/SMS code previously issued to this same user.
    *
-   * pending MFA session token from step-1 LoginResponse.mfa_otp_id
+   * id of a LOGIN_2FA OTP issued to this user (email/SMS second factor)
    *
    * @generated from field: string mfa_otp_id = 8;
    */
   mfaOtpId: string;
 
   /**
-   * 6-digit TOTP code from the user's authenticator app
+   * 6-digit TOTP code, or the one-time code when mfa_otp_id is set
    *
    * @generated from field: string totp_code = 9;
    */
@@ -843,6 +845,13 @@ export type LoginRequest = Message<"udb.core.authn.services.v1.LoginRequest"> & 
    * @generated from field: string access_surface = 12;
    */
   accessSurface: string;
+
+  /**
+   * single-use MFA recovery/backup code (alternative second factor)
+   *
+   * @generated from field: string recovery_code = 13;
+   */
+  recoveryCode: string;
 };
 
 /**
@@ -901,14 +910,14 @@ export type LoginResponse = Message<"udb.core.authn.services.v1.LoginResponse"> 
   csrfToken: string;
 
   /**
-   * true = client must present OTP before access
+   * true = client must re-call Login with password + second factor
    *
    * @generated from field: bool mfa_required = 8;
    */
   mfaRequired: boolean;
 
   /**
-   * OTP ID to complete MFA
+   * reserved for a future server-issued MFA challenge id (currently empty)
    *
    * @generated from field: string mfa_otp_id = 9;
    */
@@ -1600,6 +1609,397 @@ export const ConfirmMFAEnrollmentResponseSchema: GenMessage<ConfirmMFAEnrollment
   messageDesc(file_udb_core_authn_services_v1_core, 46);
 
 /**
+ * @generated from message udb.core.authn.services.v1.GenerateRecoveryCodesRequest
+ */
+export type GenerateRecoveryCodesRequest = Message<"udb.core.authn.services.v1.GenerateRecoveryCodesRequest"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * number of codes to generate (server clamps to a sane range; default 10)
+   *
+   * @generated from field: int32 count = 2;
+   */
+  count: number;
+
+  /**
+   * @generated from field: udb.core.common.v1.RequestContext context = 3;
+   */
+  context?: RequestContext | undefined;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.GenerateRecoveryCodesRequest.
+ * Use `create(GenerateRecoveryCodesRequestSchema)` to create a new message.
+ */
+export const GenerateRecoveryCodesRequestSchema: GenMessage<GenerateRecoveryCodesRequest> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 47);
+
+/**
+ * @generated from message udb.core.authn.services.v1.GenerateRecoveryCodesResponse
+ */
+export type GenerateRecoveryCodesResponse = Message<"udb.core.authn.services.v1.GenerateRecoveryCodesResponse"> & {
+  /**
+   * Plaintext codes, returned exactly ONCE. Only keyed hashes are stored; any
+   * previously-issued codes for the user are invalidated.
+   *
+   * @generated from field: repeated string codes = 1;
+   */
+  codes: string[];
+
+  /**
+   * @generated from field: int32 generated = 2;
+   */
+  generated: number;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.GenerateRecoveryCodesResponse.
+ * Use `create(GenerateRecoveryCodesResponseSchema)` to create a new message.
+ */
+export const GenerateRecoveryCodesResponseSchema: GenMessage<GenerateRecoveryCodesResponse> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 48);
+
+/**
+ * @generated from message udb.core.authn.services.v1.PutMfaPolicyRequest
+ */
+export type PutMfaPolicyRequest = Message<"udb.core.authn.services.v1.PutMfaPolicyRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: bool require_mfa = 2;
+   */
+  requireMfa: boolean;
+
+  /**
+   * @generated from field: udb.core.common.v1.RequestContext context = 3;
+   */
+  context?: RequestContext | undefined;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.PutMfaPolicyRequest.
+ * Use `create(PutMfaPolicyRequestSchema)` to create a new message.
+ */
+export const PutMfaPolicyRequestSchema: GenMessage<PutMfaPolicyRequest> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 49);
+
+/**
+ * @generated from message udb.core.authn.services.v1.PutMfaPolicyResponse
+ */
+export type PutMfaPolicyResponse = Message<"udb.core.authn.services.v1.PutMfaPolicyResponse"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: bool require_mfa = 2;
+   */
+  requireMfa: boolean;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.PutMfaPolicyResponse.
+ * Use `create(PutMfaPolicyResponseSchema)` to create a new message.
+ */
+export const PutMfaPolicyResponseSchema: GenMessage<PutMfaPolicyResponse> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 50);
+
+/**
+ * @generated from message udb.core.authn.services.v1.GetMfaPolicyRequest
+ */
+export type GetMfaPolicyRequest = Message<"udb.core.authn.services.v1.GetMfaPolicyRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: udb.core.common.v1.RequestContext context = 2;
+   */
+  context?: RequestContext | undefined;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.GetMfaPolicyRequest.
+ * Use `create(GetMfaPolicyRequestSchema)` to create a new message.
+ */
+export const GetMfaPolicyRequestSchema: GenMessage<GetMfaPolicyRequest> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 51);
+
+/**
+ * @generated from message udb.core.authn.services.v1.GetMfaPolicyResponse
+ */
+export type GetMfaPolicyResponse = Message<"udb.core.authn.services.v1.GetMfaPolicyResponse"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: bool require_mfa = 2;
+   */
+  requireMfa: boolean;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.GetMfaPolicyResponse.
+ * Use `create(GetMfaPolicyResponseSchema)` to create a new message.
+ */
+export const GetMfaPolicyResponseSchema: GenMessage<GetMfaPolicyResponse> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 52);
+
+/**
+ * @generated from message udb.core.authn.services.v1.ForgotPasswordRequest
+ */
+export type ForgotPasswordRequest = Message<"udb.core.authn.services.v1.ForgotPasswordRequest"> & {
+  /**
+   * username or email
+   *
+   * @generated from field: string identifier = 1;
+   */
+  identifier: string;
+
+  /**
+   * @generated from field: udb.core.common.v1.RequestContext context = 2;
+   */
+  context?: RequestContext | undefined;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.ForgotPasswordRequest.
+ * Use `create(ForgotPasswordRequestSchema)` to create a new message.
+ */
+export const ForgotPasswordRequestSchema: GenMessage<ForgotPasswordRequest> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 53);
+
+/**
+ * @generated from message udb.core.authn.services.v1.ForgotPasswordResponse
+ */
+export type ForgotPasswordResponse = Message<"udb.core.authn.services.v1.ForgotPasswordResponse"> & {
+  /**
+   * Id of the PASSWORD_RESET OTP issued (empty when the account is unknown; the
+   * response shape is uniform so it is not an account-enumeration oracle).
+   *
+   * @generated from field: string otp_id = 1;
+   */
+  otpId: string;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.ForgotPasswordResponse.
+ * Use `create(ForgotPasswordResponseSchema)` to create a new message.
+ */
+export const ForgotPasswordResponseSchema: GenMessage<ForgotPasswordResponse> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 54);
+
+/**
+ * @generated from message udb.core.authn.services.v1.ResetPasswordRequest
+ */
+export type ResetPasswordRequest = Message<"udb.core.authn.services.v1.ResetPasswordRequest"> & {
+  /**
+   * @generated from field: string otp_id = 1;
+   */
+  otpId: string;
+
+  /**
+   * @generated from field: string code = 2;
+   */
+  code: string;
+
+  /**
+   * @generated from field: string new_password = 3;
+   */
+  newPassword: string;
+
+  /**
+   * @generated from field: udb.core.common.v1.RequestContext context = 4;
+   */
+  context?: RequestContext | undefined;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.ResetPasswordRequest.
+ * Use `create(ResetPasswordRequestSchema)` to create a new message.
+ */
+export const ResetPasswordRequestSchema: GenMessage<ResetPasswordRequest> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 55);
+
+/**
+ * @generated from message udb.core.authn.services.v1.ResetPasswordResponse
+ */
+export type ResetPasswordResponse = Message<"udb.core.authn.services.v1.ResetPasswordResponse"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: int64 changed_at_unix = 2;
+   */
+  changedAtUnix: bigint;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.ResetPasswordResponse.
+ * Use `create(ResetPasswordResponseSchema)` to create a new message.
+ */
+export const ResetPasswordResponseSchema: GenMessage<ResetPasswordResponse> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 56);
+
+/**
+ * @generated from message udb.core.authn.services.v1.IntrospectTokenRequest
+ */
+export type IntrospectTokenRequest = Message<"udb.core.authn.services.v1.IntrospectTokenRequest"> & {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token: string;
+
+  /**
+   * @generated from field: udb.core.common.v1.RequestContext context = 2;
+   */
+  context?: RequestContext | undefined;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.IntrospectTokenRequest.
+ * Use `create(IntrospectTokenRequestSchema)` to create a new message.
+ */
+export const IntrospectTokenRequestSchema: GenMessage<IntrospectTokenRequest> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 57);
+
+/**
+ * @generated from message udb.core.authn.services.v1.IntrospectTokenResponse
+ */
+export type IntrospectTokenResponse = Message<"udb.core.authn.services.v1.IntrospectTokenResponse"> & {
+  /**
+   * @generated from field: bool active = 1;
+   */
+  active: boolean;
+
+  /**
+   * @generated from field: string subject = 2;
+   */
+  subject: string;
+
+  /**
+   * @generated from field: string tenant_id = 3;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string service_identity = 4;
+   */
+  serviceIdentity: string;
+
+  /**
+   * @generated from field: repeated string scopes = 5;
+   */
+  scopes: string[];
+
+  /**
+   * @generated from field: int64 expires_at_unix = 6;
+   */
+  expiresAtUnix: bigint;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.IntrospectTokenResponse.
+ * Use `create(IntrospectTokenResponseSchema)` to create a new message.
+ */
+export const IntrospectTokenResponseSchema: GenMessage<IntrospectTokenResponse> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 58);
+
+/**
+ * @generated from message udb.core.authn.services.v1.GetJwksRequest
+ */
+export type GetJwksRequest = Message<"udb.core.authn.services.v1.GetJwksRequest"> & {
+  /**
+   * @generated from field: udb.core.common.v1.RequestContext context = 1;
+   */
+  context?: RequestContext | undefined;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.GetJwksRequest.
+ * Use `create(GetJwksRequestSchema)` to create a new message.
+ */
+export const GetJwksRequestSchema: GenMessage<GetJwksRequest> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 59);
+
+/**
+ * @generated from message udb.core.authn.services.v1.GetJwksResponse
+ */
+export type GetJwksResponse = Message<"udb.core.authn.services.v1.GetJwksResponse"> & {
+  /**
+   * RFC 7517 JWK Set document for verifying UDB-issued JWTs
+   *
+   * @generated from field: string jwks_json = 1;
+   */
+  jwksJson: string;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.GetJwksResponse.
+ * Use `create(GetJwksResponseSchema)` to create a new message.
+ */
+export const GetJwksResponseSchema: GenMessage<GetJwksResponse> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 60);
+
+/**
+ * @generated from message udb.core.authn.services.v1.SendPhoneVerificationRequest
+ */
+export type SendPhoneVerificationRequest = Message<"udb.core.authn.services.v1.SendPhoneVerificationRequest"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * E.164 number to set + verify
+   *
+   * @generated from field: string phone = 2;
+   */
+  phone: string;
+
+  /**
+   * @generated from field: udb.core.common.v1.RequestContext context = 3;
+   */
+  context?: RequestContext | undefined;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.SendPhoneVerificationRequest.
+ * Use `create(SendPhoneVerificationRequestSchema)` to create a new message.
+ */
+export const SendPhoneVerificationRequestSchema: GenMessage<SendPhoneVerificationRequest> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 61);
+
+/**
+ * @generated from message udb.core.authn.services.v1.SendPhoneVerificationResponse
+ */
+export type SendPhoneVerificationResponse = Message<"udb.core.authn.services.v1.SendPhoneVerificationResponse"> & {
+  /**
+   * @generated from field: string otp_id = 1;
+   */
+  otpId: string;
+};
+
+/**
+ * Describes the message udb.core.authn.services.v1.SendPhoneVerificationResponse.
+ * Use `create(SendPhoneVerificationResponseSchema)` to create a new message.
+ */
+export const SendPhoneVerificationResponseSchema: GenMessage<SendPhoneVerificationResponse> = /*@__PURE__*/
+  messageDesc(file_udb_core_authn_services_v1_core, 62);
+
+/**
  * @generated from message udb.core.authn.services.v1.StartWebAuthnRegistrationRequest
  */
 export type StartWebAuthnRegistrationRequest = Message<"udb.core.authn.services.v1.StartWebAuthnRegistrationRequest"> & {
@@ -1634,7 +2034,7 @@ export type StartWebAuthnRegistrationRequest = Message<"udb.core.authn.services.
  * Use `create(StartWebAuthnRegistrationRequestSchema)` to create a new message.
  */
 export const StartWebAuthnRegistrationRequestSchema: GenMessage<StartWebAuthnRegistrationRequest> = /*@__PURE__*/
-  messageDesc(file_udb_core_authn_services_v1_core, 47);
+  messageDesc(file_udb_core_authn_services_v1_core, 63);
 
 /**
  * @generated from message udb.core.authn.services.v1.StartWebAuthnRegistrationResponse
@@ -1661,7 +2061,7 @@ export type StartWebAuthnRegistrationResponse = Message<"udb.core.authn.services
  * Use `create(StartWebAuthnRegistrationResponseSchema)` to create a new message.
  */
 export const StartWebAuthnRegistrationResponseSchema: GenMessage<StartWebAuthnRegistrationResponse> = /*@__PURE__*/
-  messageDesc(file_udb_core_authn_services_v1_core, 48);
+  messageDesc(file_udb_core_authn_services_v1_core, 64);
 
 /**
  * @generated from message udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest
@@ -1693,7 +2093,7 @@ export type FinishWebAuthnRegistrationRequest = Message<"udb.core.authn.services
  * Use `create(FinishWebAuthnRegistrationRequestSchema)` to create a new message.
  */
 export const FinishWebAuthnRegistrationRequestSchema: GenMessage<FinishWebAuthnRegistrationRequest> = /*@__PURE__*/
-  messageDesc(file_udb_core_authn_services_v1_core, 49);
+  messageDesc(file_udb_core_authn_services_v1_core, 65);
 
 /**
  * @generated from message udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse
@@ -1720,7 +2120,7 @@ export type FinishWebAuthnRegistrationResponse = Message<"udb.core.authn.service
  * Use `create(FinishWebAuthnRegistrationResponseSchema)` to create a new message.
  */
 export const FinishWebAuthnRegistrationResponseSchema: GenMessage<FinishWebAuthnRegistrationResponse> = /*@__PURE__*/
-  messageDesc(file_udb_core_authn_services_v1_core, 50);
+  messageDesc(file_udb_core_authn_services_v1_core, 66);
 
 /**
  * @generated from message udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest
@@ -1752,7 +2152,7 @@ export type StartWebAuthnAuthenticationRequest = Message<"udb.core.authn.service
  * Use `create(StartWebAuthnAuthenticationRequestSchema)` to create a new message.
  */
 export const StartWebAuthnAuthenticationRequestSchema: GenMessage<StartWebAuthnAuthenticationRequest> = /*@__PURE__*/
-  messageDesc(file_udb_core_authn_services_v1_core, 51);
+  messageDesc(file_udb_core_authn_services_v1_core, 67);
 
 /**
  * @generated from message udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse
@@ -1779,7 +2179,7 @@ export type StartWebAuthnAuthenticationResponse = Message<"udb.core.authn.servic
  * Use `create(StartWebAuthnAuthenticationResponseSchema)` to create a new message.
  */
 export const StartWebAuthnAuthenticationResponseSchema: GenMessage<StartWebAuthnAuthenticationResponse> = /*@__PURE__*/
-  messageDesc(file_udb_core_authn_services_v1_core, 52);
+  messageDesc(file_udb_core_authn_services_v1_core, 68);
 
 /**
  * @generated from message udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest
@@ -1806,7 +2206,7 @@ export type FinishWebAuthnAuthenticationRequest = Message<"udb.core.authn.servic
  * Use `create(FinishWebAuthnAuthenticationRequestSchema)` to create a new message.
  */
 export const FinishWebAuthnAuthenticationRequestSchema: GenMessage<FinishWebAuthnAuthenticationRequest> = /*@__PURE__*/
-  messageDesc(file_udb_core_authn_services_v1_core, 53);
+  messageDesc(file_udb_core_authn_services_v1_core, 69);
 
 /**
  * @generated from message udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse
@@ -1843,5 +2243,5 @@ export type FinishWebAuthnAuthenticationResponse = Message<"udb.core.authn.servi
  * Use `create(FinishWebAuthnAuthenticationResponseSchema)` to create a new message.
  */
 export const FinishWebAuthnAuthenticationResponseSchema: GenMessage<FinishWebAuthnAuthenticationResponse> = /*@__PURE__*/
-  messageDesc(file_udb_core_authn_services_v1_core, 54);
+  messageDesc(file_udb_core_authn_services_v1_core, 70);
 

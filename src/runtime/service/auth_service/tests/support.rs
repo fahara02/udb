@@ -72,9 +72,34 @@ pub(super) async fn migrate_native_auth_db(pool: &sqlx::PgPool) {
 }
 
 pub(super) fn authn_service(pool: sqlx::PgPool) -> AuthnServiceImpl {
+    // OTP cooldown disabled here so existing tests can send/resend OTPs back to
+    // back; the cooldown itself is covered by a dedicated test that opts in.
     let config = AuthnConfig {
         session_enabled: true,
         session_hash_secret: "live-auth-test-secret".to_string(),
+        otp_cooldown_secs: 0,
+        ..AuthnConfig::default()
+    };
+    let sessions: Arc<dyn SessionStore> = Arc::new(PostgresSessionStore::new(pool.clone(), ""));
+    AuthnServiceImpl::with_stores(
+        config,
+        SecurityConfig::current(),
+        sessions,
+        Arc::new(PostgresApiKeyStore::new(pool.clone(), "")),
+        Arc::new(PostgresUserStore::new(pool.clone(), "")),
+    )
+    .with_postgres(Some(pool))
+}
+
+/// Like [`authn_service`] but with an explicit OTP cooldown, for the cooldown test.
+pub(super) fn authn_service_with_cooldown(
+    pool: sqlx::PgPool,
+    otp_cooldown_secs: u64,
+) -> AuthnServiceImpl {
+    let config = AuthnConfig {
+        session_enabled: true,
+        session_hash_secret: "live-auth-test-secret".to_string(),
+        otp_cooldown_secs,
         ..AuthnConfig::default()
     };
     let sessions: Arc<dyn SessionStore> = Arc::new(PostgresSessionStore::new(pool.clone(), ""));

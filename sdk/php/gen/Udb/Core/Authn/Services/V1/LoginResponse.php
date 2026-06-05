@@ -52,13 +52,13 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      */
     protected $csrf_token = '';
     /**
-     * true = client must present OTP before access
+     * true = client must re-call Login with password + second factor
      *
      * Generated from protobuf field <code>bool mfa_required = 8 [json_name = "mfaRequired"];</code>
      */
     protected $mfa_required = false;
     /**
-     * OTP ID to complete MFA
+     * reserved for a future server-issued MFA challenge id (currently empty)
      *
      * Generated from protobuf field <code>string mfa_otp_id = 9 [json_name = "mfaOtpId"];</code>
      */
@@ -83,9 +83,9 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      *     @type string $csrf_token
      *           injected into a readable cookie
      *     @type bool $mfa_required
-     *           true = client must present OTP before access
+     *           true = client must re-call Login with password + second factor
      *     @type string $mfa_otp_id
-     *           OTP ID to complete MFA
+     *           reserved for a future server-issued MFA challenge id (currently empty)
      * }
      */
     public function __construct($data = NULL) {
@@ -266,7 +266,7 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * true = client must present OTP before access
+     * true = client must re-call Login with password + second factor
      *
      * Generated from protobuf field <code>bool mfa_required = 8 [json_name = "mfaRequired"];</code>
      * @return bool
@@ -277,7 +277,7 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * true = client must present OTP before access
+     * true = client must re-call Login with password + second factor
      *
      * Generated from protobuf field <code>bool mfa_required = 8 [json_name = "mfaRequired"];</code>
      * @param bool $var
@@ -291,7 +291,7 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * OTP ID to complete MFA
+     * reserved for a future server-issued MFA challenge id (currently empty)
      *
      * Generated from protobuf field <code>string mfa_otp_id = 9 [json_name = "mfaOtpId"];</code>
      * @return string
@@ -302,7 +302,7 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * OTP ID to complete MFA
+     * reserved for a future server-issued MFA challenge id (currently empty)
      *
      * Generated from protobuf field <code>string mfa_otp_id = 9 [json_name = "mfaOtpId"];</code>
      * @param string $var

@@ -373,6 +373,139 @@ service AuthnService {
     };
   }
 
+  // Generate a fresh set of single-use MFA recovery/backup codes (returned once;
+  // any prior codes for the user are invalidated).
+  rpc GenerateRecoveryCodes(GenerateRecoveryCodesRequest) returns (GenerateRecoveryCodesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/users/{user_id}/recovery-codes:generate"
+      body: "*"
+    };
+  }
+
+  // Set the per-tenant MFA enforcement policy.
+  rpc PutMfaPolicy(PutMfaPolicyRequest) returns (PutMfaPolicyResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      put: "/v1/auth/tenants/{tenant_id}/mfa-policy"
+      body: "*"
+    };
+  }
+
+  // Read the per-tenant MFA enforcement policy.
+  rpc GetMfaPolicy(GetMfaPolicyRequest) returns (GetMfaPolicyResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      get: "/v1/auth/tenants/{tenant_id}/mfa-policy"
+    };
+  }
+
+  // User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the
+  // account's channel). Public — no bearer required.
+  rpc ForgotPassword(ForgotPasswordRequest) returns (ForgotPasswordResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_PUBLIC
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/password:forgot"
+      body: "*"
+    };
+  }
+
+  // Complete a password reset with the OTP from ForgotPassword (no current
+  // password required). Public — the OTP is the proof of control.
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_PUBLIC
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/password:reset"
+      body: "*"
+    };
+  }
+
+  // OAuth2-style token introspection for a UDB-issued JWT.
+  rpc IntrospectToken(IntrospectTokenRequest) returns (IntrospectTokenResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/token:introspect"
+      body: "*"
+    };
+  }
+
+  // Set the user's phone number and send an SMS verification OTP. Complete with
+  // VerifyOTP (the response is verified the same way as email).
+  rpc SendPhoneVerification(SendPhoneVerificationRequest) returns (SendPhoneVerificationResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      tenant_required: true
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/users/{user_id}/phone:verify"
+      body: "*"
+    };
+  }
+
+  // JSON Web Key Set for verifying UDB-issued JWTs. Public.
+  rpc GetJwks(GetJwksRequest) returns (GetJwksResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_PUBLIC
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: false
+      api_error: true
+    };
+    option (google.api.http) = {
+      get: "/v1/auth/.well-known/jwks.json"
+    };
+  }
+
   // ── WebAuthn / passkeys ─────────────────────────────────────────────────
   rpc StartWebAuthnRegistration(StartWebAuthnRegistrationRequest) returns (StartWebAuthnRegistrationResponse) {
     option (udb.core.common.v1.endpoint_security) = {

@@ -337,4 +337,31 @@ public interface UserOrBuilder extends
    */
   com.google.protobuf.ByteString
       getExternalReferencesJsonBytes();
+
+  /**
+   * <code>string phone = 27 [json_name = "phone", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The phone.
+   */
+  java.lang.String getPhone();
+  /**
+   * <code>string phone = 27 [json_name = "phone", (.udb.core.common.v1.pii) = true, (.udb.core.common.v1.log_masked) = true, (.udb.core.common.v1.data_purpose) = "Authentication and communication", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for phone.
+   */
+  com.google.protobuf.ByteString
+      getPhoneBytes();
+
+  /**
+   * <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return Whether the phoneVerifiedAt field is set.
+   */
+  boolean hasPhoneVerifiedAt();
+  /**
+   * <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The phoneVerifiedAt.
+   */
+  com.google.protobuf.Timestamp getPhoneVerifiedAt();
+  /**
+   * <code>.google.protobuf.Timestamp phone_verified_at = 28 [json_name = "phoneVerifiedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   */
+  com.google.protobuf.TimestampOrBuilder getPhoneVerifiedAtOrBuilder();
 }

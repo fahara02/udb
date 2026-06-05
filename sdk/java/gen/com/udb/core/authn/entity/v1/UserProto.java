@@ -44,8 +44,8 @@ public final class UserProto extends com.google.protobuf.GeneratedFile {
       "db.core.authn.entity.v1\032\037google/protobuf" +
       "/timestamp.proto\032$udb/core/authn/entity/" +
       "v1/enums.proto\032\033udb/core/common/v1/db.pr" +
-      "oto\032!udb/core/common/v1/security.proto\"\270" +
-      "\037\n\004User\022C\n\007user_id\030\001 \001(\tB*\202\267\030&\n\007user_id\022" +
+      "oto\032!udb/core/common/v1/security.proto\"\363" +
+      "!\n\004User\022C\n\007user_id\030\001 \001(\tB*\202\267\030&\n\007user_id\022" +
       "\004UUID\030\001(\001:\021gen_random_uuid()R\006userId\022\274\001\n" +
       "\010username\030\002 \001(\tB\237\001\340\265\030\001\202\267\030\226\001\n\010username\022\013V" +
       "ARCHAR(80)\030\001 \001B%username ~ \'^[a-z][a-z0-" +
@@ -129,29 +129,37 @@ public final class UserProto extends com.google.protobuf.GeneratedFile {
       "rnal_references_json\030\032 \001(\tBc\202\267\030_\n\030extern" +
       "al_references_json\022\005JSONB\030\001:\013\'[]\'::jsonb" +
       "Z+External system references for this ac" +
-      "countx\001R\026externalReferencesJson:\367\004\242\265\0307\010\001" +
-      "\022\022udb:user:{user_id}\030\254\002 \001(\001:\022REDIS_CLUST" +
-      "ER_ADDRB\004user\372\266\030\267\004\n\005users\022\tudb_authn\030\001 \001" +
-      "*HAccounts authenticated by UDB or mappe" +
-      "d from external identity providers0\0018\001@\001" +
-      "b^\n\020tenant_isolation\032H(tenant_id::text =" +
-      " current_setting(\'app.current_tenant_id\'" +
-      ", true)::text)(\001\232\001\022\n\010pgcrypto\022\006public\232\001\021" +
-      "\n\007pg_trgm\022\006public\252\001O\n\032trg_users_touch_up" +
-      "dated_at\022\006BEFORE\032\006UPDATE\"\034udb_authn.touc" +
-      "h_updated_at()*\003ROW\302\001\332\001\n\031touch_updated_a" +
-      "t_function\022\010postgres\032\017before_triggers\"\241\001" +
-      "CREATE OR REPLACE FUNCTION udb_authn.tou" +
-      "ch_updated_at()\nRETURNS trigger\nLANGUAGE" +
-      " plpgsql\nAS $$\nBEGIN\n  NEW.updated_at = " +
-      "CURRENT_TIMESTAMP;\n  RETURN NEW;\nEND;\n$$" +
-      ";\352\001\007primary\372\001\013authn:adminB\364\001\n\034com.udb.co" +
-      "re.authn.entity.v1B\tUserProtoP\001ZDgithub." +
-      "com/fahara02/udb/sdk/go/gen/udb/core/aut" +
-      "hn/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.core." +
-      "Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\Entity\\" +
-      "V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V" +
-      "1\352\002\034Udb::Core::Authn::Entity::V1b\006proto3"
+      "countx\001R\026externalReferencesJson\022\224\001\n\005phon" +
+      "e\030\033 \001(\tB~\320\265\030\001\340\265\030\001\202\266\030 Authentication and " +
+      "communication\202\267\030N\n\005phone\022\013VARCHAR(32)Z8E" +
+      ".164 phone number for SMS OTP delivery a" +
+      "nd verificationR\005phone\022\241\001\n\021phone_verifie" +
+      "d_at\030\034 \001(\0132\032.google.protobuf.TimestampBY" +
+      "\202\267\030U\n\021phone_verified_at\022\013TIMESTAMPTZZ3Ti" +
+      "mestamp the phone number was verified vi" +
+      "a SMS OTPR\017phoneVerifiedAt:\367\004\242\265\0307\010\001\022\022udb" +
+      ":user:{user_id}\030\254\002 \001(\001:\022REDIS_CLUSTER_AD" +
+      "DRB\004user\372\266\030\267\004\n\005users\022\tudb_authn\030\001 \001*HAcc" +
+      "ounts authenticated by UDB or mapped fro" +
+      "m external identity providers0\0018\001@\001b^\n\020t" +
+      "enant_isolation\032H(tenant_id::text = curr" +
+      "ent_setting(\'app.current_tenant_id\', tru" +
+      "e)::text)(\001\232\001\022\n\010pgcrypto\022\006public\232\001\021\n\007pg_" +
+      "trgm\022\006public\252\001O\n\032trg_users_touch_updated" +
+      "_at\022\006BEFORE\032\006UPDATE\"\034udb_authn.touch_upd" +
+      "ated_at()*\003ROW\302\001\332\001\n\031touch_updated_at_fun" +
+      "ction\022\010postgres\032\017before_triggers\"\241\001CREAT" +
+      "E OR REPLACE FUNCTION udb_authn.touch_up" +
+      "dated_at()\nRETURNS trigger\nLANGUAGE plpg" +
+      "sql\nAS $$\nBEGIN\n  NEW.updated_at = CURRE" +
+      "NT_TIMESTAMP;\n  RETURN NEW;\nEND;\n$$;\352\001\007p" +
+      "rimary\372\001\013authn:adminB\364\001\n\034com.udb.core.au" +
+      "thn.entity.v1B\tUserProtoP\001ZDgithub.com/f" +
+      "ahara02/udb/sdk/go/gen/udb/core/authn/en" +
+      "tity/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Authn" +
+      ".Entity.V1\312\002\030Udb\\Core\\Authn\\Entity\\V1\342\002$" +
+      "Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\352\002\034U" +
+      "db::Core::Authn::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -166,7 +174,7 @@ public final class UserProto extends com.google.protobuf.GeneratedFile {
     internal_static_udb_core_authn_entity_v1_User_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_entity_v1_User_descriptor,
-        new java.lang.String[] { "UserId", "Username", "Email", "PasswordHash", "AccountKind", "Status", "TenantId", "FullName", "TotpSecretEnc", "MfaEnabled", "FailedLoginCount", "LockedUntil", "EmailVerifiedAt", "LastLoginAt", "CreatedBy", "CreatedAt", "UpdatedAt", "DeletedAt", "DeletedBy", "ProjectId", "ExternalProviderId", "ExternalSubject", "Locale", "Timezone", "ProfileAttributesJson", "ExternalReferencesJson", });
+        new java.lang.String[] { "UserId", "Username", "Email", "PasswordHash", "AccountKind", "Status", "TenantId", "FullName", "TotpSecretEnc", "MfaEnabled", "FailedLoginCount", "LockedUntil", "EmailVerifiedAt", "LastLoginAt", "CreatedBy", "CreatedAt", "UpdatedAt", "DeletedAt", "DeletedBy", "ProjectId", "ExternalProviderId", "ExternalSubject", "Locale", "Timezone", "ProfileAttributesJson", "ExternalReferencesJson", "Phone", "PhoneVerifiedAt", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.authn.entity.v1.EnumsProto.getDescriptor();

@@ -139,6 +139,46 @@ class AuthnServiceStub(object):
                 request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ConfirmMFAEnrollmentRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ConfirmMFAEnrollmentResponse.FromString,
                 _registered_method=True)
+        self.GenerateRecoveryCodes = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GenerateRecoveryCodesRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GenerateRecoveryCodesResponse.FromString,
+                _registered_method=True)
+        self.PutMfaPolicy = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/PutMfaPolicy',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.PutMfaPolicyRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.PutMfaPolicyResponse.FromString,
+                _registered_method=True)
+        self.GetMfaPolicy = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/GetMfaPolicy',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetMfaPolicyRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetMfaPolicyResponse.FromString,
+                _registered_method=True)
+        self.ForgotPassword = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/ForgotPassword',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ForgotPasswordRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ForgotPasswordResponse.FromString,
+                _registered_method=True)
+        self.ResetPassword = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/ResetPassword',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ResetPasswordRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ResetPasswordResponse.FromString,
+                _registered_method=True)
+        self.IntrospectToken = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/IntrospectToken',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.IntrospectTokenRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.IntrospectTokenResponse.FromString,
+                _registered_method=True)
+        self.SendPhoneVerification = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/SendPhoneVerification',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.SendPhoneVerificationRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.SendPhoneVerificationResponse.FromString,
+                _registered_method=True)
+        self.GetJwks = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/GetJwks',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetJwksRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetJwksResponse.FromString,
+                _registered_method=True)
         self.StartWebAuthnRegistration = channel.unary_unary(
                 '/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration',
                 request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartWebAuthnRegistrationRequest.SerializeToString,
@@ -322,6 +362,66 @@ class AuthnServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GenerateRecoveryCodes(self, request, context):
+        """Generate a fresh set of single-use MFA recovery/backup codes (returned once;
+        any prior codes for the user are invalidated).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def PutMfaPolicy(self, request, context):
+        """Set the per-tenant MFA enforcement policy.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetMfaPolicy(self, request, context):
+        """Read the per-tenant MFA enforcement policy.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ForgotPassword(self, request, context):
+        """User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the
+        account's channel). Public — no bearer required.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ResetPassword(self, request, context):
+        """Complete a password reset with the OTP from ForgotPassword (no current
+        password required). Public — the OTP is the proof of control.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def IntrospectToken(self, request, context):
+        """OAuth2-style token introspection for a UDB-issued JWT.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SendPhoneVerification(self, request, context):
+        """Set the user's phone number and send an SMS verification OTP. Complete with
+        VerifyOTP (the response is verified the same way as email).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetJwks(self, request, context):
+        """JSON Web Key Set for verifying UDB-issued JWTs. Public.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def StartWebAuthnRegistration(self, request, context):
         """── WebAuthn / passkeys ─────────────────────────────────────────────────
         """
@@ -464,6 +564,46 @@ def add_AuthnServiceServicer_to_server(servicer, server):
                     servicer.ConfirmMFAEnrollment,
                     request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ConfirmMFAEnrollmentRequest.FromString,
                     response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ConfirmMFAEnrollmentResponse.SerializeToString,
+            ),
+            'GenerateRecoveryCodes': grpc.unary_unary_rpc_method_handler(
+                    servicer.GenerateRecoveryCodes,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GenerateRecoveryCodesRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GenerateRecoveryCodesResponse.SerializeToString,
+            ),
+            'PutMfaPolicy': grpc.unary_unary_rpc_method_handler(
+                    servicer.PutMfaPolicy,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.PutMfaPolicyRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.PutMfaPolicyResponse.SerializeToString,
+            ),
+            'GetMfaPolicy': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetMfaPolicy,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetMfaPolicyRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetMfaPolicyResponse.SerializeToString,
+            ),
+            'ForgotPassword': grpc.unary_unary_rpc_method_handler(
+                    servicer.ForgotPassword,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ForgotPasswordRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ForgotPasswordResponse.SerializeToString,
+            ),
+            'ResetPassword': grpc.unary_unary_rpc_method_handler(
+                    servicer.ResetPassword,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ResetPasswordRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ResetPasswordResponse.SerializeToString,
+            ),
+            'IntrospectToken': grpc.unary_unary_rpc_method_handler(
+                    servicer.IntrospectToken,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.IntrospectTokenRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.IntrospectTokenResponse.SerializeToString,
+            ),
+            'SendPhoneVerification': grpc.unary_unary_rpc_method_handler(
+                    servicer.SendPhoneVerification,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.SendPhoneVerificationRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.SendPhoneVerificationResponse.SerializeToString,
+            ),
+            'GetJwks': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetJwks,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetJwksRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetJwksResponse.SerializeToString,
             ),
             'StartWebAuthnRegistration': grpc.unary_unary_rpc_method_handler(
                     servicer.StartWebAuthnRegistration,
@@ -1117,6 +1257,222 @@ class AuthnService(object):
             '/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment',
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ConfirmMFAEnrollmentRequest.SerializeToString,
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ConfirmMFAEnrollmentResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GenerateRecoveryCodes(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GenerateRecoveryCodesRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GenerateRecoveryCodesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def PutMfaPolicy(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/PutMfaPolicy',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.PutMfaPolicyRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.PutMfaPolicyResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetMfaPolicy(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/GetMfaPolicy',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetMfaPolicyRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetMfaPolicyResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ForgotPassword(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/ForgotPassword',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ForgotPasswordRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ForgotPasswordResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ResetPassword(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/ResetPassword',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ResetPasswordRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ResetPasswordResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def IntrospectToken(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/IntrospectToken',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.IntrospectTokenRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.IntrospectTokenResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SendPhoneVerification(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/SendPhoneVerification',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.SendPhoneVerificationRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.SendPhoneVerificationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetJwks(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/GetJwks',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetJwksRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetJwksResponse.FromString,
             options,
             channel_credentials,
             insecure,

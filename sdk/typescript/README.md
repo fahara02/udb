@@ -1,25 +1,43 @@
 # UDB TypeScript SDK
 
-Package: `@udb_plus/sdk`
-
-Current release: `0.3.0`
-
-Runtime: Node 18+
-
-The TypeScript SDK is a Node gRPC wrapper for the UDB DataBroker plus native
-Authn/Authz control-plane helpers. It loads bundled `.proto` files at runtime
-through `@grpc/proto-loader`, so application code should import the package
-entry points instead of `gen/` files.
+`@udb_plus/sdk` is the Node.js client for UDB. Use it when a TypeScript service
+needs to read or write through the broker, call UDB auth/authz, or run the
+version-matched `udb` CLI from a project that installed the package.
 
 ## Install
 
 ```bash
-npm i @udb_plus/sdk@0.3.0
+npm i @udb_plus/sdk@0.3.1
 ```
 
-`@grpc/grpc-js` and `@grpc/proto-loader` are package dependencies.
+Runtime: Node 18+
 
-## Usage
+Main entry points:
+
+- `@udb_plus/sdk/client` for the DataBroker client and metadata helper
+- `@udb_plus/sdk/auth` for auth/authz convenience methods
+- `@udb_plus/sdk` for the full public surface
+
+## Export UDB Protos For Your App
+
+If your app owns `.proto` schemas and wants to use UDB annotations, export the
+shared UDB protos into your project:
+
+```bash
+npx udb proto export
+```
+
+Then your app protos can import:
+
+```proto
+import "udb/core/common/v1/db.proto";
+```
+
+`proto export` is safe to re-run. It refreshes `proto/udb/**`, vendors the
+`google/api/**` protos needed for offline generation, and can merge `buf.yaml`
+without replacing your own settings.
+
+## Connect And Query
 
 ```ts
 import { dataBrokerClient, metadata, UdbMetadata } from "@udb_plus/sdk/client";
@@ -31,10 +49,11 @@ const meta: UdbMetadata = {
   purpose: "web.request",
   scopes: ["udb:read", "udb:write"],
   serviceIdentity: "billing.api",
-  projectId: "default",
+  projectId: "billing",
 };
 
 const broker = dataBrokerClient("localhost:50051");
+
 broker.Select(
   { message_type: "acme.billing.v1.Invoice", limit: 50 },
   metadata(meta),
@@ -51,22 +70,11 @@ const [allowed, decision] = await auth.can(
 );
 ```
 
-## Generated Files
+## Notes For Users
 
-The committed `gen/` directory is a drift-parity artifact kept in sync with the
-repo protos. It is not the package runtime surface. Published consumers should
-use:
+The package bundles the UDB wire protos and loads them at runtime through
+`@grpc/proto-loader`. Application code should import the package entry points
+above, not files under `gen/`.
 
-- `@udb_plus/sdk`
-- `@udb_plus/sdk/client`
-- `@udb_plus/sdk/auth`
-
-Regenerate from the repo root after proto changes:
-
-```bash
-./scripts/gen_sdk.sh
-```
-
-```powershell
-.\scripts\gen_sdk.ps1
-```
+The package also exposes a `udb` bin. With a local install, use `npx udb ...`;
+with a global install, use `udb ...`.

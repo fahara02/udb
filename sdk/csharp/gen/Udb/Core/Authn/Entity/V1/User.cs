@@ -28,7 +28,7 @@ namespace udb.core.Authn.Entity.V1 {
             "cmUuYXV0aG4uZW50aXR5LnYxGh9nb29nbGUvcHJvdG9idWYvdGltZXN0YW1w",
             "LnByb3RvGiR1ZGIvY29yZS9hdXRobi9lbnRpdHkvdjEvZW51bXMucHJvdG8a",
             "G3VkYi9jb3JlL2NvbW1vbi92MS9kYi5wcm90bxohdWRiL2NvcmUvY29tbW9u",
-            "L3YxL3NlY3VyaXR5LnByb3RvIrgfCgRVc2VyEkMKB3VzZXJfaWQYASABKAlC",
+            "L3YxL3NlY3VyaXR5LnByb3RvIvMhCgRVc2VyEkMKB3VzZXJfaWQYASABKAlC",
             "KoK3GCYKB3VzZXJfaWQSBFVVSUQYASgBOhFnZW5fcmFuZG9tX3V1aWQoKVIG",
             "dXNlcklkErwBCgh1c2VybmFtZRgCIAEoCUKfAeC1GAGCtxiWAQoIdXNlcm5h",
             "bWUSC1ZBUkNIQVIoODApGAEgAUIldXNlcm5hbWUgfiAnXlthLXpdW2EtejAt",
@@ -103,7 +103,14 @@ namespace udb.core.Authn.Entity.V1 {
             "cmlidXRlc0pzb24SnQEKGGV4dGVybmFsX3JlZmVyZW5jZXNfanNvbhgaIAEo",
             "CUJjgrcYXwoYZXh0ZXJuYWxfcmVmZXJlbmNlc19qc29uEgVKU09OQhgBOgsn",
             "W10nOjpqc29uYlorRXh0ZXJuYWwgc3lzdGVtIHJlZmVyZW5jZXMgZm9yIHRo",
-            "aXMgYWNjb3VudHgBUhZleHRlcm5hbFJlZmVyZW5jZXNKc29uOvcEorUYNwgB",
+            "aXMgYWNjb3VudHgBUhZleHRlcm5hbFJlZmVyZW5jZXNKc29uEpQBCgVwaG9u",
+            "ZRgbIAEoCUJ+0LUYAeC1GAGCthggQXV0aGVudGljYXRpb24gYW5kIGNvbW11",
+            "bmljYXRpb26CtxhOCgVwaG9uZRILVkFSQ0hBUigzMilaOEUuMTY0IHBob25l",
+            "IG51bWJlciBmb3IgU01TIE9UUCBkZWxpdmVyeSBhbmQgdmVyaWZpY2F0aW9u",
+            "UgVwaG9uZRKhAQoRcGhvbmVfdmVyaWZpZWRfYXQYHCABKAsyGi5nb29nbGUu",
+            "cHJvdG9idWYuVGltZXN0YW1wQlmCtxhVChFwaG9uZV92ZXJpZmllZF9hdBIL",
+            "VElNRVNUQU1QVFpaM1RpbWVzdGFtcCB0aGUgcGhvbmUgbnVtYmVyIHdhcyB2",
+            "ZXJpZmllZCB2aWEgU01TIE9UUFIPcGhvbmVWZXJpZmllZEF0OvcEorUYNwgB",
             "EhJ1ZGI6dXNlcjp7dXNlcl9pZH0YrAIgASgBOhJSRURJU19DTFVTVEVSX0FE",
             "RFJCBHVzZXL6thi3BAoFdXNlcnMSCXVkYl9hdXRobhgBIAEqSEFjY291bnRz",
             "IGF1dGhlbnRpY2F0ZWQgYnkgVURCIG9yIG1hcHBlZCBmcm9tIGV4dGVybmFs",
@@ -127,7 +134,7 @@ namespace udb.core.Authn.Entity.V1 {
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Authn.Entity.V1.EnumsReflection.Descriptor, global::udb.core.Common.V1.DbReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authn.Entity.V1.User), global::udb.core.Authn.Entity.V1.User.Parser, new[]{ "UserId", "Username", "Email", "PasswordHash", "AccountKind", "Status", "TenantId", "FullName", "TotpSecretEnc", "MfaEnabled", "FailedLoginCount", "LockedUntil", "EmailVerifiedAt", "LastLoginAt", "CreatedBy", "CreatedAt", "UpdatedAt", "DeletedAt", "DeletedBy", "ProjectId", "ExternalProviderId", "ExternalSubject", "Locale", "Timezone", "ProfileAttributesJson", "ExternalReferencesJson" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authn.Entity.V1.User), global::udb.core.Authn.Entity.V1.User.Parser, new[]{ "UserId", "Username", "Email", "PasswordHash", "AccountKind", "Status", "TenantId", "FullName", "TotpSecretEnc", "MfaEnabled", "FailedLoginCount", "LockedUntil", "EmailVerifiedAt", "LastLoginAt", "CreatedBy", "CreatedAt", "UpdatedAt", "DeletedAt", "DeletedBy", "ProjectId", "ExternalProviderId", "ExternalSubject", "Locale", "Timezone", "ProfileAttributesJson", "ExternalReferencesJson", "Phone", "PhoneVerifiedAt" }, null, null, null, null)
           }));
     }
     #endregion
@@ -205,6 +212,8 @@ namespace udb.core.Authn.Entity.V1 {
       timezone_ = other.timezone_;
       profileAttributesJson_ = other.profileAttributesJson_;
       externalReferencesJson_ = other.externalReferencesJson_;
+      phone_ = other.phone_;
+      phoneVerifiedAt_ = other.phoneVerifiedAt_ != null ? other.phoneVerifiedAt_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -532,6 +541,30 @@ namespace udb.core.Authn.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "phone" field.</summary>
+    public const int PhoneFieldNumber = 27;
+    private string phone_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Phone {
+      get { return phone_; }
+      set {
+        phone_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "phone_verified_at" field.</summary>
+    public const int PhoneVerifiedAtFieldNumber = 28;
+    private global::Google.Protobuf.WellKnownTypes.Timestamp phoneVerifiedAt_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Timestamp PhoneVerifiedAt {
+      get { return phoneVerifiedAt_; }
+      set {
+        phoneVerifiedAt_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -573,6 +606,8 @@ namespace udb.core.Authn.Entity.V1 {
       if (Timezone != other.Timezone) return false;
       if (ProfileAttributesJson != other.ProfileAttributesJson) return false;
       if (ExternalReferencesJson != other.ExternalReferencesJson) return false;
+      if (Phone != other.Phone) return false;
+      if (!object.Equals(PhoneVerifiedAt, other.PhoneVerifiedAt)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -606,6 +641,8 @@ namespace udb.core.Authn.Entity.V1 {
       if (Timezone.Length != 0) hash ^= Timezone.GetHashCode();
       if (ProfileAttributesJson.Length != 0) hash ^= ProfileAttributesJson.GetHashCode();
       if (ExternalReferencesJson.Length != 0) hash ^= ExternalReferencesJson.GetHashCode();
+      if (Phone.Length != 0) hash ^= Phone.GetHashCode();
+      if (phoneVerifiedAt_ != null) hash ^= PhoneVerifiedAt.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -728,6 +765,14 @@ namespace udb.core.Authn.Entity.V1 {
         output.WriteRawTag(210, 1);
         output.WriteString(ExternalReferencesJson);
       }
+      if (Phone.Length != 0) {
+        output.WriteRawTag(218, 1);
+        output.WriteString(Phone);
+      }
+      if (phoneVerifiedAt_ != null) {
+        output.WriteRawTag(226, 1);
+        output.WriteMessage(PhoneVerifiedAt);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -842,6 +887,14 @@ namespace udb.core.Authn.Entity.V1 {
         output.WriteRawTag(210, 1);
         output.WriteString(ExternalReferencesJson);
       }
+      if (Phone.Length != 0) {
+        output.WriteRawTag(218, 1);
+        output.WriteString(Phone);
+      }
+      if (phoneVerifiedAt_ != null) {
+        output.WriteRawTag(226, 1);
+        output.WriteMessage(PhoneVerifiedAt);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -929,6 +982,12 @@ namespace udb.core.Authn.Entity.V1 {
       }
       if (ExternalReferencesJson.Length != 0) {
         size += 2 + pb::CodedOutputStream.ComputeStringSize(ExternalReferencesJson);
+      }
+      if (Phone.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(Phone);
+      }
+      if (phoneVerifiedAt_ != null) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(PhoneVerifiedAt);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1037,6 +1096,15 @@ namespace udb.core.Authn.Entity.V1 {
       }
       if (other.ExternalReferencesJson.Length != 0) {
         ExternalReferencesJson = other.ExternalReferencesJson;
+      }
+      if (other.Phone.Length != 0) {
+        Phone = other.Phone;
+      }
+      if (other.phoneVerifiedAt_ != null) {
+        if (phoneVerifiedAt_ == null) {
+          PhoneVerifiedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+        }
+        PhoneVerifiedAt.MergeFrom(other.PhoneVerifiedAt);
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1179,6 +1247,17 @@ namespace udb.core.Authn.Entity.V1 {
             ExternalReferencesJson = input.ReadString();
             break;
           }
+          case 218: {
+            Phone = input.ReadString();
+            break;
+          }
+          case 226: {
+            if (phoneVerifiedAt_ == null) {
+              PhoneVerifiedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(PhoneVerifiedAt);
+            break;
+          }
         }
       }
     #endif
@@ -1318,6 +1397,17 @@ namespace udb.core.Authn.Entity.V1 {
           }
           case 210: {
             ExternalReferencesJson = input.ReadString();
+            break;
+          }
+          case 218: {
+            Phone = input.ReadString();
+            break;
+          }
+          case 226: {
+            if (phoneVerifiedAt_ == null) {
+              PhoneVerifiedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(PhoneVerifiedAt);
             break;
           }
         }

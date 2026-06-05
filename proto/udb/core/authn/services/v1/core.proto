@@ -197,13 +197,16 @@ message LoginRequest {
   string device_id = 7; // client device fingerprint (optional; for JWT device binding)
 
   // MFA step-2 fields — set on the second Login call after receiving mfa_required=true.
-  // When mfa_otp_id is non-empty the credential check is skipped and the service
-  // instead consumes the MFA session token and validates the TOTP code.
-  string mfa_otp_id = 8; // pending MFA session token from step-1 LoginResponse.mfa_otp_id
-  string totp_code = 9; // 6-digit TOTP code from the user's authenticator app
+  // The password (first factor) is ALWAYS verified; these only supply the second
+  // factor and never substitute for it. Provide totp_code for an authenticator app,
+  // or mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA
+  // email/SMS code previously issued to this same user.
+  string mfa_otp_id = 8; // id of a LOGIN_2FA OTP issued to this user (email/SMS second factor)
+  string totp_code = 9; // 6-digit TOTP code, or the one-time code when mfa_otp_id is set
   string tenant_hint = 10;
   string project_hint = 11;
   string access_surface = 12;
+  string recovery_code = 13; // single-use MFA recovery/backup code (alternative second factor)
 }
 
 message LoginResponse {
@@ -220,8 +223,8 @@ message LoginResponse {
   string session_token = 6;
   string csrf_token = 7; // injected into a readable cookie
 
-  bool mfa_required = 8; // true = client must present OTP before access
-  string mfa_otp_id = 9; // OTP ID to complete MFA
+  bool mfa_required = 8; // true = client must re-call Login with password + second factor
+  string mfa_otp_id = 9; // reserved for a future server-issued MFA challenge id (currently empty)
 }
 
 message RefreshTokenRequest {
@@ -385,6 +388,95 @@ message ConfirmMFAEnrollmentRequest {
 
 message ConfirmMFAEnrollmentResponse {
   bool enrolled = 1;
+}
+
+message GenerateRecoveryCodesRequest {
+  string user_id = 1;
+  int32 count = 2; // number of codes to generate (server clamps to a sane range; default 10)
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message GenerateRecoveryCodesResponse {
+  // Plaintext codes, returned exactly ONCE. Only keyed hashes are stored; any
+  // previously-issued codes for the user are invalidated.
+  repeated string codes = 1;
+  int32 generated = 2;
+}
+
+message PutMfaPolicyRequest {
+  string tenant_id = 1;
+  bool require_mfa = 2;
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message PutMfaPolicyResponse {
+  string tenant_id = 1;
+  bool require_mfa = 2;
+}
+
+message GetMfaPolicyRequest {
+  string tenant_id = 1;
+  udb.core.common.v1.RequestContext context = 2;
+}
+
+message GetMfaPolicyResponse {
+  string tenant_id = 1;
+  bool require_mfa = 2;
+}
+
+message ForgotPasswordRequest {
+  string identifier = 1; // username or email
+  udb.core.common.v1.RequestContext context = 2;
+}
+
+message ForgotPasswordResponse {
+  // Id of the PASSWORD_RESET OTP issued (empty when the account is unknown; the
+  // response shape is uniform so it is not an account-enumeration oracle).
+  string otp_id = 1;
+}
+
+message ResetPasswordRequest {
+  string otp_id = 1;
+  string code = 2;
+  string new_password = 3;
+  udb.core.common.v1.RequestContext context = 4;
+}
+
+message ResetPasswordResponse {
+  string user_id = 1;
+  int64 changed_at_unix = 2;
+}
+
+message IntrospectTokenRequest {
+  string token = 1;
+  udb.core.common.v1.RequestContext context = 2;
+}
+
+message IntrospectTokenResponse {
+  bool active = 1;
+  string subject = 2;
+  string tenant_id = 3;
+  string service_identity = 4;
+  repeated string scopes = 5;
+  int64 expires_at_unix = 6;
+}
+
+message GetJwksRequest {
+  udb.core.common.v1.RequestContext context = 1;
+}
+
+message GetJwksResponse {
+  string jwks_json = 1; // RFC 7517 JWK Set document for verifying UDB-issued JWTs
+}
+
+message SendPhoneVerificationRequest {
+  string user_id = 1;
+  string phone = 2; // E.164 number to set + verify
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message SendPhoneVerificationResponse {
+  string otp_id = 1;
 }
 
 message StartWebAuthnRegistrationRequest {

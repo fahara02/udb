@@ -1,5 +1,7 @@
 from udb.core.authn.entity.v1 import enums_pb2 as _enums_pb2
+from udb.core.authn.entity.v1 import mfa_policy_pb2 as _mfa_policy_pb2
 from udb.core.authn.entity.v1 import otp_pb2 as _otp_pb2
+from udb.core.authn.entity.v1 import recovery_code_pb2 as _recovery_code_pb2
 from udb.core.authn.entity.v1 import session_pb2 as _session_pb2
 from udb.core.authn.entity.v1 import user_pb2 as _user_pb2
 from udb.core.authn.entity.v1 import webauthn_pb2 as _webauthn_pb2
@@ -15,7 +17,9 @@ from udb.core.authn.entity.v1.enums_pb2 import IdentityProviderKind as IdentityP
 from udb.core.authn.entity.v1.enums_pb2 import AuthFactorKind as AuthFactorKind
 from udb.core.authn.entity.v1.enums_pb2 import AuthCredentialType as AuthCredentialType
 from udb.core.authn.entity.v1.enums_pb2 import TokenType as TokenType
+from udb.core.authn.entity.v1.mfa_policy_pb2 import MfaPolicy as MfaPolicy
 from udb.core.authn.entity.v1.otp_pb2 import OTP as OTP
+from udb.core.authn.entity.v1.recovery_code_pb2 import RecoveryCode as RecoveryCode
 from udb.core.authn.entity.v1.session_pb2 import Session as Session
 from udb.core.authn.entity.v1.user_pb2 import User as User
 from udb.core.authn.entity.v1.webauthn_pb2 import WebAuthnCredential as WebAuthnCredential
@@ -53,6 +57,7 @@ OTP_TYPE_EMAIL_VERIFICATION: _enums_pb2.OTPType
 OTP_TYPE_LOGIN_2FA: _enums_pb2.OTPType
 OTP_TYPE_PASSWORD_RESET: _enums_pb2.OTPType
 OTP_TYPE_SENSITIVE_OPERATION: _enums_pb2.OTPType
+OTP_TYPE_PHONE_VERIFICATION: _enums_pb2.OTPType
 OTP_STATUS_UNSPECIFIED: _enums_pb2.OTPStatus
 OTP_STATUS_PENDING: _enums_pb2.OTPStatus
 OTP_STATUS_USED: _enums_pb2.OTPStatus
