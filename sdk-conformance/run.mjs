@@ -34,7 +34,10 @@ const LANGS = {
     cwd: sdk("typescript"),
     detect: () => has("node"),
     setup: { cmd: "npm", args: ["install", "--no-audit", "--no-fund", "--silent"] },
-    build: { cmd: "npx", args: ["tsc", "-p", "tsconfig.test.json"] },
+    build: {
+      cmd: "npm",
+      args: ["run", "--silent", "bundle-proto", "&&", "npx", "tsc", "-p", "tsconfig.test.json"],
+    },
     test: {
       cmd: "node",
       args: [

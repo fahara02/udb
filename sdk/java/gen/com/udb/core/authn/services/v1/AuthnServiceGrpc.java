@@ -6,10 +6,8 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
  * <pre>
  * ---------------------------------------------------------------------------
  * AuthnService — native and hybrid authentication for UDB-backed projects.
- *
  * HTTP prefix: /v1/auth
  * URL conventions (Rule 07): snake_case paths, :&lt;verb&gt; custom method suffix, kebab-case query params.
- *
  * Auth method routing is policy-driven. Typical deployments use server-side
  * sessions for browser clients, JWT for APIs/desktop/mobile clients, API keys
  * for service integrations, and external OIDC/SAML/JWT proofs for hybrid auth.
@@ -1637,10 +1635,8 @@ public final class AuthnServiceGrpc {
    * <pre>
    * ---------------------------------------------------------------------------
    * AuthnService — native and hybrid authentication for UDB-backed projects.
-   *
    * HTTP prefix: /v1/auth
    * URL conventions (Rule 07): snake_case paths, :&lt;verb&gt; custom method suffix, kebab-case query params.
-   *
    * Auth method routing is policy-driven. Typical deployments use server-side
    * sessions for browser clients, JWT for APIs/desktop/mobile clients, API keys
    * for service integrations, and external OIDC/SAML/JWT proofs for hybrid auth.
@@ -2073,10 +2069,8 @@ public final class AuthnServiceGrpc {
    * <pre>
    * ---------------------------------------------------------------------------
    * AuthnService — native and hybrid authentication for UDB-backed projects.
-   *
    * HTTP prefix: /v1/auth
    * URL conventions (Rule 07): snake_case paths, :&lt;verb&gt; custom method suffix, kebab-case query params.
-   *
    * Auth method routing is policy-driven. Typical deployments use server-side
    * sessions for browser clients, JWT for APIs/desktop/mobile clients, API keys
    * for service integrations, and external OIDC/SAML/JWT proofs for hybrid auth.
@@ -2096,10 +2090,8 @@ public final class AuthnServiceGrpc {
    * <pre>
    * ---------------------------------------------------------------------------
    * AuthnService — native and hybrid authentication for UDB-backed projects.
-   *
    * HTTP prefix: /v1/auth
    * URL conventions (Rule 07): snake_case paths, :&lt;verb&gt; custom method suffix, kebab-case query params.
-   *
    * Auth method routing is policy-driven. Typical deployments use server-side
    * sessions for browser clients, JWT for APIs/desktop/mobile clients, API keys
    * for service integrations, and external OIDC/SAML/JWT proofs for hybrid auth.
@@ -2593,10 +2585,8 @@ public final class AuthnServiceGrpc {
    * <pre>
    * ---------------------------------------------------------------------------
    * AuthnService — native and hybrid authentication for UDB-backed projects.
-   *
    * HTTP prefix: /v1/auth
    * URL conventions (Rule 07): snake_case paths, :&lt;verb&gt; custom method suffix, kebab-case query params.
-   *
    * Auth method routing is policy-driven. Typical deployments use server-side
    * sessions for browser clients, JWT for APIs/desktop/mobile clients, API keys
    * for service integrations, and external OIDC/SAML/JWT proofs for hybrid auth.
@@ -3040,10 +3030,8 @@ public final class AuthnServiceGrpc {
    * <pre>
    * ---------------------------------------------------------------------------
    * AuthnService — native and hybrid authentication for UDB-backed projects.
-   *
    * HTTP prefix: /v1/auth
    * URL conventions (Rule 07): snake_case paths, :&lt;verb&gt; custom method suffix, kebab-case query params.
-   *
    * Auth method routing is policy-driven. Typical deployments use server-side
    * sessions for browser clients, JWT for APIs/desktop/mobile clients, API keys
    * for service integrations, and external OIDC/SAML/JWT proofs for hybrid auth.
@@ -3487,10 +3475,8 @@ public final class AuthnServiceGrpc {
    * <pre>
    * ---------------------------------------------------------------------------
    * AuthnService — native and hybrid authentication for UDB-backed projects.
-   *
    * HTTP prefix: /v1/auth
    * URL conventions (Rule 07): snake_case paths, :&lt;verb&gt; custom method suffix, kebab-case query params.
-   *
    * Auth method routing is policy-driven. Typical deployments use server-side
    * sessions for browser clients, JWT for APIs/desktop/mobile clients, API keys
    * for service integrations, and external OIDC/SAML/JWT proofs for hybrid auth.

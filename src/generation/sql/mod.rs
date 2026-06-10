@@ -861,5 +861,7 @@ mod tests {
             sql.contains("CREATE EXTENSION IF NOT EXISTS \"pg_partman\" SCHEMA \"partman\""),
             "{sql}"
         );
+        assert!(sql.contains("PERFORM pg_advisory_xact_lock"), "{sql}");
+        assert!(!sql.contains("SELECT pg_advisory_xact_lock"), "{sql}");
     }
 }

@@ -42,7 +42,11 @@ jobs:
             udb-skill/ollama/Modelfile \
             udb-skill/plugins/udb/skills/udb-coding/SKILL.md \
             udb-skill/plugins/udb/skills/udb-coding/references/udb-coding.md \
+            udb-skill/plugins/udb/skills/udb-coding/references/rust-stack.md \
+            udb-skill/plugins/udb/skills/udb-coding/references/backends.md \
             udb-skill/shared/udb-coding.md \
+            udb-skill/shared/udb-coding-rust-stack.md \
+            udb-skill/shared/udb-coding-backends.md \
             udb-skill/openai/instructions-udb-coding.md \
             udb-skill/ollama/Modelfile.udb-coding \
             udb-skill/LICENSE; do
@@ -64,6 +68,7 @@ jobs:
           echo "skill validation passed"
       - name: Wrapper drift check (advisory, CR-tolerant)
         run: |
+          # skill entry references vs their shared canonical
           for s in using-udb udb-coding; do
             a="udb-skill/shared/$s.md"
             b="udb-skill/plugins/udb/skills/$s/references/$s.md"
@@ -71,6 +76,16 @@ jobs:
               echo "::warning::Claude reference differs from shared/$s.md — re-sync the wrappers (see README)."
             else
               echo "wrappers in sync: $s"
+            fi
+          done
+          # udb-coding companion references (shared name -> reference name)
+          for pair in "udb-coding-rust-stack:rust-stack" "udb-coding-backends:backends"; do
+            a="udb-skill/shared/${pair%%:*}.md"
+            b="udb-skill/plugins/udb/skills/udb-coding/references/${pair##*:}.md"
+            if ! diff -q <(tr -d '\r' < "$a") <(tr -d '\r' < "$b") >/dev/null; then
+              echo "::warning::Claude reference ${pair##*:} differs from ${pair%%:*} — re-sync."
+            else
+              echo "companion in sync: ${pair##*:}"
             fi
           done
       - name: Validate with Claude CLI (best-effort)

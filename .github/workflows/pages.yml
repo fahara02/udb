@@ -14,6 +14,17 @@ on:
     paths:
       - "docs/site/**"
       - "docs/assets/**"
+      - "crates/udb-portable/**"
+      - "crates/udb-wasm/**"
+      - "src/backend/kind.rs"
+      - "src/generation/**"
+      - "src/ir/**"
+      - "src/migration/diff*.rs"
+      - "src/parser/**"
+      - "src/runtime/descriptor_manifest.rs"
+      - "src/schema/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 

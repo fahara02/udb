@@ -144,10 +144,10 @@ pub async fn upsert_resource(
     // 1. Content-addressed UPDATE: only mutate when the content actually changed.
     let update_sql = format!(
         "UPDATE {rel} SET \
-            {version} = $5, {chash} = $5, {payload} = $6::JSONB, {project} = $7, \
-            {uby} = $8, {updated} = NOW() \
+            {version} = $4, {chash} = $4, {payload} = $5::JSONB, {project} = $6, \
+            {uby} = $7, {updated} = NOW() \
          WHERE {rtype} = $1 AND {name} = $2 AND {tenant} IS NOT DISTINCT FROM $3 \
-           AND {chash} <> $5 \
+           AND {chash} <> $4 \
          RETURNING {cols}",
         rel = m.relation,
         version = m.q("version"),

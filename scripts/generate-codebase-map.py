@@ -225,6 +225,8 @@ def main() -> int:
             lines.append(f"- **{rel}** — {body}")
         lines.append("")
 
+    while lines and lines[-1] == "":
+        lines.pop()
     content = "\n".join(lines) + "\n"
 
     if "--check" in sys.argv:

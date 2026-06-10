@@ -602,8 +602,13 @@ pub(crate) fn render_create_extension(extension: &ManifestExtension) -> String {
     // observe the schema missing and one loses on `pg_namespace_nspname_index`.
     if schema != "public" {
         sql.push_str(&format!(
-            "{}SELECT pg_advisory_xact_lock(hashtext({}));\n",
+            "{}{} pg_advisory_xact_lock(hashtext({}));\n",
             if is_optional_pg_partman { "\t\t" } else { "" },
+            if is_optional_pg_partman {
+                "PERFORM"
+            } else {
+                "SELECT"
+            },
             ql(&format!(
                 "udb:create_extension:{}:{}",
                 extension.name.trim(),

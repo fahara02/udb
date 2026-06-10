@@ -55,7 +55,7 @@
     "typecheck": "tsc --noEmit",
     "bundle-proto": "node scripts/bundle-proto.mjs",
     "build": "npm run bundle-proto && tsc -p tsconfig.build.json",
-    "test": "tsc -p tsconfig.test.json && node --test dist-test",
+    "test": "npm run bundle-proto && tsc -p tsconfig.test.json && node --test dist-test/facade.test.js dist-test/live-auth.test.js dist-test/negotiation.test.js dist-test/outbound.test.js dist-test/refresh.test.js",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('dist-test',{recursive:true,force:true})\"",
     "prepublishOnly": "npm run build"
   },

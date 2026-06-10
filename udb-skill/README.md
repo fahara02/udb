@@ -63,16 +63,37 @@ ollama run udb-coding
 - The `udb` CLI (serve, sdk generate, proto export, doctor, auth)
 
 ## What `udb-coding` covers
+- A real **codebase guide**: the proto→descriptor→runtime spine, both request
+  lifecycles file-by-file, and the CDC/canonical-store/XA/IR/migration mechanics
+  with actual function names — plus a pointer to the CI-gated, generated
+  `docs/generated/codebase-map.md` (module graphs + per-file symbol index)
 - The **ten directives**, each tied to the audit finding that motivated it
   (code islands → wire-in, duplicate helpers → the cross-tenant leak they caused,
   fail-open guards, mirror tests, per-request env reads, …)
 - The **shared-machinery map**: which existing helper to use for admission,
   outbox events, pagination, tenant claim-binding, leader-elected workers,
   crypto, leases, metrics label bounding — with file paths
-- The **new-native-service recipe** (proto annotations → handlers → mount →
-  regen → policies/runbook/live-test) and the after-proto regen protocol
-- The **10-question flaw catalog** to run against any diff before claiming DONE,
-  and the definition-of-done / honest-`[~]` reporting rules
+- Two **companion references** carrying the UDB-specific *delta* of each
+  technology (NOT generic tutorials — frontier models already know generic Rust
+  and SQL):
+  - **`rust-stack`** — tokio/tonic/tower/prost/sqlx/rdkafka as used here, with
+    the traps (no blocking in async, headers-only tower layer, proto3 presence,
+    transactional outbox, gRPC status conventions, redacting Debug)
+  - **`backends`** — per-engine quirks for all 18 backends (RLS/tenant posture,
+    canonical-store tier, the live-DB + audit traps: MSSQL `@read_only` pooled-
+    connection break, Neo4j MERGE lease race, Redis Lua-only lease, ClickHouse/
+    Mongo "Enforced"-but-raw cross-tenant lies, MySQL 8.4 syntax, …)
+- The **new-native-service recipe**, after-proto regen protocol, the
+  **10-question flaw catalog**, and the honest-`[~]` reporting rules
+
+### Why companions instead of vendoring generic Rust/Postgres skills
+Frontier models already know generic Rust, SQL, and each engine better than any
+vendored 300-line skill — and external skills rot and carry license/maintenance
+baggage. The value is the **UDB-specific delta** (which traps THIS repo hit,
+which idiom THIS repo uses), single-sourced in `shared/` and drift-gated like
+the rest of the skill. Claude loads a companion on demand (progressive
+disclosure, zero cost until needed); the OpenAI/Ollama wrappers bake them inline
+since those runtimes have no file-load step.
 
 ## Layout
 ```

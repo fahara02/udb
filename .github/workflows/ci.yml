@@ -73,6 +73,13 @@ jobs:
         # regenerate with `udb sdk generate`.
         if: runner.os == 'Linux'
         run: python3 scripts/check-sdk-service-coverage.py
+      - name: Codebase map freshness gate
+        # docs/generated/codebase-map.md is the agent-facing module-dependency
+        # graph + public-symbol index (consumed by the udb-coding skill).
+        # Generated truth like the contract JSON — regenerate with:
+        #   python scripts/generate-codebase-map.py
+        if: runner.os == 'Linux'
+        run: python3 scripts/generate-codebase-map.py --check
       - name: Native contract breaking-change gate (Phase 3)
         # Diff the live descriptor contract against the committed baseline and fail
         # on auth/db/sdk/event-breaking or removed surface. Intentional breaks bump
@@ -683,6 +690,8 @@ jobs:
       UDB_STARTUP_DRY_RUN: "false"
       UDB_AUDIT_SINK_URL: file:///tmp/udb-audit.jsonl
       UDB_JWT_PRIVATE_KEY: src/runtime/testdata/jwt_rs256_private.pem
+      UDB_SESSION_HASH_SECRET: ci-live-auth-session-hash-secret
+      UDB_PASSWORD_HASH_SECRET: ci-live-auth-password-hash-secret
       UDB_LIVE_USERNAME: sdk-live@example.com
       UDB_LIVE_PASSWORD: CorrectHorse1!
       UDB_LIVE_TENANT: sdk-live
@@ -732,6 +741,7 @@ jobs:
         env:
           UDB_LIVE_SDK_TESTS: "1"
         run: |
+          npm run bundle-proto
           npx tsc -p tsconfig.test.json
           node --test dist-test/live-auth.test.js
       - name: Stop UDB

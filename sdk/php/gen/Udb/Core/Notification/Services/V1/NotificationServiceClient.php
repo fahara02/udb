@@ -6,7 +6,7 @@ namespace Udb\Core\Notification\Services\V1;
 /**
  * ---------------------------------------------------------------------------
  * NotificationService — Template-based multi-channel notification delivery.
- * 
+ *
  * HTTP prefix: /v1/notifications
  * ---------------------------------------------------------------------------
  *

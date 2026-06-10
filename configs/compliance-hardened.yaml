@@ -1,0 +1,96 @@
+# UDB hardened compliance deployment posture.
+#
+# This is a REAL, loadable config (same schema as `configs/services.yaml`) that
+# sets the fail-closed / enterprise security posture required by the SOC 2 Type 2,
+# ISO 27001/27017, and PCI/HIPAA profiles documented in
+# `docs/auth-compliance-profiles.md`.
+#
+# Load it with `UDB_CONFIG_PATH=configs/compliance-hardened.yaml`, then supply
+# the deployment secrets via the env vars noted inline below. The
+# `security:` block here installs into the global `SecurityConfig`, so a hardened
+# posture makes `validate_production()` pass AND `is_production()` true — which in
+# turn makes the startup transport/production gate FATAL (see `serve()` in
+# `src/runtime/service/mod.rs`). A misconfigured insecure transport then refuses
+# to start, satisfying "Enterprise mode refuses insecure transport unless
+# explicitly configured for development."
+#
+# Two values are intentionally NOT settable from YAML and MUST be set via env at
+# deploy time because they carry secrets / are process-global flags:
+#   * UDB_ENTERPRISE_AUDIT=true  — forces fail-closed mode on dependency errors.
+#   * UDB_FAIL_CLOSED=true       — equivalent explicit fail-closed switch.
+#   * TLS cert/key + client CA   — UDB_TLS_CERT_PATH / UDB_TLS_KEY_PATH /
+#                                  UDB_MTLS_CLIENT_CA_PATH (or the *_PEM forms).
+#   * encryption keys            — UDB_ENCRYPTION_KEY_V<n> / Vault settings.
+app_name: udb-service
+
+primary:
+  direct_dsn: postgres://udb:udb@db.internal:5432/udb?sslmode=require
+
+service:
+  metrics_addr: 0.0.0.0:50052
+  metrics_allowed_cidr: 127.0.0.1/32
+  abac_refresh_secs: 60
+  abac_default_allow: false
+  grpc_timeout_secs: 30
+  grpc_max_concurrent: 200
+  allow_degraded_backends: false
+  catalog_compat_warn_only: false
+  catalog_compatibility_level: backward
+  rate_limit_enabled: true
+  rate_limit_window_secs: 60
+  rate_limit_max_per_window: 1000
+  # Client-facing transport must be secured. With these true, the startup gate
+  # is ALWAYS fatal if the TLS cert/key (and client CA for mTLS) are missing,
+  # regardless of UDB_ENV. Supply the certs via env:
+  #   UDB_TLS_CERT_PATH, UDB_TLS_KEY_PATH, UDB_MTLS_CLIENT_CA_PATH
+  require_secure_transport: true
+  mtls_required: true
+
+# Structured audit-event sink for every mutating RPC (separate from the HTTP
+# audit-log sink in `security.audit_sink_url`). Persist to Postgres so audit
+# trails are durable and queryable.
+audit_sink:
+  kind: postgres
+  pg_table: public.udb_audit_log
+  min_severity: info
+
+# Field-level encryption-at-rest for UDB-owned sensitive columns. Inline keys are
+# omitted here on purpose — provide them via env (UDB_ENCRYPTION_KEY_V1=...) or
+# Vault Transit so secrets never live in a checked-in config.
+encryption:
+  active_version: 1
+  vault_transit_key_name: udb-field-encryption
+  vault_transit_mount: transit
+  vault_timeout_secs: 5
+  dev_mode: false
+
+security:
+  # Transport: TLS + mTLS required on the client-facing gRPC listener.
+  tls_required: true
+  pg_tls_required: true
+  redis_tls_required: true
+  kafka_tls_required: true
+  service_identity_required: true
+  mtls_required: true
+  # Header-based scopes are a dev-only fallback and MUST be off in production;
+  # validate_production() rejects them.
+  allow_header_scopes: false
+  # Encryption-at-rest key rotation.
+  encryption_key_rotation_enabled: true
+  current_encryption_key_id: udb-1
+  # HTTP audit-log sink (caller-side audit forwarding). Required by
+  # validate_production(); point it at your SIEM/collector over TLS.
+  audit_sink_url: https://audit.internal.example/api/events
+  # PII-safe logging masks PII/secret fields before they reach the sink.
+  pii_safe_logging: true
+  metric_endpoint_allowlist:
+    - 127.0.0.1
+
+saga:
+  recovery_enabled: true
+  recovery_interval_secs: 60
+  stale_threshold_secs: 300
+
+circuit_breaker:
+  failure_threshold: 3
+  cooldown_secs: 30
