@@ -836,6 +836,30 @@ mod tests {
 
         assert!(sql.contains("_control_col TEXT := 'created_at'"), "{sql}");
         assert!(sql.contains("FROM pg_partitioned_table p"), "{sql}");
+        assert!(
+            sql.contains("IF to_regclass('partman.part_config') IS NOT NULL THEN"),
+            "{sql}"
+        );
         assert!(sql.contains("p_control := _control_col"), "{sql}");
+    }
+
+    #[test]
+    fn pg_partman_extension_creation_is_skipped_when_unavailable() {
+        let sql = render_create_extension(&ManifestExtension {
+            name: "pg_partman".to_string(),
+            schema: "partman".to_string(),
+            version: String::new(),
+        });
+
+        assert!(
+            sql.contains(
+                "IF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'pg_partman') THEN"
+            ),
+            "{sql}"
+        );
+        assert!(
+            sql.contains("CREATE EXTENSION IF NOT EXISTS \"pg_partman\" SCHEMA \"partman\""),
+            "{sql}"
+        );
     }
 }

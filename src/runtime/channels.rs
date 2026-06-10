@@ -1274,9 +1274,7 @@ mod tests {
 
     #[test]
     fn scoped_semaphore_eviction_preserves_entries_with_outstanding_permits() {
-        let old = Instant::now()
-            .checked_sub(Duration::from_secs(7200))
-            .unwrap();
+        let old = Instant::now();
         let live_sem = Arc::new(Semaphore::new(1));
         let _permit = live_sem.clone().try_acquire_owned().unwrap();
         let mut ttl_map = HashMap::from([
@@ -1301,7 +1299,7 @@ mod tests {
         evict_scope_map(
             &mut ttl_map,
             2,
-            Duration::from_secs(1),
+            Duration::ZERO,
             |entry| entry.last_access,
             |entry| !entry.has_outstanding_permits(),
         );

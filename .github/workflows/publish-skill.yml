@@ -40,6 +40,11 @@ jobs:
             udb-skill/shared/using-udb.md \
             udb-skill/openai/instructions.md \
             udb-skill/ollama/Modelfile \
+            udb-skill/plugins/udb/skills/udb-coding/SKILL.md \
+            udb-skill/plugins/udb/skills/udb-coding/references/udb-coding.md \
+            udb-skill/shared/udb-coding.md \
+            udb-skill/openai/instructions-udb-coding.md \
+            udb-skill/ollama/Modelfile.udb-coding \
             udb-skill/LICENSE; do
             test -f "$f" || { echo "::error::missing $f"; exit 1; }
           done
@@ -49,21 +54,25 @@ jobs:
             udb-skill/plugins/udb/.claude-plugin/plugin.json; do
             python3 -c "import json; json.load(open('$f'))" && echo "json ok: $f"
           done
-          # SKILL.md must carry a description in its frontmatter.
-          grep -q '^description:' udb-skill/plugins/udb/skills/using-udb/SKILL.md \
-            || { echo "::error::SKILL.md missing description"; exit 1; }
+          # Every SKILL.md must carry a description in its frontmatter.
+          for s in using-udb udb-coding; do
+            grep -q '^description:' "udb-skill/plugins/udb/skills/$s/SKILL.md" \
+              || { echo "::error::$s SKILL.md missing description"; exit 1; }
+          done
           # Root marketplace plugin source must resolve to a real plugin dir.
           python3 -c "import json,os; m=json.load(open('.claude-plugin/marketplace.json')); s=m['plugins'][0]['source']; assert os.path.isfile(os.path.join(s,'.claude-plugin','plugin.json')), s; print('marketplace source ok:', s)"
           echo "skill validation passed"
       - name: Wrapper drift check (advisory, CR-tolerant)
         run: |
-          a=udb-skill/shared/using-udb.md
-          b=udb-skill/plugins/udb/skills/using-udb/references/using-udb.md
-          if ! diff -q <(tr -d '\r' < "$a") <(tr -d '\r' < "$b") >/dev/null; then
-            echo "::warning::Claude reference differs from shared/using-udb.md — re-sync the wrappers (see README)."
-          else
-            echo "wrappers in sync"
-          fi
+          for s in using-udb udb-coding; do
+            a="udb-skill/shared/$s.md"
+            b="udb-skill/plugins/udb/skills/$s/references/$s.md"
+            if ! diff -q <(tr -d '\r' < "$a") <(tr -d '\r' < "$b") >/dev/null; then
+              echo "::warning::Claude reference differs from shared/$s.md — re-sync the wrappers (see README)."
+            else
+              echo "wrappers in sync: $s"
+            fi
+          done
       - name: Validate with Claude CLI (best-effort)
         run: |
           if npm i -g @anthropic-ai/claude-code >/dev/null 2>&1 && command -v claude >/dev/null; then
@@ -122,11 +131,13 @@ jobs:
           for i in $(seq 1 30); do ollama list >/dev/null 2>&1 && break; sleep 1; done
           cd udb-skill/ollama
           ollama create "$ns/udb-assistant" -f ./Modelfile
+          ollama create "$ns/udb-coding" -f ./Modelfile.udb-coding
           # Auth: modern Ollama reads OLLAMA_API_KEY from the environment for
           # authenticated registry pushes. If your account uses the SSH-key flow
           # instead, provide the private key and `ollama` will use ~/.ollama/id_ed25519.
           ollama push "$ns/udb-assistant"
-          echo "pushed $ns/udb-assistant"
+          ollama push "$ns/udb-coding"
+          echo "pushed $ns/udb-assistant and $ns/udb-coding"
 
   openai:
     name: Sync OpenAI Assistant
@@ -146,19 +157,24 @@ jobs:
             exit 0
           fi
           model="${OPENAI_MODEL:-gpt-4o-mini}"
-          name="UDB Assistant"
-          instr="$(cat udb-skill/openai/instructions.md)"
           base="https://api.openai.com/v1"
           auth=(-H "Authorization: Bearer ${OPENAI_API_KEY}" -H "OpenAI-Beta: assistants=v2" -H "Content-Type: application/json")
-          # Idempotent upsert by assistant name.
-          id="$(curl -fsS "${auth[@]}" "$base/assistants?limit=100" \
-                | jq -r --arg n "$name" '.data[] | select(.name==$n) | .id' | head -1)"
-          payload="$(jq -n --arg n "$name" --arg m "$model" --arg i "$instr" \
-                     '{name:$n, model:$m, instructions:$i}')"
-          if [ -n "$id" ] && [ "$id" != "null" ]; then
-            curl -fsS "${auth[@]}" -X POST "$base/assistants/$id" -d "$payload" >/dev/null
-            echo "updated assistant $id"
-          else
-            new_id="$(curl -fsS "${auth[@]}" -X POST "$base/assistants" -d "$payload" | jq -r '.id')"
-            echo "created assistant $new_id"
-          fi
+          # Idempotent upsert by assistant name, one per skill.
+          upsert() {
+            local name="$1" file="$2"
+            local instr id payload new_id
+            instr="$(cat "$file")"
+            id="$(curl -fsS "${auth[@]}" "$base/assistants?limit=100" \
+                  | jq -r --arg n "$name" '.data[] | select(.name==$n) | .id' | head -1)"
+            payload="$(jq -n --arg n "$name" --arg m "$model" --arg i "$instr" \
+                       '{name:$n, model:$m, instructions:$i}')"
+            if [ -n "$id" ] && [ "$id" != "null" ]; then
+              curl -fsS "${auth[@]}" -X POST "$base/assistants/$id" -d "$payload" >/dev/null
+              echo "updated assistant '$name' ($id)"
+            else
+              new_id="$(curl -fsS "${auth[@]}" -X POST "$base/assistants" -d "$payload" | jq -r '.id')"
+              echo "created assistant '$name' ($new_id)"
+            fi
+          }
+          upsert "UDB Assistant"    udb-skill/openai/instructions.md
+          upsert "UDB Coding Agent" udb-skill/openai/instructions-udb-coding.md

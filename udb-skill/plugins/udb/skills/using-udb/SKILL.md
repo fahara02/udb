@@ -1,6 +1,6 @@
 ---
 name: using-udb
-description: Help a developer USE a running UDB broker — connect a language SDK, authenticate with scopes/credentials, and CRUD proto-defined entities over the gRPC DataBroker API. Use when the user is building an app against UDB, asks about the UDB SDK (TypeScript/Python/Go/Java/C#/PHP), UDB metadata/tenant/scopes/auth, Select/Upsert/Delete, defining UDB entity protos (table/column annotations), or the `udb` CLI (serve, sdk generate, proto export, auth bootstrap).
+description: Help a developer USE a running UDB broker — connect a language SDK, authenticate with scopes/credentials, CRUD proto-defined entities over the gRPC DataBroker API, and use the native services (storage uploads, notifications, WebRTC rooms, events/CDC). Use when the user is building an app against UDB, asks about the UDB SDK (TypeScript/Python/Go/Java/C#/PHP), UDB metadata/tenant/scopes/auth, Select/Upsert/Delete, file upload/presigned URLs, UDB events/topics, defining UDB entity protos (table/column annotations), debugging UDB gRPC errors, or the `udb` CLI (serve, sdk generate, proto export, auth bootstrap, doctor).
 allowed-tools: Read, Grep, Bash, WebFetch
 ---
 
@@ -9,66 +9,76 @@ allowed-tools: Read, Grep, Bash, WebFetch
 UDB is a **proto-driven multi-database broker**. Developers declare their data
 model as annotated Protocol Buffers; UDB generates the DB schema and serves a
 uniform gRPC **DataBroker** API (`Select`/`Upsert`/`Delete`) plus a native
-control plane (auth/authz/api-keys/storage). Every request carries **metadata**
-(tenant, project, scopes, identity) that UDB enforces. Default broker address in
-examples: `localhost:50051`.
+control plane (auth/authz/api-keys/storage/asset/notification/webrtc). Every
+request carries **metadata** (tenant, project, scopes, identity) enforced
+fail-closed server-side.
 
 **Full reference (read on demand): [references/using-udb.md](references/using-udb.md)** —
 per-language SDK install+connect snippets, the metadata header table, CRUD
-shapes, the auth/bootstrap flow, proto annotations, and the `udb` CLI.
+semantics (idempotency/retry/pagination/proto3-presence), auth + bootstrap, the
+native-services tour (storage upload flow, notifications, WebRTC, events/CDC),
+proto annotation authoring with tenant columns, the CLI, and the error-decode
+table.
 
 ## Mental model (hold this)
-1. **Entities are protos.** A table = a `message` with `(udb.core.common.v1.table)`;
-   a column = a field with `(udb.core.common.v1.column)`. The message's
-   fully-qualified name (e.g. `shop.v1.Customer`) is the `message_type` for every
-   data RPC.
-2. **No SQL.** Call `Select`/`Upsert`/`Delete` with a `message_type` + filter/record.
-3. **Every call carries metadata** (tenant/project/scopes/identity); wrong/missing
-   scopes → broker denies (gRPC error).
-4. **Auth is explicit** — a bearer JWT, API key, or session attached as metadata;
-   `udb:read`/`udb:write` scopes gate ops.
+1. **Entities are protos.** Table = annotated `message`; its fully-qualified
+   name (e.g. `shop.v1.Customer`) is the `message_type` for every data RPC.
+2. **TWO gRPC targets.** Data target (default `:50051`) serves ONLY
+   health/reflection/DataBroker. ALL native services live on the control-plane
+   target (default port+10) — every SDK has `target` AND `authTarget`.
+   `UNIMPLEMENTED` ≈ you dialed the wrong one.
+3. **Every call carries metadata** (tenant/project/scopes + a credential);
+   tenant isolation is enforced server-side on reads AND writes, and a body
+   tenant can never override the credential's tenant.
+4. **Mutations are not auto-retried** (only read-only RPCs retry on
+   DEADLINE_EXCEEDED) — recommend `conflict_fields` idempotency on Upsert.
+5. **Every mutation emits an event** (`udb.<svc>.<entity>.<verb>.v1`);
+   CDC subscription streams are tenant-scoped with `since_event_id` replay.
 
 ## Before giving code, establish
-- **Language** (TS / Python / Go / Java / C# / PHP) → use that SDK's install + client snippet from the reference.
-- **Broker address** (default `localhost:50051`, plaintext in dev).
-- **Credential** — do they have a token/API key, or need to bootstrap one?
+- **Language** (TS / Python / Go / Java / C# / PHP) → that SDK's snippet from
+  the reference.
+- **Both addresses** — data target + control-plane/authTarget.
+- **Credential** — bearer/API key in hand, or bootstrap needed?
 
 ## Quick reference
-
 **SDK packages:** TS `@udb_plus/sdk` · Python `udb-client` · Go
 `github.com/fahara02/udb/sdk/go` · Java `dev.udb:udb-java-client` · C#
-`Udb.Client` · PHP `fahara02/udb-laravel`. (Confirm the latest version tag.)
+`Udb.Client` · PHP `fahara02/udb-laravel`.
 
-**Construct a client** with metadata: `tenantId`, `projectId`, `userId`,
-`scopes` (`["udb:read","udb:write"]`), `serviceIdentity`, and a credential.
+**CRUD** (by `message_type` = proto FQN): `Select {filter, limit ≤ ~500/page}` ·
+`Upsert {record, conflict_fields, return_record}` · `Delete {filter}` · typed
+cache/document/graph/timeseries RPCs per `GetCapabilities`.
 
-**CRUD** (all by `message_type` = proto FQN):
-- `Select { message_type, filter, limit }` → RecordSet
-- `Upsert { message_type, record, conflict_fields, return_record }`
-- `Delete { message_type, filter }`
+**Storage upload:** `RegisterUpload` → presigned PUT → `FinalizeUpload`
+(`is_public` is `optional` — omit to preserve) → presigned GET. **Authz:**
+`can(resource, action)`; server `cache_ttl_seconds=0` = never cache.
 
-**Auth / bootstrap:** clients attach `authorization: Bearer <jwt>` or
-`x-api-key`. A fresh broker has no users — mint the first offline:
+**Bootstrap a fresh broker:**
 ```bash
-UDB_PG_DSN="postgres://udb:udb@host:5432/udb?sslmode=disable" \
-UDB_PASSWORD_HASH_SECRET="<secret>" \
+UDB_PG_DSN=… UDB_PASSWORD_HASH_SECRET=… \
 udb auth bootstrap user --username admin --email admin@x.com \
     --password '<strong>' --tenant acme --project default
 ```
 
-**CLI:** `udb proto export --out proto` (vendor annotations) · `udb serve proto "" 0.0.0.0:50051` ·
-`udb sdk generate --lang <lang>` · `udb doctor` · `udb auth api-key-create`.
+**CLI:** `udb proto export --out proto` · `udb serve proto "" 0.0.0.0:50051` ·
+`udb sdk generate --lang <l>` · `udb sdk manifest` · `udb doctor` ·
+`udb native list/docs` · `udb compat-matrix` (authoritative annotations).
 
-## Common failures
-- **`PERMISSION_DENIED` / `INVALID_ARGUMENT` on write** → `udb:write` missing from
-  scopes, or tenant ≠ credential's tenant.
-- **No users / can't log in on a fresh broker** → run `udb auth bootstrap user`.
-- **Unknown `message_type`** → use the proto's fully-qualified name; list the
-  contract with `udb sdk manifest`.
+## Error decode (first response to any failure)
+`UNIMPLEMENTED`→wrong target (set authTarget) · `PERMISSION_DENIED`→scope or
+tenant mismatch · `FAILED_PRECONDITION`→service disabled / wrong state /
+missing config · `RESOURCE_EXHAUSTED`→rate limit or backpressure (back off) ·
+`INVALID_ARGUMENT`→unknown message_type (use the FQN; `udb sdk manifest`) ·
+`ABORTED`→version/CAS conflict (re-read, retry) · `NOT_FOUND` can mean
+"exists, but not your tenant" — by design.
 
 ## Guardrails
-- Always include metadata (tenant/project/scopes) in examples — the #1 cause of
-  denials. Use the user's `message_type` (proto FQN), never raw table names.
-- Don't invent RPCs/fields. When unsure, point to `udb sdk manifest`,
-  `udb native list`, the per-language SDK README, and the reference file above.
-</content>
+- Always include metadata (tenant/project/scopes) AND a credential in examples;
+  route native-service clients to authTarget. Use `message_type` FQNs, never
+  table names.
+- Tenant-scoped entity protos need a recognizable tenant column (`tenant_id`,
+  `_tenant_id`, or `is_tenant_column: true`); custom proto packages need
+  `UDB_PROTO_NAMESPACE` or annotations are silently ignored.
+- Don't invent RPCs/fields/annotations — ground truth is `udb sdk manifest`,
+  `udb native list/docs`, `udb compat-matrix`, and the reference file above.

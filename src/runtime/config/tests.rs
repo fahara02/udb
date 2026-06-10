@@ -264,9 +264,16 @@ fn mtls_umbrella_enables_broker_and_internal_control_mtls() {
 
 #[test]
 fn compliance_hardened_yaml_matches_secure_runtime_posture() {
-    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let yaml = std::fs::read_to_string(root.join("configs/compliance-hardened.yaml"))
-        .expect("compliance-hardened.yaml should be readable");
+    let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let yaml_path = manifest_dir
+        .ancestors()
+        .map(|path| path.join("configs/compliance-hardened.yaml"))
+        .find(|path| path.is_file())
+        .expect(
+            "configs/compliance-hardened.yaml should exist in an ancestor of CARGO_MANIFEST_DIR",
+        );
+    let yaml =
+        std::fs::read_to_string(yaml_path).expect("compliance-hardened.yaml should be readable");
     let mut config: UdbConfig =
         serde_yaml::from_str(&yaml).expect("compliance-hardened.yaml must parse as UdbConfig");
 

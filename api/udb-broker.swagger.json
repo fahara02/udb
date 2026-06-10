@@ -467,7 +467,7 @@
         ]
       },
       "post": {
-        "summary": "── Key lifecycle (admin-only) ────────────────────────────────────────────\r\nReturns the plain key ONCE in CreateApiKeyResponse — never again.",
+        "summary": "── Key lifecycle (admin-only) ────────────────────────────────────────────\nReturns the plain key ONCE in CreateApiKeyResponse — never again.",
         "operationId": "ApiKeyService_CreateApiKey",
         "responses": {
           "200": {
@@ -824,7 +824,7 @@
     },
     "/v1/api_keys/{keyId}:rotate": {
       "post": {
-        "summary": "Rotate a key's secret in place (same key_id + lineage). Returns the new\r\nplain key ONCE; the old secret is invalidated immediately.",
+        "summary": "Rotate a key's secret in place (same key_id + lineage). Returns the new\nplain key ONCE; the old secret is invalidated immediately.",
         "operationId": "ApiKeyService_RotateApiKey",
         "responses": {
           "200": {
@@ -882,7 +882,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "Emergency revoke matching keys by one or more selectors. At least one selector\r\nmust be set. Resolves matching records and revokes each (no prefix-only blind\r\nmutation): the caller's tenant/owner/admin authority is enforced per record.",
+            "description": "Emergency revoke matching keys by one or more selectors. At least one selector\nmust be set. Resolves matching records and revokes each (no prefix-only blind\nmutation): the caller's tenant/owner/admin authority is enforced per record.",
             "in": "body",
             "required": true,
             "schema": {
@@ -2162,7 +2162,7 @@
     },
     "/v1/auth/password:forgot": {
       "post": {
-        "summary": "User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the\r\naccount's channel). Public — no bearer required.",
+        "summary": "User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the\naccount's channel). Public — no bearer required.",
         "operationId": "AuthnService_ForgotPassword",
         "responses": {
           "200": {
@@ -2195,7 +2195,7 @@
     },
     "/v1/auth/password:reset": {
       "post": {
-        "summary": "Complete a password reset with the OTP from ForgotPassword (no current\r\npassword required). Public — the OTP is the proof of control.",
+        "summary": "Complete a password reset with the OTP from ForgotPassword (no current\npassword required). Public — the OTP is the proof of control.",
         "operationId": "AuthnService_ResetPassword",
         "responses": {
           "200": {
@@ -3609,7 +3609,7 @@
     },
     "/v1/auth/users/{userId}/mfa:enroll": {
       "post": {
-        "summary": "── MFA enrollment ───────────────────────────────────────────────────────\r\nStep 1: initiate enrollment — returns TOTP secret / QR URI",
+        "summary": "── MFA enrollment ───────────────────────────────────────────────────────\nStep 1: initiate enrollment — returns TOTP secret / QR URI",
         "operationId": "AuthnService_EnrollMFA",
         "responses": {
           "200": {
@@ -3687,7 +3687,7 @@
     },
     "/v1/auth/users/{userId}/phone:verify": {
       "post": {
-        "summary": "Set the user's phone number and send an SMS verification OTP. Complete with\r\nVerifyOTP (the response is verified the same way as email).",
+        "summary": "Set the user's phone number and send an SMS verification OTP. Complete with\nVerifyOTP (the response is verified the same way as email).",
         "operationId": "AuthnService_SendPhoneVerification",
         "responses": {
           "200": {
@@ -3726,7 +3726,7 @@
     },
     "/v1/auth/users/{userId}/recovery-codes:generate": {
       "post": {
-        "summary": "Generate a fresh set of single-use MFA recovery/backup codes (returned once;\r\nany prior codes for the user are invalidated).",
+        "summary": "Generate a fresh set of single-use MFA recovery/backup codes (returned once;\nany prior codes for the user are invalidated).",
         "operationId": "AuthnService_GenerateRecoveryCodes",
         "responses": {
           "200": {
@@ -4686,7 +4686,7 @@
     },
     "/v1/authz/governance/canaries:activate": {
       "post": {
-        "summary": "Activate a policy version to a canary scope (subset of the fleet) before\r\nfleet-wide. A metric-based evaluator then auto-rolls back on breach.",
+        "summary": "Activate a policy version to a canary scope (subset of the fleet) before\nfleet-wide. A metric-based evaluator then auto-rolls back on breach.",
         "operationId": "AuthzService_ActivateCanary",
         "responses": {
           "200": {
@@ -5235,7 +5235,7 @@
     },
     "/v1/authz/native-access": {
       "post": {
-        "summary": "Stage 2: authorize and, when allowed, mint a short-lived native-access\r\ncontract (restricted role + scoped DSN + RLS session variables).",
+        "summary": "Stage 2: authorize and, when allowed, mint a short-lived native-access\ncontract (restricted role + scoped DSN + RLS session variables).",
         "operationId": "AuthzService_GetNativeAccess",
         "responses": {
           "200": {
@@ -5254,7 +5254,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "── Stage 2: native database fast-path access ──────────────────────────────\r\n\r\n`GetNativeAccess` runs the same `Authorize` decision and, when allowed,\r\nmints a short-lived contract for the caller to talk to the backend\r\ndirectly: a restricted role, a scoped DSN, and the exact set of\r\n`app.current_*` session variables the SDK must `SET LOCAL` so the\r\nbroker-generated RLS policies still apply. UDB stays the source of the\r\nauthorization decision; the native grant only carries it forward.",
+            "description": "── Stage 2: native database fast-path access ──────────────────────────────\n\n`GetNativeAccess` runs the same `Authorize` decision and, when allowed,\nmints a short-lived contract for the caller to talk to the backend\ndirectly: a restricted role, a scoped DSN, and the exact set of\n`app.current_*` session variables the SDK must `SET LOCAL` so the\nbroker-generated RLS policies still apply. UDB stays the source of the\nauthorization decision; the native grant only carries it forward.",
             "in": "body",
             "required": true,
             "schema": {
@@ -5515,7 +5515,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "── Stage 2: signed policy bundles for local SDK authorization caches ───────\r\n\r\n`GetPolicyBundle` serializes the live authorization snapshot (policies,\r\nrole bindings, relationship tuples) and signs it so an SDK can cache it\r\nand answer `can()` locally without a round-trip, while still being able\r\nto verify the bundle was issued by UDB and has not expired.",
+            "description": "── Stage 2: signed policy bundles for local SDK authorization caches ───────\n\n`GetPolicyBundle` serializes the live authorization snapshot (policies,\nrole bindings, relationship tuples) and signs it so an SDK can cache it\nand answer `can()` locally without a round-trip, while still being able\nto verify the bundle was issued by UDB and has not expired.",
             "in": "body",
             "required": true,
             "schema": {
@@ -9864,7 +9864,7 @@
           "$ref": "#/definitions/coreCommonV1RequestContext"
         }
       },
-      "description": "Rotate a key: mint a fresh secret under the same key record + lineage, return\r\nthe new plain key ONCE, and invalidate the old secret. The rotated key keeps\r\nthe same key_id, owner, scopes, tenant, and project (rotation lineage)."
+      "description": "Rotate a key: mint a fresh secret under the same key record + lineage, return\nthe new plain key ONCE, and invalidate the old secret. The rotated key keeps\nthe same key_id, owner, scopes, tenant, and project (rotation lineage)."
     },
     "ApiKeyServiceUpdateApiKeyBody": {
       "type": "object",
@@ -10648,7 +10648,7 @@
         },
         "isPublic": {
           "type": "boolean",
-          "description": "Proto3 explicit presence: absent leaves the stored visibility unchanged —\r\na partial update can never silently flip a file public/private."
+          "description": "Proto3 explicit presence: absent leaves the stored visibility unchanged —\na partial update can never silently flip a file public/private."
         }
       }
     },
@@ -10760,7 +10760,7 @@
           }
         }
       },
-      "description": "An authenticated caller, normalized to the claims UDB and project services\r\nneed after token/session/API-key validation."
+      "description": "An authenticated caller, normalized to the claims UDB and project services\nneed after token/session/API-key validation."
     },
     "coreAuthzServicesV1Principal": {
       "type": "object",
@@ -10818,7 +10818,7 @@
           }
         }
       },
-      "description": "Authenticated caller claims copied from the UDB auth control plane and kept\r\nlocal so authorization can be used by any project without importing broker\r\nservice protos."
+      "description": "Authenticated caller claims copied from the UDB auth control plane and kept\nlocal so authorization can be used by any project without importing broker\nservice protos."
     },
     "coreCommonV1RequestContext": {
       "type": "object",
@@ -10999,7 +10999,7 @@
         },
         "decisionId": {
           "type": "string",
-          "description": "── Phase L3 task4: expanded compliance columns ───────────────────────────\r\nStable decision id linking this audit row to the gRPC Decision returned to\r\nthe caller and to the access-deny domain event."
+          "description": "── Phase L3 task4: expanded compliance columns ───────────────────────────\nStable decision id linking this audit row to the gRPC Decision returned to\nthe caller and to the access-deny domain event."
         },
         "policyVersion": {
           "type": "string",
@@ -12719,7 +12719,7 @@
           "$ref": "#/definitions/coreCommonV1RequestContext"
         }
       },
-      "description": "Emergency revoke matching keys by one or more selectors. At least one selector\r\nmust be set. Resolves matching records and revokes each (no prefix-only blind\r\nmutation): the caller's tenant/owner/admin authority is enforced per record."
+      "description": "Emergency revoke matching keys by one or more selectors. At least one selector\nmust be set. Resolves matching records and revokes each (no prefix-only blind\nmutation): the caller's tenant/owner/admin authority is enforced per record."
     },
     "v1EmergencyRevokeApiKeysResponse": {
       "type": "object",
@@ -12858,7 +12858,7 @@
           "format": "date-time"
         }
       },
-      "description": "Daily executor performance roll-up for project-defined workers, handlers,\r\ndata pipelines, or backend executors."
+      "description": "Daily executor performance roll-up for project-defined workers, handlers,\ndata pipelines, or backend executors."
     },
     "v1ExplainPolicyRequest": {
       "type": "object",
@@ -13201,7 +13201,7 @@
       "properties": {
         "otpId": {
           "type": "string",
-          "description": "Id of the PASSWORD_RESET OTP issued (empty when the account is unknown; the\r\nresponse shape is uniform so it is not an account-enumeration oracle)."
+          "description": "Id of the PASSWORD_RESET OTP issued (empty when the account is unknown; the\nresponse shape is uniform so it is not an account-enumeration oracle)."
         }
       }
     },
@@ -13213,7 +13213,7 @@
           "items": {
             "type": "string"
           },
-          "description": "Plaintext codes, returned exactly ONCE. Only keyed hashes are stored; any\r\npreviously-issued codes for the user are invalidated."
+          "description": "Plaintext codes, returned exactly ONCE. Only keyed hashes are stored; any\npreviously-issued codes for the user are invalidated."
         },
         "generated": {
           "type": "integer",
@@ -14517,7 +14517,7 @@
         },
         "mfaOtpId": {
           "type": "string",
-          "description": "MFA step-2 fields — set on the second Login call after receiving mfa_required=true.\r\nThe password (first factor) is ALWAYS verified; these only supply the second\r\nfactor and never substitute for it. Provide totp_code for an authenticator app,\r\nor mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA\r\nemail/SMS code previously issued to this same user.\n\nid of a LOGIN_2FA OTP issued to this user (email/SMS second factor)"
+          "description": "MFA step-2 fields — set on the second Login call after receiving mfa_required=true.\nThe password (first factor) is ALWAYS verified; these only supply the second\nfactor and never substitute for it. Provide totp_code for an authenticator app,\nor mfa_otp_id plus the one-time code (carried in totp_code) for a LOGIN_2FA\nemail/SMS code previously issued to this same user.\n\nid of a LOGIN_2FA OTP issued to this user (email/SMS second factor)"
         },
         "totpCode": {
           "type": "string",
@@ -14561,7 +14561,7 @@
         },
         "sessionToken": {
           "type": "string",
-          "title": "Server-side session fields (only when device_type = WEB)\r\nsession_token returned to gateway which sets it as HttpOnly cookie"
+          "title": "Server-side session fields (only when device_type = WEB)\nsession_token returned to gateway which sets it as HttpOnly cookie"
         },
         "csrfToken": {
           "type": "string",
@@ -14578,7 +14578,7 @@
         "refreshTokenExpiresIn": {
           "type": "integer",
           "format": "int32",
-          "description": "Absolute lifetime (seconds) of the rotating refresh token (field 4). The\r\nrefresh token is a token-family credential (rt_\u003cfamily\u003e.\u003cjti\u003e), rotated on\r\nevery RefreshToken call; reuse of a superseded value revokes the family."
+          "description": "Absolute lifetime (seconds) of the rotating refresh token (field 4). The\nrefresh token is a token-family credential (rt_\u003cfamily\u003e.\u003cjti\u003e), rotated on\nevery RefreshToken call; reuse of a superseded value revokes the family."
         }
       }
     },
@@ -14721,7 +14721,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "`app.current_*` session variables the caller must apply per transaction\r\n(`SET LOCAL`) so broker RLS policies see the same context the broker did."
+          "description": "`app.current_*` session variables the caller must apply per transaction\n(`SET LOCAL`) so broker RLS policies see the same context the broker did."
         },
         "expiresAtUnix": {
           "type": "string",
@@ -14732,7 +14732,7 @@
           "format": "uint64"
         }
       },
-      "description": "The minted native-access contract. Present only when the embedded\r\n`Decision` allowed the request."
+      "description": "The minted native-access contract. Present only when the embedded\n`Decision` allowed the request."
     },
     "v1NativeAccessRequest": {
       "type": "object",
@@ -14778,7 +14778,7 @@
           }
         }
       },
-      "description": "── Stage 2: native database fast-path access ──────────────────────────────\r\n\r\n`GetNativeAccess` runs the same `Authorize` decision and, when allowed,\r\nmints a short-lived contract for the caller to talk to the backend\r\ndirectly: a restricted role, a scoped DSN, and the exact set of\r\n`app.current_*` session variables the SDK must `SET LOCAL` so the\r\nbroker-generated RLS policies still apply. UDB stays the source of the\r\nauthorization decision; the native grant only carries it forward."
+      "description": "── Stage 2: native database fast-path access ──────────────────────────────\n\n`GetNativeAccess` runs the same `Authorize` decision and, when allowed,\nmints a short-lived contract for the caller to talk to the backend\ndirectly: a restricted role, a scoped DSN, and the exact set of\n`app.current_*` session variables the SDK must `SET LOCAL` so the\nbroker-generated RLS policies still apply. UDB stays the source of the\nauthorization decision; the native grant only carries it forward."
     },
     "v1NativeAccessResponse": {
       "type": "object",
@@ -14964,7 +14964,7 @@
         },
         "eventType": {
           "type": "string",
-          "description": "Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.\r\nHybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the\r\nglobal default (tenant_id NULL) for the same (event_type, channel) coexist;\r\nresolution prefers the per-tenant row over the global default. The unique\r\nindex stays on (event_type, channel) for now (global dedupe); when a\r\nper-tenant write path lands, split into partial unique indexes keyed on\r\ntenant_id IS NULL vs IS NOT NULL."
+          "description": "Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.\nHybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the\nglobal default (tenant_id NULL) for the same (event_type, channel) coexist;\nresolution prefers the per-tenant row over the global default. The unique\nindex stays on (event_type, channel) for now (global dedupe); when a\nper-tenant write path lands, split into partial unique indexes keyed on\ntenant_id IS NULL vs IS NOT NULL."
         },
         "channel": {
           "$ref": "#/definitions/v1NotificationChannel"
@@ -15323,7 +15323,7 @@
         },
         "tenantId": {
           "type": "string",
-          "description": "Denormalized from the owning pipeline_instance so the tenant RLS policy can\r\nfilter steps directly (steps are created by the service from the instance).\n\n@inject_tag: gorm:\"column:tenant_id;not null\""
+          "description": "Denormalized from the owning pipeline_instance so the tenant RLS policy can\nfilter steps directly (steps are created by the service from the instance).\n\n@inject_tag: gorm:\"column:tenant_id;not null\""
         },
         "stepName": {
           "type": "string",
@@ -15426,7 +15426,7 @@
           "type": "string"
         }
       },
-      "description": "── Stage 2: signed policy bundles for local SDK authorization caches ───────\r\n\r\n`GetPolicyBundle` serializes the live authorization snapshot (policies,\r\nrole bindings, relationship tuples) and signs it so an SDK can cache it\r\nand answer `can()` locally without a round-trip, while still being able\r\nto verify the bundle was issued by UDB and has not expired."
+      "description": "── Stage 2: signed policy bundles for local SDK authorization caches ───────\n\n`GetPolicyBundle` serializes the live authorization snapshot (policies,\nrole bindings, relationship tuples) and signs it so an SDK can cache it\nand answer `can()` locally without a round-trip, while still being able\nto verify the bundle was issued by UDB and has not expired."
     },
     "v1PolicyBundleResponse": {
       "type": "object",
@@ -16024,7 +16024,7 @@
           "format": "date-time"
         }
       },
-      "description": "Daily reconciliation/conflict roll-up for projections, imports, replicated\r\nstores, and project-defined resolution workflows."
+      "description": "Daily reconciliation/conflict roll-up for projections, imports, replicated\nstores, and project-defined resolution workflows."
     },
     "v1RecordPipelineMetricRequest": {
       "type": "object",
@@ -16091,7 +16091,7 @@
         },
         "refreshToken": {
           "type": "string",
-          "description": "Rotated refresh token (token-family credential). Issued on every successful\r\nrefresh: the presented refresh token is single-use and is invalidated as the\r\nnew one is minted (atomic rotation). Empty when the caller refreshed with a\r\nlegacy server-side session id rather than a token-family credential."
+          "description": "Rotated refresh token (token-family credential). Issued on every successful\nrefresh: the presented refresh token is single-use and is invalidated as the\nnew one is minted (atomic rotation). Empty when the caller refreshed with a\nlegacy server-side session id rather than a token-family credential."
         },
         "refreshTokenExpiresIn": {
           "type": "integer",
@@ -17086,7 +17086,7 @@
         },
         "sessionTokenLookup": {
           "type": "string",
-          "description": "── SERVER-SIDE fields ──────────────────────────────────────────────────\r\nKeyed lookup digest of the opaque session token (for fast index lookup)."
+          "description": "── SERVER-SIDE fields ──────────────────────────────────────────────────\nKeyed lookup digest of the opaque session token (for fast index lookup)."
         },
         "sessionTokenHash": {
           "type": "string",
@@ -17098,7 +17098,7 @@
         },
         "accessTokenJti": {
           "type": "string",
-          "description": "── JWT fields ──────────────────────────────────────────────────────────\r\nJWT ID of the currently-valid access token (for revocation check)."
+          "description": "── JWT fields ──────────────────────────────────────────────────────────\nJWT ID of the currently-valid access token (for revocation check)."
         },
         "refreshTokenJti": {
           "type": "string"
@@ -17159,7 +17159,7 @@
           "type": "string"
         }
       },
-      "title": "---------------------------------------------------------------------------\r\nSession — Authenticated session for a user, service account, workload, or\r\nexternal identity mapped into UDB.\r\n\r\nHybrid model:\r\n  SERVER_SIDE: cookie-based; session_token_lookup (keyed HMAC) → hash verify\r\n  JWT:         access_token_jti + refresh_token_jti tracked for revocation\r\n\r\nMigration order 2. RLS scopes rows to the current tenant.\r\n---------------------------------------------------------------------------"
+      "title": "---------------------------------------------------------------------------\nSession — Authenticated session for a user, service account, workload, or\nexternal identity mapped into UDB.\n\nHybrid model:\n  SERVER_SIDE: cookie-based; session_token_lookup (keyed HMAC) → hash verify\n  JWT:         access_token_jti + refresh_token_jti tracked for revocation\n\nMigration order 2. RLS scopes rows to the current tenant.\n---------------------------------------------------------------------------"
     },
     "v1SessionType": {
       "type": "string",
@@ -18007,7 +18007,7 @@
           "format": "date-time"
         }
       },
-      "title": "---------------------------------------------------------------------------\r\nUser — a human, service, workload, or externally-mapped account that can be\r\nauthenticated by UDB and authorized by the UDB policy engine.\r\n\r\nMigration order 1 in schema udb_authn.\r\nThe password_hash uses Argon2id PHC strings; legacy keyed-HMAC values are upgraded on login.\r\nAll PII fields are masked in application logs via (pii) + (log_masked).\r\n---------------------------------------------------------------------------"
+      "title": "---------------------------------------------------------------------------\nUser — a human, service, workload, or externally-mapped account that can be\nauthenticated by UDB and authorized by the UDB policy engine.\n\nMigration order 1 in schema udb_authn.\nThe password_hash uses Argon2id PHC strings; legacy keyed-HMAC values are upgraded on login.\nAll PII fields are masked in application logs via (pii) + (log_masked).\n---------------------------------------------------------------------------"
     },
     "v1UserRole": {
       "type": "object",
@@ -18050,7 +18050,7 @@
           "type": "string"
         }
       },
-      "description": "User-to-role assignment scoped by an authorization domain such as\r\ntenant:tenant_a, project:project_a, or resource:invoice/123."
+      "description": "User-to-role assignment scoped by an authorization domain such as\ntenant:tenant_a, project:project_a, or resource:invoice/123."
     },
     "v1UserStatus": {
       "type": "string",

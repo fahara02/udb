@@ -585,7 +585,16 @@ pub(crate) fn render_create_extension(extension: &ManifestExtension) -> String {
     } else {
         &extension.schema
     };
+    let is_optional_pg_partman = extension.name.trim() == "pg_partman";
     let mut sql = String::new();
+    if is_optional_pg_partman {
+        sql.push_str(&format!(
+            "DO $$\n\
+             BEGIN\n\
+             \tIF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = {}) THEN\n",
+            ql(extension.name.trim())
+        ));
+    }
     // Extensions installed outside the public schema require the schema to
     // exist first — PostgreSQL does NOT auto-create it during CREATE EXTENSION.
     // Guard this bootstrap block because `CREATE SCHEMA IF NOT EXISTS` is not
@@ -593,17 +602,23 @@ pub(crate) fn render_create_extension(extension: &ManifestExtension) -> String {
     // observe the schema missing and one loses on `pg_namespace_nspname_index`.
     if schema != "public" {
         sql.push_str(&format!(
-            "SELECT pg_advisory_xact_lock(hashtext({}));\n",
+            "{}SELECT pg_advisory_xact_lock(hashtext({}));\n",
+            if is_optional_pg_partman { "\t\t" } else { "" },
             ql(&format!(
                 "udb:create_extension:{}:{}",
                 extension.name.trim(),
                 schema
             ))
         ));
-        sql.push_str(&format!("CREATE SCHEMA IF NOT EXISTS {};\n", qi(schema)));
+        sql.push_str(&format!(
+            "{}CREATE SCHEMA IF NOT EXISTS {};\n",
+            if is_optional_pg_partman { "\t\t" } else { "" },
+            qi(schema)
+        ));
     }
     sql.push_str(&format!(
-        "CREATE EXTENSION IF NOT EXISTS {} SCHEMA {}{};",
+        "{}CREATE EXTENSION IF NOT EXISTS {} SCHEMA {}{};",
+        if is_optional_pg_partman { "\t\t" } else { "" },
         qi(&extension.name),
         qi(schema),
         if extension.version.trim().is_empty() {
@@ -612,6 +627,9 @@ pub(crate) fn render_create_extension(extension: &ManifestExtension) -> String {
             format!(" VERSION {}", ql(&extension.version))
         }
     ));
+    if is_optional_pg_partman {
+        sql.push_str("\n\tEND IF;\nEND$$;");
+    }
     sql
 }
 

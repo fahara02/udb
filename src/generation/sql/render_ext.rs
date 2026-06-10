@@ -710,17 +710,19 @@ pub(crate) fn render_partition_setup(table: &ManifestTable) -> String {
          \t_control_col := COALESCE(_control_col, {part_col});\n\
          END IF;\n\
          \n\
-         IF NOT EXISTS (\n\
-         \t    SELECT 1 FROM partman.part_config WHERE parent_table = {parent_table}\n\
-         ) THEN\n\
-         \tPERFORM partman.create_parent(\n\
-         \t\tp_parent_table := {parent_table},\n\
-         \t\tp_control := _control_col,\n\
-         \t\tp_interval := {interval},\n\
-         \t\tp_premake := {premake},\n\
-         \t\tp_start_partition := to_char(now(), 'YYYY-MM-DD'),\n\
-         \t\tp_date_trunc_interval := {date_trunc_interval}\n\
-         \t);\n\
+         IF to_regclass('partman.part_config') IS NOT NULL THEN\n\
+         \tIF NOT EXISTS (\n\
+         \t\t    SELECT 1 FROM partman.part_config WHERE parent_table = {parent_table}\n\
+         \t) THEN\n\
+         \t\tPERFORM partman.create_parent(\n\
+         \t\t\tp_parent_table := {parent_table},\n\
+         \t\t\tp_control := _control_col,\n\
+         \t\t\tp_interval := {interval},\n\
+         \t\t\tp_premake := {premake},\n\
+         \t\t\tp_start_partition := to_char(now(), 'YYYY-MM-DD'),\n\
+         \t\t\tp_date_trunc_interval := {date_trunc_interval}\n\
+         \t\t);\n\
+         \tEND IF;\n\
          END IF;\n\
          END$$;\n\n",
         parent_table = ql(&format!("{}.{}", table.schema, table.table)),
@@ -752,9 +754,14 @@ pub(crate) fn render_partition_setup(table: &ManifestTable) -> String {
     // (rather than leaving an orphaned table). run_maintenance enforces it.
     if table.retention_days > 0 {
         out.push_str(&format!(
-            "UPDATE partman.part_config\n\
-             \tSET retention = {retention}, retention_keep_table = false\n\
-             \tWHERE parent_table = {parent_lit};\n\n",
+            "DO $$\n\
+             BEGIN\n\
+             \tIF to_regclass('partman.part_config') IS NOT NULL THEN\n\
+             \t\tUPDATE partman.part_config\n\
+             \t\tSET retention = {retention}, retention_keep_table = false\n\
+             \t\tWHERE parent_table = {parent_lit};\n\
+             \tEND IF;\n\
+             END$$;\n\n",
             retention = ql(&format!("{} days", table.retention_days)),
             parent_lit = ql(&format!("{}.{}", table.schema, table.table)),
         ));

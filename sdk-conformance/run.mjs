@@ -35,7 +35,17 @@ const LANGS = {
     detect: () => has("node"),
     setup: { cmd: "npm", args: ["install", "--no-audit", "--no-fund", "--silent"] },
     build: { cmd: "npx", args: ["tsc", "-p", "tsconfig.test.json"] },
-    test: { cmd: "node", args: ["--test", "dist-test/"] },
+    test: {
+      cmd: "node",
+      args: [
+        "--test",
+        "dist-test/facade.test.js",
+        "dist-test/live-auth.test.js",
+        "dist-test/negotiation.test.js",
+        "dist-test/outbound.test.js",
+        "dist-test/refresh.test.js",
+      ],
+    },
     pass: /\bpass\s+\d+/i,
     fail: /\bfail\s+[1-9]/i,
   },
@@ -124,12 +134,12 @@ for (const name of targets) {
   if (cfg.setup) run(cfg.setup, cfg.cwd);
   if (cfg.build) {
     const b = run(cfg.build, cfg.cwd);
-    if (b.code !== 0) { results.push({ name, status: "FAIL", note: "build/compile error" }); process.stderr.write(b.out.slice(-1200)); continue; }
+    if (b.code !== 0) { results.push({ name, status: "FAIL", note: "build/compile error" }); process.stderr.write(b.out); continue; }
   }
   const t = run(cfg.test, cfg.cwd);
   const passed = cfg.pass.test(t.out) && !(cfg.fail && cfg.fail.test(t.out));
   results.push({ name, status: passed && t.code === 0 ? "PASS" : "FAIL", note: passed ? "" : `exit ${t.code}` });
-  if (!passed) process.stderr.write(t.out.slice(-1500));
+  if (!passed) process.stderr.write(t.out);
 }
 
 // Parity matrix

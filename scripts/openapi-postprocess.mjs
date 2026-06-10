@@ -39,7 +39,6 @@ if (!udbVersion) {
 }
 
 let text = readFileSync(swaggerPath, 'utf8');
-const before = text;
 
 // Replace the `info.title` value (first occurrence, inside the info block).
 text = text.replace(
@@ -59,8 +58,12 @@ if (!text.includes(`"description": ${JSON.stringify(DESCRIPTION)}`)) {
   );
 }
 
-if (text === before) {
-  console.error('openapi-postprocess: no substitutions made — swagger info block shape changed?');
+// The openapiv2 plugin preserves source comment newlines inside JSON string
+// values. Normalize escaped CRLFs so Windows and Linux generation do not drift.
+text = text.replace(/\\r\\n/g, "\\n").replace(/\\r/g, "\\n");
+
+if (!/"info":\s*\{[\s\S]*?"title":\s*"UDB Control-Plane API"[\s\S]*?"version":\s*"[^"]+"/m.test(text)) {
+  console.error('openapi-postprocess: swagger info block shape changed?');
   process.exit(1);
 }
 

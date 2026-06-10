@@ -76,7 +76,7 @@ func (f *StorageFacade) UpdateFile(ctx context.Context, fileID, filename, conten
 		Filename:    filename,
 		ContentType: contentType,
 		FileType:    fileType,
-		IsPublic:    isPublic,
+		IsPublic:    &isPublic,
 	})
 }
 
