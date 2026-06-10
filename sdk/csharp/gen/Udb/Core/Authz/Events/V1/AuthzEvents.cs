@@ -93,13 +93,73 @@ namespace udb.core.Authz.Events.V1 {
             "cm90b2J1Zi5UaW1lc3RhbXBSCm9jY3VycmVkQXQ6igGSshmFAQoydWRiLmNv",
             "cmUuYXV0aHouZXZlbnRzLnYxLkFjY2Vzc1N1cmZhY2VVcGRhdGVkRXZlbnQS",
             "I3VkYi5hdXRoei5hY2Nlc3Muc3VyZmFjZS51cGRhdGVkLnYxGgl0ZW5hbnRf",
-            "aWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGVC+wEKHGNvbS51",
-            "ZGIuY29yZS5hdXRoei5ldmVudHMudjFCEEF1dGh6RXZlbnRzUHJvdG9QAVpE",
-            "Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9h",
-            "dXRoei9ldmVudHMvdjE7ZXZlbnRzdjGiAgRVQ0FFqgIYdWRiLmNvcmUuQXV0",
-            "aHouRXZlbnRzLlYxygIYVWRiXENvcmVcQXV0aHpcRXZlbnRzXFYx4gIkVWRi",
-            "XEdQQk1ldGFkYXRhXENvcmVcQXV0aHpcRXZlbnRzXFYx6gIcVWRiOjpDb3Jl",
-            "OjpBdXRoejo6RXZlbnRzOjpWMWIGcHJvdG8z"));
+            "aWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGUi0QMKHVJlbGF0",
+            "aW9uc2hpcFR1cGxlQ2hhbmdlZEV2ZW50EhkKCGV2ZW50X2lkGAEgASgJUgdl",
+            "dmVudElkEhgKB3N1YmplY3QYAiABKAlSB3N1YmplY3QSGgoIcmVsYXRpb24Y",
+            "AyABKAlSCHJlbGF0aW9uEhYKBm9iamVjdBgEIAEoCVIGb2JqZWN0EhsKCXRl",
+            "bmFudF9pZBgFIAEoCVIIdGVuYW50SWQSHQoKcHJvamVjdF9pZBgGIAEoCVIJ",
+            "cHJvamVjdElkEhIKBHZlcmIYByABKAlSBHZlcmISJQoOY29ycmVsYXRpb25f",
+            "aWQYCCABKAlSDWNvcnJlbGF0aW9uSWQSOwoLb2NjdXJyZWRfYXQYCSABKAsy",
+            "Gi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wUgpvY2N1cnJlZEF0OpIBkrIZ",
+            "jQEKNnVkYi5jb3JlLmF1dGh6LmV2ZW50cy52MS5SZWxhdGlvbnNoaXBUdXBs",
+            "ZUNoYW5nZWRFdmVudBIndWRiLmF1dGh6LnJlbGF0aW9uc2hpcC50dXBsZS5j",
+            "aGFuZ2VkLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNl",
+            "MgZzdGFibGUi5AMKHE5hdGl2ZUFjY2Vzc0dyYW50SXNzdWVkRXZlbnQSGQoI",
+            "ZXZlbnRfaWQYASABKAlSB2V2ZW50SWQSIQoMcHJpbmNpcGFsX2lkGAIgASgJ",
+            "UgtwcmluY2lwYWxJZBIbCgl0ZW5hbnRfaWQYAyABKAlSCHRlbmFudElkEh0K",
+            "CnByb2plY3RfaWQYBCABKAlSCXByb2plY3RJZBIlCg5wb2xpY3lfdmVyc2lv",
+            "bhgFIAEoCVINcG9saWN5VmVyc2lvbhIxChRyZWxhdGlvbnNoaXBfdmVyc2lv",
+            "bhgGIAEoCVITcmVsYXRpb25zaGlwVmVyc2lvbhIlCg5jb3JyZWxhdGlvbl9p",
+            "ZBgHIAEoCVINY29ycmVsYXRpb25JZBI7CgtvY2N1cnJlZF9hdBgIIAEoCzIa",
+            "Lmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBSCm9jY3VycmVkQXQ6iwGSshmG",
+            "AQo1dWRiLmNvcmUuYXV0aHouZXZlbnRzLnYxLk5hdGl2ZUFjY2Vzc0dyYW50",
+            "SXNzdWVkRXZlbnQSIXVkYi5hdXRoei5uYXRpdmUuYWNjZXNzLmlzc3VlZC52",
+            "MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl",
+            "IqsDChxOYXRpdmVBY2Nlc3NHcmFudERlbmllZEV2ZW50EhkKCGV2ZW50X2lk",
+            "GAEgASgJUgdldmVudElkEiEKDHByaW5jaXBhbF9pZBgCIAEoCVILcHJpbmNp",
+            "cGFsSWQSGwoJdGVuYW50X2lkGAMgASgJUgh0ZW5hbnRJZBIdCgpwcm9qZWN0",
+            "X2lkGAQgASgJUglwcm9qZWN0SWQSHwoLcmVhc29uX2NvZGUYBSABKAlSCnJl",
+            "YXNvbkNvZGUSJQoOY29ycmVsYXRpb25faWQYBiABKAlSDWNvcnJlbGF0aW9u",
+            "SWQSOwoLb2NjdXJyZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGlt",
+            "ZXN0YW1wUgpvY2N1cnJlZEF0OosBkrIZhgEKNXVkYi5jb3JlLmF1dGh6LmV2",
+            "ZW50cy52MS5OYXRpdmVBY2Nlc3NHcmFudERlbmllZEV2ZW50EiF1ZGIuYXV0",
+            "aHoubmF0aXZlLmFjY2Vzcy5kZW5pZWQudjEaCXRlbmFudF9pZCIIc3RhbmRh",
+            "cmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZSK7AwoXUG9saWN5QnVuZGxlSXNz",
+            "dWVkRXZlbnQSGQoIZXZlbnRfaWQYASABKAlSB2V2ZW50SWQSGwoJdGVuYW50",
+            "X2lkGAIgASgJUgh0ZW5hbnRJZBIdCgpwcm9qZWN0X2lkGAMgASgJUglwcm9q",
+            "ZWN0SWQSJwoPcG9saWN5X3JldmlzaW9uGAQgASgDUg5wb2xpY3lSZXZpc2lv",
+            "bhIzChVyZWxhdGlvbnNoaXBfcmV2aXNpb24YBSABKANSFHJlbGF0aW9uc2hp",
+            "cFJldmlzaW9uEiUKDmNvcnJlbGF0aW9uX2lkGAYgASgJUg1jb3JyZWxhdGlv",
+            "bklkEjsKC29jY3VycmVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRp",
+            "bWVzdGFtcFIKb2NjdXJyZWRBdDqGAZKyGYEBCjB1ZGIuY29yZS5hdXRoei5l",
+            "dmVudHMudjEuUG9saWN5QnVuZGxlSXNzdWVkRXZlbnQSIXVkYi5hdXRoei5w",
+            "b2xpY3kuYnVuZGxlLmlzc3VlZC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoN",
+            "YXRfbGVhc3Rfb25jZTIGc3RhYmxlIqwDChhQb2xpY3lCdW5kbGVSZXZva2Vk",
+            "RXZlbnQSGQoIZXZlbnRfaWQYASABKAlSB2V2ZW50SWQSGwoJdGVuYW50X2lk",
+            "GAIgASgJUgh0ZW5hbnRJZBIdCgpwcm9qZWN0X2lkGAMgASgJUglwcm9qZWN0",
+            "SWQSMgoVYmVsb3dfcG9saWN5X3JldmlzaW9uGAQgASgDUhNiZWxvd1BvbGlj",
+            "eVJldmlzaW9uEhYKBnJlYXNvbhgFIAEoCVIGcmVhc29uEiUKDmNvcnJlbGF0",
+            "aW9uX2lkGAYgASgJUg1jb3JyZWxhdGlvbklkEjsKC29jY3VycmVkX2F0GAcg",
+            "ASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcFIKb2NjdXJyZWRBdDqI",
+            "AZKyGYMBCjF1ZGIuY29yZS5hdXRoei5ldmVudHMudjEuUG9saWN5QnVuZGxl",
+            "UmV2b2tlZEV2ZW50EiJ1ZGIuYXV0aHoucG9saWN5LmJ1bmRsZS5yZXZva2Vk",
+            "LnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFi",
+            "bGUivwMKFFBvbGljeVNpbXVsYXRlZEV2ZW50EhkKCGV2ZW50X2lkGAEgASgJ",
+            "UgdldmVudElkEhsKCXRlbmFudF9pZBgCIAEoCVIIdGVuYW50SWQSHQoKcHJv",
+            "amVjdF9pZBgDIAEoCVIJcHJvamVjdElkEioKEXBvbGljeV92ZXJzaW9uX2lk",
+            "GAQgASgJUg9wb2xpY3lWZXJzaW9uSWQSIQoMc2ltdWxhdGVkX2J5GAUgASgJ",
+            "UgtzaW11bGF0ZWRCeRIdCgpkaWZmX2NvdW50GAYgASgFUglkaWZmQ291bnQS",
+            "JQoOY29ycmVsYXRpb25faWQYByABKAlSDWNvcnJlbGF0aW9uSWQSOwoLb2Nj",
+            "dXJyZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wUgpv",
+            "Y2N1cnJlZEF0On6Sshl6Ci11ZGIuY29yZS5hdXRoei5ldmVudHMudjEuUG9s",
+            "aWN5U2ltdWxhdGVkRXZlbnQSHXVkYi5hdXRoei5wb2xpY3kuc2ltdWxhdGVk",
+            "LnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFi",
+            "bGVC+wEKHGNvbS51ZGIuY29yZS5hdXRoei5ldmVudHMudjFCEEF1dGh6RXZl",
+            "bnRzUHJvdG9QAVpEZ2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dl",
+            "bi91ZGIvY29yZS9hdXRoei9ldmVudHMvdjE7ZXZlbnRzdjGiAgRVQ0FFqgIY",
+            "dWRiLmNvcmUuQXV0aHouRXZlbnRzLlYxygIYVWRiXENvcmVcQXV0aHpcRXZl",
+            "bnRzXFYx4gIkVWRiXEdQQk1ldGFkYXRhXENvcmVcQXV0aHpcRXZlbnRzXFYx",
+            "6gIcVWRiOjpDb3JlOjpBdXRoejo6RXZlbnRzOjpWMWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
@@ -109,7 +169,13 @@ namespace udb.core.Authz.Events.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authz.Events.V1.RoleCreatedEvent), global::udb.core.Authz.Events.V1.RoleCreatedEvent.Parser, new[]{ "EventId", "RoleId", "RoleCode", "TenantId", "CreatedBy", "OccurredAt" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authz.Events.V1.RoleUpdatedEvent), global::udb.core.Authz.Events.V1.RoleUpdatedEvent.Parser, new[]{ "EventId", "RoleId", "RoleCode", "TenantId", "UpdatedBy", "AddedPermissions", "RemovedPermissions", "OccurredAt" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authz.Events.V1.RoleRemovedEvent), global::udb.core.Authz.Events.V1.RoleRemovedEvent.Parser, new[]{ "EventId", "UserRoleId", "UserId", "RoleId", "RoleCode", "TenantId", "RemovedBy", "Reason", "OccurredAt" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authz.Events.V1.AccessSurfaceUpdatedEvent), global::udb.core.Authz.Events.V1.AccessSurfaceUpdatedEvent.Parser, new[]{ "EventId", "PrincipalId", "OldAccessSurface", "NewAccessSurface", "TenantId", "ProjectId", "UpdatedBy", "CorrelationId", "OccurredAt" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authz.Events.V1.AccessSurfaceUpdatedEvent), global::udb.core.Authz.Events.V1.AccessSurfaceUpdatedEvent.Parser, new[]{ "EventId", "PrincipalId", "OldAccessSurface", "NewAccessSurface", "TenantId", "ProjectId", "UpdatedBy", "CorrelationId", "OccurredAt" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authz.Events.V1.RelationshipTupleChangedEvent), global::udb.core.Authz.Events.V1.RelationshipTupleChangedEvent.Parser, new[]{ "EventId", "Subject", "Relation", "Object", "TenantId", "ProjectId", "Verb", "CorrelationId", "OccurredAt" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authz.Events.V1.NativeAccessGrantIssuedEvent), global::udb.core.Authz.Events.V1.NativeAccessGrantIssuedEvent.Parser, new[]{ "EventId", "PrincipalId", "TenantId", "ProjectId", "PolicyVersion", "RelationshipVersion", "CorrelationId", "OccurredAt" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authz.Events.V1.NativeAccessGrantDeniedEvent), global::udb.core.Authz.Events.V1.NativeAccessGrantDeniedEvent.Parser, new[]{ "EventId", "PrincipalId", "TenantId", "ProjectId", "ReasonCode", "CorrelationId", "OccurredAt" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authz.Events.V1.PolicyBundleIssuedEvent), global::udb.core.Authz.Events.V1.PolicyBundleIssuedEvent.Parser, new[]{ "EventId", "TenantId", "ProjectId", "PolicyRevision", "RelationshipRevision", "CorrelationId", "OccurredAt" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authz.Events.V1.PolicyBundleRevokedEvent), global::udb.core.Authz.Events.V1.PolicyBundleRevokedEvent.Parser, new[]{ "EventId", "TenantId", "ProjectId", "BelowPolicyRevision", "Reason", "CorrelationId", "OccurredAt" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authz.Events.V1.PolicySimulatedEvent), global::udb.core.Authz.Events.V1.PolicySimulatedEvent.Parser, new[]{ "EventId", "TenantId", "ProjectId", "PolicyVersionId", "SimulatedBy", "DiffCount", "CorrelationId", "OccurredAt" }, null, null, null, null)
           }));
     }
     #endregion
@@ -3438,6 +3504,2749 @@ namespace udb.core.Authz.Events.V1 {
             break;
           }
           case 74: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Kafka topic: udb.authz.relationship.tuple.changed.v1
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class RelationshipTupleChangedEvent : pb::IMessage<RelationshipTupleChangedEvent>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<RelationshipTupleChangedEvent> _parser = new pb::MessageParser<RelationshipTupleChangedEvent>(() => new RelationshipTupleChangedEvent());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<RelationshipTupleChangedEvent> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Authz.Events.V1.AuthzEventsReflection.Descriptor.MessageTypes[7]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public RelationshipTupleChangedEvent() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public RelationshipTupleChangedEvent(RelationshipTupleChangedEvent other) : this() {
+      eventId_ = other.eventId_;
+      subject_ = other.subject_;
+      relation_ = other.relation_;
+      object_ = other.object_;
+      tenantId_ = other.tenantId_;
+      projectId_ = other.projectId_;
+      verb_ = other.verb_;
+      correlationId_ = other.correlationId_;
+      occurredAt_ = other.occurredAt_ != null ? other.occurredAt_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public RelationshipTupleChangedEvent Clone() {
+      return new RelationshipTupleChangedEvent(this);
+    }
+
+    /// <summary>Field number for the "event_id" field.</summary>
+    public const int EventIdFieldNumber = 1;
+    private string eventId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventId {
+      get { return eventId_; }
+      set {
+        eventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "subject" field.</summary>
+    public const int SubjectFieldNumber = 2;
+    private string subject_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Subject {
+      get { return subject_; }
+      set {
+        subject_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "relation" field.</summary>
+    public const int RelationFieldNumber = 3;
+    private string relation_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Relation {
+      get { return relation_; }
+      set {
+        relation_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "object" field.</summary>
+    public const int ObjectFieldNumber = 4;
+    private string object_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Object {
+      get { return object_; }
+      set {
+        object_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 5;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 6;
+    private string projectId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "verb" field.</summary>
+    public const int VerbFieldNumber = 7;
+    private string verb_ = "";
+    /// <summary>
+    /// upsert, delete
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Verb {
+      get { return verb_; }
+      set {
+        verb_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "correlation_id" field.</summary>
+    public const int CorrelationIdFieldNumber = 8;
+    private string correlationId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string CorrelationId {
+      get { return correlationId_; }
+      set {
+        correlationId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "occurred_at" field.</summary>
+    public const int OccurredAtFieldNumber = 9;
+    private global::Google.Protobuf.WellKnownTypes.Timestamp occurredAt_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Timestamp OccurredAt {
+      get { return occurredAt_; }
+      set {
+        occurredAt_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as RelationshipTupleChangedEvent);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(RelationshipTupleChangedEvent other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (EventId != other.EventId) return false;
+      if (Subject != other.Subject) return false;
+      if (Relation != other.Relation) return false;
+      if (Object != other.Object) return false;
+      if (TenantId != other.TenantId) return false;
+      if (ProjectId != other.ProjectId) return false;
+      if (Verb != other.Verb) return false;
+      if (CorrelationId != other.CorrelationId) return false;
+      if (!object.Equals(OccurredAt, other.OccurredAt)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (EventId.Length != 0) hash ^= EventId.GetHashCode();
+      if (Subject.Length != 0) hash ^= Subject.GetHashCode();
+      if (Relation.Length != 0) hash ^= Relation.GetHashCode();
+      if (Object.Length != 0) hash ^= Object.GetHashCode();
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
+      if (Verb.Length != 0) hash ^= Verb.GetHashCode();
+      if (CorrelationId.Length != 0) hash ^= CorrelationId.GetHashCode();
+      if (occurredAt_ != null) hash ^= OccurredAt.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (Subject.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Subject);
+      }
+      if (Relation.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Relation);
+      }
+      if (Object.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(Object);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ProjectId);
+      }
+      if (Verb.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(Verb);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(74);
+        output.WriteMessage(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (Subject.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Subject);
+      }
+      if (Relation.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Relation);
+      }
+      if (Object.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(Object);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ProjectId);
+      }
+      if (Verb.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(Verb);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(74);
+        output.WriteMessage(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (EventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventId);
+      }
+      if (Subject.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Subject);
+      }
+      if (Relation.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Relation);
+      }
+      if (Object.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Object);
+      }
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
+      }
+      if (Verb.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Verb);
+      }
+      if (CorrelationId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(RelationshipTupleChangedEvent other) {
+      if (other == null) {
+        return;
+      }
+      if (other.EventId.Length != 0) {
+        EventId = other.EventId;
+      }
+      if (other.Subject.Length != 0) {
+        Subject = other.Subject;
+      }
+      if (other.Relation.Length != 0) {
+        Relation = other.Relation;
+      }
+      if (other.Object.Length != 0) {
+        Object = other.Object;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
+      }
+      if (other.Verb.Length != 0) {
+        Verb = other.Verb;
+      }
+      if (other.CorrelationId.Length != 0) {
+        CorrelationId = other.CorrelationId;
+      }
+      if (other.occurredAt_ != null) {
+        if (occurredAt_ == null) {
+          OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+        }
+        OccurredAt.MergeFrom(other.OccurredAt);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            Subject = input.ReadString();
+            break;
+          }
+          case 26: {
+            Relation = input.ReadString();
+            break;
+          }
+          case 34: {
+            Object = input.ReadString();
+            break;
+          }
+          case 42: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 50: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 58: {
+            Verb = input.ReadString();
+            break;
+          }
+          case 66: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 74: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            Subject = input.ReadString();
+            break;
+          }
+          case 26: {
+            Relation = input.ReadString();
+            break;
+          }
+          case 34: {
+            Object = input.ReadString();
+            break;
+          }
+          case 42: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 50: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 58: {
+            Verb = input.ReadString();
+            break;
+          }
+          case 66: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 74: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Kafka topic: udb.authz.native.access.issued.v1
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class NativeAccessGrantIssuedEvent : pb::IMessage<NativeAccessGrantIssuedEvent>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<NativeAccessGrantIssuedEvent> _parser = new pb::MessageParser<NativeAccessGrantIssuedEvent>(() => new NativeAccessGrantIssuedEvent());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<NativeAccessGrantIssuedEvent> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Authz.Events.V1.AuthzEventsReflection.Descriptor.MessageTypes[8]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NativeAccessGrantIssuedEvent() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NativeAccessGrantIssuedEvent(NativeAccessGrantIssuedEvent other) : this() {
+      eventId_ = other.eventId_;
+      principalId_ = other.principalId_;
+      tenantId_ = other.tenantId_;
+      projectId_ = other.projectId_;
+      policyVersion_ = other.policyVersion_;
+      relationshipVersion_ = other.relationshipVersion_;
+      correlationId_ = other.correlationId_;
+      occurredAt_ = other.occurredAt_ != null ? other.occurredAt_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NativeAccessGrantIssuedEvent Clone() {
+      return new NativeAccessGrantIssuedEvent(this);
+    }
+
+    /// <summary>Field number for the "event_id" field.</summary>
+    public const int EventIdFieldNumber = 1;
+    private string eventId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventId {
+      get { return eventId_; }
+      set {
+        eventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "principal_id" field.</summary>
+    public const int PrincipalIdFieldNumber = 2;
+    private string principalId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string PrincipalId {
+      get { return principalId_; }
+      set {
+        principalId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 3;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 4;
+    private string projectId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "policy_version" field.</summary>
+    public const int PolicyVersionFieldNumber = 5;
+    private string policyVersion_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string PolicyVersion {
+      get { return policyVersion_; }
+      set {
+        policyVersion_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "relationship_version" field.</summary>
+    public const int RelationshipVersionFieldNumber = 6;
+    private string relationshipVersion_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RelationshipVersion {
+      get { return relationshipVersion_; }
+      set {
+        relationshipVersion_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "correlation_id" field.</summary>
+    public const int CorrelationIdFieldNumber = 7;
+    private string correlationId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string CorrelationId {
+      get { return correlationId_; }
+      set {
+        correlationId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "occurred_at" field.</summary>
+    public const int OccurredAtFieldNumber = 8;
+    private global::Google.Protobuf.WellKnownTypes.Timestamp occurredAt_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Timestamp OccurredAt {
+      get { return occurredAt_; }
+      set {
+        occurredAt_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as NativeAccessGrantIssuedEvent);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(NativeAccessGrantIssuedEvent other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (EventId != other.EventId) return false;
+      if (PrincipalId != other.PrincipalId) return false;
+      if (TenantId != other.TenantId) return false;
+      if (ProjectId != other.ProjectId) return false;
+      if (PolicyVersion != other.PolicyVersion) return false;
+      if (RelationshipVersion != other.RelationshipVersion) return false;
+      if (CorrelationId != other.CorrelationId) return false;
+      if (!object.Equals(OccurredAt, other.OccurredAt)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (EventId.Length != 0) hash ^= EventId.GetHashCode();
+      if (PrincipalId.Length != 0) hash ^= PrincipalId.GetHashCode();
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
+      if (PolicyVersion.Length != 0) hash ^= PolicyVersion.GetHashCode();
+      if (RelationshipVersion.Length != 0) hash ^= RelationshipVersion.GetHashCode();
+      if (CorrelationId.Length != 0) hash ^= CorrelationId.GetHashCode();
+      if (occurredAt_ != null) hash ^= OccurredAt.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (PrincipalId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(PrincipalId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ProjectId);
+      }
+      if (PolicyVersion.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(PolicyVersion);
+      }
+      if (RelationshipVersion.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(RelationshipVersion);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (PrincipalId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(PrincipalId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ProjectId);
+      }
+      if (PolicyVersion.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(PolicyVersion);
+      }
+      if (RelationshipVersion.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(RelationshipVersion);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (EventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventId);
+      }
+      if (PrincipalId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(PrincipalId);
+      }
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
+      }
+      if (PolicyVersion.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(PolicyVersion);
+      }
+      if (RelationshipVersion.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RelationshipVersion);
+      }
+      if (CorrelationId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(NativeAccessGrantIssuedEvent other) {
+      if (other == null) {
+        return;
+      }
+      if (other.EventId.Length != 0) {
+        EventId = other.EventId;
+      }
+      if (other.PrincipalId.Length != 0) {
+        PrincipalId = other.PrincipalId;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
+      }
+      if (other.PolicyVersion.Length != 0) {
+        PolicyVersion = other.PolicyVersion;
+      }
+      if (other.RelationshipVersion.Length != 0) {
+        RelationshipVersion = other.RelationshipVersion;
+      }
+      if (other.CorrelationId.Length != 0) {
+        CorrelationId = other.CorrelationId;
+      }
+      if (other.occurredAt_ != null) {
+        if (occurredAt_ == null) {
+          OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+        }
+        OccurredAt.MergeFrom(other.OccurredAt);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            PrincipalId = input.ReadString();
+            break;
+          }
+          case 26: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 34: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 42: {
+            PolicyVersion = input.ReadString();
+            break;
+          }
+          case 50: {
+            RelationshipVersion = input.ReadString();
+            break;
+          }
+          case 58: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 66: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            PrincipalId = input.ReadString();
+            break;
+          }
+          case 26: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 34: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 42: {
+            PolicyVersion = input.ReadString();
+            break;
+          }
+          case 50: {
+            RelationshipVersion = input.ReadString();
+            break;
+          }
+          case 58: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 66: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Kafka topic: udb.authz.native.access.denied.v1
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class NativeAccessGrantDeniedEvent : pb::IMessage<NativeAccessGrantDeniedEvent>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<NativeAccessGrantDeniedEvent> _parser = new pb::MessageParser<NativeAccessGrantDeniedEvent>(() => new NativeAccessGrantDeniedEvent());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<NativeAccessGrantDeniedEvent> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Authz.Events.V1.AuthzEventsReflection.Descriptor.MessageTypes[9]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NativeAccessGrantDeniedEvent() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NativeAccessGrantDeniedEvent(NativeAccessGrantDeniedEvent other) : this() {
+      eventId_ = other.eventId_;
+      principalId_ = other.principalId_;
+      tenantId_ = other.tenantId_;
+      projectId_ = other.projectId_;
+      reasonCode_ = other.reasonCode_;
+      correlationId_ = other.correlationId_;
+      occurredAt_ = other.occurredAt_ != null ? other.occurredAt_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NativeAccessGrantDeniedEvent Clone() {
+      return new NativeAccessGrantDeniedEvent(this);
+    }
+
+    /// <summary>Field number for the "event_id" field.</summary>
+    public const int EventIdFieldNumber = 1;
+    private string eventId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventId {
+      get { return eventId_; }
+      set {
+        eventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "principal_id" field.</summary>
+    public const int PrincipalIdFieldNumber = 2;
+    private string principalId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string PrincipalId {
+      get { return principalId_; }
+      set {
+        principalId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 3;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 4;
+    private string projectId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "reason_code" field.</summary>
+    public const int ReasonCodeFieldNumber = 5;
+    private string reasonCode_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ReasonCode {
+      get { return reasonCode_; }
+      set {
+        reasonCode_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "correlation_id" field.</summary>
+    public const int CorrelationIdFieldNumber = 6;
+    private string correlationId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string CorrelationId {
+      get { return correlationId_; }
+      set {
+        correlationId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "occurred_at" field.</summary>
+    public const int OccurredAtFieldNumber = 7;
+    private global::Google.Protobuf.WellKnownTypes.Timestamp occurredAt_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Timestamp OccurredAt {
+      get { return occurredAt_; }
+      set {
+        occurredAt_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as NativeAccessGrantDeniedEvent);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(NativeAccessGrantDeniedEvent other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (EventId != other.EventId) return false;
+      if (PrincipalId != other.PrincipalId) return false;
+      if (TenantId != other.TenantId) return false;
+      if (ProjectId != other.ProjectId) return false;
+      if (ReasonCode != other.ReasonCode) return false;
+      if (CorrelationId != other.CorrelationId) return false;
+      if (!object.Equals(OccurredAt, other.OccurredAt)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (EventId.Length != 0) hash ^= EventId.GetHashCode();
+      if (PrincipalId.Length != 0) hash ^= PrincipalId.GetHashCode();
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
+      if (ReasonCode.Length != 0) hash ^= ReasonCode.GetHashCode();
+      if (CorrelationId.Length != 0) hash ^= CorrelationId.GetHashCode();
+      if (occurredAt_ != null) hash ^= OccurredAt.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (PrincipalId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(PrincipalId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ProjectId);
+      }
+      if (ReasonCode.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(ReasonCode);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(58);
+        output.WriteMessage(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (PrincipalId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(PrincipalId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ProjectId);
+      }
+      if (ReasonCode.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(ReasonCode);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(58);
+        output.WriteMessage(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (EventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventId);
+      }
+      if (PrincipalId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(PrincipalId);
+      }
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
+      }
+      if (ReasonCode.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ReasonCode);
+      }
+      if (CorrelationId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(NativeAccessGrantDeniedEvent other) {
+      if (other == null) {
+        return;
+      }
+      if (other.EventId.Length != 0) {
+        EventId = other.EventId;
+      }
+      if (other.PrincipalId.Length != 0) {
+        PrincipalId = other.PrincipalId;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
+      }
+      if (other.ReasonCode.Length != 0) {
+        ReasonCode = other.ReasonCode;
+      }
+      if (other.CorrelationId.Length != 0) {
+        CorrelationId = other.CorrelationId;
+      }
+      if (other.occurredAt_ != null) {
+        if (occurredAt_ == null) {
+          OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+        }
+        OccurredAt.MergeFrom(other.OccurredAt);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            PrincipalId = input.ReadString();
+            break;
+          }
+          case 26: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 34: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 42: {
+            ReasonCode = input.ReadString();
+            break;
+          }
+          case 50: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 58: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            PrincipalId = input.ReadString();
+            break;
+          }
+          case 26: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 34: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 42: {
+            ReasonCode = input.ReadString();
+            break;
+          }
+          case 50: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 58: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Kafka topic: udb.authz.policy.bundle.issued.v1
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class PolicyBundleIssuedEvent : pb::IMessage<PolicyBundleIssuedEvent>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<PolicyBundleIssuedEvent> _parser = new pb::MessageParser<PolicyBundleIssuedEvent>(() => new PolicyBundleIssuedEvent());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<PolicyBundleIssuedEvent> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Authz.Events.V1.AuthzEventsReflection.Descriptor.MessageTypes[10]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PolicyBundleIssuedEvent() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PolicyBundleIssuedEvent(PolicyBundleIssuedEvent other) : this() {
+      eventId_ = other.eventId_;
+      tenantId_ = other.tenantId_;
+      projectId_ = other.projectId_;
+      policyRevision_ = other.policyRevision_;
+      relationshipRevision_ = other.relationshipRevision_;
+      correlationId_ = other.correlationId_;
+      occurredAt_ = other.occurredAt_ != null ? other.occurredAt_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PolicyBundleIssuedEvent Clone() {
+      return new PolicyBundleIssuedEvent(this);
+    }
+
+    /// <summary>Field number for the "event_id" field.</summary>
+    public const int EventIdFieldNumber = 1;
+    private string eventId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventId {
+      get { return eventId_; }
+      set {
+        eventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 2;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 3;
+    private string projectId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "policy_revision" field.</summary>
+    public const int PolicyRevisionFieldNumber = 4;
+    private long policyRevision_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long PolicyRevision {
+      get { return policyRevision_; }
+      set {
+        policyRevision_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "relationship_revision" field.</summary>
+    public const int RelationshipRevisionFieldNumber = 5;
+    private long relationshipRevision_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long RelationshipRevision {
+      get { return relationshipRevision_; }
+      set {
+        relationshipRevision_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "correlation_id" field.</summary>
+    public const int CorrelationIdFieldNumber = 6;
+    private string correlationId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string CorrelationId {
+      get { return correlationId_; }
+      set {
+        correlationId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "occurred_at" field.</summary>
+    public const int OccurredAtFieldNumber = 7;
+    private global::Google.Protobuf.WellKnownTypes.Timestamp occurredAt_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Timestamp OccurredAt {
+      get { return occurredAt_; }
+      set {
+        occurredAt_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as PolicyBundleIssuedEvent);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(PolicyBundleIssuedEvent other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (EventId != other.EventId) return false;
+      if (TenantId != other.TenantId) return false;
+      if (ProjectId != other.ProjectId) return false;
+      if (PolicyRevision != other.PolicyRevision) return false;
+      if (RelationshipRevision != other.RelationshipRevision) return false;
+      if (CorrelationId != other.CorrelationId) return false;
+      if (!object.Equals(OccurredAt, other.OccurredAt)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (EventId.Length != 0) hash ^= EventId.GetHashCode();
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
+      if (PolicyRevision != 0L) hash ^= PolicyRevision.GetHashCode();
+      if (RelationshipRevision != 0L) hash ^= RelationshipRevision.GetHashCode();
+      if (CorrelationId.Length != 0) hash ^= CorrelationId.GetHashCode();
+      if (occurredAt_ != null) hash ^= OccurredAt.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(ProjectId);
+      }
+      if (PolicyRevision != 0L) {
+        output.WriteRawTag(32);
+        output.WriteInt64(PolicyRevision);
+      }
+      if (RelationshipRevision != 0L) {
+        output.WriteRawTag(40);
+        output.WriteInt64(RelationshipRevision);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(58);
+        output.WriteMessage(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(ProjectId);
+      }
+      if (PolicyRevision != 0L) {
+        output.WriteRawTag(32);
+        output.WriteInt64(PolicyRevision);
+      }
+      if (RelationshipRevision != 0L) {
+        output.WriteRawTag(40);
+        output.WriteInt64(RelationshipRevision);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(58);
+        output.WriteMessage(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (EventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventId);
+      }
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
+      }
+      if (PolicyRevision != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(PolicyRevision);
+      }
+      if (RelationshipRevision != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(RelationshipRevision);
+      }
+      if (CorrelationId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(PolicyBundleIssuedEvent other) {
+      if (other == null) {
+        return;
+      }
+      if (other.EventId.Length != 0) {
+        EventId = other.EventId;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
+      }
+      if (other.PolicyRevision != 0L) {
+        PolicyRevision = other.PolicyRevision;
+      }
+      if (other.RelationshipRevision != 0L) {
+        RelationshipRevision = other.RelationshipRevision;
+      }
+      if (other.CorrelationId.Length != 0) {
+        CorrelationId = other.CorrelationId;
+      }
+      if (other.occurredAt_ != null) {
+        if (occurredAt_ == null) {
+          OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+        }
+        OccurredAt.MergeFrom(other.OccurredAt);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 26: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 32: {
+            PolicyRevision = input.ReadInt64();
+            break;
+          }
+          case 40: {
+            RelationshipRevision = input.ReadInt64();
+            break;
+          }
+          case 50: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 58: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 26: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 32: {
+            PolicyRevision = input.ReadInt64();
+            break;
+          }
+          case 40: {
+            RelationshipRevision = input.ReadInt64();
+            break;
+          }
+          case 50: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 58: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Kafka topic: udb.authz.policy.bundle.revoked.v1
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class PolicyBundleRevokedEvent : pb::IMessage<PolicyBundleRevokedEvent>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<PolicyBundleRevokedEvent> _parser = new pb::MessageParser<PolicyBundleRevokedEvent>(() => new PolicyBundleRevokedEvent());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<PolicyBundleRevokedEvent> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Authz.Events.V1.AuthzEventsReflection.Descriptor.MessageTypes[11]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PolicyBundleRevokedEvent() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PolicyBundleRevokedEvent(PolicyBundleRevokedEvent other) : this() {
+      eventId_ = other.eventId_;
+      tenantId_ = other.tenantId_;
+      projectId_ = other.projectId_;
+      belowPolicyRevision_ = other.belowPolicyRevision_;
+      reason_ = other.reason_;
+      correlationId_ = other.correlationId_;
+      occurredAt_ = other.occurredAt_ != null ? other.occurredAt_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PolicyBundleRevokedEvent Clone() {
+      return new PolicyBundleRevokedEvent(this);
+    }
+
+    /// <summary>Field number for the "event_id" field.</summary>
+    public const int EventIdFieldNumber = 1;
+    private string eventId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventId {
+      get { return eventId_; }
+      set {
+        eventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 2;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 3;
+    private string projectId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "below_policy_revision" field.</summary>
+    public const int BelowPolicyRevisionFieldNumber = 4;
+    private long belowPolicyRevision_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long BelowPolicyRevision {
+      get { return belowPolicyRevision_; }
+      set {
+        belowPolicyRevision_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "reason" field.</summary>
+    public const int ReasonFieldNumber = 5;
+    private string reason_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Reason {
+      get { return reason_; }
+      set {
+        reason_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "correlation_id" field.</summary>
+    public const int CorrelationIdFieldNumber = 6;
+    private string correlationId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string CorrelationId {
+      get { return correlationId_; }
+      set {
+        correlationId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "occurred_at" field.</summary>
+    public const int OccurredAtFieldNumber = 7;
+    private global::Google.Protobuf.WellKnownTypes.Timestamp occurredAt_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Timestamp OccurredAt {
+      get { return occurredAt_; }
+      set {
+        occurredAt_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as PolicyBundleRevokedEvent);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(PolicyBundleRevokedEvent other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (EventId != other.EventId) return false;
+      if (TenantId != other.TenantId) return false;
+      if (ProjectId != other.ProjectId) return false;
+      if (BelowPolicyRevision != other.BelowPolicyRevision) return false;
+      if (Reason != other.Reason) return false;
+      if (CorrelationId != other.CorrelationId) return false;
+      if (!object.Equals(OccurredAt, other.OccurredAt)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (EventId.Length != 0) hash ^= EventId.GetHashCode();
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
+      if (BelowPolicyRevision != 0L) hash ^= BelowPolicyRevision.GetHashCode();
+      if (Reason.Length != 0) hash ^= Reason.GetHashCode();
+      if (CorrelationId.Length != 0) hash ^= CorrelationId.GetHashCode();
+      if (occurredAt_ != null) hash ^= OccurredAt.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(ProjectId);
+      }
+      if (BelowPolicyRevision != 0L) {
+        output.WriteRawTag(32);
+        output.WriteInt64(BelowPolicyRevision);
+      }
+      if (Reason.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(Reason);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(58);
+        output.WriteMessage(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(ProjectId);
+      }
+      if (BelowPolicyRevision != 0L) {
+        output.WriteRawTag(32);
+        output.WriteInt64(BelowPolicyRevision);
+      }
+      if (Reason.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(Reason);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(58);
+        output.WriteMessage(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (EventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventId);
+      }
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
+      }
+      if (BelowPolicyRevision != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(BelowPolicyRevision);
+      }
+      if (Reason.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Reason);
+      }
+      if (CorrelationId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(PolicyBundleRevokedEvent other) {
+      if (other == null) {
+        return;
+      }
+      if (other.EventId.Length != 0) {
+        EventId = other.EventId;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
+      }
+      if (other.BelowPolicyRevision != 0L) {
+        BelowPolicyRevision = other.BelowPolicyRevision;
+      }
+      if (other.Reason.Length != 0) {
+        Reason = other.Reason;
+      }
+      if (other.CorrelationId.Length != 0) {
+        CorrelationId = other.CorrelationId;
+      }
+      if (other.occurredAt_ != null) {
+        if (occurredAt_ == null) {
+          OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+        }
+        OccurredAt.MergeFrom(other.OccurredAt);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 26: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 32: {
+            BelowPolicyRevision = input.ReadInt64();
+            break;
+          }
+          case 42: {
+            Reason = input.ReadString();
+            break;
+          }
+          case 50: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 58: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 26: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 32: {
+            BelowPolicyRevision = input.ReadInt64();
+            break;
+          }
+          case 42: {
+            Reason = input.ReadString();
+            break;
+          }
+          case 50: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 58: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Kafka topic: udb.authz.policy.simulated.v1
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class PolicySimulatedEvent : pb::IMessage<PolicySimulatedEvent>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<PolicySimulatedEvent> _parser = new pb::MessageParser<PolicySimulatedEvent>(() => new PolicySimulatedEvent());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<PolicySimulatedEvent> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Authz.Events.V1.AuthzEventsReflection.Descriptor.MessageTypes[12]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PolicySimulatedEvent() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PolicySimulatedEvent(PolicySimulatedEvent other) : this() {
+      eventId_ = other.eventId_;
+      tenantId_ = other.tenantId_;
+      projectId_ = other.projectId_;
+      policyVersionId_ = other.policyVersionId_;
+      simulatedBy_ = other.simulatedBy_;
+      diffCount_ = other.diffCount_;
+      correlationId_ = other.correlationId_;
+      occurredAt_ = other.occurredAt_ != null ? other.occurredAt_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PolicySimulatedEvent Clone() {
+      return new PolicySimulatedEvent(this);
+    }
+
+    /// <summary>Field number for the "event_id" field.</summary>
+    public const int EventIdFieldNumber = 1;
+    private string eventId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventId {
+      get { return eventId_; }
+      set {
+        eventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 2;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 3;
+    private string projectId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "policy_version_id" field.</summary>
+    public const int PolicyVersionIdFieldNumber = 4;
+    private string policyVersionId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string PolicyVersionId {
+      get { return policyVersionId_; }
+      set {
+        policyVersionId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "simulated_by" field.</summary>
+    public const int SimulatedByFieldNumber = 5;
+    private string simulatedBy_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string SimulatedBy {
+      get { return simulatedBy_; }
+      set {
+        simulatedBy_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "diff_count" field.</summary>
+    public const int DiffCountFieldNumber = 6;
+    private int diffCount_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int DiffCount {
+      get { return diffCount_; }
+      set {
+        diffCount_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "correlation_id" field.</summary>
+    public const int CorrelationIdFieldNumber = 7;
+    private string correlationId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string CorrelationId {
+      get { return correlationId_; }
+      set {
+        correlationId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "occurred_at" field.</summary>
+    public const int OccurredAtFieldNumber = 8;
+    private global::Google.Protobuf.WellKnownTypes.Timestamp occurredAt_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Timestamp OccurredAt {
+      get { return occurredAt_; }
+      set {
+        occurredAt_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as PolicySimulatedEvent);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(PolicySimulatedEvent other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (EventId != other.EventId) return false;
+      if (TenantId != other.TenantId) return false;
+      if (ProjectId != other.ProjectId) return false;
+      if (PolicyVersionId != other.PolicyVersionId) return false;
+      if (SimulatedBy != other.SimulatedBy) return false;
+      if (DiffCount != other.DiffCount) return false;
+      if (CorrelationId != other.CorrelationId) return false;
+      if (!object.Equals(OccurredAt, other.OccurredAt)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (EventId.Length != 0) hash ^= EventId.GetHashCode();
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
+      if (PolicyVersionId.Length != 0) hash ^= PolicyVersionId.GetHashCode();
+      if (SimulatedBy.Length != 0) hash ^= SimulatedBy.GetHashCode();
+      if (DiffCount != 0) hash ^= DiffCount.GetHashCode();
+      if (CorrelationId.Length != 0) hash ^= CorrelationId.GetHashCode();
+      if (occurredAt_ != null) hash ^= OccurredAt.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(ProjectId);
+      }
+      if (PolicyVersionId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(PolicyVersionId);
+      }
+      if (SimulatedBy.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(SimulatedBy);
+      }
+      if (DiffCount != 0) {
+        output.WriteRawTag(48);
+        output.WriteInt32(DiffCount);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(ProjectId);
+      }
+      if (PolicyVersionId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(PolicyVersionId);
+      }
+      if (SimulatedBy.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(SimulatedBy);
+      }
+      if (DiffCount != 0) {
+        output.WriteRawTag(48);
+        output.WriteInt32(DiffCount);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (EventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventId);
+      }
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
+      }
+      if (PolicyVersionId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(PolicyVersionId);
+      }
+      if (SimulatedBy.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(SimulatedBy);
+      }
+      if (DiffCount != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(DiffCount);
+      }
+      if (CorrelationId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(PolicySimulatedEvent other) {
+      if (other == null) {
+        return;
+      }
+      if (other.EventId.Length != 0) {
+        EventId = other.EventId;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
+      }
+      if (other.PolicyVersionId.Length != 0) {
+        PolicyVersionId = other.PolicyVersionId;
+      }
+      if (other.SimulatedBy.Length != 0) {
+        SimulatedBy = other.SimulatedBy;
+      }
+      if (other.DiffCount != 0) {
+        DiffCount = other.DiffCount;
+      }
+      if (other.CorrelationId.Length != 0) {
+        CorrelationId = other.CorrelationId;
+      }
+      if (other.occurredAt_ != null) {
+        if (occurredAt_ == null) {
+          OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+        }
+        OccurredAt.MergeFrom(other.OccurredAt);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 26: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 34: {
+            PolicyVersionId = input.ReadString();
+            break;
+          }
+          case 42: {
+            SimulatedBy = input.ReadString();
+            break;
+          }
+          case 48: {
+            DiffCount = input.ReadInt32();
+            break;
+          }
+          case 58: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 66: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 26: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 34: {
+            PolicyVersionId = input.ReadString();
+            break;
+          }
+          case 42: {
+            SimulatedBy = input.ReadString();
+            break;
+          }
+          case 48: {
+            DiffCount = input.ReadInt32();
+            break;
+          }
+          case 58: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 66: {
             if (occurredAt_ == null) {
               OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
             }

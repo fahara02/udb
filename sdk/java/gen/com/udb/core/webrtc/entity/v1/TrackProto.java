@@ -45,7 +45,7 @@ public final class TrackProto extends com.google.protobuf.GeneratedFile {
       "mon/v1/db.proto\032!udb/core/common/v1/secu" +
       "rity.proto\032\036udb/core/common/v1/types.pro" +
       "to\032%udb/core/webrtc/entity/v1/enums.prot" +
-      "o\"\350\t\n\005Track\022F\n\010track_id\030\001 \001(\tB+\202\267\030\'\n\010tra" +
+      "o\"\211\n\n\005Track\022F\n\010track_id\030\001 \001(\tB+\202\267\030\'\n\010tra" +
       "ck_id\022\004UUID\030\001(\001:\021gen_random_uuid()R\007trac" +
       "kId\022.\n\007room_id\030\002 \001(\tB\025\202\267\030\021\n\007room_id\022\004UUI" +
       "D\030\001R\006roomId\022.\n\007peer_id\030\003 \001(\tB\025\202\267\030\021\n\007peer" +
@@ -63,7 +63,7 @@ public final class TrackProto extends com.google.protobuf.GeneratedFile {
       "etadatax\001R\010metadata\022\202\001\n\naudit_info\030\n \001(\013" +
       "2\035.udb.core.common.v1.AuditInfoBD\202\267\030@\n\na" +
       "udit_info\022\005JSONB\030\001:\013\'{}\'::jsonbZ\032Audit t" +
-      "rail stored as JSONx\001R\tauditInfo:\371\003\372\266\030\327\002" +
+      "rail stored as JSONx\001R\tauditInfo:\232\004\372\266\030\377\002" +
       "\n\006tracks\022\nudb_webrtc\030\003 \001*/WebRTC media a" +
       "nd data tracks published by peers8\001@\001b\227\001" +
       "\n\027tracks_tenant_isolation\032z(tenant_id::t" +
@@ -71,19 +71,19 @@ public final class TrackProto extends com.google.protobuf.GeneratedFile {
       "t_id\', true) OR current_setting(\'app.pla" +
       "tform_admin\', true) = \'true\')(\001h\001\212\001!\n\017id" +
       "x_tracks_room\022\005BTREEZ\007room_id\212\001!\n\017idx_tr" +
-      "acks_peer\022\005BTREEZ\007peer_id\362\001\025udb.webrtc.t" +
-      "racks.cdc\372\001\013webrtc:read\212\262\031\230\001\n\006tenant\032\tte" +
+      "acks_peer\022\005BTREEZ\007peer_id\212\001%\n\021idx_tracks" +
+      "_tenant\022\005BTREEZ\ttenant_id\362\001\025udb.webrtc.t" +
+      "racks.cdc\372\001\013webrtc:read\212\262\031\221\001\n\006tenant\032\tte" +
       "nant_id*4tenant_id = current_setting(\'ap" +
-      "p.current_tenant_id\')2\013soft_delete:\022webr" +
-      "tc.operational@\373\023H\002R\006tenantZ\010standardr\025t" +
-      "enant.data_residencyB\373\001\n\035com.udb.core.we" +
-      "brtc.entity.v1B\nTrackProtoP\001ZEgithub.com" +
-      "/fahara02/udb/sdk/go/gen/udb/core/webrtc" +
-      "/entity/v1;entityv1\242\002\004UCWE\252\002\031udb.core.We" +
-      "brtc.Entity.V1\312\002\031Udb\\Core\\Webrtc\\Entity\\" +
-      "V1\342\002%Udb\\GPBMetadata\\Core\\Webrtc\\Entity\\" +
-      "V1\352\002\035Udb::Core::Webrtc::Entity::V1b\006prot" +
-      "o3"
+      "p.current_tenant_id\')2\004none:\022webrtc.oper" +
+      "ational@\373\023H\002R\006tenantZ\010standardr\025tenant.d" +
+      "ata_residencyB\373\001\n\035com.udb.core.webrtc.en" +
+      "tity.v1B\nTrackProtoP\001ZEgithub.com/fahara" +
+      "02/udb/sdk/go/gen/udb/core/webrtc/entity" +
+      "/v1;entityv1\242\002\004UCWE\252\002\031udb.core.Webrtc.En" +
+      "tity.V1\312\002\031Udb\\Core\\Webrtc\\Entity\\V1\342\002%Ud" +
+      "b\\GPBMetadata\\Core\\Webrtc\\Entity\\V1\352\002\035Ud" +
+      "b::Core::Webrtc::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

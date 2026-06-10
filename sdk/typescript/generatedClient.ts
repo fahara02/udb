@@ -256,6 +256,11 @@ export class UdbCore {
     this.loaded = grpc.loadPackageDefinition(definition);
   }
 
+  setCredentials(credentials: { bearerToken?: string; apiKey?: string }): void {
+    if ("bearerToken" in credentials) this.opts.bearerToken = credentials.bearerToken;
+    if ("apiKey" in credentials) this.opts.apiKey = credentials.apiKey;
+  }
+
   /** Lazily construct (and cache) the dynamic stub for a service full-name. */
   private stub(fullName: string): any {
     let stub = this.stubs.get(fullName);
@@ -318,9 +323,12 @@ export class UdbCore {
     fullName: string,
     method: string,
     request: any,
-    readOnly: boolean,
+    readOnlyOrCall: boolean | CallOptions = isReadOnlyRpcName(method),
     call?: CallOptions,
   ): Promise<TRes> {
+    const readOnly =
+      typeof readOnlyOrCall === "boolean" ? readOnlyOrCall : isReadOnlyRpcName(method);
+    if (typeof readOnlyOrCall !== "boolean") call = readOnlyOrCall;
     const stub = this.stub(fullName);
     const retryEnabled = !call?.noRetry;
     let attempt = 0;

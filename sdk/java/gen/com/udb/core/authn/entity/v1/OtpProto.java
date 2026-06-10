@@ -44,7 +44,7 @@ public final class OtpProto extends com.google.protobuf.GeneratedFile {
       "b.core.authn.entity.v1\032\037google/protobuf/" +
       "timestamp.proto\032$udb/core/authn/entity/v" +
       "1/enums.proto\032\033udb/core/common/v1/db.pro" +
-      "to\032!udb/core/common/v1/security.proto\"\320\016" +
+      "to\032!udb/core/common/v1/security.proto\"\272\021" +
       "\n\003OTP\022@\n\006otp_id\030\001 \001(\tB)\202\267\030%\n\006otp_id\022\004UUI" +
       "D\030\001(\001:\021gen_random_uuid()R\005otpId\022\252\001\n\007user" +
       "_id\030\002 \001(\tB\220\001\202\267\030\213\001\n\007user_id\022\004UUID\030\001J.\n\005us" +
@@ -53,9 +53,10 @@ public final class OtpProto extends com.google.protobuf.GeneratedFile {
       "_typeZ\035FK to udb_authn.users.user_idR\006us" +
       "erId\022[\n\010otp_type\030\003 \001(\0162!.udb.core.authn." +
       "entity.v1.OTPTypeB\035\202\267\030\031\n\010otp_type\022\013VARCH" +
-      "AR(30)\030\001R\007otpType\022_\n\tcode_hash\030\004 \001(\tBB\202\267" +
-      "\030>\n\tcode_hash\022\014VARCHAR(128)\030\001Z!Keyed HMA" +
-      "C digest of the OTP codeR\010codeHash\022\216\001\n\020d" +
+      "AR(30)\030\001R\007otpType\022\206\001\n\tcode_hash\030\004 \001(\tBi\350" +
+      "\265\030\001\360\265\030\001\202\267\030>\n\tcode_hash\022\014VARCHAR(128)\030\001Z!" +
+      "Keyed HMAC digest of the OTP code\212\267\030\033\010\004\020" +
+      "\001\030\0032\013hmac-sha256J\006tenantR\010codeHash\022\216\001\n\020d" +
       "elivery_channel\030\005 \001(\tBc\202\267\030_\n\020delivery_ch" +
       "annel\022\013VARCHAR(10)\030\001:\007\'email\'Z3Delivery " +
       "channel such as email, sms, push, or voi" +
@@ -86,19 +87,27 @@ public final class OtpProto extends com.google.protobuf.GeneratedFile {
       "}\202\267\030y\n\016correlation_id\022\014VARCHAR(120)R \n\027i" +
       "dx_otps_correlation_id\022\005BTREEZ7Request o" +
       "r workflow correlation id that issued th" +
-      "is OTPR\rcorrelationId:\320\001\372\266\030r\n\004otps\022\tudb_" +
-      "authn\030\003 \001*QEmail OTP records for 2FA, ve" +
-      "rification, password reset, and sensitiv" +
-      "e operations\352\001\007primary\212\262\031V\n\006global2\013soft" +
-      "_delete:\021authn.operational@\373\023H\002R\006tenantZ" +
-      "\010standardr\025tenant.data_residencyB\363\001\n\034com" +
-      ".udb.core.authn.entity.v1B\010OtpProtoP\001ZDg" +
-      "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
-      "re/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030udb" +
-      ".core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\E" +
-      "ntity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\En" +
-      "tity\\V1\352\002\034Udb::Core::Authn::Entity::V1b\006" +
-      "proto3"
+      "is OTPR\rcorrelationId\022\214\001\n\ttenant_id\030\016 \001(" +
+      "\tBo\202\267\030k\n\ttenant_id\022\014VARCHAR(120)R\033\n\022idx_" +
+      "otps_tenant_id\022\005BTREEZ3Tenant boundary (" +
+      "denormalized from the owning user)R\010tena" +
+      "ntId:\203\003\372\266\030\351\001\n\004otps\022\tudb_authn\030\003 \001*QEmail" +
+      " OTP records for 2FA, verification, pass" +
+      "word reset, and sensitive operations@\001bs" +
+      "\n\020tenant_isolation\032](tenant_id IS NULL O" +
+      "R tenant_id::text = current_setting(\'app" +
+      ".current_tenant_id\', true)::text)(\001\352\001\007pr" +
+      "imary\212\262\031\220\001\n\006tenant\032\ttenant_id*4tenant_id" +
+      " = current_setting(\'app.current_tenant_i" +
+      "d\')2\004none:\021authn.operational@\373\023H\002R\006tenan" +
+      "tZ\010standardr\025tenant.data_residencyB\363\001\n\034c" +
+      "om.udb.core.authn.entity.v1B\010OtpProtoP\001Z" +
+      "Dgithub.com/fahara02/udb/sdk/go/gen/udb/" +
+      "core/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030u" +
+      "db.core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn" +
+      "\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\" +
+      "Entity\\V1\352\002\034Udb::Core::Authn::Entity::V1" +
+      "b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -113,7 +122,7 @@ public final class OtpProto extends com.google.protobuf.GeneratedFile {
     internal_static_udb_core_authn_entity_v1_OTP_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_entity_v1_OTP_descriptor,
-        new java.lang.String[] { "OtpId", "UserId", "OtpType", "CodeHash", "DeliveryChannel", "DeliveryAddress", "Status", "AttemptCount", "SupersededById", "ExpiresAt", "UsedAt", "CreatedAt", "CorrelationId", });
+        new java.lang.String[] { "OtpId", "UserId", "OtpType", "CodeHash", "DeliveryChannel", "DeliveryAddress", "Status", "AttemptCount", "SupersededById", "ExpiresAt", "UsedAt", "CreatedAt", "CorrelationId", "TenantId", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.authn.entity.v1.EnumsProto.getDescriptor();
@@ -121,9 +130,12 @@ public final class OtpProto extends com.google.protobuf.GeneratedFile {
     com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.dbColumnSecurity);
     registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
+    registry.add(com.udb.core.common.v1.SecurityProto.logRedacted);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);
     registry.add(com.udb.core.common.v1.DbProto.pgTable);
+    registry.add(com.udb.core.common.v1.SecurityProto.sensitive);
     com.google.protobuf.Descriptors.FileDescriptor
         .internalUpdateFileDescriptor(descriptor, registry);
   }

@@ -1847,7 +1847,10 @@ mod tests {
     fn unattended_review_required_artifact_aborts_via_wired_gate_before_execute() {
         let runtime = DataBrokerRuntime::planning_only();
         let mut report = StartupLifecycleReport::default();
-        let artifacts = vec![safe_bootstrap_artifact(), review_required_bootstrap_artifact()];
+        let artifacts = vec![
+            safe_bootstrap_artifact(),
+            review_required_bootstrap_artifact(),
+        ];
 
         // Partitioning first: the review-required artifact lands in the held
         // set; the safe artifact does not.

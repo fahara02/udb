@@ -554,10 +554,7 @@ impl JsonSystemRecordAdapter for QdrantCanonicalStore {
         self.set_json(key, value).await
     }
 
-    async fn get_migration_run_row(
-        &self,
-        key: &str,
-    ) -> SystemStoreResult<Option<MigrationRunRow>> {
+    async fn get_migration_run_row(&self, key: &str) -> SystemStoreResult<Option<MigrationRunRow>> {
         self.get_json(key).await
     }
 

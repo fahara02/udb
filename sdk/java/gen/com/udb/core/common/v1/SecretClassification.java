@@ -51,6 +51,15 @@ public enum SecretClassification
    * <code>SECRET_CLASSIFICATION_OPERATIONAL = 9;</code>
    */
   SECRET_CLASSIFICATION_OPERATIONAL(9),
+  /**
+   * <pre>
+   * Asymmetric private key material (e.g. SAML SP signing key). Referenced by the
+   * idp proto's db_column_security; added here to keep the contract compiling.
+   * </pre>
+   *
+   * <code>SECRET_CLASSIFICATION_PRIVATE_KEY = 10;</code>
+   */
+  SECRET_CLASSIFICATION_PRIVATE_KEY(10),
   UNRECOGNIZED(-1),
   ;
 
@@ -103,6 +112,15 @@ public enum SecretClassification
    * <code>SECRET_CLASSIFICATION_OPERATIONAL = 9;</code>
    */
   public static final int SECRET_CLASSIFICATION_OPERATIONAL_VALUE = 9;
+  /**
+   * <pre>
+   * Asymmetric private key material (e.g. SAML SP signing key). Referenced by the
+   * idp proto's db_column_security; added here to keep the contract compiling.
+   * </pre>
+   *
+   * <code>SECRET_CLASSIFICATION_PRIVATE_KEY = 10;</code>
+   */
+  public static final int SECRET_CLASSIFICATION_PRIVATE_KEY_VALUE = 10;
 
 
   public final int getNumber() {
@@ -139,6 +157,7 @@ public enum SecretClassification
       case 7: return SECRET_CLASSIFICATION_IDENTITY;
       case 8: return SECRET_CLASSIFICATION_PII;
       case 9: return SECRET_CLASSIFICATION_OPERATIONAL;
+      case 10: return SECRET_CLASSIFICATION_PRIVATE_KEY;
       default: return null;
     }
   }

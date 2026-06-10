@@ -44,7 +44,7 @@ public final class ReconciliationAnalyticsSummaryProto extends com.google.protob
       "ation_analytics_summary.proto\022\034udb.core." +
       "analytics.entity.v1\032\037google/protobuf/tim" +
       "estamp.proto\032\033udb/core/common/v1/db.prot" +
-      "o\032!udb/core/common/v1/security.proto\"\243\n\n" +
+      "o\032!udb/core/common/v1/security.proto\"\234\n\n" +
       "\036ReconciliationAnalyticsSummary\022L\n\nsumma" +
       "ry_id\030\001 \001(\tB-\202\267\030)\n\nsummary_id\022\004UUID\030\001(\001:" +
       "\021gen_random_uuid()R\tsummaryId\022[\n\014summary" +
@@ -71,21 +71,21 @@ public final class ReconciliationAnalyticsSummaryProto extends com.google.protob
       "R\023avgRecordConfidence\022t\n\013recorded_at\030\013 \001" +
       "(\0132\032.google.protobuf.TimestampB7\202\267\0303\n\013re" +
       "corded_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMEST" +
-      "AMP`\001h\001R\nrecordedAt:\374\001\372\266\030\231\001\n\"reconciliat" +
+      "AMP`\001h\001R\nrecordedAt:\365\001\372\266\030\231\001\n\"reconciliat" +
       "ion_analytics_summaries\022\rudb_analytics\030\003" +
       " \001*CDaily reconciliation and conflict ro" +
       "ll-up for UDB-managed workflowsH\003R\014summa" +
-      "ry_dateX\355\002\352\001\007replica\212\262\031Z\n\006global2\013soft_d" +
-      "elete:\025analytics.operational@\373\023H\002R\006tenan" +
-      "tZ\010standardr\025tenant.data_residencyB\246\002\n c" +
-      "om.udb.core.analytics.entity.v1B#Reconci" +
-      "liationAnalyticsSummaryProtoP\001ZHgithub.c" +
-      "om/fahara02/udb/sdk/go/gen/udb/core/anal" +
-      "ytics/entity/v1;entityv1\242\002\004UCAE\252\002\034udb.co" +
-      "re.Analytics.Entity.V1\312\002\034Udb\\Core\\Analyt" +
-      "ics\\Entity\\V1\342\002(Udb\\GPBMetadata\\Core\\Ana" +
-      "lytics\\Entity\\V1\352\002 Udb::Core::Analytics:" +
-      ":Entity::V1b\006proto3"
+      "ry_dateX\355\002\352\001\007replica\212\262\031S\n\006global2\004none:\025" +
+      "analytics.operational@\373\023H\002R\006tenantZ\010stan" +
+      "dardr\025tenant.data_residencyB\246\002\n com.udb." +
+      "core.analytics.entity.v1B#Reconciliation" +
+      "AnalyticsSummaryProtoP\001ZHgithub.com/faha" +
+      "ra02/udb/sdk/go/gen/udb/core/analytics/e" +
+      "ntity/v1;entityv1\242\002\004UCAE\252\002\034udb.core.Anal" +
+      "ytics.Entity.V1\312\002\034Udb\\Core\\Analytics\\Ent" +
+      "ity\\V1\342\002(Udb\\GPBMetadata\\Core\\Analytics\\" +
+      "Entity\\V1\352\002 Udb::Core::Analytics::Entity" +
+      "::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

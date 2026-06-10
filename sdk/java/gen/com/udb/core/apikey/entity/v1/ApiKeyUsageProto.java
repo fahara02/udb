@@ -44,7 +44,7 @@ public final class ApiKeyUsageProto extends com.google.protobuf.GeneratedFile {
       "e.proto\022\031udb.core.apikey.entity.v1\032\037goog" +
       "le/protobuf/timestamp.proto\032\033udb/core/co" +
       "mmon/v1/db.proto\032!udb/core/common/v1/sec" +
-      "urity.proto\"\322\t\n\013ApiKeyUsage\022F\n\010usage_id\030" +
+      "urity.proto\"\313\t\n\013ApiKeyUsage\022F\n\010usage_id\030" +
       "\001 \001(\tB+\202\267\030\'\n\010usage_id\022\004UUID\030\001(\001:\021gen_ran" +
       "dom_uuid()R\007usageId\022\264\001\n\006key_id\030\002 \001(\tB\234\001\202" +
       "\267\030\227\001\n\006key_id\022\004UUID\030\001J9\n\010api_keys\022\006key_id" +
@@ -65,23 +65,23 @@ public final class ApiKeyUsageProto extends com.google.protobuf.GeneratedFile {
       "equested_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIME" +
       "STAMP`\001h\001R\013requestedAt\022\\\n\ttenant_id\030\t \001(" +
       "\tB?\202\267\030;\n\ttenant_id\022\013VARCHAR(64)\030\001R\037\n\026idx" +
-      "_apikeyusage_tenant\022\005BTREER\010tenantId:\361\002\372" +
+      "_apikeyusage_tenant\022\005BTREER\010tenantId:\352\002\372" +
       "\266\030\317\001\n\016api_key_usages\022\tudb_authn\030\005 \001*9Per" +
       "-request API key usage log for rate limi" +
       "ting and audit@\001H\003R\014requested_atX\355\002b^\n\020t" +
       "enant_isolation\032H(tenant_id::text = curr" +
       "ent_setting(\'app.current_tenant_id\', tru" +
-      "e)::text)(\001\212\262\031\230\001\n\006tenant\032\ttenant_id*4ten" +
+      "e)::text)(\001\212\262\031\221\001\n\006tenant\032\ttenant_id*4ten" +
       "ant_id = current_setting(\'app.current_te" +
-      "nant_id\')2\013soft_delete:\022apikey.operation" +
-      "al@\373\023H\002R\006tenantZ\010standardr\025tenant.data_r" +
-      "esidencyB\201\002\n\035com.udb.core.apikey.entity." +
-      "v1B\020ApiKeyUsageProtoP\001ZEgithub.com/fahar" +
-      "a02/udb/sdk/go/gen/udb/core/apikey/entit" +
-      "y/v1;entityv1\242\002\004UCAE\252\002\031udb.core.Apikey.E" +
-      "ntity.V1\312\002\031Udb\\Core\\Apikey\\Entity\\V1\342\002%U" +
-      "db\\GPBMetadata\\Core\\Apikey\\Entity\\V1\352\002\035U" +
-      "db::Core::Apikey::Entity::V1b\006proto3"
+      "nant_id\')2\004none:\022apikey.operational@\373\023H\002" +
+      "R\006tenantZ\010standardr\025tenant.data_residenc" +
+      "yB\201\002\n\035com.udb.core.apikey.entity.v1B\020Api" +
+      "KeyUsageProtoP\001ZEgithub.com/fahara02/udb" +
+      "/sdk/go/gen/udb/core/apikey/entity/v1;en" +
+      "tityv1\242\002\004UCAE\252\002\031udb.core.Apikey.Entity.V" +
+      "1\312\002\031Udb\\Core\\Apikey\\Entity\\V1\342\002%Udb\\GPBM" +
+      "etadata\\Core\\Apikey\\Entity\\V1\352\002\035Udb::Cor" +
+      "e::Apikey::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

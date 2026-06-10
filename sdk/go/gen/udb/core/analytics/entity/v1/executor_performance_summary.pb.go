@@ -177,7 +177,7 @@ var File_udb_core_analytics_entity_v1_executor_performance_summary_proto protore
 
 const file_udb_core_analytics_entity_v1_executor_performance_summary_proto_rawDesc = "" +
 	"\n" +
-	"?udb/core/analytics/entity/v1/executor_performance_summary.proto\x12\x1cudb.core.analytics.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xf2\v\n" +
+	"?udb/core/analytics/entity/v1/executor_performance_summary.proto\x12\x1cudb.core.analytics.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xeb\v\n" +
 	"\x1aExecutorPerformanceSummary\x12L\n" +
 	"\n" +
 	"summary_id\x18\x01 \x01(\tB-\x82\xb7\x18)\n" +
@@ -212,9 +212,9 @@ const file_udb_core_analytics_entity_v1_executor_performance_summary_proto_rawDe
 	"\x18avg_capacity_utilisation\x12\x10DOUBLE PRECISIONR\x16avgCapacityUtilisation\x12t\n" +
 	"\vrecorded_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampB7\x82\xb7\x183\n" +
 	"\vrecorded_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\n" +
-	"recordedAt:\xfc\x01\xfa\xb6\x18\x99\x01\n" +
-	"\x1eexecutor_performance_summaries\x12\rudb_analytics\x18\x02 \x01*GDaily executor performance roll-up for project-defined processing unitsH\x03R\fsummary_dateX\xed\x02\xea\x01\areplica\x8a\xb2\x19Z\n" +
-	"\x06global2\vsoft_delete:\x15analytics.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xa2\x02\n" +
+	"recordedAt:\xf5\x01\xfa\xb6\x18\x99\x01\n" +
+	"\x1eexecutor_performance_summaries\x12\rudb_analytics\x18\x02 \x01*GDaily executor performance roll-up for project-defined processing unitsH\x03R\fsummary_dateX\xed\x02\xea\x01\areplica\x8a\xb2\x19S\n" +
+	"\x06global2\x04none:\x15analytics.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xa2\x02\n" +
 	" com.udb.core.analytics.entity.v1B\x1fExecutorPerformanceSummaryProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x1cudb.core.Analytics.Entity.V1\xca\x02\x1cUdb\\Core\\Analytics\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V1\xea\x02 Udb::Core::Analytics::Entity::V1b\x06proto3"
 
 var (

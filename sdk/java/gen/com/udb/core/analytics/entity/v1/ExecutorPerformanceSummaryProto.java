@@ -44,7 +44,7 @@ public final class ExecutorPerformanceSummaryProto extends com.google.protobuf.G
       "performance_summary.proto\022\034udb.core.anal" +
       "ytics.entity.v1\032\037google/protobuf/timesta" +
       "mp.proto\032\033udb/core/common/v1/db.proto\032!u" +
-      "db/core/common/v1/security.proto\"\362\013\n\032Exe" +
+      "db/core/common/v1/security.proto\"\353\013\n\032Exe" +
       "cutorPerformanceSummary\022L\n\nsummary_id\030\001 " +
       "\001(\tB-\202\267\030)\n\nsummary_id\022\004UUID\030\001(\001:\021gen_ran" +
       "dom_uuid()R\tsummaryId\022\230\001\n\014summary_date\030\002" +
@@ -76,21 +76,21 @@ public final class ExecutorPerformanceSummaryProto extends com.google.protobuf.G
       "R\026avgCapacityUtilisation\022t\n\013recorded_at\030" +
       "\016 \001(\0132\032.google.protobuf.TimestampB7\202\267\0303\n" +
       "\013recorded_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIM" +
-      "ESTAMP`\001h\001R\nrecordedAt:\374\001\372\266\030\231\001\n\036executor" +
+      "ESTAMP`\001h\001R\nrecordedAt:\365\001\372\266\030\231\001\n\036executor" +
       "_performance_summaries\022\rudb_analytics\030\002 " +
       "\001*GDaily executor performance roll-up fo" +
       "r project-defined processing unitsH\003R\014su" +
-      "mmary_dateX\355\002\352\001\007replica\212\262\031Z\n\006global2\013sof" +
-      "t_delete:\025analytics.operational@\373\023H\002R\006te" +
-      "nantZ\010standardr\025tenant.data_residencyB\242\002" +
-      "\n com.udb.core.analytics.entity.v1B\037Exec" +
-      "utorPerformanceSummaryProtoP\001ZHgithub.co" +
-      "m/fahara02/udb/sdk/go/gen/udb/core/analy" +
-      "tics/entity/v1;entityv1\242\002\004UCAE\252\002\034udb.cor" +
-      "e.Analytics.Entity.V1\312\002\034Udb\\Core\\Analyti" +
-      "cs\\Entity\\V1\342\002(Udb\\GPBMetadata\\Core\\Anal" +
-      "ytics\\Entity\\V1\352\002 Udb::Core::Analytics::" +
-      "Entity::V1b\006proto3"
+      "mmary_dateX\355\002\352\001\007replica\212\262\031S\n\006global2\004non" +
+      "e:\025analytics.operational@\373\023H\002R\006tenantZ\010s" +
+      "tandardr\025tenant.data_residencyB\242\002\n com.u" +
+      "db.core.analytics.entity.v1B\037ExecutorPer" +
+      "formanceSummaryProtoP\001ZHgithub.com/fahar" +
+      "a02/udb/sdk/go/gen/udb/core/analytics/en" +
+      "tity/v1;entityv1\242\002\004UCAE\252\002\034udb.core.Analy" +
+      "tics.Entity.V1\312\002\034Udb\\Core\\Analytics\\Enti" +
+      "ty\\V1\342\002(Udb\\GPBMetadata\\Core\\Analytics\\E" +
+      "ntity\\V1\352\002 Udb::Core::Analytics::Entity:" +
+      ":V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

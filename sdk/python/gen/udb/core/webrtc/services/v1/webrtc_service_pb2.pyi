@@ -296,20 +296,22 @@ class IssueCredentialsRequest(_message.Message):
     def __init__(self, tenant_id: _Optional[str] = ..., room_id: _Optional[str] = ..., peer_id: _Optional[str] = ..., ttl_seconds: _Optional[int] = ...) -> None: ...
 
 class IssueCredentialsResponse(_message.Message):
-    __slots__ = ("ice_servers", "username", "credential", "ttl_seconds", "expires_at", "error")
+    __slots__ = ("ice_servers", "username", "credential", "ttl_seconds", "expires_at", "error", "allowed_action")
     ICE_SERVERS_FIELD_NUMBER: _ClassVar[int]
     USERNAME_FIELD_NUMBER: _ClassVar[int]
     CREDENTIAL_FIELD_NUMBER: _ClassVar[int]
     TTL_SECONDS_FIELD_NUMBER: _ClassVar[int]
     EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    ALLOWED_ACTION_FIELD_NUMBER: _ClassVar[int]
     ice_servers: _containers.RepeatedCompositeFieldContainer[IceServer]
     username: str
     credential: str
     ttl_seconds: int
     expires_at: _timestamp_pb2.Timestamp
     error: _dto_pb2.ApiError
-    def __init__(self, ice_servers: _Optional[_Iterable[_Union[IceServer, _Mapping]]] = ..., username: _Optional[str] = ..., credential: _Optional[str] = ..., ttl_seconds: _Optional[int] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+    allowed_action: str
+    def __init__(self, ice_servers: _Optional[_Iterable[_Union[IceServer, _Mapping]]] = ..., username: _Optional[str] = ..., credential: _Optional[str] = ..., ttl_seconds: _Optional[int] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ..., allowed_action: _Optional[str] = ...) -> None: ...
 
 class SignalRequest(_message.Message):
     __slots__ = ("room_id", "peer_id", "tenant_id", "offer_sdp", "answer_sdp", "ice_candidate", "ping")

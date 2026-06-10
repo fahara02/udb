@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/core/authz/entity/v1/access_decision_audit.proto.
  */
 export const file_udb_core_authz_entity_v1_access_decision_audit: GenFile = /*@__PURE__*/
-  fileDesc("CjR1ZGIvY29yZS9hdXRoei9lbnRpdHkvdjEvYWNjZXNzX2RlY2lzaW9uX2F1ZGl0LnByb3RvEhh1ZGIuY29yZS5hdXRoei5lbnRpdHkudjEiqgoKE0FjY2Vzc0RlY2lzaW9uQXVkaXQSTwoRZGVjaXNpb25fYXVkaXRfaWQYASABKAlCNIK3GDAKEWRlY2lzaW9uX2F1ZGl0X2lkEgRVVUlEGAEoAToRZ2VuX3JhbmRvbV91dWlkKCkSUwoHdXNlcl9pZBgCIAEoCUJCgrcYPgoHdXNlcl9pZBIEVVVJRBgBUisKImlkeF9hY2Nlc3NfZGVjaXNpb25fYXVkaXRzX3VzZXJfaWQSBUJUUkVFEiwKBmRvbWFpbhgDIAEoCUIcgrcYGAoGZG9tYWluEgxWQVJDSEFSKDIwMCkYARIsCgZvYmplY3QYBCABKAlCHIK3GBgKBm9iamVjdBIMVkFSQ0hBUigyMDApGAESKwoGYWN0aW9uGAUgASgJQhuCtxgXCgZhY3Rpb24SC1ZBUkNIQVIoODApGAESUwoGZWZmZWN0GAYgASgOMiYudWRiLmNvcmUuYXV0aHouZW50aXR5LnYxLlBvbGljeUVmZmVjdEIbgrcYFwoGZWZmZWN0EgtWQVJDSEFSKDIwKRgBEmcKD2RlY2lzaW9uX3NvdXJjZRgHIAEoDjIoLnVkYi5jb3JlLmF1dGh6LmVudGl0eS52MS5EZWNpc2lvblNvdXJjZUIkgrcYIAoPZGVjaXNpb25fc291cmNlEgtWQVJDSEFSKDMwKRgBEi4KDG1hdGNoZWRfcnVsZRgIIAEoCUIYgrcYFAoMbWF0Y2hlZF9ydWxlEgRURVhUEiIKBnJlYXNvbhgJIAEoCUISgrcYDgoGcmVhc29uEgRURVhUEjEKCmlwX2FkZHJlc3MYCiABKAlCHYK3GBkKCmlwX2FkZHJlc3MSC1ZBUkNIQVIoNjQpEm4KDmNvcnJlbGF0aW9uX2lkGAsgASgJQlaCtxhSCg5jb3JyZWxhdGlvbl9pZBIMVkFSQ0hBUigxMjApUjIKKWlkeF9hY2Nlc3NfZGVjaXNpb25fYXVkaXRzX2NvcnJlbGF0aW9uX2lkEgVCVFJFRRJiCgpkZWNpZGVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIygrcYLgoKZGVjaWRlZF9hdBILVElNRVNUQU1QVFoYAToRQ1VSUkVOVF9USU1FU1RBTVASWgoJdGVuYW50X2lkGA0gASgJQkeCtxhDCgl0ZW5hbnRfaWQSC1ZBUkNIQVIoNjQpGAFSJwoeaWR4X2FjY2Vzc2RlY2lzaW9uYXVkaXRfdGVuYW50EgVCVFJFRTruAvq2GM0BChZhY2Nlc3NfZGVjaXNpb25fYXVkaXRzEgl1ZGJfYXV0aHoYBSABKjFEZWNpc2lvbiB0cmFpbCBmb3Igc2Vuc2l0aXZlIGF1dGhvcml6YXRpb24gY2hlY2tzQAFIA1IKZGVjaWRlZF9hdFj7E2JeChB0ZW5hbnRfaXNvbGF0aW9uGkgodGVuYW50X2lkOjp0ZXh0ID0gY3VycmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF90ZW5hbnRfaWQnLCB0cnVlKTo6dGV4dCkoAYqyGZcBCgZ0ZW5hbnQaCXRlbmFudF9pZCo0dGVuYW50X2lkID0gY3VycmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF90ZW5hbnRfaWQnKTILc29mdF9kZWxldGU6EWF1dGh6Lm9wZXJhdGlvbmFsQPsTSAJSBnRlbmFudFoIc3RhbmRhcmRyFXRlbmFudC5kYXRhX3Jlc2lkZW5jeUKDAgocY29tLnVkYi5jb3JlLmF1dGh6LmVudGl0eS52MUIYQWNjZXNzRGVjaXNpb25BdWRpdFByb3RvUAFaRGdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvYXV0aHovZW50aXR5L3YxO2VudGl0eXYxogIEVUNBRaoCGHVkYi5jb3JlLkF1dGh6LkVudGl0eS5WMcoCGFVkYlxDb3JlXEF1dGh6XEVudGl0eVxWMeICJFVkYlxHUEJNZXRhZGF0YVxDb3JlXEF1dGh6XEVudGl0eVxWMeoCHFVkYjo6Q29yZTo6QXV0aHo6OkVudGl0eTo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_udb_core_authz_entity_v1_enums, file_udb_core_common_v1_db, file_udb_core_common_v1_security]);
+  fileDesc("CjR1ZGIvY29yZS9hdXRoei9lbnRpdHkvdjEvYWNjZXNzX2RlY2lzaW9uX2F1ZGl0LnByb3RvEhh1ZGIuY29yZS5hdXRoei5lbnRpdHkudjEihhAKE0FjY2Vzc0RlY2lzaW9uQXVkaXQSTwoRZGVjaXNpb25fYXVkaXRfaWQYASABKAlCNIK3GDAKEWRlY2lzaW9uX2F1ZGl0X2lkEgRVVUlEGAEoAToRZ2VuX3JhbmRvbV91dWlkKCkSUwoHdXNlcl9pZBgCIAEoCUJCgrcYPgoHdXNlcl9pZBIEVVVJRBgBUisKImlkeF9hY2Nlc3NfZGVjaXNpb25fYXVkaXRzX3VzZXJfaWQSBUJUUkVFEiwKBmRvbWFpbhgDIAEoCUIcgrcYGAoGZG9tYWluEgxWQVJDSEFSKDIwMCkYARIsCgZvYmplY3QYBCABKAlCHIK3GBgKBm9iamVjdBIMVkFSQ0hBUigyMDApGAESKwoGYWN0aW9uGAUgASgJQhuCtxgXCgZhY3Rpb24SC1ZBUkNIQVIoODApGAESUwoGZWZmZWN0GAYgASgOMiYudWRiLmNvcmUuYXV0aHouZW50aXR5LnYxLlBvbGljeUVmZmVjdEIbgrcYFwoGZWZmZWN0EgtWQVJDSEFSKDIwKRgBEmcKD2RlY2lzaW9uX3NvdXJjZRgHIAEoDjIoLnVkYi5jb3JlLmF1dGh6LmVudGl0eS52MS5EZWNpc2lvblNvdXJjZUIkgrcYIAoPZGVjaXNpb25fc291cmNlEgtWQVJDSEFSKDMwKRgBEi4KDG1hdGNoZWRfcnVsZRgIIAEoCUIYgrcYFAoMbWF0Y2hlZF9ydWxlEgRURVhUEiIKBnJlYXNvbhgJIAEoCUISgrcYDgoGcmVhc29uEgRURVhUEjEKCmlwX2FkZHJlc3MYCiABKAlCHYK3GBkKCmlwX2FkZHJlc3MSC1ZBUkNIQVIoNjQpEm4KDmNvcnJlbGF0aW9uX2lkGAsgASgJQlaCtxhSCg5jb3JyZWxhdGlvbl9pZBIMVkFSQ0hBUigxMjApUjIKKWlkeF9hY2Nlc3NfZGVjaXNpb25fYXVkaXRzX2NvcnJlbGF0aW9uX2lkEgVCVFJFRRJiCgpkZWNpZGVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIygrcYLgoKZGVjaWRlZF9hdBILVElNRVNUQU1QVFoYAToRQ1VSUkVOVF9USU1FU1RBTVASWgoJdGVuYW50X2lkGA0gASgJQkeCtxhDCgl0ZW5hbnRfaWQSC1ZBUkNIQVIoNjQpGAFSJwoeaWR4X2FjY2Vzc2RlY2lzaW9uYXVkaXRfdGVuYW50EgVCVFJFRRJfCgtkZWNpc2lvbl9pZBgOIAEoCUJKgrcYRgoLZGVjaXNpb25faWQSDFZBUkNIQVIoMTIwKVIpCiBpZHhfYWNjZXNzZGVjaXNpb25hdWRpdF9kZWNpc2lvbhIFQlRSRUUSOgoOcG9saWN5X3ZlcnNpb24YDyABKAlCIoK3GB4KDnBvbGljeV92ZXJzaW9uEgxWQVJDSEFSKDEyMCkSRgoUcmVsYXRpb25zaGlwX3ZlcnNpb24YECABKAlCKIK3GCQKFHJlbGF0aW9uc2hpcF92ZXJzaW9uEgxWQVJDSEFSKDEyMCkSLAoHcHVycG9zZRgRIAEoCUIbgrcYFwoHcHVycG9zZRIMVkFSQ0hBUigxMjApEiIKBnNjb3BlcxgSIAEoCUISgrcYDgoGc2NvcGVzEgRURVhUEjwKEm1hdGNoZWRfcG9saWN5X2lkcxgTIAMoCUIggrcYHAoSbWF0Y2hlZF9wb2xpY3lfaWRzEgZURVhUW10SMQoKcHJvamVjdF9pZBgUIAEoCUIdgrcYGQoKcHJvamVjdF9pZBILVkFSQ0hBUig2NCkSMQoKYWN0b3Jfa2luZBgVIAEoCUIdgrcYGQoKYWN0b3Jfa2luZBILVkFSQ0hBUigyMCkSOAoNcmVzb3VyY2VfdHlwZRgWIAEoCUIhgrcYHQoNcmVzb3VyY2VfdHlwZRIMVkFSQ0hBUigxMjApEi0KCHRyYWNlX2lkGBcgASgJQhuCtxgXCgh0cmFjZV9pZBILVkFSQ0hBUig2NCkSKwoHc3Bhbl9pZBgYIAEoCUIagrcYFgoHc3Bhbl9pZBILVkFSQ0hBUig2NCkSOwoPdXNlcl9hZ2VudF9oYXNoGBkgASgJQiKCtxgeCg91c2VyX2FnZW50X2hhc2gSC1ZBUkNIQVIoODApEjMKDmRlY2lzaW9uX2lucHV0GBogASgJQhuCtxgXCg5kZWNpc2lvbl9pbnB1dBIFSlNPTkI65wL6thjNAQoWYWNjZXNzX2RlY2lzaW9uX2F1ZGl0cxIJdWRiX2F1dGh6GAUgASoxRGVjaXNpb24gdHJhaWwgZm9yIHNlbnNpdGl2ZSBhdXRob3JpemF0aW9uIGNoZWNrc0ABSANSCmRlY2lkZWRfYXRY+xNiXgoQdGVuYW50X2lzb2xhdGlvbhpIKHRlbmFudF9pZDo6dGV4dCA9IGN1cnJlbnRfc2V0dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lkJywgdHJ1ZSk6OnRleHQpKAGKshmQAQoGdGVuYW50Ggl0ZW5hbnRfaWQqNHRlbmFudF9pZCA9IGN1cnJlbnRfc2V0dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lkJykyBG5vbmU6EWF1dGh6Lm9wZXJhdGlvbmFsQPsTSAJSBnRlbmFudFoIc3RhbmRhcmRyFXRlbmFudC5kYXRhX3Jlc2lkZW5jeUKDAgocY29tLnVkYi5jb3JlLmF1dGh6LmVudGl0eS52MUIYQWNjZXNzRGVjaXNpb25BdWRpdFByb3RvUAFaRGdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvYXV0aHovZW50aXR5L3YxO2VudGl0eXYxogIEVUNBRaoCGHVkYi5jb3JlLkF1dGh6LkVudGl0eS5WMcoCGFVkYlxDb3JlXEF1dGh6XEVudGl0eVxWMeICJFVkYlxHUEJNZXRhZGF0YVxDb3JlXEF1dGh6XEVudGl0eVxWMeoCHFVkYjo6Q29yZTo6QXV0aHo6OkVudGl0eTo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_udb_core_authz_entity_v1_enums, file_udb_core_common_v1_db, file_udb_core_common_v1_security]);
 
 /**
  * @generated from message udb.core.authz.entity.v1.AccessDecisionAudit
@@ -86,6 +86,95 @@ export type AccessDecisionAudit = Message<"udb.core.authz.entity.v1.AccessDecisi
    * @generated from field: string tenant_id = 13;
    */
   tenantId: string;
+
+  /**
+   * ── Phase L3 task4: expanded compliance columns ───────────────────────────
+   * Stable decision id linking this audit row to the gRPC Decision returned to
+   * the caller and to the access-deny domain event.
+   *
+   * @generated from field: string decision_id = 14;
+   */
+  decisionId: string;
+
+  /**
+   * Authz snapshot versions at decision time.
+   *
+   * @generated from field: string policy_version = 15;
+   */
+  policyVersion: string;
+
+  /**
+   * @generated from field: string relationship_version = 16;
+   */
+  relationshipVersion: string;
+
+  /**
+   * Declared purpose of the access (purpose-binding / GDPR).
+   *
+   * @generated from field: string purpose = 17;
+   */
+  purpose: string;
+
+  /**
+   * Scopes required by the matched policy (comma-joined).
+   *
+   * @generated from field: string scopes = 18;
+   */
+  scopes: string;
+
+  /**
+   * Every policy id that matched (Postgres text array), not just the first.
+   *
+   * @generated from field: repeated string matched_policy_ids = 19;
+   */
+  matchedPolicyIds: string[];
+
+  /**
+   * Project domain (tenant lives on tenant_id).
+   *
+   * @generated from field: string project_id = 20;
+   */
+  projectId: string;
+
+  /**
+   * Actor kind: "user" | "service" | "external".
+   *
+   * @generated from field: string actor_kind = 21;
+   */
+  actorKind: string;
+
+  /**
+   * Resource type/reference for the object being acted upon.
+   *
+   * @generated from field: string resource_type = 22;
+   */
+  resourceType: string;
+
+  /**
+   * Distributed-trace correlation (OpenTelemetry).
+   *
+   * @generated from field: string trace_id = 23;
+   */
+  traceId: string;
+
+  /**
+   * @generated from field: string span_id = 24;
+   */
+  spanId: string;
+
+  /**
+   * Hashed user-agent (never raw) from the request context.
+   *
+   * @generated from field: string user_agent_hash = 25;
+   */
+  userAgentHash: string;
+
+  /**
+   * Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+   *
+   * @generated from field: string decision_input = 26;
+   */
+  decisionInput: string;
 };
 
 /**

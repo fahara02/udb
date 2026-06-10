@@ -26,7 +26,7 @@ var File_udb_core_apikey_services_v1_apikey_service_proto protoreflect.FileDescr
 
 const file_udb_core_apikey_services_v1_apikey_service_proto_rawDesc = "" +
 	"\n" +
-	"0udb/core/apikey/services/v1/apikey_service.proto\x12\x1budb.core.apikey.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a&udb/core/apikey/services/v1/core.proto\x1a!udb/core/common/v1/security.proto2\xf7#\n" +
+	"0udb/core/apikey/services/v1/apikey_service.proto\x12\x1budb.core.apikey.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a&udb/core/apikey/services/v1/core.proto\x1a!udb/core/common/v1/security.proto2\x90*\n" +
 	"\rApiKeyService\x12\xd0\x04\n" +
 	"\fCreateApiKey\x120.udb.core.apikey.services.v1.CreateApiKeyRequest\x1a1.udb.core.apikey.services.v1.CreateApiKeyResponse\"\xda\x03\xca\xf3\x18;\b\x02\x1a\x19udb:apikey:create-api-key \x01J\x02\x01\x02j\x13apikey.CreateApiKey\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18'\b\x01\x12\x0ecreate_api_key\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\xb2\x01\n" +
 	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.auth.create_api_key.boilerplate*\x0ecreate_api_key2\budb_auth:\x06apikeyJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18P\n" +
@@ -47,7 +47,11 @@ const file_udb_core_apikey_services_v1_apikey_service_proto_rawDesc = "" +
 	"\fRevokeApiKey\x120.udb.core.apikey.services.v1.RevokeApiKeyRequest\x1a1.udb.core.apikey.services.v1.RevokeApiKeyResponse\"\xe0\x03\xca\xf3\x18;\b\x02\x1a\x19udb:apikey:revoke-api-key \x01J\x02\x01\x02j\x13apikey.RevokeApiKey\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18'\b\x01\x12\x0erevoke_api_key\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\xb2\x01\n" +
 	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.auth.revoke_api_key.boilerplate*\x0erevoke_api_key2\budb_auth:\x06apikeyJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18P\n" +
 	"\x13apikey.RevokeApiKey\x12\rapikey.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
-	"\x06apikey\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x17*\x15/v1/api_keys/{key_id}\x12\xeb\x04\n" +
+	"\x06apikey\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x17*\x15/v1/api_keys/{key_id}\x12\xe5\x02\n" +
+	"\fRotateApiKey\x120.udb.core.apikey.services.v1.RotateApiKeyRequest\x1a1.udb.core.apikey.services.v1.RotateApiKeyResponse\"\xef\x01\xca\xf3\x18;\b\x02\x1a\x19udb:apikey:rotate-api-key \x01J\x02\x01\x02j\x13apikey.RotateApiKey\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18'\b\x01\x12\x0erotate_api_key\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xea\xf3\x18P\n" +
+	"\x13apikey.RotateApiKey\x12\rapikey.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/api_keys/{key_id}:rotate\x12\xae\x03\n" +
+	"\x16EmergencyRevokeApiKeys\x12:.udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest\x1a;.udb.core.apikey.services.v1.EmergencyRevokeApiKeysResponse\"\x9a\x02\xca\xf3\x18P\b\x02\x1a$udb:apikey:emergency-revoke-api-keys \x01J\x02\x01\x02j\x1dapikey.EmergencyRevokeApiKeys\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x182\b\x01\x12\x19emergency_revoke_api_keys\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xea\xf3\x18Z\n" +
+	"\x1dapikey.EmergencyRevokeApiKeys\x12\rapikey.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/v1/api_keys:emergency-revoke\x12\xeb\x04\n" +
 	"\x0eValidateApiKey\x122.udb.core.apikey.services.v1.ValidateApiKeyRequest\x1a3.udb.core.apikey.services.v1.ValidateApiKeyResponse\"\xef\x03\xca\xf3\x18?\b\x02\x1a\x1budb:apikey:validate-api-key \x01J\x02\x01\x02j\x15apikey.ValidateApiKey\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18)\b\x01\x12\x10validate_api_key\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\xb6\x01\n" +
 	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\",udb.native.auth.validate_api_key.boilerplate*\x10validate_api_key2\budb_auth:\x06apikeyJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18R\n" +
 	"\x15apikey.ValidateApiKey\x12\rapikey.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
@@ -62,20 +66,24 @@ const file_udb_core_apikey_services_v1_apikey_service_proto_rawDesc = "" +
 	"\x1fcom.udb.core.apikey.services.v1B\x12ApikeyServiceProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1budb.core.Apikey.Services.V1\xca\x02\x1bUdb\\Core\\Apikey\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Apikey\\Services\\V1\xea\x02\x1fUdb::Core::Apikey::Services::V1b\x06proto3"
 
 var file_udb_core_apikey_services_v1_apikey_service_proto_goTypes = []any{
-	(*CreateApiKeyRequest)(nil),         // 0: udb.core.apikey.services.v1.CreateApiKeyRequest
-	(*GetApiKeyRequest)(nil),            // 1: udb.core.apikey.services.v1.GetApiKeyRequest
-	(*ListApiKeysRequest)(nil),          // 2: udb.core.apikey.services.v1.ListApiKeysRequest
-	(*UpdateApiKeyRequest)(nil),         // 3: udb.core.apikey.services.v1.UpdateApiKeyRequest
-	(*RevokeApiKeyRequest)(nil),         // 4: udb.core.apikey.services.v1.RevokeApiKeyRequest
-	(*ValidateApiKeyRequest)(nil),       // 5: udb.core.apikey.services.v1.ValidateApiKeyRequest
-	(*GetApiKeyUsageStatsRequest)(nil),  // 6: udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest
-	(*CreateApiKeyResponse)(nil),        // 7: udb.core.apikey.services.v1.CreateApiKeyResponse
-	(*GetApiKeyResponse)(nil),           // 8: udb.core.apikey.services.v1.GetApiKeyResponse
-	(*ListApiKeysResponse)(nil),         // 9: udb.core.apikey.services.v1.ListApiKeysResponse
-	(*UpdateApiKeyResponse)(nil),        // 10: udb.core.apikey.services.v1.UpdateApiKeyResponse
-	(*RevokeApiKeyResponse)(nil),        // 11: udb.core.apikey.services.v1.RevokeApiKeyResponse
-	(*ValidateApiKeyResponse)(nil),      // 12: udb.core.apikey.services.v1.ValidateApiKeyResponse
-	(*GetApiKeyUsageStatsResponse)(nil), // 13: udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse
+	(*CreateApiKeyRequest)(nil),            // 0: udb.core.apikey.services.v1.CreateApiKeyRequest
+	(*GetApiKeyRequest)(nil),               // 1: udb.core.apikey.services.v1.GetApiKeyRequest
+	(*ListApiKeysRequest)(nil),             // 2: udb.core.apikey.services.v1.ListApiKeysRequest
+	(*UpdateApiKeyRequest)(nil),            // 3: udb.core.apikey.services.v1.UpdateApiKeyRequest
+	(*RevokeApiKeyRequest)(nil),            // 4: udb.core.apikey.services.v1.RevokeApiKeyRequest
+	(*RotateApiKeyRequest)(nil),            // 5: udb.core.apikey.services.v1.RotateApiKeyRequest
+	(*EmergencyRevokeApiKeysRequest)(nil),  // 6: udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest
+	(*ValidateApiKeyRequest)(nil),          // 7: udb.core.apikey.services.v1.ValidateApiKeyRequest
+	(*GetApiKeyUsageStatsRequest)(nil),     // 8: udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest
+	(*CreateApiKeyResponse)(nil),           // 9: udb.core.apikey.services.v1.CreateApiKeyResponse
+	(*GetApiKeyResponse)(nil),              // 10: udb.core.apikey.services.v1.GetApiKeyResponse
+	(*ListApiKeysResponse)(nil),            // 11: udb.core.apikey.services.v1.ListApiKeysResponse
+	(*UpdateApiKeyResponse)(nil),           // 12: udb.core.apikey.services.v1.UpdateApiKeyResponse
+	(*RevokeApiKeyResponse)(nil),           // 13: udb.core.apikey.services.v1.RevokeApiKeyResponse
+	(*RotateApiKeyResponse)(nil),           // 14: udb.core.apikey.services.v1.RotateApiKeyResponse
+	(*EmergencyRevokeApiKeysResponse)(nil), // 15: udb.core.apikey.services.v1.EmergencyRevokeApiKeysResponse
+	(*ValidateApiKeyResponse)(nil),         // 16: udb.core.apikey.services.v1.ValidateApiKeyResponse
+	(*GetApiKeyUsageStatsResponse)(nil),    // 17: udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse
 }
 var file_udb_core_apikey_services_v1_apikey_service_proto_depIdxs = []int32{
 	0,  // 0: udb.core.apikey.services.v1.ApiKeyService.CreateApiKey:input_type -> udb.core.apikey.services.v1.CreateApiKeyRequest
@@ -83,17 +91,21 @@ var file_udb_core_apikey_services_v1_apikey_service_proto_depIdxs = []int32{
 	2,  // 2: udb.core.apikey.services.v1.ApiKeyService.ListApiKeys:input_type -> udb.core.apikey.services.v1.ListApiKeysRequest
 	3,  // 3: udb.core.apikey.services.v1.ApiKeyService.UpdateApiKey:input_type -> udb.core.apikey.services.v1.UpdateApiKeyRequest
 	4,  // 4: udb.core.apikey.services.v1.ApiKeyService.RevokeApiKey:input_type -> udb.core.apikey.services.v1.RevokeApiKeyRequest
-	5,  // 5: udb.core.apikey.services.v1.ApiKeyService.ValidateApiKey:input_type -> udb.core.apikey.services.v1.ValidateApiKeyRequest
-	6,  // 6: udb.core.apikey.services.v1.ApiKeyService.GetApiKeyUsageStats:input_type -> udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest
-	7,  // 7: udb.core.apikey.services.v1.ApiKeyService.CreateApiKey:output_type -> udb.core.apikey.services.v1.CreateApiKeyResponse
-	8,  // 8: udb.core.apikey.services.v1.ApiKeyService.GetApiKey:output_type -> udb.core.apikey.services.v1.GetApiKeyResponse
-	9,  // 9: udb.core.apikey.services.v1.ApiKeyService.ListApiKeys:output_type -> udb.core.apikey.services.v1.ListApiKeysResponse
-	10, // 10: udb.core.apikey.services.v1.ApiKeyService.UpdateApiKey:output_type -> udb.core.apikey.services.v1.UpdateApiKeyResponse
-	11, // 11: udb.core.apikey.services.v1.ApiKeyService.RevokeApiKey:output_type -> udb.core.apikey.services.v1.RevokeApiKeyResponse
-	12, // 12: udb.core.apikey.services.v1.ApiKeyService.ValidateApiKey:output_type -> udb.core.apikey.services.v1.ValidateApiKeyResponse
-	13, // 13: udb.core.apikey.services.v1.ApiKeyService.GetApiKeyUsageStats:output_type -> udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse
-	7,  // [7:14] is the sub-list for method output_type
-	0,  // [0:7] is the sub-list for method input_type
+	5,  // 5: udb.core.apikey.services.v1.ApiKeyService.RotateApiKey:input_type -> udb.core.apikey.services.v1.RotateApiKeyRequest
+	6,  // 6: udb.core.apikey.services.v1.ApiKeyService.EmergencyRevokeApiKeys:input_type -> udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest
+	7,  // 7: udb.core.apikey.services.v1.ApiKeyService.ValidateApiKey:input_type -> udb.core.apikey.services.v1.ValidateApiKeyRequest
+	8,  // 8: udb.core.apikey.services.v1.ApiKeyService.GetApiKeyUsageStats:input_type -> udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest
+	9,  // 9: udb.core.apikey.services.v1.ApiKeyService.CreateApiKey:output_type -> udb.core.apikey.services.v1.CreateApiKeyResponse
+	10, // 10: udb.core.apikey.services.v1.ApiKeyService.GetApiKey:output_type -> udb.core.apikey.services.v1.GetApiKeyResponse
+	11, // 11: udb.core.apikey.services.v1.ApiKeyService.ListApiKeys:output_type -> udb.core.apikey.services.v1.ListApiKeysResponse
+	12, // 12: udb.core.apikey.services.v1.ApiKeyService.UpdateApiKey:output_type -> udb.core.apikey.services.v1.UpdateApiKeyResponse
+	13, // 13: udb.core.apikey.services.v1.ApiKeyService.RevokeApiKey:output_type -> udb.core.apikey.services.v1.RevokeApiKeyResponse
+	14, // 14: udb.core.apikey.services.v1.ApiKeyService.RotateApiKey:output_type -> udb.core.apikey.services.v1.RotateApiKeyResponse
+	15, // 15: udb.core.apikey.services.v1.ApiKeyService.EmergencyRevokeApiKeys:output_type -> udb.core.apikey.services.v1.EmergencyRevokeApiKeysResponse
+	16, // 16: udb.core.apikey.services.v1.ApiKeyService.ValidateApiKey:output_type -> udb.core.apikey.services.v1.ValidateApiKeyResponse
+	17, // 17: udb.core.apikey.services.v1.ApiKeyService.GetApiKeyUsageStats:output_type -> udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse
+	9,  // [9:18] is the sub-list for method output_type
+	0,  // [0:9] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name

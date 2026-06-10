@@ -39,7 +39,7 @@ public interface RecoveryCodeOrBuilder extends
    * Keyed digest of the recovery code; never stored in plaintext.
    * </pre>
    *
-   * <code>string code_hash = 3 [json_name = "codeHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * <code>string code_hash = 3 [json_name = "codeHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The codeHash.
    */
   java.lang.String getCodeHash();
@@ -48,7 +48,7 @@ public interface RecoveryCodeOrBuilder extends
    * Keyed digest of the recovery code; never stored in plaintext.
    * </pre>
    *
-   * <code>string code_hash = 3 [json_name = "codeHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * <code>string code_hash = 3 [json_name = "codeHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The bytes for codeHash.
    */
   com.google.protobuf.ByteString
@@ -83,4 +83,24 @@ public interface RecoveryCodeOrBuilder extends
    * <code>.google.protobuf.Timestamp created_at = 5 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   com.google.protobuf.TimestampOrBuilder getCreatedAtOrBuilder();
+
+  /**
+   * <pre>
+   * Nullable so existing inserts can't break; RLS policy tolerates NULL.
+   * </pre>
+   *
+   * <code>string tenant_id = 6 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The tenantId.
+   */
+  java.lang.String getTenantId();
+  /**
+   * <pre>
+   * Nullable so existing inserts can't break; RLS policy tolerates NULL.
+   * </pre>
+   *
+   * <code>string tenant_id = 6 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for tenantId.
+   */
+  com.google.protobuf.ByteString
+      getTenantIdBytes();
 }

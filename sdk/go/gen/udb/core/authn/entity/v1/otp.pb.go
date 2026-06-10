@@ -48,8 +48,10 @@ type OTP struct {
 	UsedAt         *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=used_at,json=usedAt,proto3" json:"used_at,omitempty"`
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	CorrelationId  string                 `protobuf:"bytes,13,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Nullable so existing inserts can't break; RLS policy tolerates NULL.
+	TenantId      string `protobuf:"bytes,14,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *OTP) Reset() {
@@ -173,11 +175,18 @@ func (x *OTP) GetCorrelationId() string {
 	return ""
 }
 
+func (x *OTP) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
 var File_udb_core_authn_entity_v1_otp_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_otp_proto_rawDesc = "" +
 	"\n" +
-	"\"udb/core/authn/entity/v1/otp.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xd0\x0e\n" +
+	"\"udb/core/authn/entity/v1/otp.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xba\x11\n" +
 	"\x03OTP\x12@\n" +
 	"\x06otp_id\x18\x01 \x01(\tB)\x82\xb7\x18%\n" +
 	"\x06otp_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x05otpId\x12\xaa\x01\n" +
@@ -186,9 +195,9 @@ const file_udb_core_authn_entity_v1_otp_proto_rawDesc = "" +
 	"\x05users\x12\auser_id\x1a\tudb_authn \x032\x0ffk_otps_user_idR)\n" +
 	"\x16idx_otps_user_otp_type\x12\x05BTREEZ\botp_typeZ\x1dFK to udb_authn.users.user_idR\x06userId\x12[\n" +
 	"\botp_type\x18\x03 \x01(\x0e2!.udb.core.authn.entity.v1.OTPTypeB\x1d\x82\xb7\x18\x19\n" +
-	"\botp_type\x12\vVARCHAR(30)\x18\x01R\aotpType\x12_\n" +
-	"\tcode_hash\x18\x04 \x01(\tBB\x82\xb7\x18>\n" +
-	"\tcode_hash\x12\fVARCHAR(128)\x18\x01Z!Keyed HMAC digest of the OTP codeR\bcodeHash\x12\x8e\x01\n" +
+	"\botp_type\x12\vVARCHAR(30)\x18\x01R\aotpType\x12\x86\x01\n" +
+	"\tcode_hash\x18\x04 \x01(\tBi\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18>\n" +
+	"\tcode_hash\x12\fVARCHAR(128)\x18\x01Z!Keyed HMAC digest of the OTP code\x8a\xb7\x18\x1b\b\x04\x10\x01\x18\x032\vhmac-sha256J\x06tenantR\bcodeHash\x12\x8e\x01\n" +
 	"\x10delivery_channel\x18\x05 \x01(\tBc\x82\xb7\x18_\n" +
 	"\x10delivery_channel\x12\vVARCHAR(10)\x18\x01:\a'email'Z3Delivery channel such as email, sms, push, or voiceR\x0fdeliveryChannel\x12\x87\x01\n" +
 	"\x10delivery_address\x18\x06 \x01(\tB\\\x82\xb7\x18X\n" +
@@ -216,9 +225,13 @@ const file_udb_core_authn_entity_v1_otp_proto_rawDesc = "" +
 	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt\x12\xa4\x01\n" +
 	"\x0ecorrelation_id\x18\r \x01(\tB}\x82\xb7\x18y\n" +
 	"\x0ecorrelation_id\x12\fVARCHAR(120)R \n" +
-	"\x17idx_otps_correlation_id\x12\x05BTREEZ7Request or workflow correlation id that issued this OTPR\rcorrelationId:\xd0\x01\xfa\xb6\x18r\n" +
-	"\x04otps\x12\tudb_authn\x18\x03 \x01*QEmail OTP records for 2FA, verification, password reset, and sensitive operations\xea\x01\aprimary\x8a\xb2\x19V\n" +
-	"\x06global2\vsoft_delete:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf3\x01\n" +
+	"\x17idx_otps_correlation_id\x12\x05BTREEZ7Request or workflow correlation id that issued this OTPR\rcorrelationId\x12\x8c\x01\n" +
+	"\ttenant_id\x18\x0e \x01(\tBo\x82\xb7\x18k\n" +
+	"\ttenant_id\x12\fVARCHAR(120)R\x1b\n" +
+	"\x12idx_otps_tenant_id\x12\x05BTREEZ3Tenant boundary (denormalized from the owning user)R\btenantId:\x83\x03\xfa\xb6\x18\xe9\x01\n" +
+	"\x04otps\x12\tudb_authn\x18\x03 \x01*QEmail OTP records for 2FA, verification, password reset, and sensitive operations@\x01bs\n" +
+	"\x10tenant_isolation\x1a](tenant_id IS NULL OR tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xea\x01\aprimary\x8a\xb2\x19\x90\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf3\x01\n" +
 	"\x1ccom.udb.core.authn.entity.v1B\bOtpProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (

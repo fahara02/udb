@@ -133,7 +133,7 @@ class BackendInstanceStatus(_message.Message):
     def __init__(self, backend: _Optional[str] = ..., instance_name: _Optional[str] = ..., role: _Optional[str] = ..., enabled: bool = ..., configured: bool = ..., connected: bool = ..., read_weight: _Optional[int] = ..., write_weight: _Optional[int] = ..., labels: _Optional[_Mapping[str, str]] = ..., capabilities: _Optional[_Iterable[str]] = ..., routing_status: _Optional[str] = ..., healthy: bool = ..., circuit_open: bool = ...) -> None: ...
 
 class NativeServiceStatus(_message.Message):
-    __slots__ = ("service_id", "proto_service_names", "enabled", "configured", "mounted", "healthy", "degraded", "surface", "listener_kind", "supported_rpcs", "capabilities", "required_backends", "missing_dependencies", "disabled_reason", "migration_status", "descriptor_version")
+    __slots__ = ("service_id", "proto_service_names", "enabled", "configured", "mounted", "healthy", "degraded", "surface", "listener_kind", "supported_rpcs", "capabilities", "required_backends", "missing_dependencies", "disabled_reason", "migration_status", "descriptor_version", "owns_background_workers", "background_worker_enabled", "background_workers")
     SERVICE_ID_FIELD_NUMBER: _ClassVar[int]
     PROTO_SERVICE_NAMES_FIELD_NUMBER: _ClassVar[int]
     ENABLED_FIELD_NUMBER: _ClassVar[int]
@@ -150,6 +150,9 @@ class NativeServiceStatus(_message.Message):
     DISABLED_REASON_FIELD_NUMBER: _ClassVar[int]
     MIGRATION_STATUS_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTOR_VERSION_FIELD_NUMBER: _ClassVar[int]
+    OWNS_BACKGROUND_WORKERS_FIELD_NUMBER: _ClassVar[int]
+    BACKGROUND_WORKER_ENABLED_FIELD_NUMBER: _ClassVar[int]
+    BACKGROUND_WORKERS_FIELD_NUMBER: _ClassVar[int]
     service_id: str
     proto_service_names: _containers.RepeatedScalarFieldContainer[str]
     enabled: bool
@@ -166,7 +169,10 @@ class NativeServiceStatus(_message.Message):
     disabled_reason: str
     migration_status: str
     descriptor_version: str
-    def __init__(self, service_id: _Optional[str] = ..., proto_service_names: _Optional[_Iterable[str]] = ..., enabled: bool = ..., configured: bool = ..., mounted: bool = ..., healthy: bool = ..., degraded: bool = ..., surface: _Optional[str] = ..., listener_kind: _Optional[str] = ..., supported_rpcs: _Optional[_Iterable[str]] = ..., capabilities: _Optional[_Iterable[str]] = ..., required_backends: _Optional[_Iterable[str]] = ..., missing_dependencies: _Optional[_Iterable[str]] = ..., disabled_reason: _Optional[str] = ..., migration_status: _Optional[str] = ..., descriptor_version: _Optional[str] = ...) -> None: ...
+    owns_background_workers: bool
+    background_worker_enabled: bool
+    background_workers: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, service_id: _Optional[str] = ..., proto_service_names: _Optional[_Iterable[str]] = ..., enabled: bool = ..., configured: bool = ..., mounted: bool = ..., healthy: bool = ..., degraded: bool = ..., surface: _Optional[str] = ..., listener_kind: _Optional[str] = ..., supported_rpcs: _Optional[_Iterable[str]] = ..., capabilities: _Optional[_Iterable[str]] = ..., required_backends: _Optional[_Iterable[str]] = ..., missing_dependencies: _Optional[_Iterable[str]] = ..., disabled_reason: _Optional[str] = ..., migration_status: _Optional[str] = ..., descriptor_version: _Optional[str] = ..., owns_background_workers: bool = ..., background_worker_enabled: bool = ..., background_workers: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class CatalogManifestRequest(_message.Message):
     __slots__ = ("context", "redact")

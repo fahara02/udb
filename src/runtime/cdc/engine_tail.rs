@@ -379,11 +379,8 @@ mod tests {
     /// no offset persistence can ever follow a failed publish.
     #[test]
     fn tail_source_publish_failure_aborts_before_later_offsets_persist() {
-        match tail_source_publish_decision(
-            "mysql-main",
-            "offset-2",
-            Err("broker down".to_string()),
-        ) {
+        match tail_source_publish_decision("mysql-main", "offset-2", Err("broker down".to_string()))
+        {
             TailSourceStep::Abort(reason) => {
                 assert!(reason.contains("mysql-main"), "got: {reason}");
                 assert!(reason.contains("offset-2"), "got: {reason}");

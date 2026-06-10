@@ -82,4 +82,84 @@ public interface IntrospectTokenResponseOrBuilder extends
    * @return The expiresAtUnix.
    */
   long getExpiresAtUnix();
+
+  /**
+   * <pre>
+   * Real introspection metadata (Phase 3 / I2.1).
+   * </pre>
+   *
+   * <code>string key_id = 7 [json_name = "keyId"];</code>
+   * @return The keyId.
+   */
+  java.lang.String getKeyId();
+  /**
+   * <pre>
+   * Real introspection metadata (Phase 3 / I2.1).
+   * </pre>
+   *
+   * <code>string key_id = 7 [json_name = "keyId"];</code>
+   * @return The bytes for keyId.
+   */
+  com.google.protobuf.ByteString
+      getKeyIdBytes();
+
+  /**
+   * <pre>
+   * jwt_access | jwt_refresh | session | api_key
+   * </pre>
+   *
+   * <code>string token_type = 8 [json_name = "tokenType"];</code>
+   * @return The tokenType.
+   */
+  java.lang.String getTokenType();
+  /**
+   * <pre>
+   * jwt_access | jwt_refresh | session | api_key
+   * </pre>
+   *
+   * <code>string token_type = 8 [json_name = "tokenType"];</code>
+   * @return The bytes for tokenType.
+   */
+  com.google.protobuf.ByteString
+      getTokenTypeBytes();
+
+  /**
+   * <pre>
+   * issuing session handle, when present
+   * </pre>
+   *
+   * <code>string session_id = 9 [json_name = "sessionId"];</code>
+   * @return The sessionId.
+   */
+  java.lang.String getSessionId();
+  /**
+   * <pre>
+   * issuing session handle, when present
+   * </pre>
+   *
+   * <code>string session_id = 9 [json_name = "sessionId"];</code>
+   * @return The bytes for sessionId.
+   */
+  com.google.protobuf.ByteString
+      getSessionIdBytes();
+
+  /**
+   * <pre>
+   * populated when active=false due to revocation
+   * </pre>
+   *
+   * <code>string revocation_reason = 10 [json_name = "revocationReason"];</code>
+   * @return The revocationReason.
+   */
+  java.lang.String getRevocationReason();
+  /**
+   * <pre>
+   * populated when active=false due to revocation
+   * </pre>
+   *
+   * <code>string revocation_reason = 10 [json_name = "revocationReason"];</code>
+   * @return The bytes for revocationReason.
+   */
+  com.google.protobuf.ByteString
+      getRevocationReasonBytes();
 }

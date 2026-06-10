@@ -22,6 +22,19 @@ class RefreshTokenResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int32 access_token_expires_in = 2 [json_name = "accessTokenExpiresIn"];</code>
      */
     protected $access_token_expires_in = 0;
+    /**
+     * Rotated refresh token (token-family credential). Issued on every successful
+     * refresh: the presented refresh token is single-use and is invalidated as the
+     * new one is minted (atomic rotation). Empty when the caller refreshed with a
+     * legacy server-side session id rather than a token-family credential.
+     *
+     * Generated from protobuf field <code>string refresh_token = 3 [json_name = "refreshToken"];</code>
+     */
+    protected $refresh_token = '';
+    /**
+     * Generated from protobuf field <code>int32 refresh_token_expires_in = 4 [json_name = "refreshTokenExpiresIn"];</code>
+     */
+    protected $refresh_token_expires_in = 0;
 
     /**
      * Constructor.
@@ -31,6 +44,12 @@ class RefreshTokenResponse extends \Google\Protobuf\Internal\Message
      *
      *     @type string $access_token
      *     @type int $access_token_expires_in
+     *     @type string $refresh_token
+     *           Rotated refresh token (token-family credential). Issued on every successful
+     *           refresh: the presented refresh token is single-use and is invalidated as the
+     *           new one is minted (atomic rotation). Empty when the caller refreshed with a
+     *           legacy server-side session id rather than a token-family credential.
+     *     @type int $refresh_token_expires_in
      * }
      */
     public function __construct($data = NULL) {
@@ -78,6 +97,60 @@ class RefreshTokenResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt32($var);
         $this->access_token_expires_in = $var;
+
+        return $this;
+    }
+
+    /**
+     * Rotated refresh token (token-family credential). Issued on every successful
+     * refresh: the presented refresh token is single-use and is invalidated as the
+     * new one is minted (atomic rotation). Empty when the caller refreshed with a
+     * legacy server-side session id rather than a token-family credential.
+     *
+     * Generated from protobuf field <code>string refresh_token = 3 [json_name = "refreshToken"];</code>
+     * @return string
+     */
+    public function getRefreshToken()
+    {
+        return $this->refresh_token;
+    }
+
+    /**
+     * Rotated refresh token (token-family credential). Issued on every successful
+     * refresh: the presented refresh token is single-use and is invalidated as the
+     * new one is minted (atomic rotation). Empty when the caller refreshed with a
+     * legacy server-side session id rather than a token-family credential.
+     *
+     * Generated from protobuf field <code>string refresh_token = 3 [json_name = "refreshToken"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRefreshToken(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->refresh_token = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>int32 refresh_token_expires_in = 4 [json_name = "refreshTokenExpiresIn"];</code>
+     * @return int
+     */
+    public function getRefreshTokenExpiresIn()
+    {
+        return $this->refresh_token_expires_in;
+    }
+
+    /**
+     * Generated from protobuf field <code>int32 refresh_token_expires_in = 4 [json_name = "refreshTokenExpiresIn"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setRefreshTokenExpiresIn(int $var)
+    {
+        GPBUtil::checkInt32($var);
+        $this->refresh_token_expires_in = $var;
 
         return $this;
     }

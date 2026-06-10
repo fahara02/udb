@@ -99,6 +99,23 @@ class TokenType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     TOKEN_TYPE_SESSION: _ClassVar[TokenType]
     TOKEN_TYPE_API_KEY: _ClassVar[TokenType]
     TOKEN_TYPE_EXTERNAL: _ClassVar[TokenType]
+
+class SigningKeyState(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    SIGNING_KEY_STATE_UNSPECIFIED: _ClassVar[SigningKeyState]
+    SIGNING_KEY_STATE_NEXT: _ClassVar[SigningKeyState]
+    SIGNING_KEY_STATE_ACTIVE: _ClassVar[SigningKeyState]
+    SIGNING_KEY_STATE_VERIFYING: _ClassVar[SigningKeyState]
+    SIGNING_KEY_STATE_RETIRED: _ClassVar[SigningKeyState]
+    SIGNING_KEY_STATE_COMPROMISED: _ClassVar[SigningKeyState]
+
+class MfaChallengePurpose(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    MFA_CHALLENGE_PURPOSE_UNSPECIFIED: _ClassVar[MfaChallengePurpose]
+    MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP: _ClassVar[MfaChallengePurpose]
+    MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION: _ClassVar[MfaChallengePurpose]
+    MFA_CHALLENGE_PURPOSE_ENROLLMENT: _ClassVar[MfaChallengePurpose]
+    MFA_CHALLENGE_PURPOSE_RECOVERY: _ClassVar[MfaChallengePurpose]
 ACCOUNT_KIND_UNSPECIFIED: AccountKind
 ACCOUNT_KIND_PERSON: AccountKind
 ACCOUNT_KIND_SERVICE_ACCOUNT: AccountKind
@@ -165,3 +182,14 @@ TOKEN_TYPE_JWT_REFRESH: TokenType
 TOKEN_TYPE_SESSION: TokenType
 TOKEN_TYPE_API_KEY: TokenType
 TOKEN_TYPE_EXTERNAL: TokenType
+SIGNING_KEY_STATE_UNSPECIFIED: SigningKeyState
+SIGNING_KEY_STATE_NEXT: SigningKeyState
+SIGNING_KEY_STATE_ACTIVE: SigningKeyState
+SIGNING_KEY_STATE_VERIFYING: SigningKeyState
+SIGNING_KEY_STATE_RETIRED: SigningKeyState
+SIGNING_KEY_STATE_COMPROMISED: SigningKeyState
+MFA_CHALLENGE_PURPOSE_UNSPECIFIED: MfaChallengePurpose
+MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP: MfaChallengePurpose
+MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION: MfaChallengePurpose
+MFA_CHALLENGE_PURPOSE_ENROLLMENT: MfaChallengePurpose
+MFA_CHALLENGE_PURPOSE_RECOVERY: MfaChallengePurpose

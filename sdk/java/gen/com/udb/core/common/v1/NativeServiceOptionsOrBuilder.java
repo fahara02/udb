@@ -177,4 +177,17 @@ public interface NativeServiceOptionsOrBuilder extends
    */
   com.google.protobuf.ByteString
       getCapabilityRefBytes();
+
+  /**
+   * <pre>
+   * Whether this service owns background workers (e.g. storage orphan-reaper,
+   * webrtc TURN/SFU maintenance loops) that run beyond request handling. Makes
+   * worker ownership an explicit part of the contract instead of implicit runtime
+   * behavior; the native registry surfaces it on the capability report.
+   * </pre>
+   *
+   * <code>bool owns_background_workers = 19 [json_name = "ownsBackgroundWorkers"];</code>
+   * @return The ownsBackgroundWorkers.
+   */
+  boolean getOwnsBackgroundWorkers();
 }

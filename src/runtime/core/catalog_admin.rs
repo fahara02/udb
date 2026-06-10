@@ -2325,7 +2325,14 @@ mod migration_approval_tests {
 
     #[test]
     fn apply_migration_validation_rejects_non_approved_states() {
-        for state in ["DRY_RUN", "PREFLIGHT", "COMPLETED", "ERROR", "DEAD_LETTER", ""] {
+        for state in [
+            "DRY_RUN",
+            "PREFLIGHT",
+            "COMPLETED",
+            "ERROR",
+            "DEAD_LETTER",
+            "",
+        ] {
             let err =
                 validate_migration_apply_state_and_token(state, "stored-token", "stored-token")
                     .expect_err("non-approved migration state must be rejected");

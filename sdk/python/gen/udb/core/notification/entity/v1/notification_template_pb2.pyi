@@ -12,7 +12,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class NotificationTemplate(_message.Message):
-    __slots__ = ("template_id", "event_type", "channel", "subject_template", "body_template", "locale", "is_active", "created_at", "updated_at", "deleted_at", "created_by", "deleted_by")
+    __slots__ = ("template_id", "event_type", "channel", "subject_template", "body_template", "locale", "is_active", "created_at", "updated_at", "deleted_at", "created_by", "deleted_by", "tenant_id")
     TEMPLATE_ID_FIELD_NUMBER: _ClassVar[int]
     EVENT_TYPE_FIELD_NUMBER: _ClassVar[int]
     CHANNEL_FIELD_NUMBER: _ClassVar[int]
@@ -25,6 +25,7 @@ class NotificationTemplate(_message.Message):
     DELETED_AT_FIELD_NUMBER: _ClassVar[int]
     CREATED_BY_FIELD_NUMBER: _ClassVar[int]
     DELETED_BY_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     template_id: str
     event_type: str
     channel: _enums_pb2.NotificationChannel
@@ -37,4 +38,5 @@ class NotificationTemplate(_message.Message):
     deleted_at: _timestamp_pb2.Timestamp
     created_by: str
     deleted_by: str
-    def __init__(self, template_id: _Optional[str] = ..., event_type: _Optional[str] = ..., channel: _Optional[_Union[_enums_pb2.NotificationChannel, str]] = ..., subject_template: _Optional[str] = ..., body_template: _Optional[str] = ..., locale: _Optional[str] = ..., is_active: bool = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_by: _Optional[str] = ..., deleted_by: _Optional[str] = ...) -> None: ...
+    tenant_id: str
+    def __init__(self, template_id: _Optional[str] = ..., event_type: _Optional[str] = ..., channel: _Optional[_Union[_enums_pb2.NotificationChannel, str]] = ..., subject_template: _Optional[str] = ..., body_template: _Optional[str] = ..., locale: _Optional[str] = ..., is_active: bool = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_by: _Optional[str] = ..., deleted_by: _Optional[str] = ..., tenant_id: _Optional[str] = ...) -> None: ...

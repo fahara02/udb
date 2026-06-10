@@ -86,6 +86,15 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string capability_ref = 18 [json_name = "capabilityRef"];</code>
      */
     protected $capability_ref = '';
+    /**
+     * Whether this service owns background workers (e.g. storage orphan-reaper,
+     * webrtc TURN/SFU maintenance loops) that run beyond request handling. Makes
+     * worker ownership an explicit part of the contract instead of implicit runtime
+     * behavior; the native registry surfaces it on the capability report.
+     *
+     * Generated from protobuf field <code>bool owns_background_workers = 19 [json_name = "ownsBackgroundWorkers"];</code>
+     */
+    protected $owns_background_workers = false;
 
     /**
      * Constructor.
@@ -111,6 +120,11 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      *     @type string $cli_scaffold_group
      *     @type string $health_check_ref
      *     @type string $capability_ref
+     *     @type bool $owns_background_workers
+     *           Whether this service owns background workers (e.g. storage orphan-reaper,
+     *           webrtc TURN/SFU maintenance loops) that run beyond request handling. Makes
+     *           worker ownership an explicit part of the contract instead of implicit runtime
+     *           behavior; the native registry surfaces it on the capability report.
      * }
      */
     public function __construct($data = NULL) {
@@ -502,6 +516,37 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, true);
         $this->capability_ref = $var;
+
+        return $this;
+    }
+
+    /**
+     * Whether this service owns background workers (e.g. storage orphan-reaper,
+     * webrtc TURN/SFU maintenance loops) that run beyond request handling. Makes
+     * worker ownership an explicit part of the contract instead of implicit runtime
+     * behavior; the native registry surfaces it on the capability report.
+     *
+     * Generated from protobuf field <code>bool owns_background_workers = 19 [json_name = "ownsBackgroundWorkers"];</code>
+     * @return bool
+     */
+    public function getOwnsBackgroundWorkers()
+    {
+        return $this->owns_background_workers;
+    }
+
+    /**
+     * Whether this service owns background workers (e.g. storage orphan-reaper,
+     * webrtc TURN/SFU maintenance loops) that run beyond request handling. Makes
+     * worker ownership an explicit part of the contract instead of implicit runtime
+     * behavior; the native registry surfaces it on the capability report.
+     *
+     * Generated from protobuf field <code>bool owns_background_workers = 19 [json_name = "ownsBackgroundWorkers"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setOwnsBackgroundWorkers(bool $var)
+    {
+        $this->owns_background_workers = $var;
 
         return $this;
     }

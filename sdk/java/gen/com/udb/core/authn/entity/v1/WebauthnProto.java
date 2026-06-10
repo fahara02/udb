@@ -49,71 +49,73 @@ public final class WebauthnProto extends com.google.protobuf.GeneratedFile {
       "o\022\030udb.core.authn.entity.v1\032\037google/prot" +
       "obuf/timestamp.proto\032\033udb/core/common/v1" +
       "/db.proto\032!udb/core/common/v1/security.p" +
-      "roto\"\327\t\n\022WebAuthnCredential\022J\n\rcredentia" +
+      "roto\"\360\t\n\022WebAuthnCredential\022J\n\rcredentia" +
       "l_id\030\001 \001(\tB%\202\267\030!\n\rcredential_id\022\014VARCHAR" +
       "(512)\030\001(\001R\014credentialId\022\226\001\n\007user_id\030\002 \001(" +
       "\tB}\202\267\030y\n\007user_id\022\004UUID\030\001J>\n\005users\022\007user_" +
       "id\032\tudb_authn \0032\037fk_webauthn_credentials" +
       "_user_idR&\n\035idx_webauthn_credentials_use" +
-      "r\022\005BTREER\006userId\022H\n\014passkey_json\030\003 \001(\tB%" +
-      "\350\265\030\001\360\265\030\001\202\267\030\031\n\014passkey_json\022\005JSONB\030\001x\001R\013p" +
-      "asskeyJson\022/\n\005label\030\004 \001(\tB\031\202\267\030\025\n\005label\022\014" +
-      "VARCHAR(160)R\005label\022f\n\ttenant_id\030\005 \001(\tBI" +
-      "\202\267\030E\n\ttenant_id\022\014VARCHAR(120)\030\001R(\n\037idx_w" +
-      "ebauthn_credentials_tenant\022\005BTREER\010tenan" +
-      "tId\022=\n\nproject_id\030\006 \001(\tB\036\202\267\030\032\n\nproject_i" +
-      "d\022\014VARCHAR(120)R\tprojectId\022q\n\ncreated_at" +
-      "\030\007 \001(\0132\032.google.protobuf.TimestampB6\202\267\0302" +
-      "\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIM" +
-      "ESTAMP`\001h\001R\tcreatedAt\022o\n\nupdated_at\030\010 \001(" +
-      "\0132\032.google.protobuf.TimestampB4\202\267\0300\n\nupd" +
-      "ated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAM" +
-      "P`\001R\tupdatedAt\022]\n\014last_used_at\030\t \001(\0132\032.g" +
-      "oogle.protobuf.TimestampB\037\202\267\030\033\n\014last_use" +
-      "d_at\022\013TIMESTAMPTZR\nlastUsedAt:\366\002\372\266\030\325\001\n\024w" +
-      "ebauthn_credentials\022\tudb_authn\030\004 \001*0Serv" +
-      "er-side WebAuthn passkeys bound to UDB u" +
-      "sers@\001b^\n\020tenant_isolation\032H(tenant_id::" +
-      "text = current_setting(\'app.current_tena" +
-      "nt_id\', true)::text)(\001\352\001\007primary\372\001\017authn" +
-      ":mfa:write\212\262\031\227\001\n\006tenant\032\ttenant_id*4tena" +
-      "nt_id = current_setting(\'app.current_ten" +
-      "ant_id\')2\013soft_delete:\021authn.operational" +
-      "@\373\023H\002R\006tenantZ\010standardr\025tenant.data_res" +
-      "idency\"\304\010\n\021WebAuthnChallenge\022R\n\014challeng" +
-      "e_id\030\001 \001(\tB/\202\267\030+\n\014challenge_id\022\004UUID\030\001(\001" +
-      ":\021gen_random_uuid()R\013challengeId\022U\n\007user" +
-      "_id\030\002 \001(\tB<\202\267\0308\n\007user_id\022\004UUID\030\001R%\n\034idx_" +
-      "webauthn_challenges_user\022\005BTREER\006userId\022" +
-      "Y\n\010ceremony\030\003 \001(\tB=\202\267\0309\n\010ceremony\022\013VARCH" +
-      "AR(24)\030\001Z\036registration or authentication" +
-      "R\010ceremony\022B\n\nstate_json\030\004 \001(\tB#\350\265\030\001\360\265\030\001" +
-      "\202\267\030\027\n\nstate_json\022\005JSONB\030\001x\001R\tstateJson\022e" +
-      "\n\ttenant_id\030\005 \001(\tBH\202\267\030D\n\ttenant_id\022\014VARC" +
-      "HAR(120)\030\001R\'\n\036idx_webauthn_challenges_te" +
-      "nant\022\005BTREER\010tenantId\022=\n\nproject_id\030\006 \001(" +
-      "\tB\036\202\267\030\032\n\nproject_id\022\014VARCHAR(120)R\tproje" +
-      "ctId\022\204\001\n\nexpires_at\030\007 \001(\0132\032.google.proto" +
-      "buf.TimestampBI\202\267\030E\n\nexpires_at\022\013TIMESTA" +
-      "MPTZ\030\001R(\n\037idx_webauthn_challenges_expire" +
-      "s\022\005BTREER\texpiresAt\022[\n\013consumed_at\030\010 \001(\013" +
-      "2\032.google.protobuf.TimestampB\036\202\267\030\032\n\013cons" +
-      "umed_at\022\013TIMESTAMPTZR\nconsumedAt\022q\n\ncrea" +
-      "ted_at\030\t \001(\0132\032.google.protobuf.Timestamp" +
-      "B6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CURRE" +
-      "NT_TIMESTAMP`\001h\001R\tcreatedAt:\347\001\372\266\030\342\001\n\023web" +
-      "authn_challenges\022\tudb_authn\030\005 \001*>Server-" +
-      "side WebAuthn ceremony state; never retu" +
-      "rned to clients@\001b^\n\020tenant_isolation\032H(" +
-      "tenant_id::text = current_setting(\'app.c" +
-      "urrent_tenant_id\', true)::text)(\001\352\001\007prim" +
-      "ary\372\001\017authn:mfa:writeB\370\001\n\034com.udb.core.a" +
-      "uthn.entity.v1B\rWebauthnProtoP\001ZDgithub." +
-      "com/fahara02/udb/sdk/go/gen/udb/core/aut" +
-      "hn/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.core." +
-      "Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\Entity\\" +
-      "V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V" +
-      "1\352\002\034Udb::Core::Authn::Entity::V1b\006proto3"
+      "r\022\005BTREER\006userId\022h\n\014passkey_json\030\003 \001(\tBE" +
+      "\350\265\030\001\360\265\030\001\202\267\030\031\n\014passkey_json\022\005JSONB\030\001x\001\212\267\030" +
+      "\034\010\003\020\001\030\003:\016authn-webauthnJ\004noneR\013passkeyJs" +
+      "on\022/\n\005label\030\004 \001(\tB\031\202\267\030\025\n\005label\022\014VARCHAR(" +
+      "160)R\005label\022f\n\ttenant_id\030\005 \001(\tBI\202\267\030E\n\tte" +
+      "nant_id\022\014VARCHAR(120)\030\001R(\n\037idx_webauthn_" +
+      "credentials_tenant\022\005BTREER\010tenantId\022=\n\np" +
+      "roject_id\030\006 \001(\tB\036\202\267\030\032\n\nproject_id\022\014VARCH" +
+      "AR(120)R\tprojectId\022q\n\ncreated_at\030\007 \001(\0132\032" +
+      ".google.protobuf.TimestampB6\202\267\0302\n\ncreate" +
+      "d_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001" +
+      "h\001R\tcreatedAt\022o\n\nupdated_at\030\010 \001(\0132\032.goog" +
+      "le.protobuf.TimestampB4\202\267\0300\n\nupdated_at\022" +
+      "\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001R\tupd" +
+      "atedAt\022]\n\014last_used_at\030\t \001(\0132\032.google.pr" +
+      "otobuf.TimestampB\037\202\267\030\033\n\014last_used_at\022\013TI" +
+      "MESTAMPTZR\nlastUsedAt:\357\002\372\266\030\325\001\n\024webauthn_" +
+      "credentials\022\tudb_authn\030\004 \001*0Server-side " +
+      "WebAuthn passkeys bound to UDB users@\001b^" +
+      "\n\020tenant_isolation\032H(tenant_id::text = c" +
+      "urrent_setting(\'app.current_tenant_id\', " +
+      "true)::text)(\001\352\001\007primary\372\001\017authn:mfa:wri" +
+      "te\212\262\031\220\001\n\006tenant\032\ttenant_id*4tenant_id = " +
+      "current_setting(\'app.current_tenant_id\')" +
+      "2\004none:\021authn.operational@\373\023H\002R\006tenantZ\010" +
+      "standardr\025tenant.data_residency\"\344\010\n\021WebA" +
+      "uthnChallenge\022R\n\014challenge_id\030\001 \001(\tB/\202\267\030" +
+      "+\n\014challenge_id\022\004UUID\030\001(\001:\021gen_random_uu" +
+      "id()R\013challengeId\022U\n\007user_id\030\002 \001(\tB<\202\267\0308" +
+      "\n\007user_id\022\004UUID\030\001R%\n\034idx_webauthn_challe" +
+      "nges_user\022\005BTREER\006userId\022Y\n\010ceremony\030\003 \001" +
+      "(\tB=\202\267\0309\n\010ceremony\022\013VARCHAR(24)\030\001Z\036regis" +
+      "tration or authenticationR\010ceremony\022b\n\ns" +
+      "tate_json\030\004 \001(\tBC\350\265\030\001\360\265\030\001\202\267\030\027\n\nstate_jso" +
+      "n\022\005JSONB\030\001x\001\212\267\030\034\010\004\020\001\030\003:\016authn-webauthnJ\004" +
+      "noneR\tstateJson\022e\n\ttenant_id\030\005 \001(\tBH\202\267\030D" +
+      "\n\ttenant_id\022\014VARCHAR(120)\030\001R\'\n\036idx_webau" +
+      "thn_challenges_tenant\022\005BTREER\010tenantId\022=" +
+      "\n\nproject_id\030\006 \001(\tB\036\202\267\030\032\n\nproject_id\022\014VA" +
+      "RCHAR(120)R\tprojectId\022\204\001\n\nexpires_at\030\007 \001" +
+      "(\0132\032.google.protobuf.TimestampBI\202\267\030E\n\nex" +
+      "pires_at\022\013TIMESTAMPTZ\030\001R(\n\037idx_webauthn_" +
+      "challenges_expires\022\005BTREER\texpiresAt\022[\n\013" +
+      "consumed_at\030\010 \001(\0132\032.google.protobuf.Time" +
+      "stampB\036\202\267\030\032\n\013consumed_at\022\013TIMESTAMPTZR\nc" +
+      "onsumedAt\022q\n\ncreated_at\030\t \001(\0132\032.google.p" +
+      "rotobuf.TimestampB6\202\267\0302\n\ncreated_at\022\013TIM" +
+      "ESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001R\tcreat" +
+      "edAt:\347\001\372\266\030\342\001\n\023webauthn_challenges\022\tudb_a" +
+      "uthn\030\005 \001*>Server-side WebAuthn ceremony " +
+      "state; never returned to clients@\001b^\n\020te" +
+      "nant_isolation\032H(tenant_id::text = curre" +
+      "nt_setting(\'app.current_tenant_id\', true" +
+      ")::text)(\001\352\001\007primary\372\001\017authn:mfa:writeB\370" +
+      "\001\n\034com.udb.core.authn.entity.v1B\rWebauth" +
+      "nProtoP\001ZDgithub.com/fahara02/udb/sdk/go" +
+      "/gen/udb/core/authn/entity/v1;entityv1\242\002" +
+      "\004UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030Udb\\C" +
+      "ore\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadata\\Co" +
+      "re\\Authn\\Entity\\V1\352\002\034Udb::Core::Authn::E" +
+      "ntity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -140,6 +142,7 @@ public final class WebauthnProto extends com.google.protobuf.GeneratedFile {
     com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.dbColumnSecurity);
     registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
     registry.add(com.udb.core.common.v1.SecurityProto.logRedacted);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);

@@ -20,6 +20,12 @@ class NotificationTemplate extends \Google\Protobuf\Internal\Message
     protected $template_id = '';
     /**
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+     * Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
+     * global default (tenant_id NULL) for the same (event_type, channel) coexist;
+     * resolution prefers the per-tenant row over the global default. The unique
+     * index stays on (event_type, channel) for now (global dedupe); when a
+     * per-tenant write path lands, split into partial unique indexes keyed on
+     * tenant_id IS NULL vs IS NOT NULL.
      *
      * Generated from protobuf field <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = {</code>
      */
@@ -64,6 +70,12 @@ class NotificationTemplate extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string deleted_by = 12 [json_name = "deletedBy", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $deleted_by = '';
+    /**
+     * NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+     *
+     * Generated from protobuf field <code>string tenant_id = 13 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $tenant_id = '';
 
     /**
      * Constructor.
@@ -74,6 +86,12 @@ class NotificationTemplate extends \Google\Protobuf\Internal\Message
      *     @type string $template_id
      *     @type string $event_type
      *           Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+     *           Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
+     *           global default (tenant_id NULL) for the same (event_type, channel) coexist;
+     *           resolution prefers the per-tenant row over the global default. The unique
+     *           index stays on (event_type, channel) for now (global dedupe); when a
+     *           per-tenant write path lands, split into partial unique indexes keyed on
+     *           tenant_id IS NULL vs IS NOT NULL.
      *     @type int $channel
      *     @type string $subject_template
      *     @type string $body_template
@@ -84,6 +102,8 @@ class NotificationTemplate extends \Google\Protobuf\Internal\Message
      *     @type \Google\Protobuf\Timestamp $deleted_at
      *     @type string $created_by
      *     @type string $deleted_by
+     *     @type string $tenant_id
+     *           NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
      * }
      */
     public function __construct($data = NULL) {
@@ -115,6 +135,12 @@ class NotificationTemplate extends \Google\Protobuf\Internal\Message
 
     /**
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+     * Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
+     * global default (tenant_id NULL) for the same (event_type, channel) coexist;
+     * resolution prefers the per-tenant row over the global default. The unique
+     * index stays on (event_type, channel) for now (global dedupe); when a
+     * per-tenant write path lands, split into partial unique indexes keyed on
+     * tenant_id IS NULL vs IS NOT NULL.
      *
      * Generated from protobuf field <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = {</code>
      * @return string
@@ -126,6 +152,12 @@ class NotificationTemplate extends \Google\Protobuf\Internal\Message
 
     /**
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+     * Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
+     * global default (tenant_id NULL) for the same (event_type, channel) coexist;
+     * resolution prefers the per-tenant row over the global default. The unique
+     * index stays on (event_type, channel) for now (global dedupe); when a
+     * per-tenant write path lands, split into partial unique indexes keyed on
+     * tenant_id IS NULL vs IS NOT NULL.
      *
      * Generated from protobuf field <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var
@@ -381,6 +413,32 @@ class NotificationTemplate extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, true);
         $this->deleted_by = $var;
+
+        return $this;
+    }
+
+    /**
+     * NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+     *
+     * Generated from protobuf field <code>string tenant_id = 13 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getTenantId()
+    {
+        return $this->tenant_id;
+    }
+
+    /**
+     * NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+     *
+     * Generated from protobuf field <code>string tenant_id = 13 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setTenantId(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->tenant_id = $var;
 
         return $this;
     }

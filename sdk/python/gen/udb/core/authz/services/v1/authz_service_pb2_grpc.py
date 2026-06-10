@@ -3,6 +3,7 @@
 import grpc
 
 from udb.core.authz.services.v1 import core_pb2 as udb_dot_core_dot_authz_dot_services_dot_v1_dot_core__pb2
+from udb.core.authz.services.v1 import governance_pb2 as udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2
 
 
 class AuthzServiceStub(object):
@@ -130,6 +131,96 @@ class AuthzServiceStub(object):
                 '/udb.core.authz.services.v1.AuthzService/GetPolicyBundle',
                 request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_core__pb2.PolicyBundleRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_core__pb2.PolicyBundleResponse.FromString,
+                _registered_method=True)
+        self.CreatePolicyDraft = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.CreatePolicyDraftRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PolicyDraftResponse.FromString,
+                _registered_method=True)
+        self.UpdatePolicyDraft = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.UpdatePolicyDraftRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PolicyDraftResponse.FromString,
+                _registered_method=True)
+        self.DiffPolicyDraft = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/DiffPolicyDraft',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.DiffPolicyDraftRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.DiffPolicyDraftResponse.FromString,
+                _registered_method=True)
+        self.SubmitPolicyDraft = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.SubmitPolicyDraftRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PolicyDraftResponse.FromString,
+                _registered_method=True)
+        self.ApprovePolicyDraft = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ApprovePolicyDraftRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PolicyApprovalResponse.FromString,
+                _registered_method=True)
+        self.RejectPolicyDraft = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/RejectPolicyDraft',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.RejectPolicyDraftRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PolicyApprovalResponse.FromString,
+                _registered_method=True)
+        self.ActivatePolicyVersion = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ActivatePolicyVersionRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ActivationResponse.FromString,
+                _registered_method=True)
+        self.RollbackPolicyVersion = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.RollbackPolicyVersionRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ActivationResponse.FromString,
+                _registered_method=True)
+        self.ActivateCanary = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/ActivateCanary',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ActivateCanaryRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.CanaryResponse.FromString,
+                _registered_method=True)
+        self.PromoteCanary = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/PromoteCanary',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PromoteCanaryRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.CanaryResponse.FromString,
+                _registered_method=True)
+        self.GetCanaryStatus = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/GetCanaryStatus',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.GetCanaryStatusRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.GetCanaryStatusResponse.FromString,
+                _registered_method=True)
+        self.ListPolicyVersions = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/ListPolicyVersions',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ListPolicyVersionsRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ListPolicyVersionsResponse.FromString,
+                _registered_method=True)
+        self.SimulatePolicy = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/SimulatePolicy',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.SimulatePolicyRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.SimulatePolicyResponse.FromString,
+                _registered_method=True)
+        self.ExplainPolicy = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/ExplainPolicy',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ExplainPolicyRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ExplainPolicyResponse.FromString,
+                _registered_method=True)
+        self.GetAuthzRevision = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/GetAuthzRevision',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.GetAuthzRevisionRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.GetAuthzRevisionResponse.FromString,
+                _registered_method=True)
+        self.InvalidatePolicyBundles = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.InvalidatePolicyBundlesRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.InvalidatePolicyBundlesResponse.FromString,
+                _registered_method=True)
+        self.SeedBuiltinRoles = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.SeedBuiltinRolesRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.SeedBuiltinRolesResponse.FromString,
+                _registered_method=True)
+        self.MigrateLegacyPolicies = channel.unary_unary(
+                '/udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies',
+                request_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.MigrateLegacyPoliciesRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.MigrateLegacyPoliciesResponse.FromString,
                 _registered_method=True)
 
 
@@ -289,6 +380,125 @@ class AuthzServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def CreatePolicyDraft(self, request, context):
+        """── Phase K: Authz Policy Governance ─────────────────────────────────────
+        Every governance mutation is itself authorized under
+        `native.authz.governance` and requires an explicit authz governance scope
+        (authz:admin / authz:policy:write / authz:role:write) or a break-glass
+        grant — never a bare bearer token. Drafts and simulations never touch the
+        live authorization snapshot; only ActivatePolicyVersion / RollbackPolicyVersion do.
+
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UpdatePolicyDraft(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DiffPolicyDraft(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SubmitPolicyDraft(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ApprovePolicyDraft(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RejectPolicyDraft(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ActivatePolicyVersion(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RollbackPolicyVersion(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ActivateCanary(self, request, context):
+        """Activate a policy version to a canary scope (subset of the fleet) before
+        fleet-wide. A metric-based evaluator then auto-rolls back on breach.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def PromoteCanary(self, request, context):
+        """Promote a baked, within-threshold canary to fleet-wide enforcement.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetCanaryStatus(self, request, context):
+        """Read a canary's current state + promote-eligibility.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListPolicyVersions(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SimulatePolicy(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ExplainPolicy(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetAuthzRevision(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def InvalidatePolicyBundles(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SeedBuiltinRoles(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def MigrateLegacyPolicies(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AuthzServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -406,6 +616,96 @@ def add_AuthzServiceServicer_to_server(servicer, server):
                     servicer.GetPolicyBundle,
                     request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_core__pb2.PolicyBundleRequest.FromString,
                     response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_core__pb2.PolicyBundleResponse.SerializeToString,
+            ),
+            'CreatePolicyDraft': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreatePolicyDraft,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.CreatePolicyDraftRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PolicyDraftResponse.SerializeToString,
+            ),
+            'UpdatePolicyDraft': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdatePolicyDraft,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.UpdatePolicyDraftRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PolicyDraftResponse.SerializeToString,
+            ),
+            'DiffPolicyDraft': grpc.unary_unary_rpc_method_handler(
+                    servicer.DiffPolicyDraft,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.DiffPolicyDraftRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.DiffPolicyDraftResponse.SerializeToString,
+            ),
+            'SubmitPolicyDraft': grpc.unary_unary_rpc_method_handler(
+                    servicer.SubmitPolicyDraft,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.SubmitPolicyDraftRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PolicyDraftResponse.SerializeToString,
+            ),
+            'ApprovePolicyDraft': grpc.unary_unary_rpc_method_handler(
+                    servicer.ApprovePolicyDraft,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ApprovePolicyDraftRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PolicyApprovalResponse.SerializeToString,
+            ),
+            'RejectPolicyDraft': grpc.unary_unary_rpc_method_handler(
+                    servicer.RejectPolicyDraft,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.RejectPolicyDraftRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PolicyApprovalResponse.SerializeToString,
+            ),
+            'ActivatePolicyVersion': grpc.unary_unary_rpc_method_handler(
+                    servicer.ActivatePolicyVersion,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ActivatePolicyVersionRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ActivationResponse.SerializeToString,
+            ),
+            'RollbackPolicyVersion': grpc.unary_unary_rpc_method_handler(
+                    servicer.RollbackPolicyVersion,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.RollbackPolicyVersionRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ActivationResponse.SerializeToString,
+            ),
+            'ActivateCanary': grpc.unary_unary_rpc_method_handler(
+                    servicer.ActivateCanary,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ActivateCanaryRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.CanaryResponse.SerializeToString,
+            ),
+            'PromoteCanary': grpc.unary_unary_rpc_method_handler(
+                    servicer.PromoteCanary,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PromoteCanaryRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.CanaryResponse.SerializeToString,
+            ),
+            'GetCanaryStatus': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetCanaryStatus,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.GetCanaryStatusRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.GetCanaryStatusResponse.SerializeToString,
+            ),
+            'ListPolicyVersions': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListPolicyVersions,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ListPolicyVersionsRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ListPolicyVersionsResponse.SerializeToString,
+            ),
+            'SimulatePolicy': grpc.unary_unary_rpc_method_handler(
+                    servicer.SimulatePolicy,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.SimulatePolicyRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.SimulatePolicyResponse.SerializeToString,
+            ),
+            'ExplainPolicy': grpc.unary_unary_rpc_method_handler(
+                    servicer.ExplainPolicy,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ExplainPolicyRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ExplainPolicyResponse.SerializeToString,
+            ),
+            'GetAuthzRevision': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAuthzRevision,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.GetAuthzRevisionRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.GetAuthzRevisionResponse.SerializeToString,
+            ),
+            'InvalidatePolicyBundles': grpc.unary_unary_rpc_method_handler(
+                    servicer.InvalidatePolicyBundles,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.InvalidatePolicyBundlesRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.InvalidatePolicyBundlesResponse.SerializeToString,
+            ),
+            'SeedBuiltinRoles': grpc.unary_unary_rpc_method_handler(
+                    servicer.SeedBuiltinRoles,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.SeedBuiltinRolesRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.SeedBuiltinRolesResponse.SerializeToString,
+            ),
+            'MigrateLegacyPolicies': grpc.unary_unary_rpc_method_handler(
+                    servicer.MigrateLegacyPolicies,
+                    request_deserializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.MigrateLegacyPoliciesRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.MigrateLegacyPoliciesResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -1031,6 +1331,492 @@ class AuthzService(object):
             '/udb.core.authz.services.v1.AuthzService/GetPolicyBundle',
             udb_dot_core_dot_authz_dot_services_dot_v1_dot_core__pb2.PolicyBundleRequest.SerializeToString,
             udb_dot_core_dot_authz_dot_services_dot_v1_dot_core__pb2.PolicyBundleResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreatePolicyDraft(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.CreatePolicyDraftRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PolicyDraftResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def UpdatePolicyDraft(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.UpdatePolicyDraftRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PolicyDraftResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DiffPolicyDraft(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/DiffPolicyDraft',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.DiffPolicyDraftRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.DiffPolicyDraftResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SubmitPolicyDraft(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.SubmitPolicyDraftRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PolicyDraftResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ApprovePolicyDraft(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ApprovePolicyDraftRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PolicyApprovalResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RejectPolicyDraft(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/RejectPolicyDraft',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.RejectPolicyDraftRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PolicyApprovalResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ActivatePolicyVersion(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ActivatePolicyVersionRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ActivationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RollbackPolicyVersion(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.RollbackPolicyVersionRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ActivationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ActivateCanary(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/ActivateCanary',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ActivateCanaryRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.CanaryResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def PromoteCanary(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/PromoteCanary',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.PromoteCanaryRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.CanaryResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetCanaryStatus(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/GetCanaryStatus',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.GetCanaryStatusRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.GetCanaryStatusResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListPolicyVersions(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/ListPolicyVersions',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ListPolicyVersionsRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ListPolicyVersionsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SimulatePolicy(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/SimulatePolicy',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.SimulatePolicyRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.SimulatePolicyResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ExplainPolicy(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/ExplainPolicy',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ExplainPolicyRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.ExplainPolicyResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetAuthzRevision(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/GetAuthzRevision',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.GetAuthzRevisionRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.GetAuthzRevisionResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def InvalidatePolicyBundles(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.InvalidatePolicyBundlesRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.InvalidatePolicyBundlesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SeedBuiltinRoles(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.SeedBuiltinRolesRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.SeedBuiltinRolesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def MigrateLegacyPolicies(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies',
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.MigrateLegacyPoliciesRequest.SerializeToString,
+            udb_dot_core_dot_authz_dot_services_dot_v1_dot_governance__pb2.MigrateLegacyPoliciesResponse.FromString,
             options,
             channel_credentials,
             insecure,

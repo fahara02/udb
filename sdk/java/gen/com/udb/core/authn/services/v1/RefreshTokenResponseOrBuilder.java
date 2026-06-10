@@ -27,4 +27,36 @@ public interface RefreshTokenResponseOrBuilder extends
    * @return The accessTokenExpiresIn.
    */
   int getAccessTokenExpiresIn();
+
+  /**
+   * <pre>
+   * Rotated refresh token (token-family credential). Issued on every successful
+   * refresh: the presented refresh token is single-use and is invalidated as the
+   * new one is minted (atomic rotation). Empty when the caller refreshed with a
+   * legacy server-side session id rather than a token-family credential.
+   * </pre>
+   *
+   * <code>string refresh_token = 3 [json_name = "refreshToken"];</code>
+   * @return The refreshToken.
+   */
+  java.lang.String getRefreshToken();
+  /**
+   * <pre>
+   * Rotated refresh token (token-family credential). Issued on every successful
+   * refresh: the presented refresh token is single-use and is invalidated as the
+   * new one is minted (atomic rotation). Empty when the caller refreshed with a
+   * legacy server-side session id rather than a token-family credential.
+   * </pre>
+   *
+   * <code>string refresh_token = 3 [json_name = "refreshToken"];</code>
+   * @return The bytes for refreshToken.
+   */
+  com.google.protobuf.ByteString
+      getRefreshTokenBytes();
+
+  /**
+   * <code>int32 refresh_token_expires_in = 4 [json_name = "refreshTokenExpiresIn"];</code>
+   * @return The refreshTokenExpiresIn.
+   */
+  int getRefreshTokenExpiresIn();
 }

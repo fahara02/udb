@@ -105,4 +105,26 @@ public interface IssueCredentialsResponseOrBuilder extends
    * <code>.udb.core.common.v1.ApiError error = 6 [json_name = "error"];</code>
    */
   com.udb.core.common.v1.ApiErrorOrBuilder getErrorOrBuilder();
+
+  /**
+   * <pre>
+   * The action bound into the signed TURN REST username. Credentials issued by
+   * this RPC authorize media relay only, not arbitrary WebRTC control-plane RPCs.
+   * </pre>
+   *
+   * <code>string allowed_action = 7 [json_name = "allowedAction"];</code>
+   * @return The allowedAction.
+   */
+  java.lang.String getAllowedAction();
+  /**
+   * <pre>
+   * The action bound into the signed TURN REST username. Credentials issued by
+   * this RPC authorize media relay only, not arbitrary WebRTC control-plane RPCs.
+   * </pre>
+   *
+   * <code>string allowed_action = 7 [json_name = "allowedAction"];</code>
+   * @return The bytes for allowedAction.
+   */
+  com.google.protobuf.ByteString
+      getAllowedActionBytes();
 }

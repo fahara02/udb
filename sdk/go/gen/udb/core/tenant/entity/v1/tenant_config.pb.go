@@ -119,7 +119,7 @@ var File_udb_core_tenant_entity_v1_tenant_config_proto protoreflect.FileDescript
 
 const file_udb_core_tenant_entity_v1_tenant_config_proto_rawDesc = "" +
 	"\n" +
-	"-udb/core/tenant/entity/v1/tenant_config.proto\x12\x19udb.core.tenant.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/tenant/entity/v1/enums.proto\"\xb0\v\n" +
+	"-udb/core/tenant/entity/v1/tenant_config.proto\x12\x19udb.core.tenant.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/tenant/entity/v1/enums.proto\"\xa9\v\n" +
 	"\fTenantConfig\x12<\n" +
 	"\x02id\x18\x01 \x01(\tB,\x82\xb7\x18(\n" +
 	"\tconfig_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x02id\x12\x7f\n" +
@@ -141,7 +141,7 @@ const file_udb_core_tenant_entity_v1_tenant_config_proto_rawDesc = "" +
 	"\n" +
 	"audit_info\x18\a \x01(\v2\x1d.udb.core.common.v1.AuditInfoBD\x82\xb7\x18@\n" +
 	"\n" +
-	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo:\xab\x06\xfa\xb6\x18\x89\x05\n" +
+	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo:\xa4\x06\xfa\xb6\x18\x89\x05\n" +
 	"\x0etenant_configs\x12\n" +
 	"udb_tenant\x18\x02 \x01*\x1eTenant-specific configurations8\x01@\x01b\x9c\x01\n" +
 	"\x10tenant_isolation\x1aB(tenant_id::text = current_setting('app.current_tenant_id', true))\"B(tenant_id::text = current_setting('app.current_tenant_id', true))(\x01h\x01\x8a\x018\n" +
@@ -156,8 +156,8 @@ const file_udb_core_tenant_entity_v1_tenant_config_proto_rawDesc = "" +
 	"  NEW.updated_at = CURRENT_TIMESTAMP;\n" +
 	"  RETURN NEW;\n" +
 	"END;\n" +
-	"$$;\xf2\x01\x16udb.tenant.configs.cdc\xfa\x01\x12tenant:config:read\x8a\xb2\x19\x98\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x12tenant.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x82\x02\n" +
+	"$$;\xf2\x01\x16udb.tenant.configs.cdc\xfa\x01\x12tenant:config:read\x8a\xb2\x19\x91\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x12tenant.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x82\x02\n" +
 	"\x1dcom.udb.core.tenant.entity.v1B\x11TenantConfigProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/tenant/entity/v1;entityv1\xa2\x02\x04UCTE\xaa\x02\x19udb.core.Tenant.Entity.V1\xca\x02\x19Udb\\Core\\Tenant\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Tenant\\Entity\\V1\xea\x02\x1dUdb::Core::Tenant::Entity::V1b\x06proto3"
 
 var (

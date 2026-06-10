@@ -25,6 +25,12 @@ public interface NotificationTemplateOrBuilder extends
   /**
    * <pre>
    * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+   * Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
+   * global default (tenant_id NULL) for the same (event_type, channel) coexist;
+   * resolution prefers the per-tenant row over the global default. The unique
+   * index stays on (event_type, channel) for now (global dedupe); when a
+   * per-tenant write path lands, split into partial unique indexes keyed on
+   * tenant_id IS NULL vs IS NOT NULL.
    * </pre>
    *
    * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -34,6 +40,12 @@ public interface NotificationTemplateOrBuilder extends
   /**
    * <pre>
    * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+   * Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
+   * global default (tenant_id NULL) for the same (event_type, channel) coexist;
+   * resolution prefers the per-tenant row over the global default. The unique
+   * index stays on (event_type, channel) for now (global dedupe); when a
+   * per-tenant write path lands, split into partial unique indexes keyed on
+   * tenant_id IS NULL vs IS NOT NULL.
    * </pre>
    *
    * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -163,4 +175,24 @@ public interface NotificationTemplateOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDeletedByBytes();
+
+  /**
+   * <pre>
+   * NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+   * </pre>
+   *
+   * <code>string tenant_id = 13 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The tenantId.
+   */
+  java.lang.String getTenantId();
+  /**
+   * <pre>
+   * NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+   * </pre>
+   *
+   * <code>string tenant_id = 13 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for tenantId.
+   */
+  com.google.protobuf.ByteString
+      getTenantIdBytes();
 }

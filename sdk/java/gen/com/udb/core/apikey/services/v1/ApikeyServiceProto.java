@@ -39,7 +39,7 @@ public final class ApikeyServiceProto extends com.google.protobuf.GeneratedFile 
       "vice.proto\022\033udb.core.apikey.services.v1\032" +
       "\034google/api/annotations.proto\032&udb/core/" +
       "apikey/services/v1/core.proto\032!udb/core/" +
-      "common/v1/security.proto2\367#\n\rApiKeyServi" +
+      "common/v1/security.proto2\220*\n\rApiKeyServi" +
       "ce\022\320\004\n\014CreateApiKey\0220.udb.core.apikey.se" +
       "rvices.v1.CreateApiKeyRequest\0321.udb.core" +
       ".apikey.services.v1.CreateApiKeyResponse" +
@@ -114,54 +114,74 @@ public final class ApikeyServiceProto extends com.google.protobuf.GeneratedFile 
       "\rat_least_once2\006stable\362\363\030@\n\006apikey\032\010post" +
       "gres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_G" +
       "RPC_TARGET\202\323\344\223\002\027*\025/v1/api_keys/{key_id}\022" +
-      "\353\004\n\016ValidateApiKey\0222.udb.core.apikey.ser" +
-      "vices.v1.ValidateApiKeyRequest\0323.udb.cor" +
-      "e.apikey.services.v1.ValidateApiKeyRespo" +
-      "nse\"\357\003\312\363\030?\010\002\032\033udb:apikey:validate-api-ke" +
-      "y \001J\002\001\002j\025apikey.ValidateApiKey\220\001\001\322\363\030\006\010\001\020" +
-      "\001 \001\332\363\030)\010\001\022\020validate_api_key\032\003udb(\260\352\0010\003@\001" +
-      "J\004authP\001\342\363\030\266\001\n\004auth\022\017udb/native/auth\032\033UD" +
-      "B_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARG" +
-      "ET\",udb.native.auth.validate_api_key.boi" +
-      "lerplate*\020validate_api_key2\010udb_auth:\006ap" +
-      "ikeyJ\013UDB_API_KEYZ\020udb native smoke\352\363\030R\n" +
-      "\025apikey.ValidateApiKey\022\rapikey.events\032\tt" +
-      "enant_id\"\010standard*\rat_least_once2\006stabl" +
-      "e\362\363\030@\n\006apikey\032\010postgres2\033UDB_NATIVE_SERV" +
-      "ICES_ENABLED2\017UDB_GRPC_TARGET\202\323\344\223\002\032\"\025/v1" +
-      "/api_keys:validate:\001*\022\243\005\n\023GetApiKeyUsage" +
-      "Stats\0227.udb.core.apikey.services.v1.GetA" +
-      "piKeyUsageStatsRequest\0328.udb.core.apikey" +
-      ".services.v1.GetApiKeyUsageStatsResponse" +
-      "\"\230\004\312\363\030K\010\002\032\"udb:apikey:get-api-key-usage-" +
-      "stats \001J\002\001\002j\032apikey.GetApiKeyUsageStats\220" +
-      "\001\001\322\363\030\006\010\001\020\001 \001\332\363\0300\010\001\022\027get_api_key_usage_st" +
-      "ats\032\003udb(\260\352\0010\003@\001J\004authP\001\342\363\030\304\001\n\004auth\022\017udb" +
-      "/native/auth\032\033UDB_NATIVE_SERVICES_ENABLE" +
-      "D\032\017UDB_GRPC_TARGET\"3udb.native.auth.get_" +
-      "api_key_usage_stats.boilerplate*\027get_api" +
-      "_key_usage_stats2\010udb_auth:\006apikeyJ\013UDB_" +
-      "API_KEYZ\020udb native smoke\352\363\030W\n\032apikey.Ge" +
-      "tApiKeyUsageStats\022\rapikey.events\032\ttenant" +
-      "_id\"\010standard*\rat_least_once2\006stable\362\363\030@" +
-      "\n\006apikey\032\010postgres2\033UDB_NATIVE_SERVICES_" +
-      "ENABLED2\017UDB_GRPC_TARGET\202\323\344\223\002\035\022\033/v1/api_" +
-      "keys/{key_id}/stats\032\304\002\312\360\031W\n\006apikey\022\006apik" +
-      "ey\032\006apikey\"\010API Keys*\004auth0\0018\001h\001z\007apiKey" +
-      "s\202\001\004auth\212\001\006apikey\222\001\rnative.apikey\322\360\031\027\010\001\032" +
-      "\003udb(\260\352\0010\003@\001J\004authP\001\332\360\031\205\001\n\004auth\022\017udb/nat" +
-      "ive/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017U" +
-      "DB_GRPC_TARGET\"\030udb.native.apikey.config" +
-      ":\006apikeyJ\013UDB_API_KEYZ\017udb native lint\342\360" +
-      "\031@\n\006apikey\032\010postgres2\033UDB_NATIVE_SERVICE" +
-      "S_ENABLED2\017UDB_GRPC_TARGETB\221\002\n\037com.udb.c" +
-      "ore.apikey.services.v1B\022ApikeyServicePro" +
-      "toP\001ZIgithub.com/fahara02/udb/sdk/go/gen" +
-      "/udb/core/apikey/services/v1;servicesv1\242" +
-      "\002\004UCAS\252\002\033udb.core.Apikey.Services.V1\312\002\033U" +
-      "db\\Core\\Apikey\\Services\\V1\342\002\'Udb\\GPBMeta" +
-      "data\\Core\\Apikey\\Services\\V1\352\002\037Udb::Core" +
-      "::Apikey::Services::V1b\006proto3"
+      "\345\002\n\014RotateApiKey\0220.udb.core.apikey.servi" +
+      "ces.v1.RotateApiKeyRequest\0321.udb.core.ap" +
+      "ikey.services.v1.RotateApiKeyResponse\"\357\001" +
+      "\312\363\030;\010\002\032\031udb:apikey:rotate-api-key \001J\002\001\002j" +
+      "\023apikey.RotateApiKey\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030\'\010\001\022" +
+      "\016rotate_api_key\032\003udb(\260\352\0010\003@\001J\004authP\001\352\363\030P" +
+      "\n\023apikey.RotateApiKey\022\rapikey.events\032\tte" +
+      "nant_id\"\010standard*\rat_least_once2\006stable" +
+      "\202\323\344\223\002!\"\034/v1/api_keys/{key_id}:rotate:\001*\022" +
+      "\256\003\n\026EmergencyRevokeApiKeys\022:.udb.core.ap" +
+      "ikey.services.v1.EmergencyRevokeApiKeysR" +
+      "equest\032;.udb.core.apikey.services.v1.Eme" +
+      "rgencyRevokeApiKeysResponse\"\232\002\312\363\030P\010\002\032$ud" +
+      "b:apikey:emergency-revoke-api-keys \001J\002\001\002" +
+      "j\035apikey.EmergencyRevokeApiKeys\220\001\001\322\363\030\006\010\001" +
+      "\020\001 \001\332\363\0302\010\001\022\031emergency_revoke_api_keys\032\003u" +
+      "db(\260\352\0010\003@\001J\004authP\001\352\363\030Z\n\035apikey.Emergency" +
+      "RevokeApiKeys\022\rapikey.events\032\ttenant_id\"" +
+      "\010standard*\rat_least_once2\006stable\202\323\344\223\002\"\"\035" +
+      "/v1/api_keys:emergency-revoke:\001*\022\353\004\n\016Val" +
+      "idateApiKey\0222.udb.core.apikey.services.v" +
+      "1.ValidateApiKeyRequest\0323.udb.core.apike" +
+      "y.services.v1.ValidateApiKeyResponse\"\357\003\312" +
+      "\363\030?\010\002\032\033udb:apikey:validate-api-key \001J\002\001\002" +
+      "j\025apikey.ValidateApiKey\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030)" +
+      "\010\001\022\020validate_api_key\032\003udb(\260\352\0010\003@\001J\004authP" +
+      "\001\342\363\030\266\001\n\004auth\022\017udb/native/auth\032\033UDB_NATIV" +
+      "E_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\",udb" +
+      ".native.auth.validate_api_key.boilerplat" +
+      "e*\020validate_api_key2\010udb_auth:\006apikeyJ\013U" +
+      "DB_API_KEYZ\020udb native smoke\352\363\030R\n\025apikey" +
+      ".ValidateApiKey\022\rapikey.events\032\ttenant_i" +
+      "d\"\010standard*\rat_least_once2\006stable\362\363\030@\n\006" +
+      "apikey\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
+      "ABLED2\017UDB_GRPC_TARGET\202\323\344\223\002\032\"\025/v1/api_ke" +
+      "ys:validate:\001*\022\243\005\n\023GetApiKeyUsageStats\0227" +
+      ".udb.core.apikey.services.v1.GetApiKeyUs" +
+      "ageStatsRequest\0328.udb.core.apikey.servic" +
+      "es.v1.GetApiKeyUsageStatsResponse\"\230\004\312\363\030K" +
+      "\010\002\032\"udb:apikey:get-api-key-usage-stats \001" +
+      "J\002\001\002j\032apikey.GetApiKeyUsageStats\220\001\001\322\363\030\006\010" +
+      "\001\020\001 \001\332\363\0300\010\001\022\027get_api_key_usage_stats\032\003ud" +
+      "b(\260\352\0010\003@\001J\004authP\001\342\363\030\304\001\n\004auth\022\017udb/native" +
+      "/auth\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_" +
+      "GRPC_TARGET\"3udb.native.auth.get_api_key" +
+      "_usage_stats.boilerplate*\027get_api_key_us" +
+      "age_stats2\010udb_auth:\006apikeyJ\013UDB_API_KEY" +
+      "Z\020udb native smoke\352\363\030W\n\032apikey.GetApiKey" +
+      "UsageStats\022\rapikey.events\032\ttenant_id\"\010st" +
+      "andard*\rat_least_once2\006stable\362\363\030@\n\006apike" +
+      "y\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
+      "2\017UDB_GRPC_TARGET\202\323\344\223\002\035\022\033/v1/api_keys/{k" +
+      "ey_id}/stats\032\304\002\312\360\031W\n\006apikey\022\006apikey\032\006api" +
+      "key\"\010API Keys*\004auth0\0018\001h\001z\007apiKeys\202\001\004aut" +
+      "h\212\001\006apikey\222\001\rnative.apikey\322\360\031\027\010\001\032\003udb(\260\352" +
+      "\0010\003@\001J\004authP\001\332\360\031\205\001\n\004auth\022\017udb/native/aut" +
+      "h\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC" +
+      "_TARGET\"\030udb.native.apikey.config:\006apike" +
+      "yJ\013UDB_API_KEYZ\017udb native lint\342\360\031@\n\006api" +
+      "key\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
+      "ED2\017UDB_GRPC_TARGETB\221\002\n\037com.udb.core.api" +
+      "key.services.v1B\022ApikeyServiceProtoP\001ZIg" +
+      "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
+      "re/apikey/services/v1;servicesv1\242\002\004UCAS\252" +
+      "\002\033udb.core.Apikey.Services.V1\312\002\033Udb\\Core" +
+      "\\Apikey\\Services\\V1\342\002\'Udb\\GPBMetadata\\Co" +
+      "re\\Apikey\\Services\\V1\352\002\037Udb::Core::Apike" +
+      "y::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -54,6 +54,21 @@ const (
 	AuthnService_FinishWebAuthnRegistration_FullMethodName   = "/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration"
 	AuthnService_StartWebAuthnAuthentication_FullMethodName  = "/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication"
 	AuthnService_FinishWebAuthnAuthentication_FullMethodName = "/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication"
+	AuthnService_ListDevices_FullMethodName                  = "/udb.core.authn.services.v1.AuthnService/ListDevices"
+	AuthnService_RevokeDevice_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/RevokeDevice"
+	AuthnService_AdminRevokeSession_FullMethodName           = "/udb.core.authn.services.v1.AuthnService/AdminRevokeSession"
+	AuthnService_AdminRevokeAllUserSessions_FullMethodName   = "/udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions"
+	AuthnService_AdminRevokeAllTenantSessions_FullMethodName = "/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions"
+	AuthnService_EmergencyRevoke_FullMethodName              = "/udb.core.authn.services.v1.AuthnService/EmergencyRevoke"
+	AuthnService_IssueMfaChallenge_FullMethodName            = "/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge"
+	AuthnService_VerifyMfaChallenge_FullMethodName           = "/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge"
+	AuthnService_ListMfaFactors_FullMethodName               = "/udb.core.authn.services.v1.AuthnService/ListMfaFactors"
+	AuthnService_DisableMfaFactor_FullMethodName             = "/udb.core.authn.services.v1.AuthnService/DisableMfaFactor"
+	AuthnService_RenamePasskey_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/RenamePasskey"
+	AuthnService_RevokeRecoveryCodes_FullMethodName          = "/udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes"
+	AuthnService_AdminResetMfa_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/AdminResetMfa"
+	AuthnService_ListWebAuthnCredentials_FullMethodName      = "/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials"
+	AuthnService_DeleteWebAuthnCredential_FullMethodName     = "/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential"
 )
 
 // AuthnServiceClient is the client API for AuthnService service.
@@ -129,6 +144,24 @@ type AuthnServiceClient interface {
 	FinishWebAuthnRegistration(ctx context.Context, in *FinishWebAuthnRegistrationRequest, opts ...grpc.CallOption) (*FinishWebAuthnRegistrationResponse, error)
 	StartWebAuthnAuthentication(ctx context.Context, in *StartWebAuthnAuthenticationRequest, opts ...grpc.CallOption) (*StartWebAuthnAuthenticationResponse, error)
 	FinishWebAuthnAuthentication(ctx context.Context, in *FinishWebAuthnAuthenticationRequest, opts ...grpc.CallOption) (*FinishWebAuthnAuthenticationResponse, error)
+	// ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+	ListDevices(ctx context.Context, in *ListDevicesRequest, opts ...grpc.CallOption) (*ListDevicesResponse, error)
+	RevokeDevice(ctx context.Context, in *RevokeDeviceRequest, opts ...grpc.CallOption) (*RevokeDeviceResponse, error)
+	AdminRevokeSession(ctx context.Context, in *AdminRevokeSessionRequest, opts ...grpc.CallOption) (*AdminRevokeSessionResponse, error)
+	AdminRevokeAllUserSessions(ctx context.Context, in *AdminRevokeAllUserSessionsRequest, opts ...grpc.CallOption) (*AdminRevokeAllUserSessionsResponse, error)
+	AdminRevokeAllTenantSessions(ctx context.Context, in *AdminRevokeAllTenantSessionsRequest, opts ...grpc.CallOption) (*AdminRevokeAllTenantSessionsResponse, error)
+	EmergencyRevoke(ctx context.Context, in *EmergencyRevokeRequest, opts ...grpc.CallOption) (*EmergencyRevokeResponse, error)
+	// ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+	IssueMfaChallenge(ctx context.Context, in *IssueMfaChallengeRequest, opts ...grpc.CallOption) (*IssueMfaChallengeResponse, error)
+	VerifyMfaChallenge(ctx context.Context, in *VerifyMfaChallengeRequest, opts ...grpc.CallOption) (*VerifyMfaChallengeResponse, error)
+	ListMfaFactors(ctx context.Context, in *ListMfaFactorsRequest, opts ...grpc.CallOption) (*ListMfaFactorsResponse, error)
+	DisableMfaFactor(ctx context.Context, in *DisableMfaFactorRequest, opts ...grpc.CallOption) (*DisableMfaFactorResponse, error)
+	RenamePasskey(ctx context.Context, in *RenamePasskeyRequest, opts ...grpc.CallOption) (*RenamePasskeyResponse, error)
+	RevokeRecoveryCodes(ctx context.Context, in *RevokeRecoveryCodesRequest, opts ...grpc.CallOption) (*RevokeRecoveryCodesResponse, error)
+	AdminResetMfa(ctx context.Context, in *AdminResetMfaRequest, opts ...grpc.CallOption) (*AdminResetMfaResponse, error)
+	// ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+	ListWebAuthnCredentials(ctx context.Context, in *ListWebAuthnCredentialsRequest, opts ...grpc.CallOption) (*ListWebAuthnCredentialsResponse, error)
+	DeleteWebAuthnCredential(ctx context.Context, in *DeleteWebAuthnCredentialRequest, opts ...grpc.CallOption) (*DeleteWebAuthnCredentialResponse, error)
 }
 
 type authnServiceClient struct {
@@ -489,6 +522,156 @@ func (c *authnServiceClient) FinishWebAuthnAuthentication(ctx context.Context, i
 	return out, nil
 }
 
+func (c *authnServiceClient) ListDevices(ctx context.Context, in *ListDevicesRequest, opts ...grpc.CallOption) (*ListDevicesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDevicesResponse)
+	err := c.cc.Invoke(ctx, AuthnService_ListDevices_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) RevokeDevice(ctx context.Context, in *RevokeDeviceRequest, opts ...grpc.CallOption) (*RevokeDeviceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeDeviceResponse)
+	err := c.cc.Invoke(ctx, AuthnService_RevokeDevice_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) AdminRevokeSession(ctx context.Context, in *AdminRevokeSessionRequest, opts ...grpc.CallOption) (*AdminRevokeSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdminRevokeSessionResponse)
+	err := c.cc.Invoke(ctx, AuthnService_AdminRevokeSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) AdminRevokeAllUserSessions(ctx context.Context, in *AdminRevokeAllUserSessionsRequest, opts ...grpc.CallOption) (*AdminRevokeAllUserSessionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdminRevokeAllUserSessionsResponse)
+	err := c.cc.Invoke(ctx, AuthnService_AdminRevokeAllUserSessions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) AdminRevokeAllTenantSessions(ctx context.Context, in *AdminRevokeAllTenantSessionsRequest, opts ...grpc.CallOption) (*AdminRevokeAllTenantSessionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdminRevokeAllTenantSessionsResponse)
+	err := c.cc.Invoke(ctx, AuthnService_AdminRevokeAllTenantSessions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) EmergencyRevoke(ctx context.Context, in *EmergencyRevokeRequest, opts ...grpc.CallOption) (*EmergencyRevokeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EmergencyRevokeResponse)
+	err := c.cc.Invoke(ctx, AuthnService_EmergencyRevoke_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) IssueMfaChallenge(ctx context.Context, in *IssueMfaChallengeRequest, opts ...grpc.CallOption) (*IssueMfaChallengeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IssueMfaChallengeResponse)
+	err := c.cc.Invoke(ctx, AuthnService_IssueMfaChallenge_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) VerifyMfaChallenge(ctx context.Context, in *VerifyMfaChallengeRequest, opts ...grpc.CallOption) (*VerifyMfaChallengeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VerifyMfaChallengeResponse)
+	err := c.cc.Invoke(ctx, AuthnService_VerifyMfaChallenge_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) ListMfaFactors(ctx context.Context, in *ListMfaFactorsRequest, opts ...grpc.CallOption) (*ListMfaFactorsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMfaFactorsResponse)
+	err := c.cc.Invoke(ctx, AuthnService_ListMfaFactors_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) DisableMfaFactor(ctx context.Context, in *DisableMfaFactorRequest, opts ...grpc.CallOption) (*DisableMfaFactorResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DisableMfaFactorResponse)
+	err := c.cc.Invoke(ctx, AuthnService_DisableMfaFactor_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) RenamePasskey(ctx context.Context, in *RenamePasskeyRequest, opts ...grpc.CallOption) (*RenamePasskeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RenamePasskeyResponse)
+	err := c.cc.Invoke(ctx, AuthnService_RenamePasskey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) RevokeRecoveryCodes(ctx context.Context, in *RevokeRecoveryCodesRequest, opts ...grpc.CallOption) (*RevokeRecoveryCodesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeRecoveryCodesResponse)
+	err := c.cc.Invoke(ctx, AuthnService_RevokeRecoveryCodes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) AdminResetMfa(ctx context.Context, in *AdminResetMfaRequest, opts ...grpc.CallOption) (*AdminResetMfaResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdminResetMfaResponse)
+	err := c.cc.Invoke(ctx, AuthnService_AdminResetMfa_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) ListWebAuthnCredentials(ctx context.Context, in *ListWebAuthnCredentialsRequest, opts ...grpc.CallOption) (*ListWebAuthnCredentialsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListWebAuthnCredentialsResponse)
+	err := c.cc.Invoke(ctx, AuthnService_ListWebAuthnCredentials_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) DeleteWebAuthnCredential(ctx context.Context, in *DeleteWebAuthnCredentialRequest, opts ...grpc.CallOption) (*DeleteWebAuthnCredentialResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteWebAuthnCredentialResponse)
+	err := c.cc.Invoke(ctx, AuthnService_DeleteWebAuthnCredential_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthnServiceServer is the server API for AuthnService service.
 // All implementations should embed UnimplementedAuthnServiceServer
 // for forward compatibility.
@@ -562,6 +745,24 @@ type AuthnServiceServer interface {
 	FinishWebAuthnRegistration(context.Context, *FinishWebAuthnRegistrationRequest) (*FinishWebAuthnRegistrationResponse, error)
 	StartWebAuthnAuthentication(context.Context, *StartWebAuthnAuthenticationRequest) (*StartWebAuthnAuthenticationResponse, error)
 	FinishWebAuthnAuthentication(context.Context, *FinishWebAuthnAuthenticationRequest) (*FinishWebAuthnAuthenticationResponse, error)
+	// ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+	ListDevices(context.Context, *ListDevicesRequest) (*ListDevicesResponse, error)
+	RevokeDevice(context.Context, *RevokeDeviceRequest) (*RevokeDeviceResponse, error)
+	AdminRevokeSession(context.Context, *AdminRevokeSessionRequest) (*AdminRevokeSessionResponse, error)
+	AdminRevokeAllUserSessions(context.Context, *AdminRevokeAllUserSessionsRequest) (*AdminRevokeAllUserSessionsResponse, error)
+	AdminRevokeAllTenantSessions(context.Context, *AdminRevokeAllTenantSessionsRequest) (*AdminRevokeAllTenantSessionsResponse, error)
+	EmergencyRevoke(context.Context, *EmergencyRevokeRequest) (*EmergencyRevokeResponse, error)
+	// ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+	IssueMfaChallenge(context.Context, *IssueMfaChallengeRequest) (*IssueMfaChallengeResponse, error)
+	VerifyMfaChallenge(context.Context, *VerifyMfaChallengeRequest) (*VerifyMfaChallengeResponse, error)
+	ListMfaFactors(context.Context, *ListMfaFactorsRequest) (*ListMfaFactorsResponse, error)
+	DisableMfaFactor(context.Context, *DisableMfaFactorRequest) (*DisableMfaFactorResponse, error)
+	RenamePasskey(context.Context, *RenamePasskeyRequest) (*RenamePasskeyResponse, error)
+	RevokeRecoveryCodes(context.Context, *RevokeRecoveryCodesRequest) (*RevokeRecoveryCodesResponse, error)
+	AdminResetMfa(context.Context, *AdminResetMfaRequest) (*AdminResetMfaResponse, error)
+	// ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+	ListWebAuthnCredentials(context.Context, *ListWebAuthnCredentialsRequest) (*ListWebAuthnCredentialsResponse, error)
+	DeleteWebAuthnCredential(context.Context, *DeleteWebAuthnCredentialRequest) (*DeleteWebAuthnCredentialResponse, error)
 }
 
 // UnimplementedAuthnServiceServer should be embedded to have
@@ -675,6 +876,51 @@ func (UnimplementedAuthnServiceServer) StartWebAuthnAuthentication(context.Conte
 }
 func (UnimplementedAuthnServiceServer) FinishWebAuthnAuthentication(context.Context, *FinishWebAuthnAuthenticationRequest) (*FinishWebAuthnAuthenticationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FinishWebAuthnAuthentication not implemented")
+}
+func (UnimplementedAuthnServiceServer) ListDevices(context.Context, *ListDevicesRequest) (*ListDevicesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDevices not implemented")
+}
+func (UnimplementedAuthnServiceServer) RevokeDevice(context.Context, *RevokeDeviceRequest) (*RevokeDeviceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeDevice not implemented")
+}
+func (UnimplementedAuthnServiceServer) AdminRevokeSession(context.Context, *AdminRevokeSessionRequest) (*AdminRevokeSessionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AdminRevokeSession not implemented")
+}
+func (UnimplementedAuthnServiceServer) AdminRevokeAllUserSessions(context.Context, *AdminRevokeAllUserSessionsRequest) (*AdminRevokeAllUserSessionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AdminRevokeAllUserSessions not implemented")
+}
+func (UnimplementedAuthnServiceServer) AdminRevokeAllTenantSessions(context.Context, *AdminRevokeAllTenantSessionsRequest) (*AdminRevokeAllTenantSessionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AdminRevokeAllTenantSessions not implemented")
+}
+func (UnimplementedAuthnServiceServer) EmergencyRevoke(context.Context, *EmergencyRevokeRequest) (*EmergencyRevokeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method EmergencyRevoke not implemented")
+}
+func (UnimplementedAuthnServiceServer) IssueMfaChallenge(context.Context, *IssueMfaChallengeRequest) (*IssueMfaChallengeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method IssueMfaChallenge not implemented")
+}
+func (UnimplementedAuthnServiceServer) VerifyMfaChallenge(context.Context, *VerifyMfaChallengeRequest) (*VerifyMfaChallengeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method VerifyMfaChallenge not implemented")
+}
+func (UnimplementedAuthnServiceServer) ListMfaFactors(context.Context, *ListMfaFactorsRequest) (*ListMfaFactorsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMfaFactors not implemented")
+}
+func (UnimplementedAuthnServiceServer) DisableMfaFactor(context.Context, *DisableMfaFactorRequest) (*DisableMfaFactorResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DisableMfaFactor not implemented")
+}
+func (UnimplementedAuthnServiceServer) RenamePasskey(context.Context, *RenamePasskeyRequest) (*RenamePasskeyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RenamePasskey not implemented")
+}
+func (UnimplementedAuthnServiceServer) RevokeRecoveryCodes(context.Context, *RevokeRecoveryCodesRequest) (*RevokeRecoveryCodesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeRecoveryCodes not implemented")
+}
+func (UnimplementedAuthnServiceServer) AdminResetMfa(context.Context, *AdminResetMfaRequest) (*AdminResetMfaResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AdminResetMfa not implemented")
+}
+func (UnimplementedAuthnServiceServer) ListWebAuthnCredentials(context.Context, *ListWebAuthnCredentialsRequest) (*ListWebAuthnCredentialsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListWebAuthnCredentials not implemented")
+}
+func (UnimplementedAuthnServiceServer) DeleteWebAuthnCredential(context.Context, *DeleteWebAuthnCredentialRequest) (*DeleteWebAuthnCredentialResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteWebAuthnCredential not implemented")
 }
 func (UnimplementedAuthnServiceServer) testEmbeddedByValue() {}
 
@@ -1326,6 +1572,276 @@ func _AuthnService_FinishWebAuthnAuthentication_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthnService_ListDevices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDevicesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).ListDevices(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_ListDevices_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).ListDevices(ctx, req.(*ListDevicesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_RevokeDevice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeDeviceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).RevokeDevice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_RevokeDevice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).RevokeDevice(ctx, req.(*RevokeDeviceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_AdminRevokeSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminRevokeSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).AdminRevokeSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_AdminRevokeSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).AdminRevokeSession(ctx, req.(*AdminRevokeSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_AdminRevokeAllUserSessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminRevokeAllUserSessionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).AdminRevokeAllUserSessions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_AdminRevokeAllUserSessions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).AdminRevokeAllUserSessions(ctx, req.(*AdminRevokeAllUserSessionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_AdminRevokeAllTenantSessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminRevokeAllTenantSessionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).AdminRevokeAllTenantSessions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_AdminRevokeAllTenantSessions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).AdminRevokeAllTenantSessions(ctx, req.(*AdminRevokeAllTenantSessionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_EmergencyRevoke_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EmergencyRevokeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).EmergencyRevoke(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_EmergencyRevoke_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).EmergencyRevoke(ctx, req.(*EmergencyRevokeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_IssueMfaChallenge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IssueMfaChallengeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).IssueMfaChallenge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_IssueMfaChallenge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).IssueMfaChallenge(ctx, req.(*IssueMfaChallengeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_VerifyMfaChallenge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyMfaChallengeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).VerifyMfaChallenge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_VerifyMfaChallenge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).VerifyMfaChallenge(ctx, req.(*VerifyMfaChallengeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_ListMfaFactors_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMfaFactorsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).ListMfaFactors(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_ListMfaFactors_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).ListMfaFactors(ctx, req.(*ListMfaFactorsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_DisableMfaFactor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DisableMfaFactorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).DisableMfaFactor(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_DisableMfaFactor_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).DisableMfaFactor(ctx, req.(*DisableMfaFactorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_RenamePasskey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RenamePasskeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).RenamePasskey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_RenamePasskey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).RenamePasskey(ctx, req.(*RenamePasskeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_RevokeRecoveryCodes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeRecoveryCodesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).RevokeRecoveryCodes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_RevokeRecoveryCodes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).RevokeRecoveryCodes(ctx, req.(*RevokeRecoveryCodesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_AdminResetMfa_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminResetMfaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).AdminResetMfa(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_AdminResetMfa_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).AdminResetMfa(ctx, req.(*AdminResetMfaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_ListWebAuthnCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWebAuthnCredentialsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).ListWebAuthnCredentials(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_ListWebAuthnCredentials_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).ListWebAuthnCredentials(ctx, req.(*ListWebAuthnCredentialsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_DeleteWebAuthnCredential_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteWebAuthnCredentialRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).DeleteWebAuthnCredential(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_DeleteWebAuthnCredential_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).DeleteWebAuthnCredential(ctx, req.(*DeleteWebAuthnCredentialRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthnService_ServiceDesc is the grpc.ServiceDesc for AuthnService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1472,6 +1988,66 @@ var AuthnService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FinishWebAuthnAuthentication",
 			Handler:    _AuthnService_FinishWebAuthnAuthentication_Handler,
+		},
+		{
+			MethodName: "ListDevices",
+			Handler:    _AuthnService_ListDevices_Handler,
+		},
+		{
+			MethodName: "RevokeDevice",
+			Handler:    _AuthnService_RevokeDevice_Handler,
+		},
+		{
+			MethodName: "AdminRevokeSession",
+			Handler:    _AuthnService_AdminRevokeSession_Handler,
+		},
+		{
+			MethodName: "AdminRevokeAllUserSessions",
+			Handler:    _AuthnService_AdminRevokeAllUserSessions_Handler,
+		},
+		{
+			MethodName: "AdminRevokeAllTenantSessions",
+			Handler:    _AuthnService_AdminRevokeAllTenantSessions_Handler,
+		},
+		{
+			MethodName: "EmergencyRevoke",
+			Handler:    _AuthnService_EmergencyRevoke_Handler,
+		},
+		{
+			MethodName: "IssueMfaChallenge",
+			Handler:    _AuthnService_IssueMfaChallenge_Handler,
+		},
+		{
+			MethodName: "VerifyMfaChallenge",
+			Handler:    _AuthnService_VerifyMfaChallenge_Handler,
+		},
+		{
+			MethodName: "ListMfaFactors",
+			Handler:    _AuthnService_ListMfaFactors_Handler,
+		},
+		{
+			MethodName: "DisableMfaFactor",
+			Handler:    _AuthnService_DisableMfaFactor_Handler,
+		},
+		{
+			MethodName: "RenamePasskey",
+			Handler:    _AuthnService_RenamePasskey_Handler,
+		},
+		{
+			MethodName: "RevokeRecoveryCodes",
+			Handler:    _AuthnService_RevokeRecoveryCodes_Handler,
+		},
+		{
+			MethodName: "AdminResetMfa",
+			Handler:    _AuthnService_AdminResetMfa_Handler,
+		},
+		{
+			MethodName: "ListWebAuthnCredentials",
+			Handler:    _AuthnService_ListWebAuthnCredentials_Handler,
+		},
+		{
+			MethodName: "DeleteWebAuthnCredential",
+			Handler:    _AuthnService_DeleteWebAuthnCredential_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

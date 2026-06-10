@@ -36,6 +36,7 @@ private static final long serialVersionUID = 0L;
     locale_ = "";
     createdBy_ = "";
     deletedBy_ = "";
+    tenantId_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -102,6 +103,12 @@ private static final long serialVersionUID = 0L;
   /**
    * <pre>
    * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+   * Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
+   * global default (tenant_id NULL) for the same (event_type, channel) coexist;
+   * resolution prefers the per-tenant row over the global default. The unique
+   * index stays on (event_type, channel) for now (global dedupe); when a
+   * per-tenant write path lands, split into partial unique indexes keyed on
+   * tenant_id IS NULL vs IS NOT NULL.
    * </pre>
    *
    * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -123,6 +130,12 @@ private static final long serialVersionUID = 0L;
   /**
    * <pre>
    * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+   * Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
+   * global default (tenant_id NULL) for the same (event_type, channel) coexist;
+   * resolution prefers the per-tenant row over the global default. The unique
+   * index stays on (event_type, channel) for now (global dedupe); when a
+   * per-tenant write path lands, split into partial unique indexes keyed on
+   * tenant_id IS NULL vs IS NOT NULL.
    * </pre>
    *
    * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -445,6 +458,53 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int TENANT_ID_FIELD_NUMBER = 13;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object tenantId_ = "";
+  /**
+   * <pre>
+   * NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+   * </pre>
+   *
+   * <code>string tenant_id = 13 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The tenantId.
+   */
+  @java.lang.Override
+  public java.lang.String getTenantId() {
+    java.lang.Object ref = tenantId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      tenantId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+   * </pre>
+   *
+   * <code>string tenant_id = 13 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for tenantId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getTenantIdBytes() {
+    java.lang.Object ref = tenantId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      tenantId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -495,6 +555,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deletedBy_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 12, deletedBy_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tenantId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 13, tenantId_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -539,6 +602,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deletedBy_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(12, deletedBy_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tenantId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(13, tenantId_);
     }
     return size;
   }
@@ -596,6 +662,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getCreatedBy())) return false;
     if (!getDeletedBy()
         .equals(other.getDeletedBy())) return false;
+    if (!getTenantId()
+        .equals(other.getTenantId())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -638,6 +706,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getCreatedBy().hashCode();
     hash = (37 * hash) + DELETED_BY_FIELD_NUMBER;
     hash = (53 * hash) + getDeletedBy().hashCode();
+    hash = (37 * hash) + TENANT_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getTenantId().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -801,6 +871,7 @@ private static final long serialVersionUID = 0L;
       }
       createdBy_ = "";
       deletedBy_ = "";
+      tenantId_ = "";
       return this;
     }
 
@@ -880,6 +951,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000800) != 0)) {
         result.deletedBy_ = deletedBy_;
       }
+      if (((from_bitField0_ & 0x00001000) != 0)) {
+        result.tenantId_ = tenantId_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -943,6 +1017,11 @@ private static final long serialVersionUID = 0L;
       if (!other.getDeletedBy().isEmpty()) {
         deletedBy_ = other.deletedBy_;
         bitField0_ |= 0x00000800;
+        onChanged();
+      }
+      if (!other.getTenantId().isEmpty()) {
+        tenantId_ = other.tenantId_;
+        bitField0_ |= 0x00001000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1037,6 +1116,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000800;
               break;
             } // case 98
+            case 106: {
+              tenantId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00001000;
+              break;
+            } // case 106
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1130,6 +1214,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+     * Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
+     * global default (tenant_id NULL) for the same (event_type, channel) coexist;
+     * resolution prefers the per-tenant row over the global default. The unique
+     * index stays on (event_type, channel) for now (global dedupe); when a
+     * per-tenant write path lands, split into partial unique indexes keyed on
+     * tenant_id IS NULL vs IS NOT NULL.
      * </pre>
      *
      * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1150,6 +1240,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+     * Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
+     * global default (tenant_id NULL) for the same (event_type, channel) coexist;
+     * resolution prefers the per-tenant row over the global default. The unique
+     * index stays on (event_type, channel) for now (global dedupe); when a
+     * per-tenant write path lands, split into partial unique indexes keyed on
+     * tenant_id IS NULL vs IS NOT NULL.
      * </pre>
      *
      * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1171,6 +1267,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+     * Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
+     * global default (tenant_id NULL) for the same (event_type, channel) coexist;
+     * resolution prefers the per-tenant row over the global default. The unique
+     * index stays on (event_type, channel) for now (global dedupe); when a
+     * per-tenant write path lands, split into partial unique indexes keyed on
+     * tenant_id IS NULL vs IS NOT NULL.
      * </pre>
      *
      * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1188,6 +1290,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+     * Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
+     * global default (tenant_id NULL) for the same (event_type, channel) coexist;
+     * resolution prefers the per-tenant row over the global default. The unique
+     * index stays on (event_type, channel) for now (global dedupe); when a
+     * per-tenant write path lands, split into partial unique indexes keyed on
+     * tenant_id IS NULL vs IS NOT NULL.
      * </pre>
      *
      * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1202,6 +1310,12 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+     * Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
+     * global default (tenant_id NULL) for the same (event_type, channel) coexist;
+     * resolution prefers the per-tenant row over the global default. The unique
+     * index stays on (event_type, channel) for now (global dedupe); when a
+     * per-tenant write path lands, split into partial unique indexes keyed on
+     * tenant_id IS NULL vs IS NOT NULL.
      * </pre>
      *
      * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -2021,6 +2135,98 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       deletedBy_ = value;
       bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object tenantId_ = "";
+    /**
+     * <pre>
+     * NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+     * </pre>
+     *
+     * <code>string tenant_id = 13 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The tenantId.
+     */
+    public java.lang.String getTenantId() {
+      java.lang.Object ref = tenantId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        tenantId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+     * </pre>
+     *
+     * <code>string tenant_id = 13 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for tenantId.
+     */
+    public com.google.protobuf.ByteString
+        getTenantIdBytes() {
+      java.lang.Object ref = tenantId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        tenantId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+     * </pre>
+     *
+     * <code>string tenant_id = 13 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The tenantId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTenantId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      tenantId_ = value;
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+     * </pre>
+     *
+     * <code>string tenant_id = 13 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTenantId() {
+      tenantId_ = getDefaultInstance().getTenantId();
+      bitField0_ = (bitField0_ & ~0x00001000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+     * </pre>
+     *
+     * <code>string tenant_id = 13 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for tenantId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTenantIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      tenantId_ = value;
+      bitField0_ |= 0x00001000;
       onChanged();
       return this;
     }

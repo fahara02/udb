@@ -51,6 +51,16 @@ class ApiKeyServiceStub(object):
                 request_serializer=udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.RevokeApiKeyRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.RevokeApiKeyResponse.FromString,
                 _registered_method=True)
+        self.RotateApiKey = channel.unary_unary(
+                '/udb.core.apikey.services.v1.ApiKeyService/RotateApiKey',
+                request_serializer=udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.RotateApiKeyRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.RotateApiKeyResponse.FromString,
+                _registered_method=True)
+        self.EmergencyRevokeApiKeys = channel.unary_unary(
+                '/udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys',
+                request_serializer=udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.EmergencyRevokeApiKeysRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.EmergencyRevokeApiKeysResponse.FromString,
+                _registered_method=True)
         self.ValidateApiKey = channel.unary_unary(
                 '/udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey',
                 request_serializer=udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.ValidateApiKeyRequest.SerializeToString,
@@ -110,6 +120,21 @@ class ApiKeyServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def RotateApiKey(self, request, context):
+        """Rotate a key's secret in place (same key_id + lineage). Returns the new
+        plain key ONCE; the old secret is invalidated immediately.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def EmergencyRevokeApiKeys(self, request, context):
+        """Emergency bulk revoke by selector (prefix/owner/tenant/project/scope/before).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def ValidateApiKey(self, request, context):
         """── Validation (called by API gateway — internal, not public HTTP) ────────
         """
@@ -151,6 +176,16 @@ def add_ApiKeyServiceServicer_to_server(servicer, server):
                     servicer.RevokeApiKey,
                     request_deserializer=udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.RevokeApiKeyRequest.FromString,
                     response_serializer=udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.RevokeApiKeyResponse.SerializeToString,
+            ),
+            'RotateApiKey': grpc.unary_unary_rpc_method_handler(
+                    servicer.RotateApiKey,
+                    request_deserializer=udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.RotateApiKeyRequest.FromString,
+                    response_serializer=udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.RotateApiKeyResponse.SerializeToString,
+            ),
+            'EmergencyRevokeApiKeys': grpc.unary_unary_rpc_method_handler(
+                    servicer.EmergencyRevokeApiKeys,
+                    request_deserializer=udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.EmergencyRevokeApiKeysRequest.FromString,
+                    response_serializer=udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.EmergencyRevokeApiKeysResponse.SerializeToString,
             ),
             'ValidateApiKey': grpc.unary_unary_rpc_method_handler(
                     servicer.ValidateApiKey,
@@ -310,6 +345,60 @@ class ApiKeyService(object):
             '/udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey',
             udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.RevokeApiKeyRequest.SerializeToString,
             udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.RevokeApiKeyResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RotateApiKey(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.apikey.services.v1.ApiKeyService/RotateApiKey',
+            udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.RotateApiKeyRequest.SerializeToString,
+            udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.RotateApiKeyResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def EmergencyRevokeApiKeys(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys',
+            udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.EmergencyRevokeApiKeysRequest.SerializeToString,
+            udb_dot_core_dot_apikey_dot_services_dot_v1_dot_core__pb2.EmergencyRevokeApiKeysResponse.FromString,
             options,
             channel_credentials,
             insecure,

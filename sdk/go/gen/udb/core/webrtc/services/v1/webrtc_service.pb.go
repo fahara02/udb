@@ -1726,7 +1726,10 @@ type IssueCredentialsResponse struct {
 	TtlSeconds int32                  `protobuf:"varint,4,opt,name=ttl_seconds,json=ttlSeconds,proto3" json:"ttl_seconds,omitempty"`
 	ExpiresAt  *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
 	// Error information if operation failed
-	Error         *v1.ApiError `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
+	Error *v1.ApiError `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
+	// The action bound into the signed TURN REST username. Credentials issued by
+	// this RPC authorize media relay only, not arbitrary WebRTC control-plane RPCs.
+	AllowedAction string `protobuf:"bytes,7,opt,name=allowed_action,json=allowedAction,proto3" json:"allowed_action,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1801,6 +1804,13 @@ func (x *IssueCredentialsResponse) GetError() *v1.ApiError {
 		return x.Error
 	}
 	return nil
+}
+
+func (x *IssueCredentialsResponse) GetAllowedAction() string {
+	if x != nil {
+		return x.AllowedAction
+	}
+	return ""
 }
 
 type SignalRequest struct {
@@ -2225,7 +2235,7 @@ const file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDesc = "" +
 	"\aroom_id\x18\x02 \x01(\tR\x06roomId\x12\x17\n" +
 	"\apeer_id\x18\x03 \x01(\tR\x06peerId\x12\x1f\n" +
 	"\vttl_seconds\x18\x04 \x01(\x05R\n" +
-	"ttlSeconds:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xce\x02\n" +
+	"ttlSeconds:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\xf5\x02\n" +
 	"\x18IssueCredentialsResponse\x12G\n" +
 	"\vice_servers\x18\x01 \x03(\v2&.udb.core.webrtc.services.v1.IceServerR\n" +
 	"iceServers\x12\x1a\n" +
@@ -2237,7 +2247,8 @@ const file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDesc = "" +
 	"ttlSeconds\x129\n" +
 	"\n" +
 	"expires_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x122\n" +
-	"\x05error\x18\x06 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\x85\x02\n" +
+	"\x05error\x18\x06 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\x12%\n" +
+	"\x0eallowed_action\x18\a \x01(\tR\rallowedAction:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\"\x85\x02\n" +
 	"\rSignalRequest\x12\x17\n" +
 	"\aroom_id\x18\x01 \x01(\tR\x06roomId\x12\x17\n" +
 	"\apeer_id\x18\x02 \x01(\tR\x06peerId\x12\x1b\n" +
@@ -2258,13 +2269,14 @@ const file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDesc = "" +
 	"\tpeer_left\x18\x05 \x01(\tH\x00R\bpeerLeft\x12)\n" +
 	"\x0ftrack_published\x18\x06 \x01(\tH\x00R\x0etrackPublished\x12\x14\n" +
 	"\x04pong\x18\a \x01(\bH\x00R\x04pong:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01B\t\n" +
-	"\apayload2\x83\x1b\n" +
-	"\vRoomService\x12\xe6\x04\n" +
+	"\apayload2\x84\x1d\n" +
+	"\vRoomService\x12\xa7\x05\n" +
 	"\n" +
-	"CreateRoom\x12..udb.core.webrtc.services.v1.CreateRoomRequest\x1a/.udb.core.webrtc.services.v1.CreateRoomResponse\"\xf6\x03\xca\xf3\x18@\b\x02\x1a\x1budb:webrtc:room:create-room \x01J\x02\x01\x02j\x16webrtc.room.CreateRoom\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18&\b\x01\x12\vcreate_room\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xe2\xf3\x18\xb9\x01\n" +
+	"CreateRoom\x12..udb.core.webrtc.services.v1.CreateRoomRequest\x1a/.udb.core.webrtc.services.v1.CreateRoomResponse\"\xb7\x04\xca\xf3\x18@\b\x02\x1a\x1budb:webrtc:room:create-room \x01J\x02\x01\x02j\x16webrtc.room.CreateRoom\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18&\b\x01\x12\vcreate_room\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xe2\xf3\x18\xb9\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\")udb.native.webrtc.create_room.boilerplate*\vcreate_room2\n" +
-	"udb_webrtc:\vwebrtc.roomJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18X\n" +
-	"\x16webrtc.room.CreateRoom\x12\x12webrtc.room.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18E\n" +
+	"udb_webrtc:\vwebrtc.roomJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x98\x01\n" +
+	"\x16webrtc.room.CreateRoom\x12\x12webrtc.room.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:>\n" +
+	"\x1audb.webrtc.room.created.v1\x12\aroom_id\x1a\rat_least_once\"\bstandard\xf2\xf3\x18E\n" +
 	"\vwebrtc.room\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x15:\x01*\"\x10/v1/webrtc/rooms\x12\xd2\x04\n" +
 	"\aGetRoom\x12+.udb.core.webrtc.services.v1.GetRoomRequest\x1a,.udb.core.webrtc.services.v1.GetRoomResponse\"\xeb\x03\xca\xf3\x18:\b\x02\x1a\x18udb:webrtc:room:get-room \x01J\x02\x01\x02j\x13webrtc.room.GetRoom\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18#\b\x01\x12\bget_room\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xe2\xf3\x18\xb3\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"&udb.native.webrtc.get_room.boilerplate*\bget_room2\n" +
@@ -2276,13 +2288,16 @@ const file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDesc = "" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\")udb.native.webrtc.update_room.boilerplate*\vupdate_room2\n" +
 	"udb_webrtc:\vwebrtc.roomJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18X\n" +
 	"\x16webrtc.room.UpdateRoom\x12\x12webrtc.room.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18E\n" +
-	"\vwebrtc.room\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x1f:\x01*2\x1a/v1/webrtc/rooms/{room_id}\x12\xed\x04\n" +
-	"\tCloseRoom\x12-.udb.core.webrtc.services.v1.CloseRoomRequest\x1a..udb.core.webrtc.services.v1.CloseRoomResponse\"\x80\x04\xca\xf3\x18>\b\x02\x1a\x1audb:webrtc:room:close-room \x01J\x02\x01\x02j\x15webrtc.room.CloseRoom\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18%\b\x01\x12\n" +
+	"\vwebrtc.room\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x1f:\x01*2\x1a/v1/webrtc/rooms/{room_id}\x12\xad\x06\n" +
+	"\tCloseRoom\x12-.udb.core.webrtc.services.v1.CloseRoomRequest\x1a..udb.core.webrtc.services.v1.CloseRoomResponse\"\xc0\x05\xca\xf3\x18>\b\x02\x1a\x1audb:webrtc:room:close-room \x01J\x02\x01\x02j\x15webrtc.room.CloseRoom\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18%\b\x01\x12\n" +
 	"close_room\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xe2\xf3\x18\xb7\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"(udb.native.webrtc.close_room.boilerplate*\n" +
 	"close_room2\n" +
-	"udb_webrtc:\vwebrtc.roomJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18W\n" +
-	"\x15webrtc.room.CloseRoom\x12\x12webrtc.room.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18E\n" +
+	"udb_webrtc:\vwebrtc.roomJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x96\x02\n" +
+	"\x15webrtc.room.CloseRoom\x12\x12webrtc.room.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:=\n" +
+	"\x17udb.webrtc.peer.left.v1\x12\aroom_id\x1a\rat_least_once\"\bstandard(\x01:?\n" +
+	"\x19udb.webrtc.track.ended.v1\x12\aroom_id\x1a\rat_least_once\"\bstandard(\x01:=\n" +
+	"\x19udb.webrtc.room.closed.v1\x12\aroom_id\x1a\rat_least_once\"\bstandard\xf2\xf3\x18E\n" +
 	"\vwebrtc.room\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02%:\x01*\" /v1/webrtc/rooms/{room_id}/close\x12\xda\x04\n" +
 	"\tListRooms\x12-.udb.core.webrtc.services.v1.ListRoomsRequest\x1a..udb.core.webrtc.services.v1.ListRoomsResponse\"\xed\x03\xca\xf3\x18>\b\x02\x1a\x1audb:webrtc:room:list-rooms \x01J\x02\x01\x02j\x15webrtc.room.ListRooms\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18%\b\x01\x12\n" +
 	"list_rooms\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xe2\xf3\x18\xb7\x01\n" +
@@ -2293,19 +2308,21 @@ const file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDesc = "" +
 	"\vwebrtc.room\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x12\x12\x10/v1/webrtc/rooms\x1a\xf5\x02\xca\xf0\x19s\n" +
 	"\vwebrtc.room\x12\x06webrtc\x1a\x04room\"\fWebRTC Rooms*\brealtime0\x018\x01h\x01z\fwebrtc.rooms\x82\x01\x06webrtc\x8a\x01\vwebrtc.room\x92\x01\x12native.webrtc.room\xd2\xf0\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xda\xf0\x19\x93\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1dudb.native.webrtc.config.json:\vwebrtc.roomJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19E\n" +
-	"\vwebrtc.room\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET2\xb0\x16\n" +
-	"\vPeerService\x12\xe4\x04\n" +
-	"\bJoinRoom\x12,.udb.core.webrtc.services.v1.JoinRoomRequest\x1a-.udb.core.webrtc.services.v1.JoinRoomResponse\"\xfa\x03\xca\xf3\x18<\b\x02\x1a\x19udb:webrtc:peer:join-room \x01J\x02\x01\x02j\x14webrtc.peer.JoinRoom\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18$\b\x01\x12\tjoin_room\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xe2\xf3\x18\xb5\x01\n" +
+	"\vwebrtc.room\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET2\xae\x17\n" +
+	"\vPeerService\x12\xa4\x05\n" +
+	"\bJoinRoom\x12,.udb.core.webrtc.services.v1.JoinRoomRequest\x1a-.udb.core.webrtc.services.v1.JoinRoomResponse\"\xba\x04\xca\xf3\x18<\b\x02\x1a\x19udb:webrtc:peer:join-room \x01J\x02\x01\x02j\x14webrtc.peer.JoinRoom\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18$\b\x01\x12\tjoin_room\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xe2\xf3\x18\xb5\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"'udb.native.webrtc.join_room.boilerplate*\tjoin_room2\n" +
-	"udb_webrtc:\vwebrtc.peerJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18V\n" +
-	"\x14webrtc.peer.JoinRoom\x12\x12webrtc.peer.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18E\n" +
-	"\vwebrtc.peer\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02%:\x01*\" /v1/webrtc/rooms/{room_id}/peers\x12\xfd\x04\n" +
-	"\tLeaveRoom\x12-.udb.core.webrtc.services.v1.LeaveRoomRequest\x1a..udb.core.webrtc.services.v1.LeaveRoomResponse\"\x90\x04\xca\xf3\x18>\b\x02\x1a\x1audb:webrtc:peer:leave-room \x01J\x02\x01\x02j\x15webrtc.peer.LeaveRoom\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18%\b\x01\x12\n" +
+	"udb_webrtc:\vwebrtc.peerJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x95\x01\n" +
+	"\x14webrtc.peer.JoinRoom\x12\x12webrtc.peer.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:=\n" +
+	"\x19udb.webrtc.peer.joined.v1\x12\aroom_id\x1a\rat_least_once\"\bstandard\xf2\xf3\x18E\n" +
+	"\vwebrtc.peer\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02%:\x01*\" /v1/webrtc/rooms/{room_id}/peers\x12\xbb\x05\n" +
+	"\tLeaveRoom\x12-.udb.core.webrtc.services.v1.LeaveRoomRequest\x1a..udb.core.webrtc.services.v1.LeaveRoomResponse\"\xce\x04\xca\xf3\x18>\b\x02\x1a\x1audb:webrtc:peer:leave-room \x01J\x02\x01\x02j\x15webrtc.peer.LeaveRoom\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18%\b\x01\x12\n" +
 	"leave_room\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xe2\xf3\x18\xb7\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"(udb.native.webrtc.leave_room.boilerplate*\n" +
 	"leave_room2\n" +
-	"udb_webrtc:\vwebrtc.peerJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18W\n" +
-	"\x15webrtc.peer.LeaveRoom\x12\x12webrtc.peer.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18E\n" +
+	"udb_webrtc:\vwebrtc.peerJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x94\x01\n" +
+	"\x15webrtc.peer.LeaveRoom\x12\x12webrtc.peer.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:;\n" +
+	"\x17udb.webrtc.peer.left.v1\x12\aroom_id\x1a\rat_least_once\"\bstandard\xf2\xf3\x18E\n" +
 	"\vwebrtc.peer\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x025:\x01*\"0/v1/webrtc/rooms/{room_id}/peers/{peer_id}/leave\x12\xd2\x04\n" +
 	"\aGetPeer\x12+.udb.core.webrtc.services.v1.GetPeerRequest\x1a,.udb.core.webrtc.services.v1.GetPeerResponse\"\xeb\x03\xca\xf3\x18:\b\x02\x1a\x18udb:webrtc:peer:get-peer \x01J\x02\x01\x02j\x13webrtc.peer.GetPeer\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18#\b\x01\x12\bget_peer\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xe2\xf3\x18\xb3\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"&udb.native.webrtc.get_peer.boilerplate*\bget_peer2\n" +
@@ -2321,12 +2338,13 @@ const file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDesc = "" +
 	"\vwebrtc.peer\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\"\x12 /v1/webrtc/rooms/{room_id}/peers\x1a\xf7\x02\xca\xf0\x19u\n" +
 	"\vwebrtc.peer\x12\x06webrtc\x1a\x04peer\"\fWebRTC Peers*\brealtime0\x018\x01h\x01p\x01z\fwebrtc.peers\x82\x01\x06webrtc\x8a\x01\vwebrtc.peer\x92\x01\x12native.webrtc.peer\xd2\xf0\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xda\xf0\x19\x93\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1dudb.native.webrtc.config.json:\vwebrtc.peerJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19E\n" +
-	"\vwebrtc.peer\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET2\xaf\x17\n" +
-	"\fTrackService\x12\xff\x04\n" +
-	"\fPublishTrack\x120.udb.core.webrtc.services.v1.PublishTrackRequest\x1a1.udb.core.webrtc.services.v1.PublishTrackResponse\"\x89\x04\xca\xf3\x18F\b\x02\x1a\x1eudb:webrtc:track:publish-track \x01J\x02\x01\x02j\x19webrtc.track.PublishTrack\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18(\b\x01\x12\rpublish_track\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xe2\xf3\x18\xbe\x01\n" +
+	"\vwebrtc.peer\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET2\xf3\x17\n" +
+	"\fTrackService\x12\xc3\x05\n" +
+	"\fPublishTrack\x120.udb.core.webrtc.services.v1.PublishTrackRequest\x1a1.udb.core.webrtc.services.v1.PublishTrackResponse\"\xcd\x04\xca\xf3\x18F\b\x02\x1a\x1eudb:webrtc:track:publish-track \x01J\x02\x01\x02j\x19webrtc.track.PublishTrack\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18(\b\x01\x12\rpublish_track\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xe2\xf3\x18\xbe\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"+udb.native.webrtc.publish_track.boilerplate*\rpublish_track2\n" +
-	"udb_webrtc:\fwebrtc.trackJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\\\n" +
-	"\x19webrtc.track.PublishTrack\x12\x13webrtc.track.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18F\n" +
+	"udb_webrtc:\fwebrtc.trackJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x9f\x01\n" +
+	"\x19webrtc.track.PublishTrack\x12\x13webrtc.track.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:A\n" +
+	"\x1dudb.webrtc.track.published.v1\x12\aroom_id\x1a\rat_least_once\"\bstandard\xf2\xf3\x18F\n" +
 	"\fwebrtc.track\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/webrtc/tracks\x12\xa6\x05\n" +
 	"\x0eUnpublishTrack\x122.udb.core.webrtc.services.v1.UnpublishTrackRequest\x1a3.udb.core.webrtc.services.v1.UnpublishTrackResponse\"\xaa\x04\xca\xf3\x18J\b\x02\x1a udb:webrtc:track:unpublish-track \x01J\x02\x01\x02j\x1bwebrtc.track.UnpublishTrack\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18*\b\x01\x12\x0funpublish_track\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xe2\xf3\x18\xc2\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"-udb.native.webrtc.unpublish_track.boilerplate*\x0funpublish_track2\n" +
@@ -2348,23 +2366,23 @@ const file_udb_core_webrtc_services_v1_webrtc_service_proto_rawDesc = "" +
 	"\fwebrtc.track\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02#\x12!/v1/webrtc/rooms/{room_id}/tracks\x1a\xff\x02\xca\xf0\x19{\n" +
 	"\fwebrtc.track\x12\x06webrtc\x1a\x05track\"\rWebRTC Tracks*\brealtime0\x018\x01h\x01p\x01z\rwebrtc.tracks\x82\x01\x06webrtc\x8a\x01\fwebrtc.track\x92\x01\x13native.webrtc.track\xd2\xf0\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xda\xf0\x19\x94\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1dudb.native.webrtc.config.json:\fwebrtc.trackJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19F\n" +
-	"\fwebrtc.track\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET2\xb3\b\n" +
-	"\vTurnService\x12\xab\x05\n" +
-	"\x10IssueCredentials\x124.udb.core.webrtc.services.v1.IssueCredentialsRequest\x1a5.udb.core.webrtc.services.v1.IssueCredentialsResponse\"\xa9\x04\xca\xf3\x18L\b\x02\x1a!udb:webrtc:turn:issue-credentials \x01J\x02\x01\x02j\x1cwebrtc.turn.IssueCredentials\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18,\b\x01\x12\x11issue_credentials\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xe2\xf3\x18\xc6\x01\n" +
+	"\fwebrtc.track\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET2\xb2\b\n" +
+	"\vTurnService\x12\xa7\x05\n" +
+	"\x10IssueCredentials\x124.udb.core.webrtc.services.v1.IssueCredentialsRequest\x1a5.udb.core.webrtc.services.v1.IssueCredentialsResponse\"\xa5\x04\xca\xf3\x18L\b\x02\x1a!udb:webrtc:turn:issue-credentials \x01J\x02\x01\x02j\x1cwebrtc.turn.IssueCredentials\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18,\b\x01\x12\x11issue_credentials\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xe2\xf3\x18\xc5\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"/udb.native.webrtc.issue_credentials.boilerplate*\x11issue_credentials2\n" +
-	"udb_webrtc:\fwebrtc.trackJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18`\n" +
-	"\x1dwebrtc.track.IssueCredentials\x12\x13webrtc.track.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18F\n" +
-	"\fwebrtc.track\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/webrtc/turn/credentials\x1a\xf5\x02\xca\xf0\x19s\n" +
-	"\vwebrtc.turn\x12\x06webrtc\x1a\x04turn\"\vWebRTC TURN*\brealtime0\x018\x01h\x01p\x01z\vwebrtc.turn\x82\x01\x06webrtc\x8a\x01\vwebrtc.turn\x92\x01\x12native.webrtc.turn\xd2\xf0\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xda\xf0\x19\x93\x01\n" +
+	"udb_webrtc:\vwebrtc.turnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18^\n" +
+	"\x1cwebrtc.turn.IssueCredentials\x12\x12webrtc.turn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18E\n" +
+	"\vwebrtc.turn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/webrtc/turn/credentials\x1a\xf8\x02\xca\xf0\x19v\n" +
+	"\vwebrtc.turn\x12\x06webrtc\x1a\x04turn\"\vWebRTC TURN*\brealtime0\x018\x01h\x01p\x01z\vwebrtc.turn\x82\x01\x06webrtc\x8a\x01\vwebrtc.turn\x92\x01\x12native.webrtc.turn\x98\x01\x01\xd2\xf0\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xda\xf0\x19\x93\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1dudb.native.webrtc.config.json:\vwebrtc.turnJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19E\n" +
-	"\vwebrtc.turn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET2\xe4\a\n" +
+	"\vwebrtc.turn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET2\xe7\a\n" +
 	"\x10SignalingService\x12\xab\x04\n" +
 	"\x06Signal\x12*.udb.core.webrtc.services.v1.SignalRequest\x1a+.udb.core.webrtc.services.v1.SignalResponse\"\xc3\x03\xca\xf3\x18;\b\x02\x1a\x11udb:webrtc:signal \x01J\x02\x01\x02j\x10webrtc.signalingz\ttenant_id\x90\x01\x01\xda\xf3\x18!\b\x01\x12\x06signal\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06webrtcP\x01\xe2\xf3\x18\xb4\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"$udb.native.webrtc.signal.boilerplate*\x06signal2\n" +
 	"udb_webrtc:\x10webrtc.signalingJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18^\n" +
 	"\x17webrtc.signaling.Signal\x12\x17webrtc.signaling.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
-	"\x10webrtc.signaling2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET(\x010\x01\x1a\xa1\x03\xca\xf0\x19\x8f\x01\n" +
-	"\x10webrtc.signaling\x12\x06webrtc\x1a\tsignaling\"\x10WebRTC Signaling*\brealtime0\x01h\x01p\x01z\x10webrtc.signaling\x82\x01\x06webrtc\x8a\x01\x10webrtc.signaling\x92\x01\x17native.webrtc.signaling\xd2\xf0\x19(\b\x01\x1a\x03udb\"\rbidirectional(\xb0\xea\x010\x01@\x01J\x06webrtcP\x01\xda\xf0\x19\x98\x01\n" +
+	"\x10webrtc.signaling2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET(\x010\x01\x1a\xa4\x03\xca\xf0\x19\x92\x01\n" +
+	"\x10webrtc.signaling\x12\x06webrtc\x1a\tsignaling\"\x10WebRTC Signaling*\brealtime0\x01h\x01p\x01z\x10webrtc.signaling\x82\x01\x06webrtc\x8a\x01\x10webrtc.signaling\x92\x01\x17native.webrtc.signaling\x98\x01\x01\xd2\xf0\x19(\b\x01\x1a\x03udb\"\rbidirectional(\xb0\xea\x010\x01@\x01J\x06webrtcP\x01\xda\xf0\x19\x98\x01\n" +
 	"\x06webrtc\x12\x11udb/native/webrtc\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1dudb.native.webrtc.config.json:\x10webrtc.signalingJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19@\n" +
 	"\x10webrtc.signaling2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x91\x02\n" +
 	"\x1fcom.udb.core.webrtc.services.v1B\x12WebrtcServiceProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/webrtc/services/v1;servicesv1\xa2\x02\x04UCWS\xaa\x02\x1budb.core.Webrtc.Services.V1\xca\x02\x1bUdb\\Core\\Webrtc\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Webrtc\\Services\\V1\xea\x02\x1fUdb::Core::Webrtc::Services::V1b\x06proto3"

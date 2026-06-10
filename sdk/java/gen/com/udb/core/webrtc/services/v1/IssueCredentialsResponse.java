@@ -31,6 +31,7 @@ private static final long serialVersionUID = 0L;
     iceServers_ = java.util.Collections.emptyList();
     username_ = "";
     credential_ = "";
+    allowedAction_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -246,6 +247,55 @@ private static final long serialVersionUID = 0L;
     return error_ == null ? com.udb.core.common.v1.ApiError.getDefaultInstance() : error_;
   }
 
+  public static final int ALLOWED_ACTION_FIELD_NUMBER = 7;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object allowedAction_ = "";
+  /**
+   * <pre>
+   * The action bound into the signed TURN REST username. Credentials issued by
+   * this RPC authorize media relay only, not arbitrary WebRTC control-plane RPCs.
+   * </pre>
+   *
+   * <code>string allowed_action = 7 [json_name = "allowedAction"];</code>
+   * @return The allowedAction.
+   */
+  @java.lang.Override
+  public java.lang.String getAllowedAction() {
+    java.lang.Object ref = allowedAction_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      allowedAction_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * The action bound into the signed TURN REST username. Credentials issued by
+   * this RPC authorize media relay only, not arbitrary WebRTC control-plane RPCs.
+   * </pre>
+   *
+   * <code>string allowed_action = 7 [json_name = "allowedAction"];</code>
+   * @return The bytes for allowedAction.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getAllowedActionBytes() {
+    java.lang.Object ref = allowedAction_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      allowedAction_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -278,6 +328,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(6, getError());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(allowedAction_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 7, allowedAction_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -308,6 +361,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000002) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(6, getError());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(allowedAction_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(7, allowedAction_);
     }
     return size;
   }
@@ -351,6 +407,8 @@ private static final long serialVersionUID = 0L;
       if (!getError()
           .equals(other.getError())) return false;
     }
+    if (!getAllowedAction()
+        .equals(other.getAllowedAction())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -380,6 +438,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + ERROR_FIELD_NUMBER;
       hash = (53 * hash) + getError().hashCode();
     }
+    hash = (37 * hash) + ALLOWED_ACTION_FIELD_NUMBER;
+    hash = (53 * hash) + getAllowedAction().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -539,6 +599,7 @@ private static final long serialVersionUID = 0L;
         errorBuilder_.dispose();
         errorBuilder_ = null;
       }
+      allowedAction_ = "";
       return this;
     }
 
@@ -607,6 +668,9 @@ private static final long serialVersionUID = 0L;
             : errorBuilder_.build();
         to_bitField0_ |= 0x00000002;
       }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.allowedAction_ = allowedAction_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -666,6 +730,11 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasError()) {
         mergeError(other.getError());
+      }
+      if (!other.getAllowedAction().isEmpty()) {
+        allowedAction_ = other.allowedAction_;
+        bitField0_ |= 0x00000040;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -735,6 +804,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000020;
               break;
             } // case 50
+            case 58: {
+              allowedAction_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 58
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1444,6 +1518,103 @@ private static final long serialVersionUID = 0L;
         error_ = null;
       }
       return errorBuilder_;
+    }
+
+    private java.lang.Object allowedAction_ = "";
+    /**
+     * <pre>
+     * The action bound into the signed TURN REST username. Credentials issued by
+     * this RPC authorize media relay only, not arbitrary WebRTC control-plane RPCs.
+     * </pre>
+     *
+     * <code>string allowed_action = 7 [json_name = "allowedAction"];</code>
+     * @return The allowedAction.
+     */
+    public java.lang.String getAllowedAction() {
+      java.lang.Object ref = allowedAction_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        allowedAction_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The action bound into the signed TURN REST username. Credentials issued by
+     * this RPC authorize media relay only, not arbitrary WebRTC control-plane RPCs.
+     * </pre>
+     *
+     * <code>string allowed_action = 7 [json_name = "allowedAction"];</code>
+     * @return The bytes for allowedAction.
+     */
+    public com.google.protobuf.ByteString
+        getAllowedActionBytes() {
+      java.lang.Object ref = allowedAction_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        allowedAction_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The action bound into the signed TURN REST username. Credentials issued by
+     * this RPC authorize media relay only, not arbitrary WebRTC control-plane RPCs.
+     * </pre>
+     *
+     * <code>string allowed_action = 7 [json_name = "allowedAction"];</code>
+     * @param value The allowedAction to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAllowedAction(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      allowedAction_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The action bound into the signed TURN REST username. Credentials issued by
+     * this RPC authorize media relay only, not arbitrary WebRTC control-plane RPCs.
+     * </pre>
+     *
+     * <code>string allowed_action = 7 [json_name = "allowedAction"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAllowedAction() {
+      allowedAction_ = getDefaultInstance().getAllowedAction();
+      bitField0_ = (bitField0_ & ~0x00000040);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The action bound into the signed TURN REST username. Credentials issued by
+     * this RPC authorize media relay only, not arbitrary WebRTC control-plane RPCs.
+     * </pre>
+     *
+     * <code>string allowed_action = 7 [json_name = "allowedAction"];</code>
+     * @param value The bytes for allowedAction to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAllowedActionBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      allowedAction_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.webrtc.services.v1.IssueCredentialsResponse)

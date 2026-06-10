@@ -199,6 +199,81 @@ class AuthnServiceStub(object):
                 request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnAuthenticationRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnAuthenticationResponse.FromString,
                 _registered_method=True)
+        self.ListDevices = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/ListDevices',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListDevicesRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListDevicesResponse.FromString,
+                _registered_method=True)
+        self.RevokeDevice = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/RevokeDevice',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeDeviceRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeDeviceResponse.FromString,
+                _registered_method=True)
+        self.AdminRevokeSession = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/AdminRevokeSession',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeSessionRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeSessionResponse.FromString,
+                _registered_method=True)
+        self.AdminRevokeAllUserSessions = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeAllUserSessionsRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeAllUserSessionsResponse.FromString,
+                _registered_method=True)
+        self.AdminRevokeAllTenantSessions = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeAllTenantSessionsRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeAllTenantSessionsResponse.FromString,
+                _registered_method=True)
+        self.EmergencyRevoke = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/EmergencyRevoke',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.EmergencyRevokeRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.EmergencyRevokeResponse.FromString,
+                _registered_method=True)
+        self.IssueMfaChallenge = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.IssueMfaChallengeRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.IssueMfaChallengeResponse.FromString,
+                _registered_method=True)
+        self.VerifyMfaChallenge = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.VerifyMfaChallengeRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.VerifyMfaChallengeResponse.FromString,
+                _registered_method=True)
+        self.ListMfaFactors = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/ListMfaFactors',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListMfaFactorsRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListMfaFactorsResponse.FromString,
+                _registered_method=True)
+        self.DisableMfaFactor = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/DisableMfaFactor',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DisableMfaFactorRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DisableMfaFactorResponse.FromString,
+                _registered_method=True)
+        self.RenamePasskey = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/RenamePasskey',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RenamePasskeyRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RenamePasskeyResponse.FromString,
+                _registered_method=True)
+        self.RevokeRecoveryCodes = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeRecoveryCodesRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeRecoveryCodesResponse.FromString,
+                _registered_method=True)
+        self.AdminResetMfa = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/AdminResetMfa',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminResetMfaRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminResetMfaResponse.FromString,
+                _registered_method=True)
+        self.ListWebAuthnCredentials = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListWebAuthnCredentialsRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListWebAuthnCredentialsResponse.FromString,
+                _registered_method=True)
+        self.DeleteWebAuthnCredential = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DeleteWebAuthnCredentialRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DeleteWebAuthnCredentialResponse.FromString,
+                _registered_method=True)
 
 
 class AuthnServiceServicer(object):
@@ -447,6 +522,99 @@ class AuthnServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ListDevices(self, request, context):
+        """── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RevokeDevice(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AdminRevokeSession(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AdminRevokeAllUserSessions(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AdminRevokeAllTenantSessions(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def EmergencyRevoke(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def IssueMfaChallenge(self, request, context):
+        """── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def VerifyMfaChallenge(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListMfaFactors(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DisableMfaFactor(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RenamePasskey(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RevokeRecoveryCodes(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AdminResetMfa(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListWebAuthnCredentials(self, request, context):
+        """── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DeleteWebAuthnCredential(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AuthnServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -624,6 +792,81 @@ def add_AuthnServiceServicer_to_server(servicer, server):
                     servicer.FinishWebAuthnAuthentication,
                     request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnAuthenticationRequest.FromString,
                     response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnAuthenticationResponse.SerializeToString,
+            ),
+            'ListDevices': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListDevices,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListDevicesRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListDevicesResponse.SerializeToString,
+            ),
+            'RevokeDevice': grpc.unary_unary_rpc_method_handler(
+                    servicer.RevokeDevice,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeDeviceRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeDeviceResponse.SerializeToString,
+            ),
+            'AdminRevokeSession': grpc.unary_unary_rpc_method_handler(
+                    servicer.AdminRevokeSession,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeSessionRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeSessionResponse.SerializeToString,
+            ),
+            'AdminRevokeAllUserSessions': grpc.unary_unary_rpc_method_handler(
+                    servicer.AdminRevokeAllUserSessions,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeAllUserSessionsRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeAllUserSessionsResponse.SerializeToString,
+            ),
+            'AdminRevokeAllTenantSessions': grpc.unary_unary_rpc_method_handler(
+                    servicer.AdminRevokeAllTenantSessions,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeAllTenantSessionsRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeAllTenantSessionsResponse.SerializeToString,
+            ),
+            'EmergencyRevoke': grpc.unary_unary_rpc_method_handler(
+                    servicer.EmergencyRevoke,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.EmergencyRevokeRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.EmergencyRevokeResponse.SerializeToString,
+            ),
+            'IssueMfaChallenge': grpc.unary_unary_rpc_method_handler(
+                    servicer.IssueMfaChallenge,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.IssueMfaChallengeRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.IssueMfaChallengeResponse.SerializeToString,
+            ),
+            'VerifyMfaChallenge': grpc.unary_unary_rpc_method_handler(
+                    servicer.VerifyMfaChallenge,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.VerifyMfaChallengeRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.VerifyMfaChallengeResponse.SerializeToString,
+            ),
+            'ListMfaFactors': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListMfaFactors,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListMfaFactorsRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListMfaFactorsResponse.SerializeToString,
+            ),
+            'DisableMfaFactor': grpc.unary_unary_rpc_method_handler(
+                    servicer.DisableMfaFactor,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DisableMfaFactorRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DisableMfaFactorResponse.SerializeToString,
+            ),
+            'RenamePasskey': grpc.unary_unary_rpc_method_handler(
+                    servicer.RenamePasskey,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RenamePasskeyRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RenamePasskeyResponse.SerializeToString,
+            ),
+            'RevokeRecoveryCodes': grpc.unary_unary_rpc_method_handler(
+                    servicer.RevokeRecoveryCodes,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeRecoveryCodesRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeRecoveryCodesResponse.SerializeToString,
+            ),
+            'AdminResetMfa': grpc.unary_unary_rpc_method_handler(
+                    servicer.AdminResetMfa,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminResetMfaRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminResetMfaResponse.SerializeToString,
+            ),
+            'ListWebAuthnCredentials': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListWebAuthnCredentials,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListWebAuthnCredentialsRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListWebAuthnCredentialsResponse.SerializeToString,
+            ),
+            'DeleteWebAuthnCredential': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteWebAuthnCredential,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DeleteWebAuthnCredentialRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DeleteWebAuthnCredentialResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -1581,6 +1824,411 @@ class AuthnService(object):
             '/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication',
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnAuthenticationRequest.SerializeToString,
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishWebAuthnAuthenticationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListDevices(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/ListDevices',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListDevicesRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListDevicesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RevokeDevice(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/RevokeDevice',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeDeviceRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeDeviceResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AdminRevokeSession(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/AdminRevokeSession',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeSessionRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeSessionResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AdminRevokeAllUserSessions(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeAllUserSessionsRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeAllUserSessionsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AdminRevokeAllTenantSessions(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeAllTenantSessionsRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminRevokeAllTenantSessionsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def EmergencyRevoke(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/EmergencyRevoke',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.EmergencyRevokeRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.EmergencyRevokeResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def IssueMfaChallenge(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.IssueMfaChallengeRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.IssueMfaChallengeResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def VerifyMfaChallenge(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.VerifyMfaChallengeRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.VerifyMfaChallengeResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListMfaFactors(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/ListMfaFactors',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListMfaFactorsRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListMfaFactorsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DisableMfaFactor(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/DisableMfaFactor',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DisableMfaFactorRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DisableMfaFactorResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RenamePasskey(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/RenamePasskey',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RenamePasskeyRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RenamePasskeyResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RevokeRecoveryCodes(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeRecoveryCodesRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeRecoveryCodesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AdminResetMfa(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/AdminResetMfa',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminResetMfaRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AdminResetMfaResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListWebAuthnCredentials(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListWebAuthnCredentialsRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListWebAuthnCredentialsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeleteWebAuthnCredential(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DeleteWebAuthnCredentialRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DeleteWebAuthnCredentialResponse.FromString,
             options,
             channel_credentials,
             insecure,

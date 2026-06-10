@@ -353,4 +353,267 @@ class AuthzServiceClient extends \Grpc\BaseStub {
         $metadata, $options);
     }
 
+    /**
+     * ── Phase K: Authz Policy Governance ─────────────────────────────────────
+     * Every governance mutation is itself authorized under
+     * `native.authz.governance` and requires an explicit authz governance scope
+     * (authz:admin / authz:policy:write / authz:role:write) or a break-glass
+     * grant — never a bare bearer token. Drafts and simulations never touch the
+     * live authorization snapshot; only ActivatePolicyVersion / RollbackPolicyVersion do.
+     *
+     * @param \Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\PolicyDraftResponse>
+     */
+    public function CreatePolicyDraft(\Udb\Core\Authz\Services\V1\CreatePolicyDraftRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\PolicyDraftResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authz\Services\V1\UpdatePolicyDraftRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\PolicyDraftResponse>
+     */
+    public function UpdatePolicyDraft(\Udb\Core\Authz\Services\V1\UpdatePolicyDraftRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\PolicyDraftResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authz\Services\V1\DiffPolicyDraftRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\DiffPolicyDraftResponse>
+     */
+    public function DiffPolicyDraft(\Udb\Core\Authz\Services\V1\DiffPolicyDraftRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/DiffPolicyDraft',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\DiffPolicyDraftResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authz\Services\V1\SubmitPolicyDraftRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\PolicyDraftResponse>
+     */
+    public function SubmitPolicyDraft(\Udb\Core\Authz\Services\V1\SubmitPolicyDraftRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\PolicyDraftResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authz\Services\V1\ApprovePolicyDraftRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\PolicyApprovalResponse>
+     */
+    public function ApprovePolicyDraft(\Udb\Core\Authz\Services\V1\ApprovePolicyDraftRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\PolicyApprovalResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authz\Services\V1\RejectPolicyDraftRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\PolicyApprovalResponse>
+     */
+    public function RejectPolicyDraft(\Udb\Core\Authz\Services\V1\RejectPolicyDraftRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/RejectPolicyDraft',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\PolicyApprovalResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authz\Services\V1\ActivatePolicyVersionRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\ActivationResponse>
+     */
+    public function ActivatePolicyVersion(\Udb\Core\Authz\Services\V1\ActivatePolicyVersionRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\ActivationResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authz\Services\V1\RollbackPolicyVersionRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\ActivationResponse>
+     */
+    public function RollbackPolicyVersion(\Udb\Core\Authz\Services\V1\RollbackPolicyVersionRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\ActivationResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Activate a policy version to a canary scope (subset of the fleet) before
+     * fleet-wide. A metric-based evaluator then auto-rolls back on breach.
+     * @param \Udb\Core\Authz\Services\V1\ActivateCanaryRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\CanaryResponse>
+     */
+    public function ActivateCanary(\Udb\Core\Authz\Services\V1\ActivateCanaryRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/ActivateCanary',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\CanaryResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Promote a baked, within-threshold canary to fleet-wide enforcement.
+     * @param \Udb\Core\Authz\Services\V1\PromoteCanaryRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\CanaryResponse>
+     */
+    public function PromoteCanary(\Udb\Core\Authz\Services\V1\PromoteCanaryRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/PromoteCanary',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\CanaryResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Read a canary's current state + promote-eligibility.
+     * @param \Udb\Core\Authz\Services\V1\GetCanaryStatusRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\GetCanaryStatusResponse>
+     */
+    public function GetCanaryStatus(\Udb\Core\Authz\Services\V1\GetCanaryStatusRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/GetCanaryStatus',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\GetCanaryStatusResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authz\Services\V1\ListPolicyVersionsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\ListPolicyVersionsResponse>
+     */
+    public function ListPolicyVersions(\Udb\Core\Authz\Services\V1\ListPolicyVersionsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/ListPolicyVersions',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\ListPolicyVersionsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authz\Services\V1\SimulatePolicyRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\SimulatePolicyResponse>
+     */
+    public function SimulatePolicy(\Udb\Core\Authz\Services\V1\SimulatePolicyRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/SimulatePolicy',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\SimulatePolicyResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authz\Services\V1\ExplainPolicyRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\ExplainPolicyResponse>
+     */
+    public function ExplainPolicy(\Udb\Core\Authz\Services\V1\ExplainPolicyRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/ExplainPolicy',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\ExplainPolicyResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authz\Services\V1\GetAuthzRevisionRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\GetAuthzRevisionResponse>
+     */
+    public function GetAuthzRevision(\Udb\Core\Authz\Services\V1\GetAuthzRevisionRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/GetAuthzRevision',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\GetAuthzRevisionResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authz\Services\V1\InvalidatePolicyBundlesRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\InvalidatePolicyBundlesResponse>
+     */
+    public function InvalidatePolicyBundles(\Udb\Core\Authz\Services\V1\InvalidatePolicyBundlesRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\InvalidatePolicyBundlesResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authz\Services\V1\SeedBuiltinRolesRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\SeedBuiltinRolesResponse>
+     */
+    public function SeedBuiltinRoles(\Udb\Core\Authz\Services\V1\SeedBuiltinRolesRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\SeedBuiltinRolesResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authz\Services\V1\MigrateLegacyPoliciesRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authz\Services\V1\MigrateLegacyPoliciesResponse>
+     */
+    public function MigrateLegacyPolicies(\Udb\Core\Authz\Services\V1\MigrateLegacyPoliciesRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies',
+        $argument,
+        ['\Udb\Core\Authz\Services\V1\MigrateLegacyPoliciesResponse', 'decode'],
+        $metadata, $options);
+    }
+
 }

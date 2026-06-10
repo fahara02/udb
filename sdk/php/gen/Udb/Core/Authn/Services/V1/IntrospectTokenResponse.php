@@ -38,6 +38,30 @@ class IntrospectTokenResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int64 expires_at_unix = 6 [json_name = "expiresAtUnix"];</code>
      */
     protected $expires_at_unix = 0;
+    /**
+     * Real introspection metadata (Phase 3 / I2.1).
+     *
+     * Generated from protobuf field <code>string key_id = 7 [json_name = "keyId"];</code>
+     */
+    protected $key_id = '';
+    /**
+     * jwt_access | jwt_refresh | session | api_key
+     *
+     * Generated from protobuf field <code>string token_type = 8 [json_name = "tokenType"];</code>
+     */
+    protected $token_type = '';
+    /**
+     * issuing session handle, when present
+     *
+     * Generated from protobuf field <code>string session_id = 9 [json_name = "sessionId"];</code>
+     */
+    protected $session_id = '';
+    /**
+     * populated when active=false due to revocation
+     *
+     * Generated from protobuf field <code>string revocation_reason = 10 [json_name = "revocationReason"];</code>
+     */
+    protected $revocation_reason = '';
 
     /**
      * Constructor.
@@ -51,6 +75,14 @@ class IntrospectTokenResponse extends \Google\Protobuf\Internal\Message
      *     @type string $service_identity
      *     @type string[] $scopes
      *     @type int|string $expires_at_unix
+     *     @type string $key_id
+     *           Real introspection metadata (Phase 3 / I2.1).
+     *     @type string $token_type
+     *           jwt_access | jwt_refresh | session | api_key
+     *     @type string $session_id
+     *           issuing session handle, when present
+     *     @type string $revocation_reason
+     *           populated when active=false due to revocation
      * }
      */
     public function __construct($data = NULL) {
@@ -185,6 +217,110 @@ class IntrospectTokenResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt64($var);
         $this->expires_at_unix = $var;
+
+        return $this;
+    }
+
+    /**
+     * Real introspection metadata (Phase 3 / I2.1).
+     *
+     * Generated from protobuf field <code>string key_id = 7 [json_name = "keyId"];</code>
+     * @return string
+     */
+    public function getKeyId()
+    {
+        return $this->key_id;
+    }
+
+    /**
+     * Real introspection metadata (Phase 3 / I2.1).
+     *
+     * Generated from protobuf field <code>string key_id = 7 [json_name = "keyId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setKeyId(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->key_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * jwt_access | jwt_refresh | session | api_key
+     *
+     * Generated from protobuf field <code>string token_type = 8 [json_name = "tokenType"];</code>
+     * @return string
+     */
+    public function getTokenType()
+    {
+        return $this->token_type;
+    }
+
+    /**
+     * jwt_access | jwt_refresh | session | api_key
+     *
+     * Generated from protobuf field <code>string token_type = 8 [json_name = "tokenType"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setTokenType(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->token_type = $var;
+
+        return $this;
+    }
+
+    /**
+     * issuing session handle, when present
+     *
+     * Generated from protobuf field <code>string session_id = 9 [json_name = "sessionId"];</code>
+     * @return string
+     */
+    public function getSessionId()
+    {
+        return $this->session_id;
+    }
+
+    /**
+     * issuing session handle, when present
+     *
+     * Generated from protobuf field <code>string session_id = 9 [json_name = "sessionId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setSessionId(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->session_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * populated when active=false due to revocation
+     *
+     * Generated from protobuf field <code>string revocation_reason = 10 [json_name = "revocationReason"];</code>
+     * @return string
+     */
+    public function getRevocationReason()
+    {
+        return $this->revocation_reason;
+    }
+
+    /**
+     * populated when active=false due to revocation
+     *
+     * Generated from protobuf field <code>string revocation_reason = 10 [json_name = "revocationReason"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRevocationReason(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->revocation_reason = $var;
 
         return $this;
     }

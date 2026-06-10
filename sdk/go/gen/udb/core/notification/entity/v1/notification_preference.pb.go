@@ -136,7 +136,7 @@ var File_udb_core_notification_entity_v1_notification_preference_proto protorefl
 
 const file_udb_core_notification_entity_v1_notification_preference_proto_rawDesc = "" +
 	"\n" +
-	"=udb/core/notification/entity/v1/notification_preference.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\x98\r\n" +
+	"=udb/core/notification/entity/v1/notification_preference.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\x91\r\n" +
 	"\x16NotificationPreference\x12U\n" +
 	"\rpreference_id\x18\x01 \x01(\tB0\x82\xb7\x18,\n" +
 	"\rpreference_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\fpreferenceId\x12q\n" +
@@ -166,7 +166,7 @@ const file_udb_core_notification_entity_v1_notification_preference_proto_rawDesc
 	"\n" +
 	"created_by\x18\t \x01(\tBB\x82\xb7\x18>\n" +
 	"\n" +
-	"created_by\x12\fVARCHAR(120)Z\"Identity that created this record.R\tcreatedBy:\xd0\x05\xfa\xb6\x18\xa8\x04\n" +
+	"created_by\x12\fVARCHAR(120)Z\"Identity that created this record.R\tcreatedBy:\xc9\x05\xfa\xb6\x18\xa8\x04\n" +
 	"\x18notification_preferences\x12\x10udb_notification\x18\x03 \x01*APer-user per-channel per-event-type notification opt-out settings8\x01@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xaa\x01i\n" +
 	"-trg_notification_preferences_touch_updated_at\x12\x06BEFORE\x1a\x06UPDATE\"#udb_notification.touch_updated_at()*\x03ROW\xc2\x01\xe1\x01\n" +
@@ -178,8 +178,8 @@ const file_udb_core_notification_entity_v1_notification_preference_proto_rawDesc
 	"  NEW.updated_at = CURRENT_TIMESTAMP;\n" +
 	"  RETURN NEW;\n" +
 	"END;\n" +
-	"$$;\x8a\xb2\x19\x9e\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x18notification.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xb0\x02\n" +
+	"$$;\x8a\xb2\x19\x97\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x18notification.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xb0\x02\n" +
 	"#com.udb.core.notification.entity.v1B\x1bNotificationPreferenceProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1;entityv1\xa2\x02\x04UCNE\xaa\x02\x1fudb.core.Notification.Entity.V1\xca\x02\x1fUdb\\Core\\Notification\\Entity\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1\xea\x02#Udb::Core::Notification::Entity::V1b\x06proto3"
 
 var (

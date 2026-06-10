@@ -33,6 +33,10 @@ private static final long serialVersionUID = 0L;
     serviceIdentity_ = "";
     scopes_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
+    keyId_ = "";
+    tokenType_ = "";
+    sessionId_ = "";
+    revocationReason_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -229,6 +233,194 @@ private static final long serialVersionUID = 0L;
     return expiresAtUnix_;
   }
 
+  public static final int KEY_ID_FIELD_NUMBER = 7;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object keyId_ = "";
+  /**
+   * <pre>
+   * Real introspection metadata (Phase 3 / I2.1).
+   * </pre>
+   *
+   * <code>string key_id = 7 [json_name = "keyId"];</code>
+   * @return The keyId.
+   */
+  @java.lang.Override
+  public java.lang.String getKeyId() {
+    java.lang.Object ref = keyId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      keyId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Real introspection metadata (Phase 3 / I2.1).
+   * </pre>
+   *
+   * <code>string key_id = 7 [json_name = "keyId"];</code>
+   * @return The bytes for keyId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getKeyIdBytes() {
+    java.lang.Object ref = keyId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      keyId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int TOKEN_TYPE_FIELD_NUMBER = 8;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object tokenType_ = "";
+  /**
+   * <pre>
+   * jwt_access | jwt_refresh | session | api_key
+   * </pre>
+   *
+   * <code>string token_type = 8 [json_name = "tokenType"];</code>
+   * @return The tokenType.
+   */
+  @java.lang.Override
+  public java.lang.String getTokenType() {
+    java.lang.Object ref = tokenType_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      tokenType_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * jwt_access | jwt_refresh | session | api_key
+   * </pre>
+   *
+   * <code>string token_type = 8 [json_name = "tokenType"];</code>
+   * @return The bytes for tokenType.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getTokenTypeBytes() {
+    java.lang.Object ref = tokenType_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      tokenType_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int SESSION_ID_FIELD_NUMBER = 9;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object sessionId_ = "";
+  /**
+   * <pre>
+   * issuing session handle, when present
+   * </pre>
+   *
+   * <code>string session_id = 9 [json_name = "sessionId"];</code>
+   * @return The sessionId.
+   */
+  @java.lang.Override
+  public java.lang.String getSessionId() {
+    java.lang.Object ref = sessionId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      sessionId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * issuing session handle, when present
+   * </pre>
+   *
+   * <code>string session_id = 9 [json_name = "sessionId"];</code>
+   * @return The bytes for sessionId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getSessionIdBytes() {
+    java.lang.Object ref = sessionId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      sessionId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int REVOCATION_REASON_FIELD_NUMBER = 10;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object revocationReason_ = "";
+  /**
+   * <pre>
+   * populated when active=false due to revocation
+   * </pre>
+   *
+   * <code>string revocation_reason = 10 [json_name = "revocationReason"];</code>
+   * @return The revocationReason.
+   */
+  @java.lang.Override
+  public java.lang.String getRevocationReason() {
+    java.lang.Object ref = revocationReason_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      revocationReason_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * populated when active=false due to revocation
+   * </pre>
+   *
+   * <code>string revocation_reason = 10 [json_name = "revocationReason"];</code>
+   * @return The bytes for revocationReason.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRevocationReasonBytes() {
+    java.lang.Object ref = revocationReason_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      revocationReason_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -261,6 +453,18 @@ private static final long serialVersionUID = 0L;
     if (expiresAtUnix_ != 0L) {
       output.writeInt64(6, expiresAtUnix_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(keyId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 7, keyId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tokenType_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 8, tokenType_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sessionId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 9, sessionId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(revocationReason_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 10, revocationReason_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -289,6 +493,18 @@ private static final long serialVersionUID = 0L;
     if (expiresAtUnix_ != 0L) {
       size += com.google.protobuf.CodedOutputStream
         .computeInt64Size(6, expiresAtUnix_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(keyId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(7, keyId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tokenType_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(8, tokenType_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sessionId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(9, sessionId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(revocationReason_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(10, revocationReason_);
     }
     return size;
   }
@@ -326,6 +542,14 @@ private static final long serialVersionUID = 0L;
         .equals(other.getScopesList())) return false;
     if (getExpiresAtUnix()
         != other.getExpiresAtUnix()) return false;
+    if (!getKeyId()
+        .equals(other.getKeyId())) return false;
+    if (!getTokenType()
+        .equals(other.getTokenType())) return false;
+    if (!getSessionId()
+        .equals(other.getSessionId())) return false;
+    if (!getRevocationReason()
+        .equals(other.getRevocationReason())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -353,6 +577,14 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + EXPIRES_AT_UNIX_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
         getExpiresAtUnix());
+    hash = (37 * hash) + KEY_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getKeyId().hashCode();
+    hash = (37 * hash) + TOKEN_TYPE_FIELD_NUMBER;
+    hash = (53 * hash) + getTokenType().hashCode();
+    hash = (37 * hash) + SESSION_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getSessionId().hashCode();
+    hash = (37 * hash) + REVOCATION_REASON_FIELD_NUMBER;
+    hash = (53 * hash) + getRevocationReason().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -491,6 +723,10 @@ private static final long serialVersionUID = 0L;
       scopes_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
       expiresAtUnix_ = 0L;
+      keyId_ = "";
+      tokenType_ = "";
+      sessionId_ = "";
+      revocationReason_ = "";
       return this;
     }
 
@@ -543,6 +779,18 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000020) != 0)) {
         result.expiresAtUnix_ = expiresAtUnix_;
       }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.keyId_ = keyId_;
+      }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.tokenType_ = tokenType_;
+      }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.sessionId_ = sessionId_;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.revocationReason_ = revocationReason_;
+      }
     }
 
     @java.lang.Override
@@ -587,6 +835,26 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getExpiresAtUnix() != 0L) {
         setExpiresAtUnix(other.getExpiresAtUnix());
+      }
+      if (!other.getKeyId().isEmpty()) {
+        keyId_ = other.keyId_;
+        bitField0_ |= 0x00000040;
+        onChanged();
+      }
+      if (!other.getTokenType().isEmpty()) {
+        tokenType_ = other.tokenType_;
+        bitField0_ |= 0x00000080;
+        onChanged();
+      }
+      if (!other.getSessionId().isEmpty()) {
+        sessionId_ = other.sessionId_;
+        bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      if (!other.getRevocationReason().isEmpty()) {
+        revocationReason_ = other.revocationReason_;
+        bitField0_ |= 0x00000200;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -644,6 +912,26 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000020;
               break;
             } // case 48
+            case 58: {
+              keyId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 58
+            case 66: {
+              tokenType_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 66
+            case 74: {
+              sessionId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 74
+            case 82: {
+              revocationReason_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 82
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1048,6 +1336,374 @@ private static final long serialVersionUID = 0L;
     public Builder clearExpiresAtUnix() {
       bitField0_ = (bitField0_ & ~0x00000020);
       expiresAtUnix_ = 0L;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object keyId_ = "";
+    /**
+     * <pre>
+     * Real introspection metadata (Phase 3 / I2.1).
+     * </pre>
+     *
+     * <code>string key_id = 7 [json_name = "keyId"];</code>
+     * @return The keyId.
+     */
+    public java.lang.String getKeyId() {
+      java.lang.Object ref = keyId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        keyId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Real introspection metadata (Phase 3 / I2.1).
+     * </pre>
+     *
+     * <code>string key_id = 7 [json_name = "keyId"];</code>
+     * @return The bytes for keyId.
+     */
+    public com.google.protobuf.ByteString
+        getKeyIdBytes() {
+      java.lang.Object ref = keyId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        keyId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Real introspection metadata (Phase 3 / I2.1).
+     * </pre>
+     *
+     * <code>string key_id = 7 [json_name = "keyId"];</code>
+     * @param value The keyId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setKeyId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      keyId_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Real introspection metadata (Phase 3 / I2.1).
+     * </pre>
+     *
+     * <code>string key_id = 7 [json_name = "keyId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearKeyId() {
+      keyId_ = getDefaultInstance().getKeyId();
+      bitField0_ = (bitField0_ & ~0x00000040);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Real introspection metadata (Phase 3 / I2.1).
+     * </pre>
+     *
+     * <code>string key_id = 7 [json_name = "keyId"];</code>
+     * @param value The bytes for keyId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setKeyIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      keyId_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object tokenType_ = "";
+    /**
+     * <pre>
+     * jwt_access | jwt_refresh | session | api_key
+     * </pre>
+     *
+     * <code>string token_type = 8 [json_name = "tokenType"];</code>
+     * @return The tokenType.
+     */
+    public java.lang.String getTokenType() {
+      java.lang.Object ref = tokenType_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        tokenType_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * jwt_access | jwt_refresh | session | api_key
+     * </pre>
+     *
+     * <code>string token_type = 8 [json_name = "tokenType"];</code>
+     * @return The bytes for tokenType.
+     */
+    public com.google.protobuf.ByteString
+        getTokenTypeBytes() {
+      java.lang.Object ref = tokenType_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        tokenType_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * jwt_access | jwt_refresh | session | api_key
+     * </pre>
+     *
+     * <code>string token_type = 8 [json_name = "tokenType"];</code>
+     * @param value The tokenType to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTokenType(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      tokenType_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * jwt_access | jwt_refresh | session | api_key
+     * </pre>
+     *
+     * <code>string token_type = 8 [json_name = "tokenType"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTokenType() {
+      tokenType_ = getDefaultInstance().getTokenType();
+      bitField0_ = (bitField0_ & ~0x00000080);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * jwt_access | jwt_refresh | session | api_key
+     * </pre>
+     *
+     * <code>string token_type = 8 [json_name = "tokenType"];</code>
+     * @param value The bytes for tokenType to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTokenTypeBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      tokenType_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object sessionId_ = "";
+    /**
+     * <pre>
+     * issuing session handle, when present
+     * </pre>
+     *
+     * <code>string session_id = 9 [json_name = "sessionId"];</code>
+     * @return The sessionId.
+     */
+    public java.lang.String getSessionId() {
+      java.lang.Object ref = sessionId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        sessionId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * issuing session handle, when present
+     * </pre>
+     *
+     * <code>string session_id = 9 [json_name = "sessionId"];</code>
+     * @return The bytes for sessionId.
+     */
+    public com.google.protobuf.ByteString
+        getSessionIdBytes() {
+      java.lang.Object ref = sessionId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        sessionId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * issuing session handle, when present
+     * </pre>
+     *
+     * <code>string session_id = 9 [json_name = "sessionId"];</code>
+     * @param value The sessionId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSessionId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      sessionId_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * issuing session handle, when present
+     * </pre>
+     *
+     * <code>string session_id = 9 [json_name = "sessionId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSessionId() {
+      sessionId_ = getDefaultInstance().getSessionId();
+      bitField0_ = (bitField0_ & ~0x00000100);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * issuing session handle, when present
+     * </pre>
+     *
+     * <code>string session_id = 9 [json_name = "sessionId"];</code>
+     * @param value The bytes for sessionId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSessionIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      sessionId_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object revocationReason_ = "";
+    /**
+     * <pre>
+     * populated when active=false due to revocation
+     * </pre>
+     *
+     * <code>string revocation_reason = 10 [json_name = "revocationReason"];</code>
+     * @return The revocationReason.
+     */
+    public java.lang.String getRevocationReason() {
+      java.lang.Object ref = revocationReason_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        revocationReason_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * populated when active=false due to revocation
+     * </pre>
+     *
+     * <code>string revocation_reason = 10 [json_name = "revocationReason"];</code>
+     * @return The bytes for revocationReason.
+     */
+    public com.google.protobuf.ByteString
+        getRevocationReasonBytes() {
+      java.lang.Object ref = revocationReason_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        revocationReason_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * populated when active=false due to revocation
+     * </pre>
+     *
+     * <code>string revocation_reason = 10 [json_name = "revocationReason"];</code>
+     * @param value The revocationReason to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRevocationReason(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      revocationReason_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * populated when active=false due to revocation
+     * </pre>
+     *
+     * <code>string revocation_reason = 10 [json_name = "revocationReason"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRevocationReason() {
+      revocationReason_ = getDefaultInstance().getRevocationReason();
+      bitField0_ = (bitField0_ & ~0x00000200);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * populated when active=false due to revocation
+     * </pre>
+     *
+     * <code>string revocation_reason = 10 [json_name = "revocationReason"];</code>
+     * @param value The bytes for revocationReason to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRevocationReasonBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      revocationReason_ = value;
+      bitField0_ |= 0x00000200;
       onChanged();
       return this;
     }

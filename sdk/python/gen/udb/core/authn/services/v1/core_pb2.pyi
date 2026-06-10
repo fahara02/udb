@@ -4,6 +4,7 @@ from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from udb.core.authn.entity.v1 import enums_pb2 as _enums_pb2
 from udb.core.authn.entity.v1 import session_pb2 as _session_pb2
 from udb.core.authn.entity.v1 import user_pb2 as _user_pb2
+from udb.core.authn.entity.v1 import device_pb2 as _device_pb2
 from udb.core.common.v1 import dto_pb2 as _dto_pb2
 from udb.core.common.v1 import types_pb2 as _types_pb2
 from udb.core.common.v1 import domain_types_pb2 as _domain_types_pb2
@@ -345,7 +346,7 @@ class LoginRequest(_message.Message):
     def __init__(self, username: _Optional[str] = ..., password: _Optional[str] = ..., device_type: _Optional[_Union[_enums_pb2.DeviceType, str]] = ..., device_name: _Optional[str] = ..., ip_address: _Optional[str] = ..., user_agent: _Optional[str] = ..., device_id: _Optional[str] = ..., mfa_otp_id: _Optional[str] = ..., totp_code: _Optional[str] = ..., tenant_hint: _Optional[str] = ..., project_hint: _Optional[str] = ..., access_surface: _Optional[str] = ..., recovery_code: _Optional[str] = ...) -> None: ...
 
 class LoginResponse(_message.Message):
-    __slots__ = ("user_id", "session_id", "access_token", "refresh_token", "access_token_expires_in", "session_token", "csrf_token", "mfa_required", "mfa_otp_id")
+    __slots__ = ("user_id", "session_id", "access_token", "refresh_token", "access_token_expires_in", "session_token", "csrf_token", "mfa_required", "mfa_otp_id", "refresh_token_expires_in")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     SESSION_ID_FIELD_NUMBER: _ClassVar[int]
     ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
@@ -355,6 +356,7 @@ class LoginResponse(_message.Message):
     CSRF_TOKEN_FIELD_NUMBER: _ClassVar[int]
     MFA_REQUIRED_FIELD_NUMBER: _ClassVar[int]
     MFA_OTP_ID_FIELD_NUMBER: _ClassVar[int]
+    REFRESH_TOKEN_EXPIRES_IN_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     session_id: str
     access_token: str
@@ -364,7 +366,8 @@ class LoginResponse(_message.Message):
     csrf_token: str
     mfa_required: bool
     mfa_otp_id: str
-    def __init__(self, user_id: _Optional[str] = ..., session_id: _Optional[str] = ..., access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., access_token_expires_in: _Optional[int] = ..., session_token: _Optional[str] = ..., csrf_token: _Optional[str] = ..., mfa_required: bool = ..., mfa_otp_id: _Optional[str] = ...) -> None: ...
+    refresh_token_expires_in: int
+    def __init__(self, user_id: _Optional[str] = ..., session_id: _Optional[str] = ..., access_token: _Optional[str] = ..., refresh_token: _Optional[str] = ..., access_token_expires_in: _Optional[int] = ..., session_token: _Optional[str] = ..., csrf_token: _Optional[str] = ..., mfa_required: bool = ..., mfa_otp_id: _Optional[str] = ..., refresh_token_expires_in: _Optional[int] = ...) -> None: ...
 
 class RefreshTokenRequest(_message.Message):
     __slots__ = ("refresh_token", "session_id")
@@ -375,12 +378,16 @@ class RefreshTokenRequest(_message.Message):
     def __init__(self, refresh_token: _Optional[str] = ..., session_id: _Optional[str] = ...) -> None: ...
 
 class RefreshTokenResponse(_message.Message):
-    __slots__ = ("access_token", "access_token_expires_in")
+    __slots__ = ("access_token", "access_token_expires_in", "refresh_token", "refresh_token_expires_in")
     ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
     ACCESS_TOKEN_EXPIRES_IN_FIELD_NUMBER: _ClassVar[int]
+    REFRESH_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    REFRESH_TOKEN_EXPIRES_IN_FIELD_NUMBER: _ClassVar[int]
     access_token: str
     access_token_expires_in: int
-    def __init__(self, access_token: _Optional[str] = ..., access_token_expires_in: _Optional[int] = ...) -> None: ...
+    refresh_token: str
+    refresh_token_expires_in: int
+    def __init__(self, access_token: _Optional[str] = ..., access_token_expires_in: _Optional[int] = ..., refresh_token: _Optional[str] = ..., refresh_token_expires_in: _Optional[int] = ...) -> None: ...
 
 class LogoutRequest(_message.Message):
     __slots__ = ("session_id", "all_sessions", "revoke_reason", "context")
@@ -710,20 +717,28 @@ class IntrospectTokenRequest(_message.Message):
     def __init__(self, token: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
 
 class IntrospectTokenResponse(_message.Message):
-    __slots__ = ("active", "subject", "tenant_id", "service_identity", "scopes", "expires_at_unix")
+    __slots__ = ("active", "subject", "tenant_id", "service_identity", "scopes", "expires_at_unix", "key_id", "token_type", "session_id", "revocation_reason")
     ACTIVE_FIELD_NUMBER: _ClassVar[int]
     SUBJECT_FIELD_NUMBER: _ClassVar[int]
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     SERVICE_IDENTITY_FIELD_NUMBER: _ClassVar[int]
     SCOPES_FIELD_NUMBER: _ClassVar[int]
     EXPIRES_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    KEY_ID_FIELD_NUMBER: _ClassVar[int]
+    TOKEN_TYPE_FIELD_NUMBER: _ClassVar[int]
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    REVOCATION_REASON_FIELD_NUMBER: _ClassVar[int]
     active: bool
     subject: str
     tenant_id: str
     service_identity: str
     scopes: _containers.RepeatedScalarFieldContainer[str]
     expires_at_unix: int
-    def __init__(self, active: bool = ..., subject: _Optional[str] = ..., tenant_id: _Optional[str] = ..., service_identity: _Optional[str] = ..., scopes: _Optional[_Iterable[str]] = ..., expires_at_unix: _Optional[int] = ...) -> None: ...
+    key_id: str
+    token_type: str
+    session_id: str
+    revocation_reason: str
+    def __init__(self, active: bool = ..., subject: _Optional[str] = ..., tenant_id: _Optional[str] = ..., service_identity: _Optional[str] = ..., scopes: _Optional[_Iterable[str]] = ..., expires_at_unix: _Optional[int] = ..., key_id: _Optional[str] = ..., token_type: _Optional[str] = ..., session_id: _Optional[str] = ..., revocation_reason: _Optional[str] = ...) -> None: ...
 
 class GetJwksRequest(_message.Message):
     __slots__ = ("context",)
@@ -844,3 +859,297 @@ class FinishWebAuthnAuthenticationResponse(_message.Message):
     expires_at_unix: int
     credential_id: str
     def __init__(self, principal: _Optional[_Union[Principal, _Mapping]] = ..., session_id: _Optional[str] = ..., access_token: _Optional[str] = ..., expires_at_unix: _Optional[int] = ..., credential_id: _Optional[str] = ...) -> None: ...
+
+class ListDevicesRequest(_message.Message):
+    __slots__ = ("user_id", "page", "context")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    PAGE_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    page: _dto_pb2.PageRequest
+    context: _types_pb2.RequestContext
+    def __init__(self, user_id: _Optional[str] = ..., page: _Optional[_Union[_dto_pb2.PageRequest, _Mapping]] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class ListDevicesResponse(_message.Message):
+    __slots__ = ("devices", "page")
+    DEVICES_FIELD_NUMBER: _ClassVar[int]
+    PAGE_FIELD_NUMBER: _ClassVar[int]
+    devices: _containers.RepeatedCompositeFieldContainer[_device_pb2.Device]
+    page: _dto_pb2.PageResponse
+    def __init__(self, devices: _Optional[_Iterable[_Union[_device_pb2.Device, _Mapping]]] = ..., page: _Optional[_Union[_dto_pb2.PageResponse, _Mapping]] = ...) -> None: ...
+
+class RevokeDeviceRequest(_message.Message):
+    __slots__ = ("device_id", "reason", "context")
+    DEVICE_ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    device_id: str
+    reason: str
+    context: _types_pb2.RequestContext
+    def __init__(self, device_id: _Optional[str] = ..., reason: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class RevokeDeviceResponse(_message.Message):
+    __slots__ = ("revoked", "device_id", "sessions_revoked")
+    REVOKED_FIELD_NUMBER: _ClassVar[int]
+    DEVICE_ID_FIELD_NUMBER: _ClassVar[int]
+    SESSIONS_REVOKED_FIELD_NUMBER: _ClassVar[int]
+    revoked: bool
+    device_id: str
+    sessions_revoked: int
+    def __init__(self, revoked: bool = ..., device_id: _Optional[str] = ..., sessions_revoked: _Optional[int] = ...) -> None: ...
+
+class AdminRevokeSessionRequest(_message.Message):
+    __slots__ = ("user_id", "session_id", "reason", "context")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    session_id: str
+    reason: str
+    context: _types_pb2.RequestContext
+    def __init__(self, user_id: _Optional[str] = ..., session_id: _Optional[str] = ..., reason: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class AdminRevokeSessionResponse(_message.Message):
+    __slots__ = ("revoked", "sessions_revoked")
+    REVOKED_FIELD_NUMBER: _ClassVar[int]
+    SESSIONS_REVOKED_FIELD_NUMBER: _ClassVar[int]
+    revoked: bool
+    sessions_revoked: int
+    def __init__(self, revoked: bool = ..., sessions_revoked: _Optional[int] = ...) -> None: ...
+
+class AdminRevokeAllUserSessionsRequest(_message.Message):
+    __slots__ = ("user_id", "reason", "context")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    reason: str
+    context: _types_pb2.RequestContext
+    def __init__(self, user_id: _Optional[str] = ..., reason: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class AdminRevokeAllUserSessionsResponse(_message.Message):
+    __slots__ = ("sessions_revoked",)
+    SESSIONS_REVOKED_FIELD_NUMBER: _ClassVar[int]
+    sessions_revoked: int
+    def __init__(self, sessions_revoked: _Optional[int] = ...) -> None: ...
+
+class AdminRevokeAllTenantSessionsRequest(_message.Message):
+    __slots__ = ("tenant_id", "reason", "context")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    reason: str
+    context: _types_pb2.RequestContext
+    def __init__(self, tenant_id: _Optional[str] = ..., reason: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class AdminRevokeAllTenantSessionsResponse(_message.Message):
+    __slots__ = ("sessions_revoked",)
+    SESSIONS_REVOKED_FIELD_NUMBER: _ClassVar[int]
+    sessions_revoked: int
+    def __init__(self, sessions_revoked: _Optional[int] = ...) -> None: ...
+
+class EmergencyRevokeRequest(_message.Message):
+    __slots__ = ("signing_key_id", "token_family_id", "tenant_id", "principal_id", "reason", "context")
+    SIGNING_KEY_ID_FIELD_NUMBER: _ClassVar[int]
+    TOKEN_FAMILY_ID_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PRINCIPAL_ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    signing_key_id: str
+    token_family_id: str
+    tenant_id: str
+    principal_id: str
+    reason: str
+    context: _types_pb2.RequestContext
+    def __init__(self, signing_key_id: _Optional[str] = ..., token_family_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., principal_id: _Optional[str] = ..., reason: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class EmergencyRevokeResponse(_message.Message):
+    __slots__ = ("families_revoked", "sessions_revoked", "keys_compromised", "operation_id")
+    FAMILIES_REVOKED_FIELD_NUMBER: _ClassVar[int]
+    SESSIONS_REVOKED_FIELD_NUMBER: _ClassVar[int]
+    KEYS_COMPROMISED_FIELD_NUMBER: _ClassVar[int]
+    OPERATION_ID_FIELD_NUMBER: _ClassVar[int]
+    families_revoked: int
+    sessions_revoked: int
+    keys_compromised: int
+    operation_id: str
+    def __init__(self, families_revoked: _Optional[int] = ..., sessions_revoked: _Optional[int] = ..., keys_compromised: _Optional[int] = ..., operation_id: _Optional[str] = ...) -> None: ...
+
+class IssueMfaChallengeRequest(_message.Message):
+    __slots__ = ("user_id", "factor_kind", "purpose", "device_fingerprint", "ip_address", "context")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    FACTOR_KIND_FIELD_NUMBER: _ClassVar[int]
+    PURPOSE_FIELD_NUMBER: _ClassVar[int]
+    DEVICE_FINGERPRINT_FIELD_NUMBER: _ClassVar[int]
+    IP_ADDRESS_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    factor_kind: _enums_pb2.AuthFactorKind
+    purpose: _enums_pb2.MfaChallengePurpose
+    device_fingerprint: str
+    ip_address: str
+    context: _types_pb2.RequestContext
+    def __init__(self, user_id: _Optional[str] = ..., factor_kind: _Optional[_Union[_enums_pb2.AuthFactorKind, str]] = ..., purpose: _Optional[_Union[_enums_pb2.MfaChallengePurpose, str]] = ..., device_fingerprint: _Optional[str] = ..., ip_address: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class IssueMfaChallengeResponse(_message.Message):
+    __slots__ = ("challenge_id", "expires_at_unix", "factor_kind")
+    CHALLENGE_ID_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    FACTOR_KIND_FIELD_NUMBER: _ClassVar[int]
+    challenge_id: str
+    expires_at_unix: int
+    factor_kind: _enums_pb2.AuthFactorKind
+    def __init__(self, challenge_id: _Optional[str] = ..., expires_at_unix: _Optional[int] = ..., factor_kind: _Optional[_Union[_enums_pb2.AuthFactorKind, str]] = ...) -> None: ...
+
+class VerifyMfaChallengeRequest(_message.Message):
+    __slots__ = ("challenge_id", "code", "device_fingerprint", "context")
+    CHALLENGE_ID_FIELD_NUMBER: _ClassVar[int]
+    CODE_FIELD_NUMBER: _ClassVar[int]
+    DEVICE_FINGERPRINT_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    challenge_id: str
+    code: str
+    device_fingerprint: str
+    context: _types_pb2.RequestContext
+    def __init__(self, challenge_id: _Optional[str] = ..., code: _Optional[str] = ..., device_fingerprint: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class VerifyMfaChallengeResponse(_message.Message):
+    __slots__ = ("verified", "user_id")
+    VERIFIED_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    verified: bool
+    user_id: str
+    def __init__(self, verified: bool = ..., user_id: _Optional[str] = ...) -> None: ...
+
+class MfaFactorSummary(_message.Message):
+    __slots__ = ("factor_kind", "enabled", "label")
+    FACTOR_KIND_FIELD_NUMBER: _ClassVar[int]
+    ENABLED_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    factor_kind: _enums_pb2.AuthFactorKind
+    enabled: bool
+    label: str
+    def __init__(self, factor_kind: _Optional[_Union[_enums_pb2.AuthFactorKind, str]] = ..., enabled: bool = ..., label: _Optional[str] = ...) -> None: ...
+
+class ListMfaFactorsRequest(_message.Message):
+    __slots__ = ("user_id", "context")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    context: _types_pb2.RequestContext
+    def __init__(self, user_id: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class ListMfaFactorsResponse(_message.Message):
+    __slots__ = ("factors",)
+    FACTORS_FIELD_NUMBER: _ClassVar[int]
+    factors: _containers.RepeatedCompositeFieldContainer[MfaFactorSummary]
+    def __init__(self, factors: _Optional[_Iterable[_Union[MfaFactorSummary, _Mapping]]] = ...) -> None: ...
+
+class DisableMfaFactorRequest(_message.Message):
+    __slots__ = ("user_id", "factor_kind", "context")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    FACTOR_KIND_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    factor_kind: _enums_pb2.AuthFactorKind
+    context: _types_pb2.RequestContext
+    def __init__(self, user_id: _Optional[str] = ..., factor_kind: _Optional[_Union[_enums_pb2.AuthFactorKind, str]] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class DisableMfaFactorResponse(_message.Message):
+    __slots__ = ("disabled",)
+    DISABLED_FIELD_NUMBER: _ClassVar[int]
+    disabled: bool
+    def __init__(self, disabled: bool = ...) -> None: ...
+
+class RenamePasskeyRequest(_message.Message):
+    __slots__ = ("user_id", "credential_id", "new_label", "context")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    CREDENTIAL_ID_FIELD_NUMBER: _ClassVar[int]
+    NEW_LABEL_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    credential_id: str
+    new_label: str
+    context: _types_pb2.RequestContext
+    def __init__(self, user_id: _Optional[str] = ..., credential_id: _Optional[str] = ..., new_label: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class RenamePasskeyResponse(_message.Message):
+    __slots__ = ("renamed",)
+    RENAMED_FIELD_NUMBER: _ClassVar[int]
+    renamed: bool
+    def __init__(self, renamed: bool = ...) -> None: ...
+
+class RevokeRecoveryCodesRequest(_message.Message):
+    __slots__ = ("user_id", "context")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    context: _types_pb2.RequestContext
+    def __init__(self, user_id: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class RevokeRecoveryCodesResponse(_message.Message):
+    __slots__ = ("revoked_count",)
+    REVOKED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    revoked_count: int
+    def __init__(self, revoked_count: _Optional[int] = ...) -> None: ...
+
+class AdminResetMfaRequest(_message.Message):
+    __slots__ = ("user_id", "reason", "context")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    reason: str
+    context: _types_pb2.RequestContext
+    def __init__(self, user_id: _Optional[str] = ..., reason: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class AdminResetMfaResponse(_message.Message):
+    __slots__ = ("reset",)
+    RESET_FIELD_NUMBER: _ClassVar[int]
+    reset: bool
+    def __init__(self, reset: bool = ...) -> None: ...
+
+class WebAuthnCredentialSummary(_message.Message):
+    __slots__ = ("credential_id", "label", "created_at_unix", "last_used_at_unix")
+    CREDENTIAL_ID_FIELD_NUMBER: _ClassVar[int]
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    LAST_USED_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    credential_id: str
+    label: str
+    created_at_unix: int
+    last_used_at_unix: int
+    def __init__(self, credential_id: _Optional[str] = ..., label: _Optional[str] = ..., created_at_unix: _Optional[int] = ..., last_used_at_unix: _Optional[int] = ...) -> None: ...
+
+class ListWebAuthnCredentialsRequest(_message.Message):
+    __slots__ = ("user_id", "context")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    context: _types_pb2.RequestContext
+    def __init__(self, user_id: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class ListWebAuthnCredentialsResponse(_message.Message):
+    __slots__ = ("credentials",)
+    CREDENTIALS_FIELD_NUMBER: _ClassVar[int]
+    credentials: _containers.RepeatedCompositeFieldContainer[WebAuthnCredentialSummary]
+    def __init__(self, credentials: _Optional[_Iterable[_Union[WebAuthnCredentialSummary, _Mapping]]] = ...) -> None: ...
+
+class DeleteWebAuthnCredentialRequest(_message.Message):
+    __slots__ = ("user_id", "credential_id", "context")
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    CREDENTIAL_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    user_id: str
+    credential_id: str
+    context: _types_pb2.RequestContext
+    def __init__(self, user_id: _Optional[str] = ..., credential_id: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class DeleteWebAuthnCredentialResponse(_message.Message):
+    __slots__ = ("deleted",)
+    DELETED_FIELD_NUMBER: _ClassVar[int]
+    deleted: bool
+    def __init__(self, deleted: bool = ...) -> None: ...

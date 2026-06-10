@@ -147,4 +147,16 @@ public interface LoginResponseOrBuilder extends
    */
   com.google.protobuf.ByteString
       getMfaOtpIdBytes();
+
+  /**
+   * <pre>
+   * Absolute lifetime (seconds) of the rotating refresh token (field 4). The
+   * refresh token is a token-family credential (rt_&lt;family&gt;.&lt;jti&gt;), rotated on
+   * every RefreshToken call; reuse of a superseded value revokes the family.
+   * </pre>
+   *
+   * <code>int32 refresh_token_expires_in = 10 [json_name = "refreshTokenExpiresIn"];</code>
+   * @return The refreshTokenExpiresIn.
+   */
+  int getRefreshTokenExpiresIn();
 }

@@ -61,6 +61,36 @@ public final class AuthzEventsProto extends com.google.protobuf.GeneratedFile {
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_authz_events_v1_AccessSurfaceUpdatedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authz_events_v1_RelationshipTupleChangedEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authz_events_v1_RelationshipTupleChangedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authz_events_v1_NativeAccessGrantIssuedEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authz_events_v1_NativeAccessGrantIssuedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authz_events_v1_NativeAccessGrantDeniedEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authz_events_v1_NativeAccessGrantDeniedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authz_events_v1_PolicyBundleIssuedEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authz_events_v1_PolicyBundleIssuedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authz_events_v1_PolicyBundleRevokedEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authz_events_v1_PolicyBundleRevokedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authz_events_v1_PolicySimulatedEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authz_events_v1_PolicySimulatedEvent_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -148,14 +178,81 @@ public final class AuthzEventsProto extends com.google.protobuf.GeneratedFile {
       "\212\001\222\262\031\205\001\n2udb.core.authz.events.v1.Access" +
       "SurfaceUpdatedEvent\022#udb.authz.access.su" +
       "rface.updated.v1\032\ttenant_id\"\010standard*\ra" +
-      "t_least_once2\006stableB\373\001\n\034com.udb.core.au" +
-      "thz.events.v1B\020AuthzEventsProtoP\001ZDgithu" +
-      "b.com/fahara02/udb/sdk/go/gen/udb/core/a" +
-      "uthz/events/v1;eventsv1\242\002\004UCAE\252\002\030udb.cor" +
-      "e.Authz.Events.V1\312\002\030Udb\\Core\\Authz\\Event" +
-      "s\\V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\Events" +
-      "\\V1\352\002\034Udb::Core::Authz::Events::V1b\006prot" +
-      "o3"
+      "t_least_once2\006stable\"\321\003\n\035RelationshipTup" +
+      "leChangedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventI" +
+      "d\022\030\n\007subject\030\002 \001(\tR\007subject\022\032\n\010relation\030" +
+      "\003 \001(\tR\010relation\022\026\n\006object\030\004 \001(\tR\006object\022" +
+      "\033\n\ttenant_id\030\005 \001(\tR\010tenantId\022\035\n\nproject_" +
+      "id\030\006 \001(\tR\tprojectId\022\022\n\004verb\030\007 \001(\tR\004verb\022" +
+      "%\n\016correlation_id\030\010 \001(\tR\rcorrelationId\022;" +
+      "\n\013occurred_at\030\t \001(\0132\032.google.protobuf.Ti" +
+      "mestampR\noccurredAt:\222\001\222\262\031\215\001\n6udb.core.au" +
+      "thz.events.v1.RelationshipTupleChangedEv" +
+      "ent\022\'udb.authz.relationship.tuple.change" +
+      "d.v1\032\ttenant_id\"\010standard*\rat_least_once" +
+      "2\006stable\"\344\003\n\034NativeAccessGrantIssuedEven" +
+      "t\022\031\n\010event_id\030\001 \001(\tR\007eventId\022!\n\014principa" +
+      "l_id\030\002 \001(\tR\013principalId\022\033\n\ttenant_id\030\003 \001" +
+      "(\tR\010tenantId\022\035\n\nproject_id\030\004 \001(\tR\tprojec" +
+      "tId\022%\n\016policy_version\030\005 \001(\tR\rpolicyVersi" +
+      "on\0221\n\024relationship_version\030\006 \001(\tR\023relati" +
+      "onshipVersion\022%\n\016correlation_id\030\007 \001(\tR\rc" +
+      "orrelationId\022;\n\013occurred_at\030\010 \001(\0132\032.goog" +
+      "le.protobuf.TimestampR\noccurredAt:\213\001\222\262\031\206" +
+      "\001\n5udb.core.authz.events.v1.NativeAccess" +
+      "GrantIssuedEvent\022!udb.authz.native.acces" +
+      "s.issued.v1\032\ttenant_id\"\010standard*\rat_lea" +
+      "st_once2\006stable\"\253\003\n\034NativeAccessGrantDen" +
+      "iedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022!\n\014p" +
+      "rincipal_id\030\002 \001(\tR\013principalId\022\033\n\ttenant" +
+      "_id\030\003 \001(\tR\010tenantId\022\035\n\nproject_id\030\004 \001(\tR" +
+      "\tprojectId\022\037\n\013reason_code\030\005 \001(\tR\nreasonC" +
+      "ode\022%\n\016correlation_id\030\006 \001(\tR\rcorrelation" +
+      "Id\022;\n\013occurred_at\030\007 \001(\0132\032.google.protobu" +
+      "f.TimestampR\noccurredAt:\213\001\222\262\031\206\001\n5udb.cor" +
+      "e.authz.events.v1.NativeAccessGrantDenie" +
+      "dEvent\022!udb.authz.native.access.denied.v" +
+      "1\032\ttenant_id\"\010standard*\rat_least_once2\006s" +
+      "table\"\273\003\n\027PolicyBundleIssuedEvent\022\031\n\010eve" +
+      "nt_id\030\001 \001(\tR\007eventId\022\033\n\ttenant_id\030\002 \001(\tR" +
+      "\010tenantId\022\035\n\nproject_id\030\003 \001(\tR\tprojectId" +
+      "\022\'\n\017policy_revision\030\004 \001(\003R\016policyRevisio" +
+      "n\0223\n\025relationship_revision\030\005 \001(\003R\024relati" +
+      "onshipRevision\022%\n\016correlation_id\030\006 \001(\tR\r" +
+      "correlationId\022;\n\013occurred_at\030\007 \001(\0132\032.goo" +
+      "gle.protobuf.TimestampR\noccurredAt:\206\001\222\262\031" +
+      "\201\001\n0udb.core.authz.events.v1.PolicyBundl" +
+      "eIssuedEvent\022!udb.authz.policy.bundle.is" +
+      "sued.v1\032\ttenant_id\"\010standard*\rat_least_o" +
+      "nce2\006stable\"\254\003\n\030PolicyBundleRevokedEvent" +
+      "\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\033\n\ttenant_id" +
+      "\030\002 \001(\tR\010tenantId\022\035\n\nproject_id\030\003 \001(\tR\tpr" +
+      "ojectId\0222\n\025below_policy_revision\030\004 \001(\003R\023" +
+      "belowPolicyRevision\022\026\n\006reason\030\005 \001(\tR\006rea" +
+      "son\022%\n\016correlation_id\030\006 \001(\tR\rcorrelation" +
+      "Id\022;\n\013occurred_at\030\007 \001(\0132\032.google.protobu" +
+      "f.TimestampR\noccurredAt:\210\001\222\262\031\203\001\n1udb.cor" +
+      "e.authz.events.v1.PolicyBundleRevokedEve" +
+      "nt\022\"udb.authz.policy.bundle.revoked.v1\032\t" +
+      "tenant_id\"\010standard*\rat_least_once2\006stab" +
+      "le\"\277\003\n\024PolicySimulatedEvent\022\031\n\010event_id\030" +
+      "\001 \001(\tR\007eventId\022\033\n\ttenant_id\030\002 \001(\tR\010tenan" +
+      "tId\022\035\n\nproject_id\030\003 \001(\tR\tprojectId\022*\n\021po" +
+      "licy_version_id\030\004 \001(\tR\017policyVersionId\022!" +
+      "\n\014simulated_by\030\005 \001(\tR\013simulatedBy\022\035\n\ndif" +
+      "f_count\030\006 \001(\005R\tdiffCount\022%\n\016correlation_" +
+      "id\030\007 \001(\tR\rcorrelationId\022;\n\013occurred_at\030\010" +
+      " \001(\0132\032.google.protobuf.TimestampR\noccurr" +
+      "edAt:~\222\262\031z\n-udb.core.authz.events.v1.Pol" +
+      "icySimulatedEvent\022\035udb.authz.policy.simu" +
+      "lated.v1\032\ttenant_id\"\010standard*\rat_least_" +
+      "once2\006stableB\373\001\n\034com.udb.core.authz.even" +
+      "ts.v1B\020AuthzEventsProtoP\001ZDgithub.com/fa" +
+      "hara02/udb/sdk/go/gen/udb/core/authz/eve" +
+      "nts/v1;eventsv1\242\002\004UCAE\252\002\030udb.core.Authz." +
+      "Events.V1\312\002\030Udb\\Core\\Authz\\Events\\V1\342\002$U" +
+      "db\\GPBMetadata\\Core\\Authz\\Events\\V1\352\002\034Ud" +
+      "b::Core::Authz::Events::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -205,6 +302,42 @@ public final class AuthzEventsProto extends com.google.protobuf.GeneratedFile {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authz_events_v1_AccessSurfaceUpdatedEvent_descriptor,
         new java.lang.String[] { "EventId", "PrincipalId", "OldAccessSurface", "NewAccessSurface", "TenantId", "ProjectId", "UpdatedBy", "CorrelationId", "OccurredAt", });
+    internal_static_udb_core_authz_events_v1_RelationshipTupleChangedEvent_descriptor =
+      getDescriptor().getMessageType(7);
+    internal_static_udb_core_authz_events_v1_RelationshipTupleChangedEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authz_events_v1_RelationshipTupleChangedEvent_descriptor,
+        new java.lang.String[] { "EventId", "Subject", "Relation", "Object", "TenantId", "ProjectId", "Verb", "CorrelationId", "OccurredAt", });
+    internal_static_udb_core_authz_events_v1_NativeAccessGrantIssuedEvent_descriptor =
+      getDescriptor().getMessageType(8);
+    internal_static_udb_core_authz_events_v1_NativeAccessGrantIssuedEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authz_events_v1_NativeAccessGrantIssuedEvent_descriptor,
+        new java.lang.String[] { "EventId", "PrincipalId", "TenantId", "ProjectId", "PolicyVersion", "RelationshipVersion", "CorrelationId", "OccurredAt", });
+    internal_static_udb_core_authz_events_v1_NativeAccessGrantDeniedEvent_descriptor =
+      getDescriptor().getMessageType(9);
+    internal_static_udb_core_authz_events_v1_NativeAccessGrantDeniedEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authz_events_v1_NativeAccessGrantDeniedEvent_descriptor,
+        new java.lang.String[] { "EventId", "PrincipalId", "TenantId", "ProjectId", "ReasonCode", "CorrelationId", "OccurredAt", });
+    internal_static_udb_core_authz_events_v1_PolicyBundleIssuedEvent_descriptor =
+      getDescriptor().getMessageType(10);
+    internal_static_udb_core_authz_events_v1_PolicyBundleIssuedEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authz_events_v1_PolicyBundleIssuedEvent_descriptor,
+        new java.lang.String[] { "EventId", "TenantId", "ProjectId", "PolicyRevision", "RelationshipRevision", "CorrelationId", "OccurredAt", });
+    internal_static_udb_core_authz_events_v1_PolicyBundleRevokedEvent_descriptor =
+      getDescriptor().getMessageType(11);
+    internal_static_udb_core_authz_events_v1_PolicyBundleRevokedEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authz_events_v1_PolicyBundleRevokedEvent_descriptor,
+        new java.lang.String[] { "EventId", "TenantId", "ProjectId", "BelowPolicyRevision", "Reason", "CorrelationId", "OccurredAt", });
+    internal_static_udb_core_authz_events_v1_PolicySimulatedEvent_descriptor =
+      getDescriptor().getMessageType(12);
+    internal_static_udb_core_authz_events_v1_PolicySimulatedEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authz_events_v1_PolicySimulatedEvent_descriptor,
+        new java.lang.String[] { "EventId", "TenantId", "ProjectId", "PolicyVersionId", "SimulatedBy", "DiffCount", "CorrelationId", "OccurredAt", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.SecurityProto.getDescriptor();

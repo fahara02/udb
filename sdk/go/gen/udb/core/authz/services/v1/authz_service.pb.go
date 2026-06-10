@@ -26,7 +26,7 @@ var File_udb_core_authz_services_v1_authz_service_proto protoreflect.FileDescrip
 
 const file_udb_core_authz_services_v1_authz_service_proto_rawDesc = "" +
 	"\n" +
-	".udb/core/authz/services/v1/authz_service.proto\x12\x1audb.core.authz.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a%udb/core/authz/services/v1/core.proto\x1a!udb/core/common/v1/security.proto2\x94q\n" +
+	".udb/core/authz/services/v1/authz_service.proto\x12\x1audb.core.authz.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a%udb/core/authz/services/v1/core.proto\x1a+udb/core/authz/services/v1/governance.proto\x1a!udb/core/common/v1/security.proto2ך\x01\n" +
 	"\fAuthzService\x12\xa9\x04\n" +
 	"\tAuthorize\x12(.udb.core.authz.services.v1.AuthzRequest\x1a).udb.core.authz.services.v1.AuthzResponse\"\xc6\x03\xca\xf3\x181\b\x02\x1a\x13udb:authz:authorize \x01J\x02\x01\x02j\x0fauthz.Authorize\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18#\b\x01\x12\tauthorize\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\xe2\xf3\x18\xab\x01\n" +
 	"\x05authz\x12\x10udb/native/authz\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"&udb.native.authz.authorize.boilerplate*\tauthorize2\tudb_authz:\x05authzJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18K\n" +
@@ -126,7 +126,25 @@ const file_udb_core_authz_services_v1_authz_service_proto_rawDesc = "" +
 	"\x0fGetPolicyBundle\x12/.udb.core.authz.services.v1.PolicyBundleRequest\x1a0.udb.core.authz.services.v1.PolicyBundleResponse\"\xf6\x03\xca\xf3\x18?\b\x02\x1a\x1budb:authz:get-policy-bundle \x01J\x02\x01\x02j\x15authz.GetPolicyBundle\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18+\b\x01\x12\x11get_policy_bundle\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\xe2\xf3\x18\xbb\x01\n" +
 	"\x05authz\x12\x10udb/native/authz\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\".udb.native.authz.get_policy_bundle.boilerplate*\x11get_policy_bundle2\tudb_authz:\x05authzJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18Q\n" +
 	"\x15authz.GetPolicyBundle\x12\fauthz.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
-	"\x05authz\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/authz/policy-bundle\x1a\xc9\x02\xca\xf0\x19\\\n" +
+	"\x05authz\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/authz/policy-bundle\x12\x9e\x02\n" +
+	"\x11CreatePolicyDraft\x124.udb.core.authz.services.v1.CreatePolicyDraftRequest\x1a/.udb.core.authz.services.v1.PolicyDraftResponse\"\xa1\x01\xca\xf3\x18N\b\x02\x1a\x16udb:authz:policy:write \x01J\x02\x01\x02j)native.authz.governance.CreatePolicyDraft\x90\x01\x01\xda\xf3\x18%\b\x01\x12\x13create_policy_draft\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/authz/governance/drafts\x12\xa5\x02\n" +
+	"\x11UpdatePolicyDraft\x124.udb.core.authz.services.v1.UpdatePolicyDraftRequest\x1a/.udb.core.authz.services.v1.PolicyDraftResponse\"\xa8\x01\xca\xf3\x18N\b\x02\x1a\x16udb:authz:policy:write \x01J\x02\x01\x02j)native.authz.governance.UpdatePolicyDraft\x90\x01\x01\xda\xf3\x18%\b\x01\x12\x13update_policy_draft\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02':\x01*\"\"/v1/authz/governance/drafts:update\x12\x9e\x02\n" +
+	"\x0fDiffPolicyDraft\x122.udb.core.authz.services.v1.DiffPolicyDraftRequest\x1a3.udb.core.authz.services.v1.DiffPolicyDraftResponse\"\xa1\x01\xca\xf3\x18K\b\x02\x1a\x15udb:authz:policy:read \x01J\x02\x01\x02j'native.authz.governance.DiffPolicyDraft\x90\x01\x01\xda\xf3\x18#\b\x01\x12\x11diff_policy_draft\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02%:\x01*\" /v1/authz/governance/drafts:diff\x12\xa5\x02\n" +
+	"\x11SubmitPolicyDraft\x124.udb.core.authz.services.v1.SubmitPolicyDraftRequest\x1a/.udb.core.authz.services.v1.PolicyDraftResponse\"\xa8\x01\xca\xf3\x18N\b\x02\x1a\x16udb:authz:policy:write \x01J\x02\x01\x02j)native.authz.governance.SubmitPolicyDraft\x90\x01\x01\xda\xf3\x18%\b\x01\x12\x13submit_policy_draft\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02':\x01*\"\"/v1/authz/governance/drafts:submit\x12\xaf\x02\n" +
+	"\x12ApprovePolicyDraft\x125.udb.core.authz.services.v1.ApprovePolicyDraftRequest\x1a2.udb.core.authz.services.v1.PolicyApprovalResponse\"\xad\x01\xca\xf3\x18Q\b\x02\x1a\x18udb:authz:policy:approve \x01J\x02\x01\x02j*native.authz.governance.ApprovePolicyDraft\x90\x01\x01\xda\xf3\x18&\b\x01\x12\x14approve_policy_draft\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02(:\x01*\"#/v1/authz/governance/drafts:approve\x12\xaa\x02\n" +
+	"\x11RejectPolicyDraft\x124.udb.core.authz.services.v1.RejectPolicyDraftRequest\x1a2.udb.core.authz.services.v1.PolicyApprovalResponse\"\xaa\x01\xca\xf3\x18P\b\x02\x1a\x18udb:authz:policy:approve \x01J\x02\x01\x02j)native.authz.governance.RejectPolicyDraft\x90\x01\x01\xda\xf3\x18%\b\x01\x12\x13reject_policy_draft\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02':\x01*\"\"/v1/authz/governance/drafts:reject\x12\xb1\x02\n" +
+	"\x15ActivatePolicyVersion\x128.udb.core.authz.services.v1.ActivatePolicyVersionRequest\x1a..udb.core.authz.services.v1.ActivationResponse\"\xad\x01\xca\xf3\x18K\b\x02\x1a\x0fudb:authz:admin \x01J\x02\x01\x02j-native.authz.governance.ActivatePolicyVersion\x90\x01\x01\xda\xf3\x18)\b\x01\x12\x17activate_policy_version\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02+:\x01*\"&/v1/authz/governance/versions:activate\x12\xb1\x02\n" +
+	"\x15RollbackPolicyVersion\x128.udb.core.authz.services.v1.RollbackPolicyVersionRequest\x1a..udb.core.authz.services.v1.ActivationResponse\"\xad\x01\xca\xf3\x18K\b\x02\x1a\x0fudb:authz:admin \x01J\x02\x01\x02j-native.authz.governance.RollbackPolicyVersion\x90\x01\x01\xda\xf3\x18)\b\x01\x12\x17rollback_policy_version\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02+:\x01*\"&/v1/authz/governance/versions:rollback\x12\x90\x02\n" +
+	"\x0eActivateCanary\x121.udb.core.authz.services.v1.ActivateCanaryRequest\x1a*.udb.core.authz.services.v1.CanaryResponse\"\x9e\x01\xca\xf3\x18D\b\x02\x1a\x0fudb:authz:admin \x01J\x02\x01\x02j&native.authz.governance.ActivateCanary\x90\x01\x01\xda\xf3\x18!\b\x01\x12\x0factivate_canary\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02+:\x01*\"&/v1/authz/governance/canaries:activate\x12\x8b\x02\n" +
+	"\rPromoteCanary\x120.udb.core.authz.services.v1.PromoteCanaryRequest\x1a*.udb.core.authz.services.v1.CanaryResponse\"\x9b\x01\xca\xf3\x18C\b\x02\x1a\x0fudb:authz:admin \x01J\x02\x01\x02j%native.authz.governance.PromoteCanary\x90\x01\x01\xda\xf3\x18 \b\x01\x12\x0epromote_canary\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02*:\x01*\"%/v1/authz/governance/canaries:promote\x12\xa2\x02\n" +
+	"\x0fGetCanaryStatus\x122.udb.core.authz.services.v1.GetCanaryStatusRequest\x1a3.udb.core.authz.services.v1.GetCanaryStatusResponse\"\xa5\x01\xca\xf3\x18K\b\x02\x1a\x15udb:authz:policy:read \x01J\x02\x01\x02j'native.authz.governance.GetCanaryStatus\x90\x01\x01\xda\xf3\x18#\b\x01\x12\x11get_canary_status\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02):\x01*\"$/v1/authz/governance/canaries:status\x12\xaf\x02\n" +
+	"\x12ListPolicyVersions\x125.udb.core.authz.services.v1.ListPolicyVersionsRequest\x1a6.udb.core.authz.services.v1.ListPolicyVersionsResponse\"\xa9\x01\xca\xf3\x18N\b\x02\x1a\x15udb:authz:policy:read \x01J\x02\x01\x02j*native.authz.governance.ListPolicyVersions\x90\x01\x01\xda\xf3\x18&\b\x01\x12\x14list_policy_versions\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02':\x01*\"\"/v1/authz/governance/versions:list\x12\x95\x02\n" +
+	"\x0eSimulatePolicy\x121.udb.core.authz.services.v1.SimulatePolicyRequest\x1a2.udb.core.authz.services.v1.SimulatePolicyResponse\"\x9b\x01\xca\xf3\x18J\b\x02\x1a\x15udb:authz:policy:read \x01J\x02\x01\x02j&native.authz.governance.SimulatePolicy\x90\x01\x01\xda\xf3\x18!\b\x01\x12\x0fsimulate_policy\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/v1/authz/governance/simulate\x12\x8f\x02\n" +
+	"\rExplainPolicy\x120.udb.core.authz.services.v1.ExplainPolicyRequest\x1a1.udb.core.authz.services.v1.ExplainPolicyResponse\"\x98\x01\xca\xf3\x18I\b\x02\x1a\x15udb:authz:policy:read \x01J\x02\x01\x02j%native.authz.governance.ExplainPolicy\x90\x01\x01\xda\xf3\x18 \b\x01\x12\x0eexplain_policy\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/authz/governance/explain\x12\xa0\x02\n" +
+	"\x10GetAuthzRevision\x123.udb.core.authz.services.v1.GetAuthzRevisionRequest\x1a4.udb.core.authz.services.v1.GetAuthzRevisionResponse\"\xa0\x01\xca\xf3\x18L\b\x02\x1a\x15udb:authz:policy:read \x01J\x02\x01\x02j(native.authz.governance.GetAuthzRevision\x90\x01\x01\xda\xf3\x18$\b\x01\x12\x12get_authz_revision\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/v1/authz/governance/revision\x12\xc7\x02\n" +
+	"\x17InvalidatePolicyBundles\x12:.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest\x1a;.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse\"\xb2\x01\xca\xf3\x18M\b\x02\x1a\x0fudb:authz:admin \x01J\x02\x01\x02j/native.authz.governance.InvalidatePolicyBundles\x90\x01\x01\xda\xf3\x18+\b\x01\x12\x19invalidate_policy_bundles\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02,:\x01*\"'/v1/authz/governance/bundles:invalidate\x12\x9c\x02\n" +
+	"\x10SeedBuiltinRoles\x123.udb.core.authz.services.v1.SeedBuiltinRolesRequest\x1a4.udb.core.authz.services.v1.SeedBuiltinRolesResponse\"\x9c\x01\xca\xf3\x18F\b\x02\x1a\x0fudb:authz:admin \x01J\x02\x01\x02j(native.authz.governance.SeedBuiltinRoles\x90\x01\x01\xda\xf3\x18$\b\x01\x12\x12seed_builtin_roles\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/v1/authz/governance/roles:seed\x12\xb9\x02\n" +
+	"\x15MigrateLegacyPolicies\x128.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest\x1a9.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse\"\xaa\x01\xca\xf3\x18K\b\x02\x1a\x0fudb:authz:admin \x01J\x02\x01\x02j-native.authz.governance.MigrateLegacyPolicies\x90\x01\x01\xda\xf3\x18)\b\x01\x12\x17migrate_legacy_policies\x1a\x03udb@\x01J\x05authz\x82\xd3\xe4\x93\x02(:\x01*\"#/v1/authz/governance/legacy:migrate\x1a\xc9\x02\xca\xf0\x19\\\n" +
 	"\x05authz\x12\x05authz\x1a\x05authz\"\rAuthorization*\n" +
 	"governance0\x018\x01h\x01z\x05authz\x82\x01\x05authz\x8a\x01\x05authz\x92\x01\fnative.authz\xd2\xf0\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\xda\xf0\x19\x85\x01\n" +
 	"\x05authz\x12\x10udb/native/authz\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x17udb.native.authz.config:\x05authzJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19?\n" +
@@ -157,27 +175,58 @@ var file_udb_core_authz_services_v1_authz_service_proto_goTypes = []any{
 	(*LintAuthzPoliciesRequest)(nil),         // 20: udb.core.authz.services.v1.LintAuthzPoliciesRequest
 	(*NativeAccessRequest)(nil),              // 21: udb.core.authz.services.v1.NativeAccessRequest
 	(*PolicyBundleRequest)(nil),              // 22: udb.core.authz.services.v1.PolicyBundleRequest
-	(*AuthzResponse)(nil),                    // 23: udb.core.authz.services.v1.AuthzResponse
-	(*CheckAccessResponse)(nil),              // 24: udb.core.authz.services.v1.CheckAccessResponse
-	(*CreateRoleResponse)(nil),               // 25: udb.core.authz.services.v1.CreateRoleResponse
-	(*AssignRoleResponse)(nil),               // 26: udb.core.authz.services.v1.AssignRoleResponse
-	(*CreatePolicyRuleResponse)(nil),         // 27: udb.core.authz.services.v1.CreatePolicyRuleResponse
-	(*ListUserPermissionsResponse)(nil),      // 28: udb.core.authz.services.v1.ListUserPermissionsResponse
-	(*ListAccessDecisionAuditsResponse)(nil), // 29: udb.core.authz.services.v1.ListAccessDecisionAuditsResponse
-	(*RevokeRoleResponse)(nil),               // 30: udb.core.authz.services.v1.RevokeRoleResponse
-	(*ListUserRolesResponse)(nil),            // 31: udb.core.authz.services.v1.ListUserRolesResponse
-	(*GetRoleResponse)(nil),                  // 32: udb.core.authz.services.v1.GetRoleResponse
-	(*ListRolesResponse)(nil),                // 33: udb.core.authz.services.v1.ListRolesResponse
-	(*BatchCheckPermissionsResponse)(nil),    // 34: udb.core.authz.services.v1.BatchCheckPermissionsResponse
-	(*UpdateRoleResponse)(nil),               // 35: udb.core.authz.services.v1.UpdateRoleResponse
-	(*DeleteRoleResponse)(nil),               // 36: udb.core.authz.services.v1.DeleteRoleResponse
-	(*GetPolicyRuleResponse)(nil),            // 37: udb.core.authz.services.v1.GetPolicyRuleResponse
-	(*ListPolicyRulesResponse)(nil),          // 38: udb.core.authz.services.v1.ListPolicyRulesResponse
-	(*DeletePolicyRuleResponse)(nil),         // 39: udb.core.authz.services.v1.DeletePolicyRuleResponse
-	(*AuthMutationResponse)(nil),             // 40: udb.core.authz.services.v1.AuthMutationResponse
-	(*LintAuthzPoliciesResponse)(nil),        // 41: udb.core.authz.services.v1.LintAuthzPoliciesResponse
-	(*NativeAccessResponse)(nil),             // 42: udb.core.authz.services.v1.NativeAccessResponse
-	(*PolicyBundleResponse)(nil),             // 43: udb.core.authz.services.v1.PolicyBundleResponse
+	(*CreatePolicyDraftRequest)(nil),         // 23: udb.core.authz.services.v1.CreatePolicyDraftRequest
+	(*UpdatePolicyDraftRequest)(nil),         // 24: udb.core.authz.services.v1.UpdatePolicyDraftRequest
+	(*DiffPolicyDraftRequest)(nil),           // 25: udb.core.authz.services.v1.DiffPolicyDraftRequest
+	(*SubmitPolicyDraftRequest)(nil),         // 26: udb.core.authz.services.v1.SubmitPolicyDraftRequest
+	(*ApprovePolicyDraftRequest)(nil),        // 27: udb.core.authz.services.v1.ApprovePolicyDraftRequest
+	(*RejectPolicyDraftRequest)(nil),         // 28: udb.core.authz.services.v1.RejectPolicyDraftRequest
+	(*ActivatePolicyVersionRequest)(nil),     // 29: udb.core.authz.services.v1.ActivatePolicyVersionRequest
+	(*RollbackPolicyVersionRequest)(nil),     // 30: udb.core.authz.services.v1.RollbackPolicyVersionRequest
+	(*ActivateCanaryRequest)(nil),            // 31: udb.core.authz.services.v1.ActivateCanaryRequest
+	(*PromoteCanaryRequest)(nil),             // 32: udb.core.authz.services.v1.PromoteCanaryRequest
+	(*GetCanaryStatusRequest)(nil),           // 33: udb.core.authz.services.v1.GetCanaryStatusRequest
+	(*ListPolicyVersionsRequest)(nil),        // 34: udb.core.authz.services.v1.ListPolicyVersionsRequest
+	(*SimulatePolicyRequest)(nil),            // 35: udb.core.authz.services.v1.SimulatePolicyRequest
+	(*ExplainPolicyRequest)(nil),             // 36: udb.core.authz.services.v1.ExplainPolicyRequest
+	(*GetAuthzRevisionRequest)(nil),          // 37: udb.core.authz.services.v1.GetAuthzRevisionRequest
+	(*InvalidatePolicyBundlesRequest)(nil),   // 38: udb.core.authz.services.v1.InvalidatePolicyBundlesRequest
+	(*SeedBuiltinRolesRequest)(nil),          // 39: udb.core.authz.services.v1.SeedBuiltinRolesRequest
+	(*MigrateLegacyPoliciesRequest)(nil),     // 40: udb.core.authz.services.v1.MigrateLegacyPoliciesRequest
+	(*AuthzResponse)(nil),                    // 41: udb.core.authz.services.v1.AuthzResponse
+	(*CheckAccessResponse)(nil),              // 42: udb.core.authz.services.v1.CheckAccessResponse
+	(*CreateRoleResponse)(nil),               // 43: udb.core.authz.services.v1.CreateRoleResponse
+	(*AssignRoleResponse)(nil),               // 44: udb.core.authz.services.v1.AssignRoleResponse
+	(*CreatePolicyRuleResponse)(nil),         // 45: udb.core.authz.services.v1.CreatePolicyRuleResponse
+	(*ListUserPermissionsResponse)(nil),      // 46: udb.core.authz.services.v1.ListUserPermissionsResponse
+	(*ListAccessDecisionAuditsResponse)(nil), // 47: udb.core.authz.services.v1.ListAccessDecisionAuditsResponse
+	(*RevokeRoleResponse)(nil),               // 48: udb.core.authz.services.v1.RevokeRoleResponse
+	(*ListUserRolesResponse)(nil),            // 49: udb.core.authz.services.v1.ListUserRolesResponse
+	(*GetRoleResponse)(nil),                  // 50: udb.core.authz.services.v1.GetRoleResponse
+	(*ListRolesResponse)(nil),                // 51: udb.core.authz.services.v1.ListRolesResponse
+	(*BatchCheckPermissionsResponse)(nil),    // 52: udb.core.authz.services.v1.BatchCheckPermissionsResponse
+	(*UpdateRoleResponse)(nil),               // 53: udb.core.authz.services.v1.UpdateRoleResponse
+	(*DeleteRoleResponse)(nil),               // 54: udb.core.authz.services.v1.DeleteRoleResponse
+	(*GetPolicyRuleResponse)(nil),            // 55: udb.core.authz.services.v1.GetPolicyRuleResponse
+	(*ListPolicyRulesResponse)(nil),          // 56: udb.core.authz.services.v1.ListPolicyRulesResponse
+	(*DeletePolicyRuleResponse)(nil),         // 57: udb.core.authz.services.v1.DeletePolicyRuleResponse
+	(*AuthMutationResponse)(nil),             // 58: udb.core.authz.services.v1.AuthMutationResponse
+	(*LintAuthzPoliciesResponse)(nil),        // 59: udb.core.authz.services.v1.LintAuthzPoliciesResponse
+	(*NativeAccessResponse)(nil),             // 60: udb.core.authz.services.v1.NativeAccessResponse
+	(*PolicyBundleResponse)(nil),             // 61: udb.core.authz.services.v1.PolicyBundleResponse
+	(*PolicyDraftResponse)(nil),              // 62: udb.core.authz.services.v1.PolicyDraftResponse
+	(*DiffPolicyDraftResponse)(nil),          // 63: udb.core.authz.services.v1.DiffPolicyDraftResponse
+	(*PolicyApprovalResponse)(nil),           // 64: udb.core.authz.services.v1.PolicyApprovalResponse
+	(*ActivationResponse)(nil),               // 65: udb.core.authz.services.v1.ActivationResponse
+	(*CanaryResponse)(nil),                   // 66: udb.core.authz.services.v1.CanaryResponse
+	(*GetCanaryStatusResponse)(nil),          // 67: udb.core.authz.services.v1.GetCanaryStatusResponse
+	(*ListPolicyVersionsResponse)(nil),       // 68: udb.core.authz.services.v1.ListPolicyVersionsResponse
+	(*SimulatePolicyResponse)(nil),           // 69: udb.core.authz.services.v1.SimulatePolicyResponse
+	(*ExplainPolicyResponse)(nil),            // 70: udb.core.authz.services.v1.ExplainPolicyResponse
+	(*GetAuthzRevisionResponse)(nil),         // 71: udb.core.authz.services.v1.GetAuthzRevisionResponse
+	(*InvalidatePolicyBundlesResponse)(nil),  // 72: udb.core.authz.services.v1.InvalidatePolicyBundlesResponse
+	(*SeedBuiltinRolesResponse)(nil),         // 73: udb.core.authz.services.v1.SeedBuiltinRolesResponse
+	(*MigrateLegacyPoliciesResponse)(nil),    // 74: udb.core.authz.services.v1.MigrateLegacyPoliciesResponse
 }
 var file_udb_core_authz_services_v1_authz_service_proto_depIdxs = []int32{
 	0,  // 0: udb.core.authz.services.v1.AuthzService.Authorize:input_type -> udb.core.authz.services.v1.AuthzRequest
@@ -203,31 +252,67 @@ var file_udb_core_authz_services_v1_authz_service_proto_depIdxs = []int32{
 	20, // 20: udb.core.authz.services.v1.AuthzService.LintAuthzPolicies:input_type -> udb.core.authz.services.v1.LintAuthzPoliciesRequest
 	21, // 21: udb.core.authz.services.v1.AuthzService.GetNativeAccess:input_type -> udb.core.authz.services.v1.NativeAccessRequest
 	22, // 22: udb.core.authz.services.v1.AuthzService.GetPolicyBundle:input_type -> udb.core.authz.services.v1.PolicyBundleRequest
-	23, // 23: udb.core.authz.services.v1.AuthzService.Authorize:output_type -> udb.core.authz.services.v1.AuthzResponse
-	24, // 24: udb.core.authz.services.v1.AuthzService.CheckAccess:output_type -> udb.core.authz.services.v1.CheckAccessResponse
-	25, // 25: udb.core.authz.services.v1.AuthzService.CreateRole:output_type -> udb.core.authz.services.v1.CreateRoleResponse
-	26, // 26: udb.core.authz.services.v1.AuthzService.AssignRole:output_type -> udb.core.authz.services.v1.AssignRoleResponse
-	27, // 27: udb.core.authz.services.v1.AuthzService.CreatePolicyRule:output_type -> udb.core.authz.services.v1.CreatePolicyRuleResponse
-	28, // 28: udb.core.authz.services.v1.AuthzService.ListUserPermissions:output_type -> udb.core.authz.services.v1.ListUserPermissionsResponse
-	29, // 29: udb.core.authz.services.v1.AuthzService.ListAccessDecisionAudits:output_type -> udb.core.authz.services.v1.ListAccessDecisionAuditsResponse
-	30, // 30: udb.core.authz.services.v1.AuthzService.RevokeRole:output_type -> udb.core.authz.services.v1.RevokeRoleResponse
-	31, // 31: udb.core.authz.services.v1.AuthzService.ListUserRoles:output_type -> udb.core.authz.services.v1.ListUserRolesResponse
-	32, // 32: udb.core.authz.services.v1.AuthzService.GetRole:output_type -> udb.core.authz.services.v1.GetRoleResponse
-	33, // 33: udb.core.authz.services.v1.AuthzService.ListRoles:output_type -> udb.core.authz.services.v1.ListRolesResponse
-	34, // 34: udb.core.authz.services.v1.AuthzService.BatchCheckPermissions:output_type -> udb.core.authz.services.v1.BatchCheckPermissionsResponse
-	35, // 35: udb.core.authz.services.v1.AuthzService.UpdateRole:output_type -> udb.core.authz.services.v1.UpdateRoleResponse
-	36, // 36: udb.core.authz.services.v1.AuthzService.DeleteRole:output_type -> udb.core.authz.services.v1.DeleteRoleResponse
-	37, // 37: udb.core.authz.services.v1.AuthzService.GetPolicyRule:output_type -> udb.core.authz.services.v1.GetPolicyRuleResponse
-	38, // 38: udb.core.authz.services.v1.AuthzService.ListPolicyRules:output_type -> udb.core.authz.services.v1.ListPolicyRulesResponse
-	39, // 39: udb.core.authz.services.v1.AuthzService.DeletePolicyRule:output_type -> udb.core.authz.services.v1.DeletePolicyRuleResponse
-	40, // 40: udb.core.authz.services.v1.AuthzService.PutRoleBinding:output_type -> udb.core.authz.services.v1.AuthMutationResponse
-	40, // 41: udb.core.authz.services.v1.AuthzService.PutRelationship:output_type -> udb.core.authz.services.v1.AuthMutationResponse
-	40, // 42: udb.core.authz.services.v1.AuthzService.PutAuthzPolicy:output_type -> udb.core.authz.services.v1.AuthMutationResponse
-	41, // 43: udb.core.authz.services.v1.AuthzService.LintAuthzPolicies:output_type -> udb.core.authz.services.v1.LintAuthzPoliciesResponse
-	42, // 44: udb.core.authz.services.v1.AuthzService.GetNativeAccess:output_type -> udb.core.authz.services.v1.NativeAccessResponse
-	43, // 45: udb.core.authz.services.v1.AuthzService.GetPolicyBundle:output_type -> udb.core.authz.services.v1.PolicyBundleResponse
-	23, // [23:46] is the sub-list for method output_type
-	0,  // [0:23] is the sub-list for method input_type
+	23, // 23: udb.core.authz.services.v1.AuthzService.CreatePolicyDraft:input_type -> udb.core.authz.services.v1.CreatePolicyDraftRequest
+	24, // 24: udb.core.authz.services.v1.AuthzService.UpdatePolicyDraft:input_type -> udb.core.authz.services.v1.UpdatePolicyDraftRequest
+	25, // 25: udb.core.authz.services.v1.AuthzService.DiffPolicyDraft:input_type -> udb.core.authz.services.v1.DiffPolicyDraftRequest
+	26, // 26: udb.core.authz.services.v1.AuthzService.SubmitPolicyDraft:input_type -> udb.core.authz.services.v1.SubmitPolicyDraftRequest
+	27, // 27: udb.core.authz.services.v1.AuthzService.ApprovePolicyDraft:input_type -> udb.core.authz.services.v1.ApprovePolicyDraftRequest
+	28, // 28: udb.core.authz.services.v1.AuthzService.RejectPolicyDraft:input_type -> udb.core.authz.services.v1.RejectPolicyDraftRequest
+	29, // 29: udb.core.authz.services.v1.AuthzService.ActivatePolicyVersion:input_type -> udb.core.authz.services.v1.ActivatePolicyVersionRequest
+	30, // 30: udb.core.authz.services.v1.AuthzService.RollbackPolicyVersion:input_type -> udb.core.authz.services.v1.RollbackPolicyVersionRequest
+	31, // 31: udb.core.authz.services.v1.AuthzService.ActivateCanary:input_type -> udb.core.authz.services.v1.ActivateCanaryRequest
+	32, // 32: udb.core.authz.services.v1.AuthzService.PromoteCanary:input_type -> udb.core.authz.services.v1.PromoteCanaryRequest
+	33, // 33: udb.core.authz.services.v1.AuthzService.GetCanaryStatus:input_type -> udb.core.authz.services.v1.GetCanaryStatusRequest
+	34, // 34: udb.core.authz.services.v1.AuthzService.ListPolicyVersions:input_type -> udb.core.authz.services.v1.ListPolicyVersionsRequest
+	35, // 35: udb.core.authz.services.v1.AuthzService.SimulatePolicy:input_type -> udb.core.authz.services.v1.SimulatePolicyRequest
+	36, // 36: udb.core.authz.services.v1.AuthzService.ExplainPolicy:input_type -> udb.core.authz.services.v1.ExplainPolicyRequest
+	37, // 37: udb.core.authz.services.v1.AuthzService.GetAuthzRevision:input_type -> udb.core.authz.services.v1.GetAuthzRevisionRequest
+	38, // 38: udb.core.authz.services.v1.AuthzService.InvalidatePolicyBundles:input_type -> udb.core.authz.services.v1.InvalidatePolicyBundlesRequest
+	39, // 39: udb.core.authz.services.v1.AuthzService.SeedBuiltinRoles:input_type -> udb.core.authz.services.v1.SeedBuiltinRolesRequest
+	40, // 40: udb.core.authz.services.v1.AuthzService.MigrateLegacyPolicies:input_type -> udb.core.authz.services.v1.MigrateLegacyPoliciesRequest
+	41, // 41: udb.core.authz.services.v1.AuthzService.Authorize:output_type -> udb.core.authz.services.v1.AuthzResponse
+	42, // 42: udb.core.authz.services.v1.AuthzService.CheckAccess:output_type -> udb.core.authz.services.v1.CheckAccessResponse
+	43, // 43: udb.core.authz.services.v1.AuthzService.CreateRole:output_type -> udb.core.authz.services.v1.CreateRoleResponse
+	44, // 44: udb.core.authz.services.v1.AuthzService.AssignRole:output_type -> udb.core.authz.services.v1.AssignRoleResponse
+	45, // 45: udb.core.authz.services.v1.AuthzService.CreatePolicyRule:output_type -> udb.core.authz.services.v1.CreatePolicyRuleResponse
+	46, // 46: udb.core.authz.services.v1.AuthzService.ListUserPermissions:output_type -> udb.core.authz.services.v1.ListUserPermissionsResponse
+	47, // 47: udb.core.authz.services.v1.AuthzService.ListAccessDecisionAudits:output_type -> udb.core.authz.services.v1.ListAccessDecisionAuditsResponse
+	48, // 48: udb.core.authz.services.v1.AuthzService.RevokeRole:output_type -> udb.core.authz.services.v1.RevokeRoleResponse
+	49, // 49: udb.core.authz.services.v1.AuthzService.ListUserRoles:output_type -> udb.core.authz.services.v1.ListUserRolesResponse
+	50, // 50: udb.core.authz.services.v1.AuthzService.GetRole:output_type -> udb.core.authz.services.v1.GetRoleResponse
+	51, // 51: udb.core.authz.services.v1.AuthzService.ListRoles:output_type -> udb.core.authz.services.v1.ListRolesResponse
+	52, // 52: udb.core.authz.services.v1.AuthzService.BatchCheckPermissions:output_type -> udb.core.authz.services.v1.BatchCheckPermissionsResponse
+	53, // 53: udb.core.authz.services.v1.AuthzService.UpdateRole:output_type -> udb.core.authz.services.v1.UpdateRoleResponse
+	54, // 54: udb.core.authz.services.v1.AuthzService.DeleteRole:output_type -> udb.core.authz.services.v1.DeleteRoleResponse
+	55, // 55: udb.core.authz.services.v1.AuthzService.GetPolicyRule:output_type -> udb.core.authz.services.v1.GetPolicyRuleResponse
+	56, // 56: udb.core.authz.services.v1.AuthzService.ListPolicyRules:output_type -> udb.core.authz.services.v1.ListPolicyRulesResponse
+	57, // 57: udb.core.authz.services.v1.AuthzService.DeletePolicyRule:output_type -> udb.core.authz.services.v1.DeletePolicyRuleResponse
+	58, // 58: udb.core.authz.services.v1.AuthzService.PutRoleBinding:output_type -> udb.core.authz.services.v1.AuthMutationResponse
+	58, // 59: udb.core.authz.services.v1.AuthzService.PutRelationship:output_type -> udb.core.authz.services.v1.AuthMutationResponse
+	58, // 60: udb.core.authz.services.v1.AuthzService.PutAuthzPolicy:output_type -> udb.core.authz.services.v1.AuthMutationResponse
+	59, // 61: udb.core.authz.services.v1.AuthzService.LintAuthzPolicies:output_type -> udb.core.authz.services.v1.LintAuthzPoliciesResponse
+	60, // 62: udb.core.authz.services.v1.AuthzService.GetNativeAccess:output_type -> udb.core.authz.services.v1.NativeAccessResponse
+	61, // 63: udb.core.authz.services.v1.AuthzService.GetPolicyBundle:output_type -> udb.core.authz.services.v1.PolicyBundleResponse
+	62, // 64: udb.core.authz.services.v1.AuthzService.CreatePolicyDraft:output_type -> udb.core.authz.services.v1.PolicyDraftResponse
+	62, // 65: udb.core.authz.services.v1.AuthzService.UpdatePolicyDraft:output_type -> udb.core.authz.services.v1.PolicyDraftResponse
+	63, // 66: udb.core.authz.services.v1.AuthzService.DiffPolicyDraft:output_type -> udb.core.authz.services.v1.DiffPolicyDraftResponse
+	62, // 67: udb.core.authz.services.v1.AuthzService.SubmitPolicyDraft:output_type -> udb.core.authz.services.v1.PolicyDraftResponse
+	64, // 68: udb.core.authz.services.v1.AuthzService.ApprovePolicyDraft:output_type -> udb.core.authz.services.v1.PolicyApprovalResponse
+	64, // 69: udb.core.authz.services.v1.AuthzService.RejectPolicyDraft:output_type -> udb.core.authz.services.v1.PolicyApprovalResponse
+	65, // 70: udb.core.authz.services.v1.AuthzService.ActivatePolicyVersion:output_type -> udb.core.authz.services.v1.ActivationResponse
+	65, // 71: udb.core.authz.services.v1.AuthzService.RollbackPolicyVersion:output_type -> udb.core.authz.services.v1.ActivationResponse
+	66, // 72: udb.core.authz.services.v1.AuthzService.ActivateCanary:output_type -> udb.core.authz.services.v1.CanaryResponse
+	66, // 73: udb.core.authz.services.v1.AuthzService.PromoteCanary:output_type -> udb.core.authz.services.v1.CanaryResponse
+	67, // 74: udb.core.authz.services.v1.AuthzService.GetCanaryStatus:output_type -> udb.core.authz.services.v1.GetCanaryStatusResponse
+	68, // 75: udb.core.authz.services.v1.AuthzService.ListPolicyVersions:output_type -> udb.core.authz.services.v1.ListPolicyVersionsResponse
+	69, // 76: udb.core.authz.services.v1.AuthzService.SimulatePolicy:output_type -> udb.core.authz.services.v1.SimulatePolicyResponse
+	70, // 77: udb.core.authz.services.v1.AuthzService.ExplainPolicy:output_type -> udb.core.authz.services.v1.ExplainPolicyResponse
+	71, // 78: udb.core.authz.services.v1.AuthzService.GetAuthzRevision:output_type -> udb.core.authz.services.v1.GetAuthzRevisionResponse
+	72, // 79: udb.core.authz.services.v1.AuthzService.InvalidatePolicyBundles:output_type -> udb.core.authz.services.v1.InvalidatePolicyBundlesResponse
+	73, // 80: udb.core.authz.services.v1.AuthzService.SeedBuiltinRoles:output_type -> udb.core.authz.services.v1.SeedBuiltinRolesResponse
+	74, // 81: udb.core.authz.services.v1.AuthzService.MigrateLegacyPolicies:output_type -> udb.core.authz.services.v1.MigrateLegacyPoliciesResponse
+	41, // [41:82] is the sub-list for method output_type
+	0,  // [0:41] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name
@@ -239,6 +324,7 @@ func file_udb_core_authz_services_v1_authz_service_proto_init() {
 		return
 	}
 	file_udb_core_authz_services_v1_core_proto_init()
+	file_udb_core_authz_services_v1_governance_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

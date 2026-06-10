@@ -384,6 +384,11 @@ public final class SecurityProto extends com.google.protobuf.GeneratedFile {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_common_v1_EventContractOptions_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_common_v1_EventContractOptions_EmittedEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_common_v1_EventContractOptions_EmittedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_common_v1_DependencyContractOptions_descriptor;
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -423,7 +428,7 @@ public final class SecurityProto extends com.google.protobuf.GeneratedFile {
       "ract\022+\n\021response_envelope\030\001 \001(\010R\020respons" +
       "eEnvelope\022\033\n\tapi_error\030\002 \001(\010R\010apiError\022\'" +
       "\n\017pagination_meta\030\003 \001(\010R\016paginationMeta\022" +
-      "%\n\016explicit_nulls\030\004 \001(\010R\rexplicitNulls\"\247" +
+      "%\n\016explicit_nulls\030\004 \001(\010R\rexplicitNulls\"\337" +
       "\006\n\024NativeServiceOptions\022\035\n\nservice_id\030\001 " +
       "\001(\tR\tserviceId\022,\n\022logical_service_id\030\002 \001" +
       "(\tR\020logicalServiceId\022(\n\020proto_service_id" +
@@ -444,106 +449,116 @@ public final class SecurityProto extends com.google.protobuf.GeneratedFile {
       "e\022,\n\022cli_scaffold_group\030\020 \001(\tR\020cliScaffo" +
       "ldGroup\022(\n\020health_check_ref\030\021 \001(\tR\016healt" +
       "hCheckRef\022%\n\016capability_ref\030\022 \001(\tR\rcapab" +
-      "ilityRef\"\232\005\n\026DbTableSecurityOptions\0222\n\025t" +
-      "enant_isolation_mode\030\001 \001(\tR\023tenantIsolat" +
-      "ionMode\0224\n\026project_isolation_mode\030\002 \001(\tR" +
-      "\024projectIsolationMode\022#\n\rtenant_column\030\003" +
-      " \001(\tR\014tenantColumn\022%\n\016project_column\030\004 \001" +
-      "(\tR\rprojectColumn\022.\n\023rls_policy_template" +
-      "\030\005 \001(\tR\021rlsPolicyTemplate\022(\n\020soft_delete" +
-      "_mode\030\006 \001(\tR\016softDeleteMode\022\'\n\017retention" +
-      "_class\030\007 \001(\tR\016retentionClass\022%\n\016retentio" +
-      "n_days\030\010 \001(\005R\rretentionDays\022<\n\naudit_mod" +
-      "e\030\t \001(\0162\035.udb.core.common.v1.AuditModeR\t" +
-      "auditMode\022-\n\022encryption_profile\030\n \001(\tR\021e" +
-      "ncryptionProfile\022\037\n\013pii_profile\030\013 \001(\tR\np" +
-      "iiProfile\022.\n\023break_glass_visible\030\014 \001(\010R\021" +
-      "breakGlassVisible\022\'\n\017export_eligible\030\r \001" +
-      "(\010R\016exportEligible\0229\n\031data_residency_pol" +
-      "icy_ref\030\016 \001(\tR\026dataResidencyPolicyRef\"\225\005" +
-      "\n\027DbColumnSecurityOptions\022]\n\025secret_clas" +
-      "sification\030\001 \001(\0162(.udb.core.common.v1.Se" +
-      "cretClassificationR\024secretClassification" +
-      "\022?\n\013output_view\030\002 \001(\0162\036.udb.core.common." +
-      "v1.OutputViewR\noutputView\022T\n\022redaction_s" +
-      "trategy\030\003 \001(\0162%.udb.core.common.v1.Redac" +
-      "tionStrategyR\021redactionStrategy\0223\n\025token" +
-      "ization_strategy\030\004 \001(\tR\024tokenizationStra" +
-      "tegy\022)\n\020hashing_strategy\030\005 \001(\tR\017hashingS" +
-      "trategy\022+\n\021hashing_algorithm\030\006 \001(\tR\020hash" +
-      "ingAlgorithm\0220\n\024encryption_key_class\030\007 \001" +
-      "(\tR\022encryptionKeyClass\0221\n\024searchable_enc" +
-      "rypted\030\010 \001(\010R\023searchableEncrypted\022)\n\020uni" +
-      "queness_scope\030\t \001(\tR\017uniquenessScope\022\037\n\013" +
-      "owner_field\030\n \001(\010R\nownerField\022!\n\014tenant_" +
-      "field\030\013 \001(\010R\013tenantField\022#\n\rproject_fiel" +
-      "d\030\014 \001(\010R\014projectField\"\360\003\n\021SdkSurfaceOpti" +
-      "ons\022*\n\021include_in_facade\030\001 \001(\010R\017includeI" +
-      "nFacade\022!\n\014method_alias\030\002 \001(\tR\013methodAli" +
-      "as\022@\n\034required_credential_provider\030\003 \001(\t" +
-      "R\032requiredCredentialProvider\0222\n\025streamin" +
-      "g_helper_type\030\004 \001(\tR\023streamingHelperType" +
-      "\022.\n\023default_deadline_ms\030\005 \001(\005R\021defaultDe" +
-      "adlineMs\0220\n\024default_max_attempts\030\006 \001(\005R\022" +
-      "defaultMaxAttempts\022!\n\014browser_safe\030\007 \001(\010" +
-      "R\013browserSafe\022\037\n\013server_only\030\010 \001(\010R\nserv" +
-      "erOnly\0226\n\027boilerplate_recipe_tags\030\t \003(\tR" +
-      "\025boilerplateRecipeTags\0228\n\030generate_minim" +
-      "al_example\030\n \001(\010R\026generateMinimalExample" +
-      "\"\201\004\n\022CliScaffoldOptions\022)\n\020scaffold_pack" +
-      "age\030\001 \001(\tR\017scaffoldPackage\022\037\n\013import_pat" +
-      "h\030\002 \001(\tR\nimportPath\022!\n\014required_env\030\003 \003(" +
-      "\tR\013requiredEnv\022\'\n\017generated_files\030\004 \003(\tR" +
-      "\016generatedFiles\022\035\n\nroute_name\030\005 \001(\tR\trou" +
-      "teName\022\'\n\017middleware_name\030\006 \001(\tR\016middlew" +
-      "areName\0228\n\030required_native_services\030\007 \003(" +
-      "\tR\026requiredNativeServices\0228\n\030optional_na" +
-      "tive_services\030\010 \003(\tR\026optionalNativeServi" +
-      "ces\022/\n\023secret_placeholders\030\t \003(\tR\022secret" +
-      "Placeholders\0228\n\030post_generation_commands" +
-      "\030\n \003(\tR\026postGenerationCommands\022,\n\022smoke_" +
-      "test_command\030\013 \001(\tR\020smokeTestCommand\"\246\002\n" +
-      "\024EventContractOptions\022\035\n\nevent_type\030\001 \001(" +
-      "\tR\teventType\022!\n\014outbox_topic\030\002 \001(\tR\013outb" +
-      "oxTopic\022.\n\023partition_key_field\030\003 \001(\tR\021pa" +
-      "rtitionKeyField\022:\n\031payload_redaction_pro" +
-      "file\030\004 \001(\tR\027payloadRedactionProfile\022-\n\022d" +
-      "elivery_guarantee\030\005 \001(\tR\021deliveryGuarant" +
-      "ee\0221\n\024replay_compatibility\030\006 \001(\tR\023replay" +
-      "Compatibility\"\355\002\n\031DependencyContractOpti" +
-      "ons\0228\n\030required_native_services\030\001 \003(\tR\026r" +
-      "equiredNativeServices\0228\n\030optional_native" +
-      "_services\030\002 \003(\tR\026optionalNativeServices\022" +
-      "+\n\021required_backends\030\003 \003(\tR\020requiredBack" +
-      "ends\022+\n\021optional_backends\030\004 \003(\tR\020optiona" +
-      "lBackends\022+\n\021required_features\030\005 \003(\tR\020re" +
-      "quiredFeatures\022!\n\014required_env\030\006 \003(\tR\013re" +
-      "quiredEnv\0222\n\025degraded_when_missing\030\007 \003(\t" +
-      "R\023degradedWhenMissing*\207\001\n\010AuthMode\022\031\n\025AU" +
-      "TH_MODE_UNSPECIFIED\020\000\022\024\n\020AUTH_MODE_PUBLI" +
-      "C\020\001\022\024\n\020AUTH_MODE_BEARER\020\002\022\025\n\021AUTH_MODE_A" +
-      "PI_KEY\020\003\022\035\n\031AUTH_MODE_SERVICE_ACCOUNT\020\004*" +
-      "\276\002\n\016CredentialType\022\037\n\033CREDENTIAL_TYPE_UN" +
-      "SPECIFIED\020\000\022\036\n\032CREDENTIAL_TYPE_BEARER_JW" +
-      "T\020\001\022\033\n\027CREDENTIAL_TYPE_SESSION\020\002\022\033\n\027CRED" +
-      "ENTIAL_TYPE_API_KEY\020\003\022#\n\037CREDENTIAL_TYPE" +
-      "_SERVICE_ACCOUNT\020\004\022\030\n\024CREDENTIAL_TYPE_MT" +
-      "LS\020\005\022\030\n\024CREDENTIAL_TYPE_OIDC\020\006\022\030\n\024CREDEN" +
-      "TIAL_TYPE_SAML\020\007\022\034\n\030CREDENTIAL_TYPE_WEBA" +
-      "UTHN\020\010\022 \n\034CREDENTIAL_TYPE_EXTERNAL_JWT\020\t" +
-      "*\203\001\n\tAuditMode\022\032\n\026AUDIT_MODE_UNSPECIFIED" +
-      "\020\000\022\023\n\017AUDIT_MODE_NONE\020\001\022\027\n\023AUDIT_MODE_MU" +
-      "TATION\020\002\022\027\n\023AUDIT_MODE_DECISION\020\003\022\023\n\017AUD" +
-      "IT_MODE_FULL\020\004*\370\002\n\024SecretClassification\022" +
-      "%\n!SECRET_CLASSIFICATION_UNSPECIFIED\020\000\022 " +
-      "\n\034SECRET_CLASSIFICATION_PUBLIC\020\001\022\"\n\036SECR" +
-      "ET_CLASSIFICATION_INTERNAL\020\002\022$\n SECRET_C" +
-      "LASSIFICATION_CREDENTIAL\020\003\022\037\n\033SECRET_CLA" +
-      "SSIFICATION_TOKEN\020\004\022\035\n\031SECRET_CLASSIFICA" +
-      "TION_KEY\020\005\022#\n\037SECRET_CLASSIFICATION_BIOM" +
-      "ETRIC\020\006\022\"\n\036SECRET_CLASSIFICATION_IDENTIT" +
-      "Y\020\007\022\035\n\031SECRET_CLASSIFICATION_PII\020\010\022%\n!SE" +
-      "CRET_CLASSIFICATION_OPERATIONAL\020\t*\272\001\n\nOu" +
+      "ilityRef\0226\n\027owns_background_workers\030\023 \001(" +
+      "\010R\025ownsBackgroundWorkers\"\232\005\n\026DbTableSecu" +
+      "rityOptions\0222\n\025tenant_isolation_mode\030\001 \001" +
+      "(\tR\023tenantIsolationMode\0224\n\026project_isola" +
+      "tion_mode\030\002 \001(\tR\024projectIsolationMode\022#\n" +
+      "\rtenant_column\030\003 \001(\tR\014tenantColumn\022%\n\016pr" +
+      "oject_column\030\004 \001(\tR\rprojectColumn\022.\n\023rls" +
+      "_policy_template\030\005 \001(\tR\021rlsPolicyTemplat" +
+      "e\022(\n\020soft_delete_mode\030\006 \001(\tR\016softDeleteM" +
+      "ode\022\'\n\017retention_class\030\007 \001(\tR\016retentionC" +
+      "lass\022%\n\016retention_days\030\010 \001(\005R\rretentionD" +
+      "ays\022<\n\naudit_mode\030\t \001(\0162\035.udb.core.commo" +
+      "n.v1.AuditModeR\tauditMode\022-\n\022encryption_" +
+      "profile\030\n \001(\tR\021encryptionProfile\022\037\n\013pii_" +
+      "profile\030\013 \001(\tR\npiiProfile\022.\n\023break_glass" +
+      "_visible\030\014 \001(\010R\021breakGlassVisible\022\'\n\017exp" +
+      "ort_eligible\030\r \001(\010R\016exportEligible\0229\n\031da" +
+      "ta_residency_policy_ref\030\016 \001(\tR\026dataResid" +
+      "encyPolicyRef\"\225\005\n\027DbColumnSecurityOption" +
+      "s\022]\n\025secret_classification\030\001 \001(\0162(.udb.c" +
+      "ore.common.v1.SecretClassificationR\024secr" +
+      "etClassification\022?\n\013output_view\030\002 \001(\0162\036." +
+      "udb.core.common.v1.OutputViewR\noutputVie" +
+      "w\022T\n\022redaction_strategy\030\003 \001(\0162%.udb.core" +
+      ".common.v1.RedactionStrategyR\021redactionS" +
+      "trategy\0223\n\025tokenization_strategy\030\004 \001(\tR\024" +
+      "tokenizationStrategy\022)\n\020hashing_strategy" +
+      "\030\005 \001(\tR\017hashingStrategy\022+\n\021hashing_algor" +
+      "ithm\030\006 \001(\tR\020hashingAlgorithm\0220\n\024encrypti" +
+      "on_key_class\030\007 \001(\tR\022encryptionKeyClass\0221" +
+      "\n\024searchable_encrypted\030\010 \001(\010R\023searchable" +
+      "Encrypted\022)\n\020uniqueness_scope\030\t \001(\tR\017uni" +
+      "quenessScope\022\037\n\013owner_field\030\n \001(\010R\nowner" +
+      "Field\022!\n\014tenant_field\030\013 \001(\010R\013tenantField" +
+      "\022#\n\rproject_field\030\014 \001(\010R\014projectField\"\360\003" +
+      "\n\021SdkSurfaceOptions\022*\n\021include_in_facade" +
+      "\030\001 \001(\010R\017includeInFacade\022!\n\014method_alias\030" +
+      "\002 \001(\tR\013methodAlias\022@\n\034required_credentia" +
+      "l_provider\030\003 \001(\tR\032requiredCredentialProv" +
+      "ider\0222\n\025streaming_helper_type\030\004 \001(\tR\023str" +
+      "eamingHelperType\022.\n\023default_deadline_ms\030" +
+      "\005 \001(\005R\021defaultDeadlineMs\0220\n\024default_max_" +
+      "attempts\030\006 \001(\005R\022defaultMaxAttempts\022!\n\014br" +
+      "owser_safe\030\007 \001(\010R\013browserSafe\022\037\n\013server_" +
+      "only\030\010 \001(\010R\nserverOnly\0226\n\027boilerplate_re" +
+      "cipe_tags\030\t \003(\tR\025boilerplateRecipeTags\0228" +
+      "\n\030generate_minimal_example\030\n \001(\010R\026genera" +
+      "teMinimalExample\"\201\004\n\022CliScaffoldOptions\022" +
+      ")\n\020scaffold_package\030\001 \001(\tR\017scaffoldPacka" +
+      "ge\022\037\n\013import_path\030\002 \001(\tR\nimportPath\022!\n\014r" +
+      "equired_env\030\003 \003(\tR\013requiredEnv\022\'\n\017genera" +
+      "ted_files\030\004 \003(\tR\016generatedFiles\022\035\n\nroute" +
+      "_name\030\005 \001(\tR\trouteName\022\'\n\017middleware_nam" +
+      "e\030\006 \001(\tR\016middlewareName\0228\n\030required_nati" +
+      "ve_services\030\007 \003(\tR\026requiredNativeService" +
+      "s\0228\n\030optional_native_services\030\010 \003(\tR\026opt" +
+      "ionalNativeServices\022/\n\023secret_placeholde" +
+      "rs\030\t \003(\tR\022secretPlaceholders\0228\n\030post_gen" +
+      "eration_commands\030\n \003(\tR\026postGenerationCo" +
+      "mmands\022,\n\022smoke_test_command\030\013 \001(\tR\020smok" +
+      "eTestCommand\"\327\004\n\024EventContractOptions\022\035\n" +
+      "\nevent_type\030\001 \001(\tR\teventType\022!\n\014outbox_t" +
+      "opic\030\002 \001(\tR\013outboxTopic\022.\n\023partition_key" +
+      "_field\030\003 \001(\tR\021partitionKeyField\022:\n\031paylo" +
+      "ad_redaction_profile\030\004 \001(\tR\027payloadRedac" +
+      "tionProfile\022-\n\022delivery_guarantee\030\005 \001(\tR" +
+      "\021deliveryGuarantee\0221\n\024replay_compatibili" +
+      "ty\030\006 \001(\tR\023replayCompatibility\022K\n\005emits\030\007" +
+      " \003(\01325.udb.core.common.v1.EventContractO" +
+      "ptions.EmittedEventR\005emits\032\341\001\n\014EmittedEv" +
+      "ent\022\024\n\005topic\030\001 \001(\tR\005topic\022.\n\023partition_k" +
+      "ey_field\030\002 \001(\tR\021partitionKeyField\022-\n\022del" +
+      "ivery_guarantee\030\003 \001(\tR\021deliveryGuarantee" +
+      "\022:\n\031payload_redaction_profile\030\004 \001(\tR\027pay" +
+      "loadRedactionProfile\022 \n\013conditional\030\005 \001(" +
+      "\010R\013conditional\"\355\002\n\031DependencyContractOpt" +
+      "ions\0228\n\030required_native_services\030\001 \003(\tR\026" +
+      "requiredNativeServices\0228\n\030optional_nativ" +
+      "e_services\030\002 \003(\tR\026optionalNativeServices" +
+      "\022+\n\021required_backends\030\003 \003(\tR\020requiredBac" +
+      "kends\022+\n\021optional_backends\030\004 \003(\tR\020option" +
+      "alBackends\022+\n\021required_features\030\005 \003(\tR\020r" +
+      "equiredFeatures\022!\n\014required_env\030\006 \003(\tR\013r" +
+      "equiredEnv\0222\n\025degraded_when_missing\030\007 \003(" +
+      "\tR\023degradedWhenMissing*\207\001\n\010AuthMode\022\031\n\025A" +
+      "UTH_MODE_UNSPECIFIED\020\000\022\024\n\020AUTH_MODE_PUBL" +
+      "IC\020\001\022\024\n\020AUTH_MODE_BEARER\020\002\022\025\n\021AUTH_MODE_" +
+      "API_KEY\020\003\022\035\n\031AUTH_MODE_SERVICE_ACCOUNT\020\004" +
+      "*\276\002\n\016CredentialType\022\037\n\033CREDENTIAL_TYPE_U" +
+      "NSPECIFIED\020\000\022\036\n\032CREDENTIAL_TYPE_BEARER_J" +
+      "WT\020\001\022\033\n\027CREDENTIAL_TYPE_SESSION\020\002\022\033\n\027CRE" +
+      "DENTIAL_TYPE_API_KEY\020\003\022#\n\037CREDENTIAL_TYP" +
+      "E_SERVICE_ACCOUNT\020\004\022\030\n\024CREDENTIAL_TYPE_M" +
+      "TLS\020\005\022\030\n\024CREDENTIAL_TYPE_OIDC\020\006\022\030\n\024CREDE" +
+      "NTIAL_TYPE_SAML\020\007\022\034\n\030CREDENTIAL_TYPE_WEB" +
+      "AUTHN\020\010\022 \n\034CREDENTIAL_TYPE_EXTERNAL_JWT\020" +
+      "\t*\203\001\n\tAuditMode\022\032\n\026AUDIT_MODE_UNSPECIFIE" +
+      "D\020\000\022\023\n\017AUDIT_MODE_NONE\020\001\022\027\n\023AUDIT_MODE_M" +
+      "UTATION\020\002\022\027\n\023AUDIT_MODE_DECISION\020\003\022\023\n\017AU" +
+      "DIT_MODE_FULL\020\004*\237\003\n\024SecretClassification" +
+      "\022%\n!SECRET_CLASSIFICATION_UNSPECIFIED\020\000\022" +
+      " \n\034SECRET_CLASSIFICATION_PUBLIC\020\001\022\"\n\036SEC" +
+      "RET_CLASSIFICATION_INTERNAL\020\002\022$\n SECRET_" +
+      "CLASSIFICATION_CREDENTIAL\020\003\022\037\n\033SECRET_CL" +
+      "ASSIFICATION_TOKEN\020\004\022\035\n\031SECRET_CLASSIFIC" +
+      "ATION_KEY\020\005\022#\n\037SECRET_CLASSIFICATION_BIO" +
+      "METRIC\020\006\022\"\n\036SECRET_CLASSIFICATION_IDENTI" +
+      "TY\020\007\022\035\n\031SECRET_CLASSIFICATION_PII\020\010\022%\n!S" +
+      "ECRET_CLASSIFICATION_OPERATIONAL\020\t\022%\n!SE" +
+      "CRET_CLASSIFICATION_PRIVATE_KEY\020\n*\272\001\n\nOu" +
       "tputView\022\033\n\027OUTPUT_VIEW_UNSPECIFIED\020\000\022\034\n" +
       "\030OUTPUT_VIEW_STORAGE_ONLY\020\001\022\026\n\022OUTPUT_VI" +
       "EW_PUBLIC\020\002\022\024\n\020OUTPUT_VIEW_SELF\020\003\022\025\n\021OUT" +
@@ -662,7 +677,7 @@ public final class SecurityProto extends com.google.protobuf.GeneratedFile {
     internal_static_udb_core_common_v1_NativeServiceOptions_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_common_v1_NativeServiceOptions_descriptor,
-        new java.lang.String[] { "ServiceId", "LogicalServiceId", "ProtoServiceId", "DisplayName", "Category", "DefaultEnabled", "RequiresPostgres", "RequiresRedis", "RequiresObjectStore", "RequiresKafka", "RequiresFeature", "PublicListenerAllowed", "ControlPlaneListenerAllowed", "PeerListenerAllowed", "SdkFacadeName", "CliScaffoldGroup", "HealthCheckRef", "CapabilityRef", });
+        new java.lang.String[] { "ServiceId", "LogicalServiceId", "ProtoServiceId", "DisplayName", "Category", "DefaultEnabled", "RequiresPostgres", "RequiresRedis", "RequiresObjectStore", "RequiresKafka", "RequiresFeature", "PublicListenerAllowed", "ControlPlaneListenerAllowed", "PeerListenerAllowed", "SdkFacadeName", "CliScaffoldGroup", "HealthCheckRef", "CapabilityRef", "OwnsBackgroundWorkers", });
     internal_static_udb_core_common_v1_DbTableSecurityOptions_descriptor =
       getDescriptor().getMessageType(3);
     internal_static_udb_core_common_v1_DbTableSecurityOptions_fieldAccessorTable = new
@@ -692,7 +707,13 @@ public final class SecurityProto extends com.google.protobuf.GeneratedFile {
     internal_static_udb_core_common_v1_EventContractOptions_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_common_v1_EventContractOptions_descriptor,
-        new java.lang.String[] { "EventType", "OutboxTopic", "PartitionKeyField", "PayloadRedactionProfile", "DeliveryGuarantee", "ReplayCompatibility", });
+        new java.lang.String[] { "EventType", "OutboxTopic", "PartitionKeyField", "PayloadRedactionProfile", "DeliveryGuarantee", "ReplayCompatibility", "Emits", });
+    internal_static_udb_core_common_v1_EventContractOptions_EmittedEvent_descriptor =
+      internal_static_udb_core_common_v1_EventContractOptions_descriptor.getNestedType(0);
+    internal_static_udb_core_common_v1_EventContractOptions_EmittedEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_common_v1_EventContractOptions_EmittedEvent_descriptor,
+        new java.lang.String[] { "Topic", "PartitionKeyField", "DeliveryGuarantee", "PayloadRedactionProfile", "Conditional", });
     internal_static_udb_core_common_v1_DependencyContractOptions_descriptor =
       getDescriptor().getMessageType(8);
     internal_static_udb_core_common_v1_DependencyContractOptions_fieldAccessorTable = new

@@ -43,9 +43,12 @@ class UpdateFileRequest extends \Google\Protobuf\Internal\Message
      */
     protected $reference_type = '';
     /**
-     * Generated from protobuf field <code>bool is_public = 8 [json_name = "isPublic"];</code>
+     * Proto3 explicit presence: absent leaves the stored visibility unchanged —
+     * a partial update can never silently flip a file public/private.
+     *
+     * Generated from protobuf field <code>optional bool is_public = 8 [json_name = "isPublic"];</code>
      */
-    protected $is_public = false;
+    protected $is_public = null;
 
     /**
      * Constructor.
@@ -61,6 +64,8 @@ class UpdateFileRequest extends \Google\Protobuf\Internal\Message
      *     @type string $reference_id
      *     @type string $reference_type
      *     @type bool $is_public
+     *           Proto3 explicit presence: absent leaves the stored visibility unchanged —
+     *           a partial update can never silently flip a file public/private.
      * }
      */
     public function __construct($data = NULL) {
@@ -223,16 +228,32 @@ class UpdateFileRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>bool is_public = 8 [json_name = "isPublic"];</code>
+     * Proto3 explicit presence: absent leaves the stored visibility unchanged —
+     * a partial update can never silently flip a file public/private.
+     *
+     * Generated from protobuf field <code>optional bool is_public = 8 [json_name = "isPublic"];</code>
      * @return bool
      */
     public function getIsPublic()
     {
-        return $this->is_public;
+        return isset($this->is_public) ? $this->is_public : false;
+    }
+
+    public function hasIsPublic()
+    {
+        return isset($this->is_public);
+    }
+
+    public function clearIsPublic()
+    {
+        unset($this->is_public);
     }
 
     /**
-     * Generated from protobuf field <code>bool is_public = 8 [json_name = "isPublic"];</code>
+     * Proto3 explicit presence: absent leaves the stored visibility unchanged —
+     * a partial update can never silently flip a file public/private.
+     *
+     * Generated from protobuf field <code>optional bool is_public = 8 [json_name = "isPublic"];</code>
      * @param bool $var
      * @return $this
      */

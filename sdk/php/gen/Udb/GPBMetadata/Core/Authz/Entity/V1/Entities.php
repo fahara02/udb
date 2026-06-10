@@ -16,14 +16,21 @@ class Entities
           return;
         }
         \Udb\GPBMetadata\Core\Authz\Entity\V1\AccessDecisionAudit::initOnce();
+        \Udb\GPBMetadata\Core\Authz\Entity\V1\AuthzRevision::initOnce();
         \Udb\GPBMetadata\Core\Authz\Entity\V1\Enums::initOnce();
+        \Udb\GPBMetadata\Core\Authz\Entity\V1\GovernanceEnums::initOnce();
+        \Udb\GPBMetadata\Core\Authz\Entity\V1\PolicyApproval::initOnce();
+        \Udb\GPBMetadata\Core\Authz\Entity\V1\PolicyDraft::initOnce();
         \Udb\GPBMetadata\Core\Authz\Entity\V1\PolicyRule::initOnce();
+        \Udb\GPBMetadata\Core\Authz\Entity\V1\PolicySet::initOnce();
+        \Udb\GPBMetadata\Core\Authz\Entity\V1\PolicySimulation::initOnce();
         \Udb\GPBMetadata\Core\Authz\Entity\V1\PolicyTuple::initOnce();
+        \Udb\GPBMetadata\Core\Authz\Entity\V1\PolicyVersion::initOnce();
         \Udb\GPBMetadata\Core\Authz\Entity\V1\Role::initOnce();
         \Udb\GPBMetadata\Core\Authz\Entity\V1\RolePermission::initOnce();
         \Udb\GPBMetadata\Core\Authz\Entity\V1\UserRole::initOnce();
         $pool->internalAddGeneratedFile(
-            "\x0A\xD2\x04\x0A'udb/core/authz/entity/v1/entities.proto\x12\x18udb.core.authz.entity.v1\x1A\$udb/core/authz/entity/v1/enums.proto\x1A*udb/core/authz/entity/v1/policy_rule.proto\x1A+udb/core/authz/entity/v1/policy_tuple.proto\x1A#udb/core/authz/entity/v1/role.proto\x1A.udb/core/authz/entity/v1/role_permission.proto\x1A(udb/core/authz/entity/v1/user_role.protoB\xF8\x01\x0A\x1Ccom.udb.core.authz.entity.v1B\x0DEntitiesProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xA2\x02\x04UCAE\xAA\x02\x18udb.core.Authz.Entity.V1\xCA\x02\x18Udb\\Core\\Authz\\Entity\\V1\xE2\x02\$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xEA\x02\x1CUdb::Core::Authz::Entity::V1P\x00P\x01P\x02P\x03P\x04P\x05P\x06b\x06proto3"
+            "\x0A\xA9\x07\x0A'udb/core/authz/entity/v1/entities.proto\x12\x18udb.core.authz.entity.v1\x1A-udb/core/authz/entity/v1/authz_revision.proto\x1A\$udb/core/authz/entity/v1/enums.proto\x1A/udb/core/authz/entity/v1/governance_enums.proto\x1A.udb/core/authz/entity/v1/policy_approval.proto\x1A+udb/core/authz/entity/v1/policy_draft.proto\x1A*udb/core/authz/entity/v1/policy_rule.proto\x1A)udb/core/authz/entity/v1/policy_set.proto\x1A0udb/core/authz/entity/v1/policy_simulation.proto\x1A+udb/core/authz/entity/v1/policy_tuple.proto\x1A-udb/core/authz/entity/v1/policy_version.proto\x1A#udb/core/authz/entity/v1/role.proto\x1A.udb/core/authz/entity/v1/role_permission.proto\x1A(udb/core/authz/entity/v1/user_role.protoB\xF8\x01\x0A\x1Ccom.udb.core.authz.entity.v1B\x0DEntitiesProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xA2\x02\x04UCAE\xAA\x02\x18udb.core.Authz.Entity.V1\xCA\x02\x18Udb\\Core\\Authz\\Entity\\V1\xE2\x02\$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xEA\x02\x1CUdb::Core::Authz::Entity::V1P\x00P\x01P\x02P\x03P\x04P\x05P\x06P\x07P\x08P\x09P\x0AP\x0BP\x0CP\x0Db\x06proto3"
         , true);
 
         static::$is_initialized = true;

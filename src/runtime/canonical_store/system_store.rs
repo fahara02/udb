@@ -1848,8 +1848,7 @@ pub(crate) trait JsonSystemRecordAdapter: Send + Sync {
     async fn get_string_record(&self, key: &str) -> SystemStoreResult<Option<String>>;
     async fn set_string_record(&self, key: &str, value: &String) -> SystemStoreResult<()>;
 
-    async fn get_migration_run_row(&self, key: &str)
-    -> SystemStoreResult<Option<MigrationRunRow>>;
+    async fn get_migration_run_row(&self, key: &str) -> SystemStoreResult<Option<MigrationRunRow>>;
     async fn set_migration_run_row(
         &self,
         key: &str,
@@ -1859,10 +1858,8 @@ pub(crate) trait JsonSystemRecordAdapter: Send + Sync {
         &self,
         set_key: &str,
     ) -> SystemStoreResult<Vec<MigrationRunRow>>;
-    async fn load_migration_op_rows(
-        &self,
-        set_key: &str,
-    ) -> SystemStoreResult<Vec<MigrationOpRow>>;
+    async fn load_migration_op_rows(&self, set_key: &str)
+    -> SystemStoreResult<Vec<MigrationOpRow>>;
 
     async fn list_record_set(&self, set_key: &str) -> SystemStoreResult<Vec<String>>;
     async fn add_record_to_set(&self, set_key: &str, item: String) -> SystemStoreResult<()>;
@@ -1907,7 +1904,9 @@ pub(crate) async fn get_json_saga<A>(
 where
     A: JsonSystemRecordAdapter + ?Sized,
 {
-    adapter.get_saga_row(&adapter.saga_record_key(saga_id)).await
+    adapter
+        .get_saga_row(&adapter.saga_record_key(saga_id))
+        .await
 }
 
 pub(crate) async fn list_json_sagas<A>(

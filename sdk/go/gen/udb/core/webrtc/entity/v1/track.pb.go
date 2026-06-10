@@ -143,7 +143,8 @@ var File_udb_core_webrtc_entity_v1_track_proto protoreflect.FileDescriptor
 
 const file_udb_core_webrtc_entity_v1_track_proto_rawDesc = "" +
 	"\n" +
-	"%udb/core/webrtc/entity/v1/track.proto\x12\x19udb.core.webrtc.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/webrtc/entity/v1/enums.proto\"\xe8\t\n" +
+	"%udb/core/webrtc/entity/v1/track.proto\x12\x19udb.core.webrtc.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/webrtc/entity/v1/enums.proto\"\x89\n" +
+	"\n" +
 	"\x05Track\x12F\n" +
 	"\btrack_id\x18\x01 \x01(\tB+\x82\xb7\x18'\n" +
 	"\btrack_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\atrackId\x12.\n" +
@@ -167,13 +168,14 @@ const file_udb_core_webrtc_entity_v1_track_proto_rawDesc = "" +
 	"audit_info\x18\n" +
 	" \x01(\v2\x1d.udb.core.common.v1.AuditInfoBD\x82\xb7\x18@\n" +
 	"\n" +
-	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo:\xf9\x03\xfa\xb6\x18\xd7\x02\n" +
+	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo:\x9a\x04\xfa\xb6\x18\xff\x02\n" +
 	"\x06tracks\x12\n" +
 	"udb_webrtc\x18\x03 \x01*/WebRTC media and data tracks published by peers8\x01@\x01b\x97\x01\n" +
 	"\x17tracks_tenant_isolation\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01!\n" +
 	"\x0fidx_tracks_room\x12\x05BTREEZ\aroom_id\x8a\x01!\n" +
-	"\x0fidx_tracks_peer\x12\x05BTREEZ\apeer_id\xf2\x01\x15udb.webrtc.tracks.cdc\xfa\x01\vwebrtc:read\x8a\xb2\x19\x98\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x12webrtc.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfb\x01\n" +
+	"\x0fidx_tracks_peer\x12\x05BTREEZ\apeer_id\x8a\x01%\n" +
+	"\x11idx_tracks_tenant\x12\x05BTREEZ\ttenant_id\xf2\x01\x15udb.webrtc.tracks.cdc\xfa\x01\vwebrtc:read\x8a\xb2\x19\x91\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x12webrtc.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfb\x01\n" +
 	"\x1dcom.udb.core.webrtc.entity.v1B\n" +
 	"TrackProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/webrtc/entity/v1;entityv1\xa2\x02\x04UCWE\xaa\x02\x19udb.core.Webrtc.Entity.V1\xca\x02\x19Udb\\Core\\Webrtc\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Webrtc\\Entity\\V1\xea\x02\x1dUdb::Core::Webrtc::Entity::V1b\x06proto3"
 

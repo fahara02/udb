@@ -66,6 +66,82 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string tenant_id = 13 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $tenant_id = '';
+    /**
+     * ── Phase L3 task4: expanded compliance columns ───────────────────────────
+     * Stable decision id linking this audit row to the gRPC Decision returned to
+     * the caller and to the access-deny domain event.
+     *
+     * Generated from protobuf field <code>string decision_id = 14 [json_name = "decisionId", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $decision_id = '';
+    /**
+     * Authz snapshot versions at decision time.
+     *
+     * Generated from protobuf field <code>string policy_version = 15 [json_name = "policyVersion", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $policy_version = '';
+    /**
+     * Generated from protobuf field <code>string relationship_version = 16 [json_name = "relationshipVersion", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $relationship_version = '';
+    /**
+     * Declared purpose of the access (purpose-binding / GDPR).
+     *
+     * Generated from protobuf field <code>string purpose = 17 [json_name = "purpose", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $purpose = '';
+    /**
+     * Scopes required by the matched policy (comma-joined).
+     *
+     * Generated from protobuf field <code>string scopes = 18 [json_name = "scopes", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $scopes = '';
+    /**
+     * Every policy id that matched (Postgres text array), not just the first.
+     *
+     * Generated from protobuf field <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    private $matched_policy_ids;
+    /**
+     * Project domain (tenant lives on tenant_id).
+     *
+     * Generated from protobuf field <code>string project_id = 20 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $project_id = '';
+    /**
+     * Actor kind: "user" | "service" | "external".
+     *
+     * Generated from protobuf field <code>string actor_kind = 21 [json_name = "actorKind", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $actor_kind = '';
+    /**
+     * Resource type/reference for the object being acted upon.
+     *
+     * Generated from protobuf field <code>string resource_type = 22 [json_name = "resourceType", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $resource_type = '';
+    /**
+     * Distributed-trace correlation (OpenTelemetry).
+     *
+     * Generated from protobuf field <code>string trace_id = 23 [json_name = "traceId", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $trace_id = '';
+    /**
+     * Generated from protobuf field <code>string span_id = 24 [json_name = "spanId", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $span_id = '';
+    /**
+     * Hashed user-agent (never raw) from the request context.
+     *
+     * Generated from protobuf field <code>string user_agent_hash = 25 [json_name = "userAgentHash", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $user_agent_hash = '';
+    /**
+     * Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+     *
+     * Generated from protobuf field <code>string decision_input = 26 [json_name = "decisionInput", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $decision_input = '';
 
     /**
      * Constructor.
@@ -86,6 +162,32 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      *     @type string $correlation_id
      *     @type \Google\Protobuf\Timestamp $decided_at
      *     @type string $tenant_id
+     *     @type string $decision_id
+     *           ── Phase L3 task4: expanded compliance columns ───────────────────────────
+     *           Stable decision id linking this audit row to the gRPC Decision returned to
+     *           the caller and to the access-deny domain event.
+     *     @type string $policy_version
+     *           Authz snapshot versions at decision time.
+     *     @type string $relationship_version
+     *     @type string $purpose
+     *           Declared purpose of the access (purpose-binding / GDPR).
+     *     @type string $scopes
+     *           Scopes required by the matched policy (comma-joined).
+     *     @type string[] $matched_policy_ids
+     *           Every policy id that matched (Postgres text array), not just the first.
+     *     @type string $project_id
+     *           Project domain (tenant lives on tenant_id).
+     *     @type string $actor_kind
+     *           Actor kind: "user" | "service" | "external".
+     *     @type string $resource_type
+     *           Resource type/reference for the object being acted upon.
+     *     @type string $trace_id
+     *           Distributed-trace correlation (OpenTelemetry).
+     *     @type string $span_id
+     *     @type string $user_agent_hash
+     *           Hashed user-agent (never raw) from the request context.
+     *     @type string $decision_input
+     *           Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
      * }
      */
     public function __construct($data = NULL) {
@@ -384,6 +486,340 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, true);
         $this->tenant_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * ── Phase L3 task4: expanded compliance columns ───────────────────────────
+     * Stable decision id linking this audit row to the gRPC Decision returned to
+     * the caller and to the access-deny domain event.
+     *
+     * Generated from protobuf field <code>string decision_id = 14 [json_name = "decisionId", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getDecisionId()
+    {
+        return $this->decision_id;
+    }
+
+    /**
+     * ── Phase L3 task4: expanded compliance columns ───────────────────────────
+     * Stable decision id linking this audit row to the gRPC Decision returned to
+     * the caller and to the access-deny domain event.
+     *
+     * Generated from protobuf field <code>string decision_id = 14 [json_name = "decisionId", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setDecisionId(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->decision_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Authz snapshot versions at decision time.
+     *
+     * Generated from protobuf field <code>string policy_version = 15 [json_name = "policyVersion", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getPolicyVersion()
+    {
+        return $this->policy_version;
+    }
+
+    /**
+     * Authz snapshot versions at decision time.
+     *
+     * Generated from protobuf field <code>string policy_version = 15 [json_name = "policyVersion", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setPolicyVersion(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->policy_version = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string relationship_version = 16 [json_name = "relationshipVersion", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getRelationshipVersion()
+    {
+        return $this->relationship_version;
+    }
+
+    /**
+     * Generated from protobuf field <code>string relationship_version = 16 [json_name = "relationshipVersion", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRelationshipVersion(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->relationship_version = $var;
+
+        return $this;
+    }
+
+    /**
+     * Declared purpose of the access (purpose-binding / GDPR).
+     *
+     * Generated from protobuf field <code>string purpose = 17 [json_name = "purpose", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getPurpose()
+    {
+        return $this->purpose;
+    }
+
+    /**
+     * Declared purpose of the access (purpose-binding / GDPR).
+     *
+     * Generated from protobuf field <code>string purpose = 17 [json_name = "purpose", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setPurpose(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->purpose = $var;
+
+        return $this;
+    }
+
+    /**
+     * Scopes required by the matched policy (comma-joined).
+     *
+     * Generated from protobuf field <code>string scopes = 18 [json_name = "scopes", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getScopes()
+    {
+        return $this->scopes;
+    }
+
+    /**
+     * Scopes required by the matched policy (comma-joined).
+     *
+     * Generated from protobuf field <code>string scopes = 18 [json_name = "scopes", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setScopes(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->scopes = $var;
+
+        return $this;
+    }
+
+    /**
+     * Every policy id that matched (Postgres text array), not just the first.
+     *
+     * Generated from protobuf field <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = {</code>
+     * @return RepeatedField<string>
+     */
+    public function getMatchedPolicyIds()
+    {
+        return $this->matched_policy_ids;
+    }
+
+    /**
+     * Every policy id that matched (Postgres text array), not just the first.
+     *
+     * Generated from protobuf field <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string[] $var
+     * @return $this
+     */
+    public function setMatchedPolicyIds(array|RepeatedField $var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->matched_policy_ids = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Project domain (tenant lives on tenant_id).
+     *
+     * Generated from protobuf field <code>string project_id = 20 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getProjectId()
+    {
+        return $this->project_id;
+    }
+
+    /**
+     * Project domain (tenant lives on tenant_id).
+     *
+     * Generated from protobuf field <code>string project_id = 20 [json_name = "projectId", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setProjectId(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->project_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Actor kind: "user" | "service" | "external".
+     *
+     * Generated from protobuf field <code>string actor_kind = 21 [json_name = "actorKind", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getActorKind()
+    {
+        return $this->actor_kind;
+    }
+
+    /**
+     * Actor kind: "user" | "service" | "external".
+     *
+     * Generated from protobuf field <code>string actor_kind = 21 [json_name = "actorKind", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setActorKind(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->actor_kind = $var;
+
+        return $this;
+    }
+
+    /**
+     * Resource type/reference for the object being acted upon.
+     *
+     * Generated from protobuf field <code>string resource_type = 22 [json_name = "resourceType", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getResourceType()
+    {
+        return $this->resource_type;
+    }
+
+    /**
+     * Resource type/reference for the object being acted upon.
+     *
+     * Generated from protobuf field <code>string resource_type = 22 [json_name = "resourceType", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setResourceType(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->resource_type = $var;
+
+        return $this;
+    }
+
+    /**
+     * Distributed-trace correlation (OpenTelemetry).
+     *
+     * Generated from protobuf field <code>string trace_id = 23 [json_name = "traceId", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getTraceId()
+    {
+        return $this->trace_id;
+    }
+
+    /**
+     * Distributed-trace correlation (OpenTelemetry).
+     *
+     * Generated from protobuf field <code>string trace_id = 23 [json_name = "traceId", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setTraceId(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->trace_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string span_id = 24 [json_name = "spanId", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getSpanId()
+    {
+        return $this->span_id;
+    }
+
+    /**
+     * Generated from protobuf field <code>string span_id = 24 [json_name = "spanId", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setSpanId(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->span_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Hashed user-agent (never raw) from the request context.
+     *
+     * Generated from protobuf field <code>string user_agent_hash = 25 [json_name = "userAgentHash", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getUserAgentHash()
+    {
+        return $this->user_agent_hash;
+    }
+
+    /**
+     * Hashed user-agent (never raw) from the request context.
+     *
+     * Generated from protobuf field <code>string user_agent_hash = 25 [json_name = "userAgentHash", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setUserAgentHash(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->user_agent_hash = $var;
+
+        return $this;
+    }
+
+    /**
+     * Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+     *
+     * Generated from protobuf field <code>string decision_input = 26 [json_name = "decisionInput", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getDecisionInput()
+    {
+        return $this->decision_input;
+    }
+
+    /**
+     * Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+     *
+     * Generated from protobuf field <code>string decision_input = 26 [json_name = "decisionInput", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setDecisionInput(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->decision_input = $var;
 
         return $this;
     }

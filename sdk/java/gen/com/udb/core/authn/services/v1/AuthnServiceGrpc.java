@@ -1109,6 +1109,471 @@ public final class AuthnServiceGrpc {
     return getFinishWebAuthnAuthenticationMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListDevicesRequest,
+      com.udb.core.authn.services.v1.ListDevicesResponse> getListDevicesMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListDevices",
+      requestType = com.udb.core.authn.services.v1.ListDevicesRequest.class,
+      responseType = com.udb.core.authn.services.v1.ListDevicesResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListDevicesRequest,
+      com.udb.core.authn.services.v1.ListDevicesResponse> getListDevicesMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListDevicesRequest, com.udb.core.authn.services.v1.ListDevicesResponse> getListDevicesMethod;
+    if ((getListDevicesMethod = AuthnServiceGrpc.getListDevicesMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getListDevicesMethod = AuthnServiceGrpc.getListDevicesMethod) == null) {
+          AuthnServiceGrpc.getListDevicesMethod = getListDevicesMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.ListDevicesRequest, com.udb.core.authn.services.v1.ListDevicesResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListDevices"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListDevicesRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListDevicesResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("ListDevices"))
+              .build();
+        }
+      }
+    }
+    return getListDevicesMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeDeviceRequest,
+      com.udb.core.authn.services.v1.RevokeDeviceResponse> getRevokeDeviceMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RevokeDevice",
+      requestType = com.udb.core.authn.services.v1.RevokeDeviceRequest.class,
+      responseType = com.udb.core.authn.services.v1.RevokeDeviceResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeDeviceRequest,
+      com.udb.core.authn.services.v1.RevokeDeviceResponse> getRevokeDeviceMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeDeviceRequest, com.udb.core.authn.services.v1.RevokeDeviceResponse> getRevokeDeviceMethod;
+    if ((getRevokeDeviceMethod = AuthnServiceGrpc.getRevokeDeviceMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getRevokeDeviceMethod = AuthnServiceGrpc.getRevokeDeviceMethod) == null) {
+          AuthnServiceGrpc.getRevokeDeviceMethod = getRevokeDeviceMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.RevokeDeviceRequest, com.udb.core.authn.services.v1.RevokeDeviceResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RevokeDevice"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RevokeDeviceRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RevokeDeviceResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("RevokeDevice"))
+              .build();
+        }
+      }
+    }
+    return getRevokeDeviceMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.AdminRevokeSessionRequest,
+      com.udb.core.authn.services.v1.AdminRevokeSessionResponse> getAdminRevokeSessionMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "AdminRevokeSession",
+      requestType = com.udb.core.authn.services.v1.AdminRevokeSessionRequest.class,
+      responseType = com.udb.core.authn.services.v1.AdminRevokeSessionResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.AdminRevokeSessionRequest,
+      com.udb.core.authn.services.v1.AdminRevokeSessionResponse> getAdminRevokeSessionMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.AdminRevokeSessionRequest, com.udb.core.authn.services.v1.AdminRevokeSessionResponse> getAdminRevokeSessionMethod;
+    if ((getAdminRevokeSessionMethod = AuthnServiceGrpc.getAdminRevokeSessionMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getAdminRevokeSessionMethod = AuthnServiceGrpc.getAdminRevokeSessionMethod) == null) {
+          AuthnServiceGrpc.getAdminRevokeSessionMethod = getAdminRevokeSessionMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.AdminRevokeSessionRequest, com.udb.core.authn.services.v1.AdminRevokeSessionResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "AdminRevokeSession"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.AdminRevokeSessionRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.AdminRevokeSessionResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("AdminRevokeSession"))
+              .build();
+        }
+      }
+    }
+    return getAdminRevokeSessionMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest,
+      com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse> getAdminRevokeAllUserSessionsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "AdminRevokeAllUserSessions",
+      requestType = com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest.class,
+      responseType = com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest,
+      com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse> getAdminRevokeAllUserSessionsMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest, com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse> getAdminRevokeAllUserSessionsMethod;
+    if ((getAdminRevokeAllUserSessionsMethod = AuthnServiceGrpc.getAdminRevokeAllUserSessionsMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getAdminRevokeAllUserSessionsMethod = AuthnServiceGrpc.getAdminRevokeAllUserSessionsMethod) == null) {
+          AuthnServiceGrpc.getAdminRevokeAllUserSessionsMethod = getAdminRevokeAllUserSessionsMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest, com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "AdminRevokeAllUserSessions"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("AdminRevokeAllUserSessions"))
+              .build();
+        }
+      }
+    }
+    return getAdminRevokeAllUserSessionsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest,
+      com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse> getAdminRevokeAllTenantSessionsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "AdminRevokeAllTenantSessions",
+      requestType = com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest.class,
+      responseType = com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest,
+      com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse> getAdminRevokeAllTenantSessionsMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest, com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse> getAdminRevokeAllTenantSessionsMethod;
+    if ((getAdminRevokeAllTenantSessionsMethod = AuthnServiceGrpc.getAdminRevokeAllTenantSessionsMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getAdminRevokeAllTenantSessionsMethod = AuthnServiceGrpc.getAdminRevokeAllTenantSessionsMethod) == null) {
+          AuthnServiceGrpc.getAdminRevokeAllTenantSessionsMethod = getAdminRevokeAllTenantSessionsMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest, com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "AdminRevokeAllTenantSessions"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("AdminRevokeAllTenantSessions"))
+              .build();
+        }
+      }
+    }
+    return getAdminRevokeAllTenantSessionsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.EmergencyRevokeRequest,
+      com.udb.core.authn.services.v1.EmergencyRevokeResponse> getEmergencyRevokeMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "EmergencyRevoke",
+      requestType = com.udb.core.authn.services.v1.EmergencyRevokeRequest.class,
+      responseType = com.udb.core.authn.services.v1.EmergencyRevokeResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.EmergencyRevokeRequest,
+      com.udb.core.authn.services.v1.EmergencyRevokeResponse> getEmergencyRevokeMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.EmergencyRevokeRequest, com.udb.core.authn.services.v1.EmergencyRevokeResponse> getEmergencyRevokeMethod;
+    if ((getEmergencyRevokeMethod = AuthnServiceGrpc.getEmergencyRevokeMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getEmergencyRevokeMethod = AuthnServiceGrpc.getEmergencyRevokeMethod) == null) {
+          AuthnServiceGrpc.getEmergencyRevokeMethod = getEmergencyRevokeMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.EmergencyRevokeRequest, com.udb.core.authn.services.v1.EmergencyRevokeResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "EmergencyRevoke"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.EmergencyRevokeRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.EmergencyRevokeResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("EmergencyRevoke"))
+              .build();
+        }
+      }
+    }
+    return getEmergencyRevokeMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.IssueMfaChallengeRequest,
+      com.udb.core.authn.services.v1.IssueMfaChallengeResponse> getIssueMfaChallengeMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "IssueMfaChallenge",
+      requestType = com.udb.core.authn.services.v1.IssueMfaChallengeRequest.class,
+      responseType = com.udb.core.authn.services.v1.IssueMfaChallengeResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.IssueMfaChallengeRequest,
+      com.udb.core.authn.services.v1.IssueMfaChallengeResponse> getIssueMfaChallengeMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.IssueMfaChallengeRequest, com.udb.core.authn.services.v1.IssueMfaChallengeResponse> getIssueMfaChallengeMethod;
+    if ((getIssueMfaChallengeMethod = AuthnServiceGrpc.getIssueMfaChallengeMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getIssueMfaChallengeMethod = AuthnServiceGrpc.getIssueMfaChallengeMethod) == null) {
+          AuthnServiceGrpc.getIssueMfaChallengeMethod = getIssueMfaChallengeMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.IssueMfaChallengeRequest, com.udb.core.authn.services.v1.IssueMfaChallengeResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "IssueMfaChallenge"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.IssueMfaChallengeRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.IssueMfaChallengeResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("IssueMfaChallenge"))
+              .build();
+        }
+      }
+    }
+    return getIssueMfaChallengeMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.VerifyMfaChallengeRequest,
+      com.udb.core.authn.services.v1.VerifyMfaChallengeResponse> getVerifyMfaChallengeMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "VerifyMfaChallenge",
+      requestType = com.udb.core.authn.services.v1.VerifyMfaChallengeRequest.class,
+      responseType = com.udb.core.authn.services.v1.VerifyMfaChallengeResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.VerifyMfaChallengeRequest,
+      com.udb.core.authn.services.v1.VerifyMfaChallengeResponse> getVerifyMfaChallengeMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.VerifyMfaChallengeRequest, com.udb.core.authn.services.v1.VerifyMfaChallengeResponse> getVerifyMfaChallengeMethod;
+    if ((getVerifyMfaChallengeMethod = AuthnServiceGrpc.getVerifyMfaChallengeMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getVerifyMfaChallengeMethod = AuthnServiceGrpc.getVerifyMfaChallengeMethod) == null) {
+          AuthnServiceGrpc.getVerifyMfaChallengeMethod = getVerifyMfaChallengeMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.VerifyMfaChallengeRequest, com.udb.core.authn.services.v1.VerifyMfaChallengeResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "VerifyMfaChallenge"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.VerifyMfaChallengeRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.VerifyMfaChallengeResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("VerifyMfaChallenge"))
+              .build();
+        }
+      }
+    }
+    return getVerifyMfaChallengeMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListMfaFactorsRequest,
+      com.udb.core.authn.services.v1.ListMfaFactorsResponse> getListMfaFactorsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListMfaFactors",
+      requestType = com.udb.core.authn.services.v1.ListMfaFactorsRequest.class,
+      responseType = com.udb.core.authn.services.v1.ListMfaFactorsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListMfaFactorsRequest,
+      com.udb.core.authn.services.v1.ListMfaFactorsResponse> getListMfaFactorsMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListMfaFactorsRequest, com.udb.core.authn.services.v1.ListMfaFactorsResponse> getListMfaFactorsMethod;
+    if ((getListMfaFactorsMethod = AuthnServiceGrpc.getListMfaFactorsMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getListMfaFactorsMethod = AuthnServiceGrpc.getListMfaFactorsMethod) == null) {
+          AuthnServiceGrpc.getListMfaFactorsMethod = getListMfaFactorsMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.ListMfaFactorsRequest, com.udb.core.authn.services.v1.ListMfaFactorsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListMfaFactors"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListMfaFactorsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListMfaFactorsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("ListMfaFactors"))
+              .build();
+        }
+      }
+    }
+    return getListMfaFactorsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.DisableMfaFactorRequest,
+      com.udb.core.authn.services.v1.DisableMfaFactorResponse> getDisableMfaFactorMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "DisableMfaFactor",
+      requestType = com.udb.core.authn.services.v1.DisableMfaFactorRequest.class,
+      responseType = com.udb.core.authn.services.v1.DisableMfaFactorResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.DisableMfaFactorRequest,
+      com.udb.core.authn.services.v1.DisableMfaFactorResponse> getDisableMfaFactorMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.DisableMfaFactorRequest, com.udb.core.authn.services.v1.DisableMfaFactorResponse> getDisableMfaFactorMethod;
+    if ((getDisableMfaFactorMethod = AuthnServiceGrpc.getDisableMfaFactorMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getDisableMfaFactorMethod = AuthnServiceGrpc.getDisableMfaFactorMethod) == null) {
+          AuthnServiceGrpc.getDisableMfaFactorMethod = getDisableMfaFactorMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.DisableMfaFactorRequest, com.udb.core.authn.services.v1.DisableMfaFactorResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "DisableMfaFactor"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.DisableMfaFactorRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.DisableMfaFactorResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("DisableMfaFactor"))
+              .build();
+        }
+      }
+    }
+    return getDisableMfaFactorMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RenamePasskeyRequest,
+      com.udb.core.authn.services.v1.RenamePasskeyResponse> getRenamePasskeyMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RenamePasskey",
+      requestType = com.udb.core.authn.services.v1.RenamePasskeyRequest.class,
+      responseType = com.udb.core.authn.services.v1.RenamePasskeyResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RenamePasskeyRequest,
+      com.udb.core.authn.services.v1.RenamePasskeyResponse> getRenamePasskeyMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RenamePasskeyRequest, com.udb.core.authn.services.v1.RenamePasskeyResponse> getRenamePasskeyMethod;
+    if ((getRenamePasskeyMethod = AuthnServiceGrpc.getRenamePasskeyMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getRenamePasskeyMethod = AuthnServiceGrpc.getRenamePasskeyMethod) == null) {
+          AuthnServiceGrpc.getRenamePasskeyMethod = getRenamePasskeyMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.RenamePasskeyRequest, com.udb.core.authn.services.v1.RenamePasskeyResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RenamePasskey"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RenamePasskeyRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RenamePasskeyResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("RenamePasskey"))
+              .build();
+        }
+      }
+    }
+    return getRenamePasskeyMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest,
+      com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse> getRevokeRecoveryCodesMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RevokeRecoveryCodes",
+      requestType = com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest.class,
+      responseType = com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest,
+      com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse> getRevokeRecoveryCodesMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest, com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse> getRevokeRecoveryCodesMethod;
+    if ((getRevokeRecoveryCodesMethod = AuthnServiceGrpc.getRevokeRecoveryCodesMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getRevokeRecoveryCodesMethod = AuthnServiceGrpc.getRevokeRecoveryCodesMethod) == null) {
+          AuthnServiceGrpc.getRevokeRecoveryCodesMethod = getRevokeRecoveryCodesMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest, com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RevokeRecoveryCodes"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("RevokeRecoveryCodes"))
+              .build();
+        }
+      }
+    }
+    return getRevokeRecoveryCodesMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.AdminResetMfaRequest,
+      com.udb.core.authn.services.v1.AdminResetMfaResponse> getAdminResetMfaMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "AdminResetMfa",
+      requestType = com.udb.core.authn.services.v1.AdminResetMfaRequest.class,
+      responseType = com.udb.core.authn.services.v1.AdminResetMfaResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.AdminResetMfaRequest,
+      com.udb.core.authn.services.v1.AdminResetMfaResponse> getAdminResetMfaMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.AdminResetMfaRequest, com.udb.core.authn.services.v1.AdminResetMfaResponse> getAdminResetMfaMethod;
+    if ((getAdminResetMfaMethod = AuthnServiceGrpc.getAdminResetMfaMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getAdminResetMfaMethod = AuthnServiceGrpc.getAdminResetMfaMethod) == null) {
+          AuthnServiceGrpc.getAdminResetMfaMethod = getAdminResetMfaMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.AdminResetMfaRequest, com.udb.core.authn.services.v1.AdminResetMfaResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "AdminResetMfa"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.AdminResetMfaRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.AdminResetMfaResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("AdminResetMfa"))
+              .build();
+        }
+      }
+    }
+    return getAdminResetMfaMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest,
+      com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse> getListWebAuthnCredentialsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListWebAuthnCredentials",
+      requestType = com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest.class,
+      responseType = com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest,
+      com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse> getListWebAuthnCredentialsMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest, com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse> getListWebAuthnCredentialsMethod;
+    if ((getListWebAuthnCredentialsMethod = AuthnServiceGrpc.getListWebAuthnCredentialsMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getListWebAuthnCredentialsMethod = AuthnServiceGrpc.getListWebAuthnCredentialsMethod) == null) {
+          AuthnServiceGrpc.getListWebAuthnCredentialsMethod = getListWebAuthnCredentialsMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest, com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListWebAuthnCredentials"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("ListWebAuthnCredentials"))
+              .build();
+        }
+      }
+    }
+    return getListWebAuthnCredentialsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest,
+      com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse> getDeleteWebAuthnCredentialMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "DeleteWebAuthnCredential",
+      requestType = com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest.class,
+      responseType = com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest,
+      com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse> getDeleteWebAuthnCredentialMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest, com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse> getDeleteWebAuthnCredentialMethod;
+    if ((getDeleteWebAuthnCredentialMethod = AuthnServiceGrpc.getDeleteWebAuthnCredentialMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getDeleteWebAuthnCredentialMethod = AuthnServiceGrpc.getDeleteWebAuthnCredentialMethod) == null) {
+          AuthnServiceGrpc.getDeleteWebAuthnCredentialMethod = getDeleteWebAuthnCredentialMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest, com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "DeleteWebAuthnCredential"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("DeleteWebAuthnCredential"))
+              .build();
+        }
+      }
+    }
+    return getDeleteWebAuthnCredentialMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -1486,6 +1951,120 @@ public final class AuthnServiceGrpc {
     default void finishWebAuthnAuthentication(com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest request,
         io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getFinishWebAuthnAuthenticationMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+     * </pre>
+     */
+    default void listDevices(com.udb.core.authn.services.v1.ListDevicesRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListDevicesResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListDevicesMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void revokeDevice(com.udb.core.authn.services.v1.RevokeDeviceRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeDeviceResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRevokeDeviceMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void adminRevokeSession(com.udb.core.authn.services.v1.AdminRevokeSessionRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AdminRevokeSessionResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAdminRevokeSessionMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void adminRevokeAllUserSessions(com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAdminRevokeAllUserSessionsMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void adminRevokeAllTenantSessions(com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAdminRevokeAllTenantSessionsMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void emergencyRevoke(com.udb.core.authn.services.v1.EmergencyRevokeRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.EmergencyRevokeResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getEmergencyRevokeMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+     * </pre>
+     */
+    default void issueMfaChallenge(com.udb.core.authn.services.v1.IssueMfaChallengeRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.IssueMfaChallengeResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getIssueMfaChallengeMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void verifyMfaChallenge(com.udb.core.authn.services.v1.VerifyMfaChallengeRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.VerifyMfaChallengeResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getVerifyMfaChallengeMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void listMfaFactors(com.udb.core.authn.services.v1.ListMfaFactorsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListMfaFactorsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListMfaFactorsMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void disableMfaFactor(com.udb.core.authn.services.v1.DisableMfaFactorRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.DisableMfaFactorResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDisableMfaFactorMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void renamePasskey(com.udb.core.authn.services.v1.RenamePasskeyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RenamePasskeyResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRenamePasskeyMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void revokeRecoveryCodes(com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRevokeRecoveryCodesMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void adminResetMfa(com.udb.core.authn.services.v1.AdminResetMfaRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AdminResetMfaResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAdminResetMfaMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+     * </pre>
+     */
+    default void listWebAuthnCredentials(com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListWebAuthnCredentialsMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void deleteWebAuthnCredential(com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDeleteWebAuthnCredentialMethod(), responseObserver);
     }
   }
 
@@ -1878,6 +2457,135 @@ public final class AuthnServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getFinishWebAuthnAuthenticationMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+     * </pre>
+     */
+    public void listDevices(com.udb.core.authn.services.v1.ListDevicesRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListDevicesResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListDevicesMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void revokeDevice(com.udb.core.authn.services.v1.RevokeDeviceRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeDeviceResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRevokeDeviceMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void adminRevokeSession(com.udb.core.authn.services.v1.AdminRevokeSessionRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AdminRevokeSessionResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getAdminRevokeSessionMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void adminRevokeAllUserSessions(com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getAdminRevokeAllUserSessionsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void adminRevokeAllTenantSessions(com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getAdminRevokeAllTenantSessionsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void emergencyRevoke(com.udb.core.authn.services.v1.EmergencyRevokeRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.EmergencyRevokeResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getEmergencyRevokeMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+     * </pre>
+     */
+    public void issueMfaChallenge(com.udb.core.authn.services.v1.IssueMfaChallengeRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.IssueMfaChallengeResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getIssueMfaChallengeMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void verifyMfaChallenge(com.udb.core.authn.services.v1.VerifyMfaChallengeRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.VerifyMfaChallengeResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getVerifyMfaChallengeMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void listMfaFactors(com.udb.core.authn.services.v1.ListMfaFactorsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListMfaFactorsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListMfaFactorsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void disableMfaFactor(com.udb.core.authn.services.v1.DisableMfaFactorRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.DisableMfaFactorResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getDisableMfaFactorMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void renamePasskey(com.udb.core.authn.services.v1.RenamePasskeyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RenamePasskeyResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRenamePasskeyMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void revokeRecoveryCodes(com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRevokeRecoveryCodesMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void adminResetMfa(com.udb.core.authn.services.v1.AdminResetMfaRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AdminResetMfaResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getAdminResetMfaMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+     * </pre>
+     */
+    public void listWebAuthnCredentials(com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListWebAuthnCredentialsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void deleteWebAuthnCredential(com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getDeleteWebAuthnCredentialMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -2211,6 +2919,120 @@ public final class AuthnServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getFinishWebAuthnAuthenticationMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ListDevicesResponse listDevices(com.udb.core.authn.services.v1.ListDevicesRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListDevicesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.RevokeDeviceResponse revokeDevice(com.udb.core.authn.services.v1.RevokeDeviceRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getRevokeDeviceMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.AdminRevokeSessionResponse adminRevokeSession(com.udb.core.authn.services.v1.AdminRevokeSessionRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getAdminRevokeSessionMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse adminRevokeAllUserSessions(com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getAdminRevokeAllUserSessionsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse adminRevokeAllTenantSessions(com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getAdminRevokeAllTenantSessionsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.EmergencyRevokeResponse emergencyRevoke(com.udb.core.authn.services.v1.EmergencyRevokeRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getEmergencyRevokeMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.IssueMfaChallengeResponse issueMfaChallenge(com.udb.core.authn.services.v1.IssueMfaChallengeRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getIssueMfaChallengeMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.VerifyMfaChallengeResponse verifyMfaChallenge(com.udb.core.authn.services.v1.VerifyMfaChallengeRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getVerifyMfaChallengeMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.ListMfaFactorsResponse listMfaFactors(com.udb.core.authn.services.v1.ListMfaFactorsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListMfaFactorsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.DisableMfaFactorResponse disableMfaFactor(com.udb.core.authn.services.v1.DisableMfaFactorRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getDisableMfaFactorMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.RenamePasskeyResponse renamePasskey(com.udb.core.authn.services.v1.RenamePasskeyRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getRenamePasskeyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse revokeRecoveryCodes(com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getRevokeRecoveryCodesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.AdminResetMfaResponse adminResetMfa(com.udb.core.authn.services.v1.AdminResetMfaRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getAdminResetMfaMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse listWebAuthnCredentials(com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListWebAuthnCredentialsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse deleteWebAuthnCredential(com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getDeleteWebAuthnCredentialMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -2543,6 +3365,120 @@ public final class AuthnServiceGrpc {
     public com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse finishWebAuthnAuthentication(com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getFinishWebAuthnAuthenticationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ListDevicesResponse listDevices(com.udb.core.authn.services.v1.ListDevicesRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListDevicesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.RevokeDeviceResponse revokeDevice(com.udb.core.authn.services.v1.RevokeDeviceRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRevokeDeviceMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.AdminRevokeSessionResponse adminRevokeSession(com.udb.core.authn.services.v1.AdminRevokeSessionRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getAdminRevokeSessionMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse adminRevokeAllUserSessions(com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getAdminRevokeAllUserSessionsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse adminRevokeAllTenantSessions(com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getAdminRevokeAllTenantSessionsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.EmergencyRevokeResponse emergencyRevoke(com.udb.core.authn.services.v1.EmergencyRevokeRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getEmergencyRevokeMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.IssueMfaChallengeResponse issueMfaChallenge(com.udb.core.authn.services.v1.IssueMfaChallengeRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getIssueMfaChallengeMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.VerifyMfaChallengeResponse verifyMfaChallenge(com.udb.core.authn.services.v1.VerifyMfaChallengeRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getVerifyMfaChallengeMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.ListMfaFactorsResponse listMfaFactors(com.udb.core.authn.services.v1.ListMfaFactorsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListMfaFactorsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.DisableMfaFactorResponse disableMfaFactor(com.udb.core.authn.services.v1.DisableMfaFactorRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getDisableMfaFactorMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.RenamePasskeyResponse renamePasskey(com.udb.core.authn.services.v1.RenamePasskeyRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRenamePasskeyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse revokeRecoveryCodes(com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRevokeRecoveryCodesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.AdminResetMfaResponse adminResetMfa(com.udb.core.authn.services.v1.AdminResetMfaRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getAdminResetMfaMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse listWebAuthnCredentials(com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListWebAuthnCredentialsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse deleteWebAuthnCredential(com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getDeleteWebAuthnCredentialMethod(), getCallOptions(), request);
     }
   }
 
@@ -2912,6 +3848,135 @@ public final class AuthnServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getFinishWebAuthnAuthenticationMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ListDevicesResponse> listDevices(
+        com.udb.core.authn.services.v1.ListDevicesRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListDevicesMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.RevokeDeviceResponse> revokeDevice(
+        com.udb.core.authn.services.v1.RevokeDeviceRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRevokeDeviceMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.AdminRevokeSessionResponse> adminRevokeSession(
+        com.udb.core.authn.services.v1.AdminRevokeSessionRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getAdminRevokeSessionMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse> adminRevokeAllUserSessions(
+        com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getAdminRevokeAllUserSessionsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse> adminRevokeAllTenantSessions(
+        com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getAdminRevokeAllTenantSessionsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.EmergencyRevokeResponse> emergencyRevoke(
+        com.udb.core.authn.services.v1.EmergencyRevokeRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getEmergencyRevokeMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.IssueMfaChallengeResponse> issueMfaChallenge(
+        com.udb.core.authn.services.v1.IssueMfaChallengeRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getIssueMfaChallengeMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.VerifyMfaChallengeResponse> verifyMfaChallenge(
+        com.udb.core.authn.services.v1.VerifyMfaChallengeRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getVerifyMfaChallengeMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ListMfaFactorsResponse> listMfaFactors(
+        com.udb.core.authn.services.v1.ListMfaFactorsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListMfaFactorsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.DisableMfaFactorResponse> disableMfaFactor(
+        com.udb.core.authn.services.v1.DisableMfaFactorRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getDisableMfaFactorMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.RenamePasskeyResponse> renamePasskey(
+        com.udb.core.authn.services.v1.RenamePasskeyRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRenamePasskeyMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse> revokeRecoveryCodes(
+        com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRevokeRecoveryCodesMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.AdminResetMfaResponse> adminResetMfa(
+        com.udb.core.authn.services.v1.AdminResetMfaRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getAdminResetMfaMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse> listWebAuthnCredentials(
+        com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListWebAuthnCredentialsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse> deleteWebAuthnCredential(
+        com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getDeleteWebAuthnCredentialMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_USER = 0;
@@ -2949,6 +4014,21 @@ public final class AuthnServiceGrpc {
   private static final int METHODID_FINISH_WEB_AUTHN_REGISTRATION = 32;
   private static final int METHODID_START_WEB_AUTHN_AUTHENTICATION = 33;
   private static final int METHODID_FINISH_WEB_AUTHN_AUTHENTICATION = 34;
+  private static final int METHODID_LIST_DEVICES = 35;
+  private static final int METHODID_REVOKE_DEVICE = 36;
+  private static final int METHODID_ADMIN_REVOKE_SESSION = 37;
+  private static final int METHODID_ADMIN_REVOKE_ALL_USER_SESSIONS = 38;
+  private static final int METHODID_ADMIN_REVOKE_ALL_TENANT_SESSIONS = 39;
+  private static final int METHODID_EMERGENCY_REVOKE = 40;
+  private static final int METHODID_ISSUE_MFA_CHALLENGE = 41;
+  private static final int METHODID_VERIFY_MFA_CHALLENGE = 42;
+  private static final int METHODID_LIST_MFA_FACTORS = 43;
+  private static final int METHODID_DISABLE_MFA_FACTOR = 44;
+  private static final int METHODID_RENAME_PASSKEY = 45;
+  private static final int METHODID_REVOKE_RECOVERY_CODES = 46;
+  private static final int METHODID_ADMIN_RESET_MFA = 47;
+  private static final int METHODID_LIST_WEB_AUTHN_CREDENTIALS = 48;
+  private static final int METHODID_DELETE_WEB_AUTHN_CREDENTIAL = 49;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -3106,6 +4186,66 @@ public final class AuthnServiceGrpc {
         case METHODID_FINISH_WEB_AUTHN_AUTHENTICATION:
           serviceImpl.finishWebAuthnAuthentication((com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse>) responseObserver);
+          break;
+        case METHODID_LIST_DEVICES:
+          serviceImpl.listDevices((com.udb.core.authn.services.v1.ListDevicesRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListDevicesResponse>) responseObserver);
+          break;
+        case METHODID_REVOKE_DEVICE:
+          serviceImpl.revokeDevice((com.udb.core.authn.services.v1.RevokeDeviceRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeDeviceResponse>) responseObserver);
+          break;
+        case METHODID_ADMIN_REVOKE_SESSION:
+          serviceImpl.adminRevokeSession((com.udb.core.authn.services.v1.AdminRevokeSessionRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AdminRevokeSessionResponse>) responseObserver);
+          break;
+        case METHODID_ADMIN_REVOKE_ALL_USER_SESSIONS:
+          serviceImpl.adminRevokeAllUserSessions((com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse>) responseObserver);
+          break;
+        case METHODID_ADMIN_REVOKE_ALL_TENANT_SESSIONS:
+          serviceImpl.adminRevokeAllTenantSessions((com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse>) responseObserver);
+          break;
+        case METHODID_EMERGENCY_REVOKE:
+          serviceImpl.emergencyRevoke((com.udb.core.authn.services.v1.EmergencyRevokeRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.EmergencyRevokeResponse>) responseObserver);
+          break;
+        case METHODID_ISSUE_MFA_CHALLENGE:
+          serviceImpl.issueMfaChallenge((com.udb.core.authn.services.v1.IssueMfaChallengeRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.IssueMfaChallengeResponse>) responseObserver);
+          break;
+        case METHODID_VERIFY_MFA_CHALLENGE:
+          serviceImpl.verifyMfaChallenge((com.udb.core.authn.services.v1.VerifyMfaChallengeRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.VerifyMfaChallengeResponse>) responseObserver);
+          break;
+        case METHODID_LIST_MFA_FACTORS:
+          serviceImpl.listMfaFactors((com.udb.core.authn.services.v1.ListMfaFactorsRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListMfaFactorsResponse>) responseObserver);
+          break;
+        case METHODID_DISABLE_MFA_FACTOR:
+          serviceImpl.disableMfaFactor((com.udb.core.authn.services.v1.DisableMfaFactorRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.DisableMfaFactorResponse>) responseObserver);
+          break;
+        case METHODID_RENAME_PASSKEY:
+          serviceImpl.renamePasskey((com.udb.core.authn.services.v1.RenamePasskeyRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RenamePasskeyResponse>) responseObserver);
+          break;
+        case METHODID_REVOKE_RECOVERY_CODES:
+          serviceImpl.revokeRecoveryCodes((com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse>) responseObserver);
+          break;
+        case METHODID_ADMIN_RESET_MFA:
+          serviceImpl.adminResetMfa((com.udb.core.authn.services.v1.AdminResetMfaRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AdminResetMfaResponse>) responseObserver);
+          break;
+        case METHODID_LIST_WEB_AUTHN_CREDENTIALS:
+          serviceImpl.listWebAuthnCredentials((com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse>) responseObserver);
+          break;
+        case METHODID_DELETE_WEB_AUTHN_CREDENTIAL:
+          serviceImpl.deleteWebAuthnCredential((com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -3370,6 +4510,111 @@ public final class AuthnServiceGrpc {
               com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest,
               com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse>(
                 service, METHODID_FINISH_WEB_AUTHN_AUTHENTICATION)))
+        .addMethod(
+          getListDevicesMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.ListDevicesRequest,
+              com.udb.core.authn.services.v1.ListDevicesResponse>(
+                service, METHODID_LIST_DEVICES)))
+        .addMethod(
+          getRevokeDeviceMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.RevokeDeviceRequest,
+              com.udb.core.authn.services.v1.RevokeDeviceResponse>(
+                service, METHODID_REVOKE_DEVICE)))
+        .addMethod(
+          getAdminRevokeSessionMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.AdminRevokeSessionRequest,
+              com.udb.core.authn.services.v1.AdminRevokeSessionResponse>(
+                service, METHODID_ADMIN_REVOKE_SESSION)))
+        .addMethod(
+          getAdminRevokeAllUserSessionsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest,
+              com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse>(
+                service, METHODID_ADMIN_REVOKE_ALL_USER_SESSIONS)))
+        .addMethod(
+          getAdminRevokeAllTenantSessionsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest,
+              com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse>(
+                service, METHODID_ADMIN_REVOKE_ALL_TENANT_SESSIONS)))
+        .addMethod(
+          getEmergencyRevokeMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.EmergencyRevokeRequest,
+              com.udb.core.authn.services.v1.EmergencyRevokeResponse>(
+                service, METHODID_EMERGENCY_REVOKE)))
+        .addMethod(
+          getIssueMfaChallengeMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.IssueMfaChallengeRequest,
+              com.udb.core.authn.services.v1.IssueMfaChallengeResponse>(
+                service, METHODID_ISSUE_MFA_CHALLENGE)))
+        .addMethod(
+          getVerifyMfaChallengeMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.VerifyMfaChallengeRequest,
+              com.udb.core.authn.services.v1.VerifyMfaChallengeResponse>(
+                service, METHODID_VERIFY_MFA_CHALLENGE)))
+        .addMethod(
+          getListMfaFactorsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.ListMfaFactorsRequest,
+              com.udb.core.authn.services.v1.ListMfaFactorsResponse>(
+                service, METHODID_LIST_MFA_FACTORS)))
+        .addMethod(
+          getDisableMfaFactorMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.DisableMfaFactorRequest,
+              com.udb.core.authn.services.v1.DisableMfaFactorResponse>(
+                service, METHODID_DISABLE_MFA_FACTOR)))
+        .addMethod(
+          getRenamePasskeyMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.RenamePasskeyRequest,
+              com.udb.core.authn.services.v1.RenamePasskeyResponse>(
+                service, METHODID_RENAME_PASSKEY)))
+        .addMethod(
+          getRevokeRecoveryCodesMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest,
+              com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse>(
+                service, METHODID_REVOKE_RECOVERY_CODES)))
+        .addMethod(
+          getAdminResetMfaMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.AdminResetMfaRequest,
+              com.udb.core.authn.services.v1.AdminResetMfaResponse>(
+                service, METHODID_ADMIN_RESET_MFA)))
+        .addMethod(
+          getListWebAuthnCredentialsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest,
+              com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse>(
+                service, METHODID_LIST_WEB_AUTHN_CREDENTIALS)))
+        .addMethod(
+          getDeleteWebAuthnCredentialMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest,
+              com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse>(
+                service, METHODID_DELETE_WEB_AUTHN_CREDENTIAL)))
         .build();
   }
 
@@ -3453,6 +4698,21 @@ public final class AuthnServiceGrpc {
               .addMethod(getFinishWebAuthnRegistrationMethod())
               .addMethod(getStartWebAuthnAuthenticationMethod())
               .addMethod(getFinishWebAuthnAuthenticationMethod())
+              .addMethod(getListDevicesMethod())
+              .addMethod(getRevokeDeviceMethod())
+              .addMethod(getAdminRevokeSessionMethod())
+              .addMethod(getAdminRevokeAllUserSessionsMethod())
+              .addMethod(getAdminRevokeAllTenantSessionsMethod())
+              .addMethod(getEmergencyRevokeMethod())
+              .addMethod(getIssueMfaChallengeMethod())
+              .addMethod(getVerifyMfaChallengeMethod())
+              .addMethod(getListMfaFactorsMethod())
+              .addMethod(getDisableMfaFactorMethod())
+              .addMethod(getRenamePasskeyMethod())
+              .addMethod(getRevokeRecoveryCodesMethod())
+              .addMethod(getAdminResetMfaMethod())
+              .addMethod(getListWebAuthnCredentialsMethod())
+              .addMethod(getDeleteWebAuthnCredentialMethod())
               .build();
         }
       }

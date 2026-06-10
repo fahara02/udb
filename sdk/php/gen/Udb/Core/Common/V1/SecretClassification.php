@@ -52,6 +52,13 @@ class SecretClassification
      * Generated from protobuf enum <code>SECRET_CLASSIFICATION_OPERATIONAL = 9;</code>
      */
     const SECRET_CLASSIFICATION_OPERATIONAL = 9;
+    /**
+     * Asymmetric private key material (e.g. SAML SP signing key). Referenced by the
+     * idp proto's db_column_security; added here to keep the contract compiling.
+     *
+     * Generated from protobuf enum <code>SECRET_CLASSIFICATION_PRIVATE_KEY = 10;</code>
+     */
+    const SECRET_CLASSIFICATION_PRIVATE_KEY = 10;
 
     private static $valueToName = [
         self::SECRET_CLASSIFICATION_UNSPECIFIED => 'SECRET_CLASSIFICATION_UNSPECIFIED',
@@ -64,6 +71,7 @@ class SecretClassification
         self::SECRET_CLASSIFICATION_IDENTITY => 'SECRET_CLASSIFICATION_IDENTITY',
         self::SECRET_CLASSIFICATION_PII => 'SECRET_CLASSIFICATION_PII',
         self::SECRET_CLASSIFICATION_OPERATIONAL => 'SECRET_CLASSIFICATION_OPERATIONAL',
+        self::SECRET_CLASSIFICATION_PRIVATE_KEY => 'SECRET_CLASSIFICATION_PRIVATE_KEY',
     ];
 
     public static function name($value)

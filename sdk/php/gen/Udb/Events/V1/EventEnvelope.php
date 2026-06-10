@@ -5,9 +5,7 @@
 
 namespace Udb\Events\V1;
 
-use Google\Protobuf\Internal\GPBType;
 use Google\Protobuf\Internal\GPBUtil;
-use Google\Protobuf\RepeatedField;
 
 /**
  * Canonical inner envelope wrapping every native domain event stored in the
@@ -15,7 +13,6 @@ use Google\Protobuf\RepeatedField;
  * the per-domain Kafka topic (e.g. `udb.authn.user.registered.v1`); downstream
  * Apache Spark streaming jobs decode it. The concrete domain event (authn,
  * authz, or apikey) is carried as a JSON object under `payload`.
- *
  * This formalizes the shape produced by the native auth services'
  * outbox event sink and by the broker's `prepare_outbox_envelope`, so producers
  * and Spark consumers share one contract.
@@ -288,4 +285,3 @@ class EventEnvelope extends \Google\Protobuf\Internal\Message
     }
 
 }
-

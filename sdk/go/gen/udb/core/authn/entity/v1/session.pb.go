@@ -280,7 +280,7 @@ var File_udb_core_authn_entity_v1_session_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_session_proto_rawDesc = "" +
 	"\n" +
-	"&udb/core/authn/entity/v1/session.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xbc \n" +
+	"&udb/core/authn/entity/v1/session.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb5 \n" +
 	"\aSession\x12L\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tB-\x82\xb7\x18)\n" +
@@ -364,14 +364,14 @@ const file_udb_core_authn_entity_v1_session_proto_rawDesc = "" +
 	"\vscopes_json\x12\x05JSONB\x18\x01:\v'[]'::jsonbZ&Scopes resolved at authentication timex\x01R\n" +
 	"scopesJson\x12\x83\x01\n" +
 	"\rmetadata_json\x18\x19 \x01(\tB^\x82\xb7\x18Z\n" +
-	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ1Non-secret session metadata for audit and routingx\x01R\fmetadataJson:\xf0\x04\xa2\xb5\x18@\b\x01\x12\x18udb:session:{session_id}\x18\x88\x0e \x01(\x01:\x12REDIS_CLUSTER_ADDRB\asession\xfa\xb6\x18\x8b\x03\n" +
+	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ1Non-secret session metadata for audit and routingx\x01R\fmetadataJson:\xe9\x04\xa2\xb5\x18@\b\x01\x12\x18udb:session:{session_id}\x18\x88\x0e \x01(\x01:\x12REDIS_CLUSTER_ADDRB\asession\xfa\xb6\x18\x8b\x03\n" +
 	"\bsessions\x12\tudb_authn\x18\x02 \x01*FActive sessions across web, API, workload, and external identity flows@\x01H\x03R\n" +
 	"created_atX\xb4\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01P\n" +
 	"%idx_sessions_tenant_user_session_type\x12\x05BTREEZ\ttenant_idZ\auser_idZ\fsession_type\x9a\x01\x15\n" +
 	"\n" +
-	"pg_partman\x12\apartman\xca\x01\aMONTHLY\xd0\x01\x03\xd8\x01\x01\xe0\x01\x06\xea\x01\aprimary\xf2\x01\x16udb.authn.sessions.cdc\xfa\x01\x13authn:sessions:read\x8a\xb2\x19\x97\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf7\x01\n" +
+	"pg_partman\x12\apartman\xca\x01\aMONTHLY\xd0\x01\x03\xd8\x01\x01\xe0\x01\x06\xea\x01\aprimary\xf2\x01\x16udb.authn.sessions.cdc\xfa\x01\x13authn:sessions:read\x8a\xb2\x19\x90\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf7\x01\n" +
 	"\x1ccom.udb.core.authn.entity.v1B\fSessionProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (

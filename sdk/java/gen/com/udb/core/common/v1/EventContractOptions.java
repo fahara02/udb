@@ -34,6 +34,7 @@ private static final long serialVersionUID = 0L;
     payloadRedactionProfile_ = "";
     deliveryGuarantee_ = "";
     replayCompatibility_ = "";
+    emits_ = java.util.Collections.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -52,6 +53,1214 @@ private static final long serialVersionUID = 0L;
     return com.udb.core.common.v1.SecurityProto.internal_static_udb_core_common_v1_EventContractOptions_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
             com.udb.core.common.v1.EventContractOptions.class, com.udb.core.common.v1.EventContractOptions.Builder.class);
+  }
+
+  public interface EmittedEventOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:udb.core.common.v1.EventContractOptions.EmittedEvent)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <pre>
+     * versioned: udb.&lt;domain&gt;.&lt;entity&gt;.&lt;action&gt;.v1
+     * </pre>
+     *
+     * <code>string topic = 1 [json_name = "topic"];</code>
+     * @return The topic.
+     */
+    java.lang.String getTopic();
+    /**
+     * <pre>
+     * versioned: udb.&lt;domain&gt;.&lt;entity&gt;.&lt;action&gt;.v1
+     * </pre>
+     *
+     * <code>string topic = 1 [json_name = "topic"];</code>
+     * @return The bytes for topic.
+     */
+    com.google.protobuf.ByteString
+        getTopicBytes();
+
+    /**
+     * <pre>
+     * request/aggregate field used as the Kafka partition key
+     * </pre>
+     *
+     * <code>string partition_key_field = 2 [json_name = "partitionKeyField"];</code>
+     * @return The partitionKeyField.
+     */
+    java.lang.String getPartitionKeyField();
+    /**
+     * <pre>
+     * request/aggregate field used as the Kafka partition key
+     * </pre>
+     *
+     * <code>string partition_key_field = 2 [json_name = "partitionKeyField"];</code>
+     * @return The bytes for partitionKeyField.
+     */
+    com.google.protobuf.ByteString
+        getPartitionKeyFieldBytes();
+
+    /**
+     * <pre>
+     * e.g. at_least_once
+     * </pre>
+     *
+     * <code>string delivery_guarantee = 3 [json_name = "deliveryGuarantee"];</code>
+     * @return The deliveryGuarantee.
+     */
+    java.lang.String getDeliveryGuarantee();
+    /**
+     * <pre>
+     * e.g. at_least_once
+     * </pre>
+     *
+     * <code>string delivery_guarantee = 3 [json_name = "deliveryGuarantee"];</code>
+     * @return The bytes for deliveryGuarantee.
+     */
+    com.google.protobuf.ByteString
+        getDeliveryGuaranteeBytes();
+
+    /**
+     * <pre>
+     * e.g. standard
+     * </pre>
+     *
+     * <code>string payload_redaction_profile = 4 [json_name = "payloadRedactionProfile"];</code>
+     * @return The payloadRedactionProfile.
+     */
+    java.lang.String getPayloadRedactionProfile();
+    /**
+     * <pre>
+     * e.g. standard
+     * </pre>
+     *
+     * <code>string payload_redaction_profile = 4 [json_name = "payloadRedactionProfile"];</code>
+     * @return The bytes for payloadRedactionProfile.
+     */
+    com.google.protobuf.ByteString
+        getPayloadRedactionProfileBytes();
+
+    /**
+     * <pre>
+     * not every call emits it (e.g. per-peer/per-track or no-op)
+     * </pre>
+     *
+     * <code>bool conditional = 5 [json_name = "conditional"];</code>
+     * @return The conditional.
+     */
+    boolean getConditional();
+  }
+  /**
+   * <pre>
+   * One versioned domain event an RPC publishes to the outbox→CDC→Kafka relay.
+   * </pre>
+   *
+   * Protobuf type {@code udb.core.common.v1.EventContractOptions.EmittedEvent}
+   */
+  public static final class EmittedEvent extends
+      com.google.protobuf.GeneratedMessage implements
+      // @@protoc_insertion_point(message_implements:udb.core.common.v1.EventContractOptions.EmittedEvent)
+      EmittedEventOrBuilder {
+  private static final long serialVersionUID = 0L;
+    static {
+      com.google.protobuf.RuntimeVersion.validateProtobufGencodeVersion(
+        com.google.protobuf.RuntimeVersion.RuntimeDomain.PUBLIC,
+        /* major= */ 4,
+        /* minor= */ 35,
+        /* patch= */ 0,
+        /* suffix= */ "",
+        "EmittedEvent");
+    }
+    // Use EmittedEvent.newBuilder() to construct.
+    private EmittedEvent(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+    }
+    private EmittedEvent() {
+      topic_ = "";
+      partitionKeyField_ = "";
+      deliveryGuarantee_ = "";
+      payloadRedactionProfile_ = "";
+    }
+
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.udb.core.common.v1.SecurityProto.internal_static_udb_core_common_v1_EventContractOptions_EmittedEvent_descriptor;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Descriptors.Descriptor getDescriptorForType() {
+      return com.udb.core.common.v1.SecurityProto.internal_static_udb_core_common_v1_EventContractOptions_EmittedEvent_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.udb.core.common.v1.SecurityProto.internal_static_udb_core_common_v1_EventContractOptions_EmittedEvent_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.udb.core.common.v1.EventContractOptions.EmittedEvent.class, com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder.class);
+    }
+
+    public static final int TOPIC_FIELD_NUMBER = 1;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object topic_ = "";
+    /**
+     * <pre>
+     * versioned: udb.&lt;domain&gt;.&lt;entity&gt;.&lt;action&gt;.v1
+     * </pre>
+     *
+     * <code>string topic = 1 [json_name = "topic"];</code>
+     * @return The topic.
+     */
+    @java.lang.Override
+    public java.lang.String getTopic() {
+      java.lang.Object ref = topic_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        topic_ = s;
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * versioned: udb.&lt;domain&gt;.&lt;entity&gt;.&lt;action&gt;.v1
+     * </pre>
+     *
+     * <code>string topic = 1 [json_name = "topic"];</code>
+     * @return The bytes for topic.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getTopicBytes() {
+      java.lang.Object ref = topic_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        topic_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int PARTITION_KEY_FIELD_FIELD_NUMBER = 2;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object partitionKeyField_ = "";
+    /**
+     * <pre>
+     * request/aggregate field used as the Kafka partition key
+     * </pre>
+     *
+     * <code>string partition_key_field = 2 [json_name = "partitionKeyField"];</code>
+     * @return The partitionKeyField.
+     */
+    @java.lang.Override
+    public java.lang.String getPartitionKeyField() {
+      java.lang.Object ref = partitionKeyField_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        partitionKeyField_ = s;
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * request/aggregate field used as the Kafka partition key
+     * </pre>
+     *
+     * <code>string partition_key_field = 2 [json_name = "partitionKeyField"];</code>
+     * @return The bytes for partitionKeyField.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getPartitionKeyFieldBytes() {
+      java.lang.Object ref = partitionKeyField_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        partitionKeyField_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int DELIVERY_GUARANTEE_FIELD_NUMBER = 3;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object deliveryGuarantee_ = "";
+    /**
+     * <pre>
+     * e.g. at_least_once
+     * </pre>
+     *
+     * <code>string delivery_guarantee = 3 [json_name = "deliveryGuarantee"];</code>
+     * @return The deliveryGuarantee.
+     */
+    @java.lang.Override
+    public java.lang.String getDeliveryGuarantee() {
+      java.lang.Object ref = deliveryGuarantee_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        deliveryGuarantee_ = s;
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * e.g. at_least_once
+     * </pre>
+     *
+     * <code>string delivery_guarantee = 3 [json_name = "deliveryGuarantee"];</code>
+     * @return The bytes for deliveryGuarantee.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getDeliveryGuaranteeBytes() {
+      java.lang.Object ref = deliveryGuarantee_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        deliveryGuarantee_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int PAYLOAD_REDACTION_PROFILE_FIELD_NUMBER = 4;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object payloadRedactionProfile_ = "";
+    /**
+     * <pre>
+     * e.g. standard
+     * </pre>
+     *
+     * <code>string payload_redaction_profile = 4 [json_name = "payloadRedactionProfile"];</code>
+     * @return The payloadRedactionProfile.
+     */
+    @java.lang.Override
+    public java.lang.String getPayloadRedactionProfile() {
+      java.lang.Object ref = payloadRedactionProfile_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        payloadRedactionProfile_ = s;
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * e.g. standard
+     * </pre>
+     *
+     * <code>string payload_redaction_profile = 4 [json_name = "payloadRedactionProfile"];</code>
+     * @return The bytes for payloadRedactionProfile.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getPayloadRedactionProfileBytes() {
+      java.lang.Object ref = payloadRedactionProfile_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        payloadRedactionProfile_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int CONDITIONAL_FIELD_NUMBER = 5;
+    private boolean conditional_ = false;
+    /**
+     * <pre>
+     * not every call emits it (e.g. per-peer/per-track or no-op)
+     * </pre>
+     *
+     * <code>bool conditional = 5 [json_name = "conditional"];</code>
+     * @return The conditional.
+     */
+    @java.lang.Override
+    public boolean getConditional() {
+      return conditional_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(topic_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 1, topic_);
+      }
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(partitionKeyField_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 2, partitionKeyField_);
+      }
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deliveryGuarantee_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 3, deliveryGuarantee_);
+      }
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(payloadRedactionProfile_)) {
+        com.google.protobuf.GeneratedMessage.writeString(output, 4, payloadRedactionProfile_);
+      }
+      if (conditional_ != false) {
+        output.writeBool(5, conditional_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+    private int computeSerializedSize_0() {
+      int size = 0;
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(topic_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(1, topic_);
+      }
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(partitionKeyField_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(2, partitionKeyField_);
+      }
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deliveryGuarantee_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(3, deliveryGuarantee_);
+      }
+      if (!com.google.protobuf.GeneratedMessage.isStringEmpty(payloadRedactionProfile_)) {
+        size += com.google.protobuf.GeneratedMessage.computeStringSize(4, payloadRedactionProfile_);
+      }
+      if (conditional_ != false) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(5, conditional_);
+      }
+      return size;
+    }
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      size += computeSerializedSize_0();
+      size += getUnknownFields().getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof com.udb.core.common.v1.EventContractOptions.EmittedEvent)) {
+        return super.equals(obj);
+      }
+      com.udb.core.common.v1.EventContractOptions.EmittedEvent other = (com.udb.core.common.v1.EventContractOptions.EmittedEvent) obj;
+
+      if (!getTopic()
+          .equals(other.getTopic())) return false;
+      if (!getPartitionKeyField()
+          .equals(other.getPartitionKeyField())) return false;
+      if (!getDeliveryGuarantee()
+          .equals(other.getDeliveryGuarantee())) return false;
+      if (!getPayloadRedactionProfile()
+          .equals(other.getPayloadRedactionProfile())) return false;
+      if (getConditional()
+          != other.getConditional()) return false;
+      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + TOPIC_FIELD_NUMBER;
+      hash = (53 * hash) + getTopic().hashCode();
+      hash = (37 * hash) + PARTITION_KEY_FIELD_FIELD_NUMBER;
+      hash = (53 * hash) + getPartitionKeyField().hashCode();
+      hash = (37 * hash) + DELIVERY_GUARANTEE_FIELD_NUMBER;
+      hash = (53 * hash) + getDeliveryGuarantee().hashCode();
+      hash = (37 * hash) + PAYLOAD_REDACTION_PROFILE_FIELD_NUMBER;
+      hash = (53 * hash) + getPayloadRedactionProfile().hashCode();
+      hash = (37 * hash) + CONDITIONAL_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getConditional());
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static com.udb.core.common.v1.EventContractOptions.EmittedEvent parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.udb.core.common.v1.EventContractOptions.EmittedEvent parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.udb.core.common.v1.EventContractOptions.EmittedEvent parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.udb.core.common.v1.EventContractOptions.EmittedEvent parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.udb.core.common.v1.EventContractOptions.EmittedEvent parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.udb.core.common.v1.EventContractOptions.EmittedEvent parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.udb.core.common.v1.EventContractOptions.EmittedEvent parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessage
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.udb.core.common.v1.EventContractOptions.EmittedEvent parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessage
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public static com.udb.core.common.v1.EventContractOptions.EmittedEvent parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessage
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+
+    public static com.udb.core.common.v1.EventContractOptions.EmittedEvent parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessage
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.udb.core.common.v1.EventContractOptions.EmittedEvent parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessage
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.udb.core.common.v1.EventContractOptions.EmittedEvent parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessage
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(com.udb.core.common.v1.EventContractOptions.EmittedEvent prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     * One versioned domain event an RPC publishes to the outbox→CDC→Kafka relay.
+     * </pre>
+     *
+     * Protobuf type {@code udb.core.common.v1.EventContractOptions.EmittedEvent}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:udb.core.common.v1.EventContractOptions.EmittedEvent)
+        com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.udb.core.common.v1.SecurityProto.internal_static_udb_core_common_v1_EventContractOptions_EmittedEvent_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.udb.core.common.v1.SecurityProto.internal_static_udb_core_common_v1_EventContractOptions_EmittedEvent_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.udb.core.common.v1.EventContractOptions.EmittedEvent.class, com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder.class);
+      }
+
+      // Construct using com.udb.core.common.v1.EventContractOptions.EmittedEvent.newBuilder()
+      private Builder() {
+
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        bitField0_ = 0;
+        topic_ = "";
+        partitionKeyField_ = "";
+        deliveryGuarantee_ = "";
+        payloadRedactionProfile_ = "";
+        conditional_ = false;
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.udb.core.common.v1.SecurityProto.internal_static_udb_core_common_v1_EventContractOptions_EmittedEvent_descriptor;
+      }
+
+      @java.lang.Override
+      public com.udb.core.common.v1.EventContractOptions.EmittedEvent getDefaultInstanceForType() {
+        return com.udb.core.common.v1.EventContractOptions.EmittedEvent.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public com.udb.core.common.v1.EventContractOptions.EmittedEvent build() {
+        com.udb.core.common.v1.EventContractOptions.EmittedEvent result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public com.udb.core.common.v1.EventContractOptions.EmittedEvent buildPartial() {
+        com.udb.core.common.v1.EventContractOptions.EmittedEvent result = new com.udb.core.common.v1.EventContractOptions.EmittedEvent(this);
+        if (bitField0_ != 0) { buildPartial0(result); }
+        onBuilt();
+        return result;
+      }
+
+      private void buildPartial0(com.udb.core.common.v1.EventContractOptions.EmittedEvent result) {
+        int from_bitField0_ = bitField0_;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.topic_ = topic_;
+        }
+        if (((from_bitField0_ & 0x00000002) != 0)) {
+          result.partitionKeyField_ = partitionKeyField_;
+        }
+        if (((from_bitField0_ & 0x00000004) != 0)) {
+          result.deliveryGuarantee_ = deliveryGuarantee_;
+        }
+        if (((from_bitField0_ & 0x00000008) != 0)) {
+          result.payloadRedactionProfile_ = payloadRedactionProfile_;
+        }
+        if (((from_bitField0_ & 0x00000010) != 0)) {
+          result.conditional_ = conditional_;
+        }
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.udb.core.common.v1.EventContractOptions.EmittedEvent) {
+          return mergeFrom((com.udb.core.common.v1.EventContractOptions.EmittedEvent)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(com.udb.core.common.v1.EventContractOptions.EmittedEvent other) {
+        if (other == com.udb.core.common.v1.EventContractOptions.EmittedEvent.getDefaultInstance()) return this;
+        if (!other.getTopic().isEmpty()) {
+          topic_ = other.topic_;
+          bitField0_ |= 0x00000001;
+          onChanged();
+        }
+        if (!other.getPartitionKeyField().isEmpty()) {
+          partitionKeyField_ = other.partitionKeyField_;
+          bitField0_ |= 0x00000002;
+          onChanged();
+        }
+        if (!other.getDeliveryGuarantee().isEmpty()) {
+          deliveryGuarantee_ = other.deliveryGuarantee_;
+          bitField0_ |= 0x00000004;
+          onChanged();
+        }
+        if (!other.getPayloadRedactionProfile().isEmpty()) {
+          payloadRedactionProfile_ = other.payloadRedactionProfile_;
+          bitField0_ |= 0x00000008;
+          onChanged();
+        }
+        if (other.getConditional() != false) {
+          setConditional(other.getConditional());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        if (extensionRegistry == null) {
+          throw new java.lang.NullPointerException();
+        }
+        try {
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              case 10: {
+                topic_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000001;
+                break;
+              } // case 10
+              case 18: {
+                partitionKeyField_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000002;
+                break;
+              } // case 18
+              case 26: {
+                deliveryGuarantee_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000004;
+                break;
+              } // case 26
+              case 34: {
+                payloadRedactionProfile_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000008;
+                break;
+              } // case 34
+              case 40: {
+                conditional_ = input.readBool();
+                bitField0_ |= 0x00000010;
+                break;
+              } // case 40
+              default: {
+                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                  done = true; // was an endgroup tag
+                }
+                break;
+              } // default:
+            } // switch (tag)
+          } // while (!done)
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.unwrapIOException();
+        } finally {
+          onChanged();
+        } // finally
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object topic_ = "";
+      /**
+       * <pre>
+       * versioned: udb.&lt;domain&gt;.&lt;entity&gt;.&lt;action&gt;.v1
+       * </pre>
+       *
+       * <code>string topic = 1 [json_name = "topic"];</code>
+       * @return The topic.
+       */
+      public java.lang.String getTopic() {
+        java.lang.Object ref = topic_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          topic_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * versioned: udb.&lt;domain&gt;.&lt;entity&gt;.&lt;action&gt;.v1
+       * </pre>
+       *
+       * <code>string topic = 1 [json_name = "topic"];</code>
+       * @return The bytes for topic.
+       */
+      public com.google.protobuf.ByteString
+          getTopicBytes() {
+        java.lang.Object ref = topic_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          topic_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * versioned: udb.&lt;domain&gt;.&lt;entity&gt;.&lt;action&gt;.v1
+       * </pre>
+       *
+       * <code>string topic = 1 [json_name = "topic"];</code>
+       * @param value The topic to set.
+       * @return This builder for chaining.
+       */
+      public Builder setTopic(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        topic_ = value;
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * versioned: udb.&lt;domain&gt;.&lt;entity&gt;.&lt;action&gt;.v1
+       * </pre>
+       *
+       * <code>string topic = 1 [json_name = "topic"];</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearTopic() {
+        topic_ = getDefaultInstance().getTopic();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * versioned: udb.&lt;domain&gt;.&lt;entity&gt;.&lt;action&gt;.v1
+       * </pre>
+       *
+       * <code>string topic = 1 [json_name = "topic"];</code>
+       * @param value The bytes for topic to set.
+       * @return This builder for chaining.
+       */
+      public Builder setTopicBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        topic_ = value;
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object partitionKeyField_ = "";
+      /**
+       * <pre>
+       * request/aggregate field used as the Kafka partition key
+       * </pre>
+       *
+       * <code>string partition_key_field = 2 [json_name = "partitionKeyField"];</code>
+       * @return The partitionKeyField.
+       */
+      public java.lang.String getPartitionKeyField() {
+        java.lang.Object ref = partitionKeyField_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          partitionKeyField_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * request/aggregate field used as the Kafka partition key
+       * </pre>
+       *
+       * <code>string partition_key_field = 2 [json_name = "partitionKeyField"];</code>
+       * @return The bytes for partitionKeyField.
+       */
+      public com.google.protobuf.ByteString
+          getPartitionKeyFieldBytes() {
+        java.lang.Object ref = partitionKeyField_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          partitionKeyField_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * request/aggregate field used as the Kafka partition key
+       * </pre>
+       *
+       * <code>string partition_key_field = 2 [json_name = "partitionKeyField"];</code>
+       * @param value The partitionKeyField to set.
+       * @return This builder for chaining.
+       */
+      public Builder setPartitionKeyField(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        partitionKeyField_ = value;
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * request/aggregate field used as the Kafka partition key
+       * </pre>
+       *
+       * <code>string partition_key_field = 2 [json_name = "partitionKeyField"];</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearPartitionKeyField() {
+        partitionKeyField_ = getDefaultInstance().getPartitionKeyField();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * request/aggregate field used as the Kafka partition key
+       * </pre>
+       *
+       * <code>string partition_key_field = 2 [json_name = "partitionKeyField"];</code>
+       * @param value The bytes for partitionKeyField to set.
+       * @return This builder for chaining.
+       */
+      public Builder setPartitionKeyFieldBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        partitionKeyField_ = value;
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object deliveryGuarantee_ = "";
+      /**
+       * <pre>
+       * e.g. at_least_once
+       * </pre>
+       *
+       * <code>string delivery_guarantee = 3 [json_name = "deliveryGuarantee"];</code>
+       * @return The deliveryGuarantee.
+       */
+      public java.lang.String getDeliveryGuarantee() {
+        java.lang.Object ref = deliveryGuarantee_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          deliveryGuarantee_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * e.g. at_least_once
+       * </pre>
+       *
+       * <code>string delivery_guarantee = 3 [json_name = "deliveryGuarantee"];</code>
+       * @return The bytes for deliveryGuarantee.
+       */
+      public com.google.protobuf.ByteString
+          getDeliveryGuaranteeBytes() {
+        java.lang.Object ref = deliveryGuarantee_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          deliveryGuarantee_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * e.g. at_least_once
+       * </pre>
+       *
+       * <code>string delivery_guarantee = 3 [json_name = "deliveryGuarantee"];</code>
+       * @param value The deliveryGuarantee to set.
+       * @return This builder for chaining.
+       */
+      public Builder setDeliveryGuarantee(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        deliveryGuarantee_ = value;
+        bitField0_ |= 0x00000004;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * e.g. at_least_once
+       * </pre>
+       *
+       * <code>string delivery_guarantee = 3 [json_name = "deliveryGuarantee"];</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearDeliveryGuarantee() {
+        deliveryGuarantee_ = getDefaultInstance().getDeliveryGuarantee();
+        bitField0_ = (bitField0_ & ~0x00000004);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * e.g. at_least_once
+       * </pre>
+       *
+       * <code>string delivery_guarantee = 3 [json_name = "deliveryGuarantee"];</code>
+       * @param value The bytes for deliveryGuarantee to set.
+       * @return This builder for chaining.
+       */
+      public Builder setDeliveryGuaranteeBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        deliveryGuarantee_ = value;
+        bitField0_ |= 0x00000004;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object payloadRedactionProfile_ = "";
+      /**
+       * <pre>
+       * e.g. standard
+       * </pre>
+       *
+       * <code>string payload_redaction_profile = 4 [json_name = "payloadRedactionProfile"];</code>
+       * @return The payloadRedactionProfile.
+       */
+      public java.lang.String getPayloadRedactionProfile() {
+        java.lang.Object ref = payloadRedactionProfile_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          payloadRedactionProfile_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * e.g. standard
+       * </pre>
+       *
+       * <code>string payload_redaction_profile = 4 [json_name = "payloadRedactionProfile"];</code>
+       * @return The bytes for payloadRedactionProfile.
+       */
+      public com.google.protobuf.ByteString
+          getPayloadRedactionProfileBytes() {
+        java.lang.Object ref = payloadRedactionProfile_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          payloadRedactionProfile_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * e.g. standard
+       * </pre>
+       *
+       * <code>string payload_redaction_profile = 4 [json_name = "payloadRedactionProfile"];</code>
+       * @param value The payloadRedactionProfile to set.
+       * @return This builder for chaining.
+       */
+      public Builder setPayloadRedactionProfile(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        payloadRedactionProfile_ = value;
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * e.g. standard
+       * </pre>
+       *
+       * <code>string payload_redaction_profile = 4 [json_name = "payloadRedactionProfile"];</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearPayloadRedactionProfile() {
+        payloadRedactionProfile_ = getDefaultInstance().getPayloadRedactionProfile();
+        bitField0_ = (bitField0_ & ~0x00000008);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * e.g. standard
+       * </pre>
+       *
+       * <code>string payload_redaction_profile = 4 [json_name = "payloadRedactionProfile"];</code>
+       * @param value The bytes for payloadRedactionProfile to set.
+       * @return This builder for chaining.
+       */
+      public Builder setPayloadRedactionProfileBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        payloadRedactionProfile_ = value;
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return this;
+      }
+
+      private boolean conditional_ ;
+      /**
+       * <pre>
+       * not every call emits it (e.g. per-peer/per-track or no-op)
+       * </pre>
+       *
+       * <code>bool conditional = 5 [json_name = "conditional"];</code>
+       * @return The conditional.
+       */
+      @java.lang.Override
+      public boolean getConditional() {
+        return conditional_;
+      }
+      /**
+       * <pre>
+       * not every call emits it (e.g. per-peer/per-track or no-op)
+       * </pre>
+       *
+       * <code>bool conditional = 5 [json_name = "conditional"];</code>
+       * @param value The conditional to set.
+       * @return This builder for chaining.
+       */
+      public Builder setConditional(boolean value) {
+
+        conditional_ = value;
+        bitField0_ |= 0x00000010;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * not every call emits it (e.g. per-peer/per-track or no-op)
+       * </pre>
+       *
+       * <code>bool conditional = 5 [json_name = "conditional"];</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearConditional() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        conditional_ = false;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:udb.core.common.v1.EventContractOptions.EmittedEvent)
+    }
+
+    // @@protoc_insertion_point(class_scope:udb.core.common.v1.EventContractOptions.EmittedEvent)
+    private static final com.udb.core.common.v1.EventContractOptions.EmittedEvent DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new com.udb.core.common.v1.EventContractOptions.EmittedEvent();
+    }
+
+    public static com.udb.core.common.v1.EventContractOptions.EmittedEvent getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<EmittedEvent>
+        PARSER = new com.google.protobuf.AbstractParser<EmittedEvent>() {
+      @java.lang.Override
+      public EmittedEvent parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        Builder builder = newBuilder();
+        try {
+          builder.mergeFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(builder.buildPartial());
+        } catch (com.google.protobuf.UninitializedMessageException e) {
+          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(e)
+              .setUnfinishedMessage(builder.buildPartial());
+        }
+        return builder.buildPartial();
+      }
+    };
+
+    public static com.google.protobuf.Parser<EmittedEvent> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<EmittedEvent> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.udb.core.common.v1.EventContractOptions.EmittedEvent getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
   }
 
   public static final int EVENT_TYPE_FIELD_NUMBER = 1;
@@ -288,6 +1497,82 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int EMITS_FIELD_NUMBER = 7;
+  @SuppressWarnings("serial")
+  private java.util.List<com.udb.core.common.v1.EventContractOptions.EmittedEvent> emits_;
+  /**
+   * <pre>
+   * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+   * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+   * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+   * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+   * </pre>
+   *
+   * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<com.udb.core.common.v1.EventContractOptions.EmittedEvent> getEmitsList() {
+    return emits_;
+  }
+  /**
+   * <pre>
+   * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+   * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+   * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+   * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+   * </pre>
+   *
+   * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder> 
+      getEmitsOrBuilderList() {
+    return emits_;
+  }
+  /**
+   * <pre>
+   * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+   * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+   * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+   * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+   * </pre>
+   *
+   * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+   */
+  @java.lang.Override
+  public int getEmitsCount() {
+    return emits_.size();
+  }
+  /**
+   * <pre>
+   * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+   * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+   * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+   * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+   * </pre>
+   *
+   * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+   */
+  @java.lang.Override
+  public com.udb.core.common.v1.EventContractOptions.EmittedEvent getEmits(int index) {
+    return emits_.get(index);
+  }
+  /**
+   * <pre>
+   * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+   * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+   * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+   * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+   * </pre>
+   *
+   * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+   */
+  @java.lang.Override
+  public com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder getEmitsOrBuilder(
+      int index) {
+    return emits_.get(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -320,6 +1605,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(replayCompatibility_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 6, replayCompatibility_);
     }
+    for (int i = 0; i < emits_.size(); i++) {
+      output.writeMessage(7, emits_.get(i));
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -342,6 +1630,15 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(replayCompatibility_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(6, replayCompatibility_);
     }
+
+        {
+          final int count = emits_.size();
+          for (int i = 0; i < count; i++) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeMessageSizeNoTag(emits_.get(i));
+          }
+          size += 1 * count;
+        }
     return size;
   }
   @java.lang.Override
@@ -378,6 +1675,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getDeliveryGuarantee())) return false;
     if (!getReplayCompatibility()
         .equals(other.getReplayCompatibility())) return false;
+    if (!getEmitsList()
+        .equals(other.getEmitsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -401,6 +1700,10 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getDeliveryGuarantee().hashCode();
     hash = (37 * hash) + REPLAY_COMPATIBILITY_FIELD_NUMBER;
     hash = (53 * hash) + getReplayCompatibility().hashCode();
+    if (getEmitsCount() > 0) {
+      hash = (37 * hash) + EMITS_FIELD_NUMBER;
+      hash = (53 * hash) + getEmitsList().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -538,6 +1841,13 @@ private static final long serialVersionUID = 0L;
       payloadRedactionProfile_ = "";
       deliveryGuarantee_ = "";
       replayCompatibility_ = "";
+      if (emitsBuilder_ == null) {
+        emits_ = java.util.Collections.emptyList();
+      } else {
+        emits_ = null;
+        emitsBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00000040);
       return this;
     }
 
@@ -564,9 +1874,22 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.udb.core.common.v1.EventContractOptions buildPartial() {
       com.udb.core.common.v1.EventContractOptions result = new com.udb.core.common.v1.EventContractOptions(this);
+      buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartialRepeatedFields(com.udb.core.common.v1.EventContractOptions result) {
+      if (emitsBuilder_ == null) {
+        if (((bitField0_ & 0x00000040) != 0)) {
+          emits_ = java.util.Collections.unmodifiableList(emits_);
+          bitField0_ = (bitField0_ & ~0x00000040);
+        }
+        result.emits_ = emits_;
+      } else {
+        result.emits_ = emitsBuilder_.build();
+      }
     }
 
     private void buildPartial0(com.udb.core.common.v1.EventContractOptions result) {
@@ -633,6 +1956,32 @@ private static final long serialVersionUID = 0L;
         bitField0_ |= 0x00000020;
         onChanged();
       }
+      if (emitsBuilder_ == null) {
+        if (!other.emits_.isEmpty()) {
+          if (emits_.isEmpty()) {
+            emits_ = other.emits_;
+            bitField0_ = (bitField0_ & ~0x00000040);
+          } else {
+            ensureEmitsIsMutable();
+            emits_.addAll(other.emits_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.emits_.isEmpty()) {
+          if (emitsBuilder_.isEmpty()) {
+            emitsBuilder_.dispose();
+            emitsBuilder_ = null;
+            emits_ = other.emits_;
+            bitField0_ = (bitField0_ & ~0x00000040);
+            emitsBuilder_ = 
+              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                 internalGetEmitsFieldBuilder() : null;
+          } else {
+            emitsBuilder_.addAllMessages(other.emits_);
+          }
+        }
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -689,6 +2038,19 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000020;
               break;
             } // case 50
+            case 58: {
+              com.udb.core.common.v1.EventContractOptions.EmittedEvent m =
+                  input.readMessage(
+                      com.udb.core.common.v1.EventContractOptions.EmittedEvent.parser(),
+                      extensionRegistry);
+              if (emitsBuilder_ == null) {
+                ensureEmitsIsMutable();
+                emits_.add(m);
+              } else {
+                emitsBuilder_.addMessage(m);
+              }
+              break;
+            } // case 58
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1136,6 +2498,372 @@ private static final long serialVersionUID = 0L;
       bitField0_ |= 0x00000020;
       onChanged();
       return this;
+    }
+
+    private java.util.List<com.udb.core.common.v1.EventContractOptions.EmittedEvent> emits_ =
+      java.util.Collections.emptyList();
+    private void ensureEmitsIsMutable() {
+      if (!((bitField0_ & 0x00000040) != 0)) {
+        emits_ = new java.util.ArrayList<com.udb.core.common.v1.EventContractOptions.EmittedEvent>(emits_);
+        bitField0_ |= 0x00000040;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.core.common.v1.EventContractOptions.EmittedEvent, com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder, com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder> emitsBuilder_;
+
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public java.util.List<com.udb.core.common.v1.EventContractOptions.EmittedEvent> getEmitsList() {
+      if (emitsBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(emits_);
+      } else {
+        return emitsBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public int getEmitsCount() {
+      if (emitsBuilder_ == null) {
+        return emits_.size();
+      } else {
+        return emitsBuilder_.getCount();
+      }
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public com.udb.core.common.v1.EventContractOptions.EmittedEvent getEmits(int index) {
+      if (emitsBuilder_ == null) {
+        return emits_.get(index);
+      } else {
+        return emitsBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public Builder setEmits(
+        int index, com.udb.core.common.v1.EventContractOptions.EmittedEvent value) {
+      if (emitsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureEmitsIsMutable();
+        emits_.set(index, value);
+        onChanged();
+      } else {
+        emitsBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public Builder setEmits(
+        int index, com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder builderForValue) {
+      if (emitsBuilder_ == null) {
+        ensureEmitsIsMutable();
+        emits_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        emitsBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public Builder addEmits(com.udb.core.common.v1.EventContractOptions.EmittedEvent value) {
+      if (emitsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureEmitsIsMutable();
+        emits_.add(value);
+        onChanged();
+      } else {
+        emitsBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public Builder addEmits(
+        int index, com.udb.core.common.v1.EventContractOptions.EmittedEvent value) {
+      if (emitsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureEmitsIsMutable();
+        emits_.add(index, value);
+        onChanged();
+      } else {
+        emitsBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public Builder addEmits(
+        com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder builderForValue) {
+      if (emitsBuilder_ == null) {
+        ensureEmitsIsMutable();
+        emits_.add(builderForValue.build());
+        onChanged();
+      } else {
+        emitsBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public Builder addEmits(
+        int index, com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder builderForValue) {
+      if (emitsBuilder_ == null) {
+        ensureEmitsIsMutable();
+        emits_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        emitsBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public Builder addAllEmits(
+        java.lang.Iterable<? extends com.udb.core.common.v1.EventContractOptions.EmittedEvent> values) {
+      if (emitsBuilder_ == null) {
+        ensureEmitsIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, emits_);
+        onChanged();
+      } else {
+        emitsBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public Builder clearEmits() {
+      if (emitsBuilder_ == null) {
+        emits_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000040);
+        onChanged();
+      } else {
+        emitsBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public Builder removeEmits(int index) {
+      if (emitsBuilder_ == null) {
+        ensureEmitsIsMutable();
+        emits_.remove(index);
+        onChanged();
+      } else {
+        emitsBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder getEmitsBuilder(
+        int index) {
+      return internalGetEmitsFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder getEmitsOrBuilder(
+        int index) {
+      if (emitsBuilder_ == null) {
+        return emits_.get(index);  } else {
+        return emitsBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public java.util.List<? extends com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder> 
+         getEmitsOrBuilderList() {
+      if (emitsBuilder_ != null) {
+        return emitsBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(emits_);
+      }
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder addEmitsBuilder() {
+      return internalGetEmitsFieldBuilder().addBuilder(
+          com.udb.core.common.v1.EventContractOptions.EmittedEvent.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder addEmitsBuilder(
+        int index) {
+      return internalGetEmitsFieldBuilder().addBuilder(
+          index, com.udb.core.common.v1.EventContractOptions.EmittedEvent.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     * </pre>
+     *
+     * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    public java.util.List<com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder> 
+         getEmitsBuilderList() {
+      return internalGetEmitsFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.core.common.v1.EventContractOptions.EmittedEvent, com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder, com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder> 
+        internalGetEmitsFieldBuilder() {
+      if (emitsBuilder_ == null) {
+        emitsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+            com.udb.core.common.v1.EventContractOptions.EmittedEvent, com.udb.core.common.v1.EventContractOptions.EmittedEvent.Builder, com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder>(
+                emits_,
+                ((bitField0_ & 0x00000040) != 0),
+                getParentForChildren(),
+                isClean());
+        emits_ = null;
+      }
+      return emitsBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.common.v1.EventContractOptions)

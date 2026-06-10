@@ -536,6 +536,24 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int OWNS_BACKGROUND_WORKERS_FIELD_NUMBER = 19;
+  private boolean ownsBackgroundWorkers_ = false;
+  /**
+   * <pre>
+   * Whether this service owns background workers (e.g. storage orphan-reaper,
+   * webrtc TURN/SFU maintenance loops) that run beyond request handling. Makes
+   * worker ownership an explicit part of the contract instead of implicit runtime
+   * behavior; the native registry surfaces it on the capability report.
+   * </pre>
+   *
+   * <code>bool owns_background_workers = 19 [json_name = "ownsBackgroundWorkers"];</code>
+   * @return The ownsBackgroundWorkers.
+   */
+  @java.lang.Override
+  public boolean getOwnsBackgroundWorkers() {
+    return ownsBackgroundWorkers_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -604,6 +622,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(capabilityRef_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 18, capabilityRef_);
     }
+    if (ownsBackgroundWorkers_ != false) {
+      output.writeBool(19, ownsBackgroundWorkers_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -670,6 +691,10 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(capabilityRef_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(18, capabilityRef_);
     }
+    if (ownsBackgroundWorkers_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(19, ownsBackgroundWorkers_);
+    }
     return size;
   }
   @java.lang.Override
@@ -730,6 +755,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getHealthCheckRef())) return false;
     if (!getCapabilityRef()
         .equals(other.getCapabilityRef())) return false;
+    if (getOwnsBackgroundWorkers()
+        != other.getOwnsBackgroundWorkers()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -785,6 +812,9 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getHealthCheckRef().hashCode();
     hash = (37 * hash) + CAPABILITY_REF_FIELD_NUMBER;
     hash = (53 * hash) + getCapabilityRef().hashCode();
+    hash = (37 * hash) + OWNS_BACKGROUND_WORKERS_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getOwnsBackgroundWorkers());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -934,6 +964,7 @@ private static final long serialVersionUID = 0L;
       cliScaffoldGroup_ = "";
       healthCheckRef_ = "";
       capabilityRef_ = "";
+      ownsBackgroundWorkers_ = false;
       return this;
     }
 
@@ -1020,6 +1051,9 @@ private static final long serialVersionUID = 0L;
       }
       if (((from_bitField0_ & 0x00020000) != 0)) {
         result.capabilityRef_ = capabilityRef_;
+      }
+      if (((from_bitField0_ & 0x00040000) != 0)) {
+        result.ownsBackgroundWorkers_ = ownsBackgroundWorkers_;
       }
     }
 
@@ -1108,6 +1142,9 @@ private static final long serialVersionUID = 0L;
         capabilityRef_ = other.capabilityRef_;
         bitField0_ |= 0x00020000;
         onChanged();
+      }
+      if (other.getOwnsBackgroundWorkers() != false) {
+        setOwnsBackgroundWorkers(other.getOwnsBackgroundWorkers());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1225,6 +1262,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00020000;
               break;
             } // case 146
+            case 152: {
+              ownsBackgroundWorkers_ = input.readBool();
+              bitField0_ |= 0x00040000;
+              break;
+            } // case 152
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2214,6 +2256,59 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       capabilityRef_ = value;
       bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+
+    private boolean ownsBackgroundWorkers_ ;
+    /**
+     * <pre>
+     * Whether this service owns background workers (e.g. storage orphan-reaper,
+     * webrtc TURN/SFU maintenance loops) that run beyond request handling. Makes
+     * worker ownership an explicit part of the contract instead of implicit runtime
+     * behavior; the native registry surfaces it on the capability report.
+     * </pre>
+     *
+     * <code>bool owns_background_workers = 19 [json_name = "ownsBackgroundWorkers"];</code>
+     * @return The ownsBackgroundWorkers.
+     */
+    @java.lang.Override
+    public boolean getOwnsBackgroundWorkers() {
+      return ownsBackgroundWorkers_;
+    }
+    /**
+     * <pre>
+     * Whether this service owns background workers (e.g. storage orphan-reaper,
+     * webrtc TURN/SFU maintenance loops) that run beyond request handling. Makes
+     * worker ownership an explicit part of the contract instead of implicit runtime
+     * behavior; the native registry surfaces it on the capability report.
+     * </pre>
+     *
+     * <code>bool owns_background_workers = 19 [json_name = "ownsBackgroundWorkers"];</code>
+     * @param value The ownsBackgroundWorkers to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOwnsBackgroundWorkers(boolean value) {
+
+      ownsBackgroundWorkers_ = value;
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Whether this service owns background workers (e.g. storage orphan-reaper,
+     * webrtc TURN/SFU maintenance loops) that run beyond request handling. Makes
+     * worker ownership an explicit part of the contract instead of implicit runtime
+     * behavior; the native registry surfaces it on the capability report.
+     * </pre>
+     *
+     * <code>bool owns_background_workers = 19 [json_name = "ownsBackgroundWorkers"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearOwnsBackgroundWorkers() {
+      bitField0_ = (bitField0_ & ~0x00040000);
+      ownsBackgroundWorkers_ = false;
       onChanged();
       return this;
     }

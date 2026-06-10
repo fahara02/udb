@@ -135,7 +135,7 @@ var File_udb_core_asset_entity_v1_pipeline_definition_proto protoreflect.FileDes
 
 const file_udb_core_asset_entity_v1_pipeline_definition_proto_rawDesc = "" +
 	"\n" +
-	"2udb/core/asset/entity/v1/pipeline_definition.proto\x12\x18udb.core.asset.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\"\xc0\t\n" +
+	"2udb/core/asset/entity/v1/pipeline_definition.proto\x12\x18udb.core.asset.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\"\xb9\t\n" +
 	"\x12PipelineDefinition\x12U\n" +
 	"\rdefinition_id\x18\x01 \x01(\tB0\x82\xb7\x18,\n" +
 	"\rdefinition_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\fdefinitionId\x124\n" +
@@ -158,12 +158,12 @@ const file_udb_core_asset_entity_v1_pipeline_definition_proto_rawDesc = "" +
 	"\n" +
 	"audit_info\x18\t \x01(\v2\x1d.udb.core.common.v1.AuditInfoBD\x82\xb7\x18@\n" +
 	"\n" +
-	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo:\x95\x04\xfa\xb6\x18\xf4\x02\n" +
+	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo:\x8e\x04\xfa\xb6\x18\xf4\x02\n" +
 	"\x14pipeline_definitions\x12\tudb_asset\x18\x02 \x01*2Reusable versioned processing-pipeline definitions8\x01@\x01b\xa5\x01\n" +
 	"%pipeline_definitions_tenant_isolation\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x018\n" +
 	"\x1cidx_pipeline_def_name_unique\x12\x05BTREE\x18\x01Z\ttenant_idZ\x04name\xf2\x01\"udb.asset.pipeline_definitions.cdc\xfa\x01\n" +
-	"asset:read\x8a\xb2\x19\x97\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x11asset.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x82\x02\n" +
+	"asset:read\x8a\xb2\x19\x90\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11asset.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x82\x02\n" +
 	"\x1ccom.udb.core.asset.entity.v1B\x17PipelineDefinitionProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/asset/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Asset.Entity.V1\xca\x02\x18Udb\\Core\\Asset\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Asset\\Entity\\V1\xea\x02\x1cUdb::Core::Asset::Entity::V1b\x06proto3"
 
 var (

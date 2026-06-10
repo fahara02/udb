@@ -72,16 +72,26 @@ namespace udb.core.Authn.Entity.V1 {
             "AQoJVG9rZW5UeXBlEhoKFlRPS0VOX1RZUEVfVU5TUEVDSUZJRUQQABIZChVU",
             "T0tFTl9UWVBFX0pXVF9BQ0NFU1MQARIaChZUT0tFTl9UWVBFX0pXVF9SRUZS",
             "RVNIEAISFgoSVE9LRU5fVFlQRV9TRVNTSU9OEAMSFgoSVE9LRU5fVFlQRV9B",
-            "UElfS0VZEAQSFwoTVE9LRU5fVFlQRV9FWFRFUk5BTBAFQvUBChxjb20udWRi",
-            "LmNvcmUuYXV0aG4uZW50aXR5LnYxQgpFbnVtc1Byb3RvUAFaRGdpdGh1Yi5j",
-            "b20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvYXV0aG4vZW50",
-            "aXR5L3YxO2VudGl0eXYxogIEVUNBRaoCGHVkYi5jb3JlLkF1dGhuLkVudGl0",
-            "eS5WMcoCGFVkYlxDb3JlXEF1dGhuXEVudGl0eVxWMeICJFVkYlxHUEJNZXRh",
-            "ZGF0YVxDb3JlXEF1dGhuXEVudGl0eVxWMeoCHFVkYjo6Q29yZTo6QXV0aG46",
-            "OkVudGl0eTo6VjFiBnByb3RvMw=="));
+            "UElfS0VZEAQSFwoTVE9LRU5fVFlQRV9FWFRFUk5BTBAFKtEBCg9TaWduaW5n",
+            "S2V5U3RhdGUSIQodU0lHTklOR19LRVlfU1RBVEVfVU5TUEVDSUZJRUQQABIa",
+            "ChZTSUdOSU5HX0tFWV9TVEFURV9ORVhUEAESHAoYU0lHTklOR19LRVlfU1RB",
+            "VEVfQUNUSVZFEAISHwobU0lHTklOR19LRVlfU1RBVEVfVkVSSUZZSU5HEAMS",
+            "HQoZU0lHTklOR19LRVlfU1RBVEVfUkVUSVJFRBAEEiEKHVNJR05JTkdfS0VZ",
+            "X1NUQVRFX0NPTVBST01JU0VEEAUq3gEKE01mYUNoYWxsZW5nZVB1cnBvc2US",
+            "JQohTUZBX0NIQUxMRU5HRV9QVVJQT1NFX1VOU1BFQ0lGSUVEEAASJwojTUZB",
+            "X0NIQUxMRU5HRV9QVVJQT1NFX0xPR0lOX1NURVBfVVAQARItCilNRkFfQ0hB",
+            "TExFTkdFX1BVUlBPU0VfU0VOU0lUSVZFX09QRVJBVElPThACEiQKIE1GQV9D",
+            "SEFMTEVOR0VfUFVSUE9TRV9FTlJPTExNRU5UEAMSIgoeTUZBX0NIQUxMRU5H",
+            "RV9QVVJQT1NFX1JFQ09WRVJZEARC9QEKHGNvbS51ZGIuY29yZS5hdXRobi5l",
+            "bnRpdHkudjFCCkVudW1zUHJvdG9QAVpEZ2l0aHViLmNvbS9mYWhhcmEwMi91",
+            "ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9hdXRobi9lbnRpdHkvdjE7ZW50aXR5",
+            "djGiAgRVQ0FFqgIYdWRiLmNvcmUuQXV0aG4uRW50aXR5LlYxygIYVWRiXENv",
+            "cmVcQXV0aG5cRW50aXR5XFYx4gIkVWRiXEdQQk1ldGFkYXRhXENvcmVcQXV0",
+            "aG5cRW50aXR5XFYx6gIcVWRiOjpDb3JlOjpBdXRobjo6RW50aXR5OjpWMWIG",
+            "cHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
-          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::udb.core.Authn.Entity.V1.AccountKind), typeof(global::udb.core.Authn.Entity.V1.UserStatus), typeof(global::udb.core.Authn.Entity.V1.SessionType), typeof(global::udb.core.Authn.Entity.V1.DeviceType), typeof(global::udb.core.Authn.Entity.V1.OTPType), typeof(global::udb.core.Authn.Entity.V1.OTPStatus), typeof(global::udb.core.Authn.Entity.V1.IdentityProviderKind), typeof(global::udb.core.Authn.Entity.V1.AuthFactorKind), typeof(global::udb.core.Authn.Entity.V1.AuthCredentialType), typeof(global::udb.core.Authn.Entity.V1.TokenType), }, null, null));
+          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::udb.core.Authn.Entity.V1.AccountKind), typeof(global::udb.core.Authn.Entity.V1.UserStatus), typeof(global::udb.core.Authn.Entity.V1.SessionType), typeof(global::udb.core.Authn.Entity.V1.DeviceType), typeof(global::udb.core.Authn.Entity.V1.OTPType), typeof(global::udb.core.Authn.Entity.V1.OTPStatus), typeof(global::udb.core.Authn.Entity.V1.IdentityProviderKind), typeof(global::udb.core.Authn.Entity.V1.AuthFactorKind), typeof(global::udb.core.Authn.Entity.V1.AuthCredentialType), typeof(global::udb.core.Authn.Entity.V1.TokenType), typeof(global::udb.core.Authn.Entity.V1.SigningKeyState), typeof(global::udb.core.Authn.Entity.V1.MfaChallengePurpose), }, null, null));
     }
     #endregion
 
@@ -221,6 +231,35 @@ namespace udb.core.Authn.Entity.V1 {
     [pbr::OriginalName("TOKEN_TYPE_SESSION")] Session = 3,
     [pbr::OriginalName("TOKEN_TYPE_API_KEY")] ApiKey = 4,
     [pbr::OriginalName("TOKEN_TYPE_EXTERNAL")] External = 5,
+  }
+
+  /// <summary>
+  /// Lifecycle state of a JWT signing key in the DB-backed key registry. A key is
+  /// minted as NEXT, promoted to ACTIVE (the sole signing key), demoted to
+  /// VERIFYING when superseded (still trusted for verification during rotation),
+  /// then RETIRED (no longer trusted) or COMPROMISED (force-rejected). Rotation
+  /// with zero downtime relies on the ACTIVE→VERIFYING overlap window.
+  /// </summary>
+  public enum SigningKeyState {
+    [pbr::OriginalName("SIGNING_KEY_STATE_UNSPECIFIED")] Unspecified = 0,
+    [pbr::OriginalName("SIGNING_KEY_STATE_NEXT")] Next = 1,
+    [pbr::OriginalName("SIGNING_KEY_STATE_ACTIVE")] Active = 2,
+    [pbr::OriginalName("SIGNING_KEY_STATE_VERIFYING")] Verifying = 3,
+    [pbr::OriginalName("SIGNING_KEY_STATE_RETIRED")] Retired = 4,
+    [pbr::OriginalName("SIGNING_KEY_STATE_COMPROMISED")] Compromised = 5,
+  }
+
+  /// <summary>
+  /// Purpose a step-up MFA challenge is issued for. Binds the challenge record to
+  /// the operation that requested it so a challenge minted for login cannot be
+  /// replayed to authorize a sensitive mutation.
+  /// </summary>
+  public enum MfaChallengePurpose {
+    [pbr::OriginalName("MFA_CHALLENGE_PURPOSE_UNSPECIFIED")] Unspecified = 0,
+    [pbr::OriginalName("MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP")] LoginStepUp = 1,
+    [pbr::OriginalName("MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION")] SensitiveOperation = 2,
+    [pbr::OriginalName("MFA_CHALLENGE_PURPOSE_ENROLLMENT")] Enrollment = 3,
+    [pbr::OriginalName("MFA_CHALLENGE_PURPOSE_RECOVERY")] Recovery = 4,
   }
 
   #endregion

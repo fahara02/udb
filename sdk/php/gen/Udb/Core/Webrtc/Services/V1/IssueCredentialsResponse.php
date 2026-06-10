@@ -40,6 +40,13 @@ class IssueCredentialsResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.core.common.v1.ApiError error = 6 [json_name = "error"];</code>
      */
     protected $error = null;
+    /**
+     * The action bound into the signed TURN REST username. Credentials issued by
+     * this RPC authorize media relay only, not arbitrary WebRTC control-plane RPCs.
+     *
+     * Generated from protobuf field <code>string allowed_action = 7 [json_name = "allowedAction"];</code>
+     */
+    protected $allowed_action = '';
 
     /**
      * Constructor.
@@ -54,6 +61,9 @@ class IssueCredentialsResponse extends \Google\Protobuf\Internal\Message
      *     @type \Google\Protobuf\Timestamp $expires_at
      *     @type \Udb\Core\Common\V1\ApiError $error
      *           Error information if operation failed
+     *     @type string $allowed_action
+     *           The action bound into the signed TURN REST username. Credentials issued by
+     *           this RPC authorize media relay only, not arbitrary WebRTC control-plane RPCs.
      * }
      */
     public function __construct($data = NULL) {
@@ -211,6 +221,34 @@ class IssueCredentialsResponse extends \Google\Protobuf\Internal\Message
     public function setError(\Udb\Core\Common\V1\ApiError|null $var)
     {
         $this->error = $var;
+
+        return $this;
+    }
+
+    /**
+     * The action bound into the signed TURN REST username. Credentials issued by
+     * this RPC authorize media relay only, not arbitrary WebRTC control-plane RPCs.
+     *
+     * Generated from protobuf field <code>string allowed_action = 7 [json_name = "allowedAction"];</code>
+     * @return string
+     */
+    public function getAllowedAction()
+    {
+        return $this->allowed_action;
+    }
+
+    /**
+     * The action bound into the signed TURN REST username. Credentials issued by
+     * this RPC authorize media relay only, not arbitrary WebRTC control-plane RPCs.
+     *
+     * Generated from protobuf field <code>string allowed_action = 7 [json_name = "allowedAction"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setAllowedAction(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->allowed_action = $var;
 
         return $this;
     }

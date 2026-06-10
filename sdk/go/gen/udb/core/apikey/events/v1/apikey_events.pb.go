@@ -368,6 +368,200 @@ func (x *ApiKeyRateLimitedEvent) GetTenantId() string {
 	return ""
 }
 
+// Kafka topic: udb.apikey.validate.failed.v1 (Phase L)
+type ApiKeyValidateFailedEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	KeyPrefix     string                 `protobuf:"bytes,2,opt,name=key_prefix,json=keyPrefix,proto3" json:"key_prefix,omitempty"`    // public prefix only, never the raw key
+	ReasonCode    string                 `protobuf:"bytes,3,opt,name=reason_code,json=reasonCode,proto3" json:"reason_code,omitempty"` // not_found, revoked, expired, scope_mismatch
+	IpAddress     string                 `protobuf:"bytes,4,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`    // masked
+	CorrelationId string                 `protobuf:"bytes,5,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	TenantId      string                 `protobuf:"bytes,7,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApiKeyValidateFailedEvent) Reset() {
+	*x = ApiKeyValidateFailedEvent{}
+	mi := &file_udb_core_apikey_events_v1_apikey_events_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApiKeyValidateFailedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApiKeyValidateFailedEvent) ProtoMessage() {}
+
+func (x *ApiKeyValidateFailedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_apikey_events_v1_apikey_events_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApiKeyValidateFailedEvent.ProtoReflect.Descriptor instead.
+func (*ApiKeyValidateFailedEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_apikey_events_v1_apikey_events_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ApiKeyValidateFailedEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *ApiKeyValidateFailedEvent) GetKeyPrefix() string {
+	if x != nil {
+		return x.KeyPrefix
+	}
+	return ""
+}
+
+func (x *ApiKeyValidateFailedEvent) GetReasonCode() string {
+	if x != nil {
+		return x.ReasonCode
+	}
+	return ""
+}
+
+func (x *ApiKeyValidateFailedEvent) GetIpAddress() string {
+	if x != nil {
+		return x.IpAddress
+	}
+	return ""
+}
+
+func (x *ApiKeyValidateFailedEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *ApiKeyValidateFailedEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+func (x *ApiKeyValidateFailedEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+// Kafka topic: udb.apikey.anomalous.use.v1 (Phase L)
+type ApiKeyAnomalousUseEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	KeyId         string                 `protobuf:"bytes,2,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"`
+	KeyPrefix     string                 `protobuf:"bytes,3,opt,name=key_prefix,json=keyPrefix,proto3" json:"key_prefix,omitempty"`
+	Anomaly       string                 `protobuf:"bytes,4,opt,name=anomaly,proto3" json:"anomaly,omitempty"`                      // geo_velocity, new_asn, burst, off_hours
+	IpAddress     string                 `protobuf:"bytes,5,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"` // masked
+	CorrelationId string                 `protobuf:"bytes,6,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	TenantId      string                 `protobuf:"bytes,8,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApiKeyAnomalousUseEvent) Reset() {
+	*x = ApiKeyAnomalousUseEvent{}
+	mi := &file_udb_core_apikey_events_v1_apikey_events_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApiKeyAnomalousUseEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApiKeyAnomalousUseEvent) ProtoMessage() {}
+
+func (x *ApiKeyAnomalousUseEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_apikey_events_v1_apikey_events_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApiKeyAnomalousUseEvent.ProtoReflect.Descriptor instead.
+func (*ApiKeyAnomalousUseEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_apikey_events_v1_apikey_events_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ApiKeyAnomalousUseEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *ApiKeyAnomalousUseEvent) GetKeyId() string {
+	if x != nil {
+		return x.KeyId
+	}
+	return ""
+}
+
+func (x *ApiKeyAnomalousUseEvent) GetKeyPrefix() string {
+	if x != nil {
+		return x.KeyPrefix
+	}
+	return ""
+}
+
+func (x *ApiKeyAnomalousUseEvent) GetAnomaly() string {
+	if x != nil {
+		return x.Anomaly
+	}
+	return ""
+}
+
+func (x *ApiKeyAnomalousUseEvent) GetIpAddress() string {
+	if x != nil {
+		return x.IpAddress
+	}
+	return ""
+}
+
+func (x *ApiKeyAnomalousUseEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *ApiKeyAnomalousUseEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+func (x *ApiKeyAnomalousUseEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
 var File_udb_core_apikey_events_v1_apikey_events_proto protoreflect.FileDescriptor
 
 const file_udb_core_apikey_events_v1_apikey_events_proto_rawDesc = "" +
@@ -419,7 +613,33 @@ const file_udb_core_apikey_events_v1_apikey_events_proto_rawDesc = "" +
 	"occurredAt\x12\x1b\n" +
 	"\ttenant_id\x18\n" +
 	" \x01(\tR\btenantId:~\x92\xb2\x19z\n" +
-	"0udb.core.apikey.events.v1.ApiKeyRateLimitedEvent\x12\x1audb.apikey.rate.limited.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\x82\x02\n" +
+	"0udb.core.apikey.events.v1.ApiKeyRateLimitedEvent\x12\x1audb.apikey.rate.limited.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\x9e\x03\n" +
+	"\x19ApiKeyValidateFailedEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1d\n" +
+	"\n" +
+	"key_prefix\x18\x02 \x01(\tR\tkeyPrefix\x12\x1f\n" +
+	"\vreason_code\x18\x03 \x01(\tR\n" +
+	"reasonCode\x12\x1d\n" +
+	"\n" +
+	"ip_address\x18\x04 \x01(\tR\tipAddress\x12%\n" +
+	"\x0ecorrelation_id\x18\x05 \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt\x12\x1b\n" +
+	"\ttenant_id\x18\a \x01(\tR\btenantId:\x85\x01\x92\xb2\x19\x80\x01\n" +
+	"3udb.core.apikey.events.v1.ApiKeyValidateFailedEvent\x12\x1dudb.apikey.validate.failed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xa7\x03\n" +
+	"\x17ApiKeyAnomalousUseEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x15\n" +
+	"\x06key_id\x18\x02 \x01(\tR\x05keyId\x12\x1d\n" +
+	"\n" +
+	"key_prefix\x18\x03 \x01(\tR\tkeyPrefix\x12\x18\n" +
+	"\aanomaly\x18\x04 \x01(\tR\aanomaly\x12\x1d\n" +
+	"\n" +
+	"ip_address\x18\x05 \x01(\tR\tipAddress\x12%\n" +
+	"\x0ecorrelation_id\x18\x06 \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt\x12\x1b\n" +
+	"\ttenant_id\x18\b \x01(\tR\btenantId:\x80\x01\x92\xb2\x19|\n" +
+	"1udb.core.apikey.events.v1.ApiKeyAnomalousUseEvent\x12\x1budb.apikey.anomalous.use.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\x82\x02\n" +
 	"\x1dcom.udb.core.apikey.events.v1B\x11ApikeyEventsProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x19udb.core.Apikey.Events.V1\xca\x02\x19Udb\\Core\\Apikey\\Events\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Events\\V1\xea\x02\x1dUdb::Core::Apikey::Events::V1b\x06proto3"
 
 var (
@@ -434,24 +654,28 @@ func file_udb_core_apikey_events_v1_apikey_events_proto_rawDescGZIP() []byte {
 	return file_udb_core_apikey_events_v1_apikey_events_proto_rawDescData
 }
 
-var file_udb_core_apikey_events_v1_apikey_events_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_udb_core_apikey_events_v1_apikey_events_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_udb_core_apikey_events_v1_apikey_events_proto_goTypes = []any{
-	(*ApiKeyCreatedEvent)(nil),     // 0: udb.core.apikey.events.v1.ApiKeyCreatedEvent
-	(*ApiKeyRevokedEvent)(nil),     // 1: udb.core.apikey.events.v1.ApiKeyRevokedEvent
-	(*ApiKeyRateLimitedEvent)(nil), // 2: udb.core.apikey.events.v1.ApiKeyRateLimitedEvent
-	(v1.ApiKeyOwnerType)(0),        // 3: udb.core.apikey.entity.v1.ApiKeyOwnerType
-	(*timestamppb.Timestamp)(nil),  // 4: google.protobuf.Timestamp
+	(*ApiKeyCreatedEvent)(nil),        // 0: udb.core.apikey.events.v1.ApiKeyCreatedEvent
+	(*ApiKeyRevokedEvent)(nil),        // 1: udb.core.apikey.events.v1.ApiKeyRevokedEvent
+	(*ApiKeyRateLimitedEvent)(nil),    // 2: udb.core.apikey.events.v1.ApiKeyRateLimitedEvent
+	(*ApiKeyValidateFailedEvent)(nil), // 3: udb.core.apikey.events.v1.ApiKeyValidateFailedEvent
+	(*ApiKeyAnomalousUseEvent)(nil),   // 4: udb.core.apikey.events.v1.ApiKeyAnomalousUseEvent
+	(v1.ApiKeyOwnerType)(0),           // 5: udb.core.apikey.entity.v1.ApiKeyOwnerType
+	(*timestamppb.Timestamp)(nil),     // 6: google.protobuf.Timestamp
 }
 var file_udb_core_apikey_events_v1_apikey_events_proto_depIdxs = []int32{
-	3, // 0: udb.core.apikey.events.v1.ApiKeyCreatedEvent.owner_type:type_name -> udb.core.apikey.entity.v1.ApiKeyOwnerType
-	4, // 1: udb.core.apikey.events.v1.ApiKeyCreatedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	4, // 2: udb.core.apikey.events.v1.ApiKeyRevokedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	4, // 3: udb.core.apikey.events.v1.ApiKeyRateLimitedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	5, // 0: udb.core.apikey.events.v1.ApiKeyCreatedEvent.owner_type:type_name -> udb.core.apikey.entity.v1.ApiKeyOwnerType
+	6, // 1: udb.core.apikey.events.v1.ApiKeyCreatedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	6, // 2: udb.core.apikey.events.v1.ApiKeyRevokedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	6, // 3: udb.core.apikey.events.v1.ApiKeyRateLimitedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	6, // 4: udb.core.apikey.events.v1.ApiKeyValidateFailedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	6, // 5: udb.core.apikey.events.v1.ApiKeyAnomalousUseEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_apikey_events_v1_apikey_events_proto_init() }
@@ -465,7 +689,7 @@ func file_udb_core_apikey_events_v1_apikey_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_apikey_events_v1_apikey_events_proto_rawDesc), len(file_udb_core_apikey_events_v1_apikey_events_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -236,4 +236,41 @@ public interface NativeServiceStatusOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDescriptorVersionBytes();
+
+  /**
+   * <code>bool owns_background_workers = 17 [json_name = "ownsBackgroundWorkers"];</code>
+   * @return The ownsBackgroundWorkers.
+   */
+  boolean getOwnsBackgroundWorkers();
+
+  /**
+   * <code>bool background_worker_enabled = 18 [json_name = "backgroundWorkerEnabled"];</code>
+   * @return The backgroundWorkerEnabled.
+   */
+  boolean getBackgroundWorkerEnabled();
+
+  /**
+   * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+   * @return A list containing the backgroundWorkers.
+   */
+  java.util.List<java.lang.String>
+      getBackgroundWorkersList();
+  /**
+   * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+   * @return The count of backgroundWorkers.
+   */
+  int getBackgroundWorkersCount();
+  /**
+   * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+   * @param index The index of the element to return.
+   * @return The backgroundWorkers at the given index.
+   */
+  java.lang.String getBackgroundWorkers(int index);
+  /**
+   * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the backgroundWorkers at the given index.
+   */
+  com.google.protobuf.ByteString
+      getBackgroundWorkersBytes(int index);
 }

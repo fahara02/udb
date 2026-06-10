@@ -19,13 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ApiKeyService_CreateApiKey_FullMethodName        = "/udb.core.apikey.services.v1.ApiKeyService/CreateApiKey"
-	ApiKeyService_GetApiKey_FullMethodName           = "/udb.core.apikey.services.v1.ApiKeyService/GetApiKey"
-	ApiKeyService_ListApiKeys_FullMethodName         = "/udb.core.apikey.services.v1.ApiKeyService/ListApiKeys"
-	ApiKeyService_UpdateApiKey_FullMethodName        = "/udb.core.apikey.services.v1.ApiKeyService/UpdateApiKey"
-	ApiKeyService_RevokeApiKey_FullMethodName        = "/udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey"
-	ApiKeyService_ValidateApiKey_FullMethodName      = "/udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey"
-	ApiKeyService_GetApiKeyUsageStats_FullMethodName = "/udb.core.apikey.services.v1.ApiKeyService/GetApiKeyUsageStats"
+	ApiKeyService_CreateApiKey_FullMethodName           = "/udb.core.apikey.services.v1.ApiKeyService/CreateApiKey"
+	ApiKeyService_GetApiKey_FullMethodName              = "/udb.core.apikey.services.v1.ApiKeyService/GetApiKey"
+	ApiKeyService_ListApiKeys_FullMethodName            = "/udb.core.apikey.services.v1.ApiKeyService/ListApiKeys"
+	ApiKeyService_UpdateApiKey_FullMethodName           = "/udb.core.apikey.services.v1.ApiKeyService/UpdateApiKey"
+	ApiKeyService_RevokeApiKey_FullMethodName           = "/udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey"
+	ApiKeyService_RotateApiKey_FullMethodName           = "/udb.core.apikey.services.v1.ApiKeyService/RotateApiKey"
+	ApiKeyService_EmergencyRevokeApiKeys_FullMethodName = "/udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys"
+	ApiKeyService_ValidateApiKey_FullMethodName         = "/udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey"
+	ApiKeyService_GetApiKeyUsageStats_FullMethodName    = "/udb.core.apikey.services.v1.ApiKeyService/GetApiKeyUsageStats"
 )
 
 // ApiKeyServiceClient is the client API for ApiKeyService service.
@@ -53,6 +55,11 @@ type ApiKeyServiceClient interface {
 	ListApiKeys(ctx context.Context, in *ListApiKeysRequest, opts ...grpc.CallOption) (*ListApiKeysResponse, error)
 	UpdateApiKey(ctx context.Context, in *UpdateApiKeyRequest, opts ...grpc.CallOption) (*UpdateApiKeyResponse, error)
 	RevokeApiKey(ctx context.Context, in *RevokeApiKeyRequest, opts ...grpc.CallOption) (*RevokeApiKeyResponse, error)
+	// Rotate a key's secret in place (same key_id + lineage). Returns the new
+	// plain key ONCE; the old secret is invalidated immediately.
+	RotateApiKey(ctx context.Context, in *RotateApiKeyRequest, opts ...grpc.CallOption) (*RotateApiKeyResponse, error)
+	// Emergency bulk revoke by selector (prefix/owner/tenant/project/scope/before).
+	EmergencyRevokeApiKeys(ctx context.Context, in *EmergencyRevokeApiKeysRequest, opts ...grpc.CallOption) (*EmergencyRevokeApiKeysResponse, error)
 	// ── Validation (called by API gateway — internal, not public HTTP) ────────
 	ValidateApiKey(ctx context.Context, in *ValidateApiKeyRequest, opts ...grpc.CallOption) (*ValidateApiKeyResponse, error)
 	// ── Usage stats ───────────────────────────────────────────────────────────
@@ -117,6 +124,26 @@ func (c *apiKeyServiceClient) RevokeApiKey(ctx context.Context, in *RevokeApiKey
 	return out, nil
 }
 
+func (c *apiKeyServiceClient) RotateApiKey(ctx context.Context, in *RotateApiKeyRequest, opts ...grpc.CallOption) (*RotateApiKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RotateApiKeyResponse)
+	err := c.cc.Invoke(ctx, ApiKeyService_RotateApiKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *apiKeyServiceClient) EmergencyRevokeApiKeys(ctx context.Context, in *EmergencyRevokeApiKeysRequest, opts ...grpc.CallOption) (*EmergencyRevokeApiKeysResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EmergencyRevokeApiKeysResponse)
+	err := c.cc.Invoke(ctx, ApiKeyService_EmergencyRevokeApiKeys_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *apiKeyServiceClient) ValidateApiKey(ctx context.Context, in *ValidateApiKeyRequest, opts ...grpc.CallOption) (*ValidateApiKeyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ValidateApiKeyResponse)
@@ -162,6 +189,11 @@ type ApiKeyServiceServer interface {
 	ListApiKeys(context.Context, *ListApiKeysRequest) (*ListApiKeysResponse, error)
 	UpdateApiKey(context.Context, *UpdateApiKeyRequest) (*UpdateApiKeyResponse, error)
 	RevokeApiKey(context.Context, *RevokeApiKeyRequest) (*RevokeApiKeyResponse, error)
+	// Rotate a key's secret in place (same key_id + lineage). Returns the new
+	// plain key ONCE; the old secret is invalidated immediately.
+	RotateApiKey(context.Context, *RotateApiKeyRequest) (*RotateApiKeyResponse, error)
+	// Emergency bulk revoke by selector (prefix/owner/tenant/project/scope/before).
+	EmergencyRevokeApiKeys(context.Context, *EmergencyRevokeApiKeysRequest) (*EmergencyRevokeApiKeysResponse, error)
 	// ── Validation (called by API gateway — internal, not public HTTP) ────────
 	ValidateApiKey(context.Context, *ValidateApiKeyRequest) (*ValidateApiKeyResponse, error)
 	// ── Usage stats ───────────────────────────────────────────────────────────
@@ -189,6 +221,12 @@ func (UnimplementedApiKeyServiceServer) UpdateApiKey(context.Context, *UpdateApi
 }
 func (UnimplementedApiKeyServiceServer) RevokeApiKey(context.Context, *RevokeApiKeyRequest) (*RevokeApiKeyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeApiKey not implemented")
+}
+func (UnimplementedApiKeyServiceServer) RotateApiKey(context.Context, *RotateApiKeyRequest) (*RotateApiKeyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RotateApiKey not implemented")
+}
+func (UnimplementedApiKeyServiceServer) EmergencyRevokeApiKeys(context.Context, *EmergencyRevokeApiKeysRequest) (*EmergencyRevokeApiKeysResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method EmergencyRevokeApiKeys not implemented")
 }
 func (UnimplementedApiKeyServiceServer) ValidateApiKey(context.Context, *ValidateApiKeyRequest) (*ValidateApiKeyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ValidateApiKey not implemented")
@@ -306,6 +344,42 @@ func _ApiKeyService_RevokeApiKey_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ApiKeyService_RotateApiKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RotateApiKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApiKeyServiceServer).RotateApiKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ApiKeyService_RotateApiKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApiKeyServiceServer).RotateApiKey(ctx, req.(*RotateApiKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ApiKeyService_EmergencyRevokeApiKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EmergencyRevokeApiKeysRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApiKeyServiceServer).EmergencyRevokeApiKeys(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ApiKeyService_EmergencyRevokeApiKeys_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApiKeyServiceServer).EmergencyRevokeApiKeys(ctx, req.(*EmergencyRevokeApiKeysRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ApiKeyService_ValidateApiKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ValidateApiKeyRequest)
 	if err := dec(in); err != nil {
@@ -368,6 +442,14 @@ var ApiKeyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RevokeApiKey",
 			Handler:    _ApiKeyService_RevokeApiKey_Handler,
+		},
+		{
+			MethodName: "RotateApiKey",
+			Handler:    _ApiKeyService_RotateApiKey_Handler,
+		},
+		{
+			MethodName: "EmergencyRevokeApiKeys",
+			Handler:    _ApiKeyService_EmergencyRevokeApiKeys_Handler,
 		},
 		{
 			MethodName: "ValidateApiKey",

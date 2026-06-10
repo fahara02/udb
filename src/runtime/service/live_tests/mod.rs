@@ -6,9 +6,11 @@
 mod asset_image_live;
 mod asset_live;
 mod asset_trigger_live;
+#[cfg(feature = "http-client")]
 mod asset_vector_live;
 mod native_events_live;
 mod storage_live;
+#[cfg(feature = "http-client")]
 mod storage_object_live;
 mod support;
 mod webrtc_live;

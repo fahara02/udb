@@ -44,7 +44,7 @@ public final class PipelineDefinitionProto extends com.google.protobuf.Generated
       "nition.proto\022\030udb.core.asset.entity.v1\032\033" +
       "udb/core/common/v1/db.proto\032!udb/core/co" +
       "mmon/v1/security.proto\032\036udb/core/common/" +
-      "v1/types.proto\"\300\t\n\022PipelineDefinition\022U\n" +
+      "v1/types.proto\"\271\t\n\022PipelineDefinition\022U\n" +
       "\rdefinition_id\030\001 \001(\tB0\202\267\030,\n\rdefinition_i" +
       "d\022\004UUID\030\001(\001:\021gen_random_uuid()R\014definiti" +
       "onId\0224\n\ttenant_id\030\002 \001(\tB\027\202\267\030\023\n\ttenant_id" +
@@ -61,7 +61,7 @@ public final class PipelineDefinitionProto extends com.google.protobuf.Generated
       "atus\022\202\001\n\naudit_info\030\t \001(\0132\035.udb.core.com" +
       "mon.v1.AuditInfoBD\202\267\030@\n\naudit_info\022\005JSON" +
       "B\030\001:\013\'{}\'::jsonbZ\032Audit trail stored as " +
-      "JSONx\001R\tauditInfo:\225\004\372\266\030\364\002\n\024pipeline_defi" +
+      "JSONx\001R\tauditInfo:\216\004\372\266\030\364\002\n\024pipeline_defi" +
       "nitions\022\tudb_asset\030\002 \001*2Reusable version" +
       "ed processing-pipeline definitions8\001@\001b\245" +
       "\001\n%pipeline_definitions_tenant_isolation" +
@@ -71,17 +71,17 @@ public final class PipelineDefinitionProto extends com.google.protobuf.Generated
       "ue\')(\001h\001\212\0018\n\034idx_pipeline_def_name_uniqu" +
       "e\022\005BTREE\030\001Z\ttenant_idZ\004name\362\001\"udb.asset." +
       "pipeline_definitions.cdc\372\001\nasset:read\212\262\031" +
-      "\227\001\n\006tenant\032\ttenant_id*4tenant_id = curre" +
-      "nt_setting(\'app.current_tenant_id\')2\013sof" +
-      "t_delete:\021asset.operational@\373\023H\002R\006tenant" +
-      "Z\010standardr\025tenant.data_residencyB\202\002\n\034co" +
-      "m.udb.core.asset.entity.v1B\027PipelineDefi" +
-      "nitionProtoP\001ZDgithub.com/fahara02/udb/s" +
-      "dk/go/gen/udb/core/asset/entity/v1;entit" +
-      "yv1\242\002\004UCAE\252\002\030udb.core.Asset.Entity.V1\312\002\030" +
-      "Udb\\Core\\Asset\\Entity\\V1\342\002$Udb\\GPBMetada" +
-      "ta\\Core\\Asset\\Entity\\V1\352\002\034Udb::Core::Ass" +
-      "et::Entity::V1b\006proto3"
+      "\220\001\n\006tenant\032\ttenant_id*4tenant_id = curre" +
+      "nt_setting(\'app.current_tenant_id\')2\004non" +
+      "e:\021asset.operational@\373\023H\002R\006tenantZ\010stand" +
+      "ardr\025tenant.data_residencyB\202\002\n\034com.udb.c" +
+      "ore.asset.entity.v1B\027PipelineDefinitionP" +
+      "rotoP\001ZDgithub.com/fahara02/udb/sdk/go/g" +
+      "en/udb/core/asset/entity/v1;entityv1\242\002\004U" +
+      "CAE\252\002\030udb.core.Asset.Entity.V1\312\002\030Udb\\Cor" +
+      "e\\Asset\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core" +
+      "\\Asset\\Entity\\V1\352\002\034Udb::Core::Asset::Ent" +
+      "ity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

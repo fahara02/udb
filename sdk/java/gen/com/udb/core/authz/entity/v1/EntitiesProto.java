@@ -38,37 +38,59 @@ public final class EntitiesProto extends com.google.protobuf.GeneratedFile {
       "\n\'udb/core/authz/entity/v1/entities.prot" +
       "o\022\030udb.core.authz.entity.v1\0324udb/core/au" +
       "thz/entity/v1/access_decision_audit.prot" +
-      "o\032$udb/core/authz/entity/v1/enums.proto\032" +
-      "*udb/core/authz/entity/v1/policy_rule.pr" +
-      "oto\032+udb/core/authz/entity/v1/policy_tup" +
-      "le.proto\032#udb/core/authz/entity/v1/role." +
-      "proto\032.udb/core/authz/entity/v1/role_per" +
-      "mission.proto\032(udb/core/authz/entity/v1/" +
-      "user_role.protoB\370\001\n\034com.udb.core.authz.e" +
-      "ntity.v1B\rEntitiesProtoP\001ZDgithub.com/fa" +
-      "hara02/udb/sdk/go/gen/udb/core/authz/ent" +
-      "ity/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Authz." +
-      "Entity.V1\312\002\030Udb\\Core\\Authz\\Entity\\V1\342\002$U" +
-      "db\\GPBMetadata\\Core\\Authz\\Entity\\V1\352\002\034Ud" +
-      "b::Core::Authz::Entity::V1P\000P\001P\002P\003P\004P\005P\006" +
-      "b\006proto3"
+      "o\032-udb/core/authz/entity/v1/authz_revisi" +
+      "on.proto\032$udb/core/authz/entity/v1/enums" +
+      ".proto\032/udb/core/authz/entity/v1/governa" +
+      "nce_enums.proto\032.udb/core/authz/entity/v" +
+      "1/policy_approval.proto\032+udb/core/authz/" +
+      "entity/v1/policy_draft.proto\032*udb/core/a" +
+      "uthz/entity/v1/policy_rule.proto\032)udb/co" +
+      "re/authz/entity/v1/policy_set.proto\0320udb" +
+      "/core/authz/entity/v1/policy_simulation." +
+      "proto\032+udb/core/authz/entity/v1/policy_t" +
+      "uple.proto\032-udb/core/authz/entity/v1/pol" +
+      "icy_version.proto\032#udb/core/authz/entity" +
+      "/v1/role.proto\032.udb/core/authz/entity/v1" +
+      "/role_permission.proto\032(udb/core/authz/e" +
+      "ntity/v1/user_role.protoB\370\001\n\034com.udb.cor" +
+      "e.authz.entity.v1B\rEntitiesProtoP\001ZDgith" +
+      "ub.com/fahara02/udb/sdk/go/gen/udb/core/" +
+      "authz/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.co" +
+      "re.Authz.Entity.V1\312\002\030Udb\\Core\\Authz\\Enti" +
+      "ty\\V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\Entit" +
+      "y\\V1\352\002\034Udb::Core::Authz::Entity::V1P\000P\001P" +
+      "\002P\003P\004P\005P\006P\007P\010P\tP\nP\013P\014P\rb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.udb.core.authz.entity.v1.AccessDecisionAuditProto.getDescriptor(),
+          com.udb.core.authz.entity.v1.AuthzRevisionProto.getDescriptor(),
           com.udb.core.authz.entity.v1.EnumsProto.getDescriptor(),
+          com.udb.core.authz.entity.v1.GovernanceEnumsProto.getDescriptor(),
+          com.udb.core.authz.entity.v1.PolicyApprovalProto.getDescriptor(),
+          com.udb.core.authz.entity.v1.PolicyDraftProto.getDescriptor(),
           com.udb.core.authz.entity.v1.PolicyRuleProto.getDescriptor(),
+          com.udb.core.authz.entity.v1.PolicySetProto.getDescriptor(),
+          com.udb.core.authz.entity.v1.PolicySimulationProto.getDescriptor(),
           com.udb.core.authz.entity.v1.PolicyTupleProto.getDescriptor(),
+          com.udb.core.authz.entity.v1.PolicyVersionProto.getDescriptor(),
           com.udb.core.authz.entity.v1.RoleProto.getDescriptor(),
           com.udb.core.authz.entity.v1.RolePermissionProto.getDescriptor(),
           com.udb.core.authz.entity.v1.UserRoleProto.getDescriptor(),
         });
     descriptor.resolveAllFeaturesImmutable();
     com.udb.core.authz.entity.v1.AccessDecisionAuditProto.getDescriptor();
+    com.udb.core.authz.entity.v1.AuthzRevisionProto.getDescriptor();
     com.udb.core.authz.entity.v1.EnumsProto.getDescriptor();
+    com.udb.core.authz.entity.v1.GovernanceEnumsProto.getDescriptor();
+    com.udb.core.authz.entity.v1.PolicyApprovalProto.getDescriptor();
+    com.udb.core.authz.entity.v1.PolicyDraftProto.getDescriptor();
     com.udb.core.authz.entity.v1.PolicyRuleProto.getDescriptor();
+    com.udb.core.authz.entity.v1.PolicySetProto.getDescriptor();
+    com.udb.core.authz.entity.v1.PolicySimulationProto.getDescriptor();
     com.udb.core.authz.entity.v1.PolicyTupleProto.getDescriptor();
+    com.udb.core.authz.entity.v1.PolicyVersionProto.getDescriptor();
     com.udb.core.authz.entity.v1.RoleProto.getDescriptor();
     com.udb.core.authz.entity.v1.RolePermissionProto.getDescriptor();
     com.udb.core.authz.entity.v1.UserRoleProto.getDescriptor();

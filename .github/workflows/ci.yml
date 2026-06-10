@@ -234,6 +234,7 @@ jobs:
       UDB_SAGA_RECOVERY_ENABLED: "false"
       UDB_STARTUP_FORCE_SYNC: "true"
       UDB_STARTUP_DRY_RUN: "true"
+      UDB_AUDIT_SINK_URL: file:///tmp/udb-audit.jsonl
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -316,6 +317,7 @@ jobs:
       UDB_SAGA_RECOVERY_ENABLED: "false"
       UDB_STARTUP_FORCE_SYNC: "true"
       UDB_STARTUP_DRY_RUN: "true"
+      UDB_AUDIT_SINK_URL: file:///tmp/udb-audit.jsonl
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -389,11 +391,15 @@ jobs:
         # visible without blocking the stable policy gates below.
         continue-on-error: true
         uses: EmbarkStudios/cargo-deny-action@v2
+        env:
+          RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
         with:
           manifest-path: Cargo.toml
           command: check advisories
       - name: cargo-deny policy gates
         uses: EmbarkStudios/cargo-deny-action@v2
+        env:
+          RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
         with:
           manifest-path: Cargo.toml
           command: check bans licenses sources
@@ -675,6 +681,7 @@ jobs:
       UDB_SAGA_RECOVERY_ENABLED: "false"
       UDB_STARTUP_FORCE_SYNC: "true"
       UDB_STARTUP_DRY_RUN: "false"
+      UDB_AUDIT_SINK_URL: file:///tmp/udb-audit.jsonl
       UDB_JWT_PRIVATE_KEY: src/runtime/testdata/jwt_rs256_private.pem
       UDB_LIVE_USERNAME: sdk-live@example.com
       UDB_LIVE_PASSWORD: CorrectHorse1!

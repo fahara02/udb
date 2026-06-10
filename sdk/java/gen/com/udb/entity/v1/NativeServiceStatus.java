@@ -44,6 +44,8 @@ private static final long serialVersionUID = 0L;
     disabledReason_ = "";
     migrationStatus_ = "";
     descriptorVersion_ = "";
+    backgroundWorkers_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -538,6 +540,65 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int OWNS_BACKGROUND_WORKERS_FIELD_NUMBER = 17;
+  private boolean ownsBackgroundWorkers_ = false;
+  /**
+   * <code>bool owns_background_workers = 17 [json_name = "ownsBackgroundWorkers"];</code>
+   * @return The ownsBackgroundWorkers.
+   */
+  @java.lang.Override
+  public boolean getOwnsBackgroundWorkers() {
+    return ownsBackgroundWorkers_;
+  }
+
+  public static final int BACKGROUND_WORKER_ENABLED_FIELD_NUMBER = 18;
+  private boolean backgroundWorkerEnabled_ = false;
+  /**
+   * <code>bool background_worker_enabled = 18 [json_name = "backgroundWorkerEnabled"];</code>
+   * @return The backgroundWorkerEnabled.
+   */
+  @java.lang.Override
+  public boolean getBackgroundWorkerEnabled() {
+    return backgroundWorkerEnabled_;
+  }
+
+  public static final int BACKGROUND_WORKERS_FIELD_NUMBER = 19;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList backgroundWorkers_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+   * @return A list containing the backgroundWorkers.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getBackgroundWorkersList() {
+    return backgroundWorkers_;
+  }
+  /**
+   * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+   * @return The count of backgroundWorkers.
+   */
+  public int getBackgroundWorkersCount() {
+    return backgroundWorkers_.size();
+  }
+  /**
+   * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+   * @param index The index of the element to return.
+   * @return The backgroundWorkers at the given index.
+   */
+  public java.lang.String getBackgroundWorkers(int index) {
+    return backgroundWorkers_.get(index);
+  }
+  /**
+   * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the backgroundWorkers at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getBackgroundWorkersBytes(int index) {
+    return backgroundWorkers_.getByteString(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -599,6 +660,15 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(descriptorVersion_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 16, descriptorVersion_);
+    }
+    if (ownsBackgroundWorkers_ != false) {
+      output.writeBool(17, ownsBackgroundWorkers_);
+    }
+    if (backgroundWorkerEnabled_ != false) {
+      output.writeBool(18, backgroundWorkerEnabled_);
+    }
+    for (int i = 0; i < backgroundWorkers_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 19, backgroundWorkers_.getRaw(i));
     }
     getUnknownFields().writeTo(output);
   }
@@ -682,6 +752,22 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(descriptorVersion_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(16, descriptorVersion_);
     }
+    if (ownsBackgroundWorkers_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(17, ownsBackgroundWorkers_);
+    }
+    if (backgroundWorkerEnabled_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(18, backgroundWorkerEnabled_);
+    }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < backgroundWorkers_.size(); i++) {
+        dataSize += computeStringSizeNoTag(backgroundWorkers_.getRaw(i));
+      }
+      size += dataSize;
+      size += 2 * getBackgroundWorkersList().size();
+    }
     return size;
   }
   @java.lang.Override
@@ -738,6 +824,12 @@ private static final long serialVersionUID = 0L;
         .equals(other.getMigrationStatus())) return false;
     if (!getDescriptorVersion()
         .equals(other.getDescriptorVersion())) return false;
+    if (getOwnsBackgroundWorkers()
+        != other.getOwnsBackgroundWorkers()) return false;
+    if (getBackgroundWorkerEnabled()
+        != other.getBackgroundWorkerEnabled()) return false;
+    if (!getBackgroundWorkersList()
+        .equals(other.getBackgroundWorkersList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -796,6 +888,16 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getMigrationStatus().hashCode();
     hash = (37 * hash) + DESCRIPTOR_VERSION_FIELD_NUMBER;
     hash = (53 * hash) + getDescriptorVersion().hashCode();
+    hash = (37 * hash) + OWNS_BACKGROUND_WORKERS_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getOwnsBackgroundWorkers());
+    hash = (37 * hash) + BACKGROUND_WORKER_ENABLED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getBackgroundWorkerEnabled());
+    if (getBackgroundWorkersCount() > 0) {
+      hash = (37 * hash) + BACKGROUND_WORKERS_FIELD_NUMBER;
+      hash = (53 * hash) + getBackgroundWorkersList().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -948,6 +1050,10 @@ private static final long serialVersionUID = 0L;
       disabledReason_ = "";
       migrationStatus_ = "";
       descriptorVersion_ = "";
+      ownsBackgroundWorkers_ = false;
+      backgroundWorkerEnabled_ = false;
+      backgroundWorkers_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
     }
 
@@ -1033,6 +1139,16 @@ private static final long serialVersionUID = 0L;
       }
       if (((from_bitField0_ & 0x00008000) != 0)) {
         result.descriptorVersion_ = descriptorVersion_;
+      }
+      if (((from_bitField0_ & 0x00010000) != 0)) {
+        result.ownsBackgroundWorkers_ = ownsBackgroundWorkers_;
+      }
+      if (((from_bitField0_ & 0x00020000) != 0)) {
+        result.backgroundWorkerEnabled_ = backgroundWorkerEnabled_;
+      }
+      if (((from_bitField0_ & 0x00040000) != 0)) {
+        backgroundWorkers_.makeImmutable();
+        result.backgroundWorkers_ = backgroundWorkers_;
       }
     }
 
@@ -1143,6 +1259,22 @@ private static final long serialVersionUID = 0L;
         bitField0_ |= 0x00008000;
         onChanged();
       }
+      if (other.getOwnsBackgroundWorkers() != false) {
+        setOwnsBackgroundWorkers(other.getOwnsBackgroundWorkers());
+      }
+      if (other.getBackgroundWorkerEnabled() != false) {
+        setBackgroundWorkerEnabled(other.getBackgroundWorkerEnabled());
+      }
+      if (!other.backgroundWorkers_.isEmpty()) {
+        if (backgroundWorkers_.isEmpty()) {
+          backgroundWorkers_ = other.backgroundWorkers_;
+          bitField0_ |= 0x00040000;
+        } else {
+          ensureBackgroundWorkersIsMutable();
+          backgroundWorkers_.addAll(other.backgroundWorkers_);
+        }
+        onChanged();
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -1249,6 +1381,21 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00008000;
               break;
             } // case 130
+            case 136: {
+              ownsBackgroundWorkers_ = input.readBool();
+              bitField0_ |= 0x00010000;
+              break;
+            } // case 136
+            case 144: {
+              backgroundWorkerEnabled_ = input.readBool();
+              bitField0_ |= 0x00020000;
+              break;
+            } // case 144
+            case 154: {
+              ensureBackgroundWorkersIsMutable();
+              backgroundWorkers_.add(input.readStringRequireUtf8());
+              break;
+            } // case 154
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2409,6 +2556,181 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       descriptorVersion_ = value;
       bitField0_ |= 0x00008000;
+      onChanged();
+      return this;
+    }
+
+    private boolean ownsBackgroundWorkers_ ;
+    /**
+     * <code>bool owns_background_workers = 17 [json_name = "ownsBackgroundWorkers"];</code>
+     * @return The ownsBackgroundWorkers.
+     */
+    @java.lang.Override
+    public boolean getOwnsBackgroundWorkers() {
+      return ownsBackgroundWorkers_;
+    }
+    /**
+     * <code>bool owns_background_workers = 17 [json_name = "ownsBackgroundWorkers"];</code>
+     * @param value The ownsBackgroundWorkers to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOwnsBackgroundWorkers(boolean value) {
+
+      ownsBackgroundWorkers_ = value;
+      bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool owns_background_workers = 17 [json_name = "ownsBackgroundWorkers"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearOwnsBackgroundWorkers() {
+      bitField0_ = (bitField0_ & ~0x00010000);
+      ownsBackgroundWorkers_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean backgroundWorkerEnabled_ ;
+    /**
+     * <code>bool background_worker_enabled = 18 [json_name = "backgroundWorkerEnabled"];</code>
+     * @return The backgroundWorkerEnabled.
+     */
+    @java.lang.Override
+    public boolean getBackgroundWorkerEnabled() {
+      return backgroundWorkerEnabled_;
+    }
+    /**
+     * <code>bool background_worker_enabled = 18 [json_name = "backgroundWorkerEnabled"];</code>
+     * @param value The backgroundWorkerEnabled to set.
+     * @return This builder for chaining.
+     */
+    public Builder setBackgroundWorkerEnabled(boolean value) {
+
+      backgroundWorkerEnabled_ = value;
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool background_worker_enabled = 18 [json_name = "backgroundWorkerEnabled"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearBackgroundWorkerEnabled() {
+      bitField0_ = (bitField0_ & ~0x00020000);
+      backgroundWorkerEnabled_ = false;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.LazyStringArrayList backgroundWorkers_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureBackgroundWorkersIsMutable() {
+      if (!backgroundWorkers_.isModifiable()) {
+        backgroundWorkers_ = new com.google.protobuf.LazyStringArrayList(backgroundWorkers_);
+      }
+      bitField0_ |= 0x00040000;
+    }
+    /**
+     * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+     * @return A list containing the backgroundWorkers.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getBackgroundWorkersList() {
+      backgroundWorkers_.makeImmutable();
+      return backgroundWorkers_;
+    }
+    /**
+     * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+     * @return The count of backgroundWorkers.
+     */
+    public int getBackgroundWorkersCount() {
+      return backgroundWorkers_.size();
+    }
+    /**
+     * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+     * @param index The index of the element to return.
+     * @return The backgroundWorkers at the given index.
+     */
+    public java.lang.String getBackgroundWorkers(int index) {
+      return backgroundWorkers_.get(index);
+    }
+    /**
+     * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the backgroundWorkers at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getBackgroundWorkersBytes(int index) {
+      return backgroundWorkers_.getByteString(index);
+    }
+    /**
+     * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+     * @param index The index to set the value at.
+     * @param value The backgroundWorkers to set.
+     * @return This builder for chaining.
+     */
+    public Builder setBackgroundWorkers(
+        int index, java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureBackgroundWorkersIsMutable();
+      backgroundWorkers_.set(index, value);
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+     * @param value The backgroundWorkers to add.
+     * @return This builder for chaining.
+     */
+    public Builder addBackgroundWorkers(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureBackgroundWorkersIsMutable();
+      backgroundWorkers_.add(value);
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+     * @param values The backgroundWorkers to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllBackgroundWorkers(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureBackgroundWorkersIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, backgroundWorkers_);
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearBackgroundWorkers() {
+      backgroundWorkers_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00040000);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+     * @param value The bytes of the backgroundWorkers to add.
+     * @return This builder for chaining.
+     */
+    public Builder addBackgroundWorkersBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ensureBackgroundWorkersIsMutable();
+      backgroundWorkers_.add(value);
+      bitField0_ |= 0x00040000;
       onChanged();
       return this;
     }

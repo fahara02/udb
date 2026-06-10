@@ -3,7 +3,7 @@ from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from collections.abc import Iterable as _Iterable
+from collections.abc import Iterable as _Iterable, Mapping as _Mapping
 from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
@@ -49,6 +49,7 @@ class SecretClassification(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     SECRET_CLASSIFICATION_IDENTITY: _ClassVar[SecretClassification]
     SECRET_CLASSIFICATION_PII: _ClassVar[SecretClassification]
     SECRET_CLASSIFICATION_OPERATIONAL: _ClassVar[SecretClassification]
+    SECRET_CLASSIFICATION_PRIVATE_KEY: _ClassVar[SecretClassification]
 
 class OutputView(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -116,6 +117,7 @@ SECRET_CLASSIFICATION_BIOMETRIC: SecretClassification
 SECRET_CLASSIFICATION_IDENTITY: SecretClassification
 SECRET_CLASSIFICATION_PII: SecretClassification
 SECRET_CLASSIFICATION_OPERATIONAL: SecretClassification
+SECRET_CLASSIFICATION_PRIVATE_KEY: SecretClassification
 OUTPUT_VIEW_UNSPECIFIED: OutputView
 OUTPUT_VIEW_STORAGE_ONLY: OutputView
 OUTPUT_VIEW_PUBLIC: OutputView
@@ -247,7 +249,7 @@ class RestContract(_message.Message):
     def __init__(self, response_envelope: bool = ..., api_error: bool = ..., pagination_meta: bool = ..., explicit_nulls: bool = ...) -> None: ...
 
 class NativeServiceOptions(_message.Message):
-    __slots__ = ("service_id", "logical_service_id", "proto_service_id", "display_name", "category", "default_enabled", "requires_postgres", "requires_redis", "requires_object_store", "requires_kafka", "requires_feature", "public_listener_allowed", "control_plane_listener_allowed", "peer_listener_allowed", "sdk_facade_name", "cli_scaffold_group", "health_check_ref", "capability_ref")
+    __slots__ = ("service_id", "logical_service_id", "proto_service_id", "display_name", "category", "default_enabled", "requires_postgres", "requires_redis", "requires_object_store", "requires_kafka", "requires_feature", "public_listener_allowed", "control_plane_listener_allowed", "peer_listener_allowed", "sdk_facade_name", "cli_scaffold_group", "health_check_ref", "capability_ref", "owns_background_workers")
     SERVICE_ID_FIELD_NUMBER: _ClassVar[int]
     LOGICAL_SERVICE_ID_FIELD_NUMBER: _ClassVar[int]
     PROTO_SERVICE_ID_FIELD_NUMBER: _ClassVar[int]
@@ -266,6 +268,7 @@ class NativeServiceOptions(_message.Message):
     CLI_SCAFFOLD_GROUP_FIELD_NUMBER: _ClassVar[int]
     HEALTH_CHECK_REF_FIELD_NUMBER: _ClassVar[int]
     CAPABILITY_REF_FIELD_NUMBER: _ClassVar[int]
+    OWNS_BACKGROUND_WORKERS_FIELD_NUMBER: _ClassVar[int]
     service_id: str
     logical_service_id: str
     proto_service_id: str
@@ -284,7 +287,8 @@ class NativeServiceOptions(_message.Message):
     cli_scaffold_group: str
     health_check_ref: str
     capability_ref: str
-    def __init__(self, service_id: _Optional[str] = ..., logical_service_id: _Optional[str] = ..., proto_service_id: _Optional[str] = ..., display_name: _Optional[str] = ..., category: _Optional[str] = ..., default_enabled: bool = ..., requires_postgres: bool = ..., requires_redis: bool = ..., requires_object_store: bool = ..., requires_kafka: bool = ..., requires_feature: _Optional[str] = ..., public_listener_allowed: bool = ..., control_plane_listener_allowed: bool = ..., peer_listener_allowed: bool = ..., sdk_facade_name: _Optional[str] = ..., cli_scaffold_group: _Optional[str] = ..., health_check_ref: _Optional[str] = ..., capability_ref: _Optional[str] = ...) -> None: ...
+    owns_background_workers: bool
+    def __init__(self, service_id: _Optional[str] = ..., logical_service_id: _Optional[str] = ..., proto_service_id: _Optional[str] = ..., display_name: _Optional[str] = ..., category: _Optional[str] = ..., default_enabled: bool = ..., requires_postgres: bool = ..., requires_redis: bool = ..., requires_object_store: bool = ..., requires_kafka: bool = ..., requires_feature: _Optional[str] = ..., public_listener_allowed: bool = ..., control_plane_listener_allowed: bool = ..., peer_listener_allowed: bool = ..., sdk_facade_name: _Optional[str] = ..., cli_scaffold_group: _Optional[str] = ..., health_check_ref: _Optional[str] = ..., capability_ref: _Optional[str] = ..., owns_background_workers: bool = ...) -> None: ...
 
 class DbTableSecurityOptions(_message.Message):
     __slots__ = ("tenant_isolation_mode", "project_isolation_mode", "tenant_column", "project_column", "rls_policy_template", "soft_delete_mode", "retention_class", "retention_days", "audit_mode", "encryption_profile", "pii_profile", "break_glass_visible", "export_eligible", "data_residency_policy_ref")
@@ -397,20 +401,35 @@ class CliScaffoldOptions(_message.Message):
     def __init__(self, scaffold_package: _Optional[str] = ..., import_path: _Optional[str] = ..., required_env: _Optional[_Iterable[str]] = ..., generated_files: _Optional[_Iterable[str]] = ..., route_name: _Optional[str] = ..., middleware_name: _Optional[str] = ..., required_native_services: _Optional[_Iterable[str]] = ..., optional_native_services: _Optional[_Iterable[str]] = ..., secret_placeholders: _Optional[_Iterable[str]] = ..., post_generation_commands: _Optional[_Iterable[str]] = ..., smoke_test_command: _Optional[str] = ...) -> None: ...
 
 class EventContractOptions(_message.Message):
-    __slots__ = ("event_type", "outbox_topic", "partition_key_field", "payload_redaction_profile", "delivery_guarantee", "replay_compatibility")
+    __slots__ = ("event_type", "outbox_topic", "partition_key_field", "payload_redaction_profile", "delivery_guarantee", "replay_compatibility", "emits")
+    class EmittedEvent(_message.Message):
+        __slots__ = ("topic", "partition_key_field", "delivery_guarantee", "payload_redaction_profile", "conditional")
+        TOPIC_FIELD_NUMBER: _ClassVar[int]
+        PARTITION_KEY_FIELD_FIELD_NUMBER: _ClassVar[int]
+        DELIVERY_GUARANTEE_FIELD_NUMBER: _ClassVar[int]
+        PAYLOAD_REDACTION_PROFILE_FIELD_NUMBER: _ClassVar[int]
+        CONDITIONAL_FIELD_NUMBER: _ClassVar[int]
+        topic: str
+        partition_key_field: str
+        delivery_guarantee: str
+        payload_redaction_profile: str
+        conditional: bool
+        def __init__(self, topic: _Optional[str] = ..., partition_key_field: _Optional[str] = ..., delivery_guarantee: _Optional[str] = ..., payload_redaction_profile: _Optional[str] = ..., conditional: bool = ...) -> None: ...
     EVENT_TYPE_FIELD_NUMBER: _ClassVar[int]
     OUTBOX_TOPIC_FIELD_NUMBER: _ClassVar[int]
     PARTITION_KEY_FIELD_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_REDACTION_PROFILE_FIELD_NUMBER: _ClassVar[int]
     DELIVERY_GUARANTEE_FIELD_NUMBER: _ClassVar[int]
     REPLAY_COMPATIBILITY_FIELD_NUMBER: _ClassVar[int]
+    EMITS_FIELD_NUMBER: _ClassVar[int]
     event_type: str
     outbox_topic: str
     partition_key_field: str
     payload_redaction_profile: str
     delivery_guarantee: str
     replay_compatibility: str
-    def __init__(self, event_type: _Optional[str] = ..., outbox_topic: _Optional[str] = ..., partition_key_field: _Optional[str] = ..., payload_redaction_profile: _Optional[str] = ..., delivery_guarantee: _Optional[str] = ..., replay_compatibility: _Optional[str] = ...) -> None: ...
+    emits: _containers.RepeatedCompositeFieldContainer[EventContractOptions.EmittedEvent]
+    def __init__(self, event_type: _Optional[str] = ..., outbox_topic: _Optional[str] = ..., partition_key_field: _Optional[str] = ..., payload_redaction_profile: _Optional[str] = ..., delivery_guarantee: _Optional[str] = ..., replay_compatibility: _Optional[str] = ..., emits: _Optional[_Iterable[_Union[EventContractOptions.EmittedEvent, _Mapping]]] = ...) -> None: ...
 
 class DependencyContractOptions(_message.Message):
     __slots__ = ("required_native_services", "optional_native_services", "required_backends", "optional_backends", "required_features", "required_env", "degraded_when_missing")

@@ -17,6 +17,8 @@ from udb.core.authn.entity.v1.enums_pb2 import IdentityProviderKind as IdentityP
 from udb.core.authn.entity.v1.enums_pb2 import AuthFactorKind as AuthFactorKind
 from udb.core.authn.entity.v1.enums_pb2 import AuthCredentialType as AuthCredentialType
 from udb.core.authn.entity.v1.enums_pb2 import TokenType as TokenType
+from udb.core.authn.entity.v1.enums_pb2 import SigningKeyState as SigningKeyState
+from udb.core.authn.entity.v1.enums_pb2 import MfaChallengePurpose as MfaChallengePurpose
 from udb.core.authn.entity.v1.mfa_policy_pb2 import MfaPolicy as MfaPolicy
 from udb.core.authn.entity.v1.otp_pb2 import OTP as OTP
 from udb.core.authn.entity.v1.recovery_code_pb2 import RecoveryCode as RecoveryCode
@@ -92,3 +94,14 @@ TOKEN_TYPE_JWT_REFRESH: _enums_pb2.TokenType
 TOKEN_TYPE_SESSION: _enums_pb2.TokenType
 TOKEN_TYPE_API_KEY: _enums_pb2.TokenType
 TOKEN_TYPE_EXTERNAL: _enums_pb2.TokenType
+SIGNING_KEY_STATE_UNSPECIFIED: _enums_pb2.SigningKeyState
+SIGNING_KEY_STATE_NEXT: _enums_pb2.SigningKeyState
+SIGNING_KEY_STATE_ACTIVE: _enums_pb2.SigningKeyState
+SIGNING_KEY_STATE_VERIFYING: _enums_pb2.SigningKeyState
+SIGNING_KEY_STATE_RETIRED: _enums_pb2.SigningKeyState
+SIGNING_KEY_STATE_COMPROMISED: _enums_pb2.SigningKeyState
+MFA_CHALLENGE_PURPOSE_UNSPECIFIED: _enums_pb2.MfaChallengePurpose
+MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP: _enums_pb2.MfaChallengePurpose
+MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION: _enums_pb2.MfaChallengePurpose
+MFA_CHALLENGE_PURPOSE_ENROLLMENT: _enums_pb2.MfaChallengePurpose
+MFA_CHALLENGE_PURPOSE_RECOVERY: _enums_pb2.MfaChallengePurpose

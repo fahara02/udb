@@ -76,6 +76,7 @@ jobs:
     name: Skill smoke test (Claude, advisory)
     needs: validate
     runs-on: ubuntu-latest
+    environment: production
     continue-on-error: true   # non-deterministic LLM output must never block publish
     steps:
       - uses: actions/checkout@v4
@@ -102,6 +103,7 @@ jobs:
     name: Publish Ollama model
     needs: validate
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v4
       - name: Publish to Ollama registry
@@ -130,6 +132,7 @@ jobs:
     name: Sync OpenAI Assistant
     needs: validate
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v4
       - name: Create/update Assistant from instructions

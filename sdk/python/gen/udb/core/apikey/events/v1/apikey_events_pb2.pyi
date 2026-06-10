@@ -80,3 +80,41 @@ class ApiKeyRateLimitedEvent(_message.Message):
     occurred_at: _timestamp_pb2.Timestamp
     tenant_id: str
     def __init__(self, event_id: _Optional[str] = ..., key_id: _Optional[str] = ..., key_prefix: _Optional[str] = ..., endpoint: _Optional[str] = ..., ip_address: _Optional[str] = ..., requests_in_window: _Optional[int] = ..., limit: _Optional[int] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., tenant_id: _Optional[str] = ...) -> None: ...
+
+class ApiKeyValidateFailedEvent(_message.Message):
+    __slots__ = ("event_id", "key_prefix", "reason_code", "ip_address", "correlation_id", "occurred_at", "tenant_id")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    KEY_PREFIX_FIELD_NUMBER: _ClassVar[int]
+    REASON_CODE_FIELD_NUMBER: _ClassVar[int]
+    IP_ADDRESS_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    key_prefix: str
+    reason_code: str
+    ip_address: str
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    tenant_id: str
+    def __init__(self, event_id: _Optional[str] = ..., key_prefix: _Optional[str] = ..., reason_code: _Optional[str] = ..., ip_address: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., tenant_id: _Optional[str] = ...) -> None: ...
+
+class ApiKeyAnomalousUseEvent(_message.Message):
+    __slots__ = ("event_id", "key_id", "key_prefix", "anomaly", "ip_address", "correlation_id", "occurred_at", "tenant_id")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    KEY_ID_FIELD_NUMBER: _ClassVar[int]
+    KEY_PREFIX_FIELD_NUMBER: _ClassVar[int]
+    ANOMALY_FIELD_NUMBER: _ClassVar[int]
+    IP_ADDRESS_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    key_id: str
+    key_prefix: str
+    anomaly: str
+    ip_address: str
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    tenant_id: str
+    def __init__(self, event_id: _Optional[str] = ..., key_id: _Optional[str] = ..., key_prefix: _Optional[str] = ..., anomaly: _Optional[str] = ..., ip_address: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., tenant_id: _Optional[str] = ...) -> None: ...

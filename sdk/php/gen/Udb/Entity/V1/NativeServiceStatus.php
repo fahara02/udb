@@ -78,6 +78,18 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string descriptor_version = 16 [json_name = "descriptorVersion"];</code>
      */
     protected $descriptor_version = '';
+    /**
+     * Generated from protobuf field <code>bool owns_background_workers = 17 [json_name = "ownsBackgroundWorkers"];</code>
+     */
+    protected $owns_background_workers = false;
+    /**
+     * Generated from protobuf field <code>bool background_worker_enabled = 18 [json_name = "backgroundWorkerEnabled"];</code>
+     */
+    protected $background_worker_enabled = false;
+    /**
+     * Generated from protobuf field <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+     */
+    private $background_workers;
 
     /**
      * Constructor.
@@ -101,6 +113,9 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      *     @type string $disabled_reason
      *     @type string $migration_status
      *     @type string $descriptor_version
+     *     @type bool $owns_background_workers
+     *     @type bool $background_worker_enabled
+     *     @type string[] $background_workers
      * }
      */
     public function __construct($data = NULL) {
@@ -451,6 +466,70 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, true);
         $this->descriptor_version = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool owns_background_workers = 17 [json_name = "ownsBackgroundWorkers"];</code>
+     * @return bool
+     */
+    public function getOwnsBackgroundWorkers()
+    {
+        return $this->owns_background_workers;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool owns_background_workers = 17 [json_name = "ownsBackgroundWorkers"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setOwnsBackgroundWorkers(bool $var)
+    {
+        $this->owns_background_workers = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool background_worker_enabled = 18 [json_name = "backgroundWorkerEnabled"];</code>
+     * @return bool
+     */
+    public function getBackgroundWorkerEnabled()
+    {
+        return $this->background_worker_enabled;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool background_worker_enabled = 18 [json_name = "backgroundWorkerEnabled"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setBackgroundWorkerEnabled(bool $var)
+    {
+        $this->background_worker_enabled = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+     * @return RepeatedField<string>
+     */
+    public function getBackgroundWorkers()
+    {
+        return $this->background_workers;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated string background_workers = 19 [json_name = "backgroundWorkers"];</code>
+     * @param string[] $var
+     * @return $this
+     */
+    public function setBackgroundWorkers(array|RepeatedField $var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->background_workers = $arr;
 
         return $this;
     }

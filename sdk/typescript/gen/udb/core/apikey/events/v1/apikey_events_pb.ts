@@ -15,7 +15,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/core/apikey/events/v1/apikey_events.proto.
  */
 export const file_udb_core_apikey_events_v1_apikey_events: GenFile = /*@__PURE__*/
-  fileDesc("Ci11ZGIvY29yZS9hcGlrZXkvZXZlbnRzL3YxL2FwaWtleV9ldmVudHMucHJvdG8SGXVkYi5jb3JlLmFwaWtleS5ldmVudHMudjEioQMKEkFwaUtleUNyZWF0ZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIOCgZrZXlfaWQYAiABKAkSEgoKa2V5X3ByZWZpeBgDIAEoCRIMCgRuYW1lGAQgASgJEj4KCm93bmVyX3R5cGUYBSABKA4yKi51ZGIuY29yZS5hcGlrZXkuZW50aXR5LnYxLkFwaUtleU93bmVyVHlwZRIQCghvd25lcl9pZBgGIAEoCRIOCgZzY29wZXMYByADKAkSEgoKY3JlYXRlZF9ieRgIIAEoCRIWCg5jb3JyZWxhdGlvbl9pZBgJIAEoCRIvCgtvY2N1cnJlZF9hdBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEQoJdGVuYW50X2lkGAsgASgJOnWSshlxCix1ZGIuY29yZS5hcGlrZXkuZXZlbnRzLnYxLkFwaUtleUNyZWF0ZWRFdmVudBIVdWRiLmFwaWtleS5jcmVhdGVkLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGUiyAIKEkFwaUtleVJldm9rZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIOCgZrZXlfaWQYAiABKAkSEgoKa2V5X3ByZWZpeBgDIAEoCRISCgpyZXZva2VkX2J5GAQgASgJEhUKDXJldm9rZV9yZWFzb24YBSABKAkSFgoOY29ycmVsYXRpb25faWQYBiABKAkSLwoLb2NjdXJyZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhEKCXRlbmFudF9pZBgIIAEoCTp1krIZcQosdWRiLmNvcmUuYXBpa2V5LmV2ZW50cy52MS5BcGlLZXlSZXZva2VkRXZlbnQSFXVkYi5hcGlrZXkucmV2b2tlZC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIvsCChZBcGlLZXlSYXRlTGltaXRlZEV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEg4KBmtleV9pZBgCIAEoCRISCgprZXlfcHJlZml4GAMgASgJEhAKCGVuZHBvaW50GAQgASgJEhIKCmlwX2FkZHJlc3MYBSABKAkSGgoScmVxdWVzdHNfaW5fd2luZG93GAYgASgFEg0KBWxpbWl0GAcgASgFEhYKDmNvcnJlbGF0aW9uX2lkGAggASgJEi8KC29jY3VycmVkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIRCgl0ZW5hbnRfaWQYCiABKAk6fpKyGXoKMHVkYi5jb3JlLmFwaWtleS5ldmVudHMudjEuQXBpS2V5UmF0ZUxpbWl0ZWRFdmVudBIadWRiLmFwaWtleS5yYXRlLmxpbWl0ZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZUKCAgodY29tLnVkYi5jb3JlLmFwaWtleS5ldmVudHMudjFCEUFwaWtleUV2ZW50c1Byb3RvUAFaRWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvYXBpa2V5L2V2ZW50cy92MTtldmVudHN2MaICBFVDQUWqAhl1ZGIuY29yZS5BcGlrZXkuRXZlbnRzLlYxygIZVWRiXENvcmVcQXBpa2V5XEV2ZW50c1xWMeICJVVkYlxHUEJNZXRhZGF0YVxDb3JlXEFwaWtleVxFdmVudHNcVjHqAh1VZGI6OkNvcmU6OkFwaWtleTo6RXZlbnRzOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp, file_udb_core_apikey_entity_v1_enums, file_udb_core_common_v1_security]);
+  fileDesc("Ci11ZGIvY29yZS9hcGlrZXkvZXZlbnRzL3YxL2FwaWtleV9ldmVudHMucHJvdG8SGXVkYi5jb3JlLmFwaWtleS5ldmVudHMudjEioQMKEkFwaUtleUNyZWF0ZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIOCgZrZXlfaWQYAiABKAkSEgoKa2V5X3ByZWZpeBgDIAEoCRIMCgRuYW1lGAQgASgJEj4KCm93bmVyX3R5cGUYBSABKA4yKi51ZGIuY29yZS5hcGlrZXkuZW50aXR5LnYxLkFwaUtleU93bmVyVHlwZRIQCghvd25lcl9pZBgGIAEoCRIOCgZzY29wZXMYByADKAkSEgoKY3JlYXRlZF9ieRgIIAEoCRIWCg5jb3JyZWxhdGlvbl9pZBgJIAEoCRIvCgtvY2N1cnJlZF9hdBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEQoJdGVuYW50X2lkGAsgASgJOnWSshlxCix1ZGIuY29yZS5hcGlrZXkuZXZlbnRzLnYxLkFwaUtleUNyZWF0ZWRFdmVudBIVdWRiLmFwaWtleS5jcmVhdGVkLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGUiyAIKEkFwaUtleVJldm9rZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIOCgZrZXlfaWQYAiABKAkSEgoKa2V5X3ByZWZpeBgDIAEoCRISCgpyZXZva2VkX2J5GAQgASgJEhUKDXJldm9rZV9yZWFzb24YBSABKAkSFgoOY29ycmVsYXRpb25faWQYBiABKAkSLwoLb2NjdXJyZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhEKCXRlbmFudF9pZBgIIAEoCTp1krIZcQosdWRiLmNvcmUuYXBpa2V5LmV2ZW50cy52MS5BcGlLZXlSZXZva2VkRXZlbnQSFXVkYi5hcGlrZXkucmV2b2tlZC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIvsCChZBcGlLZXlSYXRlTGltaXRlZEV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEg4KBmtleV9pZBgCIAEoCRISCgprZXlfcHJlZml4GAMgASgJEhAKCGVuZHBvaW50GAQgASgJEhIKCmlwX2FkZHJlc3MYBSABKAkSGgoScmVxdWVzdHNfaW5fd2luZG93GAYgASgFEg0KBWxpbWl0GAcgASgFEhYKDmNvcnJlbGF0aW9uX2lkGAggASgJEi8KC29jY3VycmVkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIRCgl0ZW5hbnRfaWQYCiABKAk6fpKyGXoKMHVkYi5jb3JlLmFwaWtleS5ldmVudHMudjEuQXBpS2V5UmF0ZUxpbWl0ZWRFdmVudBIadWRiLmFwaWtleS5yYXRlLmxpbWl0ZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZSLOAgoZQXBpS2V5VmFsaWRhdGVGYWlsZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRISCgprZXlfcHJlZml4GAIgASgJEhMKC3JlYXNvbl9jb2RlGAMgASgJEhIKCmlwX2FkZHJlc3MYBCABKAkSFgoOY29ycmVsYXRpb25faWQYBSABKAkSLwoLb2NjdXJyZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhEKCXRlbmFudF9pZBgHIAEoCTqFAZKyGYABCjN1ZGIuY29yZS5hcGlrZXkuZXZlbnRzLnYxLkFwaUtleVZhbGlkYXRlRmFpbGVkRXZlbnQSHXVkYi5hcGlrZXkudmFsaWRhdGUuZmFpbGVkLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGUi0wIKF0FwaUtleUFub21hbG91c1VzZUV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEg4KBmtleV9pZBgCIAEoCRISCgprZXlfcHJlZml4GAMgASgJEg8KB2Fub21hbHkYBCABKAkSEgoKaXBfYWRkcmVzcxgFIAEoCRIWCg5jb3JyZWxhdGlvbl9pZBgGIAEoCRIvCgtvY2N1cnJlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEQoJdGVuYW50X2lkGAggASgJOoABkrIZfAoxdWRiLmNvcmUuYXBpa2V5LmV2ZW50cy52MS5BcGlLZXlBbm9tYWxvdXNVc2VFdmVudBIbdWRiLmFwaWtleS5hbm9tYWxvdXMudXNlLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGVCggIKHWNvbS51ZGIuY29yZS5hcGlrZXkuZXZlbnRzLnYxQhFBcGlrZXlFdmVudHNQcm90b1ABWkVnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2FwaWtleS9ldmVudHMvdjE7ZXZlbnRzdjGiAgRVQ0FFqgIZdWRiLmNvcmUuQXBpa2V5LkV2ZW50cy5WMcoCGVVkYlxDb3JlXEFwaWtleVxFdmVudHNcVjHiAiVVZGJcR1BCTWV0YWRhdGFcQ29yZVxBcGlrZXlcRXZlbnRzXFYx6gIdVWRiOjpDb3JlOjpBcGlrZXk6OkV2ZW50czo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_udb_core_apikey_entity_v1_enums, file_udb_core_common_v1_security]);
 
 /**
  * Kafka topic: udb.apikey.created.v1
@@ -204,4 +204,117 @@ export type ApiKeyRateLimitedEvent = Message<"udb.core.apikey.events.v1.ApiKeyRa
  */
 export const ApiKeyRateLimitedEventSchema: GenMessage<ApiKeyRateLimitedEvent> = /*@__PURE__*/
   messageDesc(file_udb_core_apikey_events_v1_apikey_events, 2);
+
+/**
+ * Kafka topic: udb.apikey.validate.failed.v1 (Phase L)
+ *
+ * @generated from message udb.core.apikey.events.v1.ApiKeyValidateFailedEvent
+ */
+export type ApiKeyValidateFailedEvent = Message<"udb.core.apikey.events.v1.ApiKeyValidateFailedEvent"> & {
+  /**
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * public prefix only, never the raw key
+   *
+   * @generated from field: string key_prefix = 2;
+   */
+  keyPrefix: string;
+
+  /**
+   * not_found, revoked, expired, scope_mismatch
+   *
+   * @generated from field: string reason_code = 3;
+   */
+  reasonCode: string;
+
+  /**
+   * masked
+   *
+   * @generated from field: string ip_address = 4;
+   */
+  ipAddress: string;
+
+  /**
+   * @generated from field: string correlation_id = 5;
+   */
+  correlationId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 6;
+   */
+  occurredAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: string tenant_id = 7;
+   */
+  tenantId: string;
+};
+
+/**
+ * Describes the message udb.core.apikey.events.v1.ApiKeyValidateFailedEvent.
+ * Use `create(ApiKeyValidateFailedEventSchema)` to create a new message.
+ */
+export const ApiKeyValidateFailedEventSchema: GenMessage<ApiKeyValidateFailedEvent> = /*@__PURE__*/
+  messageDesc(file_udb_core_apikey_events_v1_apikey_events, 3);
+
+/**
+ * Kafka topic: udb.apikey.anomalous.use.v1 (Phase L)
+ *
+ * @generated from message udb.core.apikey.events.v1.ApiKeyAnomalousUseEvent
+ */
+export type ApiKeyAnomalousUseEvent = Message<"udb.core.apikey.events.v1.ApiKeyAnomalousUseEvent"> & {
+  /**
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * @generated from field: string key_id = 2;
+   */
+  keyId: string;
+
+  /**
+   * @generated from field: string key_prefix = 3;
+   */
+  keyPrefix: string;
+
+  /**
+   * geo_velocity, new_asn, burst, off_hours
+   *
+   * @generated from field: string anomaly = 4;
+   */
+  anomaly: string;
+
+  /**
+   * masked
+   *
+   * @generated from field: string ip_address = 5;
+   */
+  ipAddress: string;
+
+  /**
+   * @generated from field: string correlation_id = 6;
+   */
+  correlationId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 7;
+   */
+  occurredAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: string tenant_id = 8;
+   */
+  tenantId: string;
+};
+
+/**
+ * Describes the message udb.core.apikey.events.v1.ApiKeyAnomalousUseEvent.
+ * Use `create(ApiKeyAnomalousUseEventSchema)` to create a new message.
+ */
+export const ApiKeyAnomalousUseEventSchema: GenMessage<ApiKeyAnomalousUseEvent> = /*@__PURE__*/
+  messageDesc(file_udb_core_apikey_events_v1_apikey_events, 4);
 

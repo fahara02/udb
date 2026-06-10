@@ -392,6 +392,23 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int REFRESH_TOKEN_EXPIRES_IN_FIELD_NUMBER = 10;
+  private int refreshTokenExpiresIn_ = 0;
+  /**
+   * <pre>
+   * Absolute lifetime (seconds) of the rotating refresh token (field 4). The
+   * refresh token is a token-family credential (rt_&lt;family&gt;.&lt;jti&gt;), rotated on
+   * every RefreshToken call; reuse of a superseded value revokes the family.
+   * </pre>
+   *
+   * <code>int32 refresh_token_expires_in = 10 [json_name = "refreshTokenExpiresIn"];</code>
+   * @return The refreshTokenExpiresIn.
+   */
+  @java.lang.Override
+  public int getRefreshTokenExpiresIn() {
+    return refreshTokenExpiresIn_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -433,6 +450,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(mfaOtpId_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 9, mfaOtpId_);
     }
+    if (refreshTokenExpiresIn_ != 0) {
+      output.writeInt32(10, refreshTokenExpiresIn_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -465,6 +485,10 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(mfaOtpId_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(9, mfaOtpId_);
+    }
+    if (refreshTokenExpiresIn_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(10, refreshTokenExpiresIn_);
     }
     return size;
   }
@@ -508,6 +532,8 @@ private static final long serialVersionUID = 0L;
         != other.getMfaRequired()) return false;
     if (!getMfaOtpId()
         .equals(other.getMfaOtpId())) return false;
+    if (getRefreshTokenExpiresIn()
+        != other.getRefreshTokenExpiresIn()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -538,6 +564,8 @@ private static final long serialVersionUID = 0L;
         getMfaRequired());
     hash = (37 * hash) + MFA_OTP_ID_FIELD_NUMBER;
     hash = (53 * hash) + getMfaOtpId().hashCode();
+    hash = (37 * hash) + REFRESH_TOKEN_EXPIRES_IN_FIELD_NUMBER;
+    hash = (53 * hash) + getRefreshTokenExpiresIn();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -678,6 +706,7 @@ private static final long serialVersionUID = 0L;
       csrfToken_ = "";
       mfaRequired_ = false;
       mfaOtpId_ = "";
+      refreshTokenExpiresIn_ = 0;
       return this;
     }
 
@@ -738,6 +767,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000100) != 0)) {
         result.mfaOtpId_ = mfaOtpId_;
       }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.refreshTokenExpiresIn_ = refreshTokenExpiresIn_;
+      }
     }
 
     @java.lang.Override
@@ -792,6 +824,9 @@ private static final long serialVersionUID = 0L;
         mfaOtpId_ = other.mfaOtpId_;
         bitField0_ |= 0x00000100;
         onChanged();
+      }
+      if (other.getRefreshTokenExpiresIn() != 0) {
+        setRefreshTokenExpiresIn(other.getRefreshTokenExpiresIn());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -864,6 +899,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000100;
               break;
             } // case 74
+            case 80: {
+              refreshTokenExpiresIn_ = input.readInt32();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 80
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1554,6 +1594,56 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       mfaOtpId_ = value;
       bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+
+    private int refreshTokenExpiresIn_ ;
+    /**
+     * <pre>
+     * Absolute lifetime (seconds) of the rotating refresh token (field 4). The
+     * refresh token is a token-family credential (rt_&lt;family&gt;.&lt;jti&gt;), rotated on
+     * every RefreshToken call; reuse of a superseded value revokes the family.
+     * </pre>
+     *
+     * <code>int32 refresh_token_expires_in = 10 [json_name = "refreshTokenExpiresIn"];</code>
+     * @return The refreshTokenExpiresIn.
+     */
+    @java.lang.Override
+    public int getRefreshTokenExpiresIn() {
+      return refreshTokenExpiresIn_;
+    }
+    /**
+     * <pre>
+     * Absolute lifetime (seconds) of the rotating refresh token (field 4). The
+     * refresh token is a token-family credential (rt_&lt;family&gt;.&lt;jti&gt;), rotated on
+     * every RefreshToken call; reuse of a superseded value revokes the family.
+     * </pre>
+     *
+     * <code>int32 refresh_token_expires_in = 10 [json_name = "refreshTokenExpiresIn"];</code>
+     * @param value The refreshTokenExpiresIn to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRefreshTokenExpiresIn(int value) {
+
+      refreshTokenExpiresIn_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Absolute lifetime (seconds) of the rotating refresh token (field 4). The
+     * refresh token is a token-family credential (rt_&lt;family&gt;.&lt;jti&gt;), rotated on
+     * every RefreshToken call; reuse of a superseded value revokes the family.
+     * </pre>
+     *
+     * <code>int32 refresh_token_expires_in = 10 [json_name = "refreshTokenExpiresIn"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRefreshTokenExpiresIn() {
+      bitField0_ = (bitField0_ & ~0x00000200);
+      refreshTokenExpiresIn_ = 0;
       onChanged();
       return this;
     }

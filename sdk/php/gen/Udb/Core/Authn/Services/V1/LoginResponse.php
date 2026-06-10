@@ -63,6 +63,14 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string mfa_otp_id = 9 [json_name = "mfaOtpId"];</code>
      */
     protected $mfa_otp_id = '';
+    /**
+     * Absolute lifetime (seconds) of the rotating refresh token (field 4). The
+     * refresh token is a token-family credential (rt_<family>.<jti>), rotated on
+     * every RefreshToken call; reuse of a superseded value revokes the family.
+     *
+     * Generated from protobuf field <code>int32 refresh_token_expires_in = 10 [json_name = "refreshTokenExpiresIn"];</code>
+     */
+    protected $refresh_token_expires_in = 0;
 
     /**
      * Constructor.
@@ -86,6 +94,10 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      *           true = client must re-call Login with password + second factor
      *     @type string $mfa_otp_id
      *           reserved for a future server-issued MFA challenge id (currently empty)
+     *     @type int $refresh_token_expires_in
+     *           Absolute lifetime (seconds) of the rotating refresh token (field 4). The
+     *           refresh token is a token-family credential (rt_<family>.<jti>), rotated on
+     *           every RefreshToken call; reuse of a superseded value revokes the family.
      * }
      */
     public function __construct($data = NULL) {
@@ -312,6 +324,36 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, true);
         $this->mfa_otp_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Absolute lifetime (seconds) of the rotating refresh token (field 4). The
+     * refresh token is a token-family credential (rt_<family>.<jti>), rotated on
+     * every RefreshToken call; reuse of a superseded value revokes the family.
+     *
+     * Generated from protobuf field <code>int32 refresh_token_expires_in = 10 [json_name = "refreshTokenExpiresIn"];</code>
+     * @return int
+     */
+    public function getRefreshTokenExpiresIn()
+    {
+        return $this->refresh_token_expires_in;
+    }
+
+    /**
+     * Absolute lifetime (seconds) of the rotating refresh token (field 4). The
+     * refresh token is a token-family credential (rt_<family>.<jti>), rotated on
+     * every RefreshToken call; reuse of a superseded value revokes the family.
+     *
+     * Generated from protobuf field <code>int32 refresh_token_expires_in = 10 [json_name = "refreshTokenExpiresIn"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setRefreshTokenExpiresIn(int $var)
+    {
+        GPBUtil::checkInt32($var);
+        $this->refresh_token_expires_in = $var;
 
         return $this;
     }

@@ -44,7 +44,7 @@ public final class PipelineMetricSnapshotProto extends com.google.protobuf.Gener
       "metric_snapshot.proto\022\034udb.core.analytic" +
       "s.entity.v1\032\037google/protobuf/timestamp.p" +
       "roto\032\033udb/core/common/v1/db.proto\032!udb/c" +
-      "ore/common/v1/security.proto\"\234\020\n\026Pipelin" +
+      "ore/common/v1/security.proto\"\225\020\n\026Pipelin" +
       "eMetricSnapshot\022O\n\013snapshot_id\030\001 \001(\tB.\202\267" +
       "\030*\n\013snapshot_id\022\004UUID\030\001(\001:\021gen_random_uu" +
       "id()R\nsnapshotId\022\250\001\n\rsnapshot_hour\030\002 \001(\013" +
@@ -77,7 +77,7 @@ public final class PipelineMetricSnapshotProto extends com.google.protobuf.Gener
       " second (total / 3600)R\rthroughputRps\022t\n" +
       "\013recorded_at\030\016 \001(\0132\032.google.protobuf.Tim" +
       "estampB7\202\267\0303\n\013recorded_at\022\013TIMESTAMPTZ\030\001" +
-      ":\021CURRENT_TIMESTAMP`\001h\001R\nrecordedAt:\355\005\372\266" +
+      ":\021CURRENT_TIMESTAMP`\001h\001R\nrecordedAt:\346\005\372\266" +
       "\030\310\004\n\031pipeline_metric_snapshots\022\rudb_anal" +
       "ytics\030\001 \001*CHourly aggregated pipeline st" +
       "age metrics backing Grafana dashboardsH\003" +
@@ -92,19 +92,18 @@ public final class PipelineMetricSnapshotProto extends com.google.protobuf.Gener
       "ps) AS avg_throughput_rps FROM udb_analy" +
       "tics.pipeline_metric_snapshots GROUP BY " +
       "date_trunc(\'day\', snapshot_hour), stage_" +
-      "name, tenant_id \001\352\001\007replica\212\262\031\233\001\n\006tenant" +
+      "name, tenant_id \001\352\001\007replica\212\262\031\224\001\n\006tenant" +
       "\032\ttenant_id*4tenant_id = current_setting" +
-      "(\'app.current_tenant_id\')2\013soft_delete:\025" +
-      "analytics.operational@\373\023H\002R\006tenantZ\010stan" +
-      "dardr\025tenant.data_residencyB\236\002\n com.udb." +
-      "core.analytics.entity.v1B\033PipelineMetric" +
-      "SnapshotProtoP\001ZHgithub.com/fahara02/udb" +
-      "/sdk/go/gen/udb/core/analytics/entity/v1" +
-      ";entityv1\242\002\004UCAE\252\002\034udb.core.Analytics.En" +
-      "tity.V1\312\002\034Udb\\Core\\Analytics\\Entity\\V1\342\002" +
-      "(Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V" +
-      "1\352\002 Udb::Core::Analytics::Entity::V1b\006pr" +
-      "oto3"
+      "(\'app.current_tenant_id\')2\004none:\025analyti" +
+      "cs.operational@\373\023H\002R\006tenantZ\010standardr\025t" +
+      "enant.data_residencyB\236\002\n com.udb.core.an" +
+      "alytics.entity.v1B\033PipelineMetricSnapsho" +
+      "tProtoP\001ZHgithub.com/fahara02/udb/sdk/go" +
+      "/gen/udb/core/analytics/entity/v1;entity" +
+      "v1\242\002\004UCAE\252\002\034udb.core.Analytics.Entity.V1" +
+      "\312\002\034Udb\\Core\\Analytics\\Entity\\V1\342\002(Udb\\GP" +
+      "BMetadata\\Core\\Analytics\\Entity\\V1\352\002 Udb" +
+      "::Core::Analytics::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

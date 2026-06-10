@@ -77,6 +77,26 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_apikey_services_v1_UpdateApiKeyResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_apikey_services_v1_RotateApiKeyRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_apikey_services_v1_RotateApiKeyRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_apikey_services_v1_RotateApiKeyResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_apikey_services_v1_RotateApiKeyResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_apikey_services_v1_EmergencyRevokeApiKeysRequest_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_apikey_services_v1_EmergencyRevokeApiKeysRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_apikey_services_v1_EmergencyRevokeApiKeysResponse_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_apikey_services_v1_EmergencyRevokeApiKeysResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_apikey_services_v1_ValidateApiKeyRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -174,43 +194,65 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
       "\007context:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"" +
       "j\n\024UpdateApiKeyResponse\0223\n\003key\030\001 \001(\0132!.u" +
       "db.core.apikey.entity.v1.ApiKeyR\003key:\035\232\262" +
-      "\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\265\001\n\025Validate" +
-      "ApiKeyRequest\022\033\n\tplain_key\030\001 \001(\tR\010plainK" +
-      "ey\022\032\n\010endpoint\030\002 \001(\tR\010endpoint\022%\n\016requir" +
-      "ed_scope\030\003 \001(\tR\rrequiredScope\022\035\n\nip_addr" +
-      "ess\030\004 \001(\tR\tipAddress:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@" +
-      "\001J\006apikeyP\001\"\205\002\n\026ValidateApiKeyResponse\022\024" +
-      "\n\005valid\030\001 \001(\010R\005valid\022\025\n\006key_id\030\002 \001(\tR\005ke" +
-      "yId\022\031\n\010owner_id\030\003 \001(\tR\007ownerId\022I\n\nowner_" +
-      "type\030\004 \001(\0162*.udb.core.apikey.entity.v1.A" +
-      "piKeyOwnerTypeR\townerType\022\026\n\006scopes\030\005 \003(" +
-      "\tR\006scopes\022!\n\014rate_limited\030\006 \001(\010R\013rateLim" +
-      "ited:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\256\001\n\032" +
-      "GetApiKeyUsageStatsRequest\022\025\n\006key_id\030\001 \001" +
-      "(\tR\005keyId\022.\n\004from\030\002 \001(\0132\032.google.protobu" +
-      "f.TimestampR\004from\022*\n\002to\030\003 \001(\0132\032.google.p" +
-      "rotobuf.TimestampR\002to:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003" +
-      "@\001J\006apikeyP\001\"\345\002\n\017ApiKeyDailyStat\022\022\n\004date" +
-      "\030\001 \001(\tR\004date\022%\n\016total_requests\030\002 \001(\003R\rto" +
-      "talRequests\022,\n\022rate_limited_count\030\003 \001(\003R" +
-      "\020rateLimitedCount\022$\n\016avg_latency_ms\030\004 \001(" +
-      "\001R\014avgLatencyMs\022c\n\rstatus_counts\030\005 \003(\0132>" +
-      ".udb.core.apikey.services.v1.ApiKeyDaily" +
-      "Stat.StatusCountsEntryR\014statusCounts\032?\n\021" +
-      "StatusCountsEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005v" +
-      "alue\030\002 \001(\003R\005value:\0028\001:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003" +
-      "@\001J\006apikeyP\001\"\247\001\n\033GetApiKeyUsageStatsResp" +
-      "onse\022B\n\005stats\030\001 \003(\0132,.udb.core.apikey.se" +
-      "rvices.v1.ApiKeyDailyStatR\005stats\022%\n\016tota" +
-      "l_requests\030\002 \001(\003R\rtotalRequests:\035\232\262\031\031\010\001\032" +
-      "\003udb(\260\352\0010\003@\001J\006apikeyP\001B\210\002\n\037com.udb.core." +
-      "apikey.services.v1B\tCoreProtoP\001ZIgithub." +
-      "com/fahara02/udb/sdk/go/gen/udb/core/api" +
-      "key/services/v1;servicesv1\242\002\004UCAS\252\002\033udb." +
-      "core.Apikey.Services.V1\312\002\033Udb\\Core\\Apike" +
-      "y\\Services\\V1\342\002\'Udb\\GPBMetadata\\Core\\Api" +
-      "key\\Services\\V1\352\002\037Udb::Core::Apikey::Ser" +
-      "vices::V1b\006proto3"
+      "\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\262\001\n\023RotateAp" +
+      "iKeyRequest\022\025\n\006key_id\030\001 \001(\tR\005keyId\022\'\n\017ro" +
+      "tation_reason\030\002 \001(\tR\016rotationReason\022<\n\007c" +
+      "ontext\030\003 \001(\0132\".udb.core.common.v1.Reques" +
+      "tContextR\007context:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006" +
+      "apikeyP\001\"\257\001\n\024RotateApiKeyResponse\0223\n\003key" +
+      "\030\001 \001(\0132!.udb.core.apikey.entity.v1.ApiKe" +
+      "yR\003key\022\033\n\tplain_key\030\002 \001(\tR\010plainKey\022&\n\017p" +
+      "revious_key_id\030\003 \001(\tR\rpreviousKeyId:\035\232\262\031" +
+      "\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\343\002\n\035Emergency" +
+      "RevokeApiKeysRequest\022\035\n\nkey_prefix\030\001 \001(\t" +
+      "R\tkeyPrefix\022\031\n\010owner_id\030\002 \001(\tR\007ownerId\022\033" +
+      "\n\ttenant_id\030\003 \001(\tR\010tenantId\022\035\n\nproject_i" +
+      "d\030\004 \001(\tR\tprojectId\022\024\n\005scope\030\005 \001(\tR\005scope" +
+      "\022A\n\016created_before\030\006 \001(\0132\032.google.protob" +
+      "uf.TimestampR\rcreatedBefore\022\026\n\006reason\030\007 " +
+      "\001(\tR\006reason\022<\n\007context\030\010 \001(\0132\".udb.core." +
+      "common.v1.RequestContextR\007context:\035\232\262\031\031\010" +
+      "\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\257\001\n\036EmergencyRe" +
+      "vokeApiKeysResponse\022#\n\rrevoked_count\030\001 \001" +
+      "(\003R\014revokedCount\022&\n\017revoked_key_ids\030\002 \003(" +
+      "\tR\rrevokedKeyIds\022!\n\014operation_id\030\003 \001(\tR\013" +
+      "operationId:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikey" +
+      "P\001\"\265\001\n\025ValidateApiKeyRequest\022\033\n\tplain_ke" +
+      "y\030\001 \001(\tR\010plainKey\022\032\n\010endpoint\030\002 \001(\tR\010end" +
+      "point\022%\n\016required_scope\030\003 \001(\tR\rrequiredS" +
+      "cope\022\035\n\nip_address\030\004 \001(\tR\tipAddress:\035\232\262\031" +
+      "\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\205\002\n\026ValidateA" +
+      "piKeyResponse\022\024\n\005valid\030\001 \001(\010R\005valid\022\025\n\006k" +
+      "ey_id\030\002 \001(\tR\005keyId\022\031\n\010owner_id\030\003 \001(\tR\007ow" +
+      "nerId\022I\n\nowner_type\030\004 \001(\0162*.udb.core.api" +
+      "key.entity.v1.ApiKeyOwnerTypeR\townerType" +
+      "\022\026\n\006scopes\030\005 \003(\tR\006scopes\022!\n\014rate_limited" +
+      "\030\006 \001(\010R\013rateLimited:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001" +
+      "J\006apikeyP\001\"\256\001\n\032GetApiKeyUsageStatsReques" +
+      "t\022\025\n\006key_id\030\001 \001(\tR\005keyId\022.\n\004from\030\002 \001(\0132\032" +
+      ".google.protobuf.TimestampR\004from\022*\n\002to\030\003" +
+      " \001(\0132\032.google.protobuf.TimestampR\002to:\035\232\262" +
+      "\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\345\002\n\017ApiKeyDa" +
+      "ilyStat\022\022\n\004date\030\001 \001(\tR\004date\022%\n\016total_req" +
+      "uests\030\002 \001(\003R\rtotalRequests\022,\n\022rate_limit" +
+      "ed_count\030\003 \001(\003R\020rateLimitedCount\022$\n\016avg_" +
+      "latency_ms\030\004 \001(\001R\014avgLatencyMs\022c\n\rstatus" +
+      "_counts\030\005 \003(\0132>.udb.core.apikey.services" +
+      ".v1.ApiKeyDailyStat.StatusCountsEntryR\014s" +
+      "tatusCounts\032?\n\021StatusCountsEntry\022\020\n\003key\030" +
+      "\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\003R\005value:\0028\001:\035\232\262" +
+      "\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001\"\247\001\n\033GetApiKe" +
+      "yUsageStatsResponse\022B\n\005stats\030\001 \003(\0132,.udb" +
+      ".core.apikey.services.v1.ApiKeyDailyStat" +
+      "R\005stats\022%\n\016total_requests\030\002 \001(\003R\rtotalRe" +
+      "quests:\035\232\262\031\031\010\001\032\003udb(\260\352\0010\003@\001J\006apikeyP\001B\210\002" +
+      "\n\037com.udb.core.apikey.services.v1B\tCoreP" +
+      "rotoP\001ZIgithub.com/fahara02/udb/sdk/go/g" +
+      "en/udb/core/apikey/services/v1;servicesv" +
+      "1\242\002\004UCAS\252\002\033udb.core.Apikey.Services.V1\312\002" +
+      "\033Udb\\Core\\Apikey\\Services\\V1\342\002\'Udb\\GPBMe" +
+      "tadata\\Core\\Apikey\\Services\\V1\352\002\037Udb::Co" +
+      "re::Apikey::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -282,26 +324,50 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_apikey_services_v1_UpdateApiKeyResponse_descriptor,
         new java.lang.String[] { "Key", });
-    internal_static_udb_core_apikey_services_v1_ValidateApiKeyRequest_descriptor =
+    internal_static_udb_core_apikey_services_v1_RotateApiKeyRequest_descriptor =
       getDescriptor().getMessageType(10);
+    internal_static_udb_core_apikey_services_v1_RotateApiKeyRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_apikey_services_v1_RotateApiKeyRequest_descriptor,
+        new java.lang.String[] { "KeyId", "RotationReason", "Context", });
+    internal_static_udb_core_apikey_services_v1_RotateApiKeyResponse_descriptor =
+      getDescriptor().getMessageType(11);
+    internal_static_udb_core_apikey_services_v1_RotateApiKeyResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_apikey_services_v1_RotateApiKeyResponse_descriptor,
+        new java.lang.String[] { "Key", "PlainKey", "PreviousKeyId", });
+    internal_static_udb_core_apikey_services_v1_EmergencyRevokeApiKeysRequest_descriptor =
+      getDescriptor().getMessageType(12);
+    internal_static_udb_core_apikey_services_v1_EmergencyRevokeApiKeysRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_apikey_services_v1_EmergencyRevokeApiKeysRequest_descriptor,
+        new java.lang.String[] { "KeyPrefix", "OwnerId", "TenantId", "ProjectId", "Scope", "CreatedBefore", "Reason", "Context", });
+    internal_static_udb_core_apikey_services_v1_EmergencyRevokeApiKeysResponse_descriptor =
+      getDescriptor().getMessageType(13);
+    internal_static_udb_core_apikey_services_v1_EmergencyRevokeApiKeysResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_apikey_services_v1_EmergencyRevokeApiKeysResponse_descriptor,
+        new java.lang.String[] { "RevokedCount", "RevokedKeyIds", "OperationId", });
+    internal_static_udb_core_apikey_services_v1_ValidateApiKeyRequest_descriptor =
+      getDescriptor().getMessageType(14);
     internal_static_udb_core_apikey_services_v1_ValidateApiKeyRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_apikey_services_v1_ValidateApiKeyRequest_descriptor,
         new java.lang.String[] { "PlainKey", "Endpoint", "RequiredScope", "IpAddress", });
     internal_static_udb_core_apikey_services_v1_ValidateApiKeyResponse_descriptor =
-      getDescriptor().getMessageType(11);
+      getDescriptor().getMessageType(15);
     internal_static_udb_core_apikey_services_v1_ValidateApiKeyResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_apikey_services_v1_ValidateApiKeyResponse_descriptor,
         new java.lang.String[] { "Valid", "KeyId", "OwnerId", "OwnerType", "Scopes", "RateLimited", });
     internal_static_udb_core_apikey_services_v1_GetApiKeyUsageStatsRequest_descriptor =
-      getDescriptor().getMessageType(12);
+      getDescriptor().getMessageType(16);
     internal_static_udb_core_apikey_services_v1_GetApiKeyUsageStatsRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_apikey_services_v1_GetApiKeyUsageStatsRequest_descriptor,
         new java.lang.String[] { "KeyId", "From", "To", });
     internal_static_udb_core_apikey_services_v1_ApiKeyDailyStat_descriptor =
-      getDescriptor().getMessageType(13);
+      getDescriptor().getMessageType(17);
     internal_static_udb_core_apikey_services_v1_ApiKeyDailyStat_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_apikey_services_v1_ApiKeyDailyStat_descriptor,
@@ -313,7 +379,7 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
         internal_static_udb_core_apikey_services_v1_ApiKeyDailyStat_StatusCountsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_udb_core_apikey_services_v1_GetApiKeyUsageStatsResponse_descriptor =
-      getDescriptor().getMessageType(14);
+      getDescriptor().getMessageType(18);
     internal_static_udb_core_apikey_services_v1_GetApiKeyUsageStatsResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_apikey_services_v1_GetApiKeyUsageStatsResponse_descriptor,

@@ -729,6 +729,564 @@ public final class AuthzServiceGrpc {
     return getGetPolicyBundleMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.CreatePolicyDraftRequest,
+      com.udb.core.authz.services.v1.PolicyDraftResponse> getCreatePolicyDraftMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "CreatePolicyDraft",
+      requestType = com.udb.core.authz.services.v1.CreatePolicyDraftRequest.class,
+      responseType = com.udb.core.authz.services.v1.PolicyDraftResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.CreatePolicyDraftRequest,
+      com.udb.core.authz.services.v1.PolicyDraftResponse> getCreatePolicyDraftMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.CreatePolicyDraftRequest, com.udb.core.authz.services.v1.PolicyDraftResponse> getCreatePolicyDraftMethod;
+    if ((getCreatePolicyDraftMethod = AuthzServiceGrpc.getCreatePolicyDraftMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getCreatePolicyDraftMethod = AuthzServiceGrpc.getCreatePolicyDraftMethod) == null) {
+          AuthzServiceGrpc.getCreatePolicyDraftMethod = getCreatePolicyDraftMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.CreatePolicyDraftRequest, com.udb.core.authz.services.v1.PolicyDraftResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "CreatePolicyDraft"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.CreatePolicyDraftRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.PolicyDraftResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("CreatePolicyDraft"))
+              .build();
+        }
+      }
+    }
+    return getCreatePolicyDraftMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.UpdatePolicyDraftRequest,
+      com.udb.core.authz.services.v1.PolicyDraftResponse> getUpdatePolicyDraftMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "UpdatePolicyDraft",
+      requestType = com.udb.core.authz.services.v1.UpdatePolicyDraftRequest.class,
+      responseType = com.udb.core.authz.services.v1.PolicyDraftResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.UpdatePolicyDraftRequest,
+      com.udb.core.authz.services.v1.PolicyDraftResponse> getUpdatePolicyDraftMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.UpdatePolicyDraftRequest, com.udb.core.authz.services.v1.PolicyDraftResponse> getUpdatePolicyDraftMethod;
+    if ((getUpdatePolicyDraftMethod = AuthzServiceGrpc.getUpdatePolicyDraftMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getUpdatePolicyDraftMethod = AuthzServiceGrpc.getUpdatePolicyDraftMethod) == null) {
+          AuthzServiceGrpc.getUpdatePolicyDraftMethod = getUpdatePolicyDraftMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.UpdatePolicyDraftRequest, com.udb.core.authz.services.v1.PolicyDraftResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "UpdatePolicyDraft"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.UpdatePolicyDraftRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.PolicyDraftResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("UpdatePolicyDraft"))
+              .build();
+        }
+      }
+    }
+    return getUpdatePolicyDraftMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.DiffPolicyDraftRequest,
+      com.udb.core.authz.services.v1.DiffPolicyDraftResponse> getDiffPolicyDraftMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "DiffPolicyDraft",
+      requestType = com.udb.core.authz.services.v1.DiffPolicyDraftRequest.class,
+      responseType = com.udb.core.authz.services.v1.DiffPolicyDraftResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.DiffPolicyDraftRequest,
+      com.udb.core.authz.services.v1.DiffPolicyDraftResponse> getDiffPolicyDraftMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.DiffPolicyDraftRequest, com.udb.core.authz.services.v1.DiffPolicyDraftResponse> getDiffPolicyDraftMethod;
+    if ((getDiffPolicyDraftMethod = AuthzServiceGrpc.getDiffPolicyDraftMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getDiffPolicyDraftMethod = AuthzServiceGrpc.getDiffPolicyDraftMethod) == null) {
+          AuthzServiceGrpc.getDiffPolicyDraftMethod = getDiffPolicyDraftMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.DiffPolicyDraftRequest, com.udb.core.authz.services.v1.DiffPolicyDraftResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "DiffPolicyDraft"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.DiffPolicyDraftRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.DiffPolicyDraftResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("DiffPolicyDraft"))
+              .build();
+        }
+      }
+    }
+    return getDiffPolicyDraftMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.SubmitPolicyDraftRequest,
+      com.udb.core.authz.services.v1.PolicyDraftResponse> getSubmitPolicyDraftMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "SubmitPolicyDraft",
+      requestType = com.udb.core.authz.services.v1.SubmitPolicyDraftRequest.class,
+      responseType = com.udb.core.authz.services.v1.PolicyDraftResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.SubmitPolicyDraftRequest,
+      com.udb.core.authz.services.v1.PolicyDraftResponse> getSubmitPolicyDraftMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.SubmitPolicyDraftRequest, com.udb.core.authz.services.v1.PolicyDraftResponse> getSubmitPolicyDraftMethod;
+    if ((getSubmitPolicyDraftMethod = AuthzServiceGrpc.getSubmitPolicyDraftMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getSubmitPolicyDraftMethod = AuthzServiceGrpc.getSubmitPolicyDraftMethod) == null) {
+          AuthzServiceGrpc.getSubmitPolicyDraftMethod = getSubmitPolicyDraftMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.SubmitPolicyDraftRequest, com.udb.core.authz.services.v1.PolicyDraftResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "SubmitPolicyDraft"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.SubmitPolicyDraftRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.PolicyDraftResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("SubmitPolicyDraft"))
+              .build();
+        }
+      }
+    }
+    return getSubmitPolicyDraftMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.ApprovePolicyDraftRequest,
+      com.udb.core.authz.services.v1.PolicyApprovalResponse> getApprovePolicyDraftMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ApprovePolicyDraft",
+      requestType = com.udb.core.authz.services.v1.ApprovePolicyDraftRequest.class,
+      responseType = com.udb.core.authz.services.v1.PolicyApprovalResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.ApprovePolicyDraftRequest,
+      com.udb.core.authz.services.v1.PolicyApprovalResponse> getApprovePolicyDraftMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.ApprovePolicyDraftRequest, com.udb.core.authz.services.v1.PolicyApprovalResponse> getApprovePolicyDraftMethod;
+    if ((getApprovePolicyDraftMethod = AuthzServiceGrpc.getApprovePolicyDraftMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getApprovePolicyDraftMethod = AuthzServiceGrpc.getApprovePolicyDraftMethod) == null) {
+          AuthzServiceGrpc.getApprovePolicyDraftMethod = getApprovePolicyDraftMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.ApprovePolicyDraftRequest, com.udb.core.authz.services.v1.PolicyApprovalResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ApprovePolicyDraft"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.ApprovePolicyDraftRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.PolicyApprovalResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("ApprovePolicyDraft"))
+              .build();
+        }
+      }
+    }
+    return getApprovePolicyDraftMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.RejectPolicyDraftRequest,
+      com.udb.core.authz.services.v1.PolicyApprovalResponse> getRejectPolicyDraftMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RejectPolicyDraft",
+      requestType = com.udb.core.authz.services.v1.RejectPolicyDraftRequest.class,
+      responseType = com.udb.core.authz.services.v1.PolicyApprovalResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.RejectPolicyDraftRequest,
+      com.udb.core.authz.services.v1.PolicyApprovalResponse> getRejectPolicyDraftMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.RejectPolicyDraftRequest, com.udb.core.authz.services.v1.PolicyApprovalResponse> getRejectPolicyDraftMethod;
+    if ((getRejectPolicyDraftMethod = AuthzServiceGrpc.getRejectPolicyDraftMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getRejectPolicyDraftMethod = AuthzServiceGrpc.getRejectPolicyDraftMethod) == null) {
+          AuthzServiceGrpc.getRejectPolicyDraftMethod = getRejectPolicyDraftMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.RejectPolicyDraftRequest, com.udb.core.authz.services.v1.PolicyApprovalResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RejectPolicyDraft"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.RejectPolicyDraftRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.PolicyApprovalResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("RejectPolicyDraft"))
+              .build();
+        }
+      }
+    }
+    return getRejectPolicyDraftMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.ActivatePolicyVersionRequest,
+      com.udb.core.authz.services.v1.ActivationResponse> getActivatePolicyVersionMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ActivatePolicyVersion",
+      requestType = com.udb.core.authz.services.v1.ActivatePolicyVersionRequest.class,
+      responseType = com.udb.core.authz.services.v1.ActivationResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.ActivatePolicyVersionRequest,
+      com.udb.core.authz.services.v1.ActivationResponse> getActivatePolicyVersionMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.ActivatePolicyVersionRequest, com.udb.core.authz.services.v1.ActivationResponse> getActivatePolicyVersionMethod;
+    if ((getActivatePolicyVersionMethod = AuthzServiceGrpc.getActivatePolicyVersionMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getActivatePolicyVersionMethod = AuthzServiceGrpc.getActivatePolicyVersionMethod) == null) {
+          AuthzServiceGrpc.getActivatePolicyVersionMethod = getActivatePolicyVersionMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.ActivatePolicyVersionRequest, com.udb.core.authz.services.v1.ActivationResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ActivatePolicyVersion"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.ActivatePolicyVersionRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.ActivationResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("ActivatePolicyVersion"))
+              .build();
+        }
+      }
+    }
+    return getActivatePolicyVersionMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.RollbackPolicyVersionRequest,
+      com.udb.core.authz.services.v1.ActivationResponse> getRollbackPolicyVersionMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RollbackPolicyVersion",
+      requestType = com.udb.core.authz.services.v1.RollbackPolicyVersionRequest.class,
+      responseType = com.udb.core.authz.services.v1.ActivationResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.RollbackPolicyVersionRequest,
+      com.udb.core.authz.services.v1.ActivationResponse> getRollbackPolicyVersionMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.RollbackPolicyVersionRequest, com.udb.core.authz.services.v1.ActivationResponse> getRollbackPolicyVersionMethod;
+    if ((getRollbackPolicyVersionMethod = AuthzServiceGrpc.getRollbackPolicyVersionMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getRollbackPolicyVersionMethod = AuthzServiceGrpc.getRollbackPolicyVersionMethod) == null) {
+          AuthzServiceGrpc.getRollbackPolicyVersionMethod = getRollbackPolicyVersionMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.RollbackPolicyVersionRequest, com.udb.core.authz.services.v1.ActivationResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RollbackPolicyVersion"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.RollbackPolicyVersionRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.ActivationResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("RollbackPolicyVersion"))
+              .build();
+        }
+      }
+    }
+    return getRollbackPolicyVersionMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.ActivateCanaryRequest,
+      com.udb.core.authz.services.v1.CanaryResponse> getActivateCanaryMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ActivateCanary",
+      requestType = com.udb.core.authz.services.v1.ActivateCanaryRequest.class,
+      responseType = com.udb.core.authz.services.v1.CanaryResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.ActivateCanaryRequest,
+      com.udb.core.authz.services.v1.CanaryResponse> getActivateCanaryMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.ActivateCanaryRequest, com.udb.core.authz.services.v1.CanaryResponse> getActivateCanaryMethod;
+    if ((getActivateCanaryMethod = AuthzServiceGrpc.getActivateCanaryMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getActivateCanaryMethod = AuthzServiceGrpc.getActivateCanaryMethod) == null) {
+          AuthzServiceGrpc.getActivateCanaryMethod = getActivateCanaryMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.ActivateCanaryRequest, com.udb.core.authz.services.v1.CanaryResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ActivateCanary"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.ActivateCanaryRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.CanaryResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("ActivateCanary"))
+              .build();
+        }
+      }
+    }
+    return getActivateCanaryMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.PromoteCanaryRequest,
+      com.udb.core.authz.services.v1.CanaryResponse> getPromoteCanaryMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "PromoteCanary",
+      requestType = com.udb.core.authz.services.v1.PromoteCanaryRequest.class,
+      responseType = com.udb.core.authz.services.v1.CanaryResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.PromoteCanaryRequest,
+      com.udb.core.authz.services.v1.CanaryResponse> getPromoteCanaryMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.PromoteCanaryRequest, com.udb.core.authz.services.v1.CanaryResponse> getPromoteCanaryMethod;
+    if ((getPromoteCanaryMethod = AuthzServiceGrpc.getPromoteCanaryMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getPromoteCanaryMethod = AuthzServiceGrpc.getPromoteCanaryMethod) == null) {
+          AuthzServiceGrpc.getPromoteCanaryMethod = getPromoteCanaryMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.PromoteCanaryRequest, com.udb.core.authz.services.v1.CanaryResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "PromoteCanary"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.PromoteCanaryRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.CanaryResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("PromoteCanary"))
+              .build();
+        }
+      }
+    }
+    return getPromoteCanaryMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.GetCanaryStatusRequest,
+      com.udb.core.authz.services.v1.GetCanaryStatusResponse> getGetCanaryStatusMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetCanaryStatus",
+      requestType = com.udb.core.authz.services.v1.GetCanaryStatusRequest.class,
+      responseType = com.udb.core.authz.services.v1.GetCanaryStatusResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.GetCanaryStatusRequest,
+      com.udb.core.authz.services.v1.GetCanaryStatusResponse> getGetCanaryStatusMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.GetCanaryStatusRequest, com.udb.core.authz.services.v1.GetCanaryStatusResponse> getGetCanaryStatusMethod;
+    if ((getGetCanaryStatusMethod = AuthzServiceGrpc.getGetCanaryStatusMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getGetCanaryStatusMethod = AuthzServiceGrpc.getGetCanaryStatusMethod) == null) {
+          AuthzServiceGrpc.getGetCanaryStatusMethod = getGetCanaryStatusMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.GetCanaryStatusRequest, com.udb.core.authz.services.v1.GetCanaryStatusResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetCanaryStatus"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.GetCanaryStatusRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.GetCanaryStatusResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("GetCanaryStatus"))
+              .build();
+        }
+      }
+    }
+    return getGetCanaryStatusMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.ListPolicyVersionsRequest,
+      com.udb.core.authz.services.v1.ListPolicyVersionsResponse> getListPolicyVersionsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListPolicyVersions",
+      requestType = com.udb.core.authz.services.v1.ListPolicyVersionsRequest.class,
+      responseType = com.udb.core.authz.services.v1.ListPolicyVersionsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.ListPolicyVersionsRequest,
+      com.udb.core.authz.services.v1.ListPolicyVersionsResponse> getListPolicyVersionsMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.ListPolicyVersionsRequest, com.udb.core.authz.services.v1.ListPolicyVersionsResponse> getListPolicyVersionsMethod;
+    if ((getListPolicyVersionsMethod = AuthzServiceGrpc.getListPolicyVersionsMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getListPolicyVersionsMethod = AuthzServiceGrpc.getListPolicyVersionsMethod) == null) {
+          AuthzServiceGrpc.getListPolicyVersionsMethod = getListPolicyVersionsMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.ListPolicyVersionsRequest, com.udb.core.authz.services.v1.ListPolicyVersionsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListPolicyVersions"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.ListPolicyVersionsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.ListPolicyVersionsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("ListPolicyVersions"))
+              .build();
+        }
+      }
+    }
+    return getListPolicyVersionsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.SimulatePolicyRequest,
+      com.udb.core.authz.services.v1.SimulatePolicyResponse> getSimulatePolicyMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "SimulatePolicy",
+      requestType = com.udb.core.authz.services.v1.SimulatePolicyRequest.class,
+      responseType = com.udb.core.authz.services.v1.SimulatePolicyResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.SimulatePolicyRequest,
+      com.udb.core.authz.services.v1.SimulatePolicyResponse> getSimulatePolicyMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.SimulatePolicyRequest, com.udb.core.authz.services.v1.SimulatePolicyResponse> getSimulatePolicyMethod;
+    if ((getSimulatePolicyMethod = AuthzServiceGrpc.getSimulatePolicyMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getSimulatePolicyMethod = AuthzServiceGrpc.getSimulatePolicyMethod) == null) {
+          AuthzServiceGrpc.getSimulatePolicyMethod = getSimulatePolicyMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.SimulatePolicyRequest, com.udb.core.authz.services.v1.SimulatePolicyResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "SimulatePolicy"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.SimulatePolicyRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.SimulatePolicyResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("SimulatePolicy"))
+              .build();
+        }
+      }
+    }
+    return getSimulatePolicyMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.ExplainPolicyRequest,
+      com.udb.core.authz.services.v1.ExplainPolicyResponse> getExplainPolicyMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ExplainPolicy",
+      requestType = com.udb.core.authz.services.v1.ExplainPolicyRequest.class,
+      responseType = com.udb.core.authz.services.v1.ExplainPolicyResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.ExplainPolicyRequest,
+      com.udb.core.authz.services.v1.ExplainPolicyResponse> getExplainPolicyMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.ExplainPolicyRequest, com.udb.core.authz.services.v1.ExplainPolicyResponse> getExplainPolicyMethod;
+    if ((getExplainPolicyMethod = AuthzServiceGrpc.getExplainPolicyMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getExplainPolicyMethod = AuthzServiceGrpc.getExplainPolicyMethod) == null) {
+          AuthzServiceGrpc.getExplainPolicyMethod = getExplainPolicyMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.ExplainPolicyRequest, com.udb.core.authz.services.v1.ExplainPolicyResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ExplainPolicy"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.ExplainPolicyRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.ExplainPolicyResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("ExplainPolicy"))
+              .build();
+        }
+      }
+    }
+    return getExplainPolicyMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.GetAuthzRevisionRequest,
+      com.udb.core.authz.services.v1.GetAuthzRevisionResponse> getGetAuthzRevisionMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetAuthzRevision",
+      requestType = com.udb.core.authz.services.v1.GetAuthzRevisionRequest.class,
+      responseType = com.udb.core.authz.services.v1.GetAuthzRevisionResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.GetAuthzRevisionRequest,
+      com.udb.core.authz.services.v1.GetAuthzRevisionResponse> getGetAuthzRevisionMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.GetAuthzRevisionRequest, com.udb.core.authz.services.v1.GetAuthzRevisionResponse> getGetAuthzRevisionMethod;
+    if ((getGetAuthzRevisionMethod = AuthzServiceGrpc.getGetAuthzRevisionMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getGetAuthzRevisionMethod = AuthzServiceGrpc.getGetAuthzRevisionMethod) == null) {
+          AuthzServiceGrpc.getGetAuthzRevisionMethod = getGetAuthzRevisionMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.GetAuthzRevisionRequest, com.udb.core.authz.services.v1.GetAuthzRevisionResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetAuthzRevision"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.GetAuthzRevisionRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.GetAuthzRevisionResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("GetAuthzRevision"))
+              .build();
+        }
+      }
+    }
+    return getGetAuthzRevisionMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest,
+      com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse> getInvalidatePolicyBundlesMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "InvalidatePolicyBundles",
+      requestType = com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest.class,
+      responseType = com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest,
+      com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse> getInvalidatePolicyBundlesMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest, com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse> getInvalidatePolicyBundlesMethod;
+    if ((getInvalidatePolicyBundlesMethod = AuthzServiceGrpc.getInvalidatePolicyBundlesMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getInvalidatePolicyBundlesMethod = AuthzServiceGrpc.getInvalidatePolicyBundlesMethod) == null) {
+          AuthzServiceGrpc.getInvalidatePolicyBundlesMethod = getInvalidatePolicyBundlesMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest, com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "InvalidatePolicyBundles"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("InvalidatePolicyBundles"))
+              .build();
+        }
+      }
+    }
+    return getInvalidatePolicyBundlesMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.SeedBuiltinRolesRequest,
+      com.udb.core.authz.services.v1.SeedBuiltinRolesResponse> getSeedBuiltinRolesMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "SeedBuiltinRoles",
+      requestType = com.udb.core.authz.services.v1.SeedBuiltinRolesRequest.class,
+      responseType = com.udb.core.authz.services.v1.SeedBuiltinRolesResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.SeedBuiltinRolesRequest,
+      com.udb.core.authz.services.v1.SeedBuiltinRolesResponse> getSeedBuiltinRolesMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.SeedBuiltinRolesRequest, com.udb.core.authz.services.v1.SeedBuiltinRolesResponse> getSeedBuiltinRolesMethod;
+    if ((getSeedBuiltinRolesMethod = AuthzServiceGrpc.getSeedBuiltinRolesMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getSeedBuiltinRolesMethod = AuthzServiceGrpc.getSeedBuiltinRolesMethod) == null) {
+          AuthzServiceGrpc.getSeedBuiltinRolesMethod = getSeedBuiltinRolesMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.SeedBuiltinRolesRequest, com.udb.core.authz.services.v1.SeedBuiltinRolesResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "SeedBuiltinRoles"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.SeedBuiltinRolesRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.SeedBuiltinRolesResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("SeedBuiltinRoles"))
+              .build();
+        }
+      }
+    }
+    return getSeedBuiltinRolesMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest,
+      com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse> getMigrateLegacyPoliciesMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "MigrateLegacyPolicies",
+      requestType = com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest.class,
+      responseType = com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest,
+      com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse> getMigrateLegacyPoliciesMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest, com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse> getMigrateLegacyPoliciesMethod;
+    if ((getMigrateLegacyPoliciesMethod = AuthzServiceGrpc.getMigrateLegacyPoliciesMethod) == null) {
+      synchronized (AuthzServiceGrpc.class) {
+        if ((getMigrateLegacyPoliciesMethod = AuthzServiceGrpc.getMigrateLegacyPoliciesMethod) == null) {
+          AuthzServiceGrpc.getMigrateLegacyPoliciesMethod = getMigrateLegacyPoliciesMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest, com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "MigrateLegacyPolicies"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthzServiceMethodDescriptorSupplier("MigrateLegacyPolicies"))
+              .build();
+        }
+      }
+    }
+    return getMigrateLegacyPoliciesMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -993,6 +1551,142 @@ public final class AuthzServiceGrpc {
         io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyBundleResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetPolicyBundleMethod(), responseObserver);
     }
+
+    /**
+     */
+    default void createPolicyDraft(com.udb.core.authz.services.v1.CreatePolicyDraftRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyDraftResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreatePolicyDraftMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void updatePolicyDraft(com.udb.core.authz.services.v1.UpdatePolicyDraftRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyDraftResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getUpdatePolicyDraftMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void diffPolicyDraft(com.udb.core.authz.services.v1.DiffPolicyDraftRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.DiffPolicyDraftResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDiffPolicyDraftMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void submitPolicyDraft(com.udb.core.authz.services.v1.SubmitPolicyDraftRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyDraftResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getSubmitPolicyDraftMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void approvePolicyDraft(com.udb.core.authz.services.v1.ApprovePolicyDraftRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyApprovalResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getApprovePolicyDraftMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void rejectPolicyDraft(com.udb.core.authz.services.v1.RejectPolicyDraftRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyApprovalResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRejectPolicyDraftMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void activatePolicyVersion(com.udb.core.authz.services.v1.ActivatePolicyVersionRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.ActivationResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getActivatePolicyVersionMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void rollbackPolicyVersion(com.udb.core.authz.services.v1.RollbackPolicyVersionRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.ActivationResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRollbackPolicyVersionMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Activate a policy version to a canary scope (subset of the fleet) before
+     * fleet-wide. A metric-based evaluator then auto-rolls back on breach.
+     * </pre>
+     */
+    default void activateCanary(com.udb.core.authz.services.v1.ActivateCanaryRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.CanaryResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getActivateCanaryMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Promote a baked, within-threshold canary to fleet-wide enforcement.
+     * </pre>
+     */
+    default void promoteCanary(com.udb.core.authz.services.v1.PromoteCanaryRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.CanaryResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getPromoteCanaryMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Read a canary's current state + promote-eligibility.
+     * </pre>
+     */
+    default void getCanaryStatus(com.udb.core.authz.services.v1.GetCanaryStatusRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.GetCanaryStatusResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetCanaryStatusMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void listPolicyVersions(com.udb.core.authz.services.v1.ListPolicyVersionsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.ListPolicyVersionsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListPolicyVersionsMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void simulatePolicy(com.udb.core.authz.services.v1.SimulatePolicyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.SimulatePolicyResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getSimulatePolicyMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void explainPolicy(com.udb.core.authz.services.v1.ExplainPolicyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.ExplainPolicyResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getExplainPolicyMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void getAuthzRevision(com.udb.core.authz.services.v1.GetAuthzRevisionRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.GetAuthzRevisionResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetAuthzRevisionMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void invalidatePolicyBundles(com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getInvalidatePolicyBundlesMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void seedBuiltinRoles(com.udb.core.authz.services.v1.SeedBuiltinRolesRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.SeedBuiltinRolesResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getSeedBuiltinRolesMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void migrateLegacyPolicies(com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getMigrateLegacyPoliciesMethod(), responseObserver);
+    }
   }
 
   /**
@@ -1250,6 +1944,160 @@ public final class AuthzServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getGetPolicyBundleMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     */
+    public void createPolicyDraft(com.udb.core.authz.services.v1.CreatePolicyDraftRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyDraftResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getCreatePolicyDraftMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void updatePolicyDraft(com.udb.core.authz.services.v1.UpdatePolicyDraftRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyDraftResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getUpdatePolicyDraftMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void diffPolicyDraft(com.udb.core.authz.services.v1.DiffPolicyDraftRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.DiffPolicyDraftResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getDiffPolicyDraftMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void submitPolicyDraft(com.udb.core.authz.services.v1.SubmitPolicyDraftRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyDraftResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getSubmitPolicyDraftMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void approvePolicyDraft(com.udb.core.authz.services.v1.ApprovePolicyDraftRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyApprovalResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getApprovePolicyDraftMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void rejectPolicyDraft(com.udb.core.authz.services.v1.RejectPolicyDraftRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyApprovalResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRejectPolicyDraftMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void activatePolicyVersion(com.udb.core.authz.services.v1.ActivatePolicyVersionRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.ActivationResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getActivatePolicyVersionMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void rollbackPolicyVersion(com.udb.core.authz.services.v1.RollbackPolicyVersionRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.ActivationResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRollbackPolicyVersionMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Activate a policy version to a canary scope (subset of the fleet) before
+     * fleet-wide. A metric-based evaluator then auto-rolls back on breach.
+     * </pre>
+     */
+    public void activateCanary(com.udb.core.authz.services.v1.ActivateCanaryRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.CanaryResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getActivateCanaryMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Promote a baked, within-threshold canary to fleet-wide enforcement.
+     * </pre>
+     */
+    public void promoteCanary(com.udb.core.authz.services.v1.PromoteCanaryRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.CanaryResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getPromoteCanaryMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Read a canary's current state + promote-eligibility.
+     * </pre>
+     */
+    public void getCanaryStatus(com.udb.core.authz.services.v1.GetCanaryStatusRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.GetCanaryStatusResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetCanaryStatusMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void listPolicyVersions(com.udb.core.authz.services.v1.ListPolicyVersionsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.ListPolicyVersionsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListPolicyVersionsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void simulatePolicy(com.udb.core.authz.services.v1.SimulatePolicyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.SimulatePolicyResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getSimulatePolicyMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void explainPolicy(com.udb.core.authz.services.v1.ExplainPolicyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.ExplainPolicyResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getExplainPolicyMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void getAuthzRevision(com.udb.core.authz.services.v1.GetAuthzRevisionRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.GetAuthzRevisionResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetAuthzRevisionMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void invalidatePolicyBundles(com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getInvalidatePolicyBundlesMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void seedBuiltinRoles(com.udb.core.authz.services.v1.SeedBuiltinRolesRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.SeedBuiltinRolesResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getSeedBuiltinRolesMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void migrateLegacyPolicies(com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getMigrateLegacyPoliciesMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -1469,6 +2317,142 @@ public final class AuthzServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getGetPolicyBundleMethod(), getCallOptions(), request);
     }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.PolicyDraftResponse createPolicyDraft(com.udb.core.authz.services.v1.CreatePolicyDraftRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getCreatePolicyDraftMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.PolicyDraftResponse updatePolicyDraft(com.udb.core.authz.services.v1.UpdatePolicyDraftRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getUpdatePolicyDraftMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.DiffPolicyDraftResponse diffPolicyDraft(com.udb.core.authz.services.v1.DiffPolicyDraftRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getDiffPolicyDraftMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.PolicyDraftResponse submitPolicyDraft(com.udb.core.authz.services.v1.SubmitPolicyDraftRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getSubmitPolicyDraftMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.PolicyApprovalResponse approvePolicyDraft(com.udb.core.authz.services.v1.ApprovePolicyDraftRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getApprovePolicyDraftMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.PolicyApprovalResponse rejectPolicyDraft(com.udb.core.authz.services.v1.RejectPolicyDraftRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getRejectPolicyDraftMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.ActivationResponse activatePolicyVersion(com.udb.core.authz.services.v1.ActivatePolicyVersionRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getActivatePolicyVersionMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.ActivationResponse rollbackPolicyVersion(com.udb.core.authz.services.v1.RollbackPolicyVersionRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getRollbackPolicyVersionMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Activate a policy version to a canary scope (subset of the fleet) before
+     * fleet-wide. A metric-based evaluator then auto-rolls back on breach.
+     * </pre>
+     */
+    public com.udb.core.authz.services.v1.CanaryResponse activateCanary(com.udb.core.authz.services.v1.ActivateCanaryRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getActivateCanaryMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Promote a baked, within-threshold canary to fleet-wide enforcement.
+     * </pre>
+     */
+    public com.udb.core.authz.services.v1.CanaryResponse promoteCanary(com.udb.core.authz.services.v1.PromoteCanaryRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getPromoteCanaryMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Read a canary's current state + promote-eligibility.
+     * </pre>
+     */
+    public com.udb.core.authz.services.v1.GetCanaryStatusResponse getCanaryStatus(com.udb.core.authz.services.v1.GetCanaryStatusRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetCanaryStatusMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.ListPolicyVersionsResponse listPolicyVersions(com.udb.core.authz.services.v1.ListPolicyVersionsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListPolicyVersionsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.SimulatePolicyResponse simulatePolicy(com.udb.core.authz.services.v1.SimulatePolicyRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getSimulatePolicyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.ExplainPolicyResponse explainPolicy(com.udb.core.authz.services.v1.ExplainPolicyRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getExplainPolicyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.GetAuthzRevisionResponse getAuthzRevision(com.udb.core.authz.services.v1.GetAuthzRevisionRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetAuthzRevisionMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse invalidatePolicyBundles(com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getInvalidatePolicyBundlesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.SeedBuiltinRolesResponse seedBuiltinRoles(com.udb.core.authz.services.v1.SeedBuiltinRolesRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getSeedBuiltinRolesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse migrateLegacyPolicies(com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getMigrateLegacyPoliciesMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -1687,6 +2671,142 @@ public final class AuthzServiceGrpc {
     public com.udb.core.authz.services.v1.PolicyBundleResponse getPolicyBundle(com.udb.core.authz.services.v1.PolicyBundleRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGetPolicyBundleMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.PolicyDraftResponse createPolicyDraft(com.udb.core.authz.services.v1.CreatePolicyDraftRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getCreatePolicyDraftMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.PolicyDraftResponse updatePolicyDraft(com.udb.core.authz.services.v1.UpdatePolicyDraftRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getUpdatePolicyDraftMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.DiffPolicyDraftResponse diffPolicyDraft(com.udb.core.authz.services.v1.DiffPolicyDraftRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getDiffPolicyDraftMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.PolicyDraftResponse submitPolicyDraft(com.udb.core.authz.services.v1.SubmitPolicyDraftRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getSubmitPolicyDraftMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.PolicyApprovalResponse approvePolicyDraft(com.udb.core.authz.services.v1.ApprovePolicyDraftRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getApprovePolicyDraftMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.PolicyApprovalResponse rejectPolicyDraft(com.udb.core.authz.services.v1.RejectPolicyDraftRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRejectPolicyDraftMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.ActivationResponse activatePolicyVersion(com.udb.core.authz.services.v1.ActivatePolicyVersionRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getActivatePolicyVersionMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.ActivationResponse rollbackPolicyVersion(com.udb.core.authz.services.v1.RollbackPolicyVersionRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRollbackPolicyVersionMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Activate a policy version to a canary scope (subset of the fleet) before
+     * fleet-wide. A metric-based evaluator then auto-rolls back on breach.
+     * </pre>
+     */
+    public com.udb.core.authz.services.v1.CanaryResponse activateCanary(com.udb.core.authz.services.v1.ActivateCanaryRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getActivateCanaryMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Promote a baked, within-threshold canary to fleet-wide enforcement.
+     * </pre>
+     */
+    public com.udb.core.authz.services.v1.CanaryResponse promoteCanary(com.udb.core.authz.services.v1.PromoteCanaryRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getPromoteCanaryMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Read a canary's current state + promote-eligibility.
+     * </pre>
+     */
+    public com.udb.core.authz.services.v1.GetCanaryStatusResponse getCanaryStatus(com.udb.core.authz.services.v1.GetCanaryStatusRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetCanaryStatusMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.ListPolicyVersionsResponse listPolicyVersions(com.udb.core.authz.services.v1.ListPolicyVersionsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListPolicyVersionsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.SimulatePolicyResponse simulatePolicy(com.udb.core.authz.services.v1.SimulatePolicyRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getSimulatePolicyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.ExplainPolicyResponse explainPolicy(com.udb.core.authz.services.v1.ExplainPolicyRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getExplainPolicyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.GetAuthzRevisionResponse getAuthzRevision(com.udb.core.authz.services.v1.GetAuthzRevisionRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetAuthzRevisionMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse invalidatePolicyBundles(com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getInvalidatePolicyBundlesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.SeedBuiltinRolesResponse seedBuiltinRoles(com.udb.core.authz.services.v1.SeedBuiltinRolesRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getSeedBuiltinRolesMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse migrateLegacyPolicies(com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getMigrateLegacyPoliciesMethod(), getCallOptions(), request);
     }
   }
 
@@ -1930,6 +3050,160 @@ public final class AuthzServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getGetPolicyBundleMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.PolicyDraftResponse> createPolicyDraft(
+        com.udb.core.authz.services.v1.CreatePolicyDraftRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getCreatePolicyDraftMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.PolicyDraftResponse> updatePolicyDraft(
+        com.udb.core.authz.services.v1.UpdatePolicyDraftRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getUpdatePolicyDraftMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.DiffPolicyDraftResponse> diffPolicyDraft(
+        com.udb.core.authz.services.v1.DiffPolicyDraftRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getDiffPolicyDraftMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.PolicyDraftResponse> submitPolicyDraft(
+        com.udb.core.authz.services.v1.SubmitPolicyDraftRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getSubmitPolicyDraftMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.PolicyApprovalResponse> approvePolicyDraft(
+        com.udb.core.authz.services.v1.ApprovePolicyDraftRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getApprovePolicyDraftMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.PolicyApprovalResponse> rejectPolicyDraft(
+        com.udb.core.authz.services.v1.RejectPolicyDraftRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRejectPolicyDraftMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.ActivationResponse> activatePolicyVersion(
+        com.udb.core.authz.services.v1.ActivatePolicyVersionRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getActivatePolicyVersionMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.ActivationResponse> rollbackPolicyVersion(
+        com.udb.core.authz.services.v1.RollbackPolicyVersionRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRollbackPolicyVersionMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Activate a policy version to a canary scope (subset of the fleet) before
+     * fleet-wide. A metric-based evaluator then auto-rolls back on breach.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.CanaryResponse> activateCanary(
+        com.udb.core.authz.services.v1.ActivateCanaryRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getActivateCanaryMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Promote a baked, within-threshold canary to fleet-wide enforcement.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.CanaryResponse> promoteCanary(
+        com.udb.core.authz.services.v1.PromoteCanaryRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getPromoteCanaryMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Read a canary's current state + promote-eligibility.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.GetCanaryStatusResponse> getCanaryStatus(
+        com.udb.core.authz.services.v1.GetCanaryStatusRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetCanaryStatusMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.ListPolicyVersionsResponse> listPolicyVersions(
+        com.udb.core.authz.services.v1.ListPolicyVersionsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListPolicyVersionsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.SimulatePolicyResponse> simulatePolicy(
+        com.udb.core.authz.services.v1.SimulatePolicyRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getSimulatePolicyMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.ExplainPolicyResponse> explainPolicy(
+        com.udb.core.authz.services.v1.ExplainPolicyRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getExplainPolicyMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.GetAuthzRevisionResponse> getAuthzRevision(
+        com.udb.core.authz.services.v1.GetAuthzRevisionRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetAuthzRevisionMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse> invalidatePolicyBundles(
+        com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getInvalidatePolicyBundlesMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.SeedBuiltinRolesResponse> seedBuiltinRoles(
+        com.udb.core.authz.services.v1.SeedBuiltinRolesRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getSeedBuiltinRolesMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse> migrateLegacyPolicies(
+        com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getMigrateLegacyPoliciesMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_AUTHORIZE = 0;
@@ -1955,6 +3229,24 @@ public final class AuthzServiceGrpc {
   private static final int METHODID_LINT_AUTHZ_POLICIES = 20;
   private static final int METHODID_GET_NATIVE_ACCESS = 21;
   private static final int METHODID_GET_POLICY_BUNDLE = 22;
+  private static final int METHODID_CREATE_POLICY_DRAFT = 23;
+  private static final int METHODID_UPDATE_POLICY_DRAFT = 24;
+  private static final int METHODID_DIFF_POLICY_DRAFT = 25;
+  private static final int METHODID_SUBMIT_POLICY_DRAFT = 26;
+  private static final int METHODID_APPROVE_POLICY_DRAFT = 27;
+  private static final int METHODID_REJECT_POLICY_DRAFT = 28;
+  private static final int METHODID_ACTIVATE_POLICY_VERSION = 29;
+  private static final int METHODID_ROLLBACK_POLICY_VERSION = 30;
+  private static final int METHODID_ACTIVATE_CANARY = 31;
+  private static final int METHODID_PROMOTE_CANARY = 32;
+  private static final int METHODID_GET_CANARY_STATUS = 33;
+  private static final int METHODID_LIST_POLICY_VERSIONS = 34;
+  private static final int METHODID_SIMULATE_POLICY = 35;
+  private static final int METHODID_EXPLAIN_POLICY = 36;
+  private static final int METHODID_GET_AUTHZ_REVISION = 37;
+  private static final int METHODID_INVALIDATE_POLICY_BUNDLES = 38;
+  private static final int METHODID_SEED_BUILTIN_ROLES = 39;
+  private static final int METHODID_MIGRATE_LEGACY_POLICIES = 40;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -2064,6 +3356,78 @@ public final class AuthzServiceGrpc {
         case METHODID_GET_POLICY_BUNDLE:
           serviceImpl.getPolicyBundle((com.udb.core.authz.services.v1.PolicyBundleRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyBundleResponse>) responseObserver);
+          break;
+        case METHODID_CREATE_POLICY_DRAFT:
+          serviceImpl.createPolicyDraft((com.udb.core.authz.services.v1.CreatePolicyDraftRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyDraftResponse>) responseObserver);
+          break;
+        case METHODID_UPDATE_POLICY_DRAFT:
+          serviceImpl.updatePolicyDraft((com.udb.core.authz.services.v1.UpdatePolicyDraftRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyDraftResponse>) responseObserver);
+          break;
+        case METHODID_DIFF_POLICY_DRAFT:
+          serviceImpl.diffPolicyDraft((com.udb.core.authz.services.v1.DiffPolicyDraftRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.DiffPolicyDraftResponse>) responseObserver);
+          break;
+        case METHODID_SUBMIT_POLICY_DRAFT:
+          serviceImpl.submitPolicyDraft((com.udb.core.authz.services.v1.SubmitPolicyDraftRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyDraftResponse>) responseObserver);
+          break;
+        case METHODID_APPROVE_POLICY_DRAFT:
+          serviceImpl.approvePolicyDraft((com.udb.core.authz.services.v1.ApprovePolicyDraftRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyApprovalResponse>) responseObserver);
+          break;
+        case METHODID_REJECT_POLICY_DRAFT:
+          serviceImpl.rejectPolicyDraft((com.udb.core.authz.services.v1.RejectPolicyDraftRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.PolicyApprovalResponse>) responseObserver);
+          break;
+        case METHODID_ACTIVATE_POLICY_VERSION:
+          serviceImpl.activatePolicyVersion((com.udb.core.authz.services.v1.ActivatePolicyVersionRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.ActivationResponse>) responseObserver);
+          break;
+        case METHODID_ROLLBACK_POLICY_VERSION:
+          serviceImpl.rollbackPolicyVersion((com.udb.core.authz.services.v1.RollbackPolicyVersionRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.ActivationResponse>) responseObserver);
+          break;
+        case METHODID_ACTIVATE_CANARY:
+          serviceImpl.activateCanary((com.udb.core.authz.services.v1.ActivateCanaryRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.CanaryResponse>) responseObserver);
+          break;
+        case METHODID_PROMOTE_CANARY:
+          serviceImpl.promoteCanary((com.udb.core.authz.services.v1.PromoteCanaryRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.CanaryResponse>) responseObserver);
+          break;
+        case METHODID_GET_CANARY_STATUS:
+          serviceImpl.getCanaryStatus((com.udb.core.authz.services.v1.GetCanaryStatusRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.GetCanaryStatusResponse>) responseObserver);
+          break;
+        case METHODID_LIST_POLICY_VERSIONS:
+          serviceImpl.listPolicyVersions((com.udb.core.authz.services.v1.ListPolicyVersionsRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.ListPolicyVersionsResponse>) responseObserver);
+          break;
+        case METHODID_SIMULATE_POLICY:
+          serviceImpl.simulatePolicy((com.udb.core.authz.services.v1.SimulatePolicyRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.SimulatePolicyResponse>) responseObserver);
+          break;
+        case METHODID_EXPLAIN_POLICY:
+          serviceImpl.explainPolicy((com.udb.core.authz.services.v1.ExplainPolicyRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.ExplainPolicyResponse>) responseObserver);
+          break;
+        case METHODID_GET_AUTHZ_REVISION:
+          serviceImpl.getAuthzRevision((com.udb.core.authz.services.v1.GetAuthzRevisionRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.GetAuthzRevisionResponse>) responseObserver);
+          break;
+        case METHODID_INVALIDATE_POLICY_BUNDLES:
+          serviceImpl.invalidatePolicyBundles((com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse>) responseObserver);
+          break;
+        case METHODID_SEED_BUILTIN_ROLES:
+          serviceImpl.seedBuiltinRoles((com.udb.core.authz.services.v1.SeedBuiltinRolesRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.SeedBuiltinRolesResponse>) responseObserver);
+          break;
+        case METHODID_MIGRATE_LEGACY_POLICIES:
+          serviceImpl.migrateLegacyPolicies((com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -2244,6 +3608,132 @@ public final class AuthzServiceGrpc {
               com.udb.core.authz.services.v1.PolicyBundleRequest,
               com.udb.core.authz.services.v1.PolicyBundleResponse>(
                 service, METHODID_GET_POLICY_BUNDLE)))
+        .addMethod(
+          getCreatePolicyDraftMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.CreatePolicyDraftRequest,
+              com.udb.core.authz.services.v1.PolicyDraftResponse>(
+                service, METHODID_CREATE_POLICY_DRAFT)))
+        .addMethod(
+          getUpdatePolicyDraftMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.UpdatePolicyDraftRequest,
+              com.udb.core.authz.services.v1.PolicyDraftResponse>(
+                service, METHODID_UPDATE_POLICY_DRAFT)))
+        .addMethod(
+          getDiffPolicyDraftMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.DiffPolicyDraftRequest,
+              com.udb.core.authz.services.v1.DiffPolicyDraftResponse>(
+                service, METHODID_DIFF_POLICY_DRAFT)))
+        .addMethod(
+          getSubmitPolicyDraftMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.SubmitPolicyDraftRequest,
+              com.udb.core.authz.services.v1.PolicyDraftResponse>(
+                service, METHODID_SUBMIT_POLICY_DRAFT)))
+        .addMethod(
+          getApprovePolicyDraftMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.ApprovePolicyDraftRequest,
+              com.udb.core.authz.services.v1.PolicyApprovalResponse>(
+                service, METHODID_APPROVE_POLICY_DRAFT)))
+        .addMethod(
+          getRejectPolicyDraftMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.RejectPolicyDraftRequest,
+              com.udb.core.authz.services.v1.PolicyApprovalResponse>(
+                service, METHODID_REJECT_POLICY_DRAFT)))
+        .addMethod(
+          getActivatePolicyVersionMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.ActivatePolicyVersionRequest,
+              com.udb.core.authz.services.v1.ActivationResponse>(
+                service, METHODID_ACTIVATE_POLICY_VERSION)))
+        .addMethod(
+          getRollbackPolicyVersionMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.RollbackPolicyVersionRequest,
+              com.udb.core.authz.services.v1.ActivationResponse>(
+                service, METHODID_ROLLBACK_POLICY_VERSION)))
+        .addMethod(
+          getActivateCanaryMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.ActivateCanaryRequest,
+              com.udb.core.authz.services.v1.CanaryResponse>(
+                service, METHODID_ACTIVATE_CANARY)))
+        .addMethod(
+          getPromoteCanaryMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.PromoteCanaryRequest,
+              com.udb.core.authz.services.v1.CanaryResponse>(
+                service, METHODID_PROMOTE_CANARY)))
+        .addMethod(
+          getGetCanaryStatusMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.GetCanaryStatusRequest,
+              com.udb.core.authz.services.v1.GetCanaryStatusResponse>(
+                service, METHODID_GET_CANARY_STATUS)))
+        .addMethod(
+          getListPolicyVersionsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.ListPolicyVersionsRequest,
+              com.udb.core.authz.services.v1.ListPolicyVersionsResponse>(
+                service, METHODID_LIST_POLICY_VERSIONS)))
+        .addMethod(
+          getSimulatePolicyMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.SimulatePolicyRequest,
+              com.udb.core.authz.services.v1.SimulatePolicyResponse>(
+                service, METHODID_SIMULATE_POLICY)))
+        .addMethod(
+          getExplainPolicyMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.ExplainPolicyRequest,
+              com.udb.core.authz.services.v1.ExplainPolicyResponse>(
+                service, METHODID_EXPLAIN_POLICY)))
+        .addMethod(
+          getGetAuthzRevisionMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.GetAuthzRevisionRequest,
+              com.udb.core.authz.services.v1.GetAuthzRevisionResponse>(
+                service, METHODID_GET_AUTHZ_REVISION)))
+        .addMethod(
+          getInvalidatePolicyBundlesMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest,
+              com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse>(
+                service, METHODID_INVALIDATE_POLICY_BUNDLES)))
+        .addMethod(
+          getSeedBuiltinRolesMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.SeedBuiltinRolesRequest,
+              com.udb.core.authz.services.v1.SeedBuiltinRolesResponse>(
+                service, METHODID_SEED_BUILTIN_ROLES)))
+        .addMethod(
+          getMigrateLegacyPoliciesMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest,
+              com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse>(
+                service, METHODID_MIGRATE_LEGACY_POLICIES)))
         .build();
   }
 
@@ -2315,6 +3805,24 @@ public final class AuthzServiceGrpc {
               .addMethod(getLintAuthzPoliciesMethod())
               .addMethod(getGetNativeAccessMethod())
               .addMethod(getGetPolicyBundleMethod())
+              .addMethod(getCreatePolicyDraftMethod())
+              .addMethod(getUpdatePolicyDraftMethod())
+              .addMethod(getDiffPolicyDraftMethod())
+              .addMethod(getSubmitPolicyDraftMethod())
+              .addMethod(getApprovePolicyDraftMethod())
+              .addMethod(getRejectPolicyDraftMethod())
+              .addMethod(getActivatePolicyVersionMethod())
+              .addMethod(getRollbackPolicyVersionMethod())
+              .addMethod(getActivateCanaryMethod())
+              .addMethod(getPromoteCanaryMethod())
+              .addMethod(getGetCanaryStatusMethod())
+              .addMethod(getListPolicyVersionsMethod())
+              .addMethod(getSimulatePolicyMethod())
+              .addMethod(getExplainPolicyMethod())
+              .addMethod(getGetAuthzRevisionMethod())
+              .addMethod(getInvalidatePolicyBundlesMethod())
+              .addMethod(getSeedBuiltinRolesMethod())
+              .addMethod(getMigrateLegacyPoliciesMethod())
               .build();
         }
       }

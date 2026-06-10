@@ -40,6 +40,20 @@ private static final long serialVersionUID = 0L;
     ipAddress_ = "";
     correlationId_ = "";
     tenantId_ = "";
+    decisionId_ = "";
+    policyVersion_ = "";
+    relationshipVersion_ = "";
+    purpose_ = "";
+    scopes_ = "";
+    matchedPolicyIds_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    projectId_ = "";
+    actorKind_ = "";
+    resourceType_ = "";
+    traceId_ = "";
+    spanId_ = "";
+    userAgentHash_ = "";
+    decisionInput_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -513,6 +527,611 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int DECISION_ID_FIELD_NUMBER = 14;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object decisionId_ = "";
+  /**
+   * <pre>
+   * ── Phase L3 task4: expanded compliance columns ───────────────────────────
+   * Stable decision id linking this audit row to the gRPC Decision returned to
+   * the caller and to the access-deny domain event.
+   * </pre>
+   *
+   * <code>string decision_id = 14 [json_name = "decisionId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The decisionId.
+   */
+  @java.lang.Override
+  public java.lang.String getDecisionId() {
+    java.lang.Object ref = decisionId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      decisionId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * ── Phase L3 task4: expanded compliance columns ───────────────────────────
+   * Stable decision id linking this audit row to the gRPC Decision returned to
+   * the caller and to the access-deny domain event.
+   * </pre>
+   *
+   * <code>string decision_id = 14 [json_name = "decisionId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for decisionId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDecisionIdBytes() {
+    java.lang.Object ref = decisionId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      decisionId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int POLICY_VERSION_FIELD_NUMBER = 15;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object policyVersion_ = "";
+  /**
+   * <pre>
+   * Authz snapshot versions at decision time.
+   * </pre>
+   *
+   * <code>string policy_version = 15 [json_name = "policyVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The policyVersion.
+   */
+  @java.lang.Override
+  public java.lang.String getPolicyVersion() {
+    java.lang.Object ref = policyVersion_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      policyVersion_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Authz snapshot versions at decision time.
+   * </pre>
+   *
+   * <code>string policy_version = 15 [json_name = "policyVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for policyVersion.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getPolicyVersionBytes() {
+    java.lang.Object ref = policyVersion_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      policyVersion_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int RELATIONSHIP_VERSION_FIELD_NUMBER = 16;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object relationshipVersion_ = "";
+  /**
+   * <code>string relationship_version = 16 [json_name = "relationshipVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The relationshipVersion.
+   */
+  @java.lang.Override
+  public java.lang.String getRelationshipVersion() {
+    java.lang.Object ref = relationshipVersion_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      relationshipVersion_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string relationship_version = 16 [json_name = "relationshipVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for relationshipVersion.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRelationshipVersionBytes() {
+    java.lang.Object ref = relationshipVersion_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      relationshipVersion_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int PURPOSE_FIELD_NUMBER = 17;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object purpose_ = "";
+  /**
+   * <pre>
+   * Declared purpose of the access (purpose-binding / GDPR).
+   * </pre>
+   *
+   * <code>string purpose = 17 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The purpose.
+   */
+  @java.lang.Override
+  public java.lang.String getPurpose() {
+    java.lang.Object ref = purpose_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      purpose_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Declared purpose of the access (purpose-binding / GDPR).
+   * </pre>
+   *
+   * <code>string purpose = 17 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for purpose.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getPurposeBytes() {
+    java.lang.Object ref = purpose_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      purpose_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int SCOPES_FIELD_NUMBER = 18;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object scopes_ = "";
+  /**
+   * <pre>
+   * Scopes required by the matched policy (comma-joined).
+   * </pre>
+   *
+   * <code>string scopes = 18 [json_name = "scopes", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The scopes.
+   */
+  @java.lang.Override
+  public java.lang.String getScopes() {
+    java.lang.Object ref = scopes_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      scopes_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Scopes required by the matched policy (comma-joined).
+   * </pre>
+   *
+   * <code>string scopes = 18 [json_name = "scopes", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for scopes.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getScopesBytes() {
+    java.lang.Object ref = scopes_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      scopes_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int MATCHED_POLICY_IDS_FIELD_NUMBER = 19;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList matchedPolicyIds_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * Every policy id that matched (Postgres text array), not just the first.
+   * </pre>
+   *
+   * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return A list containing the matchedPolicyIds.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getMatchedPolicyIdsList() {
+    return matchedPolicyIds_;
+  }
+  /**
+   * <pre>
+   * Every policy id that matched (Postgres text array), not just the first.
+   * </pre>
+   *
+   * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The count of matchedPolicyIds.
+   */
+  public int getMatchedPolicyIdsCount() {
+    return matchedPolicyIds_.size();
+  }
+  /**
+   * <pre>
+   * Every policy id that matched (Postgres text array), not just the first.
+   * </pre>
+   *
+   * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @param index The index of the element to return.
+   * @return The matchedPolicyIds at the given index.
+   */
+  public java.lang.String getMatchedPolicyIds(int index) {
+    return matchedPolicyIds_.get(index);
+  }
+  /**
+   * <pre>
+   * Every policy id that matched (Postgres text array), not just the first.
+   * </pre>
+   *
+   * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the matchedPolicyIds at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getMatchedPolicyIdsBytes(int index) {
+    return matchedPolicyIds_.getByteString(index);
+  }
+
+  public static final int PROJECT_ID_FIELD_NUMBER = 20;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object projectId_ = "";
+  /**
+   * <pre>
+   * Project domain (tenant lives on tenant_id).
+   * </pre>
+   *
+   * <code>string project_id = 20 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The projectId.
+   */
+  @java.lang.Override
+  public java.lang.String getProjectId() {
+    java.lang.Object ref = projectId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      projectId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Project domain (tenant lives on tenant_id).
+   * </pre>
+   *
+   * <code>string project_id = 20 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for projectId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getProjectIdBytes() {
+    java.lang.Object ref = projectId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      projectId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int ACTOR_KIND_FIELD_NUMBER = 21;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object actorKind_ = "";
+  /**
+   * <pre>
+   * Actor kind: "user" | "service" | "external".
+   * </pre>
+   *
+   * <code>string actor_kind = 21 [json_name = "actorKind", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The actorKind.
+   */
+  @java.lang.Override
+  public java.lang.String getActorKind() {
+    java.lang.Object ref = actorKind_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      actorKind_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Actor kind: "user" | "service" | "external".
+   * </pre>
+   *
+   * <code>string actor_kind = 21 [json_name = "actorKind", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for actorKind.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getActorKindBytes() {
+    java.lang.Object ref = actorKind_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      actorKind_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int RESOURCE_TYPE_FIELD_NUMBER = 22;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object resourceType_ = "";
+  /**
+   * <pre>
+   * Resource type/reference for the object being acted upon.
+   * </pre>
+   *
+   * <code>string resource_type = 22 [json_name = "resourceType", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The resourceType.
+   */
+  @java.lang.Override
+  public java.lang.String getResourceType() {
+    java.lang.Object ref = resourceType_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      resourceType_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Resource type/reference for the object being acted upon.
+   * </pre>
+   *
+   * <code>string resource_type = 22 [json_name = "resourceType", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for resourceType.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getResourceTypeBytes() {
+    java.lang.Object ref = resourceType_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      resourceType_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int TRACE_ID_FIELD_NUMBER = 23;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object traceId_ = "";
+  /**
+   * <pre>
+   * Distributed-trace correlation (OpenTelemetry).
+   * </pre>
+   *
+   * <code>string trace_id = 23 [json_name = "traceId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The traceId.
+   */
+  @java.lang.Override
+  public java.lang.String getTraceId() {
+    java.lang.Object ref = traceId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      traceId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Distributed-trace correlation (OpenTelemetry).
+   * </pre>
+   *
+   * <code>string trace_id = 23 [json_name = "traceId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for traceId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getTraceIdBytes() {
+    java.lang.Object ref = traceId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      traceId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int SPAN_ID_FIELD_NUMBER = 24;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object spanId_ = "";
+  /**
+   * <code>string span_id = 24 [json_name = "spanId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The spanId.
+   */
+  @java.lang.Override
+  public java.lang.String getSpanId() {
+    java.lang.Object ref = spanId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      spanId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string span_id = 24 [json_name = "spanId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for spanId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getSpanIdBytes() {
+    java.lang.Object ref = spanId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      spanId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int USER_AGENT_HASH_FIELD_NUMBER = 25;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object userAgentHash_ = "";
+  /**
+   * <pre>
+   * Hashed user-agent (never raw) from the request context.
+   * </pre>
+   *
+   * <code>string user_agent_hash = 25 [json_name = "userAgentHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The userAgentHash.
+   */
+  @java.lang.Override
+  public java.lang.String getUserAgentHash() {
+    java.lang.Object ref = userAgentHash_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      userAgentHash_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Hashed user-agent (never raw) from the request context.
+   * </pre>
+   *
+   * <code>string user_agent_hash = 25 [json_name = "userAgentHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for userAgentHash.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getUserAgentHashBytes() {
+    java.lang.Object ref = userAgentHash_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      userAgentHash_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int DECISION_INPUT_FIELD_NUMBER = 26;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object decisionInput_ = "";
+  /**
+   * <pre>
+   * Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+   * </pre>
+   *
+   * <code>string decision_input = 26 [json_name = "decisionInput", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The decisionInput.
+   */
+  @java.lang.Override
+  public java.lang.String getDecisionInput() {
+    java.lang.Object ref = decisionInput_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      decisionInput_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+   * </pre>
+   *
+   * <code>string decision_input = 26 [json_name = "decisionInput", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for decisionInput.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDecisionInputBytes() {
+    java.lang.Object ref = decisionInput_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      decisionInput_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -566,6 +1185,45 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tenantId_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 13, tenantId_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(decisionId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 14, decisionId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(policyVersion_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 15, policyVersion_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(relationshipVersion_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 16, relationshipVersion_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(purpose_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 17, purpose_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(scopes_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 18, scopes_);
+    }
+    for (int i = 0; i < matchedPolicyIds_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 19, matchedPolicyIds_.getRaw(i));
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 20, projectId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(actorKind_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 21, actorKind_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(resourceType_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 22, resourceType_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(traceId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 23, traceId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(spanId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 24, spanId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(userAgentHash_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 25, userAgentHash_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(decisionInput_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 26, decisionInput_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -611,6 +1269,50 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tenantId_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(13, tenantId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(decisionId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(14, decisionId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(policyVersion_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(15, policyVersion_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(relationshipVersion_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(16, relationshipVersion_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(purpose_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(17, purpose_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(scopes_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(18, scopes_);
+    }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < matchedPolicyIds_.size(); i++) {
+        dataSize += computeStringSizeNoTag(matchedPolicyIds_.getRaw(i));
+      }
+      size += dataSize;
+      size += 2 * getMatchedPolicyIdsList().size();
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(20, projectId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(actorKind_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(21, actorKind_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(resourceType_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(22, resourceType_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(traceId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(23, traceId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(spanId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(24, spanId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(userAgentHash_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(25, userAgentHash_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(decisionInput_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(26, decisionInput_);
     }
     return size;
   }
@@ -663,6 +1365,32 @@ private static final long serialVersionUID = 0L;
     }
     if (!getTenantId()
         .equals(other.getTenantId())) return false;
+    if (!getDecisionId()
+        .equals(other.getDecisionId())) return false;
+    if (!getPolicyVersion()
+        .equals(other.getPolicyVersion())) return false;
+    if (!getRelationshipVersion()
+        .equals(other.getRelationshipVersion())) return false;
+    if (!getPurpose()
+        .equals(other.getPurpose())) return false;
+    if (!getScopes()
+        .equals(other.getScopes())) return false;
+    if (!getMatchedPolicyIdsList()
+        .equals(other.getMatchedPolicyIdsList())) return false;
+    if (!getProjectId()
+        .equals(other.getProjectId())) return false;
+    if (!getActorKind()
+        .equals(other.getActorKind())) return false;
+    if (!getResourceType()
+        .equals(other.getResourceType())) return false;
+    if (!getTraceId()
+        .equals(other.getTraceId())) return false;
+    if (!getSpanId()
+        .equals(other.getSpanId())) return false;
+    if (!getUserAgentHash()
+        .equals(other.getUserAgentHash())) return false;
+    if (!getDecisionInput()
+        .equals(other.getDecisionInput())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -702,6 +1430,34 @@ private static final long serialVersionUID = 0L;
     }
     hash = (37 * hash) + TENANT_ID_FIELD_NUMBER;
     hash = (53 * hash) + getTenantId().hashCode();
+    hash = (37 * hash) + DECISION_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getDecisionId().hashCode();
+    hash = (37 * hash) + POLICY_VERSION_FIELD_NUMBER;
+    hash = (53 * hash) + getPolicyVersion().hashCode();
+    hash = (37 * hash) + RELATIONSHIP_VERSION_FIELD_NUMBER;
+    hash = (53 * hash) + getRelationshipVersion().hashCode();
+    hash = (37 * hash) + PURPOSE_FIELD_NUMBER;
+    hash = (53 * hash) + getPurpose().hashCode();
+    hash = (37 * hash) + SCOPES_FIELD_NUMBER;
+    hash = (53 * hash) + getScopes().hashCode();
+    if (getMatchedPolicyIdsCount() > 0) {
+      hash = (37 * hash) + MATCHED_POLICY_IDS_FIELD_NUMBER;
+      hash = (53 * hash) + getMatchedPolicyIdsList().hashCode();
+    }
+    hash = (37 * hash) + PROJECT_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getProjectId().hashCode();
+    hash = (37 * hash) + ACTOR_KIND_FIELD_NUMBER;
+    hash = (53 * hash) + getActorKind().hashCode();
+    hash = (37 * hash) + RESOURCE_TYPE_FIELD_NUMBER;
+    hash = (53 * hash) + getResourceType().hashCode();
+    hash = (37 * hash) + TRACE_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getTraceId().hashCode();
+    hash = (37 * hash) + SPAN_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getSpanId().hashCode();
+    hash = (37 * hash) + USER_AGENT_HASH_FIELD_NUMBER;
+    hash = (53 * hash) + getUserAgentHash().hashCode();
+    hash = (37 * hash) + DECISION_INPUT_FIELD_NUMBER;
+    hash = (53 * hash) + getDecisionInput().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -856,6 +1612,20 @@ private static final long serialVersionUID = 0L;
         decidedAtBuilder_ = null;
       }
       tenantId_ = "";
+      decisionId_ = "";
+      policyVersion_ = "";
+      relationshipVersion_ = "";
+      purpose_ = "";
+      scopes_ = "";
+      matchedPolicyIds_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
+      projectId_ = "";
+      actorKind_ = "";
+      resourceType_ = "";
+      traceId_ = "";
+      spanId_ = "";
+      userAgentHash_ = "";
+      decisionInput_ = "";
       return this;
     }
 
@@ -932,6 +1702,46 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00001000) != 0)) {
         result.tenantId_ = tenantId_;
       }
+      if (((from_bitField0_ & 0x00002000) != 0)) {
+        result.decisionId_ = decisionId_;
+      }
+      if (((from_bitField0_ & 0x00004000) != 0)) {
+        result.policyVersion_ = policyVersion_;
+      }
+      if (((from_bitField0_ & 0x00008000) != 0)) {
+        result.relationshipVersion_ = relationshipVersion_;
+      }
+      if (((from_bitField0_ & 0x00010000) != 0)) {
+        result.purpose_ = purpose_;
+      }
+      if (((from_bitField0_ & 0x00020000) != 0)) {
+        result.scopes_ = scopes_;
+      }
+      if (((from_bitField0_ & 0x00040000) != 0)) {
+        matchedPolicyIds_.makeImmutable();
+        result.matchedPolicyIds_ = matchedPolicyIds_;
+      }
+      if (((from_bitField0_ & 0x00080000) != 0)) {
+        result.projectId_ = projectId_;
+      }
+      if (((from_bitField0_ & 0x00100000) != 0)) {
+        result.actorKind_ = actorKind_;
+      }
+      if (((from_bitField0_ & 0x00200000) != 0)) {
+        result.resourceType_ = resourceType_;
+      }
+      if (((from_bitField0_ & 0x00400000) != 0)) {
+        result.traceId_ = traceId_;
+      }
+      if (((from_bitField0_ & 0x00800000) != 0)) {
+        result.spanId_ = spanId_;
+      }
+      if (((from_bitField0_ & 0x01000000) != 0)) {
+        result.userAgentHash_ = userAgentHash_;
+      }
+      if (((from_bitField0_ & 0x02000000) != 0)) {
+        result.decisionInput_ = decisionInput_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1004,6 +1814,76 @@ private static final long serialVersionUID = 0L;
       if (!other.getTenantId().isEmpty()) {
         tenantId_ = other.tenantId_;
         bitField0_ |= 0x00001000;
+        onChanged();
+      }
+      if (!other.getDecisionId().isEmpty()) {
+        decisionId_ = other.decisionId_;
+        bitField0_ |= 0x00002000;
+        onChanged();
+      }
+      if (!other.getPolicyVersion().isEmpty()) {
+        policyVersion_ = other.policyVersion_;
+        bitField0_ |= 0x00004000;
+        onChanged();
+      }
+      if (!other.getRelationshipVersion().isEmpty()) {
+        relationshipVersion_ = other.relationshipVersion_;
+        bitField0_ |= 0x00008000;
+        onChanged();
+      }
+      if (!other.getPurpose().isEmpty()) {
+        purpose_ = other.purpose_;
+        bitField0_ |= 0x00010000;
+        onChanged();
+      }
+      if (!other.getScopes().isEmpty()) {
+        scopes_ = other.scopes_;
+        bitField0_ |= 0x00020000;
+        onChanged();
+      }
+      if (!other.matchedPolicyIds_.isEmpty()) {
+        if (matchedPolicyIds_.isEmpty()) {
+          matchedPolicyIds_ = other.matchedPolicyIds_;
+          bitField0_ |= 0x00040000;
+        } else {
+          ensureMatchedPolicyIdsIsMutable();
+          matchedPolicyIds_.addAll(other.matchedPolicyIds_);
+        }
+        onChanged();
+      }
+      if (!other.getProjectId().isEmpty()) {
+        projectId_ = other.projectId_;
+        bitField0_ |= 0x00080000;
+        onChanged();
+      }
+      if (!other.getActorKind().isEmpty()) {
+        actorKind_ = other.actorKind_;
+        bitField0_ |= 0x00100000;
+        onChanged();
+      }
+      if (!other.getResourceType().isEmpty()) {
+        resourceType_ = other.resourceType_;
+        bitField0_ |= 0x00200000;
+        onChanged();
+      }
+      if (!other.getTraceId().isEmpty()) {
+        traceId_ = other.traceId_;
+        bitField0_ |= 0x00400000;
+        onChanged();
+      }
+      if (!other.getSpanId().isEmpty()) {
+        spanId_ = other.spanId_;
+        bitField0_ |= 0x00800000;
+        onChanged();
+      }
+      if (!other.getUserAgentHash().isEmpty()) {
+        userAgentHash_ = other.userAgentHash_;
+        bitField0_ |= 0x01000000;
+        onChanged();
+      }
+      if (!other.getDecisionInput().isEmpty()) {
+        decisionInput_ = other.decisionInput_;
+        bitField0_ |= 0x02000000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1099,6 +1979,71 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00001000;
               break;
             } // case 106
+            case 114: {
+              decisionId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00002000;
+              break;
+            } // case 114
+            case 122: {
+              policyVersion_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00004000;
+              break;
+            } // case 122
+            case 130: {
+              relationshipVersion_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00008000;
+              break;
+            } // case 130
+            case 138: {
+              purpose_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00010000;
+              break;
+            } // case 138
+            case 146: {
+              scopes_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00020000;
+              break;
+            } // case 146
+            case 154: {
+              ensureMatchedPolicyIdsIsMutable();
+              matchedPolicyIds_.add(input.readStringRequireUtf8());
+              break;
+            } // case 154
+            case 162: {
+              projectId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00080000;
+              break;
+            } // case 162
+            case 170: {
+              actorKind_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00100000;
+              break;
+            } // case 170
+            case 178: {
+              resourceType_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00200000;
+              break;
+            } // case 178
+            case 186: {
+              traceId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00400000;
+              break;
+            } // case 186
+            case 194: {
+              spanId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00800000;
+              break;
+            } // case 194
+            case 202: {
+              userAgentHash_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x01000000;
+              break;
+            } // case 202
+            case 210: {
+              decisionInput_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x02000000;
+              break;
+            } // case 210
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2057,6 +3002,1227 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       tenantId_ = value;
       bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object decisionId_ = "";
+    /**
+     * <pre>
+     * ── Phase L3 task4: expanded compliance columns ───────────────────────────
+     * Stable decision id linking this audit row to the gRPC Decision returned to
+     * the caller and to the access-deny domain event.
+     * </pre>
+     *
+     * <code>string decision_id = 14 [json_name = "decisionId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The decisionId.
+     */
+    public java.lang.String getDecisionId() {
+      java.lang.Object ref = decisionId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        decisionId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * ── Phase L3 task4: expanded compliance columns ───────────────────────────
+     * Stable decision id linking this audit row to the gRPC Decision returned to
+     * the caller and to the access-deny domain event.
+     * </pre>
+     *
+     * <code>string decision_id = 14 [json_name = "decisionId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for decisionId.
+     */
+    public com.google.protobuf.ByteString
+        getDecisionIdBytes() {
+      java.lang.Object ref = decisionId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        decisionId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * ── Phase L3 task4: expanded compliance columns ───────────────────────────
+     * Stable decision id linking this audit row to the gRPC Decision returned to
+     * the caller and to the access-deny domain event.
+     * </pre>
+     *
+     * <code>string decision_id = 14 [json_name = "decisionId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The decisionId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDecisionId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      decisionId_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * ── Phase L3 task4: expanded compliance columns ───────────────────────────
+     * Stable decision id linking this audit row to the gRPC Decision returned to
+     * the caller and to the access-deny domain event.
+     * </pre>
+     *
+     * <code>string decision_id = 14 [json_name = "decisionId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDecisionId() {
+      decisionId_ = getDefaultInstance().getDecisionId();
+      bitField0_ = (bitField0_ & ~0x00002000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * ── Phase L3 task4: expanded compliance columns ───────────────────────────
+     * Stable decision id linking this audit row to the gRPC Decision returned to
+     * the caller and to the access-deny domain event.
+     * </pre>
+     *
+     * <code>string decision_id = 14 [json_name = "decisionId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for decisionId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDecisionIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      decisionId_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object policyVersion_ = "";
+    /**
+     * <pre>
+     * Authz snapshot versions at decision time.
+     * </pre>
+     *
+     * <code>string policy_version = 15 [json_name = "policyVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The policyVersion.
+     */
+    public java.lang.String getPolicyVersion() {
+      java.lang.Object ref = policyVersion_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        policyVersion_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Authz snapshot versions at decision time.
+     * </pre>
+     *
+     * <code>string policy_version = 15 [json_name = "policyVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for policyVersion.
+     */
+    public com.google.protobuf.ByteString
+        getPolicyVersionBytes() {
+      java.lang.Object ref = policyVersion_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        policyVersion_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Authz snapshot versions at decision time.
+     * </pre>
+     *
+     * <code>string policy_version = 15 [json_name = "policyVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The policyVersion to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPolicyVersion(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      policyVersion_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Authz snapshot versions at decision time.
+     * </pre>
+     *
+     * <code>string policy_version = 15 [json_name = "policyVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPolicyVersion() {
+      policyVersion_ = getDefaultInstance().getPolicyVersion();
+      bitField0_ = (bitField0_ & ~0x00004000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Authz snapshot versions at decision time.
+     * </pre>
+     *
+     * <code>string policy_version = 15 [json_name = "policyVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for policyVersion to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPolicyVersionBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      policyVersion_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object relationshipVersion_ = "";
+    /**
+     * <code>string relationship_version = 16 [json_name = "relationshipVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The relationshipVersion.
+     */
+    public java.lang.String getRelationshipVersion() {
+      java.lang.Object ref = relationshipVersion_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        relationshipVersion_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string relationship_version = 16 [json_name = "relationshipVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for relationshipVersion.
+     */
+    public com.google.protobuf.ByteString
+        getRelationshipVersionBytes() {
+      java.lang.Object ref = relationshipVersion_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        relationshipVersion_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string relationship_version = 16 [json_name = "relationshipVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The relationshipVersion to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRelationshipVersion(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      relationshipVersion_ = value;
+      bitField0_ |= 0x00008000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string relationship_version = 16 [json_name = "relationshipVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRelationshipVersion() {
+      relationshipVersion_ = getDefaultInstance().getRelationshipVersion();
+      bitField0_ = (bitField0_ & ~0x00008000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string relationship_version = 16 [json_name = "relationshipVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for relationshipVersion to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRelationshipVersionBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      relationshipVersion_ = value;
+      bitField0_ |= 0x00008000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object purpose_ = "";
+    /**
+     * <pre>
+     * Declared purpose of the access (purpose-binding / GDPR).
+     * </pre>
+     *
+     * <code>string purpose = 17 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The purpose.
+     */
+    public java.lang.String getPurpose() {
+      java.lang.Object ref = purpose_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        purpose_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Declared purpose of the access (purpose-binding / GDPR).
+     * </pre>
+     *
+     * <code>string purpose = 17 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for purpose.
+     */
+    public com.google.protobuf.ByteString
+        getPurposeBytes() {
+      java.lang.Object ref = purpose_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        purpose_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Declared purpose of the access (purpose-binding / GDPR).
+     * </pre>
+     *
+     * <code>string purpose = 17 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The purpose to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPurpose(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      purpose_ = value;
+      bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Declared purpose of the access (purpose-binding / GDPR).
+     * </pre>
+     *
+     * <code>string purpose = 17 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPurpose() {
+      purpose_ = getDefaultInstance().getPurpose();
+      bitField0_ = (bitField0_ & ~0x00010000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Declared purpose of the access (purpose-binding / GDPR).
+     * </pre>
+     *
+     * <code>string purpose = 17 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for purpose to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPurposeBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      purpose_ = value;
+      bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object scopes_ = "";
+    /**
+     * <pre>
+     * Scopes required by the matched policy (comma-joined).
+     * </pre>
+     *
+     * <code>string scopes = 18 [json_name = "scopes", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The scopes.
+     */
+    public java.lang.String getScopes() {
+      java.lang.Object ref = scopes_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        scopes_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Scopes required by the matched policy (comma-joined).
+     * </pre>
+     *
+     * <code>string scopes = 18 [json_name = "scopes", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for scopes.
+     */
+    public com.google.protobuf.ByteString
+        getScopesBytes() {
+      java.lang.Object ref = scopes_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        scopes_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Scopes required by the matched policy (comma-joined).
+     * </pre>
+     *
+     * <code>string scopes = 18 [json_name = "scopes", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The scopes to set.
+     * @return This builder for chaining.
+     */
+    public Builder setScopes(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      scopes_ = value;
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Scopes required by the matched policy (comma-joined).
+     * </pre>
+     *
+     * <code>string scopes = 18 [json_name = "scopes", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearScopes() {
+      scopes_ = getDefaultInstance().getScopes();
+      bitField0_ = (bitField0_ & ~0x00020000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Scopes required by the matched policy (comma-joined).
+     * </pre>
+     *
+     * <code>string scopes = 18 [json_name = "scopes", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for scopes to set.
+     * @return This builder for chaining.
+     */
+    public Builder setScopesBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      scopes_ = value;
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.LazyStringArrayList matchedPolicyIds_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureMatchedPolicyIdsIsMutable() {
+      if (!matchedPolicyIds_.isModifiable()) {
+        matchedPolicyIds_ = new com.google.protobuf.LazyStringArrayList(matchedPolicyIds_);
+      }
+      bitField0_ |= 0x00040000;
+    }
+    /**
+     * <pre>
+     * Every policy id that matched (Postgres text array), not just the first.
+     * </pre>
+     *
+     * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return A list containing the matchedPolicyIds.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getMatchedPolicyIdsList() {
+      matchedPolicyIds_.makeImmutable();
+      return matchedPolicyIds_;
+    }
+    /**
+     * <pre>
+     * Every policy id that matched (Postgres text array), not just the first.
+     * </pre>
+     *
+     * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The count of matchedPolicyIds.
+     */
+    public int getMatchedPolicyIdsCount() {
+      return matchedPolicyIds_.size();
+    }
+    /**
+     * <pre>
+     * Every policy id that matched (Postgres text array), not just the first.
+     * </pre>
+     *
+     * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param index The index of the element to return.
+     * @return The matchedPolicyIds at the given index.
+     */
+    public java.lang.String getMatchedPolicyIds(int index) {
+      return matchedPolicyIds_.get(index);
+    }
+    /**
+     * <pre>
+     * Every policy id that matched (Postgres text array), not just the first.
+     * </pre>
+     *
+     * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the matchedPolicyIds at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getMatchedPolicyIdsBytes(int index) {
+      return matchedPolicyIds_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * Every policy id that matched (Postgres text array), not just the first.
+     * </pre>
+     *
+     * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param index The index to set the value at.
+     * @param value The matchedPolicyIds to set.
+     * @return This builder for chaining.
+     */
+    public Builder setMatchedPolicyIds(
+        int index, java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureMatchedPolicyIdsIsMutable();
+      matchedPolicyIds_.set(index, value);
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Every policy id that matched (Postgres text array), not just the first.
+     * </pre>
+     *
+     * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The matchedPolicyIds to add.
+     * @return This builder for chaining.
+     */
+    public Builder addMatchedPolicyIds(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureMatchedPolicyIdsIsMutable();
+      matchedPolicyIds_.add(value);
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Every policy id that matched (Postgres text array), not just the first.
+     * </pre>
+     *
+     * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param values The matchedPolicyIds to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllMatchedPolicyIds(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureMatchedPolicyIdsIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, matchedPolicyIds_);
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Every policy id that matched (Postgres text array), not just the first.
+     * </pre>
+     *
+     * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearMatchedPolicyIds() {
+      matchedPolicyIds_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00040000);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Every policy id that matched (Postgres text array), not just the first.
+     * </pre>
+     *
+     * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes of the matchedPolicyIds to add.
+     * @return This builder for chaining.
+     */
+    public Builder addMatchedPolicyIdsBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ensureMatchedPolicyIdsIsMutable();
+      matchedPolicyIds_.add(value);
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object projectId_ = "";
+    /**
+     * <pre>
+     * Project domain (tenant lives on tenant_id).
+     * </pre>
+     *
+     * <code>string project_id = 20 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The projectId.
+     */
+    public java.lang.String getProjectId() {
+      java.lang.Object ref = projectId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        projectId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Project domain (tenant lives on tenant_id).
+     * </pre>
+     *
+     * <code>string project_id = 20 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for projectId.
+     */
+    public com.google.protobuf.ByteString
+        getProjectIdBytes() {
+      java.lang.Object ref = projectId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        projectId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Project domain (tenant lives on tenant_id).
+     * </pre>
+     *
+     * <code>string project_id = 20 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The projectId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProjectId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      projectId_ = value;
+      bitField0_ |= 0x00080000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Project domain (tenant lives on tenant_id).
+     * </pre>
+     *
+     * <code>string project_id = 20 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearProjectId() {
+      projectId_ = getDefaultInstance().getProjectId();
+      bitField0_ = (bitField0_ & ~0x00080000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Project domain (tenant lives on tenant_id).
+     * </pre>
+     *
+     * <code>string project_id = 20 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for projectId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProjectIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      projectId_ = value;
+      bitField0_ |= 0x00080000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object actorKind_ = "";
+    /**
+     * <pre>
+     * Actor kind: "user" | "service" | "external".
+     * </pre>
+     *
+     * <code>string actor_kind = 21 [json_name = "actorKind", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The actorKind.
+     */
+    public java.lang.String getActorKind() {
+      java.lang.Object ref = actorKind_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        actorKind_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Actor kind: "user" | "service" | "external".
+     * </pre>
+     *
+     * <code>string actor_kind = 21 [json_name = "actorKind", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for actorKind.
+     */
+    public com.google.protobuf.ByteString
+        getActorKindBytes() {
+      java.lang.Object ref = actorKind_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        actorKind_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Actor kind: "user" | "service" | "external".
+     * </pre>
+     *
+     * <code>string actor_kind = 21 [json_name = "actorKind", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The actorKind to set.
+     * @return This builder for chaining.
+     */
+    public Builder setActorKind(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      actorKind_ = value;
+      bitField0_ |= 0x00100000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Actor kind: "user" | "service" | "external".
+     * </pre>
+     *
+     * <code>string actor_kind = 21 [json_name = "actorKind", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearActorKind() {
+      actorKind_ = getDefaultInstance().getActorKind();
+      bitField0_ = (bitField0_ & ~0x00100000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Actor kind: "user" | "service" | "external".
+     * </pre>
+     *
+     * <code>string actor_kind = 21 [json_name = "actorKind", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for actorKind to set.
+     * @return This builder for chaining.
+     */
+    public Builder setActorKindBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      actorKind_ = value;
+      bitField0_ |= 0x00100000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object resourceType_ = "";
+    /**
+     * <pre>
+     * Resource type/reference for the object being acted upon.
+     * </pre>
+     *
+     * <code>string resource_type = 22 [json_name = "resourceType", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The resourceType.
+     */
+    public java.lang.String getResourceType() {
+      java.lang.Object ref = resourceType_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        resourceType_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Resource type/reference for the object being acted upon.
+     * </pre>
+     *
+     * <code>string resource_type = 22 [json_name = "resourceType", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for resourceType.
+     */
+    public com.google.protobuf.ByteString
+        getResourceTypeBytes() {
+      java.lang.Object ref = resourceType_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        resourceType_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Resource type/reference for the object being acted upon.
+     * </pre>
+     *
+     * <code>string resource_type = 22 [json_name = "resourceType", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The resourceType to set.
+     * @return This builder for chaining.
+     */
+    public Builder setResourceType(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      resourceType_ = value;
+      bitField0_ |= 0x00200000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Resource type/reference for the object being acted upon.
+     * </pre>
+     *
+     * <code>string resource_type = 22 [json_name = "resourceType", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearResourceType() {
+      resourceType_ = getDefaultInstance().getResourceType();
+      bitField0_ = (bitField0_ & ~0x00200000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Resource type/reference for the object being acted upon.
+     * </pre>
+     *
+     * <code>string resource_type = 22 [json_name = "resourceType", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for resourceType to set.
+     * @return This builder for chaining.
+     */
+    public Builder setResourceTypeBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      resourceType_ = value;
+      bitField0_ |= 0x00200000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object traceId_ = "";
+    /**
+     * <pre>
+     * Distributed-trace correlation (OpenTelemetry).
+     * </pre>
+     *
+     * <code>string trace_id = 23 [json_name = "traceId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The traceId.
+     */
+    public java.lang.String getTraceId() {
+      java.lang.Object ref = traceId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        traceId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Distributed-trace correlation (OpenTelemetry).
+     * </pre>
+     *
+     * <code>string trace_id = 23 [json_name = "traceId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for traceId.
+     */
+    public com.google.protobuf.ByteString
+        getTraceIdBytes() {
+      java.lang.Object ref = traceId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        traceId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Distributed-trace correlation (OpenTelemetry).
+     * </pre>
+     *
+     * <code>string trace_id = 23 [json_name = "traceId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The traceId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTraceId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      traceId_ = value;
+      bitField0_ |= 0x00400000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Distributed-trace correlation (OpenTelemetry).
+     * </pre>
+     *
+     * <code>string trace_id = 23 [json_name = "traceId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTraceId() {
+      traceId_ = getDefaultInstance().getTraceId();
+      bitField0_ = (bitField0_ & ~0x00400000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Distributed-trace correlation (OpenTelemetry).
+     * </pre>
+     *
+     * <code>string trace_id = 23 [json_name = "traceId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for traceId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTraceIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      traceId_ = value;
+      bitField0_ |= 0x00400000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object spanId_ = "";
+    /**
+     * <code>string span_id = 24 [json_name = "spanId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The spanId.
+     */
+    public java.lang.String getSpanId() {
+      java.lang.Object ref = spanId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        spanId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string span_id = 24 [json_name = "spanId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for spanId.
+     */
+    public com.google.protobuf.ByteString
+        getSpanIdBytes() {
+      java.lang.Object ref = spanId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        spanId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string span_id = 24 [json_name = "spanId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The spanId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSpanId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      spanId_ = value;
+      bitField0_ |= 0x00800000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string span_id = 24 [json_name = "spanId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSpanId() {
+      spanId_ = getDefaultInstance().getSpanId();
+      bitField0_ = (bitField0_ & ~0x00800000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string span_id = 24 [json_name = "spanId", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for spanId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSpanIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      spanId_ = value;
+      bitField0_ |= 0x00800000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object userAgentHash_ = "";
+    /**
+     * <pre>
+     * Hashed user-agent (never raw) from the request context.
+     * </pre>
+     *
+     * <code>string user_agent_hash = 25 [json_name = "userAgentHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The userAgentHash.
+     */
+    public java.lang.String getUserAgentHash() {
+      java.lang.Object ref = userAgentHash_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        userAgentHash_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Hashed user-agent (never raw) from the request context.
+     * </pre>
+     *
+     * <code>string user_agent_hash = 25 [json_name = "userAgentHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for userAgentHash.
+     */
+    public com.google.protobuf.ByteString
+        getUserAgentHashBytes() {
+      java.lang.Object ref = userAgentHash_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        userAgentHash_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Hashed user-agent (never raw) from the request context.
+     * </pre>
+     *
+     * <code>string user_agent_hash = 25 [json_name = "userAgentHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The userAgentHash to set.
+     * @return This builder for chaining.
+     */
+    public Builder setUserAgentHash(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      userAgentHash_ = value;
+      bitField0_ |= 0x01000000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Hashed user-agent (never raw) from the request context.
+     * </pre>
+     *
+     * <code>string user_agent_hash = 25 [json_name = "userAgentHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearUserAgentHash() {
+      userAgentHash_ = getDefaultInstance().getUserAgentHash();
+      bitField0_ = (bitField0_ & ~0x01000000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Hashed user-agent (never raw) from the request context.
+     * </pre>
+     *
+     * <code>string user_agent_hash = 25 [json_name = "userAgentHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for userAgentHash to set.
+     * @return This builder for chaining.
+     */
+    public Builder setUserAgentHashBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      userAgentHash_ = value;
+      bitField0_ |= 0x01000000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object decisionInput_ = "";
+    /**
+     * <pre>
+     * Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+     * </pre>
+     *
+     * <code>string decision_input = 26 [json_name = "decisionInput", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The decisionInput.
+     */
+    public java.lang.String getDecisionInput() {
+      java.lang.Object ref = decisionInput_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        decisionInput_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+     * </pre>
+     *
+     * <code>string decision_input = 26 [json_name = "decisionInput", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for decisionInput.
+     */
+    public com.google.protobuf.ByteString
+        getDecisionInputBytes() {
+      java.lang.Object ref = decisionInput_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        decisionInput_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+     * </pre>
+     *
+     * <code>string decision_input = 26 [json_name = "decisionInput", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The decisionInput to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDecisionInput(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      decisionInput_ = value;
+      bitField0_ |= 0x02000000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+     * </pre>
+     *
+     * <code>string decision_input = 26 [json_name = "decisionInput", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDecisionInput() {
+      decisionInput_ = getDefaultInstance().getDecisionInput();
+      bitField0_ = (bitField0_ & ~0x02000000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+     * </pre>
+     *
+     * <code>string decision_input = 26 [json_name = "decisionInput", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for decisionInput to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDecisionInputBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      decisionInput_ = value;
+      bitField0_ |= 0x02000000;
       onChanged();
       return this;
     }

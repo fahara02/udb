@@ -38,8 +38,34 @@ type AccessDecisionAudit struct {
 	CorrelationId   string                 `protobuf:"bytes,11,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
 	DecidedAt       *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=decided_at,json=decidedAt,proto3" json:"decided_at,omitempty"`
 	TenantId        string                 `protobuf:"bytes,13,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// ── Phase L3 task4: expanded compliance columns ───────────────────────────
+	// Stable decision id linking this audit row to the gRPC Decision returned to
+	// the caller and to the access-deny domain event.
+	DecisionId string `protobuf:"bytes,14,opt,name=decision_id,json=decisionId,proto3" json:"decision_id,omitempty"`
+	// Authz snapshot versions at decision time.
+	PolicyVersion       string `protobuf:"bytes,15,opt,name=policy_version,json=policyVersion,proto3" json:"policy_version,omitempty"`
+	RelationshipVersion string `protobuf:"bytes,16,opt,name=relationship_version,json=relationshipVersion,proto3" json:"relationship_version,omitempty"`
+	// Declared purpose of the access (purpose-binding / GDPR).
+	Purpose string `protobuf:"bytes,17,opt,name=purpose,proto3" json:"purpose,omitempty"`
+	// Scopes required by the matched policy (comma-joined).
+	Scopes string `protobuf:"bytes,18,opt,name=scopes,proto3" json:"scopes,omitempty"`
+	// Every policy id that matched (Postgres text array), not just the first.
+	MatchedPolicyIds []string `protobuf:"bytes,19,rep,name=matched_policy_ids,json=matchedPolicyIds,proto3" json:"matched_policy_ids,omitempty"`
+	// Project domain (tenant lives on tenant_id).
+	ProjectId string `protobuf:"bytes,20,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// Actor kind: "user" | "service" | "external".
+	ActorKind string `protobuf:"bytes,21,opt,name=actor_kind,json=actorKind,proto3" json:"actor_kind,omitempty"`
+	// Resource type/reference for the object being acted upon.
+	ResourceType string `protobuf:"bytes,22,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
+	// Distributed-trace correlation (OpenTelemetry).
+	TraceId string `protobuf:"bytes,23,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	SpanId  string `protobuf:"bytes,24,opt,name=span_id,json=spanId,proto3" json:"span_id,omitempty"`
+	// Hashed user-agent (never raw) from the request context.
+	UserAgentHash string `protobuf:"bytes,25,opt,name=user_agent_hash,json=userAgentHash,proto3" json:"user_agent_hash,omitempty"`
+	// Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+	DecisionInput string `protobuf:"bytes,26,opt,name=decision_input,json=decisionInput,proto3" json:"decision_input,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AccessDecisionAudit) Reset() {
@@ -163,11 +189,102 @@ func (x *AccessDecisionAudit) GetTenantId() string {
 	return ""
 }
 
+func (x *AccessDecisionAudit) GetDecisionId() string {
+	if x != nil {
+		return x.DecisionId
+	}
+	return ""
+}
+
+func (x *AccessDecisionAudit) GetPolicyVersion() string {
+	if x != nil {
+		return x.PolicyVersion
+	}
+	return ""
+}
+
+func (x *AccessDecisionAudit) GetRelationshipVersion() string {
+	if x != nil {
+		return x.RelationshipVersion
+	}
+	return ""
+}
+
+func (x *AccessDecisionAudit) GetPurpose() string {
+	if x != nil {
+		return x.Purpose
+	}
+	return ""
+}
+
+func (x *AccessDecisionAudit) GetScopes() string {
+	if x != nil {
+		return x.Scopes
+	}
+	return ""
+}
+
+func (x *AccessDecisionAudit) GetMatchedPolicyIds() []string {
+	if x != nil {
+		return x.MatchedPolicyIds
+	}
+	return nil
+}
+
+func (x *AccessDecisionAudit) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *AccessDecisionAudit) GetActorKind() string {
+	if x != nil {
+		return x.ActorKind
+	}
+	return ""
+}
+
+func (x *AccessDecisionAudit) GetResourceType() string {
+	if x != nil {
+		return x.ResourceType
+	}
+	return ""
+}
+
+func (x *AccessDecisionAudit) GetTraceId() string {
+	if x != nil {
+		return x.TraceId
+	}
+	return ""
+}
+
+func (x *AccessDecisionAudit) GetSpanId() string {
+	if x != nil {
+		return x.SpanId
+	}
+	return ""
+}
+
+func (x *AccessDecisionAudit) GetUserAgentHash() string {
+	if x != nil {
+		return x.UserAgentHash
+	}
+	return ""
+}
+
+func (x *AccessDecisionAudit) GetDecisionInput() string {
+	if x != nil {
+		return x.DecisionInput
+	}
+	return ""
+}
+
 var File_udb_core_authz_entity_v1_access_decision_audit_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_entity_v1_access_decision_audit_proto_rawDesc = "" +
 	"\n" +
-	"4udb/core/authz/entity/v1/access_decision_audit.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb7\v\n" +
+	"4udb/core/authz/entity/v1/access_decision_audit.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb9\x12\n" +
 	"\x13AccessDecisionAudit\x12`\n" +
 	"\x11decision_audit_id\x18\x01 \x01(\tB4\x82\xb7\x180\n" +
 	"\x11decision_audit_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x0fdecisionAuditId\x12[\n" +
@@ -202,11 +319,43 @@ const file_udb_core_authz_entity_v1_access_decision_audit_proto_rawDesc = "" +
 	"decided_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMPR\tdecidedAt\x12d\n" +
 	"\ttenant_id\x18\r \x01(\tBG\x82\xb7\x18C\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R'\n" +
-	"\x1eidx_accessdecisionaudit_tenant\x12\x05BTREER\btenantId:\xee\x02\xfa\xb6\x18\xcd\x01\n" +
+	"\x1eidx_accessdecisionaudit_tenant\x12\x05BTREER\btenantId\x12k\n" +
+	"\vdecision_id\x18\x0e \x01(\tBJ\x82\xb7\x18F\n" +
+	"\vdecision_id\x12\fVARCHAR(120)R)\n" +
+	" idx_accessdecisionaudit_decision\x12\x05BTREER\n" +
+	"decisionId\x12I\n" +
+	"\x0epolicy_version\x18\x0f \x01(\tB\"\x82\xb7\x18\x1e\n" +
+	"\x0epolicy_version\x12\fVARCHAR(120)R\rpolicyVersion\x12[\n" +
+	"\x14relationship_version\x18\x10 \x01(\tB(\x82\xb7\x18$\n" +
+	"\x14relationship_version\x12\fVARCHAR(120)R\x13relationshipVersion\x125\n" +
+	"\apurpose\x18\x11 \x01(\tB\x1b\x82\xb7\x18\x17\n" +
+	"\apurpose\x12\fVARCHAR(120)R\apurpose\x12*\n" +
+	"\x06scopes\x18\x12 \x01(\tB\x12\x82\xb7\x18\x0e\n" +
+	"\x06scopes\x12\x04TEXTR\x06scopes\x12N\n" +
+	"\x12matched_policy_ids\x18\x13 \x03(\tB \x82\xb7\x18\x1c\n" +
+	"\x12matched_policy_ids\x12\x06TEXT[]R\x10matchedPolicyIds\x12<\n" +
+	"\n" +
+	"project_id\x18\x14 \x01(\tB\x1d\x82\xb7\x18\x19\n" +
+	"\n" +
+	"project_id\x12\vVARCHAR(64)R\tprojectId\x12<\n" +
+	"\n" +
+	"actor_kind\x18\x15 \x01(\tB\x1d\x82\xb7\x18\x19\n" +
+	"\n" +
+	"actor_kind\x12\vVARCHAR(20)R\tactorKind\x12F\n" +
+	"\rresource_type\x18\x16 \x01(\tB!\x82\xb7\x18\x1d\n" +
+	"\rresource_type\x12\fVARCHAR(120)R\fresourceType\x126\n" +
+	"\btrace_id\x18\x17 \x01(\tB\x1b\x82\xb7\x18\x17\n" +
+	"\btrace_id\x12\vVARCHAR(64)R\atraceId\x123\n" +
+	"\aspan_id\x18\x18 \x01(\tB\x1a\x82\xb7\x18\x16\n" +
+	"\aspan_id\x12\vVARCHAR(64)R\x06spanId\x12J\n" +
+	"\x0fuser_agent_hash\x18\x19 \x01(\tB\"\x82\xb7\x18\x1e\n" +
+	"\x0fuser_agent_hash\x12\vVARCHAR(80)R\ruserAgentHash\x12B\n" +
+	"\x0edecision_input\x18\x1a \x01(\tB\x1b\x82\xb7\x18\x17\n" +
+	"\x0edecision_input\x12\x05JSONBR\rdecisionInput:\xe7\x02\xfa\xb6\x18\xcd\x01\n" +
 	"\x16access_decision_audits\x12\tudb_authz\x18\x05 \x01*1Decision trail for sensitive authorization checks@\x01H\x03R\n" +
 	"decided_atX\xfb\x13b^\n" +
-	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\xb2\x19\x97\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x11authz.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x83\x02\n" +
+	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\xb2\x19\x90\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authz.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x83\x02\n" +
 	"\x1ccom.udb.core.authz.entity.v1B\x18AccessDecisionAuditProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
 
 var (

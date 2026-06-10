@@ -60,19 +60,39 @@ namespace udb.core.Apikey.Events.V1 {
             "CHRlbmFudElkOn6Sshl6CjB1ZGIuY29yZS5hcGlrZXkuZXZlbnRzLnYxLkFw",
             "aUtleVJhdGVMaW1pdGVkRXZlbnQSGnVkYi5hcGlrZXkucmF0ZS5saW1pdGVk",
             "LnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFi",
-            "bGVCggIKHWNvbS51ZGIuY29yZS5hcGlrZXkuZXZlbnRzLnYxQhFBcGlrZXlF",
-            "dmVudHNQcm90b1ABWkVnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28v",
-            "Z2VuL3VkYi9jb3JlL2FwaWtleS9ldmVudHMvdjE7ZXZlbnRzdjGiAgRVQ0FF",
-            "qgIZdWRiLmNvcmUuQXBpa2V5LkV2ZW50cy5WMcoCGVVkYlxDb3JlXEFwaWtl",
-            "eVxFdmVudHNcVjHiAiVVZGJcR1BCTWV0YWRhdGFcQ29yZVxBcGlrZXlcRXZl",
-            "bnRzXFYx6gIdVWRiOjpDb3JlOjpBcGlrZXk6OkV2ZW50czo6VjFiBnByb3Rv",
-            "Mw=="));
+            "bGUingMKGUFwaUtleVZhbGlkYXRlRmFpbGVkRXZlbnQSGQoIZXZlbnRfaWQY",
+            "ASABKAlSB2V2ZW50SWQSHQoKa2V5X3ByZWZpeBgCIAEoCVIJa2V5UHJlZml4",
+            "Eh8KC3JlYXNvbl9jb2RlGAMgASgJUgpyZWFzb25Db2RlEh0KCmlwX2FkZHJl",
+            "c3MYBCABKAlSCWlwQWRkcmVzcxIlCg5jb3JyZWxhdGlvbl9pZBgFIAEoCVIN",
+            "Y29ycmVsYXRpb25JZBI7CgtvY2N1cnJlZF9hdBgGIAEoCzIaLmdvb2dsZS5w",
+            "cm90b2J1Zi5UaW1lc3RhbXBSCm9jY3VycmVkQXQSGwoJdGVuYW50X2lkGAcg",
+            "ASgJUgh0ZW5hbnRJZDqFAZKyGYABCjN1ZGIuY29yZS5hcGlrZXkuZXZlbnRz",
+            "LnYxLkFwaUtleVZhbGlkYXRlRmFpbGVkRXZlbnQSHXVkYi5hcGlrZXkudmFs",
+            "aWRhdGUuZmFpbGVkLnYxGgl0ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9sZWFz",
+            "dF9vbmNlMgZzdGFibGUipwMKF0FwaUtleUFub21hbG91c1VzZUV2ZW50EhkK",
+            "CGV2ZW50X2lkGAEgASgJUgdldmVudElkEhUKBmtleV9pZBgCIAEoCVIFa2V5",
+            "SWQSHQoKa2V5X3ByZWZpeBgDIAEoCVIJa2V5UHJlZml4EhgKB2Fub21hbHkY",
+            "BCABKAlSB2Fub21hbHkSHQoKaXBfYWRkcmVzcxgFIAEoCVIJaXBBZGRyZXNz",
+            "EiUKDmNvcnJlbGF0aW9uX2lkGAYgASgJUg1jb3JyZWxhdGlvbklkEjsKC29j",
+            "Y3VycmVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcFIK",
+            "b2NjdXJyZWRBdBIbCgl0ZW5hbnRfaWQYCCABKAlSCHRlbmFudElkOoABkrIZ",
+            "fAoxdWRiLmNvcmUuYXBpa2V5LmV2ZW50cy52MS5BcGlLZXlBbm9tYWxvdXNV",
+            "c2VFdmVudBIbdWRiLmFwaWtleS5hbm9tYWxvdXMudXNlLnYxGgl0ZW5hbnRf",
+            "aWQiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGVCggIKHWNvbS51",
+            "ZGIuY29yZS5hcGlrZXkuZXZlbnRzLnYxQhFBcGlrZXlFdmVudHNQcm90b1AB",
+            "WkVnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3Jl",
+            "L2FwaWtleS9ldmVudHMvdjE7ZXZlbnRzdjGiAgRVQ0FFqgIZdWRiLmNvcmUu",
+            "QXBpa2V5LkV2ZW50cy5WMcoCGVVkYlxDb3JlXEFwaWtleVxFdmVudHNcVjHi",
+            "AiVVZGJcR1BCTWV0YWRhdGFcQ29yZVxBcGlrZXlcRXZlbnRzXFYx6gIdVWRi",
+            "OjpDb3JlOjpBcGlrZXk6OkV2ZW50czo6VjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Apikey.Entity.V1.EnumsReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Apikey.Events.V1.ApiKeyCreatedEvent), global::udb.core.Apikey.Events.V1.ApiKeyCreatedEvent.Parser, new[]{ "EventId", "KeyId", "KeyPrefix", "Name", "OwnerType", "OwnerId", "Scopes", "CreatedBy", "CorrelationId", "OccurredAt", "TenantId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Apikey.Events.V1.ApiKeyRevokedEvent), global::udb.core.Apikey.Events.V1.ApiKeyRevokedEvent.Parser, new[]{ "EventId", "KeyId", "KeyPrefix", "RevokedBy", "RevokeReason", "CorrelationId", "OccurredAt", "TenantId" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Apikey.Events.V1.ApiKeyRateLimitedEvent), global::udb.core.Apikey.Events.V1.ApiKeyRateLimitedEvent.Parser, new[]{ "EventId", "KeyId", "KeyPrefix", "Endpoint", "IpAddress", "RequestsInWindow", "Limit", "CorrelationId", "OccurredAt", "TenantId" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Apikey.Events.V1.ApiKeyRateLimitedEvent), global::udb.core.Apikey.Events.V1.ApiKeyRateLimitedEvent.Parser, new[]{ "EventId", "KeyId", "KeyPrefix", "Endpoint", "IpAddress", "RequestsInWindow", "Limit", "CorrelationId", "OccurredAt", "TenantId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Apikey.Events.V1.ApiKeyValidateFailedEvent), global::udb.core.Apikey.Events.V1.ApiKeyValidateFailedEvent.Parser, new[]{ "EventId", "KeyPrefix", "ReasonCode", "IpAddress", "CorrelationId", "OccurredAt", "TenantId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Apikey.Events.V1.ApiKeyAnomalousUseEvent), global::udb.core.Apikey.Events.V1.ApiKeyAnomalousUseEvent.Parser, new[]{ "EventId", "KeyId", "KeyPrefix", "Anomaly", "IpAddress", "CorrelationId", "OccurredAt", "TenantId" }, null, null, null, null)
           }));
     }
     #endregion
@@ -1651,6 +1671,922 @@ namespace udb.core.Apikey.Events.V1 {
             break;
           }
           case 82: {
+            TenantId = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Kafka topic: udb.apikey.validate.failed.v1 (Phase L)
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class ApiKeyValidateFailedEvent : pb::IMessage<ApiKeyValidateFailedEvent>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<ApiKeyValidateFailedEvent> _parser = new pb::MessageParser<ApiKeyValidateFailedEvent>(() => new ApiKeyValidateFailedEvent());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<ApiKeyValidateFailedEvent> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Apikey.Events.V1.ApikeyEventsReflection.Descriptor.MessageTypes[3]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ApiKeyValidateFailedEvent() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ApiKeyValidateFailedEvent(ApiKeyValidateFailedEvent other) : this() {
+      eventId_ = other.eventId_;
+      keyPrefix_ = other.keyPrefix_;
+      reasonCode_ = other.reasonCode_;
+      ipAddress_ = other.ipAddress_;
+      correlationId_ = other.correlationId_;
+      occurredAt_ = other.occurredAt_ != null ? other.occurredAt_.Clone() : null;
+      tenantId_ = other.tenantId_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ApiKeyValidateFailedEvent Clone() {
+      return new ApiKeyValidateFailedEvent(this);
+    }
+
+    /// <summary>Field number for the "event_id" field.</summary>
+    public const int EventIdFieldNumber = 1;
+    private string eventId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventId {
+      get { return eventId_; }
+      set {
+        eventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "key_prefix" field.</summary>
+    public const int KeyPrefixFieldNumber = 2;
+    private string keyPrefix_ = "";
+    /// <summary>
+    /// public prefix only, never the raw key
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string KeyPrefix {
+      get { return keyPrefix_; }
+      set {
+        keyPrefix_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "reason_code" field.</summary>
+    public const int ReasonCodeFieldNumber = 3;
+    private string reasonCode_ = "";
+    /// <summary>
+    /// not_found, revoked, expired, scope_mismatch
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ReasonCode {
+      get { return reasonCode_; }
+      set {
+        reasonCode_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "ip_address" field.</summary>
+    public const int IpAddressFieldNumber = 4;
+    private string ipAddress_ = "";
+    /// <summary>
+    /// masked
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string IpAddress {
+      get { return ipAddress_; }
+      set {
+        ipAddress_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "correlation_id" field.</summary>
+    public const int CorrelationIdFieldNumber = 5;
+    private string correlationId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string CorrelationId {
+      get { return correlationId_; }
+      set {
+        correlationId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "occurred_at" field.</summary>
+    public const int OccurredAtFieldNumber = 6;
+    private global::Google.Protobuf.WellKnownTypes.Timestamp occurredAt_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Timestamp OccurredAt {
+      get { return occurredAt_; }
+      set {
+        occurredAt_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 7;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as ApiKeyValidateFailedEvent);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(ApiKeyValidateFailedEvent other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (EventId != other.EventId) return false;
+      if (KeyPrefix != other.KeyPrefix) return false;
+      if (ReasonCode != other.ReasonCode) return false;
+      if (IpAddress != other.IpAddress) return false;
+      if (CorrelationId != other.CorrelationId) return false;
+      if (!object.Equals(OccurredAt, other.OccurredAt)) return false;
+      if (TenantId != other.TenantId) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (EventId.Length != 0) hash ^= EventId.GetHashCode();
+      if (KeyPrefix.Length != 0) hash ^= KeyPrefix.GetHashCode();
+      if (ReasonCode.Length != 0) hash ^= ReasonCode.GetHashCode();
+      if (IpAddress.Length != 0) hash ^= IpAddress.GetHashCode();
+      if (CorrelationId.Length != 0) hash ^= CorrelationId.GetHashCode();
+      if (occurredAt_ != null) hash ^= OccurredAt.GetHashCode();
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (KeyPrefix.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(KeyPrefix);
+      }
+      if (ReasonCode.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(ReasonCode);
+      }
+      if (IpAddress.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(IpAddress);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(OccurredAt);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(TenantId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (KeyPrefix.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(KeyPrefix);
+      }
+      if (ReasonCode.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(ReasonCode);
+      }
+      if (IpAddress.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(IpAddress);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(OccurredAt);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(TenantId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (EventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventId);
+      }
+      if (KeyPrefix.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(KeyPrefix);
+      }
+      if (ReasonCode.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ReasonCode);
+      }
+      if (IpAddress.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(IpAddress);
+      }
+      if (CorrelationId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(OccurredAt);
+      }
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(ApiKeyValidateFailedEvent other) {
+      if (other == null) {
+        return;
+      }
+      if (other.EventId.Length != 0) {
+        EventId = other.EventId;
+      }
+      if (other.KeyPrefix.Length != 0) {
+        KeyPrefix = other.KeyPrefix;
+      }
+      if (other.ReasonCode.Length != 0) {
+        ReasonCode = other.ReasonCode;
+      }
+      if (other.IpAddress.Length != 0) {
+        IpAddress = other.IpAddress;
+      }
+      if (other.CorrelationId.Length != 0) {
+        CorrelationId = other.CorrelationId;
+      }
+      if (other.occurredAt_ != null) {
+        if (occurredAt_ == null) {
+          OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+        }
+        OccurredAt.MergeFrom(other.OccurredAt);
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            KeyPrefix = input.ReadString();
+            break;
+          }
+          case 26: {
+            ReasonCode = input.ReadString();
+            break;
+          }
+          case 34: {
+            IpAddress = input.ReadString();
+            break;
+          }
+          case 42: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 50: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+          case 58: {
+            TenantId = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            KeyPrefix = input.ReadString();
+            break;
+          }
+          case 26: {
+            ReasonCode = input.ReadString();
+            break;
+          }
+          case 34: {
+            IpAddress = input.ReadString();
+            break;
+          }
+          case 42: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 50: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+          case 58: {
+            TenantId = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Kafka topic: udb.apikey.anomalous.use.v1 (Phase L)
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class ApiKeyAnomalousUseEvent : pb::IMessage<ApiKeyAnomalousUseEvent>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<ApiKeyAnomalousUseEvent> _parser = new pb::MessageParser<ApiKeyAnomalousUseEvent>(() => new ApiKeyAnomalousUseEvent());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<ApiKeyAnomalousUseEvent> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Apikey.Events.V1.ApikeyEventsReflection.Descriptor.MessageTypes[4]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ApiKeyAnomalousUseEvent() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ApiKeyAnomalousUseEvent(ApiKeyAnomalousUseEvent other) : this() {
+      eventId_ = other.eventId_;
+      keyId_ = other.keyId_;
+      keyPrefix_ = other.keyPrefix_;
+      anomaly_ = other.anomaly_;
+      ipAddress_ = other.ipAddress_;
+      correlationId_ = other.correlationId_;
+      occurredAt_ = other.occurredAt_ != null ? other.occurredAt_.Clone() : null;
+      tenantId_ = other.tenantId_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ApiKeyAnomalousUseEvent Clone() {
+      return new ApiKeyAnomalousUseEvent(this);
+    }
+
+    /// <summary>Field number for the "event_id" field.</summary>
+    public const int EventIdFieldNumber = 1;
+    private string eventId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventId {
+      get { return eventId_; }
+      set {
+        eventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "key_id" field.</summary>
+    public const int KeyIdFieldNumber = 2;
+    private string keyId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string KeyId {
+      get { return keyId_; }
+      set {
+        keyId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "key_prefix" field.</summary>
+    public const int KeyPrefixFieldNumber = 3;
+    private string keyPrefix_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string KeyPrefix {
+      get { return keyPrefix_; }
+      set {
+        keyPrefix_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "anomaly" field.</summary>
+    public const int AnomalyFieldNumber = 4;
+    private string anomaly_ = "";
+    /// <summary>
+    /// geo_velocity, new_asn, burst, off_hours
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Anomaly {
+      get { return anomaly_; }
+      set {
+        anomaly_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "ip_address" field.</summary>
+    public const int IpAddressFieldNumber = 5;
+    private string ipAddress_ = "";
+    /// <summary>
+    /// masked
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string IpAddress {
+      get { return ipAddress_; }
+      set {
+        ipAddress_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "correlation_id" field.</summary>
+    public const int CorrelationIdFieldNumber = 6;
+    private string correlationId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string CorrelationId {
+      get { return correlationId_; }
+      set {
+        correlationId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "occurred_at" field.</summary>
+    public const int OccurredAtFieldNumber = 7;
+    private global::Google.Protobuf.WellKnownTypes.Timestamp occurredAt_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Timestamp OccurredAt {
+      get { return occurredAt_; }
+      set {
+        occurredAt_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 8;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as ApiKeyAnomalousUseEvent);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(ApiKeyAnomalousUseEvent other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (EventId != other.EventId) return false;
+      if (KeyId != other.KeyId) return false;
+      if (KeyPrefix != other.KeyPrefix) return false;
+      if (Anomaly != other.Anomaly) return false;
+      if (IpAddress != other.IpAddress) return false;
+      if (CorrelationId != other.CorrelationId) return false;
+      if (!object.Equals(OccurredAt, other.OccurredAt)) return false;
+      if (TenantId != other.TenantId) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (EventId.Length != 0) hash ^= EventId.GetHashCode();
+      if (KeyId.Length != 0) hash ^= KeyId.GetHashCode();
+      if (KeyPrefix.Length != 0) hash ^= KeyPrefix.GetHashCode();
+      if (Anomaly.Length != 0) hash ^= Anomaly.GetHashCode();
+      if (IpAddress.Length != 0) hash ^= IpAddress.GetHashCode();
+      if (CorrelationId.Length != 0) hash ^= CorrelationId.GetHashCode();
+      if (occurredAt_ != null) hash ^= OccurredAt.GetHashCode();
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (KeyId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(KeyId);
+      }
+      if (KeyPrefix.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(KeyPrefix);
+      }
+      if (Anomaly.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(Anomaly);
+      }
+      if (IpAddress.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(IpAddress);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(58);
+        output.WriteMessage(OccurredAt);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(TenantId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (EventId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventId);
+      }
+      if (KeyId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(KeyId);
+      }
+      if (KeyPrefix.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(KeyPrefix);
+      }
+      if (Anomaly.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(Anomaly);
+      }
+      if (IpAddress.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(IpAddress);
+      }
+      if (CorrelationId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        output.WriteRawTag(58);
+        output.WriteMessage(OccurredAt);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(TenantId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (EventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventId);
+      }
+      if (KeyId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(KeyId);
+      }
+      if (KeyPrefix.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(KeyPrefix);
+      }
+      if (Anomaly.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Anomaly);
+      }
+      if (IpAddress.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(IpAddress);
+      }
+      if (CorrelationId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(CorrelationId);
+      }
+      if (occurredAt_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(OccurredAt);
+      }
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(ApiKeyAnomalousUseEvent other) {
+      if (other == null) {
+        return;
+      }
+      if (other.EventId.Length != 0) {
+        EventId = other.EventId;
+      }
+      if (other.KeyId.Length != 0) {
+        KeyId = other.KeyId;
+      }
+      if (other.KeyPrefix.Length != 0) {
+        KeyPrefix = other.KeyPrefix;
+      }
+      if (other.Anomaly.Length != 0) {
+        Anomaly = other.Anomaly;
+      }
+      if (other.IpAddress.Length != 0) {
+        IpAddress = other.IpAddress;
+      }
+      if (other.CorrelationId.Length != 0) {
+        CorrelationId = other.CorrelationId;
+      }
+      if (other.occurredAt_ != null) {
+        if (occurredAt_ == null) {
+          OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+        }
+        OccurredAt.MergeFrom(other.OccurredAt);
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            KeyId = input.ReadString();
+            break;
+          }
+          case 26: {
+            KeyPrefix = input.ReadString();
+            break;
+          }
+          case 34: {
+            Anomaly = input.ReadString();
+            break;
+          }
+          case 42: {
+            IpAddress = input.ReadString();
+            break;
+          }
+          case 50: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 58: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+          case 66: {
+            TenantId = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 18: {
+            KeyId = input.ReadString();
+            break;
+          }
+          case 26: {
+            KeyPrefix = input.ReadString();
+            break;
+          }
+          case 34: {
+            Anomaly = input.ReadString();
+            break;
+          }
+          case 42: {
+            IpAddress = input.ReadString();
+            break;
+          }
+          case 50: {
+            CorrelationId = input.ReadString();
+            break;
+          }
+          case 58: {
+            if (occurredAt_ == null) {
+              OccurredAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(OccurredAt);
+            break;
+          }
+          case 66: {
             TenantId = input.ReadString();
             break;
           }

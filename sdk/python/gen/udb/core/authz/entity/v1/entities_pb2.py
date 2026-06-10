@@ -23,22 +23,36 @@ _sym_db = _symbol_database.Default()
 
 
 from udb.core.authz.entity.v1 import access_decision_audit_pb2 as udb_dot_core_dot_authz_dot_entity_dot_v1_dot_access__decision__audit__pb2
+from udb.core.authz.entity.v1 import authz_revision_pb2 as udb_dot_core_dot_authz_dot_entity_dot_v1_dot_authz__revision__pb2
 from udb.core.authz.entity.v1 import enums_pb2 as udb_dot_core_dot_authz_dot_entity_dot_v1_dot_enums__pb2
+from udb.core.authz.entity.v1 import governance_enums_pb2 as udb_dot_core_dot_authz_dot_entity_dot_v1_dot_governance__enums__pb2
+from udb.core.authz.entity.v1 import policy_approval_pb2 as udb_dot_core_dot_authz_dot_entity_dot_v1_dot_policy__approval__pb2
+from udb.core.authz.entity.v1 import policy_draft_pb2 as udb_dot_core_dot_authz_dot_entity_dot_v1_dot_policy__draft__pb2
 from udb.core.authz.entity.v1 import policy_rule_pb2 as udb_dot_core_dot_authz_dot_entity_dot_v1_dot_policy__rule__pb2
+from udb.core.authz.entity.v1 import policy_set_pb2 as udb_dot_core_dot_authz_dot_entity_dot_v1_dot_policy__set__pb2
+from udb.core.authz.entity.v1 import policy_simulation_pb2 as udb_dot_core_dot_authz_dot_entity_dot_v1_dot_policy__simulation__pb2
 from udb.core.authz.entity.v1 import policy_tuple_pb2 as udb_dot_core_dot_authz_dot_entity_dot_v1_dot_policy__tuple__pb2
+from udb.core.authz.entity.v1 import policy_version_pb2 as udb_dot_core_dot_authz_dot_entity_dot_v1_dot_policy__version__pb2
 from udb.core.authz.entity.v1 import role_pb2 as udb_dot_core_dot_authz_dot_entity_dot_v1_dot_role__pb2
 from udb.core.authz.entity.v1 import role_permission_pb2 as udb_dot_core_dot_authz_dot_entity_dot_v1_dot_role__permission__pb2
 from udb.core.authz.entity.v1 import user_role_pb2 as udb_dot_core_dot_authz_dot_entity_dot_v1_dot_user__role__pb2
 
 from udb.core.authz.entity.v1.access_decision_audit_pb2 import *
+from udb.core.authz.entity.v1.authz_revision_pb2 import *
 from udb.core.authz.entity.v1.enums_pb2 import *
+from udb.core.authz.entity.v1.governance_enums_pb2 import *
+from udb.core.authz.entity.v1.policy_approval_pb2 import *
+from udb.core.authz.entity.v1.policy_draft_pb2 import *
 from udb.core.authz.entity.v1.policy_rule_pb2 import *
+from udb.core.authz.entity.v1.policy_set_pb2 import *
+from udb.core.authz.entity.v1.policy_simulation_pb2 import *
 from udb.core.authz.entity.v1.policy_tuple_pb2 import *
+from udb.core.authz.entity.v1.policy_version_pb2 import *
 from udb.core.authz.entity.v1.role_pb2 import *
 from udb.core.authz.entity.v1.role_permission_pb2 import *
 from udb.core.authz.entity.v1.user_role_pb2 import *
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'udb/core/authz/entity/v1/entities.proto\x12\x18udb.core.authz.entity.v1\x1a\x34udb/core/authz/entity/v1/access_decision_audit.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a*udb/core/authz/entity/v1/policy_rule.proto\x1a+udb/core/authz/entity/v1/policy_tuple.proto\x1a#udb/core/authz/entity/v1/role.proto\x1a.udb/core/authz/entity/v1/role_permission.proto\x1a(udb/core/authz/entity/v1/user_role.protoB\xf8\x01\n\x1c\x63om.udb.core.authz.entity.v1B\rEntitiesProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1P\x00P\x01P\x02P\x03P\x04P\x05P\x06\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\'udb/core/authz/entity/v1/entities.proto\x12\x18udb.core.authz.entity.v1\x1a\x34udb/core/authz/entity/v1/access_decision_audit.proto\x1a-udb/core/authz/entity/v1/authz_revision.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a/udb/core/authz/entity/v1/governance_enums.proto\x1a.udb/core/authz/entity/v1/policy_approval.proto\x1a+udb/core/authz/entity/v1/policy_draft.proto\x1a*udb/core/authz/entity/v1/policy_rule.proto\x1a)udb/core/authz/entity/v1/policy_set.proto\x1a\x30udb/core/authz/entity/v1/policy_simulation.proto\x1a+udb/core/authz/entity/v1/policy_tuple.proto\x1a-udb/core/authz/entity/v1/policy_version.proto\x1a#udb/core/authz/entity/v1/role.proto\x1a.udb/core/authz/entity/v1/role_permission.proto\x1a(udb/core/authz/entity/v1/user_role.protoB\xf8\x01\n\x1c\x63om.udb.core.authz.entity.v1B\rEntitiesProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1P\x00P\x01P\x02P\x03P\x04P\x05P\x06P\x07P\x08P\tP\nP\x0bP\x0cP\rb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)

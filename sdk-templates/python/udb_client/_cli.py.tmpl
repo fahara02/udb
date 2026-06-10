@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import os
 import platform
+import hashlib
 import shutil
 import stat
 import subprocess
@@ -103,6 +104,64 @@ def _cached_binary() -> str | None:
     return str(candidate) if candidate.is_file() else None
 
 
+def _sha256_file(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _fetch_text(url: str) -> str | None:
+    try:
+        with urllib.request.urlopen(url, timeout=20) as resp:
+            return resp.read().decode("utf-8")
+    except Exception:
+        return None
+
+
+def _expected_sha_from_manifest(text: str, asset: str) -> str | None:
+    asset_base = os.path.basename(asset)
+    fallback: str | None = None
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split()
+        if len(parts) == 1:
+            fallback = parts[0].lower().lstrip("*")
+            continue
+        digest = parts[0].lower()
+        filename = parts[1].lstrip("*")
+        if filename == asset or os.path.basename(filename) == asset_base:
+            return digest
+    return fallback
+
+
+def _verify_checksum(path: str, asset: str) -> None:
+    if os.environ.get("UDB_SKIP_CHECKSUM"):
+        return
+    urls = [
+        f"{_RELEASE_BASE}/{asset}.sha256",
+        f"{_RELEASE_BASE}/SHA256SUMS",
+        f"{_RELEASE_BASE}/sha256sums.txt",
+    ]
+    for url in urls:
+        text = _fetch_text(url)
+        if not text:
+            continue
+        expected = _expected_sha_from_manifest(text, asset)
+        if not expected:
+            continue
+        actual = _sha256_file(path)
+        if actual.lower() != expected.lower():
+            raise SystemExit(
+                f"udb: checksum mismatch for {asset}: expected {expected}, got {actual}"
+            )
+        return
+    sys.stderr.write(f"udb: warning: checksum manifest unavailable for {asset}\n")
+
+
 def _download_binary() -> str:
     if os.environ.get("UDB_SKIP_DOWNLOAD"):
         raise SystemExit(
@@ -117,6 +176,7 @@ def _download_binary() -> str:
         sys.stderr.write(f"udb: downloading {url}\n")
         with urllib.request.urlopen(url) as resp, open(tmp_path, "wb") as out:
             shutil.copyfileobj(resp, out)
+        _verify_checksum(tmp_path, _asset_name())
         mode = os.stat(tmp_path).st_mode
         os.chmod(tmp_path, mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
         os.replace(tmp_path, dest)

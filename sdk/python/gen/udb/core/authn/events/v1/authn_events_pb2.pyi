@@ -231,3 +231,147 @@ class PasswordResetByEmailRequestedEvent(_message.Message):
     occurred_at: _timestamp_pb2.Timestamp
     tenant_id: str
     def __init__(self, event_id: _Optional[str] = ..., user_id: _Optional[str] = ..., email_masked: _Optional[str] = ..., otp_id: _Optional[str] = ..., ip_address: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., tenant_id: _Optional[str] = ...) -> None: ...
+
+class LoginFailedEvent(_message.Message):
+    __slots__ = ("event_id", "user_id", "contact_address", "tenant_id", "project_id", "reason_code", "auth_method", "ip_address", "correlation_id", "occurred_at")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    CONTACT_ADDRESS_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_CODE_FIELD_NUMBER: _ClassVar[int]
+    AUTH_METHOD_FIELD_NUMBER: _ClassVar[int]
+    IP_ADDRESS_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    user_id: str
+    contact_address: str
+    tenant_id: str
+    project_id: str
+    reason_code: str
+    auth_method: str
+    ip_address: str
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    def __init__(self, event_id: _Optional[str] = ..., user_id: _Optional[str] = ..., contact_address: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., reason_code: _Optional[str] = ..., auth_method: _Optional[str] = ..., ip_address: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class MfaEnrolledEvent(_message.Message):
+    __slots__ = ("event_id", "user_id", "tenant_id", "project_id", "factor_type", "correlation_id", "occurred_at")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    FACTOR_TYPE_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    user_id: str
+    tenant_id: str
+    project_id: str
+    factor_type: str
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    def __init__(self, event_id: _Optional[str] = ..., user_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., factor_type: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class MfaChangedEvent(_message.Message):
+    __slots__ = ("event_id", "user_id", "tenant_id", "project_id", "factor_type", "change", "correlation_id", "occurred_at")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    FACTOR_TYPE_FIELD_NUMBER: _ClassVar[int]
+    CHANGE_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    user_id: str
+    tenant_id: str
+    project_id: str
+    factor_type: str
+    change: str
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    def __init__(self, event_id: _Optional[str] = ..., user_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., factor_type: _Optional[str] = ..., change: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class RecoveryCodesGeneratedEvent(_message.Message):
+    __slots__ = ("event_id", "user_id", "tenant_id", "code_count", "correlation_id", "occurred_at")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    CODE_COUNT_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    user_id: str
+    tenant_id: str
+    code_count: int
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    def __init__(self, event_id: _Optional[str] = ..., user_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., code_count: _Optional[int] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class RecoveryCodeUsedEvent(_message.Message):
+    __slots__ = ("event_id", "user_id", "tenant_id", "remaining_codes", "correlation_id", "occurred_at")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    REMAINING_CODES_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    user_id: str
+    tenant_id: str
+    remaining_codes: int
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    def __init__(self, event_id: _Optional[str] = ..., user_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., remaining_codes: _Optional[int] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class SessionRefreshedEvent(_message.Message):
+    __slots__ = ("event_id", "user_id", "session_public_id", "tenant_id", "project_id", "correlation_id", "occurred_at")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    SESSION_PUBLIC_ID_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    user_id: str
+    session_public_id: str
+    tenant_id: str
+    project_id: str
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    def __init__(self, event_id: _Optional[str] = ..., user_id: _Optional[str] = ..., session_public_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class PhoneVerifiedEvent(_message.Message):
+    __slots__ = ("event_id", "user_id", "phone_masked", "tenant_id", "correlation_id", "occurred_at")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    PHONE_MASKED_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    user_id: str
+    phone_masked: str
+    tenant_id: str
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    def __init__(self, event_id: _Optional[str] = ..., user_id: _Optional[str] = ..., phone_masked: _Optional[str] = ..., tenant_id: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class WebauthnRegisteredEvent(_message.Message):
+    __slots__ = ("event_id", "user_id", "credential_id", "tenant_id", "correlation_id", "occurred_at")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    CREDENTIAL_ID_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    user_id: str
+    credential_id: str
+    tenant_id: str
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    def __init__(self, event_id: _Optional[str] = ..., user_id: _Optional[str] = ..., credential_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...

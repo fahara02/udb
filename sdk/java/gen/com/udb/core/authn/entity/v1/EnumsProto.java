@@ -89,14 +89,25 @@ public final class EnumsProto extends com.google.protobuf.GeneratedFile {
       "\026TOKEN_TYPE_UNSPECIFIED\020\000\022\031\n\025TOKEN_TYPE_" +
       "JWT_ACCESS\020\001\022\032\n\026TOKEN_TYPE_JWT_REFRESH\020\002" +
       "\022\026\n\022TOKEN_TYPE_SESSION\020\003\022\026\n\022TOKEN_TYPE_A" +
-      "PI_KEY\020\004\022\027\n\023TOKEN_TYPE_EXTERNAL\020\005B\365\001\n\034co" +
-      "m.udb.core.authn.entity.v1B\nEnumsProtoP\001" +
-      "ZDgithub.com/fahara02/udb/sdk/go/gen/udb" +
-      "/core/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030" +
-      "udb.core.Authn.Entity.V1\312\002\030Udb\\Core\\Auth" +
-      "n\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn" +
-      "\\Entity\\V1\352\002\034Udb::Core::Authn::Entity::V" +
-      "1b\006proto3"
+      "PI_KEY\020\004\022\027\n\023TOKEN_TYPE_EXTERNAL\020\005*\321\001\n\017Si" +
+      "gningKeyState\022!\n\035SIGNING_KEY_STATE_UNSPE" +
+      "CIFIED\020\000\022\032\n\026SIGNING_KEY_STATE_NEXT\020\001\022\034\n\030" +
+      "SIGNING_KEY_STATE_ACTIVE\020\002\022\037\n\033SIGNING_KE" +
+      "Y_STATE_VERIFYING\020\003\022\035\n\031SIGNING_KEY_STATE" +
+      "_RETIRED\020\004\022!\n\035SIGNING_KEY_STATE_COMPROMI" +
+      "SED\020\005*\336\001\n\023MfaChallengePurpose\022%\n!MFA_CHA" +
+      "LLENGE_PURPOSE_UNSPECIFIED\020\000\022\'\n#MFA_CHAL" +
+      "LENGE_PURPOSE_LOGIN_STEP_UP\020\001\022-\n)MFA_CHA" +
+      "LLENGE_PURPOSE_SENSITIVE_OPERATION\020\002\022$\n " +
+      "MFA_CHALLENGE_PURPOSE_ENROLLMENT\020\003\022\"\n\036MF" +
+      "A_CHALLENGE_PURPOSE_RECOVERY\020\004B\365\001\n\034com.u" +
+      "db.core.authn.entity.v1B\nEnumsProtoP\001ZDg" +
+      "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
+      "re/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030udb" +
+      ".core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\E" +
+      "ntity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\En" +
+      "tity\\V1\352\002\034Udb::Core::Authn::Entity::V1b\006" +
+      "proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

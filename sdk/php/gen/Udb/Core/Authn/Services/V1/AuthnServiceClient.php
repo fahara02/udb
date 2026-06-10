@@ -539,4 +539,217 @@ class AuthnServiceClient extends \Grpc\BaseStub {
         $metadata, $options);
     }
 
+    /**
+     * ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+     * @param \Udb\Core\Authn\Services\V1\ListDevicesRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\ListDevicesResponse>
+     */
+    public function ListDevices(\Udb\Core\Authn\Services\V1\ListDevicesRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/ListDevices',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\ListDevicesResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authn\Services\V1\RevokeDeviceRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\RevokeDeviceResponse>
+     */
+    public function RevokeDevice(\Udb\Core\Authn\Services\V1\RevokeDeviceRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/RevokeDevice',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\RevokeDeviceResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authn\Services\V1\AdminRevokeSessionRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\AdminRevokeSessionResponse>
+     */
+    public function AdminRevokeSession(\Udb\Core\Authn\Services\V1\AdminRevokeSessionRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/AdminRevokeSession',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\AdminRevokeSessionResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authn\Services\V1\AdminRevokeAllUserSessionsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\AdminRevokeAllUserSessionsResponse>
+     */
+    public function AdminRevokeAllUserSessions(\Udb\Core\Authn\Services\V1\AdminRevokeAllUserSessionsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\AdminRevokeAllUserSessionsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authn\Services\V1\AdminRevokeAllTenantSessionsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\AdminRevokeAllTenantSessionsResponse>
+     */
+    public function AdminRevokeAllTenantSessions(\Udb\Core\Authn\Services\V1\AdminRevokeAllTenantSessionsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\AdminRevokeAllTenantSessionsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authn\Services\V1\EmergencyRevokeRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\EmergencyRevokeResponse>
+     */
+    public function EmergencyRevoke(\Udb\Core\Authn\Services\V1\EmergencyRevokeRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/EmergencyRevoke',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\EmergencyRevokeResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+     * @param \Udb\Core\Authn\Services\V1\IssueMfaChallengeRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\IssueMfaChallengeResponse>
+     */
+    public function IssueMfaChallenge(\Udb\Core\Authn\Services\V1\IssueMfaChallengeRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\IssueMfaChallengeResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authn\Services\V1\VerifyMfaChallengeRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\VerifyMfaChallengeResponse>
+     */
+    public function VerifyMfaChallenge(\Udb\Core\Authn\Services\V1\VerifyMfaChallengeRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\VerifyMfaChallengeResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authn\Services\V1\ListMfaFactorsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\ListMfaFactorsResponse>
+     */
+    public function ListMfaFactors(\Udb\Core\Authn\Services\V1\ListMfaFactorsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/ListMfaFactors',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\ListMfaFactorsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authn\Services\V1\DisableMfaFactorRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\DisableMfaFactorResponse>
+     */
+    public function DisableMfaFactor(\Udb\Core\Authn\Services\V1\DisableMfaFactorRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/DisableMfaFactor',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\DisableMfaFactorResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authn\Services\V1\RenamePasskeyRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\RenamePasskeyResponse>
+     */
+    public function RenamePasskey(\Udb\Core\Authn\Services\V1\RenamePasskeyRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/RenamePasskey',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\RenamePasskeyResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authn\Services\V1\RevokeRecoveryCodesRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\RevokeRecoveryCodesResponse>
+     */
+    public function RevokeRecoveryCodes(\Udb\Core\Authn\Services\V1\RevokeRecoveryCodesRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\RevokeRecoveryCodesResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authn\Services\V1\AdminResetMfaRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\AdminResetMfaResponse>
+     */
+    public function AdminResetMfa(\Udb\Core\Authn\Services\V1\AdminResetMfaRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/AdminResetMfa',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\AdminResetMfaResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+     * @param \Udb\Core\Authn\Services\V1\ListWebAuthnCredentialsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\ListWebAuthnCredentialsResponse>
+     */
+    public function ListWebAuthnCredentials(\Udb\Core\Authn\Services\V1\ListWebAuthnCredentialsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\ListWebAuthnCredentialsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Authn\Services\V1\DeleteWebAuthnCredentialRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\DeleteWebAuthnCredentialResponse>
+     */
+    public function DeleteWebAuthnCredential(\Udb\Core\Authn\Services\V1\DeleteWebAuthnCredentialRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\DeleteWebAuthnCredentialResponse', 'decode'],
+        $metadata, $options);
+    }
+
 }

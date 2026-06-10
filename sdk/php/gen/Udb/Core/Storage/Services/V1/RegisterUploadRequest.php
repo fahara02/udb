@@ -43,9 +43,11 @@ class RegisterUploadRequest extends \Google\Protobuf\Internal\Message
      */
     protected $reference_type = '';
     /**
-     * Generated from protobuf field <code>bool is_public = 8 [json_name = "isPublic"];</code>
+     * Optional initial visibility; absent defaults to private (false).
+     *
+     * Generated from protobuf field <code>optional bool is_public = 8 [json_name = "isPublic"];</code>
      */
-    protected $is_public = false;
+    protected $is_public = null;
     /**
      * Generated from protobuf field <code>int32 expires_in_minutes = 9 [json_name = "expiresInMinutes"];</code>
      */
@@ -71,6 +73,7 @@ class RegisterUploadRequest extends \Google\Protobuf\Internal\Message
      *     @type string $reference_id
      *     @type string $reference_type
      *     @type bool $is_public
+     *           Optional initial visibility; absent defaults to private (false).
      *     @type int $expires_in_minutes
      *     @type int|string $size_bytes
      *           Declared upload size in bytes, used for the pre-upload tenant quota check.
@@ -236,16 +239,30 @@ class RegisterUploadRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>bool is_public = 8 [json_name = "isPublic"];</code>
+     * Optional initial visibility; absent defaults to private (false).
+     *
+     * Generated from protobuf field <code>optional bool is_public = 8 [json_name = "isPublic"];</code>
      * @return bool
      */
     public function getIsPublic()
     {
-        return $this->is_public;
+        return isset($this->is_public) ? $this->is_public : false;
+    }
+
+    public function hasIsPublic()
+    {
+        return isset($this->is_public);
+    }
+
+    public function clearIsPublic()
+    {
+        unset($this->is_public);
     }
 
     /**
-     * Generated from protobuf field <code>bool is_public = 8 [json_name = "isPublic"];</code>
+     * Optional initial visibility; absent defaults to private (false).
+     *
+     * Generated from protobuf field <code>optional bool is_public = 8 [json_name = "isPublic"];</code>
      * @param bool $var
      * @return $this
      */

@@ -44,7 +44,7 @@ public final class UserRoleProto extends com.google.protobuf.GeneratedFile {
       "to\022\030udb.core.authz.entity.v1\032\037google/pro" +
       "tobuf/timestamp.proto\032\033udb/core/common/v" +
       "1/db.proto\032!udb/core/common/v1/security." +
-      "proto\"\303\017\n\010UserRole\022Q\n\014user_role_id\030\001 \001(\t" +
+      "proto\"\274\017\n\010UserRole\022Q\n\014user_role_id\030\001 \001(\t" +
       "B/\202\267\030+\n\014user_role_id\022\004UUID\030\001(\001:\021gen_rand" +
       "om_uuid()R\nuserRoleId\022\221\001\n\007user_id\030\002 \001(\tB" +
       "x\202\267\030t\n\007user_id\022\004UUID\030\001J4\n\005users\022\007user_id" +
@@ -75,7 +75,7 @@ public final class UserRoleProto extends com.google.protobuf.GeneratedFile {
       "d_by\022\014VARCHAR(120)Z\"Identity that create" +
       "d this record.R\tcreatedBy\022Y\n\ttenant_id\030\013" +
       " \001(\tB<\202\267\0308\n\ttenant_id\022\013VARCHAR(64)\030\001R\034\n\023" +
-      "idx_userrole_tenant\022\005BTREER\010tenantId:\314\005\372" +
+      "idx_userrole_tenant\022\005BTREER\010tenantId:\305\005\372" +
       "\266\030\253\004\n\nuser_roles\022\tudb_authz\030\003 \001*/Role as" +
       "signments scoped by authorization domain" +
       "8\001@\001b^\n\020tenant_isolation\032H(tenant_id::te" +
@@ -90,17 +90,17 @@ public final class UserRoleProto extends com.google.protobuf.GeneratedFile {
       "_updated_at()\nRETURNS trigger\nLANGUAGE p" +
       "lpgsql\nAS $$\nBEGIN\n  NEW.updated_at = CU" +
       "RRENT_TIMESTAMP;\n  RETURN NEW;\nEND;\n$$;\212" +
-      "\262\031\227\001\n\006tenant\032\ttenant_id*4tenant_id = cur" +
-      "rent_setting(\'app.current_tenant_id\')2\013s" +
-      "oft_delete:\021authz.operational@\373\023H\002R\006tena" +
-      "ntZ\010standardr\025tenant.data_residencyB\370\001\n\034" +
-      "com.udb.core.authz.entity.v1B\rUserRolePr" +
-      "otoP\001ZDgithub.com/fahara02/udb/sdk/go/ge" +
-      "n/udb/core/authz/entity/v1;entityv1\242\002\004UC" +
-      "AE\252\002\030udb.core.Authz.Entity.V1\312\002\030Udb\\Core" +
-      "\\Authz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\" +
-      "Authz\\Entity\\V1\352\002\034Udb::Core::Authz::Enti" +
-      "ty::V1b\006proto3"
+      "\262\031\220\001\n\006tenant\032\ttenant_id*4tenant_id = cur" +
+      "rent_setting(\'app.current_tenant_id\')2\004n" +
+      "one:\021authz.operational@\373\023H\002R\006tenantZ\010sta" +
+      "ndardr\025tenant.data_residencyB\370\001\n\034com.udb" +
+      ".core.authz.entity.v1B\rUserRoleProtoP\001ZD" +
+      "github.com/fahara02/udb/sdk/go/gen/udb/c" +
+      "ore/authz/entity/v1;entityv1\242\002\004UCAE\252\002\030ud" +
+      "b.core.Authz.Entity.V1\312\002\030Udb\\Core\\Authz\\" +
+      "Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\E" +
+      "ntity\\V1\352\002\034Udb::Core::Authz::Entity::V1b" +
+      "\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -73,13 +73,11 @@ async fn insert_outbox_publishing_row(
 }
 
 async fn outbox_delivery_state(pool: &PgPool, event_id: Uuid) -> String {
-    sqlx::query_scalar(
-        "SELECT delivery_state FROM udb_system.outbox_events WHERE event_id = $1",
-    )
-    .bind(event_id)
-    .fetch_one(pool)
-    .await
-    .expect("read outbox delivery_state")
+    sqlx::query_scalar("SELECT delivery_state FROM udb_system.outbox_events WHERE event_id = $1")
+        .bind(event_id)
+        .fetch_one(pool)
+        .await
+        .expect("read outbox delivery_state")
 }
 
 async fn delete_outbox_rows(pool: &PgPool, event_ids: &[Uuid]) {

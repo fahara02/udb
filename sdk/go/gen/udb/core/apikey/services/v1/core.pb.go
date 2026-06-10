@@ -674,6 +674,293 @@ func (x *UpdateApiKeyResponse) GetKey() *v1.ApiKey {
 	return nil
 }
 
+// Rotate a key: mint a fresh secret under the same key record + lineage, return
+// the new plain key ONCE, and invalidate the old secret. The rotated key keeps
+// the same key_id, owner, scopes, tenant, and project (rotation lineage).
+type RotateApiKeyRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	KeyId          string                 `protobuf:"bytes,1,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"`
+	RotationReason string                 `protobuf:"bytes,2,opt,name=rotation_reason,json=rotationReason,proto3" json:"rotation_reason,omitempty"`
+	Context        *v11.RequestContext    `protobuf:"bytes,3,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RotateApiKeyRequest) Reset() {
+	*x = RotateApiKeyRequest{}
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateApiKeyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateApiKeyRequest) ProtoMessage() {}
+
+func (x *RotateApiKeyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateApiKeyRequest.ProtoReflect.Descriptor instead.
+func (*RotateApiKeyRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_apikey_services_v1_core_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *RotateApiKeyRequest) GetKeyId() string {
+	if x != nil {
+		return x.KeyId
+	}
+	return ""
+}
+
+func (x *RotateApiKeyRequest) GetRotationReason() string {
+	if x != nil {
+		return x.RotationReason
+	}
+	return ""
+}
+
+func (x *RotateApiKeyRequest) GetContext() *v11.RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type RotateApiKeyResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Key   *v1.ApiKey             `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	// New plain key returned ONCE; the prior secret is invalidated immediately.
+	PlainKey      string `protobuf:"bytes,2,opt,name=plain_key,json=plainKey,proto3" json:"plain_key,omitempty"`
+	PreviousKeyId string `protobuf:"bytes,3,opt,name=previous_key_id,json=previousKeyId,proto3" json:"previous_key_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RotateApiKeyResponse) Reset() {
+	*x = RotateApiKeyResponse{}
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateApiKeyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateApiKeyResponse) ProtoMessage() {}
+
+func (x *RotateApiKeyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateApiKeyResponse.ProtoReflect.Descriptor instead.
+func (*RotateApiKeyResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_apikey_services_v1_core_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *RotateApiKeyResponse) GetKey() *v1.ApiKey {
+	if x != nil {
+		return x.Key
+	}
+	return nil
+}
+
+func (x *RotateApiKeyResponse) GetPlainKey() string {
+	if x != nil {
+		return x.PlainKey
+	}
+	return ""
+}
+
+func (x *RotateApiKeyResponse) GetPreviousKeyId() string {
+	if x != nil {
+		return x.PreviousKeyId
+	}
+	return ""
+}
+
+// Emergency revoke matching keys by one or more selectors. At least one selector
+// must be set. Resolves matching records and revokes each (no prefix-only blind
+// mutation): the caller's tenant/owner/admin authority is enforced per record.
+type EmergencyRevokeApiKeysRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	KeyPrefix     string                 `protobuf:"bytes,1,opt,name=key_prefix,json=keyPrefix,proto3" json:"key_prefix,omitempty"`
+	OwnerId       string                 `protobuf:"bytes,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	TenantId      string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Scope         string                 `protobuf:"bytes,5,opt,name=scope,proto3" json:"scope,omitempty"`
+	CreatedBefore *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_before,json=createdBefore,proto3" json:"created_before,omitempty"`
+	Reason        string                 `protobuf:"bytes,7,opt,name=reason,proto3" json:"reason,omitempty"`
+	Context       *v11.RequestContext    `protobuf:"bytes,8,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EmergencyRevokeApiKeysRequest) Reset() {
+	*x = EmergencyRevokeApiKeysRequest{}
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EmergencyRevokeApiKeysRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EmergencyRevokeApiKeysRequest) ProtoMessage() {}
+
+func (x *EmergencyRevokeApiKeysRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EmergencyRevokeApiKeysRequest.ProtoReflect.Descriptor instead.
+func (*EmergencyRevokeApiKeysRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_apikey_services_v1_core_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *EmergencyRevokeApiKeysRequest) GetKeyPrefix() string {
+	if x != nil {
+		return x.KeyPrefix
+	}
+	return ""
+}
+
+func (x *EmergencyRevokeApiKeysRequest) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
+}
+
+func (x *EmergencyRevokeApiKeysRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *EmergencyRevokeApiKeysRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *EmergencyRevokeApiKeysRequest) GetScope() string {
+	if x != nil {
+		return x.Scope
+	}
+	return ""
+}
+
+func (x *EmergencyRevokeApiKeysRequest) GetCreatedBefore() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedBefore
+	}
+	return nil
+}
+
+func (x *EmergencyRevokeApiKeysRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *EmergencyRevokeApiKeysRequest) GetContext() *v11.RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type EmergencyRevokeApiKeysResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RevokedCount  int64                  `protobuf:"varint,1,opt,name=revoked_count,json=revokedCount,proto3" json:"revoked_count,omitempty"`
+	RevokedKeyIds []string               `protobuf:"bytes,2,rep,name=revoked_key_ids,json=revokedKeyIds,proto3" json:"revoked_key_ids,omitempty"`
+	OperationId   string                 `protobuf:"bytes,3,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EmergencyRevokeApiKeysResponse) Reset() {
+	*x = EmergencyRevokeApiKeysResponse{}
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EmergencyRevokeApiKeysResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EmergencyRevokeApiKeysResponse) ProtoMessage() {}
+
+func (x *EmergencyRevokeApiKeysResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EmergencyRevokeApiKeysResponse.ProtoReflect.Descriptor instead.
+func (*EmergencyRevokeApiKeysResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_apikey_services_v1_core_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *EmergencyRevokeApiKeysResponse) GetRevokedCount() int64 {
+	if x != nil {
+		return x.RevokedCount
+	}
+	return 0
+}
+
+func (x *EmergencyRevokeApiKeysResponse) GetRevokedKeyIds() []string {
+	if x != nil {
+		return x.RevokedKeyIds
+	}
+	return nil
+}
+
+func (x *EmergencyRevokeApiKeysResponse) GetOperationId() string {
+	if x != nil {
+		return x.OperationId
+	}
+	return ""
+}
+
 type ValidateApiKeyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PlainKey      string                 `protobuf:"bytes,1,opt,name=plain_key,json=plainKey,proto3" json:"plain_key,omitempty"`                // Raw key from Authorization header
@@ -686,7 +973,7 @@ type ValidateApiKeyRequest struct {
 
 func (x *ValidateApiKeyRequest) Reset() {
 	*x = ValidateApiKeyRequest{}
-	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[10]
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -698,7 +985,7 @@ func (x *ValidateApiKeyRequest) String() string {
 func (*ValidateApiKeyRequest) ProtoMessage() {}
 
 func (x *ValidateApiKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[10]
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -711,7 +998,7 @@ func (x *ValidateApiKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateApiKeyRequest.ProtoReflect.Descriptor instead.
 func (*ValidateApiKeyRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_apikey_services_v1_core_proto_rawDescGZIP(), []int{10}
+	return file_udb_core_apikey_services_v1_core_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ValidateApiKeyRequest) GetPlainKey() string {
@@ -757,7 +1044,7 @@ type ValidateApiKeyResponse struct {
 
 func (x *ValidateApiKeyResponse) Reset() {
 	*x = ValidateApiKeyResponse{}
-	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[11]
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -769,7 +1056,7 @@ func (x *ValidateApiKeyResponse) String() string {
 func (*ValidateApiKeyResponse) ProtoMessage() {}
 
 func (x *ValidateApiKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[11]
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -782,7 +1069,7 @@ func (x *ValidateApiKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateApiKeyResponse.ProtoReflect.Descriptor instead.
 func (*ValidateApiKeyResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_apikey_services_v1_core_proto_rawDescGZIP(), []int{11}
+	return file_udb_core_apikey_services_v1_core_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ValidateApiKeyResponse) GetValid() bool {
@@ -838,7 +1125,7 @@ type GetApiKeyUsageStatsRequest struct {
 
 func (x *GetApiKeyUsageStatsRequest) Reset() {
 	*x = GetApiKeyUsageStatsRequest{}
-	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[12]
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -850,7 +1137,7 @@ func (x *GetApiKeyUsageStatsRequest) String() string {
 func (*GetApiKeyUsageStatsRequest) ProtoMessage() {}
 
 func (x *GetApiKeyUsageStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[12]
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -863,7 +1150,7 @@ func (x *GetApiKeyUsageStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetApiKeyUsageStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetApiKeyUsageStatsRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_apikey_services_v1_core_proto_rawDescGZIP(), []int{12}
+	return file_udb_core_apikey_services_v1_core_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetApiKeyUsageStatsRequest) GetKeyId() string {
@@ -900,7 +1187,7 @@ type ApiKeyDailyStat struct {
 
 func (x *ApiKeyDailyStat) Reset() {
 	*x = ApiKeyDailyStat{}
-	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[13]
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -912,7 +1199,7 @@ func (x *ApiKeyDailyStat) String() string {
 func (*ApiKeyDailyStat) ProtoMessage() {}
 
 func (x *ApiKeyDailyStat) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[13]
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -925,7 +1212,7 @@ func (x *ApiKeyDailyStat) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApiKeyDailyStat.ProtoReflect.Descriptor instead.
 func (*ApiKeyDailyStat) Descriptor() ([]byte, []int) {
-	return file_udb_core_apikey_services_v1_core_proto_rawDescGZIP(), []int{13}
+	return file_udb_core_apikey_services_v1_core_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ApiKeyDailyStat) GetDate() string {
@@ -973,7 +1260,7 @@ type GetApiKeyUsageStatsResponse struct {
 
 func (x *GetApiKeyUsageStatsResponse) Reset() {
 	*x = GetApiKeyUsageStatsResponse{}
-	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[14]
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -985,7 +1272,7 @@ func (x *GetApiKeyUsageStatsResponse) String() string {
 func (*GetApiKeyUsageStatsResponse) ProtoMessage() {}
 
 func (x *GetApiKeyUsageStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[14]
+	mi := &file_udb_core_apikey_services_v1_core_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -998,7 +1285,7 @@ func (x *GetApiKeyUsageStatsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetApiKeyUsageStatsResponse.ProtoReflect.Descriptor instead.
 func (*GetApiKeyUsageStatsResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_apikey_services_v1_core_proto_rawDescGZIP(), []int{14}
+	return file_udb_core_apikey_services_v1_core_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GetApiKeyUsageStatsResponse) GetStats() []*ApiKeyDailyStat {
@@ -1071,7 +1358,30 @@ const file_udb_core_apikey_services_v1_core_proto_rawDesc = "" +
 	"expires_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12<\n" +
 	"\acontext\x18\t \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"j\n" +
 	"\x14UpdateApiKeyResponse\x123\n" +
-	"\x03key\x18\x01 \x01(\v2!.udb.core.apikey.entity.v1.ApiKeyR\x03key:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\xb5\x01\n" +
+	"\x03key\x18\x01 \x01(\v2!.udb.core.apikey.entity.v1.ApiKeyR\x03key:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\xb2\x01\n" +
+	"\x13RotateApiKeyRequest\x12\x15\n" +
+	"\x06key_id\x18\x01 \x01(\tR\x05keyId\x12'\n" +
+	"\x0frotation_reason\x18\x02 \x01(\tR\x0erotationReason\x12<\n" +
+	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\xaf\x01\n" +
+	"\x14RotateApiKeyResponse\x123\n" +
+	"\x03key\x18\x01 \x01(\v2!.udb.core.apikey.entity.v1.ApiKeyR\x03key\x12\x1b\n" +
+	"\tplain_key\x18\x02 \x01(\tR\bplainKey\x12&\n" +
+	"\x0fprevious_key_id\x18\x03 \x01(\tR\rpreviousKeyId:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\xe3\x02\n" +
+	"\x1dEmergencyRevokeApiKeysRequest\x12\x1d\n" +
+	"\n" +
+	"key_prefix\x18\x01 \x01(\tR\tkeyPrefix\x12\x19\n" +
+	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x1b\n" +
+	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x04 \x01(\tR\tprojectId\x12\x14\n" +
+	"\x05scope\x18\x05 \x01(\tR\x05scope\x12A\n" +
+	"\x0ecreated_before\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\rcreatedBefore\x12\x16\n" +
+	"\x06reason\x18\a \x01(\tR\x06reason\x12<\n" +
+	"\acontext\x18\b \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\xaf\x01\n" +
+	"\x1eEmergencyRevokeApiKeysResponse\x12#\n" +
+	"\rrevoked_count\x18\x01 \x01(\x03R\frevokedCount\x12&\n" +
+	"\x0frevoked_key_ids\x18\x02 \x03(\tR\rrevokedKeyIds\x12!\n" +
+	"\foperation_id\x18\x03 \x01(\tR\voperationId:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\xb5\x01\n" +
 	"\x15ValidateApiKeyRequest\x12\x1b\n" +
 	"\tplain_key\x18\x01 \x01(\tR\bplainKey\x12\x1a\n" +
 	"\bendpoint\x18\x02 \x01(\tR\bendpoint\x12%\n" +
@@ -1116,58 +1426,66 @@ func file_udb_core_apikey_services_v1_core_proto_rawDescGZIP() []byte {
 	return file_udb_core_apikey_services_v1_core_proto_rawDescData
 }
 
-var file_udb_core_apikey_services_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_udb_core_apikey_services_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_udb_core_apikey_services_v1_core_proto_goTypes = []any{
-	(*CreateApiKeyRequest)(nil),         // 0: udb.core.apikey.services.v1.CreateApiKeyRequest
-	(*CreateApiKeyResponse)(nil),        // 1: udb.core.apikey.services.v1.CreateApiKeyResponse
-	(*GetApiKeyRequest)(nil),            // 2: udb.core.apikey.services.v1.GetApiKeyRequest
-	(*GetApiKeyResponse)(nil),           // 3: udb.core.apikey.services.v1.GetApiKeyResponse
-	(*ListApiKeysRequest)(nil),          // 4: udb.core.apikey.services.v1.ListApiKeysRequest
-	(*ListApiKeysResponse)(nil),         // 5: udb.core.apikey.services.v1.ListApiKeysResponse
-	(*RevokeApiKeyRequest)(nil),         // 6: udb.core.apikey.services.v1.RevokeApiKeyRequest
-	(*RevokeApiKeyResponse)(nil),        // 7: udb.core.apikey.services.v1.RevokeApiKeyResponse
-	(*UpdateApiKeyRequest)(nil),         // 8: udb.core.apikey.services.v1.UpdateApiKeyRequest
-	(*UpdateApiKeyResponse)(nil),        // 9: udb.core.apikey.services.v1.UpdateApiKeyResponse
-	(*ValidateApiKeyRequest)(nil),       // 10: udb.core.apikey.services.v1.ValidateApiKeyRequest
-	(*ValidateApiKeyResponse)(nil),      // 11: udb.core.apikey.services.v1.ValidateApiKeyResponse
-	(*GetApiKeyUsageStatsRequest)(nil),  // 12: udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest
-	(*ApiKeyDailyStat)(nil),             // 13: udb.core.apikey.services.v1.ApiKeyDailyStat
-	(*GetApiKeyUsageStatsResponse)(nil), // 14: udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse
-	nil,                                 // 15: udb.core.apikey.services.v1.ApiKeyDailyStat.StatusCountsEntry
-	(v1.ApiKeyOwnerType)(0),             // 16: udb.core.apikey.entity.v1.ApiKeyOwnerType
-	(*timestamppb.Timestamp)(nil),       // 17: google.protobuf.Timestamp
-	(*v11.RequestContext)(nil),          // 18: udb.core.common.v1.RequestContext
-	(*v1.ApiKey)(nil),                   // 19: udb.core.apikey.entity.v1.ApiKey
-	(v1.ApiKeyStatus)(0),                // 20: udb.core.apikey.entity.v1.ApiKeyStatus
-	(*v11.PageRequest)(nil),             // 21: udb.core.common.v1.PageRequest
-	(*v11.PageResponse)(nil),            // 22: udb.core.common.v1.PageResponse
+	(*CreateApiKeyRequest)(nil),            // 0: udb.core.apikey.services.v1.CreateApiKeyRequest
+	(*CreateApiKeyResponse)(nil),           // 1: udb.core.apikey.services.v1.CreateApiKeyResponse
+	(*GetApiKeyRequest)(nil),               // 2: udb.core.apikey.services.v1.GetApiKeyRequest
+	(*GetApiKeyResponse)(nil),              // 3: udb.core.apikey.services.v1.GetApiKeyResponse
+	(*ListApiKeysRequest)(nil),             // 4: udb.core.apikey.services.v1.ListApiKeysRequest
+	(*ListApiKeysResponse)(nil),            // 5: udb.core.apikey.services.v1.ListApiKeysResponse
+	(*RevokeApiKeyRequest)(nil),            // 6: udb.core.apikey.services.v1.RevokeApiKeyRequest
+	(*RevokeApiKeyResponse)(nil),           // 7: udb.core.apikey.services.v1.RevokeApiKeyResponse
+	(*UpdateApiKeyRequest)(nil),            // 8: udb.core.apikey.services.v1.UpdateApiKeyRequest
+	(*UpdateApiKeyResponse)(nil),           // 9: udb.core.apikey.services.v1.UpdateApiKeyResponse
+	(*RotateApiKeyRequest)(nil),            // 10: udb.core.apikey.services.v1.RotateApiKeyRequest
+	(*RotateApiKeyResponse)(nil),           // 11: udb.core.apikey.services.v1.RotateApiKeyResponse
+	(*EmergencyRevokeApiKeysRequest)(nil),  // 12: udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest
+	(*EmergencyRevokeApiKeysResponse)(nil), // 13: udb.core.apikey.services.v1.EmergencyRevokeApiKeysResponse
+	(*ValidateApiKeyRequest)(nil),          // 14: udb.core.apikey.services.v1.ValidateApiKeyRequest
+	(*ValidateApiKeyResponse)(nil),         // 15: udb.core.apikey.services.v1.ValidateApiKeyResponse
+	(*GetApiKeyUsageStatsRequest)(nil),     // 16: udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest
+	(*ApiKeyDailyStat)(nil),                // 17: udb.core.apikey.services.v1.ApiKeyDailyStat
+	(*GetApiKeyUsageStatsResponse)(nil),    // 18: udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse
+	nil,                                    // 19: udb.core.apikey.services.v1.ApiKeyDailyStat.StatusCountsEntry
+	(v1.ApiKeyOwnerType)(0),                // 20: udb.core.apikey.entity.v1.ApiKeyOwnerType
+	(*timestamppb.Timestamp)(nil),          // 21: google.protobuf.Timestamp
+	(*v11.RequestContext)(nil),             // 22: udb.core.common.v1.RequestContext
+	(*v1.ApiKey)(nil),                      // 23: udb.core.apikey.entity.v1.ApiKey
+	(v1.ApiKeyStatus)(0),                   // 24: udb.core.apikey.entity.v1.ApiKeyStatus
+	(*v11.PageRequest)(nil),                // 25: udb.core.common.v1.PageRequest
+	(*v11.PageResponse)(nil),               // 26: udb.core.common.v1.PageResponse
 }
 var file_udb_core_apikey_services_v1_core_proto_depIdxs = []int32{
-	16, // 0: udb.core.apikey.services.v1.CreateApiKeyRequest.owner_type:type_name -> udb.core.apikey.entity.v1.ApiKeyOwnerType
-	17, // 1: udb.core.apikey.services.v1.CreateApiKeyRequest.expires_at:type_name -> google.protobuf.Timestamp
-	18, // 2: udb.core.apikey.services.v1.CreateApiKeyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	19, // 3: udb.core.apikey.services.v1.CreateApiKeyResponse.key:type_name -> udb.core.apikey.entity.v1.ApiKey
-	19, // 4: udb.core.apikey.services.v1.GetApiKeyResponse.key:type_name -> udb.core.apikey.entity.v1.ApiKey
-	16, // 5: udb.core.apikey.services.v1.ListApiKeysRequest.owner_type:type_name -> udb.core.apikey.entity.v1.ApiKeyOwnerType
-	20, // 6: udb.core.apikey.services.v1.ListApiKeysRequest.status:type_name -> udb.core.apikey.entity.v1.ApiKeyStatus
-	21, // 7: udb.core.apikey.services.v1.ListApiKeysRequest.page:type_name -> udb.core.common.v1.PageRequest
-	19, // 8: udb.core.apikey.services.v1.ListApiKeysResponse.keys:type_name -> udb.core.apikey.entity.v1.ApiKey
-	22, // 9: udb.core.apikey.services.v1.ListApiKeysResponse.page:type_name -> udb.core.common.v1.PageResponse
-	18, // 10: udb.core.apikey.services.v1.RevokeApiKeyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	17, // 11: udb.core.apikey.services.v1.RevokeApiKeyResponse.revoked_at:type_name -> google.protobuf.Timestamp
-	17, // 12: udb.core.apikey.services.v1.UpdateApiKeyRequest.expires_at:type_name -> google.protobuf.Timestamp
-	18, // 13: udb.core.apikey.services.v1.UpdateApiKeyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	19, // 14: udb.core.apikey.services.v1.UpdateApiKeyResponse.key:type_name -> udb.core.apikey.entity.v1.ApiKey
-	16, // 15: udb.core.apikey.services.v1.ValidateApiKeyResponse.owner_type:type_name -> udb.core.apikey.entity.v1.ApiKeyOwnerType
-	17, // 16: udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest.from:type_name -> google.protobuf.Timestamp
-	17, // 17: udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest.to:type_name -> google.protobuf.Timestamp
-	15, // 18: udb.core.apikey.services.v1.ApiKeyDailyStat.status_counts:type_name -> udb.core.apikey.services.v1.ApiKeyDailyStat.StatusCountsEntry
-	13, // 19: udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse.stats:type_name -> udb.core.apikey.services.v1.ApiKeyDailyStat
-	20, // [20:20] is the sub-list for method output_type
-	20, // [20:20] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	20, // 0: udb.core.apikey.services.v1.CreateApiKeyRequest.owner_type:type_name -> udb.core.apikey.entity.v1.ApiKeyOwnerType
+	21, // 1: udb.core.apikey.services.v1.CreateApiKeyRequest.expires_at:type_name -> google.protobuf.Timestamp
+	22, // 2: udb.core.apikey.services.v1.CreateApiKeyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	23, // 3: udb.core.apikey.services.v1.CreateApiKeyResponse.key:type_name -> udb.core.apikey.entity.v1.ApiKey
+	23, // 4: udb.core.apikey.services.v1.GetApiKeyResponse.key:type_name -> udb.core.apikey.entity.v1.ApiKey
+	20, // 5: udb.core.apikey.services.v1.ListApiKeysRequest.owner_type:type_name -> udb.core.apikey.entity.v1.ApiKeyOwnerType
+	24, // 6: udb.core.apikey.services.v1.ListApiKeysRequest.status:type_name -> udb.core.apikey.entity.v1.ApiKeyStatus
+	25, // 7: udb.core.apikey.services.v1.ListApiKeysRequest.page:type_name -> udb.core.common.v1.PageRequest
+	23, // 8: udb.core.apikey.services.v1.ListApiKeysResponse.keys:type_name -> udb.core.apikey.entity.v1.ApiKey
+	26, // 9: udb.core.apikey.services.v1.ListApiKeysResponse.page:type_name -> udb.core.common.v1.PageResponse
+	22, // 10: udb.core.apikey.services.v1.RevokeApiKeyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	21, // 11: udb.core.apikey.services.v1.RevokeApiKeyResponse.revoked_at:type_name -> google.protobuf.Timestamp
+	21, // 12: udb.core.apikey.services.v1.UpdateApiKeyRequest.expires_at:type_name -> google.protobuf.Timestamp
+	22, // 13: udb.core.apikey.services.v1.UpdateApiKeyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	23, // 14: udb.core.apikey.services.v1.UpdateApiKeyResponse.key:type_name -> udb.core.apikey.entity.v1.ApiKey
+	22, // 15: udb.core.apikey.services.v1.RotateApiKeyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	23, // 16: udb.core.apikey.services.v1.RotateApiKeyResponse.key:type_name -> udb.core.apikey.entity.v1.ApiKey
+	21, // 17: udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest.created_before:type_name -> google.protobuf.Timestamp
+	22, // 18: udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest.context:type_name -> udb.core.common.v1.RequestContext
+	20, // 19: udb.core.apikey.services.v1.ValidateApiKeyResponse.owner_type:type_name -> udb.core.apikey.entity.v1.ApiKeyOwnerType
+	21, // 20: udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest.from:type_name -> google.protobuf.Timestamp
+	21, // 21: udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest.to:type_name -> google.protobuf.Timestamp
+	19, // 22: udb.core.apikey.services.v1.ApiKeyDailyStat.status_counts:type_name -> udb.core.apikey.services.v1.ApiKeyDailyStat.StatusCountsEntry
+	17, // 23: udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse.stats:type_name -> udb.core.apikey.services.v1.ApiKeyDailyStat
+	24, // [24:24] is the sub-list for method output_type
+	24, // [24:24] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_apikey_services_v1_core_proto_init() }
@@ -1181,7 +1499,7 @@ func file_udb_core_apikey_services_v1_core_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_apikey_services_v1_core_proto_rawDesc), len(file_udb_core_apikey_services_v1_core_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

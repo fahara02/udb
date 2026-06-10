@@ -81,4 +81,63 @@ public interface EventContractOptionsOrBuilder extends
    */
   com.google.protobuf.ByteString
       getReplayCompatibilityBytes();
+
+  /**
+   * <pre>
+   * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+   * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+   * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+   * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+   * </pre>
+   *
+   * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+   */
+  java.util.List<com.udb.core.common.v1.EventContractOptions.EmittedEvent> 
+      getEmitsList();
+  /**
+   * <pre>
+   * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+   * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+   * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+   * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+   * </pre>
+   *
+   * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+   */
+  com.udb.core.common.v1.EventContractOptions.EmittedEvent getEmits(int index);
+  /**
+   * <pre>
+   * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+   * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+   * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+   * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+   * </pre>
+   *
+   * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+   */
+  int getEmitsCount();
+  /**
+   * <pre>
+   * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+   * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+   * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+   * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+   * </pre>
+   *
+   * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+   */
+  java.util.List<? extends com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder> 
+      getEmitsOrBuilderList();
+  /**
+   * <pre>
+   * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+   * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+   * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+   * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+   * </pre>
+   *
+   * <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+   */
+  com.udb.core.common.v1.EventContractOptions.EmittedEventOrBuilder getEmitsOrBuilder(
+      int index);
 }

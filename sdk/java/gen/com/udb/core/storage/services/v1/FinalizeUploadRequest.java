@@ -54,6 +54,7 @@ private static final long serialVersionUID = 0L;
             com.udb.core.storage.services.v1.FinalizeUploadRequest.class, com.udb.core.storage.services.v1.FinalizeUploadRequest.Builder.class);
   }
 
+  private int bitField0_;
   public static final int TENANT_ID_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
   private volatile java.lang.Object tenantId_ = "";
@@ -291,7 +292,23 @@ private static final long serialVersionUID = 0L;
   public static final int IS_PUBLIC_FIELD_NUMBER = 7;
   private boolean isPublic_ = false;
   /**
-   * <code>bool is_public = 7 [json_name = "isPublic"];</code>
+   * <pre>
+   * Proto3 explicit presence: absent leaves the stored visibility unchanged.
+   * </pre>
+   *
+   * <code>optional bool is_public = 7 [json_name = "isPublic"];</code>
+   * @return Whether the isPublic field is set.
+   */
+  @java.lang.Override
+  public boolean hasIsPublic() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * Proto3 explicit presence: absent leaves the stored visibility unchanged.
+   * </pre>
+   *
+   * <code>optional bool is_public = 7 [json_name = "isPublic"];</code>
    * @return The isPublic.
    */
   @java.lang.Override
@@ -346,7 +363,7 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(referenceType_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 6, referenceType_);
     }
-    if (isPublic_ != false) {
+    if (((bitField0_ & 0x00000001) != 0)) {
       output.writeBool(7, isPublic_);
     }
     if (sizeBytes_ != 0L) {
@@ -374,7 +391,7 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(referenceType_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(6, referenceType_);
     }
-    if (isPublic_ != false) {
+    if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(7, isPublic_);
     }
@@ -418,8 +435,11 @@ private static final long serialVersionUID = 0L;
         .equals(other.getReferenceId())) return false;
     if (!getReferenceType()
         .equals(other.getReferenceType())) return false;
-    if (getIsPublic()
-        != other.getIsPublic()) return false;
+    if (hasIsPublic() != other.hasIsPublic()) return false;
+    if (hasIsPublic()) {
+      if (getIsPublic()
+          != other.getIsPublic()) return false;
+    }
     if (getSizeBytes()
         != other.getSizeBytes()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
@@ -445,9 +465,11 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getReferenceId().hashCode();
     hash = (37 * hash) + REFERENCE_TYPE_FIELD_NUMBER;
     hash = (53 * hash) + getReferenceType().hashCode();
-    hash = (37 * hash) + IS_PUBLIC_FIELD_NUMBER;
-    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
-        getIsPublic());
+    if (hasIsPublic()) {
+      hash = (37 * hash) + IS_PUBLIC_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getIsPublic());
+    }
     hash = (37 * hash) + SIZE_BYTES_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
         getSizeBytes());
@@ -641,12 +663,15 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000020) != 0)) {
         result.referenceType_ = referenceType_;
       }
+      int to_bitField0_ = 0;
       if (((from_bitField0_ & 0x00000040) != 0)) {
         result.isPublic_ = isPublic_;
+        to_bitField0_ |= 0x00000001;
       }
       if (((from_bitField0_ & 0x00000080) != 0)) {
         result.sizeBytes_ = sizeBytes_;
       }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -691,7 +716,7 @@ private static final long serialVersionUID = 0L;
         bitField0_ |= 0x00000020;
         onChanged();
       }
-      if (other.getIsPublic() != false) {
+      if (other.hasIsPublic()) {
         setIsPublic(other.getIsPublic());
       }
       if (other.getSizeBytes() != 0L) {
@@ -1214,7 +1239,23 @@ private static final long serialVersionUID = 0L;
 
     private boolean isPublic_ ;
     /**
-     * <code>bool is_public = 7 [json_name = "isPublic"];</code>
+     * <pre>
+     * Proto3 explicit presence: absent leaves the stored visibility unchanged.
+     * </pre>
+     *
+     * <code>optional bool is_public = 7 [json_name = "isPublic"];</code>
+     * @return Whether the isPublic field is set.
+     */
+    @java.lang.Override
+    public boolean hasIsPublic() {
+      return ((bitField0_ & 0x00000040) != 0);
+    }
+    /**
+     * <pre>
+     * Proto3 explicit presence: absent leaves the stored visibility unchanged.
+     * </pre>
+     *
+     * <code>optional bool is_public = 7 [json_name = "isPublic"];</code>
      * @return The isPublic.
      */
     @java.lang.Override
@@ -1222,7 +1263,11 @@ private static final long serialVersionUID = 0L;
       return isPublic_;
     }
     /**
-     * <code>bool is_public = 7 [json_name = "isPublic"];</code>
+     * <pre>
+     * Proto3 explicit presence: absent leaves the stored visibility unchanged.
+     * </pre>
+     *
+     * <code>optional bool is_public = 7 [json_name = "isPublic"];</code>
      * @param value The isPublic to set.
      * @return This builder for chaining.
      */
@@ -1234,7 +1279,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
-     * <code>bool is_public = 7 [json_name = "isPublic"];</code>
+     * <pre>
+     * Proto3 explicit presence: absent leaves the stored visibility unchanged.
+     * </pre>
+     *
+     * <code>optional bool is_public = 7 [json_name = "isPublic"];</code>
      * @return This builder for chaining.
      */
     public Builder clearIsPublic() {

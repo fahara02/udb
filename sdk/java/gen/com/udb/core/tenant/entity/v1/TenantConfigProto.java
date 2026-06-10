@@ -45,7 +45,7 @@ public final class TenantConfigProto extends com.google.protobuf.GeneratedFile {
       "core/common/v1/db.proto\032!udb/core/common" +
       "/v1/security.proto\032\036udb/core/common/v1/t" +
       "ypes.proto\032%udb/core/tenant/entity/v1/en" +
-      "ums.proto\"\260\013\n\014TenantConfig\022<\n\002id\030\001 \001(\tB," +
+      "ums.proto\"\251\013\n\014TenantConfig\022<\n\002id\030\001 \001(\tB," +
       "\202\267\030(\n\tconfig_id\022\004UUID\030\001(\001:\021gen_random_uu" +
       "id()R\002id\022\177\n\ttenant_id\030\002 \001(\tBb\202\267\030^\n\ttenan" +
       "t_id\022\004UUID\030\001J\"\n\007tenants\022\ttenant_id\032\nudb_" +
@@ -61,7 +61,7 @@ public final class TenantConfigProto extends com.google.protobuf.GeneratedFile {
       "n\022\202\001\n\naudit_info\030\007 \001(\0132\035.udb.core.common" +
       ".v1.AuditInfoBD\202\267\030@\n\naudit_info\022\005JSONB\030\001" +
       ":\013\'{}\'::jsonbZ\032Audit trail stored as JSO" +
-      "Nx\001R\tauditInfo:\253\006\372\266\030\211\005\n\016tenant_configs\022\n" +
+      "Nx\001R\tauditInfo:\244\006\372\266\030\211\005\n\016tenant_configs\022\n" +
       "udb_tenant\030\002 \001*\036Tenant-specific configur" +
       "ations8\001@\001b\234\001\n\020tenant_isolation\032B(tenant" +
       "_id::text = current_setting(\'app.current" +
@@ -77,18 +77,18 @@ public final class TenantConfigProto extends com.google.protobuf.GeneratedFile {
       "RETURNS trigger\nLANGUAGE plpgsql\nAS $$\nB" +
       "EGIN\n  NEW.updated_at = CURRENT_TIMESTAM" +
       "P;\n  RETURN NEW;\nEND;\n$$;\362\001\026udb.tenant.c" +
-      "onfigs.cdc\372\001\022tenant:config:read\212\262\031\230\001\n\006te" +
+      "onfigs.cdc\372\001\022tenant:config:read\212\262\031\221\001\n\006te" +
       "nant\032\ttenant_id*4tenant_id = current_set" +
-      "ting(\'app.current_tenant_id\')2\013soft_dele" +
-      "te:\022tenant.operational@\373\023H\002R\006tenantZ\010sta" +
-      "ndardr\025tenant.data_residencyB\202\002\n\035com.udb" +
-      ".core.tenant.entity.v1B\021TenantConfigProt" +
-      "oP\001ZEgithub.com/fahara02/udb/sdk/go/gen/" +
-      "udb/core/tenant/entity/v1;entityv1\242\002\004UCT" +
-      "E\252\002\031udb.core.Tenant.Entity.V1\312\002\031Udb\\Core" +
-      "\\Tenant\\Entity\\V1\342\002%Udb\\GPBMetadata\\Core" +
-      "\\Tenant\\Entity\\V1\352\002\035Udb::Core::Tenant::E" +
-      "ntity::V1b\006proto3"
+      "ting(\'app.current_tenant_id\')2\004none:\022ten" +
+      "ant.operational@\373\023H\002R\006tenantZ\010standardr\025" +
+      "tenant.data_residencyB\202\002\n\035com.udb.core.t" +
+      "enant.entity.v1B\021TenantConfigProtoP\001ZEgi" +
+      "thub.com/fahara02/udb/sdk/go/gen/udb/cor" +
+      "e/tenant/entity/v1;entityv1\242\002\004UCTE\252\002\031udb" +
+      ".core.Tenant.Entity.V1\312\002\031Udb\\Core\\Tenant" +
+      "\\Entity\\V1\342\002%Udb\\GPBMetadata\\Core\\Tenant" +
+      "\\Entity\\V1\352\002\035Udb::Core::Tenant::Entity::" +
+      "V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

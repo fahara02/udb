@@ -621,6 +621,127 @@ func (TokenType) EnumDescriptor() ([]byte, []int) {
 	return file_udb_core_authn_entity_v1_enums_proto_rawDescGZIP(), []int{9}
 }
 
+// Lifecycle state of a JWT signing key in the DB-backed key registry. A key is
+// minted as NEXT, promoted to ACTIVE (the sole signing key), demoted to
+// VERIFYING when superseded (still trusted for verification during rotation),
+// then RETIRED (no longer trusted) or COMPROMISED (force-rejected). Rotation
+// with zero downtime relies on the ACTIVE→VERIFYING overlap window.
+type SigningKeyState int32
+
+const (
+	SigningKeyState_SIGNING_KEY_STATE_UNSPECIFIED SigningKeyState = 0
+	SigningKeyState_SIGNING_KEY_STATE_NEXT        SigningKeyState = 1
+	SigningKeyState_SIGNING_KEY_STATE_ACTIVE      SigningKeyState = 2
+	SigningKeyState_SIGNING_KEY_STATE_VERIFYING   SigningKeyState = 3
+	SigningKeyState_SIGNING_KEY_STATE_RETIRED     SigningKeyState = 4
+	SigningKeyState_SIGNING_KEY_STATE_COMPROMISED SigningKeyState = 5
+)
+
+// Enum value maps for SigningKeyState.
+var (
+	SigningKeyState_name = map[int32]string{
+		0: "SIGNING_KEY_STATE_UNSPECIFIED",
+		1: "SIGNING_KEY_STATE_NEXT",
+		2: "SIGNING_KEY_STATE_ACTIVE",
+		3: "SIGNING_KEY_STATE_VERIFYING",
+		4: "SIGNING_KEY_STATE_RETIRED",
+		5: "SIGNING_KEY_STATE_COMPROMISED",
+	}
+	SigningKeyState_value = map[string]int32{
+		"SIGNING_KEY_STATE_UNSPECIFIED": 0,
+		"SIGNING_KEY_STATE_NEXT":        1,
+		"SIGNING_KEY_STATE_ACTIVE":      2,
+		"SIGNING_KEY_STATE_VERIFYING":   3,
+		"SIGNING_KEY_STATE_RETIRED":     4,
+		"SIGNING_KEY_STATE_COMPROMISED": 5,
+	}
+)
+
+func (x SigningKeyState) Enum() *SigningKeyState {
+	p := new(SigningKeyState)
+	*p = x
+	return p
+}
+
+func (x SigningKeyState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SigningKeyState) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_authn_entity_v1_enums_proto_enumTypes[10].Descriptor()
+}
+
+func (SigningKeyState) Type() protoreflect.EnumType {
+	return &file_udb_core_authn_entity_v1_enums_proto_enumTypes[10]
+}
+
+func (x SigningKeyState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SigningKeyState.Descriptor instead.
+func (SigningKeyState) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_authn_entity_v1_enums_proto_rawDescGZIP(), []int{10}
+}
+
+// Purpose a step-up MFA challenge is issued for. Binds the challenge record to
+// the operation that requested it so a challenge minted for login cannot be
+// replayed to authorize a sensitive mutation.
+type MfaChallengePurpose int32
+
+const (
+	MfaChallengePurpose_MFA_CHALLENGE_PURPOSE_UNSPECIFIED         MfaChallengePurpose = 0
+	MfaChallengePurpose_MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP       MfaChallengePurpose = 1
+	MfaChallengePurpose_MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION MfaChallengePurpose = 2
+	MfaChallengePurpose_MFA_CHALLENGE_PURPOSE_ENROLLMENT          MfaChallengePurpose = 3
+	MfaChallengePurpose_MFA_CHALLENGE_PURPOSE_RECOVERY            MfaChallengePurpose = 4
+)
+
+// Enum value maps for MfaChallengePurpose.
+var (
+	MfaChallengePurpose_name = map[int32]string{
+		0: "MFA_CHALLENGE_PURPOSE_UNSPECIFIED",
+		1: "MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP",
+		2: "MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION",
+		3: "MFA_CHALLENGE_PURPOSE_ENROLLMENT",
+		4: "MFA_CHALLENGE_PURPOSE_RECOVERY",
+	}
+	MfaChallengePurpose_value = map[string]int32{
+		"MFA_CHALLENGE_PURPOSE_UNSPECIFIED":         0,
+		"MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP":       1,
+		"MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION": 2,
+		"MFA_CHALLENGE_PURPOSE_ENROLLMENT":          3,
+		"MFA_CHALLENGE_PURPOSE_RECOVERY":            4,
+	}
+)
+
+func (x MfaChallengePurpose) Enum() *MfaChallengePurpose {
+	p := new(MfaChallengePurpose)
+	*p = x
+	return p
+}
+
+func (x MfaChallengePurpose) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (MfaChallengePurpose) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_authn_entity_v1_enums_proto_enumTypes[11].Descriptor()
+}
+
+func (MfaChallengePurpose) Type() protoreflect.EnumType {
+	return &file_udb_core_authn_entity_v1_enums_proto_enumTypes[11]
+}
+
+func (x MfaChallengePurpose) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use MfaChallengePurpose.Descriptor instead.
+func (MfaChallengePurpose) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_authn_entity_v1_enums_proto_rawDescGZIP(), []int{11}
+}
+
 var File_udb_core_authn_entity_v1_enums_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_enums_proto_rawDesc = "" +
@@ -703,7 +824,20 @@ const file_udb_core_authn_entity_v1_enums_proto_rawDesc = "" +
 	"\x16TOKEN_TYPE_JWT_REFRESH\x10\x02\x12\x16\n" +
 	"\x12TOKEN_TYPE_SESSION\x10\x03\x12\x16\n" +
 	"\x12TOKEN_TYPE_API_KEY\x10\x04\x12\x17\n" +
-	"\x13TOKEN_TYPE_EXTERNAL\x10\x05B\xf5\x01\n" +
+	"\x13TOKEN_TYPE_EXTERNAL\x10\x05*\xd1\x01\n" +
+	"\x0fSigningKeyState\x12!\n" +
+	"\x1dSIGNING_KEY_STATE_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16SIGNING_KEY_STATE_NEXT\x10\x01\x12\x1c\n" +
+	"\x18SIGNING_KEY_STATE_ACTIVE\x10\x02\x12\x1f\n" +
+	"\x1bSIGNING_KEY_STATE_VERIFYING\x10\x03\x12\x1d\n" +
+	"\x19SIGNING_KEY_STATE_RETIRED\x10\x04\x12!\n" +
+	"\x1dSIGNING_KEY_STATE_COMPROMISED\x10\x05*\xde\x01\n" +
+	"\x13MfaChallengePurpose\x12%\n" +
+	"!MFA_CHALLENGE_PURPOSE_UNSPECIFIED\x10\x00\x12'\n" +
+	"#MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP\x10\x01\x12-\n" +
+	")MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION\x10\x02\x12$\n" +
+	" MFA_CHALLENGE_PURPOSE_ENROLLMENT\x10\x03\x12\"\n" +
+	"\x1eMFA_CHALLENGE_PURPOSE_RECOVERY\x10\x04B\xf5\x01\n" +
 	"\x1ccom.udb.core.authn.entity.v1B\n" +
 	"EnumsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
@@ -719,7 +853,7 @@ func file_udb_core_authn_entity_v1_enums_proto_rawDescGZIP() []byte {
 	return file_udb_core_authn_entity_v1_enums_proto_rawDescData
 }
 
-var file_udb_core_authn_entity_v1_enums_proto_enumTypes = make([]protoimpl.EnumInfo, 10)
+var file_udb_core_authn_entity_v1_enums_proto_enumTypes = make([]protoimpl.EnumInfo, 12)
 var file_udb_core_authn_entity_v1_enums_proto_goTypes = []any{
 	(AccountKind)(0),          // 0: udb.core.authn.entity.v1.AccountKind
 	(UserStatus)(0),           // 1: udb.core.authn.entity.v1.UserStatus
@@ -731,6 +865,8 @@ var file_udb_core_authn_entity_v1_enums_proto_goTypes = []any{
 	(AuthFactorKind)(0),       // 7: udb.core.authn.entity.v1.AuthFactorKind
 	(AuthCredentialType)(0),   // 8: udb.core.authn.entity.v1.AuthCredentialType
 	(TokenType)(0),            // 9: udb.core.authn.entity.v1.TokenType
+	(SigningKeyState)(0),      // 10: udb.core.authn.entity.v1.SigningKeyState
+	(MfaChallengePurpose)(0),  // 11: udb.core.authn.entity.v1.MfaChallengePurpose
 }
 var file_udb_core_authn_entity_v1_enums_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -750,7 +886,7 @@ func file_udb_core_authn_entity_v1_enums_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_authn_entity_v1_enums_proto_rawDesc), len(file_udb_core_authn_entity_v1_enums_proto_rawDesc)),
-			NumEnums:      10,
+			NumEnums:      12,
 			NumMessages:   0,
 			NumExtensions: 0,
 			NumServices:   0,

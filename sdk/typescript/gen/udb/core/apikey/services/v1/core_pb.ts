@@ -21,7 +21,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/core/apikey/services/v1/core.proto.
  */
 export const file_udb_core_apikey_services_v1_core: GenFile = /*@__PURE__*/
-  fileDesc("CiZ1ZGIvY29yZS9hcGlrZXkvc2VydmljZXMvdjEvY29yZS5wcm90bxIbdWRiLmNvcmUuYXBpa2V5LnNlcnZpY2VzLnYxIu8CChNDcmVhdGVBcGlLZXlSZXF1ZXN0EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSPgoKb3duZXJfdHlwZRgDIAEoDjIqLnVkYi5jb3JlLmFwaWtleS5lbnRpdHkudjEuQXBpS2V5T3duZXJUeXBlEhAKCG93bmVyX2lkGAQgASgJEg4KBnNjb3BlcxgFIAMoCRIUCgxpcF9hbGxvd2xpc3QYBiADKAkSHQoVcmF0ZV9saW1pdF9wZXJfbWludXRlGAcgASgFEhoKEnJhdGVfbGltaXRfcGVyX2RheRgIIAEoAxIuCgpleHBpcmVzX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIzCgdjb250ZXh0GAogASgLMiIudWRiLmNvcmUuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0Oh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASJ4ChRDcmVhdGVBcGlLZXlSZXNwb25zZRIuCgNrZXkYASABKAsyIS51ZGIuY29yZS5hcGlrZXkuZW50aXR5LnYxLkFwaUtleRIRCglwbGFpbl9rZXkYAiABKAk6HZqyGRkIARoDdWRiKLDqATADQAFKBmFwaWtleVABIkEKEEdldEFwaUtleVJlcXVlc3QSDgoGa2V5X2lkGAEgASgJOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASJiChFHZXRBcGlLZXlSZXNwb25zZRIuCgNrZXkYASABKAsyIS51ZGIuY29yZS5hcGlrZXkuZW50aXR5LnYxLkFwaUtleTodmrIZGQgBGgN1ZGIosOoBMANAAUoGYXBpa2V5UAEi7QEKEkxpc3RBcGlLZXlzUmVxdWVzdBIQCghvd25lcl9pZBgBIAEoCRI+Cgpvd25lcl90eXBlGAIgASgOMioudWRiLmNvcmUuYXBpa2V5LmVudGl0eS52MS5BcGlLZXlPd25lclR5cGUSNwoGc3RhdHVzGAMgASgOMicudWRiLmNvcmUuYXBpa2V5LmVudGl0eS52MS5BcGlLZXlTdGF0dXMSLQoEcGFnZRgEIAEoCzIfLnVkYi5jb3JlLmNvbW1vbi52MS5QYWdlUmVxdWVzdDodmrIZGQgBGgN1ZGIosOoBMANAAUoGYXBpa2V5UAEilQEKE0xpc3RBcGlLZXlzUmVzcG9uc2USLwoEa2V5cxgBIAMoCzIhLnVkYi5jb3JlLmFwaWtleS5lbnRpdHkudjEuQXBpS2V5Ei4KBHBhZ2UYAiABKAsyIC51ZGIuY29yZS5jb21tb24udjEuUGFnZVJlc3BvbnNlOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASKQAQoTUmV2b2tlQXBpS2V5UmVxdWVzdBIOCgZrZXlfaWQYASABKAkSFQoNcmV2b2tlX3JlYXNvbhgCIAEoCRIzCgdjb250ZXh0GAMgASgLMiIudWRiLmNvcmUuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0Oh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASKLAQoUUmV2b2tlQXBpS2V5UmVzcG9uc2USDgoGa2V5X2lkGAEgASgJEi4KCnJldm9rZWRfYXQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDG9wZXJhdGlvbl9pZBgDIAEoCTodmrIZGQgBGgN1ZGIosOoBMANAAUoGYXBpa2V5UAEirQIKE1VwZGF0ZUFwaUtleVJlcXVlc3QSDgoGa2V5X2lkGAEgASgJEgwKBG5hbWUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSDgoGc2NvcGVzGAQgAygJEhQKDGlwX2FsbG93bGlzdBgFIAMoCRIdChVyYXRlX2xpbWl0X3Blcl9taW51dGUYBiABKAUSGgoScmF0ZV9saW1pdF9wZXJfZGF5GAcgASgDEi4KCmV4cGlyZXNfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjMKB2NvbnRleHQYCSABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQ6HZqyGRkIARoDdWRiKLDqATADQAFKBmFwaWtleVABImUKFFVwZGF0ZUFwaUtleVJlc3BvbnNlEi4KA2tleRgBIAEoCzIhLnVkYi5jb3JlLmFwaWtleS5lbnRpdHkudjEuQXBpS2V5Oh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASKHAQoVVmFsaWRhdGVBcGlLZXlSZXF1ZXN0EhEKCXBsYWluX2tleRgBIAEoCRIQCghlbmRwb2ludBgCIAEoCRIWCg5yZXF1aXJlZF9zY29wZRgDIAEoCRISCgppcF9hZGRyZXNzGAQgASgJOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASLOAQoWVmFsaWRhdGVBcGlLZXlSZXNwb25zZRINCgV2YWxpZBgBIAEoCBIOCgZrZXlfaWQYAiABKAkSEAoIb3duZXJfaWQYAyABKAkSPgoKb3duZXJfdHlwZRgEIAEoDjIqLnVkYi5jb3JlLmFwaWtleS5lbnRpdHkudjEuQXBpS2V5T3duZXJUeXBlEg4KBnNjb3BlcxgFIAMoCRIUCgxyYXRlX2xpbWl0ZWQYBiABKAg6HZqyGRkIARoDdWRiKLDqATADQAFKBmFwaWtleVABIp0BChpHZXRBcGlLZXlVc2FnZVN0YXRzUmVxdWVzdBIOCgZrZXlfaWQYASABKAkSKAoEZnJvbRgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASJgoCdG8YAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASKWAgoPQXBpS2V5RGFpbHlTdGF0EgwKBGRhdGUYASABKAkSFgoOdG90YWxfcmVxdWVzdHMYAiABKAMSGgoScmF0ZV9saW1pdGVkX2NvdW50GAMgASgDEhYKDmF2Z19sYXRlbmN5X21zGAQgASgBElUKDXN0YXR1c19jb3VudHMYBSADKAsyPi51ZGIuY29yZS5hcGlrZXkuc2VydmljZXMudjEuQXBpS2V5RGFpbHlTdGF0LlN0YXR1c0NvdW50c0VudHJ5GjMKEVN0YXR1c0NvdW50c0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAzoCOAE6HZqyGRkIARoDdWRiKLDqATADQAFKBmFwaWtleVABIpEBChtHZXRBcGlLZXlVc2FnZVN0YXRzUmVzcG9uc2USOwoFc3RhdHMYASADKAsyLC51ZGIuY29yZS5hcGlrZXkuc2VydmljZXMudjEuQXBpS2V5RGFpbHlTdGF0EhYKDnRvdGFsX3JlcXVlc3RzGAIgASgDOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQAUKIAgofY29tLnVkYi5jb3JlLmFwaWtleS5zZXJ2aWNlcy52MUIJQ29yZVByb3RvUAFaSWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvYXBpa2V5L3NlcnZpY2VzL3YxO3NlcnZpY2VzdjGiAgRVQ0FTqgIbdWRiLmNvcmUuQXBpa2V5LlNlcnZpY2VzLlYxygIbVWRiXENvcmVcQXBpa2V5XFNlcnZpY2VzXFYx4gInVWRiXEdQQk1ldGFkYXRhXENvcmVcQXBpa2V5XFNlcnZpY2VzXFYx6gIfVWRiOjpDb3JlOjpBcGlrZXk6OlNlcnZpY2VzOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp, file_udb_core_apikey_entity_v1_api_key, file_udb_core_apikey_entity_v1_enums, file_udb_core_common_v1_dto, file_udb_core_common_v1_types, file_udb_core_common_v1_security]);
+  fileDesc("CiZ1ZGIvY29yZS9hcGlrZXkvc2VydmljZXMvdjEvY29yZS5wcm90bxIbdWRiLmNvcmUuYXBpa2V5LnNlcnZpY2VzLnYxIu8CChNDcmVhdGVBcGlLZXlSZXF1ZXN0EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSPgoKb3duZXJfdHlwZRgDIAEoDjIqLnVkYi5jb3JlLmFwaWtleS5lbnRpdHkudjEuQXBpS2V5T3duZXJUeXBlEhAKCG93bmVyX2lkGAQgASgJEg4KBnNjb3BlcxgFIAMoCRIUCgxpcF9hbGxvd2xpc3QYBiADKAkSHQoVcmF0ZV9saW1pdF9wZXJfbWludXRlGAcgASgFEhoKEnJhdGVfbGltaXRfcGVyX2RheRgIIAEoAxIuCgpleHBpcmVzX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIzCgdjb250ZXh0GAogASgLMiIudWRiLmNvcmUuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0Oh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASJ4ChRDcmVhdGVBcGlLZXlSZXNwb25zZRIuCgNrZXkYASABKAsyIS51ZGIuY29yZS5hcGlrZXkuZW50aXR5LnYxLkFwaUtleRIRCglwbGFpbl9rZXkYAiABKAk6HZqyGRkIARoDdWRiKLDqATADQAFKBmFwaWtleVABIkEKEEdldEFwaUtleVJlcXVlc3QSDgoGa2V5X2lkGAEgASgJOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASJiChFHZXRBcGlLZXlSZXNwb25zZRIuCgNrZXkYASABKAsyIS51ZGIuY29yZS5hcGlrZXkuZW50aXR5LnYxLkFwaUtleTodmrIZGQgBGgN1ZGIosOoBMANAAUoGYXBpa2V5UAEi7QEKEkxpc3RBcGlLZXlzUmVxdWVzdBIQCghvd25lcl9pZBgBIAEoCRI+Cgpvd25lcl90eXBlGAIgASgOMioudWRiLmNvcmUuYXBpa2V5LmVudGl0eS52MS5BcGlLZXlPd25lclR5cGUSNwoGc3RhdHVzGAMgASgOMicudWRiLmNvcmUuYXBpa2V5LmVudGl0eS52MS5BcGlLZXlTdGF0dXMSLQoEcGFnZRgEIAEoCzIfLnVkYi5jb3JlLmNvbW1vbi52MS5QYWdlUmVxdWVzdDodmrIZGQgBGgN1ZGIosOoBMANAAUoGYXBpa2V5UAEilQEKE0xpc3RBcGlLZXlzUmVzcG9uc2USLwoEa2V5cxgBIAMoCzIhLnVkYi5jb3JlLmFwaWtleS5lbnRpdHkudjEuQXBpS2V5Ei4KBHBhZ2UYAiABKAsyIC51ZGIuY29yZS5jb21tb24udjEuUGFnZVJlc3BvbnNlOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASKQAQoTUmV2b2tlQXBpS2V5UmVxdWVzdBIOCgZrZXlfaWQYASABKAkSFQoNcmV2b2tlX3JlYXNvbhgCIAEoCRIzCgdjb250ZXh0GAMgASgLMiIudWRiLmNvcmUuY29tbW9uLnYxLlJlcXVlc3RDb250ZXh0Oh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASKLAQoUUmV2b2tlQXBpS2V5UmVzcG9uc2USDgoGa2V5X2lkGAEgASgJEi4KCnJldm9rZWRfYXQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDG9wZXJhdGlvbl9pZBgDIAEoCTodmrIZGQgBGgN1ZGIosOoBMANAAUoGYXBpa2V5UAEirQIKE1VwZGF0ZUFwaUtleVJlcXVlc3QSDgoGa2V5X2lkGAEgASgJEgwKBG5hbWUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSDgoGc2NvcGVzGAQgAygJEhQKDGlwX2FsbG93bGlzdBgFIAMoCRIdChVyYXRlX2xpbWl0X3Blcl9taW51dGUYBiABKAUSGgoScmF0ZV9saW1pdF9wZXJfZGF5GAcgASgDEi4KCmV4cGlyZXNfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjMKB2NvbnRleHQYCSABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQ6HZqyGRkIARoDdWRiKLDqATADQAFKBmFwaWtleVABImUKFFVwZGF0ZUFwaUtleVJlc3BvbnNlEi4KA2tleRgBIAEoCzIhLnVkYi5jb3JlLmFwaWtleS5lbnRpdHkudjEuQXBpS2V5Oh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASKSAQoTUm90YXRlQXBpS2V5UmVxdWVzdBIOCgZrZXlfaWQYASABKAkSFwoPcm90YXRpb25fcmVhc29uGAIgASgJEjMKB2NvbnRleHQYAyABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQ6HZqyGRkIARoDdWRiKLDqATADQAFKBmFwaWtleVABIpEBChRSb3RhdGVBcGlLZXlSZXNwb25zZRIuCgNrZXkYASABKAsyIS51ZGIuY29yZS5hcGlrZXkuZW50aXR5LnYxLkFwaUtleRIRCglwbGFpbl9rZXkYAiABKAkSFwoPcHJldmlvdXNfa2V5X2lkGAMgASgJOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASKTAgodRW1lcmdlbmN5UmV2b2tlQXBpS2V5c1JlcXVlc3QSEgoKa2V5X3ByZWZpeBgBIAEoCRIQCghvd25lcl9pZBgCIAEoCRIRCgl0ZW5hbnRfaWQYAyABKAkSEgoKcHJvamVjdF9pZBgEIAEoCRINCgVzY29wZRgFIAEoCRIyCg5jcmVhdGVkX2JlZm9yZRgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDgoGcmVhc29uGAcgASgJEjMKB2NvbnRleHQYCCABKAsyIi51ZGIuY29yZS5jb21tb24udjEuUmVxdWVzdENvbnRleHQ6HZqyGRkIARoDdWRiKLDqATADQAFKBmFwaWtleVABIoUBCh5FbWVyZ2VuY3lSZXZva2VBcGlLZXlzUmVzcG9uc2USFQoNcmV2b2tlZF9jb3VudBgBIAEoAxIXCg9yZXZva2VkX2tleV9pZHMYAiADKAkSFAoMb3BlcmF0aW9uX2lkGAMgASgJOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASKHAQoVVmFsaWRhdGVBcGlLZXlSZXF1ZXN0EhEKCXBsYWluX2tleRgBIAEoCRIQCghlbmRwb2ludBgCIAEoCRIWCg5yZXF1aXJlZF9zY29wZRgDIAEoCRISCgppcF9hZGRyZXNzGAQgASgJOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASLOAQoWVmFsaWRhdGVBcGlLZXlSZXNwb25zZRINCgV2YWxpZBgBIAEoCBIOCgZrZXlfaWQYAiABKAkSEAoIb3duZXJfaWQYAyABKAkSPgoKb3duZXJfdHlwZRgEIAEoDjIqLnVkYi5jb3JlLmFwaWtleS5lbnRpdHkudjEuQXBpS2V5T3duZXJUeXBlEg4KBnNjb3BlcxgFIAMoCRIUCgxyYXRlX2xpbWl0ZWQYBiABKAg6HZqyGRkIARoDdWRiKLDqATADQAFKBmFwaWtleVABIp0BChpHZXRBcGlLZXlVc2FnZVN0YXRzUmVxdWVzdBIOCgZrZXlfaWQYASABKAkSKAoEZnJvbRgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASJgoCdG8YAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQASKWAgoPQXBpS2V5RGFpbHlTdGF0EgwKBGRhdGUYASABKAkSFgoOdG90YWxfcmVxdWVzdHMYAiABKAMSGgoScmF0ZV9saW1pdGVkX2NvdW50GAMgASgDEhYKDmF2Z19sYXRlbmN5X21zGAQgASgBElUKDXN0YXR1c19jb3VudHMYBSADKAsyPi51ZGIuY29yZS5hcGlrZXkuc2VydmljZXMudjEuQXBpS2V5RGFpbHlTdGF0LlN0YXR1c0NvdW50c0VudHJ5GjMKEVN0YXR1c0NvdW50c0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAzoCOAE6HZqyGRkIARoDdWRiKLDqATADQAFKBmFwaWtleVABIpEBChtHZXRBcGlLZXlVc2FnZVN0YXRzUmVzcG9uc2USOwoFc3RhdHMYASADKAsyLC51ZGIuY29yZS5hcGlrZXkuc2VydmljZXMudjEuQXBpS2V5RGFpbHlTdGF0EhYKDnRvdGFsX3JlcXVlc3RzGAIgASgDOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZhcGlrZXlQAUKIAgofY29tLnVkYi5jb3JlLmFwaWtleS5zZXJ2aWNlcy52MUIJQ29yZVByb3RvUAFaSWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvYXBpa2V5L3NlcnZpY2VzL3YxO3NlcnZpY2VzdjGiAgRVQ0FTqgIbdWRiLmNvcmUuQXBpa2V5LlNlcnZpY2VzLlYxygIbVWRiXENvcmVcQXBpa2V5XFNlcnZpY2VzXFYx4gInVWRiXEdQQk1ldGFkYXRhXENvcmVcQXBpa2V5XFNlcnZpY2VzXFYx6gIfVWRiOjpDb3JlOjpBcGlrZXk6OlNlcnZpY2VzOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp, file_udb_core_apikey_entity_v1_api_key, file_udb_core_apikey_entity_v1_enums, file_udb_core_common_v1_dto, file_udb_core_common_v1_types, file_udb_core_common_v1_security]);
 
 /**
  * @generated from message udb.core.apikey.services.v1.CreateApiKeyRequest
@@ -338,6 +338,149 @@ export const UpdateApiKeyResponseSchema: GenMessage<UpdateApiKeyResponse> = /*@_
   messageDesc(file_udb_core_apikey_services_v1_core, 9);
 
 /**
+ * Rotate a key: mint a fresh secret under the same key record + lineage, return
+ * the new plain key ONCE, and invalidate the old secret. The rotated key keeps
+ * the same key_id, owner, scopes, tenant, and project (rotation lineage).
+ *
+ * @generated from message udb.core.apikey.services.v1.RotateApiKeyRequest
+ */
+export type RotateApiKeyRequest = Message<"udb.core.apikey.services.v1.RotateApiKeyRequest"> & {
+  /**
+   * @generated from field: string key_id = 1;
+   */
+  keyId: string;
+
+  /**
+   * @generated from field: string rotation_reason = 2;
+   */
+  rotationReason: string;
+
+  /**
+   * @generated from field: udb.core.common.v1.RequestContext context = 3;
+   */
+  context?: RequestContext | undefined;
+};
+
+/**
+ * Describes the message udb.core.apikey.services.v1.RotateApiKeyRequest.
+ * Use `create(RotateApiKeyRequestSchema)` to create a new message.
+ */
+export const RotateApiKeyRequestSchema: GenMessage<RotateApiKeyRequest> = /*@__PURE__*/
+  messageDesc(file_udb_core_apikey_services_v1_core, 10);
+
+/**
+ * @generated from message udb.core.apikey.services.v1.RotateApiKeyResponse
+ */
+export type RotateApiKeyResponse = Message<"udb.core.apikey.services.v1.RotateApiKeyResponse"> & {
+  /**
+   * @generated from field: udb.core.apikey.entity.v1.ApiKey key = 1;
+   */
+  key?: ApiKey | undefined;
+
+  /**
+   * New plain key returned ONCE; the prior secret is invalidated immediately.
+   *
+   * @generated from field: string plain_key = 2;
+   */
+  plainKey: string;
+
+  /**
+   * @generated from field: string previous_key_id = 3;
+   */
+  previousKeyId: string;
+};
+
+/**
+ * Describes the message udb.core.apikey.services.v1.RotateApiKeyResponse.
+ * Use `create(RotateApiKeyResponseSchema)` to create a new message.
+ */
+export const RotateApiKeyResponseSchema: GenMessage<RotateApiKeyResponse> = /*@__PURE__*/
+  messageDesc(file_udb_core_apikey_services_v1_core, 11);
+
+/**
+ * Emergency revoke matching keys by one or more selectors. At least one selector
+ * must be set. Resolves matching records and revokes each (no prefix-only blind
+ * mutation): the caller's tenant/owner/admin authority is enforced per record.
+ *
+ * @generated from message udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest
+ */
+export type EmergencyRevokeApiKeysRequest = Message<"udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest"> & {
+  /**
+   * @generated from field: string key_prefix = 1;
+   */
+  keyPrefix: string;
+
+  /**
+   * @generated from field: string owner_id = 2;
+   */
+  ownerId: string;
+
+  /**
+   * @generated from field: string tenant_id = 3;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string project_id = 4;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string scope = 5;
+   */
+  scope: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_before = 6;
+   */
+  createdBefore?: Timestamp | undefined;
+
+  /**
+   * @generated from field: string reason = 7;
+   */
+  reason: string;
+
+  /**
+   * @generated from field: udb.core.common.v1.RequestContext context = 8;
+   */
+  context?: RequestContext | undefined;
+};
+
+/**
+ * Describes the message udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest.
+ * Use `create(EmergencyRevokeApiKeysRequestSchema)` to create a new message.
+ */
+export const EmergencyRevokeApiKeysRequestSchema: GenMessage<EmergencyRevokeApiKeysRequest> = /*@__PURE__*/
+  messageDesc(file_udb_core_apikey_services_v1_core, 12);
+
+/**
+ * @generated from message udb.core.apikey.services.v1.EmergencyRevokeApiKeysResponse
+ */
+export type EmergencyRevokeApiKeysResponse = Message<"udb.core.apikey.services.v1.EmergencyRevokeApiKeysResponse"> & {
+  /**
+   * @generated from field: int64 revoked_count = 1;
+   */
+  revokedCount: bigint;
+
+  /**
+   * @generated from field: repeated string revoked_key_ids = 2;
+   */
+  revokedKeyIds: string[];
+
+  /**
+   * @generated from field: string operation_id = 3;
+   */
+  operationId: string;
+};
+
+/**
+ * Describes the message udb.core.apikey.services.v1.EmergencyRevokeApiKeysResponse.
+ * Use `create(EmergencyRevokeApiKeysResponseSchema)` to create a new message.
+ */
+export const EmergencyRevokeApiKeysResponseSchema: GenMessage<EmergencyRevokeApiKeysResponse> = /*@__PURE__*/
+  messageDesc(file_udb_core_apikey_services_v1_core, 13);
+
+/**
  * @generated from message udb.core.apikey.services.v1.ValidateApiKeyRequest
  */
 export type ValidateApiKeyRequest = Message<"udb.core.apikey.services.v1.ValidateApiKeyRequest"> & {
@@ -375,7 +518,7 @@ export type ValidateApiKeyRequest = Message<"udb.core.apikey.services.v1.Validat
  * Use `create(ValidateApiKeyRequestSchema)` to create a new message.
  */
 export const ValidateApiKeyRequestSchema: GenMessage<ValidateApiKeyRequest> = /*@__PURE__*/
-  messageDesc(file_udb_core_apikey_services_v1_core, 10);
+  messageDesc(file_udb_core_apikey_services_v1_core, 14);
 
 /**
  * @generated from message udb.core.apikey.services.v1.ValidateApiKeyResponse
@@ -419,7 +562,7 @@ export type ValidateApiKeyResponse = Message<"udb.core.apikey.services.v1.Valida
  * Use `create(ValidateApiKeyResponseSchema)` to create a new message.
  */
 export const ValidateApiKeyResponseSchema: GenMessage<ValidateApiKeyResponse> = /*@__PURE__*/
-  messageDesc(file_udb_core_apikey_services_v1_core, 11);
+  messageDesc(file_udb_core_apikey_services_v1_core, 15);
 
 /**
  * @generated from message udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest
@@ -446,7 +589,7 @@ export type GetApiKeyUsageStatsRequest = Message<"udb.core.apikey.services.v1.Ge
  * Use `create(GetApiKeyUsageStatsRequestSchema)` to create a new message.
  */
 export const GetApiKeyUsageStatsRequestSchema: GenMessage<GetApiKeyUsageStatsRequest> = /*@__PURE__*/
-  messageDesc(file_udb_core_apikey_services_v1_core, 12);
+  messageDesc(file_udb_core_apikey_services_v1_core, 16);
 
 /**
  * @generated from message udb.core.apikey.services.v1.ApiKeyDailyStat
@@ -487,7 +630,7 @@ export type ApiKeyDailyStat = Message<"udb.core.apikey.services.v1.ApiKeyDailySt
  * Use `create(ApiKeyDailyStatSchema)` to create a new message.
  */
 export const ApiKeyDailyStatSchema: GenMessage<ApiKeyDailyStat> = /*@__PURE__*/
-  messageDesc(file_udb_core_apikey_services_v1_core, 13);
+  messageDesc(file_udb_core_apikey_services_v1_core, 17);
 
 /**
  * @generated from message udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse
@@ -509,5 +652,5 @@ export type GetApiKeyUsageStatsResponse = Message<"udb.core.apikey.services.v1.G
  * Use `create(GetApiKeyUsageStatsResponseSchema)` to create a new message.
  */
 export const GetApiKeyUsageStatsResponseSchema: GenMessage<GetApiKeyUsageStatsResponse> = /*@__PURE__*/
-  messageDesc(file_udb_core_apikey_services_v1_core, 14);
+  messageDesc(file_udb_core_apikey_services_v1_core, 18);
 

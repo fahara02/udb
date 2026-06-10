@@ -44,34 +44,43 @@ public final class RecoveryCodeProto extends com.google.protobuf.GeneratedFile {
       ".proto\022\030udb.core.authn.entity.v1\032\037google" +
       "/protobuf/timestamp.proto\032\033udb/core/comm" +
       "on/v1/db.proto\032!udb/core/common/v1/secur" +
-      "ity.proto\"\272\006\n\014RecoveryCode\022]\n\020recovery_c" +
+      "ity.proto\"\256\t\n\014RecoveryCode\022]\n\020recovery_c" +
       "ode_id\030\001 \001(\tB3\202\267\030/\n\020recovery_code_id\022\004UU" +
       "ID\030\001(\001:\021gen_random_uuid()R\016recoveryCodeI" +
       "d\022\264\001\n\007user_id\030\002 \001(\tB\232\001\202\267\030\225\001\n\007user_id\022\004UU" +
       "ID\030\001J8\n\005users\022\007user_id\032\tudb_authn \0032\031fk_" +
       "recovery_codes_user_idR)\n\027idx_recovery_c" +
       "odes_user\022\005BTREEZ\007user_idZ\035FK to udb_aut" +
-      "hn.users.user_idR\006userId\022d\n\tcode_hash\030\003 " +
-      "\001(\tBG\202\267\030C\n\tcode_hash\022\014VARCHAR(128)\030\001Z&Ke" +
-      "yed HMAC digest of the recovery codeR\010co" +
+      "hn.users.user_idR\006userId\022\213\001\n\tcode_hash\030\003" +
+      " \001(\tBn\350\265\030\001\360\265\030\001\202\267\030C\n\tcode_hash\022\014VARCHAR(1" +
+      "28)\030\001Z&Keyed HMAC digest of the recovery" +
+      " code\212\267\030\033\010\004\020\001\030\0032\013hmac-sha256J\006tenantR\010co" +
       "deHash\022\203\001\n\007used_at\030\004 \001(\0132\032.google.protob" +
       "uf.TimestampBN\202\267\030J\n\007used_at\022\013TIMESTAMPTZ" +
       "Z2Timestamp the code was consumed; NULL " +
       "while unusedR\006usedAt\022q\n\ncreated_at\030\005 \001(\013" +
       "2\032.google.protobuf.TimestampB6\202\267\0302\n\ncrea" +
       "ted_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP" +
-      "`\001h\001R\tcreatedAt:\264\001\372\266\030V\n\016recovery_codes\022\t" +
-      "udb_authn\030\006 \001*+Hashed single-use MFA rec" +
-      "overy/backup codes\352\001\007primary\212\262\031V\n\006global" +
-      "2\013soft_delete:\021authn.operational@\373\023H\002R\006t" +
-      "enantZ\010standardr\025tenant.data_residencyB\374" +
-      "\001\n\034com.udb.core.authn.entity.v1B\021Recover" +
-      "yCodeProtoP\001ZDgithub.com/fahara02/udb/sd" +
-      "k/go/gen/udb/core/authn/entity/v1;entity" +
-      "v1\242\002\004UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030U" +
-      "db\\Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadat" +
-      "a\\Core\\Authn\\Entity\\V1\352\002\034Udb::Core::Auth" +
-      "n::Entity::V1b\006proto3"
+      "`\001h\001R\tcreatedAt\022\226\001\n\ttenant_id\030\006 \001(\tBy\202\267\030" +
+      "u\n\ttenant_id\022\014VARCHAR(120)R%\n\034idx_recove" +
+      "ry_codes_tenant_id\022\005BTREEZ3Tenant bounda" +
+      "ry (denormalized from the owning user)R\010" +
+      "tenantId:\347\002\372\266\030\315\001\n\016recovery_codes\022\tudb_au" +
+      "thn\030\006 \001*+Hashed single-use MFA recovery/" +
+      "backup codes@\001bs\n\020tenant_isolation\032](ten" +
+      "ant_id IS NULL OR tenant_id::text = curr" +
+      "ent_setting(\'app.current_tenant_id\', tru" +
+      "e)::text)(\001\352\001\007primary\212\262\031\220\001\n\006tenant\032\ttena" +
+      "nt_id*4tenant_id = current_setting(\'app." +
+      "current_tenant_id\')2\004none:\021authn.operati" +
+      "onal@\373\023H\002R\006tenantZ\010standardr\025tenant.data" +
+      "_residencyB\374\001\n\034com.udb.core.authn.entity" +
+      ".v1B\021RecoveryCodeProtoP\001ZDgithub.com/fah" +
+      "ara02/udb/sdk/go/gen/udb/core/authn/enti" +
+      "ty/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Authn.E" +
+      "ntity.V1\312\002\030Udb\\Core\\Authn\\Entity\\V1\342\002$Ud" +
+      "b\\GPBMetadata\\Core\\Authn\\Entity\\V1\352\002\034Udb" +
+      "::Core::Authn::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -85,16 +94,19 @@ public final class RecoveryCodeProto extends com.google.protobuf.GeneratedFile {
     internal_static_udb_core_authn_entity_v1_RecoveryCode_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_entity_v1_RecoveryCode_descriptor,
-        new java.lang.String[] { "RecoveryCodeId", "UserId", "CodeHash", "UsedAt", "CreatedAt", });
+        new java.lang.String[] { "RecoveryCodeId", "UserId", "CodeHash", "UsedAt", "CreatedAt", "TenantId", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();
     com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.dbColumnSecurity);
     registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
+    registry.add(com.udb.core.common.v1.SecurityProto.logRedacted);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);
     registry.add(com.udb.core.common.v1.DbProto.pgTable);
+    registry.add(com.udb.core.common.v1.SecurityProto.sensitive);
     com.google.protobuf.Descriptors.FileDescriptor
         .internalUpdateFileDescriptor(descriptor, registry);
   }

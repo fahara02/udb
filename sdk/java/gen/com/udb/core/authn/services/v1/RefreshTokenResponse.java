@@ -29,6 +29,7 @@ private static final long serialVersionUID = 0L;
   }
   private RefreshTokenResponse() {
     accessToken_ = "";
+    refreshToken_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -99,6 +100,70 @@ private static final long serialVersionUID = 0L;
     return accessTokenExpiresIn_;
   }
 
+  public static final int REFRESH_TOKEN_FIELD_NUMBER = 3;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object refreshToken_ = "";
+  /**
+   * <pre>
+   * Rotated refresh token (token-family credential). Issued on every successful
+   * refresh: the presented refresh token is single-use and is invalidated as the
+   * new one is minted (atomic rotation). Empty when the caller refreshed with a
+   * legacy server-side session id rather than a token-family credential.
+   * </pre>
+   *
+   * <code>string refresh_token = 3 [json_name = "refreshToken"];</code>
+   * @return The refreshToken.
+   */
+  @java.lang.Override
+  public java.lang.String getRefreshToken() {
+    java.lang.Object ref = refreshToken_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      refreshToken_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Rotated refresh token (token-family credential). Issued on every successful
+   * refresh: the presented refresh token is single-use and is invalidated as the
+   * new one is minted (atomic rotation). Empty when the caller refreshed with a
+   * legacy server-side session id rather than a token-family credential.
+   * </pre>
+   *
+   * <code>string refresh_token = 3 [json_name = "refreshToken"];</code>
+   * @return The bytes for refreshToken.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRefreshTokenBytes() {
+    java.lang.Object ref = refreshToken_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      refreshToken_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int REFRESH_TOKEN_EXPIRES_IN_FIELD_NUMBER = 4;
+  private int refreshTokenExpiresIn_ = 0;
+  /**
+   * <code>int32 refresh_token_expires_in = 4 [json_name = "refreshTokenExpiresIn"];</code>
+   * @return The refreshTokenExpiresIn.
+   */
+  @java.lang.Override
+  public int getRefreshTokenExpiresIn() {
+    return refreshTokenExpiresIn_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -119,6 +184,12 @@ private static final long serialVersionUID = 0L;
     if (accessTokenExpiresIn_ != 0) {
       output.writeInt32(2, accessTokenExpiresIn_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(refreshToken_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 3, refreshToken_);
+    }
+    if (refreshTokenExpiresIn_ != 0) {
+      output.writeInt32(4, refreshTokenExpiresIn_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -129,6 +200,13 @@ private static final long serialVersionUID = 0L;
     if (accessTokenExpiresIn_ != 0) {
       size += com.google.protobuf.CodedOutputStream
         .computeInt32Size(2, accessTokenExpiresIn_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(refreshToken_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(3, refreshToken_);
+    }
+    if (refreshTokenExpiresIn_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(4, refreshTokenExpiresIn_);
     }
     return size;
   }
@@ -158,6 +236,10 @@ private static final long serialVersionUID = 0L;
         .equals(other.getAccessToken())) return false;
     if (getAccessTokenExpiresIn()
         != other.getAccessTokenExpiresIn()) return false;
+    if (!getRefreshToken()
+        .equals(other.getRefreshToken())) return false;
+    if (getRefreshTokenExpiresIn()
+        != other.getRefreshTokenExpiresIn()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -173,6 +255,10 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getAccessToken().hashCode();
     hash = (37 * hash) + ACCESS_TOKEN_EXPIRES_IN_FIELD_NUMBER;
     hash = (53 * hash) + getAccessTokenExpiresIn();
+    hash = (37 * hash) + REFRESH_TOKEN_FIELD_NUMBER;
+    hash = (53 * hash) + getRefreshToken().hashCode();
+    hash = (37 * hash) + REFRESH_TOKEN_EXPIRES_IN_FIELD_NUMBER;
+    hash = (53 * hash) + getRefreshTokenExpiresIn();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -306,6 +392,8 @@ private static final long serialVersionUID = 0L;
       bitField0_ = 0;
       accessToken_ = "";
       accessTokenExpiresIn_ = 0;
+      refreshToken_ = "";
+      refreshTokenExpiresIn_ = 0;
       return this;
     }
 
@@ -345,6 +433,12 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000002) != 0)) {
         result.accessTokenExpiresIn_ = accessTokenExpiresIn_;
       }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.refreshToken_ = refreshToken_;
+      }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.refreshTokenExpiresIn_ = refreshTokenExpiresIn_;
+      }
     }
 
     @java.lang.Override
@@ -366,6 +460,14 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getAccessTokenExpiresIn() != 0) {
         setAccessTokenExpiresIn(other.getAccessTokenExpiresIn());
+      }
+      if (!other.getRefreshToken().isEmpty()) {
+        refreshToken_ = other.refreshToken_;
+        bitField0_ |= 0x00000004;
+        onChanged();
+      }
+      if (other.getRefreshTokenExpiresIn() != 0) {
+        setRefreshTokenExpiresIn(other.getRefreshTokenExpiresIn());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -403,6 +505,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000002;
               break;
             } // case 16
+            case 26: {
+              refreshToken_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000004;
+              break;
+            } // case 26
+            case 32: {
+              refreshTokenExpiresIn_ = input.readInt32();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 32
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -520,6 +632,145 @@ private static final long serialVersionUID = 0L;
     public Builder clearAccessTokenExpiresIn() {
       bitField0_ = (bitField0_ & ~0x00000002);
       accessTokenExpiresIn_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object refreshToken_ = "";
+    /**
+     * <pre>
+     * Rotated refresh token (token-family credential). Issued on every successful
+     * refresh: the presented refresh token is single-use and is invalidated as the
+     * new one is minted (atomic rotation). Empty when the caller refreshed with a
+     * legacy server-side session id rather than a token-family credential.
+     * </pre>
+     *
+     * <code>string refresh_token = 3 [json_name = "refreshToken"];</code>
+     * @return The refreshToken.
+     */
+    public java.lang.String getRefreshToken() {
+      java.lang.Object ref = refreshToken_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        refreshToken_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Rotated refresh token (token-family credential). Issued on every successful
+     * refresh: the presented refresh token is single-use and is invalidated as the
+     * new one is minted (atomic rotation). Empty when the caller refreshed with a
+     * legacy server-side session id rather than a token-family credential.
+     * </pre>
+     *
+     * <code>string refresh_token = 3 [json_name = "refreshToken"];</code>
+     * @return The bytes for refreshToken.
+     */
+    public com.google.protobuf.ByteString
+        getRefreshTokenBytes() {
+      java.lang.Object ref = refreshToken_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        refreshToken_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Rotated refresh token (token-family credential). Issued on every successful
+     * refresh: the presented refresh token is single-use and is invalidated as the
+     * new one is minted (atomic rotation). Empty when the caller refreshed with a
+     * legacy server-side session id rather than a token-family credential.
+     * </pre>
+     *
+     * <code>string refresh_token = 3 [json_name = "refreshToken"];</code>
+     * @param value The refreshToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRefreshToken(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      refreshToken_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Rotated refresh token (token-family credential). Issued on every successful
+     * refresh: the presented refresh token is single-use and is invalidated as the
+     * new one is minted (atomic rotation). Empty when the caller refreshed with a
+     * legacy server-side session id rather than a token-family credential.
+     * </pre>
+     *
+     * <code>string refresh_token = 3 [json_name = "refreshToken"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRefreshToken() {
+      refreshToken_ = getDefaultInstance().getRefreshToken();
+      bitField0_ = (bitField0_ & ~0x00000004);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Rotated refresh token (token-family credential). Issued on every successful
+     * refresh: the presented refresh token is single-use and is invalidated as the
+     * new one is minted (atomic rotation). Empty when the caller refreshed with a
+     * legacy server-side session id rather than a token-family credential.
+     * </pre>
+     *
+     * <code>string refresh_token = 3 [json_name = "refreshToken"];</code>
+     * @param value The bytes for refreshToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRefreshTokenBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      refreshToken_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+
+    private int refreshTokenExpiresIn_ ;
+    /**
+     * <code>int32 refresh_token_expires_in = 4 [json_name = "refreshTokenExpiresIn"];</code>
+     * @return The refreshTokenExpiresIn.
+     */
+    @java.lang.Override
+    public int getRefreshTokenExpiresIn() {
+      return refreshTokenExpiresIn_;
+    }
+    /**
+     * <code>int32 refresh_token_expires_in = 4 [json_name = "refreshTokenExpiresIn"];</code>
+     * @param value The refreshTokenExpiresIn to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRefreshTokenExpiresIn(int value) {
+
+      refreshTokenExpiresIn_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 refresh_token_expires_in = 4 [json_name = "refreshTokenExpiresIn"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRefreshTokenExpiresIn() {
+      bitField0_ = (bitField0_ & ~0x00000008);
+      refreshTokenExpiresIn_ = 0;
       onChanged();
       return this;
     }

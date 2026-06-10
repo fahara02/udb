@@ -127,6 +127,56 @@ class UpdateApiKeyResponse(_message.Message):
     key: _api_key_pb2.ApiKey
     def __init__(self, key: _Optional[_Union[_api_key_pb2.ApiKey, _Mapping]] = ...) -> None: ...
 
+class RotateApiKeyRequest(_message.Message):
+    __slots__ = ("key_id", "rotation_reason", "context")
+    KEY_ID_FIELD_NUMBER: _ClassVar[int]
+    ROTATION_REASON_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    key_id: str
+    rotation_reason: str
+    context: _types_pb2.RequestContext
+    def __init__(self, key_id: _Optional[str] = ..., rotation_reason: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class RotateApiKeyResponse(_message.Message):
+    __slots__ = ("key", "plain_key", "previous_key_id")
+    KEY_FIELD_NUMBER: _ClassVar[int]
+    PLAIN_KEY_FIELD_NUMBER: _ClassVar[int]
+    PREVIOUS_KEY_ID_FIELD_NUMBER: _ClassVar[int]
+    key: _api_key_pb2.ApiKey
+    plain_key: str
+    previous_key_id: str
+    def __init__(self, key: _Optional[_Union[_api_key_pb2.ApiKey, _Mapping]] = ..., plain_key: _Optional[str] = ..., previous_key_id: _Optional[str] = ...) -> None: ...
+
+class EmergencyRevokeApiKeysRequest(_message.Message):
+    __slots__ = ("key_prefix", "owner_id", "tenant_id", "project_id", "scope", "created_before", "reason", "context")
+    KEY_PREFIX_FIELD_NUMBER: _ClassVar[int]
+    OWNER_ID_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    SCOPE_FIELD_NUMBER: _ClassVar[int]
+    CREATED_BEFORE_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    key_prefix: str
+    owner_id: str
+    tenant_id: str
+    project_id: str
+    scope: str
+    created_before: _timestamp_pb2.Timestamp
+    reason: str
+    context: _types_pb2.RequestContext
+    def __init__(self, key_prefix: _Optional[str] = ..., owner_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., scope: _Optional[str] = ..., created_before: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., reason: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+
+class EmergencyRevokeApiKeysResponse(_message.Message):
+    __slots__ = ("revoked_count", "revoked_key_ids", "operation_id")
+    REVOKED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    REVOKED_KEY_IDS_FIELD_NUMBER: _ClassVar[int]
+    OPERATION_ID_FIELD_NUMBER: _ClassVar[int]
+    revoked_count: int
+    revoked_key_ids: _containers.RepeatedScalarFieldContainer[str]
+    operation_id: str
+    def __init__(self, revoked_count: _Optional[int] = ..., revoked_key_ids: _Optional[_Iterable[str]] = ..., operation_id: _Optional[str] = ...) -> None: ...
+
 class ValidateApiKeyRequest(_message.Message):
     __slots__ = ("plain_key", "endpoint", "required_scope", "ip_address")
     PLAIN_KEY_FIELD_NUMBER: _ClassVar[int]

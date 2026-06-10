@@ -45,7 +45,7 @@ public final class NotificationLogProto extends com.google.protobuf.GeneratedFil
       "entity.v1\032\037google/protobuf/timestamp.pro" +
       "to\032\033udb/core/common/v1/db.proto\032!udb/cor" +
       "e/common/v1/security.proto\032+udb/core/not" +
-      "ification/entity/v1/enums.proto\"\215\025\n\017Noti" +
+      "ification/entity/v1/enums.proto\"\206\025\n\017Noti" +
       "ficationLog\022@\n\006log_id\030\001 \001(\tB)\202\267\030%\n\006log_i" +
       "d\022\004UUID\030\001(\001:\021gen_random_uuid()R\005logId\022\303\001" +
       "\n\013template_id\030\002 \001(\tB\241\001\202\267\030\234\001\n\013template_id" +
@@ -100,7 +100,7 @@ public final class NotificationLogProto extends com.google.protobuf.GeneratedFil
       "ESTAMPTZR\013deliveredAt\022q\n\ncreated_at\030\023 \001(" +
       "\0132\032.google.protobuf.TimestampB6\202\267\0302\n\ncre" +
       "ated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAM" +
-      "P`\001h\001R\tcreatedAt:\204\004\372\266\030\334\002\n\021notification_l" +
+      "P`\001h\001R\tcreatedAt:\375\003\372\266\030\334\002\n\021notification_l" +
       "ogs\022\020udb_notification\030\002 \001*<Delivery audi" +
       "t log for every notification sent by the" +
       " system@\001H\003R\ncreated_atXZb^\n\020tenant_isol" +
@@ -109,19 +109,18 @@ public final class NotificationLogProto extends com.google.protobuf.GeneratedFil
       "\001\212\001C\n\036idx_nlog_tenant_channel_status\022\005BT" +
       "REEZ\ttenant_idZ\007channelZ\006status\212\001!\n\020idx_" +
       "nlog_sent_at\022\004BRINZ\007sent_at\362\001\026notificati" +
-      "on.failed.v1\212\262\031\236\001\n\006tenant\032\ttenant_id*4te" +
+      "on.failed.v1\212\262\031\227\001\n\006tenant\032\ttenant_id*4te" +
       "nant_id = current_setting(\'app.current_t" +
-      "enant_id\')2\013soft_delete:\030notification.op" +
-      "erational@\373\023H\002R\006tenantZ\010standardr\025tenant" +
-      ".data_residencyB\251\002\n#com.udb.core.notific" +
-      "ation.entity.v1B\024NotificationLogProtoP\001Z" +
-      "Kgithub.com/fahara02/udb/sdk/go/gen/udb/" +
-      "core/notification/entity/v1;entityv1\242\002\004U" +
-      "CNE\252\002\037udb.core.Notification.Entity.V1\312\002\037" +
-      "Udb\\Core\\Notification\\Entity\\V1\342\002+Udb\\GP" +
-      "BMetadata\\Core\\Notification\\Entity\\V1\352\002#" +
-      "Udb::Core::Notification::Entity::V1b\006pro" +
-      "to3"
+      "enant_id\')2\004none:\030notification.operation" +
+      "al@\373\023H\002R\006tenantZ\010standardr\025tenant.data_r" +
+      "esidencyB\251\002\n#com.udb.core.notification.e" +
+      "ntity.v1B\024NotificationLogProtoP\001ZKgithub" +
+      ".com/fahara02/udb/sdk/go/gen/udb/core/no" +
+      "tification/entity/v1;entityv1\242\002\004UCNE\252\002\037u" +
+      "db.core.Notification.Entity.V1\312\002\037Udb\\Cor" +
+      "e\\Notification\\Entity\\V1\342\002+Udb\\GPBMetada" +
+      "ta\\Core\\Notification\\Entity\\V1\352\002#Udb::Co" +
+      "re::Notification::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

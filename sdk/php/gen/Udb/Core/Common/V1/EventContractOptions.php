@@ -38,6 +38,15 @@ class EventContractOptions extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string replay_compatibility = 6 [json_name = "replayCompatibility"];</code>
      */
     protected $replay_compatibility = '';
+    /**
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     *
+     * Generated from protobuf field <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     */
+    private $emits;
 
     /**
      * Constructor.
@@ -51,6 +60,11 @@ class EventContractOptions extends \Google\Protobuf\Internal\Message
      *     @type string $payload_redaction_profile
      *     @type string $delivery_guarantee
      *     @type string $replay_compatibility
+     *     @type \Udb\Core\Common\V1\EventContractOptions\EmittedEvent[] $emits
+     *           The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     *           a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     *           one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     *           peer.left + track.ended + room.closed). See docs/event-contract-model.md.
      * }
      */
     public function __construct($data = NULL) {
@@ -186,6 +200,38 @@ class EventContractOptions extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, true);
         $this->replay_compatibility = $var;
+
+        return $this;
+    }
+
+    /**
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     *
+     * Generated from protobuf field <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     * @return RepeatedField<\Udb\Core\Common\V1\EventContractOptions\EmittedEvent>
+     */
+    public function getEmits()
+    {
+        return $this->emits;
+    }
+
+    /**
+     * The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+     * a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+     * one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+     * peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+     *
+     * Generated from protobuf field <code>repeated .udb.core.common.v1.EventContractOptions.EmittedEvent emits = 7 [json_name = "emits"];</code>
+     * @param \Udb\Core\Common\V1\EventContractOptions\EmittedEvent[] $var
+     * @return $this
+     */
+    public function setEmits(array|RepeatedField $var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Common\V1\EventContractOptions\EmittedEvent::class);
+        $this->emits = $arr;
 
         return $this;
     }

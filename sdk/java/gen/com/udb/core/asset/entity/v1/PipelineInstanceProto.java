@@ -46,7 +46,7 @@ public final class PipelineInstanceProto extends com.google.protobuf.GeneratedFi
       "common/v1/db.proto\032!udb/core/common/v1/s" +
       "ecurity.proto\032\036udb/core/common/v1/types." +
       "proto\032$udb/core/asset/entity/v1/enums.pr" +
-      "oto\"\330\014\n\020PipelineInstance\022O\n\013instance_id\030" +
+      "oto\"\321\014\n\020PipelineInstance\022O\n\013instance_id\030" +
       "\001 \001(\tB.\202\267\030*\n\013instance_id\022\004UUID\030\001(\001:\021gen_" +
       "random_uuid()R\ninstanceId\022@\n\rdefinition_" +
       "id\030\002 \001(\tB\033\202\267\030\027\n\rdefinition_id\022\004UUID\030\001R\014d" +
@@ -71,7 +71,7 @@ public final class PipelineInstanceProto extends com.google.protobuf.GeneratedFi
       "ZR\013completedAt\022\202\001\n\naudit_info\030\013 \001(\0132\035.ud" +
       "b.core.common.v1.AuditInfoBD\202\267\030@\n\naudit_" +
       "info\022\005JSONB\030\001:\013\'{}\'::jsonbZ\032Audit trail " +
-      "stored as JSONx\001R\tauditInfo:\330\004\372\266\030\267\003\n\022pip" +
+      "stored as JSONx\001R\tauditInfo:\321\004\372\266\030\267\003\n\022pip" +
       "eline_instances\022\tudb_asset\030\003 \001*?Pipeline" +
       " execution instances tracking per-asset " +
       "processing runs8\001@\001b\243\001\n#pipeline_instanc" +
@@ -82,18 +82,18 @@ public final class PipelineInstanceProto extends com.google.protobuf.GeneratedFi
       "line_instance_correlation_unique\022\005BTREE\030" +
       "\001Z\016correlation_id\212\001.\n\033idx_pipeline_insta" +
       "nce_asset\022\005BTREEZ\010asset_id\362\001 udb.asset.p" +
-      "ipeline_instances.cdc\372\001\nasset:read\212\262\031\227\001\n" +
+      "ipeline_instances.cdc\372\001\nasset:read\212\262\031\220\001\n" +
       "\006tenant\032\ttenant_id*4tenant_id = current_" +
-      "setting(\'app.current_tenant_id\')2\013soft_d" +
-      "elete:\021asset.operational@\373\023H\002R\006tenantZ\010s" +
-      "tandardr\025tenant.data_residencyB\200\002\n\034com.u" +
-      "db.core.asset.entity.v1B\025PipelineInstanc" +
-      "eProtoP\001ZDgithub.com/fahara02/udb/sdk/go" +
-      "/gen/udb/core/asset/entity/v1;entityv1\242\002" +
-      "\004UCAE\252\002\030udb.core.Asset.Entity.V1\312\002\030Udb\\C" +
-      "ore\\Asset\\Entity\\V1\342\002$Udb\\GPBMetadata\\Co" +
-      "re\\Asset\\Entity\\V1\352\002\034Udb::Core::Asset::E" +
-      "ntity::V1b\006proto3"
+      "setting(\'app.current_tenant_id\')2\004none:\021" +
+      "asset.operational@\373\023H\002R\006tenantZ\010standard" +
+      "r\025tenant.data_residencyB\200\002\n\034com.udb.core" +
+      ".asset.entity.v1B\025PipelineInstanceProtoP" +
+      "\001ZDgithub.com/fahara02/udb/sdk/go/gen/ud" +
+      "b/core/asset/entity/v1;entityv1\242\002\004UCAE\252\002" +
+      "\030udb.core.Asset.Entity.V1\312\002\030Udb\\Core\\Ass" +
+      "et\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Asse" +
+      "t\\Entity\\V1\352\002\034Udb::Core::Asset::Entity::" +
+      "V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

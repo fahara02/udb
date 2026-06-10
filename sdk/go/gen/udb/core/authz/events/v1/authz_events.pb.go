@@ -746,6 +746,596 @@ func (x *AccessSurfaceUpdatedEvent) GetOccurredAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// Kafka topic: udb.authz.relationship.tuple.changed.v1
+type RelationshipTupleChangedEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	Subject       string                 `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`
+	Relation      string                 `protobuf:"bytes,3,opt,name=relation,proto3" json:"relation,omitempty"`
+	Object        string                 `protobuf:"bytes,4,opt,name=object,proto3" json:"object,omitempty"`
+	TenantId      string                 `protobuf:"bytes,5,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,6,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Verb          string                 `protobuf:"bytes,7,opt,name=verb,proto3" json:"verb,omitempty"` // upsert, delete
+	CorrelationId string                 `protobuf:"bytes,8,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RelationshipTupleChangedEvent) Reset() {
+	*x = RelationshipTupleChangedEvent{}
+	mi := &file_udb_core_authz_events_v1_authz_events_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RelationshipTupleChangedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RelationshipTupleChangedEvent) ProtoMessage() {}
+
+func (x *RelationshipTupleChangedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authz_events_v1_authz_events_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RelationshipTupleChangedEvent.ProtoReflect.Descriptor instead.
+func (*RelationshipTupleChangedEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_authz_events_v1_authz_events_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *RelationshipTupleChangedEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *RelationshipTupleChangedEvent) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
+func (x *RelationshipTupleChangedEvent) GetRelation() string {
+	if x != nil {
+		return x.Relation
+	}
+	return ""
+}
+
+func (x *RelationshipTupleChangedEvent) GetObject() string {
+	if x != nil {
+		return x.Object
+	}
+	return ""
+}
+
+func (x *RelationshipTupleChangedEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *RelationshipTupleChangedEvent) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *RelationshipTupleChangedEvent) GetVerb() string {
+	if x != nil {
+		return x.Verb
+	}
+	return ""
+}
+
+func (x *RelationshipTupleChangedEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *RelationshipTupleChangedEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+// Kafka topic: udb.authz.native.access.issued.v1
+type NativeAccessGrantIssuedEvent struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	EventId             string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	PrincipalId         string                 `protobuf:"bytes,2,opt,name=principal_id,json=principalId,proto3" json:"principal_id,omitempty"`
+	TenantId            string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId           string                 `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	PolicyVersion       string                 `protobuf:"bytes,5,opt,name=policy_version,json=policyVersion,proto3" json:"policy_version,omitempty"`
+	RelationshipVersion string                 `protobuf:"bytes,6,opt,name=relationship_version,json=relationshipVersion,proto3" json:"relationship_version,omitempty"`
+	CorrelationId       string                 `protobuf:"bytes,7,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt          *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *NativeAccessGrantIssuedEvent) Reset() {
+	*x = NativeAccessGrantIssuedEvent{}
+	mi := &file_udb_core_authz_events_v1_authz_events_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NativeAccessGrantIssuedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NativeAccessGrantIssuedEvent) ProtoMessage() {}
+
+func (x *NativeAccessGrantIssuedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authz_events_v1_authz_events_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NativeAccessGrantIssuedEvent.ProtoReflect.Descriptor instead.
+func (*NativeAccessGrantIssuedEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_authz_events_v1_authz_events_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *NativeAccessGrantIssuedEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *NativeAccessGrantIssuedEvent) GetPrincipalId() string {
+	if x != nil {
+		return x.PrincipalId
+	}
+	return ""
+}
+
+func (x *NativeAccessGrantIssuedEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *NativeAccessGrantIssuedEvent) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *NativeAccessGrantIssuedEvent) GetPolicyVersion() string {
+	if x != nil {
+		return x.PolicyVersion
+	}
+	return ""
+}
+
+func (x *NativeAccessGrantIssuedEvent) GetRelationshipVersion() string {
+	if x != nil {
+		return x.RelationshipVersion
+	}
+	return ""
+}
+
+func (x *NativeAccessGrantIssuedEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *NativeAccessGrantIssuedEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+// Kafka topic: udb.authz.native.access.denied.v1
+type NativeAccessGrantDeniedEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	PrincipalId   string                 `protobuf:"bytes,2,opt,name=principal_id,json=principalId,proto3" json:"principal_id,omitempty"`
+	TenantId      string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ReasonCode    string                 `protobuf:"bytes,5,opt,name=reason_code,json=reasonCode,proto3" json:"reason_code,omitempty"`
+	CorrelationId string                 `protobuf:"bytes,6,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NativeAccessGrantDeniedEvent) Reset() {
+	*x = NativeAccessGrantDeniedEvent{}
+	mi := &file_udb_core_authz_events_v1_authz_events_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NativeAccessGrantDeniedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NativeAccessGrantDeniedEvent) ProtoMessage() {}
+
+func (x *NativeAccessGrantDeniedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authz_events_v1_authz_events_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NativeAccessGrantDeniedEvent.ProtoReflect.Descriptor instead.
+func (*NativeAccessGrantDeniedEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_authz_events_v1_authz_events_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *NativeAccessGrantDeniedEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *NativeAccessGrantDeniedEvent) GetPrincipalId() string {
+	if x != nil {
+		return x.PrincipalId
+	}
+	return ""
+}
+
+func (x *NativeAccessGrantDeniedEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *NativeAccessGrantDeniedEvent) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *NativeAccessGrantDeniedEvent) GetReasonCode() string {
+	if x != nil {
+		return x.ReasonCode
+	}
+	return ""
+}
+
+func (x *NativeAccessGrantDeniedEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *NativeAccessGrantDeniedEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+// Kafka topic: udb.authz.policy.bundle.issued.v1
+type PolicyBundleIssuedEvent struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	EventId              string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	TenantId             string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId            string                 `protobuf:"bytes,3,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	PolicyRevision       int64                  `protobuf:"varint,4,opt,name=policy_revision,json=policyRevision,proto3" json:"policy_revision,omitempty"`
+	RelationshipRevision int64                  `protobuf:"varint,5,opt,name=relationship_revision,json=relationshipRevision,proto3" json:"relationship_revision,omitempty"`
+	CorrelationId        string                 `protobuf:"bytes,6,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt           *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *PolicyBundleIssuedEvent) Reset() {
+	*x = PolicyBundleIssuedEvent{}
+	mi := &file_udb_core_authz_events_v1_authz_events_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PolicyBundleIssuedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PolicyBundleIssuedEvent) ProtoMessage() {}
+
+func (x *PolicyBundleIssuedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authz_events_v1_authz_events_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PolicyBundleIssuedEvent.ProtoReflect.Descriptor instead.
+func (*PolicyBundleIssuedEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_authz_events_v1_authz_events_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *PolicyBundleIssuedEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *PolicyBundleIssuedEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *PolicyBundleIssuedEvent) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *PolicyBundleIssuedEvent) GetPolicyRevision() int64 {
+	if x != nil {
+		return x.PolicyRevision
+	}
+	return 0
+}
+
+func (x *PolicyBundleIssuedEvent) GetRelationshipRevision() int64 {
+	if x != nil {
+		return x.RelationshipRevision
+	}
+	return 0
+}
+
+func (x *PolicyBundleIssuedEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *PolicyBundleIssuedEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+// Kafka topic: udb.authz.policy.bundle.revoked.v1
+type PolicyBundleRevokedEvent struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	EventId             string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	TenantId            string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId           string                 `protobuf:"bytes,3,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	BelowPolicyRevision int64                  `protobuf:"varint,4,opt,name=below_policy_revision,json=belowPolicyRevision,proto3" json:"below_policy_revision,omitempty"`
+	Reason              string                 `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
+	CorrelationId       string                 `protobuf:"bytes,6,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt          *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *PolicyBundleRevokedEvent) Reset() {
+	*x = PolicyBundleRevokedEvent{}
+	mi := &file_udb_core_authz_events_v1_authz_events_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PolicyBundleRevokedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PolicyBundleRevokedEvent) ProtoMessage() {}
+
+func (x *PolicyBundleRevokedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authz_events_v1_authz_events_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PolicyBundleRevokedEvent.ProtoReflect.Descriptor instead.
+func (*PolicyBundleRevokedEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_authz_events_v1_authz_events_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *PolicyBundleRevokedEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *PolicyBundleRevokedEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *PolicyBundleRevokedEvent) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *PolicyBundleRevokedEvent) GetBelowPolicyRevision() int64 {
+	if x != nil {
+		return x.BelowPolicyRevision
+	}
+	return 0
+}
+
+func (x *PolicyBundleRevokedEvent) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *PolicyBundleRevokedEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *PolicyBundleRevokedEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+// Kafka topic: udb.authz.policy.simulated.v1
+type PolicySimulatedEvent struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	EventId         string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	TenantId        string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId       string                 `protobuf:"bytes,3,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	PolicyVersionId string                 `protobuf:"bytes,4,opt,name=policy_version_id,json=policyVersionId,proto3" json:"policy_version_id,omitempty"`
+	SimulatedBy     string                 `protobuf:"bytes,5,opt,name=simulated_by,json=simulatedBy,proto3" json:"simulated_by,omitempty"`
+	DiffCount       int32                  `protobuf:"varint,6,opt,name=diff_count,json=diffCount,proto3" json:"diff_count,omitempty"`
+	CorrelationId   string                 `protobuf:"bytes,7,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt      *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *PolicySimulatedEvent) Reset() {
+	*x = PolicySimulatedEvent{}
+	mi := &file_udb_core_authz_events_v1_authz_events_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PolicySimulatedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PolicySimulatedEvent) ProtoMessage() {}
+
+func (x *PolicySimulatedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authz_events_v1_authz_events_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PolicySimulatedEvent.ProtoReflect.Descriptor instead.
+func (*PolicySimulatedEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_authz_events_v1_authz_events_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *PolicySimulatedEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *PolicySimulatedEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *PolicySimulatedEvent) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *PolicySimulatedEvent) GetPolicyVersionId() string {
+	if x != nil {
+		return x.PolicyVersionId
+	}
+	return ""
+}
+
+func (x *PolicySimulatedEvent) GetSimulatedBy() string {
+	if x != nil {
+		return x.SimulatedBy
+	}
+	return ""
+}
+
+func (x *PolicySimulatedEvent) GetDiffCount() int32 {
+	if x != nil {
+		return x.DiffCount
+	}
+	return 0
+}
+
+func (x *PolicySimulatedEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *PolicySimulatedEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
 var File_udb_core_authz_events_v1_authz_events_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_events_v1_authz_events_proto_rawDesc = "" +
@@ -842,7 +1432,79 @@ const file_udb_core_authz_events_v1_authz_events_proto_rawDesc = "" +
 	"\x0ecorrelation_id\x18\b \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt:\x8a\x01\x92\xb2\x19\x85\x01\n" +
-	"2udb.core.authz.events.v1.AccessSurfaceUpdatedEvent\x12#udb.authz.access.surface.updated.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\xfb\x01\n" +
+	"2udb.core.authz.events.v1.AccessSurfaceUpdatedEvent\x12#udb.authz.access.surface.updated.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xd1\x03\n" +
+	"\x1dRelationshipTupleChangedEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x18\n" +
+	"\asubject\x18\x02 \x01(\tR\asubject\x12\x1a\n" +
+	"\brelation\x18\x03 \x01(\tR\brelation\x12\x16\n" +
+	"\x06object\x18\x04 \x01(\tR\x06object\x12\x1b\n" +
+	"\ttenant_id\x18\x05 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x06 \x01(\tR\tprojectId\x12\x12\n" +
+	"\x04verb\x18\a \x01(\tR\x04verb\x12%\n" +
+	"\x0ecorrelation_id\x18\b \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt:\x92\x01\x92\xb2\x19\x8d\x01\n" +
+	"6udb.core.authz.events.v1.RelationshipTupleChangedEvent\x12'udb.authz.relationship.tuple.changed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xe4\x03\n" +
+	"\x1cNativeAccessGrantIssuedEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12!\n" +
+	"\fprincipal_id\x18\x02 \x01(\tR\vprincipalId\x12\x1b\n" +
+	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x04 \x01(\tR\tprojectId\x12%\n" +
+	"\x0epolicy_version\x18\x05 \x01(\tR\rpolicyVersion\x121\n" +
+	"\x14relationship_version\x18\x06 \x01(\tR\x13relationshipVersion\x12%\n" +
+	"\x0ecorrelation_id\x18\a \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt:\x8b\x01\x92\xb2\x19\x86\x01\n" +
+	"5udb.core.authz.events.v1.NativeAccessGrantIssuedEvent\x12!udb.authz.native.access.issued.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xab\x03\n" +
+	"\x1cNativeAccessGrantDeniedEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12!\n" +
+	"\fprincipal_id\x18\x02 \x01(\tR\vprincipalId\x12\x1b\n" +
+	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x04 \x01(\tR\tprojectId\x12\x1f\n" +
+	"\vreason_code\x18\x05 \x01(\tR\n" +
+	"reasonCode\x12%\n" +
+	"\x0ecorrelation_id\x18\x06 \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt:\x8b\x01\x92\xb2\x19\x86\x01\n" +
+	"5udb.core.authz.events.v1.NativeAccessGrantDeniedEvent\x12!udb.authz.native.access.denied.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xbb\x03\n" +
+	"\x17PolicyBundleIssuedEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1b\n" +
+	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x03 \x01(\tR\tprojectId\x12'\n" +
+	"\x0fpolicy_revision\x18\x04 \x01(\x03R\x0epolicyRevision\x123\n" +
+	"\x15relationship_revision\x18\x05 \x01(\x03R\x14relationshipRevision\x12%\n" +
+	"\x0ecorrelation_id\x18\x06 \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt:\x86\x01\x92\xb2\x19\x81\x01\n" +
+	"0udb.core.authz.events.v1.PolicyBundleIssuedEvent\x12!udb.authz.policy.bundle.issued.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xac\x03\n" +
+	"\x18PolicyBundleRevokedEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1b\n" +
+	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x03 \x01(\tR\tprojectId\x122\n" +
+	"\x15below_policy_revision\x18\x04 \x01(\x03R\x13belowPolicyRevision\x12\x16\n" +
+	"\x06reason\x18\x05 \x01(\tR\x06reason\x12%\n" +
+	"\x0ecorrelation_id\x18\x06 \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt:\x88\x01\x92\xb2\x19\x83\x01\n" +
+	"1udb.core.authz.events.v1.PolicyBundleRevokedEvent\x12\"udb.authz.policy.bundle.revoked.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xbf\x03\n" +
+	"\x14PolicySimulatedEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1b\n" +
+	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x03 \x01(\tR\tprojectId\x12*\n" +
+	"\x11policy_version_id\x18\x04 \x01(\tR\x0fpolicyVersionId\x12!\n" +
+	"\fsimulated_by\x18\x05 \x01(\tR\vsimulatedBy\x12\x1d\n" +
+	"\n" +
+	"diff_count\x18\x06 \x01(\x05R\tdiffCount\x12%\n" +
+	"\x0ecorrelation_id\x18\a \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt:~\x92\xb2\x19z\n" +
+	"-udb.core.authz.events.v1.PolicySimulatedEvent\x12\x1dudb.authz.policy.simulated.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\xfb\x01\n" +
 	"\x1ccom.udb.core.authz.events.v1B\x10AuthzEventsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Events.V1\xca\x02\x18Udb\\Core\\Authz\\Events\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Events\\V1\xea\x02\x1cUdb::Core::Authz::Events::V1b\x06proto3"
 
 var (
@@ -857,30 +1519,42 @@ func file_udb_core_authz_events_v1_authz_events_proto_rawDescGZIP() []byte {
 	return file_udb_core_authz_events_v1_authz_events_proto_rawDescData
 }
 
-var file_udb_core_authz_events_v1_authz_events_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_udb_core_authz_events_v1_authz_events_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_udb_core_authz_events_v1_authz_events_proto_goTypes = []any{
-	(*RoleAssignedEvent)(nil),         // 0: udb.core.authz.events.v1.RoleAssignedEvent
-	(*RoleRevokedEvent)(nil),          // 1: udb.core.authz.events.v1.RoleRevokedEvent
-	(*AccessDeniedEvent)(nil),         // 2: udb.core.authz.events.v1.AccessDeniedEvent
-	(*RoleCreatedEvent)(nil),          // 3: udb.core.authz.events.v1.RoleCreatedEvent
-	(*RoleUpdatedEvent)(nil),          // 4: udb.core.authz.events.v1.RoleUpdatedEvent
-	(*RoleRemovedEvent)(nil),          // 5: udb.core.authz.events.v1.RoleRemovedEvent
-	(*AccessSurfaceUpdatedEvent)(nil), // 6: udb.core.authz.events.v1.AccessSurfaceUpdatedEvent
-	(*timestamppb.Timestamp)(nil),     // 7: google.protobuf.Timestamp
+	(*RoleAssignedEvent)(nil),             // 0: udb.core.authz.events.v1.RoleAssignedEvent
+	(*RoleRevokedEvent)(nil),              // 1: udb.core.authz.events.v1.RoleRevokedEvent
+	(*AccessDeniedEvent)(nil),             // 2: udb.core.authz.events.v1.AccessDeniedEvent
+	(*RoleCreatedEvent)(nil),              // 3: udb.core.authz.events.v1.RoleCreatedEvent
+	(*RoleUpdatedEvent)(nil),              // 4: udb.core.authz.events.v1.RoleUpdatedEvent
+	(*RoleRemovedEvent)(nil),              // 5: udb.core.authz.events.v1.RoleRemovedEvent
+	(*AccessSurfaceUpdatedEvent)(nil),     // 6: udb.core.authz.events.v1.AccessSurfaceUpdatedEvent
+	(*RelationshipTupleChangedEvent)(nil), // 7: udb.core.authz.events.v1.RelationshipTupleChangedEvent
+	(*NativeAccessGrantIssuedEvent)(nil),  // 8: udb.core.authz.events.v1.NativeAccessGrantIssuedEvent
+	(*NativeAccessGrantDeniedEvent)(nil),  // 9: udb.core.authz.events.v1.NativeAccessGrantDeniedEvent
+	(*PolicyBundleIssuedEvent)(nil),       // 10: udb.core.authz.events.v1.PolicyBundleIssuedEvent
+	(*PolicyBundleRevokedEvent)(nil),      // 11: udb.core.authz.events.v1.PolicyBundleRevokedEvent
+	(*PolicySimulatedEvent)(nil),          // 12: udb.core.authz.events.v1.PolicySimulatedEvent
+	(*timestamppb.Timestamp)(nil),         // 13: google.protobuf.Timestamp
 }
 var file_udb_core_authz_events_v1_authz_events_proto_depIdxs = []int32{
-	7, // 0: udb.core.authz.events.v1.RoleAssignedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	7, // 1: udb.core.authz.events.v1.RoleRevokedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	7, // 2: udb.core.authz.events.v1.AccessDeniedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	7, // 3: udb.core.authz.events.v1.RoleCreatedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	7, // 4: udb.core.authz.events.v1.RoleUpdatedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	7, // 5: udb.core.authz.events.v1.RoleRemovedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	7, // 6: udb.core.authz.events.v1.AccessSurfaceUpdatedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	13, // 0: udb.core.authz.events.v1.RoleAssignedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	13, // 1: udb.core.authz.events.v1.RoleRevokedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	13, // 2: udb.core.authz.events.v1.AccessDeniedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	13, // 3: udb.core.authz.events.v1.RoleCreatedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	13, // 4: udb.core.authz.events.v1.RoleUpdatedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	13, // 5: udb.core.authz.events.v1.RoleRemovedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	13, // 6: udb.core.authz.events.v1.AccessSurfaceUpdatedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	13, // 7: udb.core.authz.events.v1.RelationshipTupleChangedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	13, // 8: udb.core.authz.events.v1.NativeAccessGrantIssuedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	13, // 9: udb.core.authz.events.v1.NativeAccessGrantDeniedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	13, // 10: udb.core.authz.events.v1.PolicyBundleIssuedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	13, // 11: udb.core.authz.events.v1.PolicyBundleRevokedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	13, // 12: udb.core.authz.events.v1.PolicySimulatedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	13, // [13:13] is the sub-list for method output_type
+	13, // [13:13] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_authz_events_v1_authz_events_proto_init() }
@@ -894,7 +1568,7 @@ func file_udb_core_authz_events_v1_authz_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_authz_events_v1_authz_events_proto_rawDesc), len(file_udb_core_authz_events_v1_authz_events_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

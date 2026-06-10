@@ -5,9 +5,16 @@
 import type { GenFile } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_udb_core_authz_entity_v1_access_decision_audit } from "./access_decision_audit_pb";
+import { file_udb_core_authz_entity_v1_authz_revision } from "./authz_revision_pb";
 import { file_udb_core_authz_entity_v1_enums } from "./enums_pb";
+import { file_udb_core_authz_entity_v1_governance_enums } from "./governance_enums_pb";
+import { file_udb_core_authz_entity_v1_policy_approval } from "./policy_approval_pb";
+import { file_udb_core_authz_entity_v1_policy_draft } from "./policy_draft_pb";
 import { file_udb_core_authz_entity_v1_policy_rule } from "./policy_rule_pb";
+import { file_udb_core_authz_entity_v1_policy_set } from "./policy_set_pb";
+import { file_udb_core_authz_entity_v1_policy_simulation } from "./policy_simulation_pb";
 import { file_udb_core_authz_entity_v1_policy_tuple } from "./policy_tuple_pb";
+import { file_udb_core_authz_entity_v1_policy_version } from "./policy_version_pb";
 import { file_udb_core_authz_entity_v1_role } from "./role_pb";
 import { file_udb_core_authz_entity_v1_role_permission } from "./role_permission_pb";
 import { file_udb_core_authz_entity_v1_user_role } from "./user_role_pb";
@@ -16,5 +23,5 @@ import { file_udb_core_authz_entity_v1_user_role } from "./user_role_pb";
  * Describes the file udb/core/authz/entity/v1/entities.proto.
  */
 export const file_udb_core_authz_entity_v1_entities: GenFile = /*@__PURE__*/
-  fileDesc("Cid1ZGIvY29yZS9hdXRoei9lbnRpdHkvdjEvZW50aXRpZXMucHJvdG8SGHVkYi5jb3JlLmF1dGh6LmVudGl0eS52MUL4AQocY29tLnVkYi5jb3JlLmF1dGh6LmVudGl0eS52MUINRW50aXRpZXNQcm90b1ABWkRnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2F1dGh6L2VudGl0eS92MTtlbnRpdHl2MaICBFVDQUWqAhh1ZGIuY29yZS5BdXRoei5FbnRpdHkuVjHKAhhVZGJcQ29yZVxBdXRoelxFbnRpdHlcVjHiAiRVZGJcR1BCTWV0YWRhdGFcQ29yZVxBdXRoelxFbnRpdHlcVjHqAhxVZGI6OkNvcmU6OkF1dGh6OjpFbnRpdHk6OlYxUABQAVACUANQBFAFUAZiBnByb3RvMw", [file_udb_core_authz_entity_v1_access_decision_audit, file_udb_core_authz_entity_v1_enums, file_udb_core_authz_entity_v1_policy_rule, file_udb_core_authz_entity_v1_policy_tuple, file_udb_core_authz_entity_v1_role, file_udb_core_authz_entity_v1_role_permission, file_udb_core_authz_entity_v1_user_role]);
+  fileDesc("Cid1ZGIvY29yZS9hdXRoei9lbnRpdHkvdjEvZW50aXRpZXMucHJvdG8SGHVkYi5jb3JlLmF1dGh6LmVudGl0eS52MUL4AQocY29tLnVkYi5jb3JlLmF1dGh6LmVudGl0eS52MUINRW50aXRpZXNQcm90b1ABWkRnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2F1dGh6L2VudGl0eS92MTtlbnRpdHl2MaICBFVDQUWqAhh1ZGIuY29yZS5BdXRoei5FbnRpdHkuVjHKAhhVZGJcQ29yZVxBdXRoelxFbnRpdHlcVjHiAiRVZGJcR1BCTWV0YWRhdGFcQ29yZVxBdXRoelxFbnRpdHlcVjHqAhxVZGI6OkNvcmU6OkF1dGh6OjpFbnRpdHk6OlYxUABQAVACUANQBFAFUAZQB1AIUAlQClALUAxQDWIGcHJvdG8z", [file_udb_core_authz_entity_v1_access_decision_audit, file_udb_core_authz_entity_v1_authz_revision, file_udb_core_authz_entity_v1_enums, file_udb_core_authz_entity_v1_governance_enums, file_udb_core_authz_entity_v1_policy_approval, file_udb_core_authz_entity_v1_policy_draft, file_udb_core_authz_entity_v1_policy_rule, file_udb_core_authz_entity_v1_policy_set, file_udb_core_authz_entity_v1_policy_simulation, file_udb_core_authz_entity_v1_policy_tuple, file_udb_core_authz_entity_v1_policy_version, file_udb_core_authz_entity_v1_role, file_udb_core_authz_entity_v1_role_permission, file_udb_core_authz_entity_v1_user_role]);
 

@@ -153,3 +153,119 @@ class AccessSurfaceUpdatedEvent(_message.Message):
     correlation_id: str
     occurred_at: _timestamp_pb2.Timestamp
     def __init__(self, event_id: _Optional[str] = ..., principal_id: _Optional[str] = ..., old_access_surface: _Optional[str] = ..., new_access_surface: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., updated_by: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class RelationshipTupleChangedEvent(_message.Message):
+    __slots__ = ("event_id", "subject", "relation", "object", "tenant_id", "project_id", "verb", "correlation_id", "occurred_at")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_FIELD_NUMBER: _ClassVar[int]
+    RELATION_FIELD_NUMBER: _ClassVar[int]
+    OBJECT_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    VERB_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    subject: str
+    relation: str
+    object: str
+    tenant_id: str
+    project_id: str
+    verb: str
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    def __init__(self, event_id: _Optional[str] = ..., subject: _Optional[str] = ..., relation: _Optional[str] = ..., object: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., verb: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class NativeAccessGrantIssuedEvent(_message.Message):
+    __slots__ = ("event_id", "principal_id", "tenant_id", "project_id", "policy_version", "relationship_version", "correlation_id", "occurred_at")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    PRINCIPAL_ID_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    POLICY_VERSION_FIELD_NUMBER: _ClassVar[int]
+    RELATIONSHIP_VERSION_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    principal_id: str
+    tenant_id: str
+    project_id: str
+    policy_version: str
+    relationship_version: str
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    def __init__(self, event_id: _Optional[str] = ..., principal_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., policy_version: _Optional[str] = ..., relationship_version: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class NativeAccessGrantDeniedEvent(_message.Message):
+    __slots__ = ("event_id", "principal_id", "tenant_id", "project_id", "reason_code", "correlation_id", "occurred_at")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    PRINCIPAL_ID_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_CODE_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    principal_id: str
+    tenant_id: str
+    project_id: str
+    reason_code: str
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    def __init__(self, event_id: _Optional[str] = ..., principal_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., reason_code: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class PolicyBundleIssuedEvent(_message.Message):
+    __slots__ = ("event_id", "tenant_id", "project_id", "policy_revision", "relationship_revision", "correlation_id", "occurred_at")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    POLICY_REVISION_FIELD_NUMBER: _ClassVar[int]
+    RELATIONSHIP_REVISION_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    tenant_id: str
+    project_id: str
+    policy_revision: int
+    relationship_revision: int
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    def __init__(self, event_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., policy_revision: _Optional[int] = ..., relationship_revision: _Optional[int] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class PolicyBundleRevokedEvent(_message.Message):
+    __slots__ = ("event_id", "tenant_id", "project_id", "below_policy_revision", "reason", "correlation_id", "occurred_at")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    BELOW_POLICY_REVISION_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    tenant_id: str
+    project_id: str
+    below_policy_revision: int
+    reason: str
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    def __init__(self, event_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., below_policy_revision: _Optional[int] = ..., reason: _Optional[str] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class PolicySimulatedEvent(_message.Message):
+    __slots__ = ("event_id", "tenant_id", "project_id", "policy_version_id", "simulated_by", "diff_count", "correlation_id", "occurred_at")
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    POLICY_VERSION_ID_FIELD_NUMBER: _ClassVar[int]
+    SIMULATED_BY_FIELD_NUMBER: _ClassVar[int]
+    DIFF_COUNT_FIELD_NUMBER: _ClassVar[int]
+    CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
+    OCCURRED_AT_FIELD_NUMBER: _ClassVar[int]
+    event_id: str
+    tenant_id: str
+    project_id: str
+    policy_version_id: str
+    simulated_by: str
+    diff_count: int
+    correlation_id: str
+    occurred_at: _timestamp_pb2.Timestamp
+    def __init__(self, event_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., policy_version_id: _Optional[str] = ..., simulated_by: _Optional[str] = ..., diff_count: _Optional[int] = ..., correlation_id: _Optional[str] = ..., occurred_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...

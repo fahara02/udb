@@ -45,7 +45,7 @@ public final class SessionProto extends com.google.protobuf.GeneratedFile {
       "buf/timestamp.proto\032$udb/core/authn/enti" +
       "ty/v1/enums.proto\032\033udb/core/common/v1/db" +
       ".proto\032!udb/core/common/v1/security.prot" +
-      "o\"\274 \n\007Session\022L\n\nsession_id\030\001 \001(\tB-\202\267\030)\n" +
+      "o\"\265 \n\007Session\022L\n\nsession_id\030\001 \001(\tB-\202\267\030)\n" +
       "\nsession_id\022\004UUID\030\001(\001:\021gen_random_uuid()" +
       "R\tsessionId\022\213\001\n\007user_id\030\002 \001(\tBr\202\267\030n\n\007use" +
       "r_id\022\004UUID\030\001J\035\n\005users\022\007user_id\032\tudb_auth" +
@@ -133,7 +133,7 @@ public final class SessionProto extends com.google.protobuf.GeneratedFile {
       "\203\001\n\rmetadata_json\030\031 \001(\tB^\202\267\030Z\n\rmetadata_" +
       "json\022\005JSONB\030\001:\013\'{}\'::jsonbZ1Non-secret s" +
       "ession metadata for audit and routingx\001R" +
-      "\014metadataJson:\360\004\242\265\030@\010\001\022\030udb:session:{ses" +
+      "\014metadataJson:\351\004\242\265\030@\010\001\022\030udb:session:{ses" +
       "sion_id}\030\210\016 \001(\001:\022REDIS_CLUSTER_ADDRB\007ses" +
       "sion\372\266\030\213\003\n\010sessions\022\tudb_authn\030\002 \001*FActi" +
       "ve sessions across web, API, workload, a" +
@@ -145,17 +145,17 @@ public final class SessionProto extends com.google.protobuf.GeneratedFile {
       "dZ\007user_idZ\014session_type\232\001\025\n\npg_partman\022" +
       "\007partman\312\001\007MONTHLY\320\001\003\330\001\001\340\001\006\352\001\007primary\362\001\026" +
       "udb.authn.sessions.cdc\372\001\023authn:sessions:" +
-      "read\212\262\031\227\001\n\006tenant\032\ttenant_id*4tenant_id " +
+      "read\212\262\031\220\001\n\006tenant\032\ttenant_id*4tenant_id " +
       "= current_setting(\'app.current_tenant_id" +
-      "\')2\013soft_delete:\021authn.operational@\373\023H\002R" +
-      "\006tenantZ\010standardr\025tenant.data_residency" +
-      "B\367\001\n\034com.udb.core.authn.entity.v1B\014Sessi" +
-      "onProtoP\001ZDgithub.com/fahara02/udb/sdk/g" +
-      "o/gen/udb/core/authn/entity/v1;entityv1\242" +
-      "\002\004UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030Udb\\" +
-      "Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadata\\C" +
-      "ore\\Authn\\Entity\\V1\352\002\034Udb::Core::Authn::" +
-      "Entity::V1b\006proto3"
+      "\')2\004none:\021authn.operational@\373\023H\002R\006tenant" +
+      "Z\010standardr\025tenant.data_residencyB\367\001\n\034co" +
+      "m.udb.core.authn.entity.v1B\014SessionProto" +
+      "P\001ZDgithub.com/fahara02/udb/sdk/go/gen/u" +
+      "db/core/authn/entity/v1;entityv1\242\002\004UCAE\252" +
+      "\002\030udb.core.Authn.Entity.V1\312\002\030Udb\\Core\\Au" +
+      "thn\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Aut" +
+      "hn\\Entity\\V1\352\002\034Udb::Core::Authn::Entity:" +
+      ":V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

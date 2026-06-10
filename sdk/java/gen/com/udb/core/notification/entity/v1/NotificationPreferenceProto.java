@@ -45,7 +45,7 @@ public final class NotificationPreferenceProto extends com.google.protobuf.Gener
       "cation.entity.v1\032\037google/protobuf/timest" +
       "amp.proto\032\033udb/core/common/v1/db.proto\032!" +
       "udb/core/common/v1/security.proto\032+udb/c" +
-      "ore/notification/entity/v1/enums.proto\"\230" +
+      "ore/notification/entity/v1/enums.proto\"\221" +
       "\r\n\026NotificationPreference\022U\n\rpreference_" +
       "id\030\001 \001(\tB0\202\267\030,\n\rpreference_id\022\004UUID\030\001(\001:" +
       "\021gen_random_uuid()R\014preferenceId\022q\n\007user" +
@@ -70,7 +70,7 @@ public final class NotificationPreferenceProto extends com.google.protobuf.Gener
       "RENT_TIMESTAMP`\001R\tupdatedAt\022a\n\ncreated_b" +
       "y\030\t \001(\tBB\202\267\030>\n\ncreated_by\022\014VARCHAR(120)Z" +
       "\"Identity that created this record.R\tcre" +
-      "atedBy:\320\005\372\266\030\250\004\n\030notification_preferences" +
+      "atedBy:\311\005\372\266\030\250\004\n\030notification_preferences" +
       "\022\020udb_notification\030\003 \001*APer-user per-cha" +
       "nnel per-event-type notification opt-out" +
       " settings8\001@\001b^\n\020tenant_isolation\032H(tena" +
@@ -84,19 +84,18 @@ public final class NotificationPreferenceProto extends com.google.protobuf.Gener
       "n.touch_updated_at()\nRETURNS trigger\nLAN" +
       "GUAGE plpgsql\nAS $$\nBEGIN\n  NEW.updated_" +
       "at = CURRENT_TIMESTAMP;\n  RETURN NEW;\nEN" +
-      "D;\n$$;\212\262\031\236\001\n\006tenant\032\ttenant_id*4tenant_i" +
+      "D;\n$$;\212\262\031\227\001\n\006tenant\032\ttenant_id*4tenant_i" +
       "d = current_setting(\'app.current_tenant_" +
-      "id\')2\013soft_delete:\030notification.operatio" +
-      "nal@\373\023H\002R\006tenantZ\010standardr\025tenant.data_" +
-      "residencyB\260\002\n#com.udb.core.notification." +
-      "entity.v1B\033NotificationPreferenceProtoP\001" +
-      "ZKgithub.com/fahara02/udb/sdk/go/gen/udb" +
-      "/core/notification/entity/v1;entityv1\242\002\004" +
-      "UCNE\252\002\037udb.core.Notification.Entity.V1\312\002" +
-      "\037Udb\\Core\\Notification\\Entity\\V1\342\002+Udb\\G" +
-      "PBMetadata\\Core\\Notification\\Entity\\V1\352\002" +
-      "#Udb::Core::Notification::Entity::V1b\006pr" +
-      "oto3"
+      "id\')2\004none:\030notification.operational@\373\023H" +
+      "\002R\006tenantZ\010standardr\025tenant.data_residen" +
+      "cyB\260\002\n#com.udb.core.notification.entity." +
+      "v1B\033NotificationPreferenceProtoP\001ZKgithu" +
+      "b.com/fahara02/udb/sdk/go/gen/udb/core/n" +
+      "otification/entity/v1;entityv1\242\002\004UCNE\252\002\037" +
+      "udb.core.Notification.Entity.V1\312\002\037Udb\\Co" +
+      "re\\Notification\\Entity\\V1\342\002+Udb\\GPBMetad" +
+      "ata\\Core\\Notification\\Entity\\V1\352\002#Udb::C" +
+      "ore::Notification::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -41,6 +41,16 @@ public final class ApikeyEventsProto extends com.google.protobuf.GeneratedFile {
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_apikey_events_v1_ApiKeyRateLimitedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_apikey_events_v1_ApiKeyValidateFailedEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_apikey_events_v1_ApiKeyValidateFailedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_apikey_events_v1_ApiKeyAnomalousUseEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_apikey_events_v1_ApiKeyAnomalousUseEvent_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -90,14 +100,35 @@ public final class ApikeyEventsProto extends com.google.protobuf.GeneratedFile {
       " \001(\tR\010tenantId:~\222\262\031z\n0udb.core.apikey.ev" +
       "ents.v1.ApiKeyRateLimitedEvent\022\032udb.apik" +
       "ey.rate.limited.v1\032\ttenant_id\"\010standard*" +
-      "\rat_least_once2\006stableB\202\002\n\035com.udb.core." +
-      "apikey.events.v1B\021ApikeyEventsProtoP\001ZEg" +
-      "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
-      "re/apikey/events/v1;eventsv1\242\002\004UCAE\252\002\031ud" +
-      "b.core.Apikey.Events.V1\312\002\031Udb\\Core\\Apike" +
-      "y\\Events\\V1\342\002%Udb\\GPBMetadata\\Core\\Apike" +
-      "y\\Events\\V1\352\002\035Udb::Core::Apikey::Events:" +
-      ":V1b\006proto3"
+      "\rat_least_once2\006stable\"\236\003\n\031ApiKeyValidat" +
+      "eFailedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022" +
+      "\035\n\nkey_prefix\030\002 \001(\tR\tkeyPrefix\022\037\n\013reason" +
+      "_code\030\003 \001(\tR\nreasonCode\022\035\n\nip_address\030\004 " +
+      "\001(\tR\tipAddress\022%\n\016correlation_id\030\005 \001(\tR\r" +
+      "correlationId\022;\n\013occurred_at\030\006 \001(\0132\032.goo" +
+      "gle.protobuf.TimestampR\noccurredAt\022\033\n\tte" +
+      "nant_id\030\007 \001(\tR\010tenantId:\205\001\222\262\031\200\001\n3udb.cor" +
+      "e.apikey.events.v1.ApiKeyValidateFailedE" +
+      "vent\022\035udb.apikey.validate.failed.v1\032\tten" +
+      "ant_id\"\010standard*\rat_least_once2\006stable\"" +
+      "\247\003\n\027ApiKeyAnomalousUseEvent\022\031\n\010event_id\030" +
+      "\001 \001(\tR\007eventId\022\025\n\006key_id\030\002 \001(\tR\005keyId\022\035\n" +
+      "\nkey_prefix\030\003 \001(\tR\tkeyPrefix\022\030\n\007anomaly\030" +
+      "\004 \001(\tR\007anomaly\022\035\n\nip_address\030\005 \001(\tR\tipAd" +
+      "dress\022%\n\016correlation_id\030\006 \001(\tR\rcorrelati" +
+      "onId\022;\n\013occurred_at\030\007 \001(\0132\032.google.proto" +
+      "buf.TimestampR\noccurredAt\022\033\n\ttenant_id\030\010" +
+      " \001(\tR\010tenantId:\200\001\222\262\031|\n1udb.core.apikey.e" +
+      "vents.v1.ApiKeyAnomalousUseEvent\022\033udb.ap" +
+      "ikey.anomalous.use.v1\032\ttenant_id\"\010standa" +
+      "rd*\rat_least_once2\006stableB\202\002\n\035com.udb.co" +
+      "re.apikey.events.v1B\021ApikeyEventsProtoP\001" +
+      "ZEgithub.com/fahara02/udb/sdk/go/gen/udb" +
+      "/core/apikey/events/v1;eventsv1\242\002\004UCAE\252\002" +
+      "\031udb.core.Apikey.Events.V1\312\002\031Udb\\Core\\Ap" +
+      "ikey\\Events\\V1\342\002%Udb\\GPBMetadata\\Core\\Ap" +
+      "ikey\\Events\\V1\352\002\035Udb::Core::Apikey::Even" +
+      "ts::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -124,6 +155,18 @@ public final class ApikeyEventsProto extends com.google.protobuf.GeneratedFile {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_apikey_events_v1_ApiKeyRateLimitedEvent_descriptor,
         new java.lang.String[] { "EventId", "KeyId", "KeyPrefix", "Endpoint", "IpAddress", "RequestsInWindow", "Limit", "CorrelationId", "OccurredAt", "TenantId", });
+    internal_static_udb_core_apikey_events_v1_ApiKeyValidateFailedEvent_descriptor =
+      getDescriptor().getMessageType(3);
+    internal_static_udb_core_apikey_events_v1_ApiKeyValidateFailedEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_apikey_events_v1_ApiKeyValidateFailedEvent_descriptor,
+        new java.lang.String[] { "EventId", "KeyPrefix", "ReasonCode", "IpAddress", "CorrelationId", "OccurredAt", "TenantId", });
+    internal_static_udb_core_apikey_events_v1_ApiKeyAnomalousUseEvent_descriptor =
+      getDescriptor().getMessageType(4);
+    internal_static_udb_core_apikey_events_v1_ApiKeyAnomalousUseEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_apikey_events_v1_ApiKeyAnomalousUseEvent_descriptor,
+        new java.lang.String[] { "EventId", "KeyId", "KeyPrefix", "Anomaly", "IpAddress", "CorrelationId", "OccurredAt", "TenantId", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.apikey.entity.v1.EnumsProto.getDescriptor();

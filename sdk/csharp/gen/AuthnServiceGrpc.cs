@@ -197,6 +197,66 @@ namespace udb.core.Authn.Services.V1 {
     static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest> __Marshaller_udb_core_authn_services_v1_FinishWebAuthnAuthenticationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse> __Marshaller_udb_core_authn_services_v1_FinishWebAuthnAuthenticationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.ListDevicesRequest> __Marshaller_udb_core_authn_services_v1_ListDevicesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.ListDevicesRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.ListDevicesResponse> __Marshaller_udb_core_authn_services_v1_ListDevicesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.ListDevicesResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.RevokeDeviceRequest> __Marshaller_udb_core_authn_services_v1_RevokeDeviceRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.RevokeDeviceRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.RevokeDeviceResponse> __Marshaller_udb_core_authn_services_v1_RevokeDeviceResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.RevokeDeviceResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.AdminRevokeSessionRequest> __Marshaller_udb_core_authn_services_v1_AdminRevokeSessionRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.AdminRevokeSessionRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.AdminRevokeSessionResponse> __Marshaller_udb_core_authn_services_v1_AdminRevokeSessionResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.AdminRevokeSessionResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsRequest> __Marshaller_udb_core_authn_services_v1_AdminRevokeAllUserSessionsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsResponse> __Marshaller_udb_core_authn_services_v1_AdminRevokeAllUserSessionsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsRequest> __Marshaller_udb_core_authn_services_v1_AdminRevokeAllTenantSessionsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsResponse> __Marshaller_udb_core_authn_services_v1_AdminRevokeAllTenantSessionsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.EmergencyRevokeRequest> __Marshaller_udb_core_authn_services_v1_EmergencyRevokeRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.EmergencyRevokeRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.EmergencyRevokeResponse> __Marshaller_udb_core_authn_services_v1_EmergencyRevokeResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.EmergencyRevokeResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.IssueMfaChallengeRequest> __Marshaller_udb_core_authn_services_v1_IssueMfaChallengeRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.IssueMfaChallengeRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.IssueMfaChallengeResponse> __Marshaller_udb_core_authn_services_v1_IssueMfaChallengeResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.IssueMfaChallengeResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.VerifyMfaChallengeRequest> __Marshaller_udb_core_authn_services_v1_VerifyMfaChallengeRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.VerifyMfaChallengeRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.VerifyMfaChallengeResponse> __Marshaller_udb_core_authn_services_v1_VerifyMfaChallengeResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.VerifyMfaChallengeResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.ListMfaFactorsRequest> __Marshaller_udb_core_authn_services_v1_ListMfaFactorsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.ListMfaFactorsRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.ListMfaFactorsResponse> __Marshaller_udb_core_authn_services_v1_ListMfaFactorsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.ListMfaFactorsResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.DisableMfaFactorRequest> __Marshaller_udb_core_authn_services_v1_DisableMfaFactorRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.DisableMfaFactorRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.DisableMfaFactorResponse> __Marshaller_udb_core_authn_services_v1_DisableMfaFactorResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.DisableMfaFactorResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.RenamePasskeyRequest> __Marshaller_udb_core_authn_services_v1_RenamePasskeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.RenamePasskeyRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.RenamePasskeyResponse> __Marshaller_udb_core_authn_services_v1_RenamePasskeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.RenamePasskeyResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.RevokeRecoveryCodesRequest> __Marshaller_udb_core_authn_services_v1_RevokeRecoveryCodesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.RevokeRecoveryCodesRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.RevokeRecoveryCodesResponse> __Marshaller_udb_core_authn_services_v1_RevokeRecoveryCodesResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.RevokeRecoveryCodesResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.AdminResetMfaRequest> __Marshaller_udb_core_authn_services_v1_AdminResetMfaRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.AdminResetMfaRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.AdminResetMfaResponse> __Marshaller_udb_core_authn_services_v1_AdminResetMfaResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.AdminResetMfaResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsRequest> __Marshaller_udb_core_authn_services_v1_ListWebAuthnCredentialsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsResponse> __Marshaller_udb_core_authn_services_v1_ListWebAuthnCredentialsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialRequest> __Marshaller_udb_core_authn_services_v1_DeleteWebAuthnCredentialRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialResponse> __Marshaller_udb_core_authn_services_v1_DeleteWebAuthnCredentialResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::udb.core.Authn.Services.V1.CreateUserRequest, global::udb.core.Authn.Services.V1.CreateUserResponse> __Method_CreateUser = new grpc::Method<global::udb.core.Authn.Services.V1.CreateUserRequest, global::udb.core.Authn.Services.V1.CreateUserResponse>(
@@ -477,6 +537,126 @@ namespace udb.core.Authn.Services.V1 {
         "FinishWebAuthnAuthentication",
         __Marshaller_udb_core_authn_services_v1_FinishWebAuthnAuthenticationRequest,
         __Marshaller_udb_core_authn_services_v1_FinishWebAuthnAuthenticationResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.ListDevicesRequest, global::udb.core.Authn.Services.V1.ListDevicesResponse> __Method_ListDevices = new grpc::Method<global::udb.core.Authn.Services.V1.ListDevicesRequest, global::udb.core.Authn.Services.V1.ListDevicesResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ListDevices",
+        __Marshaller_udb_core_authn_services_v1_ListDevicesRequest,
+        __Marshaller_udb_core_authn_services_v1_ListDevicesResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.RevokeDeviceRequest, global::udb.core.Authn.Services.V1.RevokeDeviceResponse> __Method_RevokeDevice = new grpc::Method<global::udb.core.Authn.Services.V1.RevokeDeviceRequest, global::udb.core.Authn.Services.V1.RevokeDeviceResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "RevokeDevice",
+        __Marshaller_udb_core_authn_services_v1_RevokeDeviceRequest,
+        __Marshaller_udb_core_authn_services_v1_RevokeDeviceResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.AdminRevokeSessionRequest, global::udb.core.Authn.Services.V1.AdminRevokeSessionResponse> __Method_AdminRevokeSession = new grpc::Method<global::udb.core.Authn.Services.V1.AdminRevokeSessionRequest, global::udb.core.Authn.Services.V1.AdminRevokeSessionResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "AdminRevokeSession",
+        __Marshaller_udb_core_authn_services_v1_AdminRevokeSessionRequest,
+        __Marshaller_udb_core_authn_services_v1_AdminRevokeSessionResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsRequest, global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsResponse> __Method_AdminRevokeAllUserSessions = new grpc::Method<global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsRequest, global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "AdminRevokeAllUserSessions",
+        __Marshaller_udb_core_authn_services_v1_AdminRevokeAllUserSessionsRequest,
+        __Marshaller_udb_core_authn_services_v1_AdminRevokeAllUserSessionsResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsRequest, global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsResponse> __Method_AdminRevokeAllTenantSessions = new grpc::Method<global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsRequest, global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "AdminRevokeAllTenantSessions",
+        __Marshaller_udb_core_authn_services_v1_AdminRevokeAllTenantSessionsRequest,
+        __Marshaller_udb_core_authn_services_v1_AdminRevokeAllTenantSessionsResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.EmergencyRevokeRequest, global::udb.core.Authn.Services.V1.EmergencyRevokeResponse> __Method_EmergencyRevoke = new grpc::Method<global::udb.core.Authn.Services.V1.EmergencyRevokeRequest, global::udb.core.Authn.Services.V1.EmergencyRevokeResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "EmergencyRevoke",
+        __Marshaller_udb_core_authn_services_v1_EmergencyRevokeRequest,
+        __Marshaller_udb_core_authn_services_v1_EmergencyRevokeResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.IssueMfaChallengeRequest, global::udb.core.Authn.Services.V1.IssueMfaChallengeResponse> __Method_IssueMfaChallenge = new grpc::Method<global::udb.core.Authn.Services.V1.IssueMfaChallengeRequest, global::udb.core.Authn.Services.V1.IssueMfaChallengeResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "IssueMfaChallenge",
+        __Marshaller_udb_core_authn_services_v1_IssueMfaChallengeRequest,
+        __Marshaller_udb_core_authn_services_v1_IssueMfaChallengeResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.VerifyMfaChallengeRequest, global::udb.core.Authn.Services.V1.VerifyMfaChallengeResponse> __Method_VerifyMfaChallenge = new grpc::Method<global::udb.core.Authn.Services.V1.VerifyMfaChallengeRequest, global::udb.core.Authn.Services.V1.VerifyMfaChallengeResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "VerifyMfaChallenge",
+        __Marshaller_udb_core_authn_services_v1_VerifyMfaChallengeRequest,
+        __Marshaller_udb_core_authn_services_v1_VerifyMfaChallengeResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.ListMfaFactorsRequest, global::udb.core.Authn.Services.V1.ListMfaFactorsResponse> __Method_ListMfaFactors = new grpc::Method<global::udb.core.Authn.Services.V1.ListMfaFactorsRequest, global::udb.core.Authn.Services.V1.ListMfaFactorsResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ListMfaFactors",
+        __Marshaller_udb_core_authn_services_v1_ListMfaFactorsRequest,
+        __Marshaller_udb_core_authn_services_v1_ListMfaFactorsResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.DisableMfaFactorRequest, global::udb.core.Authn.Services.V1.DisableMfaFactorResponse> __Method_DisableMfaFactor = new grpc::Method<global::udb.core.Authn.Services.V1.DisableMfaFactorRequest, global::udb.core.Authn.Services.V1.DisableMfaFactorResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "DisableMfaFactor",
+        __Marshaller_udb_core_authn_services_v1_DisableMfaFactorRequest,
+        __Marshaller_udb_core_authn_services_v1_DisableMfaFactorResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.RenamePasskeyRequest, global::udb.core.Authn.Services.V1.RenamePasskeyResponse> __Method_RenamePasskey = new grpc::Method<global::udb.core.Authn.Services.V1.RenamePasskeyRequest, global::udb.core.Authn.Services.V1.RenamePasskeyResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "RenamePasskey",
+        __Marshaller_udb_core_authn_services_v1_RenamePasskeyRequest,
+        __Marshaller_udb_core_authn_services_v1_RenamePasskeyResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.RevokeRecoveryCodesRequest, global::udb.core.Authn.Services.V1.RevokeRecoveryCodesResponse> __Method_RevokeRecoveryCodes = new grpc::Method<global::udb.core.Authn.Services.V1.RevokeRecoveryCodesRequest, global::udb.core.Authn.Services.V1.RevokeRecoveryCodesResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "RevokeRecoveryCodes",
+        __Marshaller_udb_core_authn_services_v1_RevokeRecoveryCodesRequest,
+        __Marshaller_udb_core_authn_services_v1_RevokeRecoveryCodesResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.AdminResetMfaRequest, global::udb.core.Authn.Services.V1.AdminResetMfaResponse> __Method_AdminResetMfa = new grpc::Method<global::udb.core.Authn.Services.V1.AdminResetMfaRequest, global::udb.core.Authn.Services.V1.AdminResetMfaResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "AdminResetMfa",
+        __Marshaller_udb_core_authn_services_v1_AdminResetMfaRequest,
+        __Marshaller_udb_core_authn_services_v1_AdminResetMfaResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsRequest, global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsResponse> __Method_ListWebAuthnCredentials = new grpc::Method<global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsRequest, global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ListWebAuthnCredentials",
+        __Marshaller_udb_core_authn_services_v1_ListWebAuthnCredentialsRequest,
+        __Marshaller_udb_core_authn_services_v1_ListWebAuthnCredentialsResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialRequest, global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialResponse> __Method_DeleteWebAuthnCredential = new grpc::Method<global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialRequest, global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "DeleteWebAuthnCredential",
+        __Marshaller_udb_core_authn_services_v1_DeleteWebAuthnCredentialRequest,
+        __Marshaller_udb_core_authn_services_v1_DeleteWebAuthnCredentialResponse);
 
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
@@ -807,6 +987,114 @@ namespace udb.core.Authn.Services.V1 {
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse> FinishWebAuthnAuthentication(global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.ListDevicesResponse> ListDevices(global::udb.core.Authn.Services.V1.ListDevicesRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.RevokeDeviceResponse> RevokeDevice(global::udb.core.Authn.Services.V1.RevokeDeviceRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.AdminRevokeSessionResponse> AdminRevokeSession(global::udb.core.Authn.Services.V1.AdminRevokeSessionRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsResponse> AdminRevokeAllUserSessions(global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsResponse> AdminRevokeAllTenantSessions(global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.EmergencyRevokeResponse> EmergencyRevoke(global::udb.core.Authn.Services.V1.EmergencyRevokeRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.IssueMfaChallengeResponse> IssueMfaChallenge(global::udb.core.Authn.Services.V1.IssueMfaChallengeRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.VerifyMfaChallengeResponse> VerifyMfaChallenge(global::udb.core.Authn.Services.V1.VerifyMfaChallengeRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.ListMfaFactorsResponse> ListMfaFactors(global::udb.core.Authn.Services.V1.ListMfaFactorsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.DisableMfaFactorResponse> DisableMfaFactor(global::udb.core.Authn.Services.V1.DisableMfaFactorRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.RenamePasskeyResponse> RenamePasskey(global::udb.core.Authn.Services.V1.RenamePasskeyRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.RevokeRecoveryCodesResponse> RevokeRecoveryCodes(global::udb.core.Authn.Services.V1.RevokeRecoveryCodesRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.AdminResetMfaResponse> AdminResetMfa(global::udb.core.Authn.Services.V1.AdminResetMfaRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsResponse> ListWebAuthnCredentials(global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialResponse> DeleteWebAuthnCredential(global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -2064,6 +2352,390 @@ namespace udb.core.Authn.Services.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_FinishWebAuthnAuthentication, null, options, request);
       }
+      /// <summary>
+      /// ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.ListDevicesResponse ListDevices(global::udb.core.Authn.Services.V1.ListDevicesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListDevices(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.ListDevicesResponse ListDevices(global::udb.core.Authn.Services.V1.ListDevicesRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ListDevices, null, options, request);
+      }
+      /// <summary>
+      /// ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.ListDevicesResponse> ListDevicesAsync(global::udb.core.Authn.Services.V1.ListDevicesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListDevicesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.ListDevicesResponse> ListDevicesAsync(global::udb.core.Authn.Services.V1.ListDevicesRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ListDevices, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.RevokeDeviceResponse RevokeDevice(global::udb.core.Authn.Services.V1.RevokeDeviceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RevokeDevice(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.RevokeDeviceResponse RevokeDevice(global::udb.core.Authn.Services.V1.RevokeDeviceRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_RevokeDevice, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.RevokeDeviceResponse> RevokeDeviceAsync(global::udb.core.Authn.Services.V1.RevokeDeviceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RevokeDeviceAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.RevokeDeviceResponse> RevokeDeviceAsync(global::udb.core.Authn.Services.V1.RevokeDeviceRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_RevokeDevice, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.AdminRevokeSessionResponse AdminRevokeSession(global::udb.core.Authn.Services.V1.AdminRevokeSessionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AdminRevokeSession(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.AdminRevokeSessionResponse AdminRevokeSession(global::udb.core.Authn.Services.V1.AdminRevokeSessionRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_AdminRevokeSession, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.AdminRevokeSessionResponse> AdminRevokeSessionAsync(global::udb.core.Authn.Services.V1.AdminRevokeSessionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AdminRevokeSessionAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.AdminRevokeSessionResponse> AdminRevokeSessionAsync(global::udb.core.Authn.Services.V1.AdminRevokeSessionRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_AdminRevokeSession, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsResponse AdminRevokeAllUserSessions(global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AdminRevokeAllUserSessions(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsResponse AdminRevokeAllUserSessions(global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_AdminRevokeAllUserSessions, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsResponse> AdminRevokeAllUserSessionsAsync(global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AdminRevokeAllUserSessionsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsResponse> AdminRevokeAllUserSessionsAsync(global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_AdminRevokeAllUserSessions, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsResponse AdminRevokeAllTenantSessions(global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AdminRevokeAllTenantSessions(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsResponse AdminRevokeAllTenantSessions(global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_AdminRevokeAllTenantSessions, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsResponse> AdminRevokeAllTenantSessionsAsync(global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AdminRevokeAllTenantSessionsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsResponse> AdminRevokeAllTenantSessionsAsync(global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_AdminRevokeAllTenantSessions, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.EmergencyRevokeResponse EmergencyRevoke(global::udb.core.Authn.Services.V1.EmergencyRevokeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return EmergencyRevoke(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.EmergencyRevokeResponse EmergencyRevoke(global::udb.core.Authn.Services.V1.EmergencyRevokeRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_EmergencyRevoke, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.EmergencyRevokeResponse> EmergencyRevokeAsync(global::udb.core.Authn.Services.V1.EmergencyRevokeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return EmergencyRevokeAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.EmergencyRevokeResponse> EmergencyRevokeAsync(global::udb.core.Authn.Services.V1.EmergencyRevokeRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_EmergencyRevoke, null, options, request);
+      }
+      /// <summary>
+      /// ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.IssueMfaChallengeResponse IssueMfaChallenge(global::udb.core.Authn.Services.V1.IssueMfaChallengeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return IssueMfaChallenge(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.IssueMfaChallengeResponse IssueMfaChallenge(global::udb.core.Authn.Services.V1.IssueMfaChallengeRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_IssueMfaChallenge, null, options, request);
+      }
+      /// <summary>
+      /// ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.IssueMfaChallengeResponse> IssueMfaChallengeAsync(global::udb.core.Authn.Services.V1.IssueMfaChallengeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return IssueMfaChallengeAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.IssueMfaChallengeResponse> IssueMfaChallengeAsync(global::udb.core.Authn.Services.V1.IssueMfaChallengeRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_IssueMfaChallenge, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.VerifyMfaChallengeResponse VerifyMfaChallenge(global::udb.core.Authn.Services.V1.VerifyMfaChallengeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return VerifyMfaChallenge(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.VerifyMfaChallengeResponse VerifyMfaChallenge(global::udb.core.Authn.Services.V1.VerifyMfaChallengeRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_VerifyMfaChallenge, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.VerifyMfaChallengeResponse> VerifyMfaChallengeAsync(global::udb.core.Authn.Services.V1.VerifyMfaChallengeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return VerifyMfaChallengeAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.VerifyMfaChallengeResponse> VerifyMfaChallengeAsync(global::udb.core.Authn.Services.V1.VerifyMfaChallengeRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_VerifyMfaChallenge, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.ListMfaFactorsResponse ListMfaFactors(global::udb.core.Authn.Services.V1.ListMfaFactorsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListMfaFactors(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.ListMfaFactorsResponse ListMfaFactors(global::udb.core.Authn.Services.V1.ListMfaFactorsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ListMfaFactors, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.ListMfaFactorsResponse> ListMfaFactorsAsync(global::udb.core.Authn.Services.V1.ListMfaFactorsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListMfaFactorsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.ListMfaFactorsResponse> ListMfaFactorsAsync(global::udb.core.Authn.Services.V1.ListMfaFactorsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ListMfaFactors, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.DisableMfaFactorResponse DisableMfaFactor(global::udb.core.Authn.Services.V1.DisableMfaFactorRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return DisableMfaFactor(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.DisableMfaFactorResponse DisableMfaFactor(global::udb.core.Authn.Services.V1.DisableMfaFactorRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_DisableMfaFactor, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.DisableMfaFactorResponse> DisableMfaFactorAsync(global::udb.core.Authn.Services.V1.DisableMfaFactorRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return DisableMfaFactorAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.DisableMfaFactorResponse> DisableMfaFactorAsync(global::udb.core.Authn.Services.V1.DisableMfaFactorRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_DisableMfaFactor, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.RenamePasskeyResponse RenamePasskey(global::udb.core.Authn.Services.V1.RenamePasskeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RenamePasskey(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.RenamePasskeyResponse RenamePasskey(global::udb.core.Authn.Services.V1.RenamePasskeyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_RenamePasskey, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.RenamePasskeyResponse> RenamePasskeyAsync(global::udb.core.Authn.Services.V1.RenamePasskeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RenamePasskeyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.RenamePasskeyResponse> RenamePasskeyAsync(global::udb.core.Authn.Services.V1.RenamePasskeyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_RenamePasskey, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.RevokeRecoveryCodesResponse RevokeRecoveryCodes(global::udb.core.Authn.Services.V1.RevokeRecoveryCodesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RevokeRecoveryCodes(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.RevokeRecoveryCodesResponse RevokeRecoveryCodes(global::udb.core.Authn.Services.V1.RevokeRecoveryCodesRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_RevokeRecoveryCodes, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.RevokeRecoveryCodesResponse> RevokeRecoveryCodesAsync(global::udb.core.Authn.Services.V1.RevokeRecoveryCodesRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RevokeRecoveryCodesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.RevokeRecoveryCodesResponse> RevokeRecoveryCodesAsync(global::udb.core.Authn.Services.V1.RevokeRecoveryCodesRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_RevokeRecoveryCodes, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.AdminResetMfaResponse AdminResetMfa(global::udb.core.Authn.Services.V1.AdminResetMfaRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AdminResetMfa(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.AdminResetMfaResponse AdminResetMfa(global::udb.core.Authn.Services.V1.AdminResetMfaRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_AdminResetMfa, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.AdminResetMfaResponse> AdminResetMfaAsync(global::udb.core.Authn.Services.V1.AdminResetMfaRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AdminResetMfaAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.AdminResetMfaResponse> AdminResetMfaAsync(global::udb.core.Authn.Services.V1.AdminResetMfaRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_AdminResetMfa, null, options, request);
+      }
+      /// <summary>
+      /// ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsResponse ListWebAuthnCredentials(global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListWebAuthnCredentials(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsResponse ListWebAuthnCredentials(global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ListWebAuthnCredentials, null, options, request);
+      }
+      /// <summary>
+      /// ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsResponse> ListWebAuthnCredentialsAsync(global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListWebAuthnCredentialsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsResponse> ListWebAuthnCredentialsAsync(global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ListWebAuthnCredentials, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialResponse DeleteWebAuthnCredential(global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return DeleteWebAuthnCredential(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialResponse DeleteWebAuthnCredential(global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_DeleteWebAuthnCredential, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialResponse> DeleteWebAuthnCredentialAsync(global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return DeleteWebAuthnCredentialAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialResponse> DeleteWebAuthnCredentialAsync(global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_DeleteWebAuthnCredential, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override AuthnServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -2112,7 +2784,22 @@ namespace udb.core.Authn.Services.V1 {
           .AddMethod(__Method_StartWebAuthnRegistration, serviceImpl.StartWebAuthnRegistration)
           .AddMethod(__Method_FinishWebAuthnRegistration, serviceImpl.FinishWebAuthnRegistration)
           .AddMethod(__Method_StartWebAuthnAuthentication, serviceImpl.StartWebAuthnAuthentication)
-          .AddMethod(__Method_FinishWebAuthnAuthentication, serviceImpl.FinishWebAuthnAuthentication).Build();
+          .AddMethod(__Method_FinishWebAuthnAuthentication, serviceImpl.FinishWebAuthnAuthentication)
+          .AddMethod(__Method_ListDevices, serviceImpl.ListDevices)
+          .AddMethod(__Method_RevokeDevice, serviceImpl.RevokeDevice)
+          .AddMethod(__Method_AdminRevokeSession, serviceImpl.AdminRevokeSession)
+          .AddMethod(__Method_AdminRevokeAllUserSessions, serviceImpl.AdminRevokeAllUserSessions)
+          .AddMethod(__Method_AdminRevokeAllTenantSessions, serviceImpl.AdminRevokeAllTenantSessions)
+          .AddMethod(__Method_EmergencyRevoke, serviceImpl.EmergencyRevoke)
+          .AddMethod(__Method_IssueMfaChallenge, serviceImpl.IssueMfaChallenge)
+          .AddMethod(__Method_VerifyMfaChallenge, serviceImpl.VerifyMfaChallenge)
+          .AddMethod(__Method_ListMfaFactors, serviceImpl.ListMfaFactors)
+          .AddMethod(__Method_DisableMfaFactor, serviceImpl.DisableMfaFactor)
+          .AddMethod(__Method_RenamePasskey, serviceImpl.RenamePasskey)
+          .AddMethod(__Method_RevokeRecoveryCodes, serviceImpl.RevokeRecoveryCodes)
+          .AddMethod(__Method_AdminResetMfa, serviceImpl.AdminResetMfa)
+          .AddMethod(__Method_ListWebAuthnCredentials, serviceImpl.ListWebAuthnCredentials)
+          .AddMethod(__Method_DeleteWebAuthnCredential, serviceImpl.DeleteWebAuthnCredential).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -2157,6 +2844,21 @@ namespace udb.core.Authn.Services.V1 {
       serviceBinder.AddMethod(__Method_FinishWebAuthnRegistration, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationRequest, global::udb.core.Authn.Services.V1.FinishWebAuthnRegistrationResponse>(serviceImpl.FinishWebAuthnRegistration));
       serviceBinder.AddMethod(__Method_StartWebAuthnAuthentication, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationRequest, global::udb.core.Authn.Services.V1.StartWebAuthnAuthenticationResponse>(serviceImpl.StartWebAuthnAuthentication));
       serviceBinder.AddMethod(__Method_FinishWebAuthnAuthentication, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationRequest, global::udb.core.Authn.Services.V1.FinishWebAuthnAuthenticationResponse>(serviceImpl.FinishWebAuthnAuthentication));
+      serviceBinder.AddMethod(__Method_ListDevices, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.ListDevicesRequest, global::udb.core.Authn.Services.V1.ListDevicesResponse>(serviceImpl.ListDevices));
+      serviceBinder.AddMethod(__Method_RevokeDevice, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.RevokeDeviceRequest, global::udb.core.Authn.Services.V1.RevokeDeviceResponse>(serviceImpl.RevokeDevice));
+      serviceBinder.AddMethod(__Method_AdminRevokeSession, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.AdminRevokeSessionRequest, global::udb.core.Authn.Services.V1.AdminRevokeSessionResponse>(serviceImpl.AdminRevokeSession));
+      serviceBinder.AddMethod(__Method_AdminRevokeAllUserSessions, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsRequest, global::udb.core.Authn.Services.V1.AdminRevokeAllUserSessionsResponse>(serviceImpl.AdminRevokeAllUserSessions));
+      serviceBinder.AddMethod(__Method_AdminRevokeAllTenantSessions, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsRequest, global::udb.core.Authn.Services.V1.AdminRevokeAllTenantSessionsResponse>(serviceImpl.AdminRevokeAllTenantSessions));
+      serviceBinder.AddMethod(__Method_EmergencyRevoke, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.EmergencyRevokeRequest, global::udb.core.Authn.Services.V1.EmergencyRevokeResponse>(serviceImpl.EmergencyRevoke));
+      serviceBinder.AddMethod(__Method_IssueMfaChallenge, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.IssueMfaChallengeRequest, global::udb.core.Authn.Services.V1.IssueMfaChallengeResponse>(serviceImpl.IssueMfaChallenge));
+      serviceBinder.AddMethod(__Method_VerifyMfaChallenge, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.VerifyMfaChallengeRequest, global::udb.core.Authn.Services.V1.VerifyMfaChallengeResponse>(serviceImpl.VerifyMfaChallenge));
+      serviceBinder.AddMethod(__Method_ListMfaFactors, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.ListMfaFactorsRequest, global::udb.core.Authn.Services.V1.ListMfaFactorsResponse>(serviceImpl.ListMfaFactors));
+      serviceBinder.AddMethod(__Method_DisableMfaFactor, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.DisableMfaFactorRequest, global::udb.core.Authn.Services.V1.DisableMfaFactorResponse>(serviceImpl.DisableMfaFactor));
+      serviceBinder.AddMethod(__Method_RenamePasskey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.RenamePasskeyRequest, global::udb.core.Authn.Services.V1.RenamePasskeyResponse>(serviceImpl.RenamePasskey));
+      serviceBinder.AddMethod(__Method_RevokeRecoveryCodes, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.RevokeRecoveryCodesRequest, global::udb.core.Authn.Services.V1.RevokeRecoveryCodesResponse>(serviceImpl.RevokeRecoveryCodes));
+      serviceBinder.AddMethod(__Method_AdminResetMfa, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.AdminResetMfaRequest, global::udb.core.Authn.Services.V1.AdminResetMfaResponse>(serviceImpl.AdminResetMfa));
+      serviceBinder.AddMethod(__Method_ListWebAuthnCredentials, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsRequest, global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsResponse>(serviceImpl.ListWebAuthnCredentials));
+      serviceBinder.AddMethod(__Method_DeleteWebAuthnCredential, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialRequest, global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialResponse>(serviceImpl.DeleteWebAuthnCredential));
     }
 
   }

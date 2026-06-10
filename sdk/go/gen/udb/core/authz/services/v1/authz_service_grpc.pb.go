@@ -42,6 +42,24 @@ const (
 	AuthzService_LintAuthzPolicies_FullMethodName        = "/udb.core.authz.services.v1.AuthzService/LintAuthzPolicies"
 	AuthzService_GetNativeAccess_FullMethodName          = "/udb.core.authz.services.v1.AuthzService/GetNativeAccess"
 	AuthzService_GetPolicyBundle_FullMethodName          = "/udb.core.authz.services.v1.AuthzService/GetPolicyBundle"
+	AuthzService_CreatePolicyDraft_FullMethodName        = "/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft"
+	AuthzService_UpdatePolicyDraft_FullMethodName        = "/udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft"
+	AuthzService_DiffPolicyDraft_FullMethodName          = "/udb.core.authz.services.v1.AuthzService/DiffPolicyDraft"
+	AuthzService_SubmitPolicyDraft_FullMethodName        = "/udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft"
+	AuthzService_ApprovePolicyDraft_FullMethodName       = "/udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft"
+	AuthzService_RejectPolicyDraft_FullMethodName        = "/udb.core.authz.services.v1.AuthzService/RejectPolicyDraft"
+	AuthzService_ActivatePolicyVersion_FullMethodName    = "/udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion"
+	AuthzService_RollbackPolicyVersion_FullMethodName    = "/udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion"
+	AuthzService_ActivateCanary_FullMethodName           = "/udb.core.authz.services.v1.AuthzService/ActivateCanary"
+	AuthzService_PromoteCanary_FullMethodName            = "/udb.core.authz.services.v1.AuthzService/PromoteCanary"
+	AuthzService_GetCanaryStatus_FullMethodName          = "/udb.core.authz.services.v1.AuthzService/GetCanaryStatus"
+	AuthzService_ListPolicyVersions_FullMethodName       = "/udb.core.authz.services.v1.AuthzService/ListPolicyVersions"
+	AuthzService_SimulatePolicy_FullMethodName           = "/udb.core.authz.services.v1.AuthzService/SimulatePolicy"
+	AuthzService_ExplainPolicy_FullMethodName            = "/udb.core.authz.services.v1.AuthzService/ExplainPolicy"
+	AuthzService_GetAuthzRevision_FullMethodName         = "/udb.core.authz.services.v1.AuthzService/GetAuthzRevision"
+	AuthzService_InvalidatePolicyBundles_FullMethodName  = "/udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles"
+	AuthzService_SeedBuiltinRoles_FullMethodName         = "/udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles"
+	AuthzService_MigrateLegacyPolicies_FullMethodName    = "/udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies"
 )
 
 // AuthzServiceClient is the client API for AuthzService service.
@@ -87,6 +105,28 @@ type AuthzServiceClient interface {
 	GetNativeAccess(ctx context.Context, in *NativeAccessRequest, opts ...grpc.CallOption) (*NativeAccessResponse, error)
 	// Stage 2: return a signed policy bundle for local SDK authorization caches.
 	GetPolicyBundle(ctx context.Context, in *PolicyBundleRequest, opts ...grpc.CallOption) (*PolicyBundleResponse, error)
+	CreatePolicyDraft(ctx context.Context, in *CreatePolicyDraftRequest, opts ...grpc.CallOption) (*PolicyDraftResponse, error)
+	UpdatePolicyDraft(ctx context.Context, in *UpdatePolicyDraftRequest, opts ...grpc.CallOption) (*PolicyDraftResponse, error)
+	DiffPolicyDraft(ctx context.Context, in *DiffPolicyDraftRequest, opts ...grpc.CallOption) (*DiffPolicyDraftResponse, error)
+	SubmitPolicyDraft(ctx context.Context, in *SubmitPolicyDraftRequest, opts ...grpc.CallOption) (*PolicyDraftResponse, error)
+	ApprovePolicyDraft(ctx context.Context, in *ApprovePolicyDraftRequest, opts ...grpc.CallOption) (*PolicyApprovalResponse, error)
+	RejectPolicyDraft(ctx context.Context, in *RejectPolicyDraftRequest, opts ...grpc.CallOption) (*PolicyApprovalResponse, error)
+	ActivatePolicyVersion(ctx context.Context, in *ActivatePolicyVersionRequest, opts ...grpc.CallOption) (*ActivationResponse, error)
+	RollbackPolicyVersion(ctx context.Context, in *RollbackPolicyVersionRequest, opts ...grpc.CallOption) (*ActivationResponse, error)
+	// Activate a policy version to a canary scope (subset of the fleet) before
+	// fleet-wide. A metric-based evaluator then auto-rolls back on breach.
+	ActivateCanary(ctx context.Context, in *ActivateCanaryRequest, opts ...grpc.CallOption) (*CanaryResponse, error)
+	// Promote a baked, within-threshold canary to fleet-wide enforcement.
+	PromoteCanary(ctx context.Context, in *PromoteCanaryRequest, opts ...grpc.CallOption) (*CanaryResponse, error)
+	// Read a canary's current state + promote-eligibility.
+	GetCanaryStatus(ctx context.Context, in *GetCanaryStatusRequest, opts ...grpc.CallOption) (*GetCanaryStatusResponse, error)
+	ListPolicyVersions(ctx context.Context, in *ListPolicyVersionsRequest, opts ...grpc.CallOption) (*ListPolicyVersionsResponse, error)
+	SimulatePolicy(ctx context.Context, in *SimulatePolicyRequest, opts ...grpc.CallOption) (*SimulatePolicyResponse, error)
+	ExplainPolicy(ctx context.Context, in *ExplainPolicyRequest, opts ...grpc.CallOption) (*ExplainPolicyResponse, error)
+	GetAuthzRevision(ctx context.Context, in *GetAuthzRevisionRequest, opts ...grpc.CallOption) (*GetAuthzRevisionResponse, error)
+	InvalidatePolicyBundles(ctx context.Context, in *InvalidatePolicyBundlesRequest, opts ...grpc.CallOption) (*InvalidatePolicyBundlesResponse, error)
+	SeedBuiltinRoles(ctx context.Context, in *SeedBuiltinRolesRequest, opts ...grpc.CallOption) (*SeedBuiltinRolesResponse, error)
+	MigrateLegacyPolicies(ctx context.Context, in *MigrateLegacyPoliciesRequest, opts ...grpc.CallOption) (*MigrateLegacyPoliciesResponse, error)
 }
 
 type authzServiceClient struct {
@@ -327,6 +367,186 @@ func (c *authzServiceClient) GetPolicyBundle(ctx context.Context, in *PolicyBund
 	return out, nil
 }
 
+func (c *authzServiceClient) CreatePolicyDraft(ctx context.Context, in *CreatePolicyDraftRequest, opts ...grpc.CallOption) (*PolicyDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PolicyDraftResponse)
+	err := c.cc.Invoke(ctx, AuthzService_CreatePolicyDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) UpdatePolicyDraft(ctx context.Context, in *UpdatePolicyDraftRequest, opts ...grpc.CallOption) (*PolicyDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PolicyDraftResponse)
+	err := c.cc.Invoke(ctx, AuthzService_UpdatePolicyDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) DiffPolicyDraft(ctx context.Context, in *DiffPolicyDraftRequest, opts ...grpc.CallOption) (*DiffPolicyDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DiffPolicyDraftResponse)
+	err := c.cc.Invoke(ctx, AuthzService_DiffPolicyDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) SubmitPolicyDraft(ctx context.Context, in *SubmitPolicyDraftRequest, opts ...grpc.CallOption) (*PolicyDraftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PolicyDraftResponse)
+	err := c.cc.Invoke(ctx, AuthzService_SubmitPolicyDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) ApprovePolicyDraft(ctx context.Context, in *ApprovePolicyDraftRequest, opts ...grpc.CallOption) (*PolicyApprovalResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PolicyApprovalResponse)
+	err := c.cc.Invoke(ctx, AuthzService_ApprovePolicyDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) RejectPolicyDraft(ctx context.Context, in *RejectPolicyDraftRequest, opts ...grpc.CallOption) (*PolicyApprovalResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PolicyApprovalResponse)
+	err := c.cc.Invoke(ctx, AuthzService_RejectPolicyDraft_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) ActivatePolicyVersion(ctx context.Context, in *ActivatePolicyVersionRequest, opts ...grpc.CallOption) (*ActivationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ActivationResponse)
+	err := c.cc.Invoke(ctx, AuthzService_ActivatePolicyVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) RollbackPolicyVersion(ctx context.Context, in *RollbackPolicyVersionRequest, opts ...grpc.CallOption) (*ActivationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ActivationResponse)
+	err := c.cc.Invoke(ctx, AuthzService_RollbackPolicyVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) ActivateCanary(ctx context.Context, in *ActivateCanaryRequest, opts ...grpc.CallOption) (*CanaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CanaryResponse)
+	err := c.cc.Invoke(ctx, AuthzService_ActivateCanary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) PromoteCanary(ctx context.Context, in *PromoteCanaryRequest, opts ...grpc.CallOption) (*CanaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CanaryResponse)
+	err := c.cc.Invoke(ctx, AuthzService_PromoteCanary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) GetCanaryStatus(ctx context.Context, in *GetCanaryStatusRequest, opts ...grpc.CallOption) (*GetCanaryStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCanaryStatusResponse)
+	err := c.cc.Invoke(ctx, AuthzService_GetCanaryStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) ListPolicyVersions(ctx context.Context, in *ListPolicyVersionsRequest, opts ...grpc.CallOption) (*ListPolicyVersionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPolicyVersionsResponse)
+	err := c.cc.Invoke(ctx, AuthzService_ListPolicyVersions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) SimulatePolicy(ctx context.Context, in *SimulatePolicyRequest, opts ...grpc.CallOption) (*SimulatePolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SimulatePolicyResponse)
+	err := c.cc.Invoke(ctx, AuthzService_SimulatePolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) ExplainPolicy(ctx context.Context, in *ExplainPolicyRequest, opts ...grpc.CallOption) (*ExplainPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExplainPolicyResponse)
+	err := c.cc.Invoke(ctx, AuthzService_ExplainPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) GetAuthzRevision(ctx context.Context, in *GetAuthzRevisionRequest, opts ...grpc.CallOption) (*GetAuthzRevisionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAuthzRevisionResponse)
+	err := c.cc.Invoke(ctx, AuthzService_GetAuthzRevision_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) InvalidatePolicyBundles(ctx context.Context, in *InvalidatePolicyBundlesRequest, opts ...grpc.CallOption) (*InvalidatePolicyBundlesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InvalidatePolicyBundlesResponse)
+	err := c.cc.Invoke(ctx, AuthzService_InvalidatePolicyBundles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) SeedBuiltinRoles(ctx context.Context, in *SeedBuiltinRolesRequest, opts ...grpc.CallOption) (*SeedBuiltinRolesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SeedBuiltinRolesResponse)
+	err := c.cc.Invoke(ctx, AuthzService_SeedBuiltinRoles_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authzServiceClient) MigrateLegacyPolicies(ctx context.Context, in *MigrateLegacyPoliciesRequest, opts ...grpc.CallOption) (*MigrateLegacyPoliciesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MigrateLegacyPoliciesResponse)
+	err := c.cc.Invoke(ctx, AuthzService_MigrateLegacyPolicies_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthzServiceServer is the server API for AuthzService service.
 // All implementations should embed UnimplementedAuthzServiceServer
 // for forward compatibility.
@@ -370,6 +590,28 @@ type AuthzServiceServer interface {
 	GetNativeAccess(context.Context, *NativeAccessRequest) (*NativeAccessResponse, error)
 	// Stage 2: return a signed policy bundle for local SDK authorization caches.
 	GetPolicyBundle(context.Context, *PolicyBundleRequest) (*PolicyBundleResponse, error)
+	CreatePolicyDraft(context.Context, *CreatePolicyDraftRequest) (*PolicyDraftResponse, error)
+	UpdatePolicyDraft(context.Context, *UpdatePolicyDraftRequest) (*PolicyDraftResponse, error)
+	DiffPolicyDraft(context.Context, *DiffPolicyDraftRequest) (*DiffPolicyDraftResponse, error)
+	SubmitPolicyDraft(context.Context, *SubmitPolicyDraftRequest) (*PolicyDraftResponse, error)
+	ApprovePolicyDraft(context.Context, *ApprovePolicyDraftRequest) (*PolicyApprovalResponse, error)
+	RejectPolicyDraft(context.Context, *RejectPolicyDraftRequest) (*PolicyApprovalResponse, error)
+	ActivatePolicyVersion(context.Context, *ActivatePolicyVersionRequest) (*ActivationResponse, error)
+	RollbackPolicyVersion(context.Context, *RollbackPolicyVersionRequest) (*ActivationResponse, error)
+	// Activate a policy version to a canary scope (subset of the fleet) before
+	// fleet-wide. A metric-based evaluator then auto-rolls back on breach.
+	ActivateCanary(context.Context, *ActivateCanaryRequest) (*CanaryResponse, error)
+	// Promote a baked, within-threshold canary to fleet-wide enforcement.
+	PromoteCanary(context.Context, *PromoteCanaryRequest) (*CanaryResponse, error)
+	// Read a canary's current state + promote-eligibility.
+	GetCanaryStatus(context.Context, *GetCanaryStatusRequest) (*GetCanaryStatusResponse, error)
+	ListPolicyVersions(context.Context, *ListPolicyVersionsRequest) (*ListPolicyVersionsResponse, error)
+	SimulatePolicy(context.Context, *SimulatePolicyRequest) (*SimulatePolicyResponse, error)
+	ExplainPolicy(context.Context, *ExplainPolicyRequest) (*ExplainPolicyResponse, error)
+	GetAuthzRevision(context.Context, *GetAuthzRevisionRequest) (*GetAuthzRevisionResponse, error)
+	InvalidatePolicyBundles(context.Context, *InvalidatePolicyBundlesRequest) (*InvalidatePolicyBundlesResponse, error)
+	SeedBuiltinRoles(context.Context, *SeedBuiltinRolesRequest) (*SeedBuiltinRolesResponse, error)
+	MigrateLegacyPolicies(context.Context, *MigrateLegacyPoliciesRequest) (*MigrateLegacyPoliciesResponse, error)
 }
 
 // UnimplementedAuthzServiceServer should be embedded to have
@@ -447,6 +689,60 @@ func (UnimplementedAuthzServiceServer) GetNativeAccess(context.Context, *NativeA
 }
 func (UnimplementedAuthzServiceServer) GetPolicyBundle(context.Context, *PolicyBundleRequest) (*PolicyBundleResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetPolicyBundle not implemented")
+}
+func (UnimplementedAuthzServiceServer) CreatePolicyDraft(context.Context, *CreatePolicyDraftRequest) (*PolicyDraftResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreatePolicyDraft not implemented")
+}
+func (UnimplementedAuthzServiceServer) UpdatePolicyDraft(context.Context, *UpdatePolicyDraftRequest) (*PolicyDraftResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdatePolicyDraft not implemented")
+}
+func (UnimplementedAuthzServiceServer) DiffPolicyDraft(context.Context, *DiffPolicyDraftRequest) (*DiffPolicyDraftResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DiffPolicyDraft not implemented")
+}
+func (UnimplementedAuthzServiceServer) SubmitPolicyDraft(context.Context, *SubmitPolicyDraftRequest) (*PolicyDraftResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SubmitPolicyDraft not implemented")
+}
+func (UnimplementedAuthzServiceServer) ApprovePolicyDraft(context.Context, *ApprovePolicyDraftRequest) (*PolicyApprovalResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApprovePolicyDraft not implemented")
+}
+func (UnimplementedAuthzServiceServer) RejectPolicyDraft(context.Context, *RejectPolicyDraftRequest) (*PolicyApprovalResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RejectPolicyDraft not implemented")
+}
+func (UnimplementedAuthzServiceServer) ActivatePolicyVersion(context.Context, *ActivatePolicyVersionRequest) (*ActivationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ActivatePolicyVersion not implemented")
+}
+func (UnimplementedAuthzServiceServer) RollbackPolicyVersion(context.Context, *RollbackPolicyVersionRequest) (*ActivationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RollbackPolicyVersion not implemented")
+}
+func (UnimplementedAuthzServiceServer) ActivateCanary(context.Context, *ActivateCanaryRequest) (*CanaryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ActivateCanary not implemented")
+}
+func (UnimplementedAuthzServiceServer) PromoteCanary(context.Context, *PromoteCanaryRequest) (*CanaryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PromoteCanary not implemented")
+}
+func (UnimplementedAuthzServiceServer) GetCanaryStatus(context.Context, *GetCanaryStatusRequest) (*GetCanaryStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCanaryStatus not implemented")
+}
+func (UnimplementedAuthzServiceServer) ListPolicyVersions(context.Context, *ListPolicyVersionsRequest) (*ListPolicyVersionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListPolicyVersions not implemented")
+}
+func (UnimplementedAuthzServiceServer) SimulatePolicy(context.Context, *SimulatePolicyRequest) (*SimulatePolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SimulatePolicy not implemented")
+}
+func (UnimplementedAuthzServiceServer) ExplainPolicy(context.Context, *ExplainPolicyRequest) (*ExplainPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExplainPolicy not implemented")
+}
+func (UnimplementedAuthzServiceServer) GetAuthzRevision(context.Context, *GetAuthzRevisionRequest) (*GetAuthzRevisionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAuthzRevision not implemented")
+}
+func (UnimplementedAuthzServiceServer) InvalidatePolicyBundles(context.Context, *InvalidatePolicyBundlesRequest) (*InvalidatePolicyBundlesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method InvalidatePolicyBundles not implemented")
+}
+func (UnimplementedAuthzServiceServer) SeedBuiltinRoles(context.Context, *SeedBuiltinRolesRequest) (*SeedBuiltinRolesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SeedBuiltinRoles not implemented")
+}
+func (UnimplementedAuthzServiceServer) MigrateLegacyPolicies(context.Context, *MigrateLegacyPoliciesRequest) (*MigrateLegacyPoliciesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method MigrateLegacyPolicies not implemented")
 }
 func (UnimplementedAuthzServiceServer) testEmbeddedByValue() {}
 
@@ -882,6 +1178,330 @@ func _AuthzService_GetPolicyBundle_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthzService_CreatePolicyDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreatePolicyDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).CreatePolicyDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_CreatePolicyDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).CreatePolicyDraft(ctx, req.(*CreatePolicyDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_UpdatePolicyDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdatePolicyDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).UpdatePolicyDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_UpdatePolicyDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).UpdatePolicyDraft(ctx, req.(*UpdatePolicyDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_DiffPolicyDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DiffPolicyDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).DiffPolicyDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_DiffPolicyDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).DiffPolicyDraft(ctx, req.(*DiffPolicyDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_SubmitPolicyDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubmitPolicyDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).SubmitPolicyDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_SubmitPolicyDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).SubmitPolicyDraft(ctx, req.(*SubmitPolicyDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_ApprovePolicyDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApprovePolicyDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).ApprovePolicyDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_ApprovePolicyDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).ApprovePolicyDraft(ctx, req.(*ApprovePolicyDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_RejectPolicyDraft_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RejectPolicyDraftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).RejectPolicyDraft(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_RejectPolicyDraft_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).RejectPolicyDraft(ctx, req.(*RejectPolicyDraftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_ActivatePolicyVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActivatePolicyVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).ActivatePolicyVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_ActivatePolicyVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).ActivatePolicyVersion(ctx, req.(*ActivatePolicyVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_RollbackPolicyVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RollbackPolicyVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).RollbackPolicyVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_RollbackPolicyVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).RollbackPolicyVersion(ctx, req.(*RollbackPolicyVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_ActivateCanary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActivateCanaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).ActivateCanary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_ActivateCanary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).ActivateCanary(ctx, req.(*ActivateCanaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_PromoteCanary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PromoteCanaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).PromoteCanary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_PromoteCanary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).PromoteCanary(ctx, req.(*PromoteCanaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_GetCanaryStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCanaryStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).GetCanaryStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_GetCanaryStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).GetCanaryStatus(ctx, req.(*GetCanaryStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_ListPolicyVersions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPolicyVersionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).ListPolicyVersions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_ListPolicyVersions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).ListPolicyVersions(ctx, req.(*ListPolicyVersionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_SimulatePolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SimulatePolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).SimulatePolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_SimulatePolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).SimulatePolicy(ctx, req.(*SimulatePolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_ExplainPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExplainPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).ExplainPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_ExplainPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).ExplainPolicy(ctx, req.(*ExplainPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_GetAuthzRevision_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAuthzRevisionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).GetAuthzRevision(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_GetAuthzRevision_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).GetAuthzRevision(ctx, req.(*GetAuthzRevisionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_InvalidatePolicyBundles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InvalidatePolicyBundlesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).InvalidatePolicyBundles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_InvalidatePolicyBundles_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).InvalidatePolicyBundles(ctx, req.(*InvalidatePolicyBundlesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_SeedBuiltinRoles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SeedBuiltinRolesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).SeedBuiltinRoles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_SeedBuiltinRoles_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).SeedBuiltinRoles(ctx, req.(*SeedBuiltinRolesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthzService_MigrateLegacyPolicies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MigrateLegacyPoliciesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthzServiceServer).MigrateLegacyPolicies(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthzService_MigrateLegacyPolicies_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthzServiceServer).MigrateLegacyPolicies(ctx, req.(*MigrateLegacyPoliciesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthzService_ServiceDesc is the grpc.ServiceDesc for AuthzService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -980,6 +1600,78 @@ var AuthzService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPolicyBundle",
 			Handler:    _AuthzService_GetPolicyBundle_Handler,
+		},
+		{
+			MethodName: "CreatePolicyDraft",
+			Handler:    _AuthzService_CreatePolicyDraft_Handler,
+		},
+		{
+			MethodName: "UpdatePolicyDraft",
+			Handler:    _AuthzService_UpdatePolicyDraft_Handler,
+		},
+		{
+			MethodName: "DiffPolicyDraft",
+			Handler:    _AuthzService_DiffPolicyDraft_Handler,
+		},
+		{
+			MethodName: "SubmitPolicyDraft",
+			Handler:    _AuthzService_SubmitPolicyDraft_Handler,
+		},
+		{
+			MethodName: "ApprovePolicyDraft",
+			Handler:    _AuthzService_ApprovePolicyDraft_Handler,
+		},
+		{
+			MethodName: "RejectPolicyDraft",
+			Handler:    _AuthzService_RejectPolicyDraft_Handler,
+		},
+		{
+			MethodName: "ActivatePolicyVersion",
+			Handler:    _AuthzService_ActivatePolicyVersion_Handler,
+		},
+		{
+			MethodName: "RollbackPolicyVersion",
+			Handler:    _AuthzService_RollbackPolicyVersion_Handler,
+		},
+		{
+			MethodName: "ActivateCanary",
+			Handler:    _AuthzService_ActivateCanary_Handler,
+		},
+		{
+			MethodName: "PromoteCanary",
+			Handler:    _AuthzService_PromoteCanary_Handler,
+		},
+		{
+			MethodName: "GetCanaryStatus",
+			Handler:    _AuthzService_GetCanaryStatus_Handler,
+		},
+		{
+			MethodName: "ListPolicyVersions",
+			Handler:    _AuthzService_ListPolicyVersions_Handler,
+		},
+		{
+			MethodName: "SimulatePolicy",
+			Handler:    _AuthzService_SimulatePolicy_Handler,
+		},
+		{
+			MethodName: "ExplainPolicy",
+			Handler:    _AuthzService_ExplainPolicy_Handler,
+		},
+		{
+			MethodName: "GetAuthzRevision",
+			Handler:    _AuthzService_GetAuthzRevision_Handler,
+		},
+		{
+			MethodName: "InvalidatePolicyBundles",
+			Handler:    _AuthzService_InvalidatePolicyBundles_Handler,
+		},
+		{
+			MethodName: "SeedBuiltinRoles",
+			Handler:    _AuthzService_SeedBuiltinRoles_Handler,
+		},
+		{
+			MethodName: "MigrateLegacyPolicies",
+			Handler:    _AuthzService_MigrateLegacyPolicies_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

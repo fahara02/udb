@@ -101,6 +101,37 @@ class ApiKeyServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Rotate a key's secret in place (same key_id + lineage). Returns the new
+     * plain key ONCE; the old secret is invalidated immediately.
+     * @param \Udb\Core\Apikey\Services\V1\RotateApiKeyRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Apikey\Services\V1\RotateApiKeyResponse>
+     */
+    public function RotateApiKey(\Udb\Core\Apikey\Services\V1\RotateApiKeyRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.apikey.services.v1.ApiKeyService/RotateApiKey',
+        $argument,
+        ['\Udb\Core\Apikey\Services\V1\RotateApiKeyResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Emergency bulk revoke by selector (prefix/owner/tenant/project/scope/before).
+     * @param \Udb\Core\Apikey\Services\V1\EmergencyRevokeApiKeysRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Apikey\Services\V1\EmergencyRevokeApiKeysResponse>
+     */
+    public function EmergencyRevokeApiKeys(\Udb\Core\Apikey\Services\V1\EmergencyRevokeApiKeysRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys',
+        $argument,
+        ['\Udb\Core\Apikey\Services\V1\EmergencyRevokeApiKeysResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * ── Validation (called by API gateway — internal, not public HTTP) ────────
      * @param \Udb\Core\Apikey\Services\V1\ValidateApiKeyRequest $argument input argument
      * @param array $metadata metadata

@@ -659,25 +659,28 @@ func (x *BackendInstanceStatus) GetCircuitOpen() bool {
 }
 
 type NativeServiceStatus struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	ServiceId           string                 `protobuf:"bytes,1,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty"`
-	ProtoServiceNames   []string               `protobuf:"bytes,2,rep,name=proto_service_names,json=protoServiceNames,proto3" json:"proto_service_names,omitempty"`
-	Enabled             bool                   `protobuf:"varint,3,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	Configured          bool                   `protobuf:"varint,4,opt,name=configured,proto3" json:"configured,omitempty"`
-	Mounted             bool                   `protobuf:"varint,5,opt,name=mounted,proto3" json:"mounted,omitempty"`
-	Healthy             bool                   `protobuf:"varint,6,opt,name=healthy,proto3" json:"healthy,omitempty"`
-	Degraded            bool                   `protobuf:"varint,7,opt,name=degraded,proto3" json:"degraded,omitempty"`
-	Surface             string                 `protobuf:"bytes,8,opt,name=surface,proto3" json:"surface,omitempty"`
-	ListenerKind        string                 `protobuf:"bytes,9,opt,name=listener_kind,json=listenerKind,proto3" json:"listener_kind,omitempty"`
-	SupportedRpcs       []string               `protobuf:"bytes,10,rep,name=supported_rpcs,json=supportedRpcs,proto3" json:"supported_rpcs,omitempty"`
-	Capabilities        []string               `protobuf:"bytes,11,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
-	RequiredBackends    []string               `protobuf:"bytes,12,rep,name=required_backends,json=requiredBackends,proto3" json:"required_backends,omitempty"`
-	MissingDependencies []string               `protobuf:"bytes,13,rep,name=missing_dependencies,json=missingDependencies,proto3" json:"missing_dependencies,omitempty"`
-	DisabledReason      string                 `protobuf:"bytes,14,opt,name=disabled_reason,json=disabledReason,proto3" json:"disabled_reason,omitempty"`
-	MigrationStatus     string                 `protobuf:"bytes,15,opt,name=migration_status,json=migrationStatus,proto3" json:"migration_status,omitempty"`
-	DescriptorVersion   string                 `protobuf:"bytes,16,opt,name=descriptor_version,json=descriptorVersion,proto3" json:"descriptor_version,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	ServiceId               string                 `protobuf:"bytes,1,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty"`
+	ProtoServiceNames       []string               `protobuf:"bytes,2,rep,name=proto_service_names,json=protoServiceNames,proto3" json:"proto_service_names,omitempty"`
+	Enabled                 bool                   `protobuf:"varint,3,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Configured              bool                   `protobuf:"varint,4,opt,name=configured,proto3" json:"configured,omitempty"`
+	Mounted                 bool                   `protobuf:"varint,5,opt,name=mounted,proto3" json:"mounted,omitempty"`
+	Healthy                 bool                   `protobuf:"varint,6,opt,name=healthy,proto3" json:"healthy,omitempty"`
+	Degraded                bool                   `protobuf:"varint,7,opt,name=degraded,proto3" json:"degraded,omitempty"`
+	Surface                 string                 `protobuf:"bytes,8,opt,name=surface,proto3" json:"surface,omitempty"`
+	ListenerKind            string                 `protobuf:"bytes,9,opt,name=listener_kind,json=listenerKind,proto3" json:"listener_kind,omitempty"`
+	SupportedRpcs           []string               `protobuf:"bytes,10,rep,name=supported_rpcs,json=supportedRpcs,proto3" json:"supported_rpcs,omitempty"`
+	Capabilities            []string               `protobuf:"bytes,11,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	RequiredBackends        []string               `protobuf:"bytes,12,rep,name=required_backends,json=requiredBackends,proto3" json:"required_backends,omitempty"`
+	MissingDependencies     []string               `protobuf:"bytes,13,rep,name=missing_dependencies,json=missingDependencies,proto3" json:"missing_dependencies,omitempty"`
+	DisabledReason          string                 `protobuf:"bytes,14,opt,name=disabled_reason,json=disabledReason,proto3" json:"disabled_reason,omitempty"`
+	MigrationStatus         string                 `protobuf:"bytes,15,opt,name=migration_status,json=migrationStatus,proto3" json:"migration_status,omitempty"`
+	DescriptorVersion       string                 `protobuf:"bytes,16,opt,name=descriptor_version,json=descriptorVersion,proto3" json:"descriptor_version,omitempty"`
+	OwnsBackgroundWorkers   bool                   `protobuf:"varint,17,opt,name=owns_background_workers,json=ownsBackgroundWorkers,proto3" json:"owns_background_workers,omitempty"`
+	BackgroundWorkerEnabled bool                   `protobuf:"varint,18,opt,name=background_worker_enabled,json=backgroundWorkerEnabled,proto3" json:"background_worker_enabled,omitempty"`
+	BackgroundWorkers       []string               `protobuf:"bytes,19,rep,name=background_workers,json=backgroundWorkers,proto3" json:"background_workers,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *NativeServiceStatus) Reset() {
@@ -820,6 +823,27 @@ func (x *NativeServiceStatus) GetDescriptorVersion() string {
 		return x.DescriptorVersion
 	}
 	return ""
+}
+
+func (x *NativeServiceStatus) GetOwnsBackgroundWorkers() bool {
+	if x != nil {
+		return x.OwnsBackgroundWorkers
+	}
+	return false
+}
+
+func (x *NativeServiceStatus) GetBackgroundWorkerEnabled() bool {
+	if x != nil {
+		return x.BackgroundWorkerEnabled
+	}
+	return false
+}
+
+func (x *NativeServiceStatus) GetBackgroundWorkers() []string {
+	if x != nil {
+		return x.BackgroundWorkers
+	}
+	return nil
 }
 
 type CatalogManifestRequest struct {
@@ -6008,7 +6032,7 @@ const file_udb_entity_v1_admin_proto_rawDesc = "" +
 	"\fcircuit_open\x18\r \x01(\bR\vcircuitOpen\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xdb\x04\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xfe\x05\n" +
 	"\x13NativeServiceStatus\x12\x1d\n" +
 	"\n" +
 	"service_id\x18\x01 \x01(\tR\tserviceId\x12.\n" +
@@ -6029,7 +6053,10 @@ const file_udb_entity_v1_admin_proto_rawDesc = "" +
 	"\x14missing_dependencies\x18\r \x03(\tR\x13missingDependencies\x12'\n" +
 	"\x0fdisabled_reason\x18\x0e \x01(\tR\x0edisabledReason\x12)\n" +
 	"\x10migration_status\x18\x0f \x01(\tR\x0fmigrationStatus\x12-\n" +
-	"\x12descriptor_version\x18\x10 \x01(\tR\x11descriptorVersion\"i\n" +
+	"\x12descriptor_version\x18\x10 \x01(\tR\x11descriptorVersion\x126\n" +
+	"\x17owns_background_workers\x18\x11 \x01(\bR\x15ownsBackgroundWorkers\x12:\n" +
+	"\x19background_worker_enabled\x18\x12 \x01(\bR\x17backgroundWorkerEnabled\x12-\n" +
+	"\x12background_workers\x18\x13 \x03(\tR\x11backgroundWorkers\"i\n" +
 	"\x16CatalogManifestRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x16\n" +
 	"\x06redact\x18\x02 \x01(\bR\x06redact\">\n" +

@@ -76,6 +76,46 @@ public final class AuthnEventsProto extends com.google.protobuf.GeneratedFile {
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_authn_events_v1_PasswordResetByEmailRequestedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_events_v1_LoginFailedEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_events_v1_LoginFailedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_events_v1_MfaEnrolledEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_events_v1_MfaEnrolledEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_events_v1_MfaChangedEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_events_v1_MfaChangedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_events_v1_RecoveryCodesGeneratedEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_events_v1_RecoveryCodesGeneratedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_events_v1_RecoveryCodeUsedEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_events_v1_RecoveryCodeUsedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_events_v1_SessionRefreshedEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_events_v1_SessionRefreshedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_events_v1_PhoneVerifiedEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_events_v1_PhoneVerifiedEvent_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_authn_events_v1_WebauthnRegisteredEvent_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_authn_events_v1_WebauthnRegisteredEvent_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -213,14 +253,94 @@ public final class AuthnEventsProto extends com.google.protobuf.GeneratedFile {
       "\001\n;udb.core.authn.events.v1.PasswordRese" +
       "tByEmailRequestedEvent\0220udb.authn.user.e" +
       "mail.password.reset.requested.v1\032\ttenant" +
-      "_id\"\010standard*\rat_least_once2\006stableB\373\001\n" +
-      "\034com.udb.core.authn.events.v1B\020AuthnEven" +
-      "tsProtoP\001ZDgithub.com/fahara02/udb/sdk/g" +
-      "o/gen/udb/core/authn/events/v1;eventsv1\242" +
-      "\002\004UCAE\252\002\030udb.core.Authn.Events.V1\312\002\030Udb\\" +
-      "Core\\Authn\\Events\\V1\342\002$Udb\\GPBMetadata\\C" +
-      "ore\\Authn\\Events\\V1\352\002\034Udb::Core::Authn::" +
-      "Events::V1b\006proto3"
+      "_id\"\010standard*\rat_least_once2\006stable\"\355\003\n" +
+      "\020LoginFailedEvent\022\031\n\010event_id\030\001 \001(\tR\007eve" +
+      "ntId\022\027\n\007user_id\030\002 \001(\tR\006userId\022\'\n\017contact" +
+      "_address\030\003 \001(\tR\016contactAddress\022\033\n\ttenant" +
+      "_id\030\004 \001(\tR\010tenantId\022\035\n\nproject_id\030\005 \001(\tR" +
+      "\tprojectId\022\037\n\013reason_code\030\006 \001(\tR\nreasonC" +
+      "ode\022\037\n\013auth_method\030\007 \001(\tR\nauthMethod\022\035\n\n" +
+      "ip_address\030\010 \001(\tR\tipAddress\022%\n\016correlati" +
+      "on_id\030\t \001(\tR\rcorrelationId\022;\n\013occurred_a" +
+      "t\030\n \001(\0132\032.google.protobuf.TimestampR\nocc" +
+      "urredAt:{\222\262\031w\n)udb.core.authn.events.v1." +
+      "LoginFailedEvent\022\036udb.authn.user.login.f" +
+      "ailed.v1\032\ttenant_id\"\010standard*\rat_least_" +
+      "once2\006stable\"\377\002\n\020MfaEnrolledEvent\022\031\n\010eve" +
+      "nt_id\030\001 \001(\tR\007eventId\022\027\n\007user_id\030\002 \001(\tR\006u" +
+      "serId\022\033\n\ttenant_id\030\003 \001(\tR\010tenantId\022\035\n\npr" +
+      "oject_id\030\004 \001(\tR\tprojectId\022\037\n\013factor_type" +
+      "\030\005 \001(\tR\nfactorType\022%\n\016correlation_id\030\006 \001" +
+      "(\tR\rcorrelationId\022;\n\013occurred_at\030\007 \001(\0132\032" +
+      ".google.protobuf.TimestampR\noccurredAt:v" +
+      "\222\262\031r\n)udb.core.authn.events.v1.MfaEnroll" +
+      "edEvent\022\031udb.authn.mfa.enrolled.v1\032\ttena" +
+      "nt_id\"\010standard*\rat_least_once2\006stable\"\224" +
+      "\003\n\017MfaChangedEvent\022\031\n\010event_id\030\001 \001(\tR\007ev" +
+      "entId\022\027\n\007user_id\030\002 \001(\tR\006userId\022\033\n\ttenant" +
+      "_id\030\003 \001(\tR\010tenantId\022\035\n\nproject_id\030\004 \001(\tR" +
+      "\tprojectId\022\037\n\013factor_type\030\005 \001(\tR\nfactorT" +
+      "ype\022\026\n\006change\030\006 \001(\tR\006change\022%\n\016correlati" +
+      "on_id\030\007 \001(\tR\rcorrelationId\022;\n\013occurred_a" +
+      "t\030\010 \001(\0132\032.google.protobuf.TimestampR\nocc" +
+      "urredAt:t\222\262\031p\n(udb.core.authn.events.v1." +
+      "MfaChangedEvent\022\030udb.authn.mfa.changed.v" +
+      "1\032\ttenant_id\"\010standard*\rat_least_once2\006s" +
+      "table\"\202\003\n\033RecoveryCodesGeneratedEvent\022\031\n" +
+      "\010event_id\030\001 \001(\tR\007eventId\022\027\n\007user_id\030\002 \001(" +
+      "\tR\006userId\022\033\n\ttenant_id\030\003 \001(\tR\010tenantId\022\035" +
+      "\n\ncode_count\030\004 \001(\005R\tcodeCount\022%\n\016correla" +
+      "tion_id\030\005 \001(\tR\rcorrelationId\022;\n\013occurred" +
+      "_at\030\006 \001(\0132\032.google.protobuf.TimestampR\no" +
+      "ccurredAt:\216\001\222\262\031\211\001\n4udb.core.authn.events" +
+      ".v1.RecoveryCodesGeneratedEvent\022%udb.aut" +
+      "hn.recovery.codes.generated.v1\032\ttenant_i" +
+      "d\"\010standard*\rat_least_once2\006stable\"\371\002\n\025R" +
+      "ecoveryCodeUsedEvent\022\031\n\010event_id\030\001 \001(\tR\007" +
+      "eventId\022\027\n\007user_id\030\002 \001(\tR\006userId\022\033\n\ttena" +
+      "nt_id\030\003 \001(\tR\010tenantId\022\'\n\017remaining_codes" +
+      "\030\004 \001(\005R\016remainingCodes\022%\n\016correlation_id" +
+      "\030\005 \001(\tR\rcorrelationId\022;\n\013occurred_at\030\006 \001" +
+      "(\0132\032.google.protobuf.TimestampR\noccurred" +
+      "At:\201\001\222\262\031}\n.udb.core.authn.events.v1.Reco" +
+      "veryCodeUsedEvent\022\037udb.authn.recovery.co" +
+      "de.used.v1\032\ttenant_id\"\010standard*\rat_leas" +
+      "t_once2\006stable\"\232\003\n\025SessionRefreshedEvent" +
+      "\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\027\n\007user_id\030\002" +
+      " \001(\tR\006userId\022*\n\021session_public_id\030\003 \001(\tR" +
+      "\017sessionPublicId\022\033\n\ttenant_id\030\004 \001(\tR\010ten" +
+      "antId\022\035\n\nproject_id\030\005 \001(\tR\tprojectId\022%\n\016" +
+      "correlation_id\030\006 \001(\tR\rcorrelationId\022;\n\013o" +
+      "ccurred_at\030\007 \001(\0132\032.google.protobuf.Times" +
+      "tampR\noccurredAt:\200\001\222\262\031|\n.udb.core.authn." +
+      "events.v1.SessionRefreshedEvent\022\036udb.aut" +
+      "hn.session.refreshed.v1\032\ttenant_id\"\010stan" +
+      "dard*\rat_least_once2\006stable\"\355\002\n\022PhoneVer" +
+      "ifiedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\027\n" +
+      "\007user_id\030\002 \001(\tR\006userId\022!\n\014phone_masked\030\003" +
+      " \001(\tR\013phoneMasked\022\033\n\ttenant_id\030\004 \001(\tR\010te" +
+      "nantId\022%\n\016correlation_id\030\005 \001(\tR\rcorrelat" +
+      "ionId\022;\n\013occurred_at\030\006 \001(\0132\032.google.prot" +
+      "obuf.TimestampR\noccurredAt:\177\222\262\031{\n+udb.co" +
+      "re.authn.events.v1.PhoneVerifiedEvent\022 u" +
+      "db.authn.user.phone.verified.v1\032\ttenant_" +
+      "id\"\010standard*\rat_least_once2\006stable\"\373\002\n\027" +
+      "WebauthnRegisteredEvent\022\031\n\010event_id\030\001 \001(" +
+      "\tR\007eventId\022\027\n\007user_id\030\002 \001(\tR\006userId\022#\n\rc" +
+      "redential_id\030\003 \001(\tR\014credentialId\022\033\n\ttena" +
+      "nt_id\030\004 \001(\tR\010tenantId\022%\n\016correlation_id\030" +
+      "\005 \001(\tR\rcorrelationId\022;\n\013occurred_at\030\006 \001(" +
+      "\0132\032.google.protobuf.TimestampR\noccurredA" +
+      "t:\205\001\222\262\031\200\001\n0udb.core.authn.events.v1.Weba" +
+      "uthnRegisteredEvent\022 udb.authn.webauthn." +
+      "registered.v1\032\ttenant_id\"\010standard*\rat_l" +
+      "east_once2\006stableB\373\001\n\034com.udb.core.authn" +
+      ".events.v1B\020AuthnEventsProtoP\001ZDgithub.c" +
+      "om/fahara02/udb/sdk/go/gen/udb/core/auth" +
+      "n/events/v1;eventsv1\242\002\004UCAE\252\002\030udb.core.A" +
+      "uthn.Events.V1\312\002\030Udb\\Core\\Authn\\Events\\V" +
+      "1\342\002$Udb\\GPBMetadata\\Core\\Authn\\Events\\V1" +
+      "\352\002\034Udb::Core::Authn::Events::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -289,6 +409,54 @@ public final class AuthnEventsProto extends com.google.protobuf.GeneratedFile {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_events_v1_PasswordResetByEmailRequestedEvent_descriptor,
         new java.lang.String[] { "EventId", "UserId", "EmailMasked", "OtpId", "IpAddress", "CorrelationId", "OccurredAt", "TenantId", });
+    internal_static_udb_core_authn_events_v1_LoginFailedEvent_descriptor =
+      getDescriptor().getMessageType(10);
+    internal_static_udb_core_authn_events_v1_LoginFailedEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_events_v1_LoginFailedEvent_descriptor,
+        new java.lang.String[] { "EventId", "UserId", "ContactAddress", "TenantId", "ProjectId", "ReasonCode", "AuthMethod", "IpAddress", "CorrelationId", "OccurredAt", });
+    internal_static_udb_core_authn_events_v1_MfaEnrolledEvent_descriptor =
+      getDescriptor().getMessageType(11);
+    internal_static_udb_core_authn_events_v1_MfaEnrolledEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_events_v1_MfaEnrolledEvent_descriptor,
+        new java.lang.String[] { "EventId", "UserId", "TenantId", "ProjectId", "FactorType", "CorrelationId", "OccurredAt", });
+    internal_static_udb_core_authn_events_v1_MfaChangedEvent_descriptor =
+      getDescriptor().getMessageType(12);
+    internal_static_udb_core_authn_events_v1_MfaChangedEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_events_v1_MfaChangedEvent_descriptor,
+        new java.lang.String[] { "EventId", "UserId", "TenantId", "ProjectId", "FactorType", "Change", "CorrelationId", "OccurredAt", });
+    internal_static_udb_core_authn_events_v1_RecoveryCodesGeneratedEvent_descriptor =
+      getDescriptor().getMessageType(13);
+    internal_static_udb_core_authn_events_v1_RecoveryCodesGeneratedEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_events_v1_RecoveryCodesGeneratedEvent_descriptor,
+        new java.lang.String[] { "EventId", "UserId", "TenantId", "CodeCount", "CorrelationId", "OccurredAt", });
+    internal_static_udb_core_authn_events_v1_RecoveryCodeUsedEvent_descriptor =
+      getDescriptor().getMessageType(14);
+    internal_static_udb_core_authn_events_v1_RecoveryCodeUsedEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_events_v1_RecoveryCodeUsedEvent_descriptor,
+        new java.lang.String[] { "EventId", "UserId", "TenantId", "RemainingCodes", "CorrelationId", "OccurredAt", });
+    internal_static_udb_core_authn_events_v1_SessionRefreshedEvent_descriptor =
+      getDescriptor().getMessageType(15);
+    internal_static_udb_core_authn_events_v1_SessionRefreshedEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_events_v1_SessionRefreshedEvent_descriptor,
+        new java.lang.String[] { "EventId", "UserId", "SessionPublicId", "TenantId", "ProjectId", "CorrelationId", "OccurredAt", });
+    internal_static_udb_core_authn_events_v1_PhoneVerifiedEvent_descriptor =
+      getDescriptor().getMessageType(16);
+    internal_static_udb_core_authn_events_v1_PhoneVerifiedEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_events_v1_PhoneVerifiedEvent_descriptor,
+        new java.lang.String[] { "EventId", "UserId", "PhoneMasked", "TenantId", "CorrelationId", "OccurredAt", });
+    internal_static_udb_core_authn_events_v1_WebauthnRegisteredEvent_descriptor =
+      getDescriptor().getMessageType(17);
+    internal_static_udb_core_authn_events_v1_WebauthnRegisteredEvent_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_authn_events_v1_WebauthnRegisteredEvent_descriptor,
+        new java.lang.String[] { "EventId", "UserId", "CredentialId", "TenantId", "CorrelationId", "OccurredAt", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.authn.entity.v1.EnumsProto.getDescriptor();

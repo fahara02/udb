@@ -152,7 +152,7 @@ var File_udb_core_asset_entity_v1_pipeline_instance_proto protoreflect.FileDescr
 
 const file_udb_core_asset_entity_v1_pipeline_instance_proto_rawDesc = "" +
 	"\n" +
-	"0udb/core/asset/entity/v1/pipeline_instance.proto\x12\x18udb.core.asset.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a$udb/core/asset/entity/v1/enums.proto\"\xd8\f\n" +
+	"0udb/core/asset/entity/v1/pipeline_instance.proto\x12\x18udb.core.asset.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a$udb/core/asset/entity/v1/enums.proto\"\xd1\f\n" +
 	"\x10PipelineInstance\x12O\n" +
 	"\vinstance_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vinstance_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
@@ -182,13 +182,13 @@ const file_udb_core_asset_entity_v1_pipeline_instance_proto_rawDesc = "" +
 	"\n" +
 	"audit_info\x18\v \x01(\v2\x1d.udb.core.common.v1.AuditInfoBD\x82\xb7\x18@\n" +
 	"\n" +
-	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo:\xd8\x04\xfa\xb6\x18\xb7\x03\n" +
+	"audit_info\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1aAudit trail stored as JSONx\x01R\tauditInfo:\xd1\x04\xfa\xb6\x18\xb7\x03\n" +
 	"\x12pipeline_instances\x12\tudb_asset\x18\x03 \x01*?Pipeline execution instances tracking per-asset processing runs8\x01@\x01b\xa3\x01\n" +
 	"#pipeline_instances_tenant_isolation\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01C\n" +
 	"(idx_pipeline_instance_correlation_unique\x12\x05BTREE\x18\x01Z\x0ecorrelation_id\x8a\x01.\n" +
 	"\x1bidx_pipeline_instance_asset\x12\x05BTREEZ\basset_id\xf2\x01 udb.asset.pipeline_instances.cdc\xfa\x01\n" +
-	"asset:read\x8a\xb2\x19\x97\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x11asset.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x80\x02\n" +
+	"asset:read\x8a\xb2\x19\x90\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11asset.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x80\x02\n" +
 	"\x1ccom.udb.core.asset.entity.v1B\x15PipelineInstanceProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/asset/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Asset.Entity.V1\xca\x02\x18Udb\\Core\\Asset\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Asset\\Entity\\V1\xea\x02\x1cUdb::Core::Asset::Entity::V1b\x06proto3"
 
 var (

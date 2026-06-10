@@ -166,4 +166,273 @@ public interface AccessDecisionAuditOrBuilder extends
    */
   com.google.protobuf.ByteString
       getTenantIdBytes();
+
+  /**
+   * <pre>
+   * ── Phase L3 task4: expanded compliance columns ───────────────────────────
+   * Stable decision id linking this audit row to the gRPC Decision returned to
+   * the caller and to the access-deny domain event.
+   * </pre>
+   *
+   * <code>string decision_id = 14 [json_name = "decisionId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The decisionId.
+   */
+  java.lang.String getDecisionId();
+  /**
+   * <pre>
+   * ── Phase L3 task4: expanded compliance columns ───────────────────────────
+   * Stable decision id linking this audit row to the gRPC Decision returned to
+   * the caller and to the access-deny domain event.
+   * </pre>
+   *
+   * <code>string decision_id = 14 [json_name = "decisionId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for decisionId.
+   */
+  com.google.protobuf.ByteString
+      getDecisionIdBytes();
+
+  /**
+   * <pre>
+   * Authz snapshot versions at decision time.
+   * </pre>
+   *
+   * <code>string policy_version = 15 [json_name = "policyVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The policyVersion.
+   */
+  java.lang.String getPolicyVersion();
+  /**
+   * <pre>
+   * Authz snapshot versions at decision time.
+   * </pre>
+   *
+   * <code>string policy_version = 15 [json_name = "policyVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for policyVersion.
+   */
+  com.google.protobuf.ByteString
+      getPolicyVersionBytes();
+
+  /**
+   * <code>string relationship_version = 16 [json_name = "relationshipVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The relationshipVersion.
+   */
+  java.lang.String getRelationshipVersion();
+  /**
+   * <code>string relationship_version = 16 [json_name = "relationshipVersion", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for relationshipVersion.
+   */
+  com.google.protobuf.ByteString
+      getRelationshipVersionBytes();
+
+  /**
+   * <pre>
+   * Declared purpose of the access (purpose-binding / GDPR).
+   * </pre>
+   *
+   * <code>string purpose = 17 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The purpose.
+   */
+  java.lang.String getPurpose();
+  /**
+   * <pre>
+   * Declared purpose of the access (purpose-binding / GDPR).
+   * </pre>
+   *
+   * <code>string purpose = 17 [json_name = "purpose", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for purpose.
+   */
+  com.google.protobuf.ByteString
+      getPurposeBytes();
+
+  /**
+   * <pre>
+   * Scopes required by the matched policy (comma-joined).
+   * </pre>
+   *
+   * <code>string scopes = 18 [json_name = "scopes", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The scopes.
+   */
+  java.lang.String getScopes();
+  /**
+   * <pre>
+   * Scopes required by the matched policy (comma-joined).
+   * </pre>
+   *
+   * <code>string scopes = 18 [json_name = "scopes", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for scopes.
+   */
+  com.google.protobuf.ByteString
+      getScopesBytes();
+
+  /**
+   * <pre>
+   * Every policy id that matched (Postgres text array), not just the first.
+   * </pre>
+   *
+   * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return A list containing the matchedPolicyIds.
+   */
+  java.util.List<java.lang.String>
+      getMatchedPolicyIdsList();
+  /**
+   * <pre>
+   * Every policy id that matched (Postgres text array), not just the first.
+   * </pre>
+   *
+   * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The count of matchedPolicyIds.
+   */
+  int getMatchedPolicyIdsCount();
+  /**
+   * <pre>
+   * Every policy id that matched (Postgres text array), not just the first.
+   * </pre>
+   *
+   * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @param index The index of the element to return.
+   * @return The matchedPolicyIds at the given index.
+   */
+  java.lang.String getMatchedPolicyIds(int index);
+  /**
+   * <pre>
+   * Every policy id that matched (Postgres text array), not just the first.
+   * </pre>
+   *
+   * <code>repeated string matched_policy_ids = 19 [json_name = "matchedPolicyIds", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the matchedPolicyIds at the given index.
+   */
+  com.google.protobuf.ByteString
+      getMatchedPolicyIdsBytes(int index);
+
+  /**
+   * <pre>
+   * Project domain (tenant lives on tenant_id).
+   * </pre>
+   *
+   * <code>string project_id = 20 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The projectId.
+   */
+  java.lang.String getProjectId();
+  /**
+   * <pre>
+   * Project domain (tenant lives on tenant_id).
+   * </pre>
+   *
+   * <code>string project_id = 20 [json_name = "projectId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for projectId.
+   */
+  com.google.protobuf.ByteString
+      getProjectIdBytes();
+
+  /**
+   * <pre>
+   * Actor kind: "user" | "service" | "external".
+   * </pre>
+   *
+   * <code>string actor_kind = 21 [json_name = "actorKind", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The actorKind.
+   */
+  java.lang.String getActorKind();
+  /**
+   * <pre>
+   * Actor kind: "user" | "service" | "external".
+   * </pre>
+   *
+   * <code>string actor_kind = 21 [json_name = "actorKind", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for actorKind.
+   */
+  com.google.protobuf.ByteString
+      getActorKindBytes();
+
+  /**
+   * <pre>
+   * Resource type/reference for the object being acted upon.
+   * </pre>
+   *
+   * <code>string resource_type = 22 [json_name = "resourceType", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The resourceType.
+   */
+  java.lang.String getResourceType();
+  /**
+   * <pre>
+   * Resource type/reference for the object being acted upon.
+   * </pre>
+   *
+   * <code>string resource_type = 22 [json_name = "resourceType", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for resourceType.
+   */
+  com.google.protobuf.ByteString
+      getResourceTypeBytes();
+
+  /**
+   * <pre>
+   * Distributed-trace correlation (OpenTelemetry).
+   * </pre>
+   *
+   * <code>string trace_id = 23 [json_name = "traceId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The traceId.
+   */
+  java.lang.String getTraceId();
+  /**
+   * <pre>
+   * Distributed-trace correlation (OpenTelemetry).
+   * </pre>
+   *
+   * <code>string trace_id = 23 [json_name = "traceId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for traceId.
+   */
+  com.google.protobuf.ByteString
+      getTraceIdBytes();
+
+  /**
+   * <code>string span_id = 24 [json_name = "spanId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The spanId.
+   */
+  java.lang.String getSpanId();
+  /**
+   * <code>string span_id = 24 [json_name = "spanId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for spanId.
+   */
+  com.google.protobuf.ByteString
+      getSpanIdBytes();
+
+  /**
+   * <pre>
+   * Hashed user-agent (never raw) from the request context.
+   * </pre>
+   *
+   * <code>string user_agent_hash = 25 [json_name = "userAgentHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The userAgentHash.
+   */
+  java.lang.String getUserAgentHash();
+  /**
+   * <pre>
+   * Hashed user-agent (never raw) from the request context.
+   * </pre>
+   *
+   * <code>string user_agent_hash = 25 [json_name = "userAgentHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for userAgentHash.
+   */
+  com.google.protobuf.ByteString
+      getUserAgentHashBytes();
+
+  /**
+   * <pre>
+   * Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+   * </pre>
+   *
+   * <code>string decision_input = 26 [json_name = "decisionInput", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The decisionInput.
+   */
+  java.lang.String getDecisionInput();
+  /**
+   * <pre>
+   * Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+   * </pre>
+   *
+   * <code>string decision_input = 26 [json_name = "decisionInput", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for decisionInput.
+   */
+  com.google.protobuf.ByteString
+      getDecisionInputBytes();
 }

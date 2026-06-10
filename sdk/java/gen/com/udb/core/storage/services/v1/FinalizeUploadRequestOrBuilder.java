@@ -83,7 +83,20 @@ public interface FinalizeUploadRequestOrBuilder extends
       getReferenceTypeBytes();
 
   /**
-   * <code>bool is_public = 7 [json_name = "isPublic"];</code>
+   * <pre>
+   * Proto3 explicit presence: absent leaves the stored visibility unchanged.
+   * </pre>
+   *
+   * <code>optional bool is_public = 7 [json_name = "isPublic"];</code>
+   * @return Whether the isPublic field is set.
+   */
+  boolean hasIsPublic();
+  /**
+   * <pre>
+   * Proto3 explicit presence: absent leaves the stored visibility unchanged.
+   * </pre>
+   *
+   * <code>optional bool is_public = 7 [json_name = "isPublic"];</code>
    * @return The isPublic.
    */
   boolean getIsPublic();

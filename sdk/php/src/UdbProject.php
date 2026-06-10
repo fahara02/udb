@@ -153,7 +153,7 @@ final class UdbProject
      * clients (and every accessor that funnels through {@see metadata()}) pick
      * up the new credentials on their next call.
      */
-    public function setCredentials(?string $bearerToken = null, ?string $apiKey = null): self
+    public function setCredentials(?string $bearerToken = null, ?string $apiKey = null): UdbProject
     {
         $updated = $this->metadata()->withCredentials($bearerToken, $apiKey);
 

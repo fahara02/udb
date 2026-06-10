@@ -26,11 +26,12 @@ var File_udb_core_notification_services_v1_notification_service_proto protorefle
 
 const file_udb_core_notification_services_v1_notification_service_proto_rawDesc = "" +
 	"\n" +
-	"<udb/core/notification/services/v1/notification_service.proto\x12!udb.core.notification.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a!udb/core/common/v1/security.proto\x1a,udb/core/notification/services/v1/core.proto2\xadB\n" +
-	"\x13NotificationService\x12\xd4\x05\n" +
-	"\x10SendNotification\x12:.udb.core.notification.services.v1.SendNotificationRequest\x1a;.udb.core.notification.services.v1.SendNotificationResponse\"\xc6\x04\xca\xf3\x18N\b\x02\x1a\"udb:notification:send-notification \x01J\x02\x01\x02j\x1dnotification.SendNotification\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x182\b\x01\x12\x11send_notification\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\xe2\xf3\x18\xde\x01\n" +
-	"\fnotification\x12\x17udb/native/notification\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"5udb.native.notification.send_notification.boilerplate*\x11send_notification2\x10udb_notification:\fnotificationJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18`\n" +
-	"\x1dnotification.SendNotification\x12\x13notification.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18M\n" +
+	"<udb/core/notification/services/v1/notification_service.proto\x12!udb.core.notification.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a!udb/core/common/v1/security.proto\x1a,udb/core/notification/services/v1/core.proto2\xf1B\n" +
+	"\x13NotificationService\x12\x98\x06\n" +
+	"\x10SendNotification\x12:.udb.core.notification.services.v1.SendNotificationRequest\x1a;.udb.core.notification.services.v1.SendNotificationResponse\"\x8a\x05\xca\xf3\x18N\b\x02\x1a\"udb:notification:send-notification \x01J\x02\x01\x02j\x1dnotification.SendNotification\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x182\b\x01\x12\x11send_notification\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\xe2\xf3\x18\xde\x01\n" +
+	"\fnotification\x12\x17udb/native/notification\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"5udb.native.notification.send_notification.boilerplate*\x11send_notification2\x10udb_notification:\fnotificationJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\xa3\x01\n" +
+	"\x1dnotification.SendNotification\x12\x13notification.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:A\n" +
+	"\x18udb.notification.sent.v1\x12\frecipient_id\x1a\rat_least_once\"\bstandard\xf2\xf3\x18M\n" +
 	"\fnotification\x1a\bpostgres\x1a\x05kafka2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/notifications\x12\xd1\x05\n" +
 	"\x0fGetNotification\x129.udb.core.notification.services.v1.GetNotificationRequest\x1a:.udb.core.notification.services.v1.GetNotificationResponse\"\xc6\x04\xca\xf3\x18L\b\x02\x1a!udb:notification:get-notification \x01J\x02\x01\x02j\x1cnotification.GetNotification\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x181\b\x01\x12\x10get_notification\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\xe2\xf3\x18\xdc\x01\n" +
 	"\fnotification\x12\x17udb/native/notification\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"4udb.native.notification.get_notification.boilerplate*\x10get_notification2\x10udb_notification:\fnotificationJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18_\n" +

@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/core/authz/events/v1/authz_events.proto.
  */
 export const file_udb_core_authz_events_v1_authz_events: GenFile = /*@__PURE__*/
-  fileDesc("Cit1ZGIvY29yZS9hdXRoei9ldmVudHMvdjEvYXV0aHpfZXZlbnRzLnByb3RvEhh1ZGIuY29yZS5hdXRoei5ldmVudHMudjEi/wIKEVJvbGVBc3NpZ25lZEV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEhQKDHVzZXJfcm9sZV9pZBgCIAEoCRIPCgd1c2VyX2lkGAMgASgJEg8KB3JvbGVfaWQYBCABKAkSEQoJcm9sZV9jb2RlGAUgASgJEhEKCXRlbmFudF9pZBgGIAEoCRITCgthc3NpZ25lZF9ieRgHIAEoCRIvCgtvY2N1cnJlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDgoGZG9tYWluGAkgASgJEhIKCnByb2plY3RfaWQYCiABKAkSFgoOYWNjZXNzX3N1cmZhY2UYCyABKAk6eJKyGXQKKnVkYi5jb3JlLmF1dGh6LmV2ZW50cy52MS5Sb2xlQXNzaWduZWRFdmVudBIadWRiLmF1dGh6LnJvbGUuYXNzaWduZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZSK+AgoQUm9sZVJldm9rZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIUCgx1c2VyX3JvbGVfaWQYAiABKAkSDwoHdXNlcl9pZBgDIAEoCRIRCglyb2xlX2NvZGUYBCABKAkSEQoJdGVuYW50X2lkGAUgASgJEhIKCnJldm9rZWRfYnkYBiABKAkSDgoGcmVhc29uGAcgASgJEi8KC29jY3VycmVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDp2krIZcgopdWRiLmNvcmUuYXV0aHouZXZlbnRzLnYxLlJvbGVSZXZva2VkRXZlbnQSGXVkYi5hdXRoei5yb2xlLnJldm9rZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZSKrAgoRQWNjZXNzRGVuaWVkRXZlbnQSEAoIZXZlbnRfaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCRIRCgl0ZW5hbnRfaWQYAyABKAkSEAoIcmVzb3VyY2UYBCABKAkSDgoGYWN0aW9uGAUgASgJEhMKC2RlbnlfcmVhc29uGAYgASgJEi8KC29jY3VycmVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDp4krIZdAoqdWRiLmNvcmUuYXV0aHouZXZlbnRzLnYxLkFjY2Vzc0RlbmllZEV2ZW50Ehp1ZGIuYXV0aHouYWNjZXNzLmRlbmllZC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIpgCChBSb2xlQ3JlYXRlZEV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEg8KB3JvbGVfaWQYAiABKAkSEQoJcm9sZV9jb2RlGAMgASgJEhEKCXRlbmFudF9pZBgEIAEoCRISCgpjcmVhdGVkX2J5GAUgASgJEi8KC29jY3VycmVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDp2krIZcgopdWRiLmNvcmUuYXV0aHouZXZlbnRzLnYxLlJvbGVDcmVhdGVkRXZlbnQSGXVkYi5hdXRoei5yb2xlLmNyZWF0ZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZSLQAgoQUm9sZVVwZGF0ZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIPCgdyb2xlX2lkGAIgASgJEhEKCXJvbGVfY29kZRgDIAEoCRIRCgl0ZW5hbnRfaWQYBCABKAkSEgoKdXBkYXRlZF9ieRgFIAEoCRIZChFhZGRlZF9wZXJtaXNzaW9ucxgGIAMoCRIbChNyZW1vdmVkX3Blcm1pc3Npb25zGAcgAygJEi8KC29jY3VycmVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDp2krIZcgopdWRiLmNvcmUuYXV0aHouZXZlbnRzLnYxLlJvbGVVcGRhdGVkRXZlbnQSGXVkYi5hdXRoei5yb2xlLnVwZGF0ZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZSLVAgoQUm9sZVJlbW92ZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIUCgx1c2VyX3JvbGVfaWQYAiABKAkSDwoHdXNlcl9pZBgDIAEoCRIPCgdyb2xlX2lkGAQgASgJEhEKCXJvbGVfY29kZRgFIAEoCRIRCgl0ZW5hbnRfaWQYBiABKAkSEgoKcmVtb3ZlZF9ieRgHIAEoCRIOCgZyZWFzb24YCCABKAkSLwoLb2NjdXJyZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wOnySshl4Cil1ZGIuY29yZS5hdXRoei5ldmVudHMudjEuUm9sZVJlbW92ZWRFdmVudBIfdWRiLmF1dGh6LnJvbGVfcmVtb3ZlZF9ldmVudC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIowDChlBY2Nlc3NTdXJmYWNlVXBkYXRlZEV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEhQKDHByaW5jaXBhbF9pZBgCIAEoCRIaChJvbGRfYWNjZXNzX3N1cmZhY2UYAyABKAkSGgoSbmV3X2FjY2Vzc19zdXJmYWNlGAQgASgJEhEKCXRlbmFudF9pZBgFIAEoCRISCgpwcm9qZWN0X2lkGAYgASgJEhIKCnVwZGF0ZWRfYnkYByABKAkSFgoOY29ycmVsYXRpb25faWQYCCABKAkSLwoLb2NjdXJyZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wOooBkrIZhQEKMnVkYi5jb3JlLmF1dGh6LmV2ZW50cy52MS5BY2Nlc3NTdXJmYWNlVXBkYXRlZEV2ZW50EiN1ZGIuYXV0aHouYWNjZXNzLnN1cmZhY2UudXBkYXRlZC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlQvsBChxjb20udWRiLmNvcmUuYXV0aHouZXZlbnRzLnYxQhBBdXRoekV2ZW50c1Byb3RvUAFaRGdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvYXV0aHovZXZlbnRzL3YxO2V2ZW50c3YxogIEVUNBRaoCGHVkYi5jb3JlLkF1dGh6LkV2ZW50cy5WMcoCGFVkYlxDb3JlXEF1dGh6XEV2ZW50c1xWMeICJFVkYlxHUEJNZXRhZGF0YVxDb3JlXEF1dGh6XEV2ZW50c1xWMeoCHFVkYjo6Q29yZTo6QXV0aHo6OkV2ZW50czo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_udb_core_common_v1_security]);
+  fileDesc("Cit1ZGIvY29yZS9hdXRoei9ldmVudHMvdjEvYXV0aHpfZXZlbnRzLnByb3RvEhh1ZGIuY29yZS5hdXRoei5ldmVudHMudjEi/wIKEVJvbGVBc3NpZ25lZEV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEhQKDHVzZXJfcm9sZV9pZBgCIAEoCRIPCgd1c2VyX2lkGAMgASgJEg8KB3JvbGVfaWQYBCABKAkSEQoJcm9sZV9jb2RlGAUgASgJEhEKCXRlbmFudF9pZBgGIAEoCRITCgthc3NpZ25lZF9ieRgHIAEoCRIvCgtvY2N1cnJlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDgoGZG9tYWluGAkgASgJEhIKCnByb2plY3RfaWQYCiABKAkSFgoOYWNjZXNzX3N1cmZhY2UYCyABKAk6eJKyGXQKKnVkYi5jb3JlLmF1dGh6LmV2ZW50cy52MS5Sb2xlQXNzaWduZWRFdmVudBIadWRiLmF1dGh6LnJvbGUuYXNzaWduZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZSK+AgoQUm9sZVJldm9rZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIUCgx1c2VyX3JvbGVfaWQYAiABKAkSDwoHdXNlcl9pZBgDIAEoCRIRCglyb2xlX2NvZGUYBCABKAkSEQoJdGVuYW50X2lkGAUgASgJEhIKCnJldm9rZWRfYnkYBiABKAkSDgoGcmVhc29uGAcgASgJEi8KC29jY3VycmVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDp2krIZcgopdWRiLmNvcmUuYXV0aHouZXZlbnRzLnYxLlJvbGVSZXZva2VkRXZlbnQSGXVkYi5hdXRoei5yb2xlLnJldm9rZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZSKrAgoRQWNjZXNzRGVuaWVkRXZlbnQSEAoIZXZlbnRfaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCRIRCgl0ZW5hbnRfaWQYAyABKAkSEAoIcmVzb3VyY2UYBCABKAkSDgoGYWN0aW9uGAUgASgJEhMKC2RlbnlfcmVhc29uGAYgASgJEi8KC29jY3VycmVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDp4krIZdAoqdWRiLmNvcmUuYXV0aHouZXZlbnRzLnYxLkFjY2Vzc0RlbmllZEV2ZW50Ehp1ZGIuYXV0aHouYWNjZXNzLmRlbmllZC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIpgCChBSb2xlQ3JlYXRlZEV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEg8KB3JvbGVfaWQYAiABKAkSEQoJcm9sZV9jb2RlGAMgASgJEhEKCXRlbmFudF9pZBgEIAEoCRISCgpjcmVhdGVkX2J5GAUgASgJEi8KC29jY3VycmVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDp2krIZcgopdWRiLmNvcmUuYXV0aHouZXZlbnRzLnYxLlJvbGVDcmVhdGVkRXZlbnQSGXVkYi5hdXRoei5yb2xlLmNyZWF0ZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZSLQAgoQUm9sZVVwZGF0ZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIPCgdyb2xlX2lkGAIgASgJEhEKCXJvbGVfY29kZRgDIAEoCRIRCgl0ZW5hbnRfaWQYBCABKAkSEgoKdXBkYXRlZF9ieRgFIAEoCRIZChFhZGRlZF9wZXJtaXNzaW9ucxgGIAMoCRIbChNyZW1vdmVkX3Blcm1pc3Npb25zGAcgAygJEi8KC29jY3VycmVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDp2krIZcgopdWRiLmNvcmUuYXV0aHouZXZlbnRzLnYxLlJvbGVVcGRhdGVkRXZlbnQSGXVkYi5hdXRoei5yb2xlLnVwZGF0ZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZSLVAgoQUm9sZVJlbW92ZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIUCgx1c2VyX3JvbGVfaWQYAiABKAkSDwoHdXNlcl9pZBgDIAEoCRIPCgdyb2xlX2lkGAQgASgJEhEKCXJvbGVfY29kZRgFIAEoCRIRCgl0ZW5hbnRfaWQYBiABKAkSEgoKcmVtb3ZlZF9ieRgHIAEoCRIOCgZyZWFzb24YCCABKAkSLwoLb2NjdXJyZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wOnySshl4Cil1ZGIuY29yZS5hdXRoei5ldmVudHMudjEuUm9sZVJlbW92ZWRFdmVudBIfdWRiLmF1dGh6LnJvbGVfcmVtb3ZlZF9ldmVudC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIowDChlBY2Nlc3NTdXJmYWNlVXBkYXRlZEV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEhQKDHByaW5jaXBhbF9pZBgCIAEoCRIaChJvbGRfYWNjZXNzX3N1cmZhY2UYAyABKAkSGgoSbmV3X2FjY2Vzc19zdXJmYWNlGAQgASgJEhEKCXRlbmFudF9pZBgFIAEoCRISCgpwcm9qZWN0X2lkGAYgASgJEhIKCnVwZGF0ZWRfYnkYByABKAkSFgoOY29ycmVsYXRpb25faWQYCCABKAkSLwoLb2NjdXJyZWRfYXQYCSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wOooBkrIZhQEKMnVkYi5jb3JlLmF1dGh6LmV2ZW50cy52MS5BY2Nlc3NTdXJmYWNlVXBkYXRlZEV2ZW50EiN1ZGIuYXV0aHouYWNjZXNzLnN1cmZhY2UudXBkYXRlZC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIvcCCh1SZWxhdGlvbnNoaXBUdXBsZUNoYW5nZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIPCgdzdWJqZWN0GAIgASgJEhAKCHJlbGF0aW9uGAMgASgJEg4KBm9iamVjdBgEIAEoCRIRCgl0ZW5hbnRfaWQYBSABKAkSEgoKcHJvamVjdF9pZBgGIAEoCRIMCgR2ZXJiGAcgASgJEhYKDmNvcnJlbGF0aW9uX2lkGAggASgJEi8KC29jY3VycmVkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDqSAZKyGY0BCjZ1ZGIuY29yZS5hdXRoei5ldmVudHMudjEuUmVsYXRpb25zaGlwVHVwbGVDaGFuZ2VkRXZlbnQSJ3VkYi5hdXRoei5yZWxhdGlvbnNoaXAudHVwbGUuY2hhbmdlZC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIvoCChxOYXRpdmVBY2Nlc3NHcmFudElzc3VlZEV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEhQKDHByaW5jaXBhbF9pZBgCIAEoCRIRCgl0ZW5hbnRfaWQYAyABKAkSEgoKcHJvamVjdF9pZBgEIAEoCRIWCg5wb2xpY3lfdmVyc2lvbhgFIAEoCRIcChRyZWxhdGlvbnNoaXBfdmVyc2lvbhgGIAEoCRIWCg5jb3JyZWxhdGlvbl9pZBgHIAEoCRIvCgtvY2N1cnJlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXA6iwGSshmGAQo1dWRiLmNvcmUuYXV0aHouZXZlbnRzLnYxLk5hdGl2ZUFjY2Vzc0dyYW50SXNzdWVkRXZlbnQSIXVkYi5hdXRoei5uYXRpdmUuYWNjZXNzLmlzc3VlZC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlItkCChxOYXRpdmVBY2Nlc3NHcmFudERlbmllZEV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEhQKDHByaW5jaXBhbF9pZBgCIAEoCRIRCgl0ZW5hbnRfaWQYAyABKAkSEgoKcHJvamVjdF9pZBgEIAEoCRITCgtyZWFzb25fY29kZRgFIAEoCRIWCg5jb3JyZWxhdGlvbl9pZBgGIAEoCRIvCgtvY2N1cnJlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXA6iwGSshmGAQo1dWRiLmNvcmUuYXV0aHouZXZlbnRzLnYxLk5hdGl2ZUFjY2Vzc0dyYW50RGVuaWVkRXZlbnQSIXVkYi5hdXRoei5uYXRpdmUuYWNjZXNzLmRlbmllZC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlItwCChdQb2xpY3lCdW5kbGVJc3N1ZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIRCgl0ZW5hbnRfaWQYAiABKAkSEgoKcHJvamVjdF9pZBgDIAEoCRIXCg9wb2xpY3lfcmV2aXNpb24YBCABKAMSHQoVcmVsYXRpb25zaGlwX3JldmlzaW9uGAUgASgDEhYKDmNvcnJlbGF0aW9uX2lkGAYgASgJEi8KC29jY3VycmVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDqGAZKyGYEBCjB1ZGIuY29yZS5hdXRoei5ldmVudHMudjEuUG9saWN5QnVuZGxlSXNzdWVkRXZlbnQSIXVkYi5hdXRoei5wb2xpY3kuYnVuZGxlLmlzc3VlZC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlItYCChhQb2xpY3lCdW5kbGVSZXZva2VkRXZlbnQSEAoIZXZlbnRfaWQYASABKAkSEQoJdGVuYW50X2lkGAIgASgJEhIKCnByb2plY3RfaWQYAyABKAkSHQoVYmVsb3dfcG9saWN5X3JldmlzaW9uGAQgASgDEg4KBnJlYXNvbhgFIAEoCRIWCg5jb3JyZWxhdGlvbl9pZBgGIAEoCRIvCgtvY2N1cnJlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXA6iAGSshmDAQoxdWRiLmNvcmUuYXV0aHouZXZlbnRzLnYxLlBvbGljeUJ1bmRsZVJldm9rZWRFdmVudBIidWRiLmF1dGh6LnBvbGljeS5idW5kbGUucmV2b2tlZC52MRoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxlIt0CChRQb2xpY3lTaW11bGF0ZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIRCgl0ZW5hbnRfaWQYAiABKAkSEgoKcHJvamVjdF9pZBgDIAEoCRIZChFwb2xpY3lfdmVyc2lvbl9pZBgEIAEoCRIUCgxzaW11bGF0ZWRfYnkYBSABKAkSEgoKZGlmZl9jb3VudBgGIAEoBRIWCg5jb3JyZWxhdGlvbl9pZBgHIAEoCRIvCgtvY2N1cnJlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXA6fpKyGXoKLXVkYi5jb3JlLmF1dGh6LmV2ZW50cy52MS5Qb2xpY3lTaW11bGF0ZWRFdmVudBIddWRiLmF1dGh6LnBvbGljeS5zaW11bGF0ZWQudjEaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZUL7AQocY29tLnVkYi5jb3JlLmF1dGh6LmV2ZW50cy52MUIQQXV0aHpFdmVudHNQcm90b1ABWkRnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2F1dGh6L2V2ZW50cy92MTtldmVudHN2MaICBFVDQUWqAhh1ZGIuY29yZS5BdXRoei5FdmVudHMuVjHKAhhVZGJcQ29yZVxBdXRoelxFdmVudHNcVjHiAiRVZGJcR1BCTWV0YWRhdGFcQ29yZVxBdXRoelxFdmVudHNcVjHqAhxVZGI6OkNvcmU6OkF1dGh6OjpFdmVudHM6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_udb_core_common_v1_security]);
 
 /**
  * Kafka topic: udb.authz.role.assigned.v1
@@ -402,4 +402,320 @@ export type AccessSurfaceUpdatedEvent = Message<"udb.core.authz.events.v1.Access
  */
 export const AccessSurfaceUpdatedEventSchema: GenMessage<AccessSurfaceUpdatedEvent> = /*@__PURE__*/
   messageDesc(file_udb_core_authz_events_v1_authz_events, 6);
+
+/**
+ * Kafka topic: udb.authz.relationship.tuple.changed.v1
+ *
+ * @generated from message udb.core.authz.events.v1.RelationshipTupleChangedEvent
+ */
+export type RelationshipTupleChangedEvent = Message<"udb.core.authz.events.v1.RelationshipTupleChangedEvent"> & {
+  /**
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * @generated from field: string subject = 2;
+   */
+  subject: string;
+
+  /**
+   * @generated from field: string relation = 3;
+   */
+  relation: string;
+
+  /**
+   * @generated from field: string object = 4;
+   */
+  object: string;
+
+  /**
+   * @generated from field: string tenant_id = 5;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string project_id = 6;
+   */
+  projectId: string;
+
+  /**
+   * upsert, delete
+   *
+   * @generated from field: string verb = 7;
+   */
+  verb: string;
+
+  /**
+   * @generated from field: string correlation_id = 8;
+   */
+  correlationId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 9;
+   */
+  occurredAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message udb.core.authz.events.v1.RelationshipTupleChangedEvent.
+ * Use `create(RelationshipTupleChangedEventSchema)` to create a new message.
+ */
+export const RelationshipTupleChangedEventSchema: GenMessage<RelationshipTupleChangedEvent> = /*@__PURE__*/
+  messageDesc(file_udb_core_authz_events_v1_authz_events, 7);
+
+/**
+ * Kafka topic: udb.authz.native.access.issued.v1
+ *
+ * @generated from message udb.core.authz.events.v1.NativeAccessGrantIssuedEvent
+ */
+export type NativeAccessGrantIssuedEvent = Message<"udb.core.authz.events.v1.NativeAccessGrantIssuedEvent"> & {
+  /**
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * @generated from field: string principal_id = 2;
+   */
+  principalId: string;
+
+  /**
+   * @generated from field: string tenant_id = 3;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string project_id = 4;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string policy_version = 5;
+   */
+  policyVersion: string;
+
+  /**
+   * @generated from field: string relationship_version = 6;
+   */
+  relationshipVersion: string;
+
+  /**
+   * @generated from field: string correlation_id = 7;
+   */
+  correlationId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 8;
+   */
+  occurredAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message udb.core.authz.events.v1.NativeAccessGrantIssuedEvent.
+ * Use `create(NativeAccessGrantIssuedEventSchema)` to create a new message.
+ */
+export const NativeAccessGrantIssuedEventSchema: GenMessage<NativeAccessGrantIssuedEvent> = /*@__PURE__*/
+  messageDesc(file_udb_core_authz_events_v1_authz_events, 8);
+
+/**
+ * Kafka topic: udb.authz.native.access.denied.v1
+ *
+ * @generated from message udb.core.authz.events.v1.NativeAccessGrantDeniedEvent
+ */
+export type NativeAccessGrantDeniedEvent = Message<"udb.core.authz.events.v1.NativeAccessGrantDeniedEvent"> & {
+  /**
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * @generated from field: string principal_id = 2;
+   */
+  principalId: string;
+
+  /**
+   * @generated from field: string tenant_id = 3;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string project_id = 4;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string reason_code = 5;
+   */
+  reasonCode: string;
+
+  /**
+   * @generated from field: string correlation_id = 6;
+   */
+  correlationId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 7;
+   */
+  occurredAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message udb.core.authz.events.v1.NativeAccessGrantDeniedEvent.
+ * Use `create(NativeAccessGrantDeniedEventSchema)` to create a new message.
+ */
+export const NativeAccessGrantDeniedEventSchema: GenMessage<NativeAccessGrantDeniedEvent> = /*@__PURE__*/
+  messageDesc(file_udb_core_authz_events_v1_authz_events, 9);
+
+/**
+ * Kafka topic: udb.authz.policy.bundle.issued.v1
+ *
+ * @generated from message udb.core.authz.events.v1.PolicyBundleIssuedEvent
+ */
+export type PolicyBundleIssuedEvent = Message<"udb.core.authz.events.v1.PolicyBundleIssuedEvent"> & {
+  /**
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * @generated from field: string tenant_id = 2;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string project_id = 3;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: int64 policy_revision = 4;
+   */
+  policyRevision: bigint;
+
+  /**
+   * @generated from field: int64 relationship_revision = 5;
+   */
+  relationshipRevision: bigint;
+
+  /**
+   * @generated from field: string correlation_id = 6;
+   */
+  correlationId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 7;
+   */
+  occurredAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message udb.core.authz.events.v1.PolicyBundleIssuedEvent.
+ * Use `create(PolicyBundleIssuedEventSchema)` to create a new message.
+ */
+export const PolicyBundleIssuedEventSchema: GenMessage<PolicyBundleIssuedEvent> = /*@__PURE__*/
+  messageDesc(file_udb_core_authz_events_v1_authz_events, 10);
+
+/**
+ * Kafka topic: udb.authz.policy.bundle.revoked.v1
+ *
+ * @generated from message udb.core.authz.events.v1.PolicyBundleRevokedEvent
+ */
+export type PolicyBundleRevokedEvent = Message<"udb.core.authz.events.v1.PolicyBundleRevokedEvent"> & {
+  /**
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * @generated from field: string tenant_id = 2;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string project_id = 3;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: int64 below_policy_revision = 4;
+   */
+  belowPolicyRevision: bigint;
+
+  /**
+   * @generated from field: string reason = 5;
+   */
+  reason: string;
+
+  /**
+   * @generated from field: string correlation_id = 6;
+   */
+  correlationId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 7;
+   */
+  occurredAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message udb.core.authz.events.v1.PolicyBundleRevokedEvent.
+ * Use `create(PolicyBundleRevokedEventSchema)` to create a new message.
+ */
+export const PolicyBundleRevokedEventSchema: GenMessage<PolicyBundleRevokedEvent> = /*@__PURE__*/
+  messageDesc(file_udb_core_authz_events_v1_authz_events, 11);
+
+/**
+ * Kafka topic: udb.authz.policy.simulated.v1
+ *
+ * @generated from message udb.core.authz.events.v1.PolicySimulatedEvent
+ */
+export type PolicySimulatedEvent = Message<"udb.core.authz.events.v1.PolicySimulatedEvent"> & {
+  /**
+   * @generated from field: string event_id = 1;
+   */
+  eventId: string;
+
+  /**
+   * @generated from field: string tenant_id = 2;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string project_id = 3;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string policy_version_id = 4;
+   */
+  policyVersionId: string;
+
+  /**
+   * @generated from field: string simulated_by = 5;
+   */
+  simulatedBy: string;
+
+  /**
+   * @generated from field: int32 diff_count = 6;
+   */
+  diffCount: number;
+
+  /**
+   * @generated from field: string correlation_id = 7;
+   */
+  correlationId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp occurred_at = 8;
+   */
+  occurredAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message udb.core.authz.events.v1.PolicySimulatedEvent.
+ * Use `create(PolicySimulatedEventSchema)` to create a new message.
+ */
+export const PolicySimulatedEventSchema: GenMessage<PolicySimulatedEvent> = /*@__PURE__*/
+  messageDesc(file_udb_core_authz_events_v1_authz_events, 12);
 

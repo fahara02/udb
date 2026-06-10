@@ -35,9 +35,11 @@ type RecoveryCode struct {
 	RecoveryCodeId string                 `protobuf:"bytes,1,opt,name=recovery_code_id,json=recoveryCodeId,proto3" json:"recovery_code_id,omitempty"`
 	UserId         string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// Keyed digest of the recovery code; never stored in plaintext.
-	CodeHash      string                 `protobuf:"bytes,3,opt,name=code_hash,json=codeHash,proto3" json:"code_hash,omitempty"`
-	UsedAt        *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=used_at,json=usedAt,proto3" json:"used_at,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CodeHash  string                 `protobuf:"bytes,3,opt,name=code_hash,json=codeHash,proto3" json:"code_hash,omitempty"`
+	UsedAt    *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=used_at,json=usedAt,proto3" json:"used_at,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// Nullable so existing inserts can't break; RLS policy tolerates NULL.
+	TenantId      string `protobuf:"bytes,6,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -107,28 +109,39 @@ func (x *RecoveryCode) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *RecoveryCode) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
 var File_udb_core_authn_entity_v1_recovery_code_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_recovery_code_proto_rawDesc = "" +
 	"\n" +
-	",udb/core/authn/entity/v1/recovery_code.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xba\x06\n" +
+	",udb/core/authn/entity/v1/recovery_code.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xae\t\n" +
 	"\fRecoveryCode\x12]\n" +
 	"\x10recovery_code_id\x18\x01 \x01(\tB3\x82\xb7\x18/\n" +
 	"\x10recovery_code_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x0erecoveryCodeId\x12\xb4\x01\n" +
 	"\auser_id\x18\x02 \x01(\tB\x9a\x01\x82\xb7\x18\x95\x01\n" +
 	"\auser_id\x12\x04UUID\x18\x01J8\n" +
 	"\x05users\x12\auser_id\x1a\tudb_authn \x032\x19fk_recovery_codes_user_idR)\n" +
-	"\x17idx_recovery_codes_user\x12\x05BTREEZ\auser_idZ\x1dFK to udb_authn.users.user_idR\x06userId\x12d\n" +
-	"\tcode_hash\x18\x03 \x01(\tBG\x82\xb7\x18C\n" +
-	"\tcode_hash\x12\fVARCHAR(128)\x18\x01Z&Keyed HMAC digest of the recovery codeR\bcodeHash\x12\x83\x01\n" +
+	"\x17idx_recovery_codes_user\x12\x05BTREEZ\auser_idZ\x1dFK to udb_authn.users.user_idR\x06userId\x12\x8b\x01\n" +
+	"\tcode_hash\x18\x03 \x01(\tBn\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18C\n" +
+	"\tcode_hash\x12\fVARCHAR(128)\x18\x01Z&Keyed HMAC digest of the recovery code\x8a\xb7\x18\x1b\b\x04\x10\x01\x18\x032\vhmac-sha256J\x06tenantR\bcodeHash\x12\x83\x01\n" +
 	"\aused_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampBN\x82\xb7\x18J\n" +
 	"\aused_at\x12\vTIMESTAMPTZZ2Timestamp the code was consumed; NULL while unusedR\x06usedAt\x12q\n" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB6\x82\xb7\x182\n" +
 	"\n" +
-	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt:\xb4\x01\xfa\xb6\x18V\n" +
-	"\x0erecovery_codes\x12\tudb_authn\x18\x06 \x01*+Hashed single-use MFA recovery/backup codes\xea\x01\aprimary\x8a\xb2\x19V\n" +
-	"\x06global2\vsoft_delete:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfc\x01\n" +
+	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt\x12\x96\x01\n" +
+	"\ttenant_id\x18\x06 \x01(\tBy\x82\xb7\x18u\n" +
+	"\ttenant_id\x12\fVARCHAR(120)R%\n" +
+	"\x1cidx_recovery_codes_tenant_id\x12\x05BTREEZ3Tenant boundary (denormalized from the owning user)R\btenantId:\xe7\x02\xfa\xb6\x18\xcd\x01\n" +
+	"\x0erecovery_codes\x12\tudb_authn\x18\x06 \x01*+Hashed single-use MFA recovery/backup codes@\x01bs\n" +
+	"\x10tenant_isolation\x1a](tenant_id IS NULL OR tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xea\x01\aprimary\x8a\xb2\x19\x90\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfc\x01\n" +
 	"\x1ccom.udb.core.authn.entity.v1B\x11RecoveryCodeProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (

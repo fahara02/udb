@@ -95,7 +95,20 @@ public interface RegisterUploadRequestOrBuilder extends
       getReferenceTypeBytes();
 
   /**
-   * <code>bool is_public = 8 [json_name = "isPublic"];</code>
+   * <pre>
+   * Optional initial visibility; absent defaults to private (false).
+   * </pre>
+   *
+   * <code>optional bool is_public = 8 [json_name = "isPublic"];</code>
+   * @return Whether the isPublic field is set.
+   */
+  boolean hasIsPublic();
+  /**
+   * <pre>
+   * Optional initial visibility; absent defaults to private (false).
+   * </pre>
+   *
+   * <code>optional bool is_public = 8 [json_name = "isPublic"];</code>
    * @return The isPublic.
    */
   boolean getIsPublic();

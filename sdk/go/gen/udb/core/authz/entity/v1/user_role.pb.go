@@ -153,7 +153,7 @@ var File_udb_core_authz_entity_v1_user_role_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_entity_v1_user_role_proto_rawDesc = "" +
 	"\n" +
-	"(udb/core/authz/entity/v1/user_role.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xc3\x0f\n" +
+	"(udb/core/authz/entity/v1/user_role.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xbc\x0f\n" +
 	"\bUserRole\x12Q\n" +
 	"\fuser_role_id\x18\x01 \x01(\tB/\x82\xb7\x18+\n" +
 	"\fuser_role_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
@@ -194,7 +194,7 @@ const file_udb_core_authz_entity_v1_user_role_proto_rawDesc = "" +
 	"created_by\x12\fVARCHAR(120)Z\"Identity that created this record.R\tcreatedBy\x12Y\n" +
 	"\ttenant_id\x18\v \x01(\tB<\x82\xb7\x188\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R\x1c\n" +
-	"\x13idx_userrole_tenant\x12\x05BTREER\btenantId:\xcc\x05\xfa\xb6\x18\xab\x04\n" +
+	"\x13idx_userrole_tenant\x12\x05BTREER\btenantId:\xc5\x05\xfa\xb6\x18\xab\x04\n" +
 	"\n" +
 	"user_roles\x12\tudb_authz\x18\x03 \x01*/Role assignments scoped by authorization domain8\x01@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01C\n" +
@@ -208,8 +208,8 @@ const file_udb_core_authz_entity_v1_user_role_proto_rawDesc = "" +
 	"  NEW.updated_at = CURRENT_TIMESTAMP;\n" +
 	"  RETURN NEW;\n" +
 	"END;\n" +
-	"$$;\x8a\xb2\x19\x97\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x11authz.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf8\x01\n" +
+	"$$;\x8a\xb2\x19\x90\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authz.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf8\x01\n" +
 	"\x1ccom.udb.core.authz.entity.v1B\rUserRoleProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
 
 var (

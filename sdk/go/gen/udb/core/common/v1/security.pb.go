@@ -215,21 +215,25 @@ const (
 	SecretClassification_SECRET_CLASSIFICATION_IDENTITY    SecretClassification = 7
 	SecretClassification_SECRET_CLASSIFICATION_PII         SecretClassification = 8
 	SecretClassification_SECRET_CLASSIFICATION_OPERATIONAL SecretClassification = 9
+	// Asymmetric private key material (e.g. SAML SP signing key). Referenced by the
+	// idp proto's db_column_security; added here to keep the contract compiling.
+	SecretClassification_SECRET_CLASSIFICATION_PRIVATE_KEY SecretClassification = 10
 )
 
 // Enum value maps for SecretClassification.
 var (
 	SecretClassification_name = map[int32]string{
-		0: "SECRET_CLASSIFICATION_UNSPECIFIED",
-		1: "SECRET_CLASSIFICATION_PUBLIC",
-		2: "SECRET_CLASSIFICATION_INTERNAL",
-		3: "SECRET_CLASSIFICATION_CREDENTIAL",
-		4: "SECRET_CLASSIFICATION_TOKEN",
-		5: "SECRET_CLASSIFICATION_KEY",
-		6: "SECRET_CLASSIFICATION_BIOMETRIC",
-		7: "SECRET_CLASSIFICATION_IDENTITY",
-		8: "SECRET_CLASSIFICATION_PII",
-		9: "SECRET_CLASSIFICATION_OPERATIONAL",
+		0:  "SECRET_CLASSIFICATION_UNSPECIFIED",
+		1:  "SECRET_CLASSIFICATION_PUBLIC",
+		2:  "SECRET_CLASSIFICATION_INTERNAL",
+		3:  "SECRET_CLASSIFICATION_CREDENTIAL",
+		4:  "SECRET_CLASSIFICATION_TOKEN",
+		5:  "SECRET_CLASSIFICATION_KEY",
+		6:  "SECRET_CLASSIFICATION_BIOMETRIC",
+		7:  "SECRET_CLASSIFICATION_IDENTITY",
+		8:  "SECRET_CLASSIFICATION_PII",
+		9:  "SECRET_CLASSIFICATION_OPERATIONAL",
+		10: "SECRET_CLASSIFICATION_PRIVATE_KEY",
 	}
 	SecretClassification_value = map[string]int32{
 		"SECRET_CLASSIFICATION_UNSPECIFIED": 0,
@@ -242,6 +246,7 @@ var (
 		"SECRET_CLASSIFICATION_IDENTITY":    7,
 		"SECRET_CLASSIFICATION_PII":         8,
 		"SECRET_CLASSIFICATION_OPERATIONAL": 9,
+		"SECRET_CLASSIFICATION_PRIVATE_KEY": 10,
 	}
 )
 
@@ -775,8 +780,13 @@ type NativeServiceOptions struct {
 	CliScaffoldGroup            string                 `protobuf:"bytes,16,opt,name=cli_scaffold_group,json=cliScaffoldGroup,proto3" json:"cli_scaffold_group,omitempty"`
 	HealthCheckRef              string                 `protobuf:"bytes,17,opt,name=health_check_ref,json=healthCheckRef,proto3" json:"health_check_ref,omitempty"`
 	CapabilityRef               string                 `protobuf:"bytes,18,opt,name=capability_ref,json=capabilityRef,proto3" json:"capability_ref,omitempty"`
-	unknownFields               protoimpl.UnknownFields
-	sizeCache                   protoimpl.SizeCache
+	// Whether this service owns background workers (e.g. storage orphan-reaper,
+	// webrtc TURN/SFU maintenance loops) that run beyond request handling. Makes
+	// worker ownership an explicit part of the contract instead of implicit runtime
+	// behavior; the native registry surfaces it on the capability report.
+	OwnsBackgroundWorkers bool `protobuf:"varint,19,opt,name=owns_background_workers,json=ownsBackgroundWorkers,proto3" json:"owns_background_workers,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *NativeServiceOptions) Reset() {
@@ -933,6 +943,13 @@ func (x *NativeServiceOptions) GetCapabilityRef() string {
 		return x.CapabilityRef
 	}
 	return ""
+}
+
+func (x *NativeServiceOptions) GetOwnsBackgroundWorkers() bool {
+	if x != nil {
+		return x.OwnsBackgroundWorkers
+	}
+	return false
 }
 
 type DbTableSecurityOptions struct {
@@ -1463,8 +1480,13 @@ type EventContractOptions struct {
 	PayloadRedactionProfile string                 `protobuf:"bytes,4,opt,name=payload_redaction_profile,json=payloadRedactionProfile,proto3" json:"payload_redaction_profile,omitempty"`
 	DeliveryGuarantee       string                 `protobuf:"bytes,5,opt,name=delivery_guarantee,json=deliveryGuarantee,proto3" json:"delivery_guarantee,omitempty"`
 	ReplayCompatibility     string                 `protobuf:"bytes,6,opt,name=replay_compatibility,json=replayCompatibility,proto3" json:"replay_compatibility,omitempty"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	// The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+	// a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+	// one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+	// peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+	Emits         []*EventContractOptions_EmittedEvent `protobuf:"bytes,7,rep,name=emits,proto3" json:"emits,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *EventContractOptions) Reset() {
@@ -1537,6 +1559,13 @@ func (x *EventContractOptions) GetReplayCompatibility() string {
 		return x.ReplayCompatibility
 	}
 	return ""
+}
+
+func (x *EventContractOptions) GetEmits() []*EventContractOptions_EmittedEvent {
+	if x != nil {
+		return x.Emits
+	}
+	return nil
 }
 
 type DependencyContractOptions struct {
@@ -1629,6 +1658,83 @@ func (x *DependencyContractOptions) GetDegradedWhenMissing() []string {
 		return x.DegradedWhenMissing
 	}
 	return nil
+}
+
+// One versioned domain event an RPC publishes to the outbox→CDC→Kafka relay.
+type EventContractOptions_EmittedEvent struct {
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	Topic                   string                 `protobuf:"bytes,1,opt,name=topic,proto3" json:"topic,omitempty"`                                                                      // versioned: udb.<domain>.<entity>.<action>.v1
+	PartitionKeyField       string                 `protobuf:"bytes,2,opt,name=partition_key_field,json=partitionKeyField,proto3" json:"partition_key_field,omitempty"`                   // request/aggregate field used as the Kafka partition key
+	DeliveryGuarantee       string                 `protobuf:"bytes,3,opt,name=delivery_guarantee,json=deliveryGuarantee,proto3" json:"delivery_guarantee,omitempty"`                     // e.g. at_least_once
+	PayloadRedactionProfile string                 `protobuf:"bytes,4,opt,name=payload_redaction_profile,json=payloadRedactionProfile,proto3" json:"payload_redaction_profile,omitempty"` // e.g. standard
+	Conditional             bool                   `protobuf:"varint,5,opt,name=conditional,proto3" json:"conditional,omitempty"`                                                         // not every call emits it (e.g. per-peer/per-track or no-op)
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *EventContractOptions_EmittedEvent) Reset() {
+	*x = EventContractOptions_EmittedEvent{}
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventContractOptions_EmittedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventContractOptions_EmittedEvent) ProtoMessage() {}
+
+func (x *EventContractOptions_EmittedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventContractOptions_EmittedEvent.ProtoReflect.Descriptor instead.
+func (*EventContractOptions_EmittedEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{7, 0}
+}
+
+func (x *EventContractOptions_EmittedEvent) GetTopic() string {
+	if x != nil {
+		return x.Topic
+	}
+	return ""
+}
+
+func (x *EventContractOptions_EmittedEvent) GetPartitionKeyField() string {
+	if x != nil {
+		return x.PartitionKeyField
+	}
+	return ""
+}
+
+func (x *EventContractOptions_EmittedEvent) GetDeliveryGuarantee() string {
+	if x != nil {
+		return x.DeliveryGuarantee
+	}
+	return ""
+}
+
+func (x *EventContractOptions_EmittedEvent) GetPayloadRedactionProfile() string {
+	if x != nil {
+		return x.PayloadRedactionProfile
+	}
+	return ""
+}
+
+func (x *EventContractOptions_EmittedEvent) GetConditional() bool {
+	if x != nil {
+		return x.Conditional
+	}
+	return false
 }
 
 var file_udb_core_common_v1_security_proto_extTypes = []protoimpl.ExtensionInfo{
@@ -1944,7 +2050,7 @@ const file_udb_core_common_v1_security_proto_rawDesc = "" +
 	"\x11response_envelope\x18\x01 \x01(\bR\x10responseEnvelope\x12\x1b\n" +
 	"\tapi_error\x18\x02 \x01(\bR\bapiError\x12'\n" +
 	"\x0fpagination_meta\x18\x03 \x01(\bR\x0epaginationMeta\x12%\n" +
-	"\x0eexplicit_nulls\x18\x04 \x01(\bR\rexplicitNulls\"\xa7\x06\n" +
+	"\x0eexplicit_nulls\x18\x04 \x01(\bR\rexplicitNulls\"\xdf\x06\n" +
 	"\x14NativeServiceOptions\x12\x1d\n" +
 	"\n" +
 	"service_id\x18\x01 \x01(\tR\tserviceId\x12,\n" +
@@ -1965,7 +2071,8 @@ const file_udb_core_common_v1_security_proto_rawDesc = "" +
 	"\x0fsdk_facade_name\x18\x0f \x01(\tR\rsdkFacadeName\x12,\n" +
 	"\x12cli_scaffold_group\x18\x10 \x01(\tR\x10cliScaffoldGroup\x12(\n" +
 	"\x10health_check_ref\x18\x11 \x01(\tR\x0ehealthCheckRef\x12%\n" +
-	"\x0ecapability_ref\x18\x12 \x01(\tR\rcapabilityRef\"\x9a\x05\n" +
+	"\x0ecapability_ref\x18\x12 \x01(\tR\rcapabilityRef\x126\n" +
+	"\x17owns_background_workers\x18\x13 \x01(\bR\x15ownsBackgroundWorkers\"\x9a\x05\n" +
 	"\x16DbTableSecurityOptions\x122\n" +
 	"\x15tenant_isolation_mode\x18\x01 \x01(\tR\x13tenantIsolationMode\x124\n" +
 	"\x16project_isolation_mode\x18\x02 \x01(\tR\x14projectIsolationMode\x12#\n" +
@@ -2027,7 +2134,7 @@ const file_udb_core_common_v1_security_proto_rawDesc = "" +
 	"\x13secret_placeholders\x18\t \x03(\tR\x12secretPlaceholders\x128\n" +
 	"\x18post_generation_commands\x18\n" +
 	" \x03(\tR\x16postGenerationCommands\x12,\n" +
-	"\x12smoke_test_command\x18\v \x01(\tR\x10smokeTestCommand\"\xa6\x02\n" +
+	"\x12smoke_test_command\x18\v \x01(\tR\x10smokeTestCommand\"\xd7\x04\n" +
 	"\x14EventContractOptions\x12\x1d\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\tR\teventType\x12!\n" +
@@ -2035,7 +2142,14 @@ const file_udb_core_common_v1_security_proto_rawDesc = "" +
 	"\x13partition_key_field\x18\x03 \x01(\tR\x11partitionKeyField\x12:\n" +
 	"\x19payload_redaction_profile\x18\x04 \x01(\tR\x17payloadRedactionProfile\x12-\n" +
 	"\x12delivery_guarantee\x18\x05 \x01(\tR\x11deliveryGuarantee\x121\n" +
-	"\x14replay_compatibility\x18\x06 \x01(\tR\x13replayCompatibility\"\xed\x02\n" +
+	"\x14replay_compatibility\x18\x06 \x01(\tR\x13replayCompatibility\x12K\n" +
+	"\x05emits\x18\a \x03(\v25.udb.core.common.v1.EventContractOptions.EmittedEventR\x05emits\x1a\xe1\x01\n" +
+	"\fEmittedEvent\x12\x14\n" +
+	"\x05topic\x18\x01 \x01(\tR\x05topic\x12.\n" +
+	"\x13partition_key_field\x18\x02 \x01(\tR\x11partitionKeyField\x12-\n" +
+	"\x12delivery_guarantee\x18\x03 \x01(\tR\x11deliveryGuarantee\x12:\n" +
+	"\x19payload_redaction_profile\x18\x04 \x01(\tR\x17payloadRedactionProfile\x12 \n" +
+	"\vconditional\x18\x05 \x01(\bR\vconditional\"\xed\x02\n" +
 	"\x19DependencyContractOptions\x128\n" +
 	"\x18required_native_services\x18\x01 \x03(\tR\x16requiredNativeServices\x128\n" +
 	"\x18optional_native_services\x18\x02 \x03(\tR\x16optionalNativeServices\x12+\n" +
@@ -2066,7 +2180,7 @@ const file_udb_core_common_v1_security_proto_rawDesc = "" +
 	"\x0fAUDIT_MODE_NONE\x10\x01\x12\x17\n" +
 	"\x13AUDIT_MODE_MUTATION\x10\x02\x12\x17\n" +
 	"\x13AUDIT_MODE_DECISION\x10\x03\x12\x13\n" +
-	"\x0fAUDIT_MODE_FULL\x10\x04*\xf8\x02\n" +
+	"\x0fAUDIT_MODE_FULL\x10\x04*\x9f\x03\n" +
 	"\x14SecretClassification\x12%\n" +
 	"!SECRET_CLASSIFICATION_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cSECRET_CLASSIFICATION_PUBLIC\x10\x01\x12\"\n" +
@@ -2077,7 +2191,9 @@ const file_udb_core_common_v1_security_proto_rawDesc = "" +
 	"\x1fSECRET_CLASSIFICATION_BIOMETRIC\x10\x06\x12\"\n" +
 	"\x1eSECRET_CLASSIFICATION_IDENTITY\x10\a\x12\x1d\n" +
 	"\x19SECRET_CLASSIFICATION_PII\x10\b\x12%\n" +
-	"!SECRET_CLASSIFICATION_OPERATIONAL\x10\t*\xba\x01\n" +
+	"!SECRET_CLASSIFICATION_OPERATIONAL\x10\t\x12%\n" +
+	"!SECRET_CLASSIFICATION_PRIVATE_KEY\x10\n" +
+	"*\xba\x01\n" +
 	"\n" +
 	"OutputView\x12\x1b\n" +
 	"\x17OUTPUT_VIEW_UNSPECIFIED\x10\x00\x12\x1c\n" +
@@ -2151,29 +2267,30 @@ func file_udb_core_common_v1_security_proto_rawDescGZIP() []byte {
 }
 
 var file_udb_core_common_v1_security_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_udb_core_common_v1_security_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_udb_core_common_v1_security_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_udb_core_common_v1_security_proto_goTypes = []any{
-	(AuthMode)(0),                       // 0: udb.core.common.v1.AuthMode
-	(CredentialType)(0),                 // 1: udb.core.common.v1.CredentialType
-	(AuditMode)(0),                      // 2: udb.core.common.v1.AuditMode
-	(SecretClassification)(0),           // 3: udb.core.common.v1.SecretClassification
-	(OutputView)(0),                     // 4: udb.core.common.v1.OutputView
-	(RedactionStrategy)(0),              // 5: udb.core.common.v1.RedactionStrategy
-	(SecurityClassification)(0),         // 6: udb.core.common.v1.SecurityClassification
-	(DataCategory)(0),                   // 7: udb.core.common.v1.DataCategory
-	(*EndpointSecurity)(nil),            // 8: udb.core.common.v1.EndpointSecurity
-	(*RestContract)(nil),                // 9: udb.core.common.v1.RestContract
-	(*NativeServiceOptions)(nil),        // 10: udb.core.common.v1.NativeServiceOptions
-	(*DbTableSecurityOptions)(nil),      // 11: udb.core.common.v1.DbTableSecurityOptions
-	(*DbColumnSecurityOptions)(nil),     // 12: udb.core.common.v1.DbColumnSecurityOptions
-	(*SdkSurfaceOptions)(nil),           // 13: udb.core.common.v1.SdkSurfaceOptions
-	(*CliScaffoldOptions)(nil),          // 14: udb.core.common.v1.CliScaffoldOptions
-	(*EventContractOptions)(nil),        // 15: udb.core.common.v1.EventContractOptions
-	(*DependencyContractOptions)(nil),   // 16: udb.core.common.v1.DependencyContractOptions
-	(*descriptorpb.FieldOptions)(nil),   // 17: google.protobuf.FieldOptions
-	(*descriptorpb.MethodOptions)(nil),  // 18: google.protobuf.MethodOptions
-	(*descriptorpb.MessageOptions)(nil), // 19: google.protobuf.MessageOptions
-	(*descriptorpb.ServiceOptions)(nil), // 20: google.protobuf.ServiceOptions
+	(AuthMode)(0),                             // 0: udb.core.common.v1.AuthMode
+	(CredentialType)(0),                       // 1: udb.core.common.v1.CredentialType
+	(AuditMode)(0),                            // 2: udb.core.common.v1.AuditMode
+	(SecretClassification)(0),                 // 3: udb.core.common.v1.SecretClassification
+	(OutputView)(0),                           // 4: udb.core.common.v1.OutputView
+	(RedactionStrategy)(0),                    // 5: udb.core.common.v1.RedactionStrategy
+	(SecurityClassification)(0),               // 6: udb.core.common.v1.SecurityClassification
+	(DataCategory)(0),                         // 7: udb.core.common.v1.DataCategory
+	(*EndpointSecurity)(nil),                  // 8: udb.core.common.v1.EndpointSecurity
+	(*RestContract)(nil),                      // 9: udb.core.common.v1.RestContract
+	(*NativeServiceOptions)(nil),              // 10: udb.core.common.v1.NativeServiceOptions
+	(*DbTableSecurityOptions)(nil),            // 11: udb.core.common.v1.DbTableSecurityOptions
+	(*DbColumnSecurityOptions)(nil),           // 12: udb.core.common.v1.DbColumnSecurityOptions
+	(*SdkSurfaceOptions)(nil),                 // 13: udb.core.common.v1.SdkSurfaceOptions
+	(*CliScaffoldOptions)(nil),                // 14: udb.core.common.v1.CliScaffoldOptions
+	(*EventContractOptions)(nil),              // 15: udb.core.common.v1.EventContractOptions
+	(*DependencyContractOptions)(nil),         // 16: udb.core.common.v1.DependencyContractOptions
+	(*EventContractOptions_EmittedEvent)(nil), // 17: udb.core.common.v1.EventContractOptions.EmittedEvent
+	(*descriptorpb.FieldOptions)(nil),         // 18: google.protobuf.FieldOptions
+	(*descriptorpb.MethodOptions)(nil),        // 19: google.protobuf.MethodOptions
+	(*descriptorpb.MessageOptions)(nil),       // 20: google.protobuf.MessageOptions
+	(*descriptorpb.ServiceOptions)(nil),       // 21: google.protobuf.ServiceOptions
 }
 var file_udb_core_common_v1_security_proto_depIdxs = []int32{
 	0,  // 0: udb.core.common.v1.EndpointSecurity.mode:type_name -> udb.core.common.v1.AuthMode
@@ -2182,54 +2299,55 @@ var file_udb_core_common_v1_security_proto_depIdxs = []int32{
 	3,  // 3: udb.core.common.v1.DbColumnSecurityOptions.secret_classification:type_name -> udb.core.common.v1.SecretClassification
 	4,  // 4: udb.core.common.v1.DbColumnSecurityOptions.output_view:type_name -> udb.core.common.v1.OutputView
 	5,  // 5: udb.core.common.v1.DbColumnSecurityOptions.redaction_strategy:type_name -> udb.core.common.v1.RedactionStrategy
-	17, // 6: udb.core.common.v1.pii:extendee -> google.protobuf.FieldOptions
-	17, // 7: udb.core.common.v1.encrypted_security:extendee -> google.protobuf.FieldOptions
-	17, // 8: udb.core.common.v1.log_masked:extendee -> google.protobuf.FieldOptions
-	17, // 9: udb.core.common.v1.log_redacted:extendee -> google.protobuf.FieldOptions
-	17, // 10: udb.core.common.v1.sensitive:extendee -> google.protobuf.FieldOptions
-	17, // 11: udb.core.common.v1.requires_consent:extendee -> google.protobuf.FieldOptions
-	17, // 12: udb.core.common.v1.data_purpose:extendee -> google.protobuf.FieldOptions
-	17, // 13: udb.core.common.v1.retention_days:extendee -> google.protobuf.FieldOptions
-	17, // 14: udb.core.common.v1.tokenized:extendee -> google.protobuf.FieldOptions
-	17, // 15: udb.core.common.v1.security_classification:extendee -> google.protobuf.FieldOptions
-	17, // 16: udb.core.common.v1.data_category:extendee -> google.protobuf.FieldOptions
-	17, // 17: udb.core.common.v1.db_column_security:extendee -> google.protobuf.FieldOptions
-	18, // 18: udb.core.common.v1.endpoint_security:extendee -> google.protobuf.MethodOptions
-	18, // 19: udb.core.common.v1.rest_contract:extendee -> google.protobuf.MethodOptions
-	18, // 20: udb.core.common.v1.sdk_surface:extendee -> google.protobuf.MethodOptions
-	18, // 21: udb.core.common.v1.method_cli_scaffold:extendee -> google.protobuf.MethodOptions
-	18, // 22: udb.core.common.v1.method_event_contract:extendee -> google.protobuf.MethodOptions
-	18, // 23: udb.core.common.v1.method_dependency_contract:extendee -> google.protobuf.MethodOptions
-	19, // 24: udb.core.common.v1.db_table_security:extendee -> google.protobuf.MessageOptions
-	19, // 25: udb.core.common.v1.message_event_contract:extendee -> google.protobuf.MessageOptions
-	19, // 26: udb.core.common.v1.message_sdk_surface:extendee -> google.protobuf.MessageOptions
-	19, // 27: udb.core.common.v1.message_dependency_contract:extendee -> google.protobuf.MessageOptions
-	20, // 28: udb.core.common.v1.native_service:extendee -> google.protobuf.ServiceOptions
-	20, // 29: udb.core.common.v1.service_sdk_surface:extendee -> google.protobuf.ServiceOptions
-	20, // 30: udb.core.common.v1.service_cli_scaffold:extendee -> google.protobuf.ServiceOptions
-	20, // 31: udb.core.common.v1.service_dependency_contract:extendee -> google.protobuf.ServiceOptions
-	6,  // 32: udb.core.common.v1.security_classification:type_name -> udb.core.common.v1.SecurityClassification
-	7,  // 33: udb.core.common.v1.data_category:type_name -> udb.core.common.v1.DataCategory
-	12, // 34: udb.core.common.v1.db_column_security:type_name -> udb.core.common.v1.DbColumnSecurityOptions
-	8,  // 35: udb.core.common.v1.endpoint_security:type_name -> udb.core.common.v1.EndpointSecurity
-	9,  // 36: udb.core.common.v1.rest_contract:type_name -> udb.core.common.v1.RestContract
-	13, // 37: udb.core.common.v1.sdk_surface:type_name -> udb.core.common.v1.SdkSurfaceOptions
-	14, // 38: udb.core.common.v1.method_cli_scaffold:type_name -> udb.core.common.v1.CliScaffoldOptions
-	15, // 39: udb.core.common.v1.method_event_contract:type_name -> udb.core.common.v1.EventContractOptions
-	16, // 40: udb.core.common.v1.method_dependency_contract:type_name -> udb.core.common.v1.DependencyContractOptions
-	11, // 41: udb.core.common.v1.db_table_security:type_name -> udb.core.common.v1.DbTableSecurityOptions
-	15, // 42: udb.core.common.v1.message_event_contract:type_name -> udb.core.common.v1.EventContractOptions
-	13, // 43: udb.core.common.v1.message_sdk_surface:type_name -> udb.core.common.v1.SdkSurfaceOptions
-	16, // 44: udb.core.common.v1.message_dependency_contract:type_name -> udb.core.common.v1.DependencyContractOptions
-	10, // 45: udb.core.common.v1.native_service:type_name -> udb.core.common.v1.NativeServiceOptions
-	13, // 46: udb.core.common.v1.service_sdk_surface:type_name -> udb.core.common.v1.SdkSurfaceOptions
-	14, // 47: udb.core.common.v1.service_cli_scaffold:type_name -> udb.core.common.v1.CliScaffoldOptions
-	16, // 48: udb.core.common.v1.service_dependency_contract:type_name -> udb.core.common.v1.DependencyContractOptions
-	49, // [49:49] is the sub-list for method output_type
-	49, // [49:49] is the sub-list for method input_type
-	32, // [32:49] is the sub-list for extension type_name
-	6,  // [6:32] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	17, // 6: udb.core.common.v1.EventContractOptions.emits:type_name -> udb.core.common.v1.EventContractOptions.EmittedEvent
+	18, // 7: udb.core.common.v1.pii:extendee -> google.protobuf.FieldOptions
+	18, // 8: udb.core.common.v1.encrypted_security:extendee -> google.protobuf.FieldOptions
+	18, // 9: udb.core.common.v1.log_masked:extendee -> google.protobuf.FieldOptions
+	18, // 10: udb.core.common.v1.log_redacted:extendee -> google.protobuf.FieldOptions
+	18, // 11: udb.core.common.v1.sensitive:extendee -> google.protobuf.FieldOptions
+	18, // 12: udb.core.common.v1.requires_consent:extendee -> google.protobuf.FieldOptions
+	18, // 13: udb.core.common.v1.data_purpose:extendee -> google.protobuf.FieldOptions
+	18, // 14: udb.core.common.v1.retention_days:extendee -> google.protobuf.FieldOptions
+	18, // 15: udb.core.common.v1.tokenized:extendee -> google.protobuf.FieldOptions
+	18, // 16: udb.core.common.v1.security_classification:extendee -> google.protobuf.FieldOptions
+	18, // 17: udb.core.common.v1.data_category:extendee -> google.protobuf.FieldOptions
+	18, // 18: udb.core.common.v1.db_column_security:extendee -> google.protobuf.FieldOptions
+	19, // 19: udb.core.common.v1.endpoint_security:extendee -> google.protobuf.MethodOptions
+	19, // 20: udb.core.common.v1.rest_contract:extendee -> google.protobuf.MethodOptions
+	19, // 21: udb.core.common.v1.sdk_surface:extendee -> google.protobuf.MethodOptions
+	19, // 22: udb.core.common.v1.method_cli_scaffold:extendee -> google.protobuf.MethodOptions
+	19, // 23: udb.core.common.v1.method_event_contract:extendee -> google.protobuf.MethodOptions
+	19, // 24: udb.core.common.v1.method_dependency_contract:extendee -> google.protobuf.MethodOptions
+	20, // 25: udb.core.common.v1.db_table_security:extendee -> google.protobuf.MessageOptions
+	20, // 26: udb.core.common.v1.message_event_contract:extendee -> google.protobuf.MessageOptions
+	20, // 27: udb.core.common.v1.message_sdk_surface:extendee -> google.protobuf.MessageOptions
+	20, // 28: udb.core.common.v1.message_dependency_contract:extendee -> google.protobuf.MessageOptions
+	21, // 29: udb.core.common.v1.native_service:extendee -> google.protobuf.ServiceOptions
+	21, // 30: udb.core.common.v1.service_sdk_surface:extendee -> google.protobuf.ServiceOptions
+	21, // 31: udb.core.common.v1.service_cli_scaffold:extendee -> google.protobuf.ServiceOptions
+	21, // 32: udb.core.common.v1.service_dependency_contract:extendee -> google.protobuf.ServiceOptions
+	6,  // 33: udb.core.common.v1.security_classification:type_name -> udb.core.common.v1.SecurityClassification
+	7,  // 34: udb.core.common.v1.data_category:type_name -> udb.core.common.v1.DataCategory
+	12, // 35: udb.core.common.v1.db_column_security:type_name -> udb.core.common.v1.DbColumnSecurityOptions
+	8,  // 36: udb.core.common.v1.endpoint_security:type_name -> udb.core.common.v1.EndpointSecurity
+	9,  // 37: udb.core.common.v1.rest_contract:type_name -> udb.core.common.v1.RestContract
+	13, // 38: udb.core.common.v1.sdk_surface:type_name -> udb.core.common.v1.SdkSurfaceOptions
+	14, // 39: udb.core.common.v1.method_cli_scaffold:type_name -> udb.core.common.v1.CliScaffoldOptions
+	15, // 40: udb.core.common.v1.method_event_contract:type_name -> udb.core.common.v1.EventContractOptions
+	16, // 41: udb.core.common.v1.method_dependency_contract:type_name -> udb.core.common.v1.DependencyContractOptions
+	11, // 42: udb.core.common.v1.db_table_security:type_name -> udb.core.common.v1.DbTableSecurityOptions
+	15, // 43: udb.core.common.v1.message_event_contract:type_name -> udb.core.common.v1.EventContractOptions
+	13, // 44: udb.core.common.v1.message_sdk_surface:type_name -> udb.core.common.v1.SdkSurfaceOptions
+	16, // 45: udb.core.common.v1.message_dependency_contract:type_name -> udb.core.common.v1.DependencyContractOptions
+	10, // 46: udb.core.common.v1.native_service:type_name -> udb.core.common.v1.NativeServiceOptions
+	13, // 47: udb.core.common.v1.service_sdk_surface:type_name -> udb.core.common.v1.SdkSurfaceOptions
+	14, // 48: udb.core.common.v1.service_cli_scaffold:type_name -> udb.core.common.v1.CliScaffoldOptions
+	16, // 49: udb.core.common.v1.service_dependency_contract:type_name -> udb.core.common.v1.DependencyContractOptions
+	50, // [50:50] is the sub-list for method output_type
+	50, // [50:50] is the sub-list for method input_type
+	33, // [33:50] is the sub-list for extension type_name
+	7,  // [7:33] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_common_v1_security_proto_init() }
@@ -2243,7 +2361,7 @@ func file_udb_core_common_v1_security_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_common_v1_security_proto_rawDesc), len(file_udb_core_common_v1_security_proto_rawDesc)),
 			NumEnums:      8,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 26,
 			NumServices:   0,
 		},

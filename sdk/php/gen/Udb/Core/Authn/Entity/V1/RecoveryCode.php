@@ -33,7 +33,7 @@ class RecoveryCode extends \Google\Protobuf\Internal\Message
     /**
      * Keyed digest of the recovery code; never stored in plaintext.
      *
-     * Generated from protobuf field <code>string code_hash = 3 [json_name = "codeHash", (.udb.core.common.v1.pg_column) = {</code>
+     * Generated from protobuf field <code>string code_hash = 3 [json_name = "codeHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $code_hash = '';
     /**
@@ -44,6 +44,12 @@ class RecoveryCode extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.Timestamp created_at = 5 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $created_at = null;
+    /**
+     * Nullable so existing inserts can't break; RLS policy tolerates NULL.
+     *
+     * Generated from protobuf field <code>string tenant_id = 6 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $tenant_id = '';
 
     /**
      * Constructor.
@@ -57,6 +63,8 @@ class RecoveryCode extends \Google\Protobuf\Internal\Message
      *           Keyed digest of the recovery code; never stored in plaintext.
      *     @type \Google\Protobuf\Timestamp $used_at
      *     @type \Google\Protobuf\Timestamp $created_at
+     *     @type string $tenant_id
+     *           Nullable so existing inserts can't break; RLS policy tolerates NULL.
      * }
      */
     public function __construct($data = NULL) {
@@ -111,7 +119,7 @@ class RecoveryCode extends \Google\Protobuf\Internal\Message
     /**
      * Keyed digest of the recovery code; never stored in plaintext.
      *
-     * Generated from protobuf field <code>string code_hash = 3 [json_name = "codeHash", (.udb.core.common.v1.pg_column) = {</code>
+     * Generated from protobuf field <code>string code_hash = 3 [json_name = "codeHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = {</code>
      * @return string
      */
     public function getCodeHash()
@@ -122,7 +130,7 @@ class RecoveryCode extends \Google\Protobuf\Internal\Message
     /**
      * Keyed digest of the recovery code; never stored in plaintext.
      *
-     * Generated from protobuf field <code>string code_hash = 3 [json_name = "codeHash", (.udb.core.common.v1.pg_column) = {</code>
+     * Generated from protobuf field <code>string code_hash = 3 [json_name = "codeHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var
      * @return $this
      */
@@ -192,6 +200,32 @@ class RecoveryCode extends \Google\Protobuf\Internal\Message
     public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
     {
         $this->created_at = $var;
+
+        return $this;
+    }
+
+    /**
+     * Nullable so existing inserts can't break; RLS policy tolerates NULL.
+     *
+     * Generated from protobuf field <code>string tenant_id = 6 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getTenantId()
+    {
+        return $this->tenant_id;
+    }
+
+    /**
+     * Nullable so existing inserts can't break; RLS policy tolerates NULL.
+     *
+     * Generated from protobuf field <code>string tenant_id = 6 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setTenantId(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->tenant_id = $var;
 
         return $this;
     }

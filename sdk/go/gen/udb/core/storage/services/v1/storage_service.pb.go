@@ -26,16 +26,17 @@ const (
 )
 
 type RegisterUploadRequest struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	TenantId         string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	ProjectId        string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Filename         string                 `protobuf:"bytes,3,opt,name=filename,proto3" json:"filename,omitempty"`
-	ContentType      string                 `protobuf:"bytes,4,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
-	FileType         string                 `protobuf:"bytes,5,opt,name=file_type,json=fileType,proto3" json:"file_type,omitempty"`
-	ReferenceId      string                 `protobuf:"bytes,6,opt,name=reference_id,json=referenceId,proto3" json:"reference_id,omitempty"`
-	ReferenceType    string                 `protobuf:"bytes,7,opt,name=reference_type,json=referenceType,proto3" json:"reference_type,omitempty"`
-	IsPublic         bool                   `protobuf:"varint,8,opt,name=is_public,json=isPublic,proto3" json:"is_public,omitempty"`
-	ExpiresInMinutes int32                  `protobuf:"varint,9,opt,name=expires_in_minutes,json=expiresInMinutes,proto3" json:"expires_in_minutes,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Filename      string                 `protobuf:"bytes,3,opt,name=filename,proto3" json:"filename,omitempty"`
+	ContentType   string                 `protobuf:"bytes,4,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	FileType      string                 `protobuf:"bytes,5,opt,name=file_type,json=fileType,proto3" json:"file_type,omitempty"`
+	ReferenceId   string                 `protobuf:"bytes,6,opt,name=reference_id,json=referenceId,proto3" json:"reference_id,omitempty"`
+	ReferenceType string                 `protobuf:"bytes,7,opt,name=reference_type,json=referenceType,proto3" json:"reference_type,omitempty"`
+	// Optional initial visibility; absent defaults to private (false).
+	IsPublic         *bool `protobuf:"varint,8,opt,name=is_public,json=isPublic,proto3,oneof" json:"is_public,omitempty"`
+	ExpiresInMinutes int32 `protobuf:"varint,9,opt,name=expires_in_minutes,json=expiresInMinutes,proto3" json:"expires_in_minutes,omitempty"`
 	// Declared upload size in bytes, used for the pre-upload tenant quota check.
 	SizeBytes     int64 `protobuf:"varint,10,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -122,8 +123,8 @@ func (x *RegisterUploadRequest) GetReferenceType() string {
 }
 
 func (x *RegisterUploadRequest) GetIsPublic() bool {
-	if x != nil {
-		return x.IsPublic
+	if x != nil && x.IsPublic != nil {
+		return *x.IsPublic
 	}
 	return false
 }
@@ -219,7 +220,8 @@ type FinalizeUploadRequest struct {
 	FileType      string                 `protobuf:"bytes,4,opt,name=file_type,json=fileType,proto3" json:"file_type,omitempty"`
 	ReferenceId   string                 `protobuf:"bytes,5,opt,name=reference_id,json=referenceId,proto3" json:"reference_id,omitempty"`
 	ReferenceType string                 `protobuf:"bytes,6,opt,name=reference_type,json=referenceType,proto3" json:"reference_type,omitempty"`
-	IsPublic      bool                   `protobuf:"varint,7,opt,name=is_public,json=isPublic,proto3" json:"is_public,omitempty"`
+	// Proto3 explicit presence: absent leaves the stored visibility unchanged.
+	IsPublic *bool `protobuf:"varint,7,opt,name=is_public,json=isPublic,proto3,oneof" json:"is_public,omitempty"`
 	// Actual uploaded size in bytes, persisted on finalize.
 	SizeBytes     int64 `protobuf:"varint,8,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -299,8 +301,8 @@ func (x *FinalizeUploadRequest) GetReferenceType() string {
 }
 
 func (x *FinalizeUploadRequest) GetIsPublic() bool {
-	if x != nil {
-		return x.IsPublic
+	if x != nil && x.IsPublic != nil {
+		return *x.IsPublic
 	}
 	return false
 }
@@ -600,7 +602,9 @@ type UpdateFileRequest struct {
 	FileType      string                 `protobuf:"bytes,5,opt,name=file_type,json=fileType,proto3" json:"file_type,omitempty"`
 	ReferenceId   string                 `protobuf:"bytes,6,opt,name=reference_id,json=referenceId,proto3" json:"reference_id,omitempty"`
 	ReferenceType string                 `protobuf:"bytes,7,opt,name=reference_type,json=referenceType,proto3" json:"reference_type,omitempty"`
-	IsPublic      bool                   `protobuf:"varint,8,opt,name=is_public,json=isPublic,proto3" json:"is_public,omitempty"`
+	// Proto3 explicit presence: absent leaves the stored visibility unchanged —
+	// a partial update can never silently flip a file public/private.
+	IsPublic      *bool `protobuf:"varint,8,opt,name=is_public,json=isPublic,proto3,oneof" json:"is_public,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -685,8 +689,8 @@ func (x *UpdateFileRequest) GetReferenceType() string {
 }
 
 func (x *UpdateFileRequest) GetIsPublic() bool {
-	if x != nil {
-		return x.IsPublic
+	if x != nil && x.IsPublic != nil {
+		return *x.IsPublic
 	}
 	return false
 }
@@ -1006,7 +1010,7 @@ var File_udb_core_storage_services_v1_storage_service_proto protoreflect.FileDes
 
 const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"\n" +
-	"2udb/core/storage/services/v1/storage_service.proto\x12\x1cudb.core.storage.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\x1a%udb/core/storage/entity/v1/file.proto\"\x83\x03\n" +
+	"2udb/core/storage/services/v1/storage_service.proto\x12\x1cudb.core.storage.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\x1a%udb/core/storage/entity/v1/file.proto\"\x96\x03\n" +
 	"\x15RegisterUploadRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
@@ -1015,29 +1019,33 @@ const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"\fcontent_type\x18\x04 \x01(\tR\vcontentType\x12\x1b\n" +
 	"\tfile_type\x18\x05 \x01(\tR\bfileType\x12!\n" +
 	"\freference_id\x18\x06 \x01(\tR\vreferenceId\x12%\n" +
-	"\x0ereference_type\x18\a \x01(\tR\rreferenceType\x12\x1b\n" +
-	"\tis_public\x18\b \x01(\bR\bisPublic\x12,\n" +
+	"\x0ereference_type\x18\a \x01(\tR\rreferenceType\x12 \n" +
+	"\tis_public\x18\b \x01(\bH\x00R\bisPublic\x88\x01\x01\x12,\n" +
 	"\x12expires_in_minutes\x18\t \x01(\x05R\x10expiresInMinutes\x12\x1d\n" +
 	"\n" +
 	"size_bytes\x18\n" +
-	" \x01(\x03R\tsizeBytes:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\xc3\x01\n" +
+	" \x01(\x03R\tsizeBytes:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01B\f\n" +
+	"\n" +
+	"_is_public\"\xc3\x01\n" +
 	"\x16RegisterUploadResponse\x12\x17\n" +
 	"\afile_id\x18\x01 \x01(\tR\x06fileId\x12\x1d\n" +
 	"\n" +
 	"upload_url\x18\x02 \x01(\tR\tuploadUrl\x12\x1d\n" +
 	"\n" +
 	"object_key\x18\x03 \x01(\tR\tobjectKey\x122\n" +
-	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\xb3\x02\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\xc6\x02\n" +
 	"\x15FinalizeUploadRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x17\n" +
 	"\afile_id\x18\x02 \x01(\tR\x06fileId\x12!\n" +
 	"\fcontent_type\x18\x03 \x01(\tR\vcontentType\x12\x1b\n" +
 	"\tfile_type\x18\x04 \x01(\tR\bfileType\x12!\n" +
 	"\freference_id\x18\x05 \x01(\tR\vreferenceId\x12%\n" +
-	"\x0ereference_type\x18\x06 \x01(\tR\rreferenceType\x12\x1b\n" +
-	"\tis_public\x18\a \x01(\bR\bisPublic\x12\x1d\n" +
+	"\x0ereference_type\x18\x06 \x01(\tR\rreferenceType\x12 \n" +
+	"\tis_public\x18\a \x01(\bH\x00R\bisPublic\x88\x01\x01\x12\x1d\n" +
 	"\n" +
-	"size_bytes\x18\b \x01(\x03R\tsizeBytes:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\xa2\x01\n" +
+	"size_bytes\x18\b \x01(\x03R\tsizeBytes:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01B\f\n" +
+	"\n" +
+	"_is_public\"\xa2\x01\n" +
 	"\x16FinalizeUploadResponse\x124\n" +
 	"\x04file\x18\x01 \x01(\v2 .udb.core.storage.entity.v1.FileR\x04file\x122\n" +
 	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\x9b\x01\n" +
@@ -1055,7 +1063,7 @@ const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"\afile_id\x18\x02 \x01(\tR\x06fileId:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\x9b\x01\n" +
 	"\x0fGetFileResponse\x124\n" +
 	"\x04file\x18\x01 \x01(\v2 .udb.core.storage.entity.v1.FileR\x04file\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\xac\x02\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\xbf\x02\n" +
 	"\x11UpdateFileRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x17\n" +
 	"\afile_id\x18\x02 \x01(\tR\x06fileId\x12\x1a\n" +
@@ -1063,8 +1071,10 @@ const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"\fcontent_type\x18\x04 \x01(\tR\vcontentType\x12\x1b\n" +
 	"\tfile_type\x18\x05 \x01(\tR\bfileType\x12!\n" +
 	"\freference_id\x18\x06 \x01(\tR\vreferenceId\x12%\n" +
-	"\x0ereference_type\x18\a \x01(\tR\rreferenceType\x12\x1b\n" +
-	"\tis_public\x18\b \x01(\bR\bisPublic:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"\x82\x01\n" +
+	"\x0ereference_type\x18\a \x01(\tR\rreferenceType\x12 \n" +
+	"\tis_public\x18\b \x01(\bH\x00R\bisPublic\x88\x01\x01:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01B\f\n" +
+	"\n" +
+	"_is_public\"\x82\x01\n" +
 	"\x12UpdateFileResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x122\n" +
 	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\"i\n" +
@@ -1087,15 +1097,17 @@ const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"\x05files\x18\x01 \x03(\v2 .udb.core.storage.entity.v1.FileR\x05files\x12\x1f\n" +
 	"\vtotal_count\x18\x02 \x01(\x05R\n" +
 	"totalCount\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x012\xed%\n" +
-	"\x0eStorageService\x12\x8a\x05\n" +
-	"\x0eRegisterUpload\x123.udb.core.storage.services.v1.RegisterUploadRequest\x1a4.udb.core.storage.services.v1.RegisterUploadResponse\"\x8c\x04\xca\xf3\x18@\b\x02\x1a\x1budb:storage:register-upload \x01J\x02\x01\x02j\x16storage.RegisterUpload\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18+\b\x01\x12\x0fregister_upload\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xc1\x01\n" +
-	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\".udb.native.storage.register_upload.boilerplate*\x0fregister_upload2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18T\n" +
-	"\x16storage.RegisterUpload\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18O\n" +
-	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/v1/storage/uploads\x12\x9d\x05\n" +
-	"\x0eFinalizeUpload\x123.udb.core.storage.services.v1.FinalizeUploadRequest\x1a4.udb.core.storage.services.v1.FinalizeUploadResponse\"\x9f\x04\xca\xf3\x18@\b\x02\x1a\x1budb:storage:finalize-upload \x01J\x02\x01\x02j\x16storage.FinalizeUpload\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18+\b\x01\x12\x0ffinalize_upload\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xc1\x01\n" +
-	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\".udb.native.storage.finalize_upload.boilerplate*\x0ffinalize_upload2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18T\n" +
-	"\x16storage.FinalizeUpload\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18O\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1e\x9a\xb2\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x012\x8f(\n" +
+	"\x0eStorageService\x12\xd6\x05\n" +
+	"\x0eRegisterUpload\x123.udb.core.storage.services.v1.RegisterUploadRequest\x1a4.udb.core.storage.services.v1.RegisterUploadResponse\"\xd8\x04\xca\xf3\x18@\b\x02\x1a\x1budb:storage:register-upload \x01J\x02\x01\x02j\x16storage.RegisterUpload\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18+\b\x01\x12\x0fregister_upload\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xc1\x01\n" +
+	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\".udb.native.storage.register_upload.boilerplate*\x0fregister_upload2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x9f\x01\n" +
+	"\x16storage.RegisterUpload\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:I\n" +
+	"%udb.storage.file.upload_url_issued.v1\x12\afile_id\x1a\rat_least_once\"\bstandard\xf2\xf3\x18O\n" +
+	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/v1/storage/uploads\x12\xe3\x05\n" +
+	"\x0eFinalizeUpload\x123.udb.core.storage.services.v1.FinalizeUploadRequest\x1a4.udb.core.storage.services.v1.FinalizeUploadResponse\"\xe5\x04\xca\xf3\x18@\b\x02\x1a\x1budb:storage:finalize-upload \x01J\x02\x01\x02j\x16storage.FinalizeUpload\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18+\b\x01\x12\x0ffinalize_upload\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xc1\x01\n" +
+	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\".udb.native.storage.finalize_upload.boilerplate*\x0ffinalize_upload2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x99\x01\n" +
+	"\x16storage.FinalizeUpload\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:C\n" +
+	"\x1dudb.storage.file.finalized.v1\x12\afile_id\x1a\rat_least_once\"\bstandard(\x01\xf2\xf3\x18O\n" +
 	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02+:\x01*\"&/v1/storage/uploads/{file_id}/finalize\x12\xa0\x05\n" +
 	"\x0eGetDownloadUrl\x123.udb.core.storage.services.v1.GetDownloadUrlRequest\x1a4.udb.core.storage.services.v1.GetDownloadUrlResponse\"\xa2\x04\xca\xf3\x18A\b\x02\x1a\x1cudb:storage:get-download-url \x01J\x02\x01\x02j\x16storage.GetDownloadUrl\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18,\b\x01\x12\x10get_download_url\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xc3\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"/udb.native.storage.get_download_url.boilerplate*\x10get_download_url2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18T\n" +
@@ -1104,24 +1116,26 @@ const file_udb_core_storage_services_v1_storage_service_proto_rawDesc = "" +
 	"\aGetFile\x12,.udb.core.storage.services.v1.GetFileRequest\x1a-.udb.core.storage.services.v1.GetFileResponse\"\xe7\x03\xca\xf3\x182\b\x02\x1a\x14udb:storage:get-file \x01J\x02\x01\x02j\x0fstorage.GetFile\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18$\b\x01\x12\bget_file\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xb3\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"'udb.native.storage.get_file.boilerplate*\bget_file2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18M\n" +
 	"\x0fstorage.GetFile\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18O\n" +
-	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/storage/files/{file_id}\x12\xee\x04\n" +
+	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/storage/files/{file_id}\x12\xb9\x05\n" +
 	"\n" +
-	"UpdateFile\x12/.udb.core.storage.services.v1.UpdateFileRequest\x1a0.udb.core.storage.services.v1.UpdateFileResponse\"\xfc\x03\xca\xf3\x188\b\x02\x1a\x17udb:storage:update-file \x01J\x02\x01\x02j\x12storage.UpdateFile\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18'\b\x01\x12\vupdate_file\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xb9\x01\n" +
-	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.storage.update_file.boilerplate*\vupdate_file2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18P\n" +
-	"\x12storage.UpdateFile\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18O\n" +
-	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02 :\x01*2\x1b/v1/storage/files/{file_id}\x12\xeb\x04\n" +
+	"UpdateFile\x12/.udb.core.storage.services.v1.UpdateFileRequest\x1a0.udb.core.storage.services.v1.UpdateFileResponse\"\xc7\x04\xca\xf3\x188\b\x02\x1a\x17udb:storage:update-file \x01J\x02\x01\x02j\x12storage.UpdateFile\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18'\b\x01\x12\vupdate_file\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xb9\x01\n" +
+	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.storage.update_file.boilerplate*\vupdate_file2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x9a\x01\n" +
+	"\x12storage.UpdateFile\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:H\n" +
+	"$udb.storage.file.metadata_updated.v1\x12\afile_id\x1a\rat_least_once\"\bstandard\xf2\xf3\x18O\n" +
+	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02 :\x01*2\x1b/v1/storage/files/{file_id}\x12\xad\x05\n" +
 	"\n" +
-	"DeleteFile\x12/.udb.core.storage.services.v1.DeleteFileRequest\x1a0.udb.core.storage.services.v1.DeleteFileResponse\"\xf9\x03\xca\xf3\x188\b\x02\x1a\x17udb:storage:delete-file \x01J\x02\x01\x02j\x12storage.DeleteFile\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18'\b\x01\x12\vdelete_file\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xb9\x01\n" +
-	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.storage.delete_file.boilerplate*\vdelete_file2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18P\n" +
-	"\x12storage.DeleteFile\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18O\n" +
+	"DeleteFile\x12/.udb.core.storage.services.v1.DeleteFileRequest\x1a0.udb.core.storage.services.v1.DeleteFileResponse\"\xbb\x04\xca\xf3\x188\b\x02\x1a\x17udb:storage:delete-file \x01J\x02\x01\x02j\x12storage.DeleteFile\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18'\b\x01\x12\vdelete_file\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xb9\x01\n" +
+	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.storage.delete_file.boilerplate*\vdelete_file2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18\x91\x01\n" +
+	"\x12storage.DeleteFile\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable:?\n" +
+	"\x1budb.storage.file.deleted.v1\x12\afile_id\x1a\rat_least_once\"\bstandard\xf2\xf3\x18O\n" +
 	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x1d*\x1b/v1/storage/files/{file_id}\x12\xd8\x04\n" +
 	"\tListFiles\x12..udb.core.storage.services.v1.ListFilesRequest\x1a/.udb.core.storage.services.v1.ListFilesResponse\"\xe9\x03\xca\xf3\x186\b\x02\x1a\x16udb:storage:list-files \x01J\x02\x01\x02j\x11storage.ListFiles\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18&\b\x01\x12\n" +
 	"list_files\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xe2\xf3\x18\xb7\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\")udb.native.storage.list_files.boilerplate*\n" +
 	"list_files2\vudb_storage:\astorageJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18O\n" +
 	"\x11storage.ListFiles\x12\x0estorage.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18O\n" +
-	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/storage/files\x1a\xfd\x02\xca\xf0\x19c\n" +
-	"\astorage\x12\astorage\x1a\astorage\"\aStorage*\astorage0\x018\x01H\x01h\x01z\astorage\x82\x01\astorage\x8a\x01\astorage\x92\x01\x0enative.storage\xd2\xf0\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xda\xf0\x19\x92\x01\n" +
+	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/storage/files\x1a\x80\x03\xca\xf0\x19f\n" +
+	"\astorage\x12\astorage\x1a\astorage\"\aStorage*\astorage0\x018\x01H\x01h\x01z\astorage\x82\x01\astorage\x8a\x01\astorage\x92\x01\x0enative.storage\x98\x01\x01\xd2\xf0\x19\x1a\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\astorageP\x01\xda\xf0\x19\x92\x01\n" +
 	"\astorage\x12\x12udb/native/storage\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1eudb.native.storage.config.json:\astorageJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19]\n" +
 	"\astorage\x1a\bpostgres\x1a\fobject_store2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET:\fobject_storeB\x98\x02\n" +
 	" com.udb.core.storage.services.v1B\x13StorageServiceProtoP\x01ZJgithub.com/fahara02/udb/sdk/go/gen/udb/core/storage/services/v1;servicesv1\xa2\x02\x04UCSS\xaa\x02\x1cudb.core.Storage.Services.V1\xca\x02\x1cUdb\\Core\\Storage\\Services\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Storage\\Services\\V1\xea\x02 Udb::Core::Storage::Services::V1b\x06proto3"
@@ -1196,6 +1210,9 @@ func file_udb_core_storage_services_v1_storage_service_proto_init() {
 	if File_udb_core_storage_services_v1_storage_service_proto != nil {
 		return
 	}
+	file_udb_core_storage_services_v1_storage_service_proto_msgTypes[0].OneofWrappers = []any{}
+	file_udb_core_storage_services_v1_storage_service_proto_msgTypes[2].OneofWrappers = []any{}
+	file_udb_core_storage_services_v1_storage_service_proto_msgTypes[8].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

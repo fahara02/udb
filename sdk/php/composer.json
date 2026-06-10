@@ -47,7 +47,9 @@
     "autoload": {
         "psr-4": {
             "Fahara02\\UdbLaravel\\": "src/",
+            "Google\\": "gen/Google/",
             "Udb\\": "gen/Udb/",
+            "GPBMetadata\\Google\\": "gen/GPBMetadata/Google/",
             "GPBMetadata\\Udb\\": "gen/GPBMetadata/Udb/"
         },
         "files": [

@@ -50,7 +50,7 @@ public interface OTPOrBuilder extends
    * Keyed digest of the OTP code; never stored in plaintext.
    * </pre>
    *
-   * <code>string code_hash = 4 [json_name = "codeHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * <code>string code_hash = 4 [json_name = "codeHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The codeHash.
    */
   java.lang.String getCodeHash();
@@ -59,7 +59,7 @@ public interface OTPOrBuilder extends
    * Keyed digest of the OTP code; never stored in plaintext.
    * </pre>
    *
-   * <code>string code_hash = 4 [json_name = "codeHash", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * <code>string code_hash = 4 [json_name = "codeHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The bytes for codeHash.
    */
   com.google.protobuf.ByteString
@@ -186,4 +186,24 @@ public interface OTPOrBuilder extends
    */
   com.google.protobuf.ByteString
       getCorrelationIdBytes();
+
+  /**
+   * <pre>
+   * Nullable so existing inserts can't break; RLS policy tolerates NULL.
+   * </pre>
+   *
+   * <code>string tenant_id = 14 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The tenantId.
+   */
+  java.lang.String getTenantId();
+  /**
+   * <pre>
+   * Nullable so existing inserts can't break; RLS policy tolerates NULL.
+   * </pre>
+   *
+   * <code>string tenant_id = 14 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for tenantId.
+   */
+  com.google.protobuf.ByteString
+      getTenantIdBytes();
 }

@@ -201,7 +201,10 @@ fn derive_security_rls_policies(
 ) -> Vec<ManifestPolicy> {
     let mut predicates = Vec::new();
     if !security.rls_policy_template.trim().is_empty() {
-        predicates.push(security.rls_policy_template.trim().to_string());
+        predicates.push(normalize_rls_policy_template(
+            security.rls_policy_template.trim(),
+            security,
+        ));
     } else {
         if tenant_isolation_enabled(&security.tenant_isolation_mode)
             && !security.tenant_column.trim().is_empty()
@@ -246,6 +249,26 @@ fn derive_security_rls_policies(
         with_check: expression,
         permissive: true,
     }]
+}
+
+fn normalize_rls_policy_template(template: &str, security: &ManifestTableSecurity) -> String {
+    let mut normalized = template.trim().to_string();
+    for (column, guc) in [
+        (security.tenant_column.trim(), "app.current_tenant_id"),
+        (security.project_column.trim(), "app.current_project_id"),
+    ] {
+        if column.is_empty() {
+            continue;
+        }
+        let casted = format!("{column}::text = current_setting('{guc}', true)::text");
+        for pattern in [
+            format!("{column} = current_setting('{guc}')"),
+            format!("{column}=current_setting('{guc}')"),
+        ] {
+            normalized = normalized.replace(&pattern, &casted);
+        }
+    }
+    normalized
 }
 
 pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
@@ -1552,6 +1575,15 @@ mod oneof_check_tests {
                 .iter()
                 .any(|policy| policy.name == "table_security_isolation"),
             "db_table_security should derive a concrete policy"
+        );
+        let policy = table
+            .rls_policies
+            .iter()
+            .find(|policy| policy.name == "table_security_isolation")
+            .expect("derived policy");
+        assert_eq!(
+            policy.using_expression,
+            "tenant_id::text = current_setting('app.current_tenant_id', true)::text"
         );
         assert!(manifest.validation_errors.iter().any(|error| {
             error.contains("tenant_column")

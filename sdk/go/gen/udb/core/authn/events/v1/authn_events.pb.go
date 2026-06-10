@@ -1122,6 +1122,750 @@ func (x *PasswordResetByEmailRequestedEvent) GetTenantId() string {
 	return ""
 }
 
+// Kafka topic: udb.authn.user.login.failed.v1
+type LoginFailedEvent struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	EventId        string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	UserId         string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	ContactAddress string                 `protobuf:"bytes,3,opt,name=contact_address,json=contactAddress,proto3" json:"contact_address,omitempty"` // masked identifier
+	TenantId       string                 `protobuf:"bytes,4,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId      string                 `protobuf:"bytes,5,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ReasonCode     string                 `protobuf:"bytes,6,opt,name=reason_code,json=reasonCode,proto3" json:"reason_code,omitempty"` // e.g. bad_password, unknown_user, mfa_required
+	AuthMethod     string                 `protobuf:"bytes,7,opt,name=auth_method,json=authMethod,proto3" json:"auth_method,omitempty"`
+	IpAddress      string                 `protobuf:"bytes,8,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"` // masked
+	CorrelationId  string                 `protobuf:"bytes,9,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *LoginFailedEvent) Reset() {
+	*x = LoginFailedEvent{}
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginFailedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginFailedEvent) ProtoMessage() {}
+
+func (x *LoginFailedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginFailedEvent.ProtoReflect.Descriptor instead.
+func (*LoginFailedEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_events_v1_authn_events_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *LoginFailedEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *LoginFailedEvent) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *LoginFailedEvent) GetContactAddress() string {
+	if x != nil {
+		return x.ContactAddress
+	}
+	return ""
+}
+
+func (x *LoginFailedEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *LoginFailedEvent) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *LoginFailedEvent) GetReasonCode() string {
+	if x != nil {
+		return x.ReasonCode
+	}
+	return ""
+}
+
+func (x *LoginFailedEvent) GetAuthMethod() string {
+	if x != nil {
+		return x.AuthMethod
+	}
+	return ""
+}
+
+func (x *LoginFailedEvent) GetIpAddress() string {
+	if x != nil {
+		return x.IpAddress
+	}
+	return ""
+}
+
+func (x *LoginFailedEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *LoginFailedEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+// Kafka topic: udb.authn.mfa.enrolled.v1
+type MfaEnrolledEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	TenantId      string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	FactorType    string                 `protobuf:"bytes,5,opt,name=factor_type,json=factorType,proto3" json:"factor_type,omitempty"` // totp, webauthn, recovery_code
+	CorrelationId string                 `protobuf:"bytes,6,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MfaEnrolledEvent) Reset() {
+	*x = MfaEnrolledEvent{}
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MfaEnrolledEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MfaEnrolledEvent) ProtoMessage() {}
+
+func (x *MfaEnrolledEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MfaEnrolledEvent.ProtoReflect.Descriptor instead.
+func (*MfaEnrolledEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_events_v1_authn_events_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *MfaEnrolledEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *MfaEnrolledEvent) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *MfaEnrolledEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *MfaEnrolledEvent) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *MfaEnrolledEvent) GetFactorType() string {
+	if x != nil {
+		return x.FactorType
+	}
+	return ""
+}
+
+func (x *MfaEnrolledEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *MfaEnrolledEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+// Kafka topic: udb.authn.mfa.changed.v1
+type MfaChangedEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	TenantId      string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	FactorType    string                 `protobuf:"bytes,5,opt,name=factor_type,json=factorType,proto3" json:"factor_type,omitempty"`
+	Change        string                 `protobuf:"bytes,6,opt,name=change,proto3" json:"change,omitempty"` // added, removed, reset
+	CorrelationId string                 `protobuf:"bytes,7,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MfaChangedEvent) Reset() {
+	*x = MfaChangedEvent{}
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MfaChangedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MfaChangedEvent) ProtoMessage() {}
+
+func (x *MfaChangedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MfaChangedEvent.ProtoReflect.Descriptor instead.
+func (*MfaChangedEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_events_v1_authn_events_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *MfaChangedEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *MfaChangedEvent) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *MfaChangedEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *MfaChangedEvent) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *MfaChangedEvent) GetFactorType() string {
+	if x != nil {
+		return x.FactorType
+	}
+	return ""
+}
+
+func (x *MfaChangedEvent) GetChange() string {
+	if x != nil {
+		return x.Change
+	}
+	return ""
+}
+
+func (x *MfaChangedEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *MfaChangedEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+// Kafka topic: udb.authn.recovery.codes.generated.v1
+type RecoveryCodesGeneratedEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	TenantId      string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	CodeCount     int32                  `protobuf:"varint,4,opt,name=code_count,json=codeCount,proto3" json:"code_count,omitempty"` // count only — never the codes themselves
+	CorrelationId string                 `protobuf:"bytes,5,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecoveryCodesGeneratedEvent) Reset() {
+	*x = RecoveryCodesGeneratedEvent{}
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecoveryCodesGeneratedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecoveryCodesGeneratedEvent) ProtoMessage() {}
+
+func (x *RecoveryCodesGeneratedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecoveryCodesGeneratedEvent.ProtoReflect.Descriptor instead.
+func (*RecoveryCodesGeneratedEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_events_v1_authn_events_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *RecoveryCodesGeneratedEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *RecoveryCodesGeneratedEvent) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *RecoveryCodesGeneratedEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *RecoveryCodesGeneratedEvent) GetCodeCount() int32 {
+	if x != nil {
+		return x.CodeCount
+	}
+	return 0
+}
+
+func (x *RecoveryCodesGeneratedEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *RecoveryCodesGeneratedEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+// Kafka topic: udb.authn.recovery.code.used.v1
+type RecoveryCodeUsedEvent struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	EventId        string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	UserId         string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	TenantId       string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	RemainingCodes int32                  `protobuf:"varint,4,opt,name=remaining_codes,json=remainingCodes,proto3" json:"remaining_codes,omitempty"`
+	CorrelationId  string                 `protobuf:"bytes,5,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RecoveryCodeUsedEvent) Reset() {
+	*x = RecoveryCodeUsedEvent{}
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecoveryCodeUsedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecoveryCodeUsedEvent) ProtoMessage() {}
+
+func (x *RecoveryCodeUsedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecoveryCodeUsedEvent.ProtoReflect.Descriptor instead.
+func (*RecoveryCodeUsedEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_events_v1_authn_events_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *RecoveryCodeUsedEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *RecoveryCodeUsedEvent) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *RecoveryCodeUsedEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *RecoveryCodeUsedEvent) GetRemainingCodes() int32 {
+	if x != nil {
+		return x.RemainingCodes
+	}
+	return 0
+}
+
+func (x *RecoveryCodeUsedEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *RecoveryCodeUsedEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+// Kafka topic: udb.authn.session.refreshed.v1
+type SessionRefreshedEvent struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	EventId         string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	UserId          string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	SessionPublicId string                 `protobuf:"bytes,3,opt,name=session_public_id,json=sessionPublicId,proto3" json:"session_public_id,omitempty"` // public id, never the raw token
+	TenantId        string                 `protobuf:"bytes,4,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId       string                 `protobuf:"bytes,5,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	CorrelationId   string                 `protobuf:"bytes,6,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SessionRefreshedEvent) Reset() {
+	*x = SessionRefreshedEvent{}
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionRefreshedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionRefreshedEvent) ProtoMessage() {}
+
+func (x *SessionRefreshedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionRefreshedEvent.ProtoReflect.Descriptor instead.
+func (*SessionRefreshedEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_events_v1_authn_events_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *SessionRefreshedEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *SessionRefreshedEvent) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *SessionRefreshedEvent) GetSessionPublicId() string {
+	if x != nil {
+		return x.SessionPublicId
+	}
+	return ""
+}
+
+func (x *SessionRefreshedEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *SessionRefreshedEvent) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *SessionRefreshedEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *SessionRefreshedEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+// Kafka topic: udb.authn.user.phone.verified.v1
+type PhoneVerifiedEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	PhoneMasked   string                 `protobuf:"bytes,3,opt,name=phone_masked,json=phoneMasked,proto3" json:"phone_masked,omitempty"`
+	TenantId      string                 `protobuf:"bytes,4,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	CorrelationId string                 `protobuf:"bytes,5,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PhoneVerifiedEvent) Reset() {
+	*x = PhoneVerifiedEvent{}
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PhoneVerifiedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PhoneVerifiedEvent) ProtoMessage() {}
+
+func (x *PhoneVerifiedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PhoneVerifiedEvent.ProtoReflect.Descriptor instead.
+func (*PhoneVerifiedEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_events_v1_authn_events_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *PhoneVerifiedEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *PhoneVerifiedEvent) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *PhoneVerifiedEvent) GetPhoneMasked() string {
+	if x != nil {
+		return x.PhoneMasked
+	}
+	return ""
+}
+
+func (x *PhoneVerifiedEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *PhoneVerifiedEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *PhoneVerifiedEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+// Kafka topic: udb.authn.webauthn.registered.v1
+type WebauthnRegisteredEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	CredentialId  string                 `protobuf:"bytes,3,opt,name=credential_id,json=credentialId,proto3" json:"credential_id,omitempty"` // public credential id, not the key
+	TenantId      string                 `protobuf:"bytes,4,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	CorrelationId string                 `protobuf:"bytes,5,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	OccurredAt    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WebauthnRegisteredEvent) Reset() {
+	*x = WebauthnRegisteredEvent{}
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WebauthnRegisteredEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WebauthnRegisteredEvent) ProtoMessage() {}
+
+func (x *WebauthnRegisteredEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_events_v1_authn_events_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WebauthnRegisteredEvent.ProtoReflect.Descriptor instead.
+func (*WebauthnRegisteredEvent) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_events_v1_authn_events_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *WebauthnRegisteredEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *WebauthnRegisteredEvent) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *WebauthnRegisteredEvent) GetCredentialId() string {
+	if x != nil {
+		return x.CredentialId
+	}
+	return ""
+}
+
+func (x *WebauthnRegisteredEvent) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *WebauthnRegisteredEvent) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
+}
+
+func (x *WebauthnRegisteredEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
 var File_udb_core_authn_events_v1_authn_events_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_events_v1_authn_events_proto_rawDesc = "" +
@@ -1269,7 +2013,98 @@ const file_udb_core_authn_events_v1_authn_events_proto_rawDesc = "" +
 	"\voccurred_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12\x1b\n" +
 	"\ttenant_id\x18\b \x01(\tR\btenantId:\xa0\x01\x92\xb2\x19\x9b\x01\n" +
-	";udb.core.authn.events.v1.PasswordResetByEmailRequestedEvent\x120udb.authn.user.email.password.reset.requested.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\xfb\x01\n" +
+	";udb.core.authn.events.v1.PasswordResetByEmailRequestedEvent\x120udb.authn.user.email.password.reset.requested.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xed\x03\n" +
+	"\x10LoginFailedEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12'\n" +
+	"\x0fcontact_address\x18\x03 \x01(\tR\x0econtactAddress\x12\x1b\n" +
+	"\ttenant_id\x18\x04 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x05 \x01(\tR\tprojectId\x12\x1f\n" +
+	"\vreason_code\x18\x06 \x01(\tR\n" +
+	"reasonCode\x12\x1f\n" +
+	"\vauth_method\x18\a \x01(\tR\n" +
+	"authMethod\x12\x1d\n" +
+	"\n" +
+	"ip_address\x18\b \x01(\tR\tipAddress\x12%\n" +
+	"\x0ecorrelation_id\x18\t \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt:{\x92\xb2\x19w\n" +
+	")udb.core.authn.events.v1.LoginFailedEvent\x12\x1eudb.authn.user.login.failed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xff\x02\n" +
+	"\x10MfaEnrolledEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1b\n" +
+	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x04 \x01(\tR\tprojectId\x12\x1f\n" +
+	"\vfactor_type\x18\x05 \x01(\tR\n" +
+	"factorType\x12%\n" +
+	"\x0ecorrelation_id\x18\x06 \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt:v\x92\xb2\x19r\n" +
+	")udb.core.authn.events.v1.MfaEnrolledEvent\x12\x19udb.authn.mfa.enrolled.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\x94\x03\n" +
+	"\x0fMfaChangedEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1b\n" +
+	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x04 \x01(\tR\tprojectId\x12\x1f\n" +
+	"\vfactor_type\x18\x05 \x01(\tR\n" +
+	"factorType\x12\x16\n" +
+	"\x06change\x18\x06 \x01(\tR\x06change\x12%\n" +
+	"\x0ecorrelation_id\x18\a \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt:t\x92\xb2\x19p\n" +
+	"(udb.core.authn.events.v1.MfaChangedEvent\x12\x18udb.authn.mfa.changed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\x82\x03\n" +
+	"\x1bRecoveryCodesGeneratedEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1b\n" +
+	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"code_count\x18\x04 \x01(\x05R\tcodeCount\x12%\n" +
+	"\x0ecorrelation_id\x18\x05 \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt:\x8e\x01\x92\xb2\x19\x89\x01\n" +
+	"4udb.core.authn.events.v1.RecoveryCodesGeneratedEvent\x12%udb.authn.recovery.codes.generated.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xf9\x02\n" +
+	"\x15RecoveryCodeUsedEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1b\n" +
+	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12'\n" +
+	"\x0fremaining_codes\x18\x04 \x01(\x05R\x0eremainingCodes\x12%\n" +
+	"\x0ecorrelation_id\x18\x05 \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt:\x81\x01\x92\xb2\x19}\n" +
+	".udb.core.authn.events.v1.RecoveryCodeUsedEvent\x12\x1fudb.authn.recovery.code.used.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\x9a\x03\n" +
+	"\x15SessionRefreshedEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12*\n" +
+	"\x11session_public_id\x18\x03 \x01(\tR\x0fsessionPublicId\x12\x1b\n" +
+	"\ttenant_id\x18\x04 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x05 \x01(\tR\tprojectId\x12%\n" +
+	"\x0ecorrelation_id\x18\x06 \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt:\x80\x01\x92\xb2\x19|\n" +
+	".udb.core.authn.events.v1.SessionRefreshedEvent\x12\x1eudb.authn.session.refreshed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xed\x02\n" +
+	"\x12PhoneVerifiedEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
+	"\fphone_masked\x18\x03 \x01(\tR\vphoneMasked\x12\x1b\n" +
+	"\ttenant_id\x18\x04 \x01(\tR\btenantId\x12%\n" +
+	"\x0ecorrelation_id\x18\x05 \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt:\x7f\x92\xb2\x19{\n" +
+	"+udb.core.authn.events.v1.PhoneVerifiedEvent\x12 udb.authn.user.phone.verified.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xfb\x02\n" +
+	"\x17WebauthnRegisteredEvent\x12\x19\n" +
+	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12#\n" +
+	"\rcredential_id\x18\x03 \x01(\tR\fcredentialId\x12\x1b\n" +
+	"\ttenant_id\x18\x04 \x01(\tR\btenantId\x12%\n" +
+	"\x0ecorrelation_id\x18\x05 \x01(\tR\rcorrelationId\x12;\n" +
+	"\voccurred_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt:\x85\x01\x92\xb2\x19\x80\x01\n" +
+	"0udb.core.authn.events.v1.WebauthnRegisteredEvent\x12 udb.authn.webauthn.registered.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\xfb\x01\n" +
 	"\x1ccom.udb.core.authn.events.v1B\x10AuthnEventsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Events.V1\xca\x02\x18Udb\\Core\\Authn\\Events\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Events\\V1\xea\x02\x1cUdb::Core::Authn::Events::V1b\x06proto3"
 
 var (
@@ -1284,7 +2119,7 @@ func file_udb_core_authn_events_v1_authn_events_proto_rawDescGZIP() []byte {
 	return file_udb_core_authn_events_v1_authn_events_proto_rawDescData
 }
 
-var file_udb_core_authn_events_v1_authn_events_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_udb_core_authn_events_v1_authn_events_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_udb_core_authn_events_v1_authn_events_proto_goTypes = []any{
 	(*UserRegisteredEvent)(nil),                // 0: udb.core.authn.events.v1.UserRegisteredEvent
 	(*UserLoggedInEvent)(nil),                  // 1: udb.core.authn.events.v1.UserLoggedInEvent
@@ -1296,37 +2131,53 @@ var file_udb_core_authn_events_v1_authn_events_proto_goTypes = []any{
 	(*EmailVerifiedEvent)(nil),                 // 7: udb.core.authn.events.v1.EmailVerifiedEvent
 	(*PasswordResetRequestedEvent)(nil),        // 8: udb.core.authn.events.v1.PasswordResetRequestedEvent
 	(*PasswordResetByEmailRequestedEvent)(nil), // 9: udb.core.authn.events.v1.PasswordResetByEmailRequestedEvent
-	(*timestamppb.Timestamp)(nil),              // 10: google.protobuf.Timestamp
-	(v1.AccountKind)(0),                        // 11: udb.core.authn.entity.v1.AccountKind
-	(v1.SessionType)(0),                        // 12: udb.core.authn.entity.v1.SessionType
-	(v1.DeviceType)(0),                         // 13: udb.core.authn.entity.v1.DeviceType
-	(v1.OTPType)(0),                            // 14: udb.core.authn.entity.v1.OTPType
-	(v1.UserStatus)(0),                         // 15: udb.core.authn.entity.v1.UserStatus
+	(*LoginFailedEvent)(nil),                   // 10: udb.core.authn.events.v1.LoginFailedEvent
+	(*MfaEnrolledEvent)(nil),                   // 11: udb.core.authn.events.v1.MfaEnrolledEvent
+	(*MfaChangedEvent)(nil),                    // 12: udb.core.authn.events.v1.MfaChangedEvent
+	(*RecoveryCodesGeneratedEvent)(nil),        // 13: udb.core.authn.events.v1.RecoveryCodesGeneratedEvent
+	(*RecoveryCodeUsedEvent)(nil),              // 14: udb.core.authn.events.v1.RecoveryCodeUsedEvent
+	(*SessionRefreshedEvent)(nil),              // 15: udb.core.authn.events.v1.SessionRefreshedEvent
+	(*PhoneVerifiedEvent)(nil),                 // 16: udb.core.authn.events.v1.PhoneVerifiedEvent
+	(*WebauthnRegisteredEvent)(nil),            // 17: udb.core.authn.events.v1.WebauthnRegisteredEvent
+	(*timestamppb.Timestamp)(nil),              // 18: google.protobuf.Timestamp
+	(v1.AccountKind)(0),                        // 19: udb.core.authn.entity.v1.AccountKind
+	(v1.SessionType)(0),                        // 20: udb.core.authn.entity.v1.SessionType
+	(v1.DeviceType)(0),                         // 21: udb.core.authn.entity.v1.DeviceType
+	(v1.OTPType)(0),                            // 22: udb.core.authn.entity.v1.OTPType
+	(v1.UserStatus)(0),                         // 23: udb.core.authn.entity.v1.UserStatus
 }
 var file_udb_core_authn_events_v1_authn_events_proto_depIdxs = []int32{
-	10, // 0: udb.core.authn.events.v1.UserRegisteredEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	11, // 1: udb.core.authn.events.v1.UserRegisteredEvent.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	12, // 2: udb.core.authn.events.v1.UserLoggedInEvent.session_type:type_name -> udb.core.authn.entity.v1.SessionType
-	13, // 3: udb.core.authn.events.v1.UserLoggedInEvent.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
-	10, // 4: udb.core.authn.events.v1.UserLoggedInEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	10, // 5: udb.core.authn.events.v1.SessionRevokedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	10, // 6: udb.core.authn.events.v1.UserLockedEvent.locked_until:type_name -> google.protobuf.Timestamp
-	10, // 7: udb.core.authn.events.v1.UserLockedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	10, // 8: udb.core.authn.events.v1.PasswordChangedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	14, // 9: udb.core.authn.events.v1.OTPSentEvent.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
-	10, // 10: udb.core.authn.events.v1.OTPSentEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	15, // 11: udb.core.authn.events.v1.UserStatusChangedEvent.old_status:type_name -> udb.core.authn.entity.v1.UserStatus
-	15, // 12: udb.core.authn.events.v1.UserStatusChangedEvent.new_status:type_name -> udb.core.authn.entity.v1.UserStatus
-	10, // 13: udb.core.authn.events.v1.UserStatusChangedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	10, // 14: udb.core.authn.events.v1.EmailVerifiedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	13, // 15: udb.core.authn.events.v1.PasswordResetRequestedEvent.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
-	10, // 16: udb.core.authn.events.v1.PasswordResetRequestedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	10, // 17: udb.core.authn.events.v1.PasswordResetByEmailRequestedEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	18, // [18:18] is the sub-list for method output_type
-	18, // [18:18] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	18, // 0: udb.core.authn.events.v1.UserRegisteredEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	19, // 1: udb.core.authn.events.v1.UserRegisteredEvent.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	20, // 2: udb.core.authn.events.v1.UserLoggedInEvent.session_type:type_name -> udb.core.authn.entity.v1.SessionType
+	21, // 3: udb.core.authn.events.v1.UserLoggedInEvent.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
+	18, // 4: udb.core.authn.events.v1.UserLoggedInEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	18, // 5: udb.core.authn.events.v1.SessionRevokedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	18, // 6: udb.core.authn.events.v1.UserLockedEvent.locked_until:type_name -> google.protobuf.Timestamp
+	18, // 7: udb.core.authn.events.v1.UserLockedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	18, // 8: udb.core.authn.events.v1.PasswordChangedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	22, // 9: udb.core.authn.events.v1.OTPSentEvent.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
+	18, // 10: udb.core.authn.events.v1.OTPSentEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	23, // 11: udb.core.authn.events.v1.UserStatusChangedEvent.old_status:type_name -> udb.core.authn.entity.v1.UserStatus
+	23, // 12: udb.core.authn.events.v1.UserStatusChangedEvent.new_status:type_name -> udb.core.authn.entity.v1.UserStatus
+	18, // 13: udb.core.authn.events.v1.UserStatusChangedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	18, // 14: udb.core.authn.events.v1.EmailVerifiedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	21, // 15: udb.core.authn.events.v1.PasswordResetRequestedEvent.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
+	18, // 16: udb.core.authn.events.v1.PasswordResetRequestedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	18, // 17: udb.core.authn.events.v1.PasswordResetByEmailRequestedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	18, // 18: udb.core.authn.events.v1.LoginFailedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	18, // 19: udb.core.authn.events.v1.MfaEnrolledEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	18, // 20: udb.core.authn.events.v1.MfaChangedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	18, // 21: udb.core.authn.events.v1.RecoveryCodesGeneratedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	18, // 22: udb.core.authn.events.v1.RecoveryCodeUsedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	18, // 23: udb.core.authn.events.v1.SessionRefreshedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	18, // 24: udb.core.authn.events.v1.PhoneVerifiedEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	18, // 25: udb.core.authn.events.v1.WebauthnRegisteredEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	26, // [26:26] is the sub-list for method output_type
+	26, // [26:26] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_authn_events_v1_authn_events_proto_init() }
@@ -1340,7 +2191,7 @@ func file_udb_core_authn_events_v1_authn_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_authn_events_v1_authn_events_proto_rawDesc), len(file_udb_core_authn_events_v1_authn_events_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
