@@ -42,6 +42,16 @@ pub struct SyncConfig {
     /// Skip tables whose row count difference is below this threshold.
     /// Helps reduce noise from high-frequency tables.  Default: 0 (sync all).
     pub min_row_diff_threshold: i64,
+    /// Optional tenant filter for backup/restore or primary→backup sync.
+    /// When set, workers MUST add this tenant predicate to every copied table
+    /// that carries a tenant column.
+    #[serde(default)]
+    pub tenant_id_filter: Option<String>,
+    /// Explicit break-glass flag for whole-database/cross-tenant restore or
+    /// replication. Default false: tenant-scoped deployments fail closed unless
+    /// an operator deliberately acknowledges the cross-tenant blast radius.
+    #[serde(default)]
+    pub allow_cross_tenant_restore: bool,
 }
 
 impl Default for SyncConfig {
@@ -52,6 +62,8 @@ impl Default for SyncConfig {
             batch_size: 500,
             tables_to_sync: Vec::new(),
             min_row_diff_threshold: 0,
+            tenant_id_filter: None,
+            allow_cross_tenant_restore: false,
         }
     }
 }
@@ -69,6 +81,32 @@ impl SyncConfig {
     /// Returns `true` when specific tables are configured (vs auto-discovery).
     pub fn has_explicit_tables(&self) -> bool {
         !self.tables_to_sync.is_empty()
+    }
+
+    pub fn tenant_scoped(&self) -> bool {
+        self.tenant_id_filter
+            .as_deref()
+            .map(str::trim)
+            .is_some_and(|tenant| !tenant.is_empty())
+    }
+
+    /// Phase 2 fail-closed contract for any worker consuming this legacy config:
+    /// if a sync/restore path is enabled without a tenant filter, it must carry a
+    /// deliberate cross-tenant acknowledgement.
+    ///
+    // NOTE (Tier-6 #30): this is a ready-to-wire primitive. The primary→backup
+    // sync *worker* is NOT ported to the Rust runtime (legacy Go responsibility;
+    // see the module header). When that native worker is built, call
+    // `validate_tenant_scope()` BEFORE the first copy cycle so the tenant-scope
+    // contract is enforced on the serving path, not just in unit tests.
+    pub fn validate_tenant_scope(&self) -> Result<(), String> {
+        if self.enabled && !self.tenant_scoped() && !self.allow_cross_tenant_restore {
+            return Err(
+                "sync/restore is enabled without tenant_id_filter; set tenant_id_filter or allow_cross_tenant_restore=true"
+                    .to_string(),
+            );
+        }
+        Ok(())
     }
 }
 
@@ -183,5 +221,19 @@ mod tests {
         assert!(s.contains("tables=3"));
         assert!(s.contains("rows=42"));
         assert!(s.contains("elapsed=2000ms"));
+    }
+
+    #[test]
+    fn sync_config_requires_tenant_scope_or_break_glass_when_enabled() {
+        let mut cfg = SyncConfig {
+            enabled: true,
+            ..SyncConfig::default()
+        };
+        assert!(cfg.validate_tenant_scope().is_err());
+        cfg.tenant_id_filter = Some("tenant-a".to_string());
+        assert!(cfg.validate_tenant_scope().is_ok());
+        cfg.tenant_id_filter = None;
+        cfg.allow_cross_tenant_restore = true;
+        assert!(cfg.validate_tenant_scope().is_ok());
     }
 }

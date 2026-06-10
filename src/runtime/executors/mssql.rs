@@ -242,7 +242,6 @@ fn is_transport_error(err: &tiberius::error::Error) -> bool {
 /// `query`/`mutate`/`transaction` call prepends
 /// `EXEC sp_set_session_context` statements that set
 /// `app.current_tenant_id`, `app.current_project_id`, …
-/// `@read_only = 1` so the values can't be rewritten mid-request.
 /// Operator-installed T-SQL RLS policies read those values via
 /// `SESSION_CONTEXT(N'app_current_tenant_id')` to filter rows.
 #[derive(Debug, Clone)]
@@ -693,6 +692,10 @@ mod tests {
         assert!(batch.contains("@key = N'app_current_tenant_id'"));
         assert!(batch.contains("@value = N'acme'"));
         assert!(batch.contains("@key = N'app_current_project_id'"));
+        assert!(
+            !batch.contains("@read_only"),
+            "pooled MSSQL sessions must be restampable per request; got: {batch}"
+        );
         // Multiple statements joined into a single batch.
         assert!(batch.contains("; "));
     }

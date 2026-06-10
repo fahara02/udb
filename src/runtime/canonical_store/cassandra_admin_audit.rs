@@ -45,7 +45,7 @@ use super::cassandra::{CassandraCanonicalStore, now_unix_ms};
 use super::cassandra_projection::{cass_err, cql_ts, get_dt, get_json, get_text, get_uuid};
 use super::system_store::{
     AdminAuditChainReport, AdminAuditInsert, AdminAuditListFilter, AdminAuditRow, AdminAuditStore,
-    SystemStoreError, SystemStoreResult, compute_admin_audit_hash, verify_admin_audit_chain_step,
+    SystemStoreResult, compute_admin_audit_hash, verify_admin_audit_chain_step,
 };
 
 /// Single partition value for the audit-log table — every row shares it so the

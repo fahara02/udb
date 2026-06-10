@@ -13,15 +13,22 @@
 //! as MySQL `?` placeholders (sqlx converts `?` from the SQL string
 //! to MySQL-protocol prepared-statement params).
 //!
-//! ## NW-deep — RequestContext enforcement
+//! ## NW-deep — RequestContext propagation (NOT native RLS)
 //!
 //! When constructed with `with_context`, the executor wraps every
 //! dispatched SQL in a session-scoped transaction and SETs the
 //! `@app_current_tenant_id` / `@app_current_project_id` /
-//! `@app_current_purpose` user variables before running the SQL. RLS
-//! views and stored procedures that read those user vars now see the
-//! same tenant context as the typed RPCs (matches Postgres's
-//! `set_request_local_settings` pattern).
+//! `@app_current_purpose` user variables before running the SQL.
+//!
+//! **Limitation (capability-honest):** MySQL has no native row-level-security
+//! engine, so these session vars perform NO in-engine row filtering on their
+//! own. They merely *publish* the tenant context so that operator-installed
+//! views / stored procedures (e.g. `WHERE tenant_id = @app_current_tenant_id`)
+//! — or broker-side tenant-predicate injection at compile time — can scope rows.
+//! Accordingly `BackendContextEnforcer::enforce` reports `Advisory` (not
+//! `Enforced`) and the capability matrix reports `supports_rls: false`. Without
+//! operator views OR broker predicate injection, tenant isolation on MySQL is
+//! application-trust, not broker-enforced — see `enforce` below.
 //!
 //! ## What this DOES NOT do yet
 //!
@@ -40,8 +47,7 @@ use sqlx::Row;
 
 use crate::broker::RequestContext;
 use crate::runtime::backend_context::{
-    AppliedContext, BackendContextEnforcer, ContextEffect, SqlDialect, enforce_with_mechanism,
-    render_sql_session_settings,
+    AppliedContext, BackendContextEnforcer, ContextEffect, SqlDialect, render_sql_session_settings,
 };
 use crate::runtime::core::{validate_mutation_sql, validate_read_sql};
 use crate::runtime::executor_utils::{
@@ -73,8 +79,11 @@ impl MysqlExecutor {
     }
 
     /// Context-bound constructor — every dispatched query/mutate runs
-    /// inside a transaction with session vars set, so RLS-style views
-    /// can introspect tenant context.
+    /// inside a transaction with session vars set, so operator-installed
+    /// RLS-style views can introspect tenant context. NOTE: this sets the
+    /// tenant session context ONLY; it performs NO in-engine row filtering —
+    /// operator-installed views / broker tenant-predicate injection are REQUIRED
+    /// for isolation on MySQL (no native RLS). See the module-level note.
     pub fn with_context(pool: MySqlPool, context: Arc<RequestContext>) -> Self {
         Self {
             pool,
@@ -187,14 +196,29 @@ impl BackendContextEnforcer for MysqlExecutor {
     }
 
     fn enforce(&self, ctx: &AppliedContext) -> ContextEffect {
-        // Effect classification — actual application happens inside
-        // the per-request transaction via `apply_session_vars`. We
-        // report Enforced because the executor is wired to honour
-        // `with_context` and emit the SETs.
-        enforce_with_mechanism(
-            ctx,
-            "SET @app_current_* session variables in request-scoped transaction",
-        )
+        // HONEST POSTURE (M1): MySQL has NO native row-level-security engine.
+        // Setting `@app_current_*` session user-variables publishes the tenant
+        // context, but performs NO in-engine row filtering by itself — rows are
+        // only scoped if the OPERATOR installs views/stored-procedures that read
+        // those user-vars (e.g. `WHERE tenant_id = @app_current_tenant_id`), or if
+        // the broker injects a tenant predicate at compile time. Therefore the
+        // session-var SET is `Advisory`, not `Enforced`: the broker records the
+        // context for operator-side policy to consume, but does not itself
+        // constrain row visibility. This matches `supports_rls: false` for MySQL
+        // in the capability matrix. Without operator views OR broker-side tenant
+        // predicate injection, tenant isolation on MySQL is application-trust.
+        if ctx.is_empty() {
+            ContextEffect::Advisory {
+                recorded_in: "no_context_to_apply".into(),
+            }
+        } else {
+            ContextEffect::Advisory {
+                recorded_in: "SET @app_current_* session variables (no native MySQL RLS — \
+                              operator-installed views / broker tenant-predicate injection \
+                              REQUIRED for row isolation)"
+                    .into(),
+            }
+        }
     }
 }
 

@@ -45,7 +45,7 @@ public final class SessionProto extends com.google.protobuf.GeneratedFile {
       "buf/timestamp.proto\032$udb/core/authn/enti" +
       "ty/v1/enums.proto\032\033udb/core/common/v1/db" +
       ".proto\032!udb/core/common/v1/security.prot" +
-      "o\"\301\036\n\007Session\022L\n\nsession_id\030\001 \001(\tB-\202\267\030)\n" +
+      "o\"\274 \n\007Session\022L\n\nsession_id\030\001 \001(\tB-\202\267\030)\n" +
       "\nsession_id\022\004UUID\030\001(\001:\021gen_random_uuid()" +
       "R\tsessionId\022\213\001\n\007user_id\030\002 \001(\tBr\202\267\030n\n\007use" +
       "r_id\022\004UUID\030\001J\035\n\005users\022\007user_id\032\tudb_auth" +
@@ -54,102 +54,108 @@ public final class SessionProto extends com.google.protobuf.GeneratedFile {
       "ssion_type\030\003 \001(\0162%.udb.core.authn.entity" +
       ".v1.SessionTypeB=\202\267\0309\n\014session_type\022\013VAR" +
       "CHAR(20)\030\001R\032\n\021idx_sessions_type\022\005BTREER\013" +
-      "sessionType\022\332\001\n\024session_token_lookup\030\004 \001" +
-      "(\tB\247\001\350\265\030\001\360\265\030\001\202\267\030\232\001\n\024session_token_lookup" +
+      "sessionType\022\371\001\n\024session_token_lookup\030\004 \001" +
+      "(\tB\306\001\350\265\030\001\360\265\030\001\202\267\030\232\001\n\024session_token_lookup" +
       "\022\014VARCHAR(128)R?\n\031idx_sessions_token_loo" +
       "kup\022\004HASH:\034session_type = \'SERVER_SIDE\'Z" +
       "3Keyed HMAC lookup digest of the plain s" +
-      "ession tokenR\022sessionTokenLookup\022\226\001\n\022ses" +
-      "sion_token_hash\030\005 \001(\tBh\350\265\030\001\360\265\030\001\202\267\030\\\n\022ses" +
-      "sion_token_hash\022\014VARCHAR(128)Z8bcrypt ha" +
-      "sh of session token (server-side session" +
-      "s only)R\020sessionTokenHash\022\204\001\n\017csrf_token" +
-      "_hash\030\006 \001(\tB\\\350\265\030\001\360\265\030\001\202\267\030P\n\017csrf_token_ha" +
-      "sh\022\014VARCHAR(128)Z/SHA-256 of CSRF token;" +
-      " rotated on each mutationR\rcsrfTokenHash" +
-      "\022\277\001\n\020access_token_jti\030\007 \001(\tB\224\001\202\267\030\217\001\n\020acc" +
-      "ess_token_jti\022\013VARCHAR(36)R5\n\027idx_sessio" +
-      "ns_access_jti\022\004HASH:\024session_type = \'JWT" +
-      "\'Z7JWT jti for access token revocation (" +
-      "JWT sessions only)R\016accessTokenJti\022\257\001\n\021r" +
-      "efresh_token_jti\030\010 \001(\tB\202\001\202\267\030~\n\021refresh_t" +
-      "oken_jti\022\013VARCHAR(36)R6\n\030idx_sessions_re" +
-      "fresh_jti\022\004HASH:\024session_type = \'JWT\'Z$J" +
-      "WT jti for refresh token revocationR\017ref" +
-      "reshTokenJti\022n\n\013device_type\030\t \001(\0162$.udb." +
-      "core.authn.entity.v1.DeviceTypeB\'\202\267\030#\n\013d" +
-      "evice_type\022\013VARCHAR(20)\030\001:\005\'WEB\'R\ndevice" +
-      "Type\022v\n\013device_name\030\n \001(\tBU\202\267\030Q\n\013device_" +
-      "name\022\014VARCHAR(150)Z4Human-readable: brow" +
-      "ser/OS string or API client nameR\ndevice" +
-      "Name\022n\n\nip_address\030\013 \001(\tBO\320\265\030\001\340\265\030\001\202\266\030\024Se" +
-      "curity audit trail\202\267\030+\n\nip_address\022\004INET" +
-      "Z\027Client IP at login timeR\tipAddress\0225\n\n" +
-      "user_agent\030\014 \001(\tB\026\202\267\030\022\n\nuser_agent\022\004TEXT" +
-      "R\tuserAgent\022{\n\tis_active\030\r \001(\010B^\202\267\030Z\n\tis" +
-      "_active\022\007BOOLEAN\030\001:\004TRUER<\n\030idx_sessions" +
-      "_active_user\022\005BTREE:\020is_active = trueZ\007u" +
-      "ser_idR\010isActive\022|\n\nexpires_at\030\016 \001(\0132\032.g" +
-      "oogle.protobuf.TimestampBA\202\267\030=\n\nexpires_" +
-      "at\022\013TIMESTAMPTZ\030\001R \n\027idx_sessions_expire" +
-      "s_at\022\005BTREER\texpiresAt\022\237\001\n\016last_active_a" +
-      "t\030\017 \001(\0132\032.google.protobuf.TimestampB]\202\267\030" +
-      "Y\n\016last_active_at\022\013TIMESTAMPTZZ:Updated " +
-      "on each authenticated request (for slidi" +
-      "ng expiry)R\014lastActiveAt\022\322\001\n\nrevoked_by\030" +
-      "\020 \001(\tB\262\001\202\267\030\255\001\n\nrevoked_by\022\004UUIDJ5\n\005users" +
-      "\022\007user_id\032\tudb_authn \0042\026fk_sessions_revo" +
-      "ked_byR \n\027idx_sessions_revoked_by\022\005BTREE" +
-      "Z@FK to users.user_id \342\200\224 who revoked th" +
-      "is session (self or admin)R\trevokedBy\022\211\001" +
-      "\n\rrevoke_reason\030\021 \001(\tBd\202\267\030`\n\rrevoke_reas" +
-      "on\022\013VARCHAR(80)ZBlogout | admin_revoke |" +
-      " password_change | expired | security_ev" +
-      "entR\014revokeReason\022q\n\ncreated_at\030\022 \001(\0132\032." +
-      "google.protobuf.TimestampB6\202\267\0302\n\ncreated" +
-      "_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h" +
-      "\001R\tcreatedAt\022X\n\ttenant_id\030\023 \001(\tB;\202\267\0307\n\tt" +
-      "enant_id\022\013VARCHAR(64)\030\001R\033\n\022idx_session_t" +
-      "enant\022\005BTREER\010tenantId\022\230\001\n\nproject_id\030\024 " +
-      "\001(\tBy\202\267\030u\n\nproject_id\022\014VARCHAR(120)R \n\027i" +
-      "dx_sessions_project_id\022\005BTREEZ7Optional " +
-      "project/application namespace for this s" +
-      "essionR\tprojectId\022\234\001\n\014principal_id\030\025 \001(\t" +
-      "By\202\267\030u\n\014principal_id\022\014VARCHAR(160)R\"\n\031id" +
-      "x_sessions_principal_id\022\005BTREEZ3Canonica" +
-      "l UDB principal id resolved for the sess" +
-      "ionR\013principalId\022s\n\013provider_id\030\026 \001(\tBR\202" +
-      "\267\030N\n\013provider_id\022\014VARCHAR(120)Z1Identity" +
-      " provider that authenticated this sessio" +
-      "nR\nproviderId\022\204\001\n\013auth_method\030\027 \001(\tBc\202\267\030" +
-      "_\n\013auth_method\022\013VARCHAR(40)ZCjwt, sessio" +
-      "n, api_key, mtls, oidc, saml, or provide" +
-      "r-defined methodR\nauthMethod\022r\n\013scopes_j" +
-      "son\030\030 \001(\tBQ\202\267\030M\n\013scopes_json\022\005JSONB\030\001:\013\'" +
-      "[]\'::jsonbZ&Scopes resolved at authentic" +
-      "ation timex\001R\nscopesJson\022\203\001\n\rmetadata_js" +
-      "on\030\031 \001(\tB^\202\267\030Z\n\rmetadata_json\022\005JSONB\030\001:\013" +
-      "\'{}\'::jsonbZ1Non-secret session metadata" +
-      " for audit and routingx\001R\014metadataJson:\324" +
-      "\003\242\265\030@\010\001\022\030udb:session:{session_id}\030\210\016 \001(\001" +
-      ":\022REDIS_CLUSTER_ADDRB\007session\372\266\030\213\003\n\010sess" +
-      "ions\022\tudb_authn\030\002 \001*FActive sessions acr" +
-      "oss web, API, workload, and external ide" +
-      "ntity flows@\001H\003R\ncreated_atX\264\001b^\n\020tenant" +
-      "_isolation\032H(tenant_id::text = current_s" +
-      "etting(\'app.current_tenant_id\', true)::t" +
-      "ext)(\001\212\001P\n%idx_sessions_tenant_user_sess" +
-      "ion_type\022\005BTREEZ\ttenant_idZ\007user_idZ\014ses" +
-      "sion_type\232\001\025\n\npg_partman\022\007partman\312\001\007MONT" +
-      "HLY\320\001\003\330\001\001\340\001\006\352\001\007primary\362\001\026udb.authn.sessi" +
-      "ons.cdc\372\001\023authn:sessions:readB\367\001\n\034com.ud" +
-      "b.core.authn.entity.v1B\014SessionProtoP\001ZD" +
-      "github.com/fahara02/udb/sdk/go/gen/udb/c" +
-      "ore/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030ud" +
-      "b.core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\" +
-      "Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\E" +
-      "ntity\\V1\352\002\034Udb::Core::Authn::Entity::V1b" +
-      "\006proto3"
+      "ession token\212\267\030\033\010\004\020\001\030\0032\013hmac-sha256J\006ten" +
+      "antR\022sessionTokenLookup\022\274\001\n\022session_toke" +
+      "n_hash\030\005 \001(\tB\215\001\350\265\030\001\360\265\030\001\202\267\030b\n\022session_tok" +
+      "en_hash\022\014VARCHAR(128)Z>Keyed HMAC digest" +
+      " of session token (server-side sessions " +
+      "only)\212\267\030\033\010\004\020\001\030\0032\013hmac-sha256J\006tenantR\020se" +
+      "ssionTokenHash\022\236\001\n\017csrf_token_hash\030\006 \001(\t" +
+      "Bv\350\265\030\001\360\265\030\001\202\267\030O\n\017csrf_token_hash\022\014VARCHAR" +
+      "(128)Z.Digest of CSRF token; rotated on " +
+      "each mutation\212\267\030\027\010\004\020\001\030\0032\006sha256J\007session" +
+      "R\rcsrfTokenHash\022\277\001\n\020access_token_jti\030\007 \001" +
+      "(\tB\224\001\202\267\030\217\001\n\020access_token_jti\022\013VARCHAR(36" +
+      ")R5\n\027idx_sessions_access_jti\022\004HASH:\024sess" +
+      "ion_type = \'JWT\'Z7JWT jti for access tok" +
+      "en revocation (JWT sessions only)R\016acces" +
+      "sTokenJti\022\257\001\n\021refresh_token_jti\030\010 \001(\tB\202\001" +
+      "\202\267\030~\n\021refresh_token_jti\022\013VARCHAR(36)R6\n\030" +
+      "idx_sessions_refresh_jti\022\004HASH:\024session_" +
+      "type = \'JWT\'Z$JWT jti for refresh token " +
+      "revocationR\017refreshTokenJti\022n\n\013device_ty" +
+      "pe\030\t \001(\0162$.udb.core.authn.entity.v1.Devi" +
+      "ceTypeB\'\202\267\030#\n\013device_type\022\013VARCHAR(20)\030\001" +
+      ":\005\'WEB\'R\ndeviceType\022v\n\013device_name\030\n \001(\t" +
+      "BU\202\267\030Q\n\013device_name\022\014VARCHAR(150)Z4Human" +
+      "-readable: browser/OS string or API clie" +
+      "nt nameR\ndeviceName\022n\n\nip_address\030\013 \001(\tB" +
+      "O\320\265\030\001\340\265\030\001\202\266\030\024Security audit trail\202\267\030+\n\ni" +
+      "p_address\022\004INETZ\027Client IP at login time" +
+      "R\tipAddress\0225\n\nuser_agent\030\014 \001(\tB\026\202\267\030\022\n\nu" +
+      "ser_agent\022\004TEXTR\tuserAgent\022{\n\tis_active\030" +
+      "\r \001(\010B^\202\267\030Z\n\tis_active\022\007BOOLEAN\030\001:\004TRUER" +
+      "<\n\030idx_sessions_active_user\022\005BTREE:\020is_a" +
+      "ctive = trueZ\007user_idR\010isActive\022|\n\nexpir" +
+      "es_at\030\016 \001(\0132\032.google.protobuf.TimestampB" +
+      "A\202\267\030=\n\nexpires_at\022\013TIMESTAMPTZ\030\001R \n\027idx_" +
+      "sessions_expires_at\022\005BTREER\texpiresAt\022\237\001" +
+      "\n\016last_active_at\030\017 \001(\0132\032.google.protobuf" +
+      ".TimestampB]\202\267\030Y\n\016last_active_at\022\013TIMEST" +
+      "AMPTZZ:Updated on each authenticated req" +
+      "uest (for sliding expiry)R\014lastActiveAt\022" +
+      "\322\001\n\nrevoked_by\030\020 \001(\tB\262\001\202\267\030\255\001\n\nrevoked_by" +
+      "\022\004UUIDJ5\n\005users\022\007user_id\032\tudb_authn \0042\026f" +
+      "k_sessions_revoked_byR \n\027idx_sessions_re" +
+      "voked_by\022\005BTREEZ@FK to users.user_id \342\200\224" +
+      " who revoked this session (self or admin" +
+      ")R\trevokedBy\022\211\001\n\rrevoke_reason\030\021 \001(\tBd\202\267" +
+      "\030`\n\rrevoke_reason\022\013VARCHAR(80)ZBlogout |" +
+      " admin_revoke | password_change | expire" +
+      "d | security_eventR\014revokeReason\022q\n\ncrea" +
+      "ted_at\030\022 \001(\0132\032.google.protobuf.Timestamp" +
+      "B6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CURRE" +
+      "NT_TIMESTAMP`\001h\001R\tcreatedAt\022X\n\ttenant_id" +
+      "\030\023 \001(\tB;\202\267\0307\n\ttenant_id\022\013VARCHAR(64)\030\001R\033" +
+      "\n\022idx_session_tenant\022\005BTREER\010tenantId\022\230\001" +
+      "\n\nproject_id\030\024 \001(\tBy\202\267\030u\n\nproject_id\022\014VA" +
+      "RCHAR(120)R \n\027idx_sessions_project_id\022\005B" +
+      "TREEZ7Optional project/application names" +
+      "pace for this sessionR\tprojectId\022\234\001\n\014pri" +
+      "ncipal_id\030\025 \001(\tBy\202\267\030u\n\014principal_id\022\014VAR" +
+      "CHAR(160)R\"\n\031idx_sessions_principal_id\022\005" +
+      "BTREEZ3Canonical UDB principal id resolv" +
+      "ed for the sessionR\013principalId\022s\n\013provi" +
+      "der_id\030\026 \001(\tBR\202\267\030N\n\013provider_id\022\014VARCHAR" +
+      "(120)Z1Identity provider that authentica" +
+      "ted this sessionR\nproviderId\022\204\001\n\013auth_me" +
+      "thod\030\027 \001(\tBc\202\267\030_\n\013auth_method\022\013VARCHAR(4" +
+      "0)ZCjwt, session, api_key, mtls, oidc, s" +
+      "aml, or provider-defined methodR\nauthMet" +
+      "hod\022r\n\013scopes_json\030\030 \001(\tBQ\202\267\030M\n\013scopes_j" +
+      "son\022\005JSONB\030\001:\013\'[]\'::jsonbZ&Scopes resolv" +
+      "ed at authentication timex\001R\nscopesJson\022" +
+      "\203\001\n\rmetadata_json\030\031 \001(\tB^\202\267\030Z\n\rmetadata_" +
+      "json\022\005JSONB\030\001:\013\'{}\'::jsonbZ1Non-secret s" +
+      "ession metadata for audit and routingx\001R" +
+      "\014metadataJson:\360\004\242\265\030@\010\001\022\030udb:session:{ses" +
+      "sion_id}\030\210\016 \001(\001:\022REDIS_CLUSTER_ADDRB\007ses" +
+      "sion\372\266\030\213\003\n\010sessions\022\tudb_authn\030\002 \001*FActi" +
+      "ve sessions across web, API, workload, a" +
+      "nd external identity flows@\001H\003R\ncreated_" +
+      "atX\264\001b^\n\020tenant_isolation\032H(tenant_id::t" +
+      "ext = current_setting(\'app.current_tenan" +
+      "t_id\', true)::text)(\001\212\001P\n%idx_sessions_t" +
+      "enant_user_session_type\022\005BTREEZ\ttenant_i" +
+      "dZ\007user_idZ\014session_type\232\001\025\n\npg_partman\022" +
+      "\007partman\312\001\007MONTHLY\320\001\003\330\001\001\340\001\006\352\001\007primary\362\001\026" +
+      "udb.authn.sessions.cdc\372\001\023authn:sessions:" +
+      "read\212\262\031\227\001\n\006tenant\032\ttenant_id*4tenant_id " +
+      "= current_setting(\'app.current_tenant_id" +
+      "\')2\013soft_delete:\021authn.operational@\373\023H\002R" +
+      "\006tenantZ\010standardr\025tenant.data_residency" +
+      "B\367\001\n\034com.udb.core.authn.entity.v1B\014Sessi" +
+      "onProtoP\001ZDgithub.com/fahara02/udb/sdk/g" +
+      "o/gen/udb/core/authn/entity/v1;entityv1\242" +
+      "\002\004UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030Udb\\" +
+      "Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadata\\C" +
+      "ore\\Authn\\Entity\\V1\352\002\034Udb::Core::Authn::" +
+      "Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -174,6 +180,8 @@ public final class SessionProto extends com.google.protobuf.GeneratedFile {
         com.google.protobuf.ExtensionRegistry.newInstance();
     registry.add(com.udb.core.common.v1.DbProto.cache);
     registry.add(com.udb.core.common.v1.SecurityProto.dataPurpose);
+    registry.add(com.udb.core.common.v1.SecurityProto.dbColumnSecurity);
+    registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
     registry.add(com.udb.core.common.v1.SecurityProto.logMasked);
     registry.add(com.udb.core.common.v1.SecurityProto.logRedacted);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);

@@ -20,33 +20,45 @@ pub(crate) fn render_materialized_view(view: &ManifestMaterializedView) -> Strin
 pub(crate) fn render_sql_artifacts(table: &ManifestTable, phase: &str) -> String {
     let mut out = String::new();
     for artifact in &table.sql_artifacts {
-        if !artifact_applies_to_phase(artifact, phase) {
-            continue;
-        }
-        if !artifact.backend.trim().is_empty() && artifact.backend != "postgres" {
-            continue;
-        }
-        if !artifact.sql.trim().is_empty() {
-            out.push_str(&format!(
-                "\n-- UDB:sql_artifact={}\n-- UDB:sql_artifact_phase={}\n",
-                artifact.name, phase
-            ));
-            if !artifact.checksum_sha256.trim().is_empty() {
-                out.push_str(&format!(
-                    "-- UDB:sql_artifact_sha256={}\n",
-                    artifact.checksum_sha256
-                ));
-            }
-            out.push_str(artifact.sql.trim());
-            out.push_str("\n\n");
-        } else if !artifact.file.trim().is_empty() {
-            out.push_str(&format!(
-                "\n-- UDB:sql_artifact={} file={} phase={} sha256={}\n",
-                artifact.name, artifact.file, phase, artifact.checksum_sha256
-            ));
+        if let Some(sql) = render_sql_artifact(artifact, phase) {
+            out.push_str(&sql);
         }
     }
     out
+}
+
+pub(crate) fn render_sql_artifact(artifact: &ManifestSqlArtifact, phase: &str) -> Option<String> {
+    if !artifact_applies_to_phase(artifact, phase) {
+        return None;
+    }
+    if !artifact.backend.trim().is_empty() && artifact.backend != "postgres" {
+        return None;
+    }
+    if !artifact.sql.trim().is_empty() {
+        let mut out = format!(
+            "\n-- UDB:sql_artifact={}\n-- UDB:sql_artifact_phase={}\n-- UDB:sql_artifact_requires_review={}\n",
+            artifact.name, phase, artifact.requires_review
+        );
+        if !artifact.checksum_sha256.trim().is_empty() {
+            out.push_str(&format!(
+                "-- UDB:sql_artifact_sha256={}\n",
+                artifact.checksum_sha256
+            ));
+        }
+        if !artifact.file.trim().is_empty() {
+            out.push_str(&format!("-- UDB:sql_artifact_file={}\n", artifact.file));
+        }
+        out.push_str(artifact.sql.trim());
+        out.push_str("\n\n");
+        return Some(out);
+    }
+    if !artifact.file.trim().is_empty() {
+        return Some(format!(
+            "\n-- UDB:sql_artifact={} file={} phase={} sha256={} requires_review={}\n",
+            artifact.name, artifact.file, phase, artifact.checksum_sha256, artifact.requires_review
+        ));
+    }
+    None
 }
 
 pub(crate) fn artifact_applies_to_phase(artifact: &ManifestSqlArtifact, phase: &str) -> bool {
@@ -327,6 +339,16 @@ pub(crate) fn find_trigger<'a>(
     name: &str,
 ) -> Option<&'a ManifestTrigger> {
     table.triggers.iter().find(|trigger| trigger.name == name)
+}
+
+pub(crate) fn find_sql_artifact<'a>(
+    table: &'a ManifestTable,
+    name: &str,
+) -> Option<&'a ManifestSqlArtifact> {
+    table
+        .sql_artifacts
+        .iter()
+        .find(|artifact| artifact.name == name)
 }
 
 /// Render an index DDL statement.

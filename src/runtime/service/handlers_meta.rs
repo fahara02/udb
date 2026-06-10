@@ -79,20 +79,26 @@ impl DataBrokerService {
         // Max message bytes: the server relies on tonic's transport defaults
         // (no max_decoding_message_size / max_encoding_message_size override),
         // so we report 0 ("not advertised / use transport default").
-        let backend_caps = crate::backend::capability_matrix();
+        // urgent_fix #37: annotate the compile-time capability matrix with which
+        // backends are actually CONFIGURED on this node (have a live instance/DSN),
+        // so `GetCapabilities` advertises real deployment capability, not merely
+        // "the binary was compiled with this backend".
+        let configured_backends: std::collections::HashSet<String> = {
+            let snap = self.runtime_snapshot();
+            snap.backend_instances()
+                .iter()
+                .map(|inst| inst.backend.clone())
+                .collect()
+        };
+        let backend_caps = crate::backend::capability_matrix_configured(&configured_backends);
         let backend_protocol_support: Vec<crate::proto::BackendProtocolSupport> = backend_caps
             .iter()
             .map(|entry| {
-                // Streaming reads: any backend that supports the "query"
-                // operation can be read via the server-streaming path
-                // (QueryExecutor::query_stream has a default chunking impl).
-                let supports_streaming_reads = entry.operations.iter().any(|op| op == "query");
-                // Object streaming: object stores expose get_object/put_object
-                // (ObjectExecutor::get_object_stream default-chunks).
-                let supports_object_streaming = entry
-                    .operations
-                    .iter()
-                    .any(|op| op == "get_object" || op == "put_object");
+                let kind = crate::backend::BackendKind::from_token(&entry.backend);
+                let v2 = kind.map(|kind| kind.capabilities_v2());
+                let supports_streaming_reads =
+                    v2.as_ref().is_some_and(|cap| cap.supports_streaming);
+                let supports_object_streaming = v2.as_ref().is_some_and(|cap| cap.is_object_store);
                 crate::proto::BackendProtocolSupport {
                     backend: entry.backend.clone(),
                     supports_streaming_reads,
@@ -122,6 +128,13 @@ impl DataBrokerService {
             max_send_message_bytes: 0,
             supported_rpcs: supported_rpcs.clone(),
         });
+        let native_services: Vec<crate::proto::NativeServiceStatus> =
+            crate::runtime::service::native_registry::resolved_native_service_statuses(
+                self.runtime_snapshot().config(),
+            )
+            .into_iter()
+            .map(crate::runtime::service::native_registry::status_to_proto)
+            .collect();
 
         let startup_summary = format!(
             "[UDB] capabilities: {} table(s), {} store(s), {} backend(s) enabled, {} degraded",
@@ -163,6 +176,7 @@ impl DataBrokerService {
                     .collect(),
                 protocol_support,
                 backend_protocol_support,
+                native_services,
             })),
         )
     }
@@ -199,25 +213,8 @@ impl DataBrokerService {
         // Live probes
         let mut probes = Vec::new();
         if request.with_probes {
-            #[cfg(feature = "redis")]
-            if init.redis_configured {
-                probes.push(self.runtime_snapshot().probe_redis_ping().await);
-            }
-            if init.qdrant_configured {
-                probes.push(self.runtime_snapshot().probe_qdrant_collections().await);
-            }
-            #[cfg(feature = "s3")]
-            if init.s3_configured {
-                probes.push(self.runtime_snapshot().probe_s3_access().await);
-            }
-            if init.mongodb_configured {
-                probes.push(self.runtime_snapshot().probe_mongodb_ping().await);
-            }
-            if init.neo4j_configured {
-                probes.push(self.runtime_snapshot().probe_neo4j_ping().await);
-            }
-            if init.clickhouse_configured {
-                probes.push(self.runtime_snapshot().probe_clickhouse_ping().await);
+            for backend in self.runtime_snapshot().configured_probe_backends(false) {
+                probes.push(self.runtime_snapshot().probe_backend(backend).await);
             }
             #[cfg(feature = "kafka")]
             probes.push(self.runtime_snapshot().probe_kafka_metadata());
@@ -267,6 +264,46 @@ impl DataBrokerService {
             .and_then(|p| serde_json::to_vec(p).ok())
             .unwrap_or_default();
         let probes_json = serde_json::to_vec(&probes).unwrap_or_default();
+        let native_statuses =
+            crate::runtime::service::native_registry::resolved_native_service_statuses(
+                self.runtime_snapshot().config(),
+            );
+
+        // ── Phase 10: unified readiness contract ──────────────────────────────
+        // GetHealthReport, `udb native doctor`, the gRPC health service, and the
+        // auth-plane readiness checks all derive their facts from the same
+        // `slo::ReadinessFacts` shape so the four surfaces agree (the acceptance
+        // criterion). Reuse the existing auth-plane checks rather than
+        // re-deriving signing-key / casbin / JWKS posture here.
+        let auth_report = crate::runtime::service::auth_service::readiness::check_auth_readiness(
+            &crate::runtime::security::SecurityConfig::current(),
+        )
+        .await;
+        let auth_triples: Vec<(String, bool, String)> = auth_report
+            .checks
+            .iter()
+            .map(|c| (c.name.clone(), c.ok, c.detail.clone()))
+            .collect();
+        let readiness =
+            crate::runtime::slo::build_readiness_facts(&init, &native_statuses, &auth_triples);
+        // Fold the shared facts into the report's error/warning channels so a
+        // failing required fact (e.g. a bad signing key, missing PG) fails the
+        // health report exactly as it fails doctor and flips gRPC health.
+        for err in readiness.errors() {
+            if !errors.contains(&err) {
+                errors.push(err);
+            }
+        }
+        for warn in readiness.warnings() {
+            if !warnings.contains(&warn) {
+                warnings.push(warn);
+            }
+        }
+
+        let native_services: Vec<crate::proto::NativeServiceStatus> = native_statuses
+            .into_iter()
+            .map(crate::runtime::service::native_registry::status_to_proto)
+            .collect();
 
         self.record_grpc(
             "GetHealthReport",
@@ -287,6 +324,7 @@ impl DataBrokerService {
                     .iter()
                     .map(backend_instance_status)
                     .collect(),
+                native_services,
             })),
         )
     }
@@ -395,6 +433,133 @@ impl DataBrokerService {
             })),
         )
     }
+}
+
+/// Which listener a health service is being built for. Each UDB listener gets
+/// its own `tonic_health` service so a health probe on one port reports only the
+/// gRPC services actually mounted on that port (per the gRPC health spec, the
+/// empty service name `""` is overall-server health for that listener).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HealthPlane {
+    /// The public DataBroker listener.
+    DataBroker,
+    /// The internal native control-plane listener (`UDB_AUTH_GRPC_ADDR`):
+    /// authn/authz/apikey/idp/tenant/notification/analytics/storage/asset and
+    /// the WebRTC *control* services.
+    NativeControlPlane,
+    /// The peer-facing WebRTC listener (`UDB_WEBRTC_GRPC_ADDR`).
+    WebRtcPeer,
+}
+
+/// Build a `tonic_health` service for a single UDB listener, with each gRPC
+/// service marked `Serving`/`NotServing` to reflect real readiness.
+///
+/// The returned `HealthServer` is added to that listener's tonic server by the
+/// caller in `serve()` (the parent owns server wiring). The reporter is consumed
+/// internally — all status marking happens here so the parent only has to mount
+/// the returned service.
+///
+/// Marking rules:
+/// - `DataBroker`: the `DataBrokerServer` is marked `Serving` iff the shared
+///   `slo::ReadinessFacts` contract passes.
+/// - `NativeControlPlane` / `WebRtcPeer`: each native gRPC service mounted on
+///   that listener is marked `Serving` when its `NativeServiceStatus.mounted` is
+///   true and the shared readiness facts pass, and `NotServing` otherwise.
+///
+/// The overall-server entry (`""`) is set to `Serving` iff at least one service
+/// on the listener is serving, so a load balancer's empty-name health check
+/// fails closed when every native service on the listener is degraded.
+///
+/// Parent (`service/mod.rs::serve`) usage — one call per listener, mount the
+/// returned `health_service` on that listener's `Server`:
+/// ```ignore
+/// let native_health =
+///     build_listener_health_service(HealthPlane::NativeControlPlane, &runtime_config, Some(&runtime)).await;
+/// auth_server.add_service(native_health) /* ...other services... */;
+///
+/// let webrtc_health =
+///     build_listener_health_service(HealthPlane::WebRtcPeer, &runtime_config, Some(&runtime)).await;
+/// webrtc_peer_server.add_service(webrtc_health) /* ...other services... */;
+/// ```
+pub async fn build_listener_health_service(
+    plane: HealthPlane,
+    config: &crate::runtime::config::UdbConfig,
+    runtime: Option<&crate::runtime::DataBrokerRuntime>,
+) -> tonic_health::pb::health_server::HealthServer<impl tonic_health::pb::health_server::Health> {
+    use crate::runtime::service::native_registry::NativeListenerKind;
+    use tonic_health::ServingStatus;
+
+    let (mut reporter, health_service) = tonic_health::server::health_reporter();
+    let mut any_serving = false;
+    let statuses =
+        crate::runtime::service::native_registry::resolved_native_service_statuses(config);
+    let readiness_passed = if let Some(runtime) = runtime {
+        let auth_triples = crate::runtime::service::auth_readiness_triples(
+            &crate::runtime::security::SecurityConfig::current(),
+        )
+        .await;
+        crate::runtime::slo::build_readiness_facts(runtime.init_report(), &statuses, &auth_triples)
+            .passed()
+    } else {
+        true
+    };
+
+    match plane {
+        HealthPlane::DataBroker => {
+            if readiness_passed {
+                reporter
+                    .set_serving::<DataBrokerServer<DataBrokerService>>()
+                    .await;
+                any_serving = true;
+            } else {
+                reporter
+                    .set_not_serving::<DataBrokerServer<DataBrokerService>>()
+                    .await;
+            }
+        }
+        HealthPlane::NativeControlPlane | HealthPlane::WebRtcPeer => {
+            let want_kind = match plane {
+                HealthPlane::NativeControlPlane => NativeListenerKind::ControlPlane.as_str(),
+                HealthPlane::WebRtcPeer => NativeListenerKind::WebRtcPeer.as_str(),
+                HealthPlane::DataBroker => unreachable!(),
+            };
+            for status in statuses {
+                if !status.enabled || status.listener_kind != want_kind {
+                    continue;
+                }
+                let serving = if status.mounted && readiness_passed {
+                    any_serving = true;
+                    ServingStatus::Serving
+                } else {
+                    ServingStatus::NotServing
+                };
+                // One UDB native service can ship several proto gRPC services
+                // (e.g. WebRTC = Room/Peer/Track/Turn/Signaling); mark each by
+                // its full proto service name so a `Check{service}` probe for any
+                // of them resolves.
+                for proto_service in &status.proto_services {
+                    reporter
+                        .set_service_status(proto_service.as_str(), serving)
+                        .await;
+                }
+            }
+        }
+    }
+
+    // Overall-server health (`""`) fails closed when nothing on the listener is
+    // serving, so an LB empty-name probe does not route to a dead listener.
+    reporter
+        .set_service_status(
+            "",
+            if any_serving {
+                ServingStatus::Serving
+            } else {
+                ServingStatus::NotServing
+            },
+        )
+        .await;
+
+    health_service
 }
 
 fn message_descriptor_to_proto(

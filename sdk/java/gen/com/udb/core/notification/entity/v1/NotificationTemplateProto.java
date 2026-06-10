@@ -43,68 +43,72 @@ public final class NotificationTemplateProto extends com.google.protobuf.Generat
       "\n;udb/core/notification/entity/v1/notifi" +
       "cation_template.proto\022\037udb.core.notifica" +
       "tion.entity.v1\032\037google/protobuf/timestam" +
-      "p.proto\032\033udb/core/common/v1/db.proto\032+ud" +
-      "b/core/notification/entity/v1/enums.prot" +
-      "o\"\232\016\n\024NotificationTemplate\022O\n\013template_i" +
-      "d\030\001 \001(\tB.\202\267\030*\n\013template_id\022\004UUID\030\001(\001:\021ge" +
-      "n_random_uuid()R\ntemplateId\022\201\001\n\nevent_ty" +
-      "pe\030\002 \001(\tBb\202\267\030^\n\nevent_type\022\013VARCHAR(80)\030" +
-      "\001RA\n!idx_notif_templates_event_channel\022\005" +
-      "BTREE\030\001Z\nevent_typeZ\007channelR\teventType\022" +
-      "l\n\007channel\030\003 \001(\01624.udb.core.notification" +
-      ".entity.v1.NotificationChannelB\034\202\267\030\030\n\007ch" +
-      "annel\022\013VARCHAR(20)\030\001R\007channel\022\305\001\n\020subjec" +
-      "t_template\030\004 \001(\tB\231\001\202\267\030\224\001\n\020subject_templa" +
-      "te\022\014VARCHAR(500)ZBHandlebars/Go template" +
-      " such as \'{{.ResourceName}} requires rev" +
-      "iew\'\220\001\001\232\001\007english\242\001\020subject_template\242\001\rb" +
-      "ody_templateR\017subjectTemplate\022w\n\rbody_te" +
-      "mplate\030\005 \001(\tBR\202\267\030N\n\rbody_template\022\004TEXT\030" +
-      "\001Z5Full message body template with varia" +
-      "ble placeholdersR\014bodyTemplate\022B\n\006locale" +
-      "\030\006 \001(\tB*\202\267\030&\n\006locale\022\013VARCHAR(10)\030\001:\004\'en" +
-      "\'Z\007en | bnR\006locale\022=\n\tis_active\030\007 \001(\010B \202" +
-      "\267\030\034\n\tis_active\022\007BOOLEAN\030\001:\004TRUER\010isActiv" +
-      "e\022q\n\ncreated_at\030\010 \001(\0132\032.google.protobuf." +
-      "TimestampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ" +
-      "\030\001:\021CURRENT_TIMESTAMP`\001h\001R\tcreatedAt\022o\n\n" +
-      "updated_at\030\t \001(\0132\032.google.protobuf.Times" +
-      "tampB4\202\267\0300\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021C" +
-      "URRENT_TIMESTAMP`\001R\tupdatedAt\022\221\001\n\ndelete" +
-      "d_at\030\n \001(\0132\032.google.protobuf.TimestampBV" +
-      "\202\267\030R\n\ndeleted_at\022\013TIMESTAMPTZR7\n\032idx_not" +
-      "if_templates_active\022\005BTREE:\022deleted_at I" +
-      "S NULLR\tdeletedAt\022a\n\ncreated_by\030\013 \001(\tBB\202" +
-      "\267\030>\n\ncreated_by\022\014VARCHAR(120)Z\"Identity " +
-      "that created this record.R\tcreatedBy\022H\n\n" +
-      "deleted_by\030\014 \001(\tB)\202\267\030%\n\ndeleted_by\022\004UUID" +
-      "Z\021Soft delete actorR\tdeletedBy:\325\003\372\266\030\320\003\n\026" +
-      "notification_templates\022\020udb_notification" +
-      "\030\001 \001*8Message templates for each notific" +
-      "ation type and channel0\0018\001\252\001g\n+trg_notif" +
-      "ication_templates_touch_updated_at\022\006BEFO" +
-      "RE\032\006UPDATE\"#udb_notification.touch_updat" +
-      "ed_at()*\003ROW\302\001\341\001\n\031touch_updated_at_funct" +
-      "ion\022\010postgres\032\017before_triggers\"\250\001CREATE " +
-      "OR REPLACE FUNCTION udb_notification.tou" +
-      "ch_updated_at()\nRETURNS trigger\nLANGUAGE" +
-      " plpgsql\nAS $$\nBEGIN\n  NEW.updated_at = " +
-      "CURRENT_TIMESTAMP;\n  RETURN NEW;\nEND;\n$$" +
-      ";\372\001\022notification:adminB\256\002\n#com.udb.core." +
-      "notification.entity.v1B\031NotificationTemp" +
-      "lateProtoP\001ZKgithub.com/fahara02/udb/sdk" +
-      "/go/gen/udb/core/notification/entity/v1;" +
-      "entityv1\242\002\004UCNE\252\002\037udb.core.Notification." +
-      "Entity.V1\312\002\037Udb\\Core\\Notification\\Entity" +
-      "\\V1\342\002+Udb\\GPBMetadata\\Core\\Notification\\" +
-      "Entity\\V1\352\002#Udb::Core::Notification::Ent" +
-      "ity::V1b\006proto3"
+      "p.proto\032\033udb/core/common/v1/db.proto\032!ud" +
+      "b/core/common/v1/security.proto\032+udb/cor" +
+      "e/notification/entity/v1/enums.proto\"\373\016\n" +
+      "\024NotificationTemplate\022O\n\013template_id\030\001 \001" +
+      "(\tB.\202\267\030*\n\013template_id\022\004UUID\030\001(\001:\021gen_ran" +
+      "dom_uuid()R\ntemplateId\022\201\001\n\nevent_type\030\002 " +
+      "\001(\tBb\202\267\030^\n\nevent_type\022\013VARCHAR(80)\030\001RA\n!" +
+      "idx_notif_templates_event_channel\022\005BTREE" +
+      "\030\001Z\nevent_typeZ\007channelR\teventType\022l\n\007ch" +
+      "annel\030\003 \001(\01624.udb.core.notification.enti" +
+      "ty.v1.NotificationChannelB\034\202\267\030\030\n\007channel" +
+      "\022\013VARCHAR(20)\030\001R\007channel\022\305\001\n\020subject_tem" +
+      "plate\030\004 \001(\tB\231\001\202\267\030\224\001\n\020subject_template\022\014V" +
+      "ARCHAR(500)ZBHandlebars/Go template such" +
+      " as \'{{.ResourceName}} requires review\'\220" +
+      "\001\001\232\001\007english\242\001\020subject_template\242\001\rbody_t" +
+      "emplateR\017subjectTemplate\022w\n\rbody_templat" +
+      "e\030\005 \001(\tBR\202\267\030N\n\rbody_template\022\004TEXT\030\001Z5Fu" +
+      "ll message body template with variable p" +
+      "laceholdersR\014bodyTemplate\022B\n\006locale\030\006 \001(" +
+      "\tB*\202\267\030&\n\006locale\022\013VARCHAR(10)\030\001:\004\'en\'Z\007en" +
+      " | bnR\006locale\022=\n\tis_active\030\007 \001(\010B \202\267\030\034\n\t" +
+      "is_active\022\007BOOLEAN\030\001:\004TRUER\010isActive\022q\n\n" +
+      "created_at\030\010 \001(\0132\032.google.protobuf.Times" +
+      "tampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021C" +
+      "URRENT_TIMESTAMP`\001h\001R\tcreatedAt\022o\n\nupdat" +
+      "ed_at\030\t \001(\0132\032.google.protobuf.TimestampB" +
+      "4\202\267\0300\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021CURREN" +
+      "T_TIMESTAMP`\001R\tupdatedAt\022\221\001\n\ndeleted_at\030" +
+      "\n \001(\0132\032.google.protobuf.TimestampBV\202\267\030R\n" +
+      "\ndeleted_at\022\013TIMESTAMPTZR7\n\032idx_notif_te" +
+      "mplates_active\022\005BTREE:\022deleted_at IS NUL" +
+      "LR\tdeletedAt\022a\n\ncreated_by\030\013 \001(\tBB\202\267\030>\n\n" +
+      "created_by\022\014VARCHAR(120)Z\"Identity that " +
+      "created this record.R\tcreatedBy\022H\n\ndelet" +
+      "ed_by\030\014 \001(\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Sof" +
+      "t delete actorR\tdeletedBy:\266\004\372\266\030\320\003\n\026notif" +
+      "ication_templates\022\020udb_notification\030\001 \001*" +
+      "8Message templates for each notification" +
+      " type and channel0\0018\001\252\001g\n+trg_notificati" +
+      "on_templates_touch_updated_at\022\006BEFORE\032\006U" +
+      "PDATE\"#udb_notification.touch_updated_at" +
+      "()*\003ROW\302\001\341\001\n\031touch_updated_at_function\022\010" +
+      "postgres\032\017before_triggers\"\250\001CREATE OR RE" +
+      "PLACE FUNCTION udb_notification.touch_up" +
+      "dated_at()\nRETURNS trigger\nLANGUAGE plpg" +
+      "sql\nAS $$\nBEGIN\n  NEW.updated_at = CURRE" +
+      "NT_TIMESTAMP;\n  RETURN NEW;\nEND;\n$$;\372\001\022n" +
+      "otification:admin\212\262\031]\n\006global2\013soft_dele" +
+      "te:\030notification.operational@\373\023H\002R\006tenan" +
+      "tZ\010standardr\025tenant.data_residencyB\256\002\n#c" +
+      "om.udb.core.notification.entity.v1B\031Noti" +
+      "ficationTemplateProtoP\001ZKgithub.com/faha" +
+      "ra02/udb/sdk/go/gen/udb/core/notificatio" +
+      "n/entity/v1;entityv1\242\002\004UCNE\252\002\037udb.core.N" +
+      "otification.Entity.V1\312\002\037Udb\\Core\\Notific" +
+      "ation\\Entity\\V1\342\002+Udb\\GPBMetadata\\Core\\N" +
+      "otification\\Entity\\V1\352\002#Udb::Core::Notif" +
+      "ication::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.TimestampProto.getDescriptor(),
           com.udb.core.common.v1.DbProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
           com.udb.core.notification.entity.v1.EnumsProto.getDescriptor(),
         });
     internal_static_udb_core_notification_entity_v1_NotificationTemplate_descriptor =
@@ -116,9 +120,11 @@ public final class NotificationTemplateProto extends com.google.protobuf.Generat
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.udb.core.notification.entity.v1.EnumsProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);
     registry.add(com.udb.core.common.v1.DbProto.pgTable);
     com.google.protobuf.Descriptors.FileDescriptor

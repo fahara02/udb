@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package udb.core.authn.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/authn/entity/v1/enums.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authn.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";
+option java_package = "com.udb.core.authn.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// TokenRevocation — durable cluster-wide deny list (Phase 3 / I1, I2.3).
+//
+// A revoked token's jti (keyed-HMAC digest, STORAGE_ONLY) lands here so every
+// node rejects it before its natural expiry. Rows can be GC'd once `expires_at`
+// passes (the token would be rejected on expiry anyway). Redis accelerates the
+// lookup when enabled; Postgres is the source of truth.
+//
+// Migration order 22.
+// ---------------------------------------------------------------------------
+message TokenRevocation {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "token_revocations"
+    schema_name: "udb_authn"
+    migration_order: 22
+    is_table: true
+    comment: "Durable cluster-wide token revocation list (jti deny list)"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: false
+    indexes: {
+      index_name: "idx_token_revocations_jti"
+      index_type: "HASH"
+      columns: "jti_hash"
+    }
+    indexes: {
+      index_name: "idx_token_revocations_expires"
+      index_type: "BTREE"
+      columns: "expires_at"
+    }
+    indexes: {
+      index_name: "idx_token_revocations_tenant"
+      index_type: "BTREE"
+      columns: "tenant_id"
+    }
+    replica_hint: "primary"
+    required_scope: "authn:revocations:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    soft_delete_mode: "none"
+    retention_class: "authn.security"
+    retention_days: 90
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+  };
+
+  // Keyed-HMAC digest of the revoked token jti. STORAGE_ONLY (the raw jti is
+  // credential-equivalent for a still-valid token).
+  string jti_hash = 1 [(udb.core.common.v1.pg_column) = { column_name: "jti_hash" sql_type: "VARCHAR(128)" primary_key: true not_null: true comment: "Keyed digest of the revoked jti" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT hashing_algorithm: "hmac-sha256" }];
+
+  TokenType token_type = 2 [(udb.core.common.v1.pg_column) = { column_name: "token_type" sql_type: "VARCHAR(20)" not_null: true default_value: "'TOKEN_TYPE_UNSPECIFIED'" }];
+
+  string tenant_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" }];
+
+  // After this instant the row may be GC'd: an expired token is rejected anyway.
+  google.protobuf.Timestamp expires_at = 4 [(udb.core.common.v1.pg_column) = { column_name: "expires_at" sql_type: "TIMESTAMPTZ" }];
+
+  google.protobuf.Timestamp revoked_at = 5 [(udb.core.common.v1.pg_column) = { column_name: "revoked_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  string revoked_by = 6 [(udb.core.common.v1.pg_column) = { column_name: "revoked_by" sql_type: "VARCHAR(160)" }];
+
+  string reason = 7 [(udb.core.common.v1.pg_column) = { column_name: "reason" sql_type: "VARCHAR(120)" }];
+}

@@ -96,7 +96,7 @@ public final class Launcher {
       Process p = new ProcessBuilder(bin.toString(), "--version").redirectErrorStream(true).start();
       String out = new String(p.getInputStream().readAllBytes()).trim();
       p.waitFor();
-      // `udb --version` prints e.g. "udb 0.3.1"; accept any line containing the tag.
+      // `udb --version` prints e.g. "udb 0.3.2"; accept any line containing the tag.
       return out.contains(UDB_VERSION);
     } catch (IOException | InterruptedException e) {
       if (e instanceof InterruptedException) {
@@ -124,7 +124,7 @@ public final class Launcher {
 
   /**
    * The per-OS/arch release asset name. Mirrors the GitHub release naming for
-   * github.com/fahara02/udb (e.g. {@code udb-v0.3.1-x86_64-unknown-linux-gnu}).
+   * github.com/fahara02/udb (e.g. {@code udb-v0.3.2-x86_64-unknown-linux-gnu}).
    */
   static String assetName() {
     String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);

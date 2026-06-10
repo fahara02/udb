@@ -39,89 +39,17 @@ use serde::{Deserialize, Serialize};
 
 // ── Backend kind ──────────────────────────────────────────────────────────────
 
-/// All storage backends the UDB can manage or broker connections to.
-///
-/// Used for:
-/// - Resolving the correct config block from `UdbConfig`
-/// - Building the `udb+<tier>+<backend>://…` DSN scheme
-/// - Routing APPLYING-phase commands (SQL DDL vs bucket/collection creation)
-/// - Labelling metrics (tier + backend)
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum BackendKind {
-    // ── Tier 1 — SQL / Relational ─────────────────────────────────────────────
-    /// PostgreSQL — the primary migration ledger and main relational store.
-    /// Also used for the backup DB and signal (analytics) DB.
-    Postgres,
-    /// MySQL / MariaDB (extended deployment).
-    Mysql,
-    /// SQLite (embedded; test/dev only).
-    Sqlite,
-    /// Microsoft SQL Server (on-premise banking integration).
-    Mssql,
-    /// ClickHouse (analytics column store via SQL wire protocol).
-    Clickhouse,
-
-    // ── Tier 2 — Cache ────────────────────────────────────────────────────────
-    /// Redis — default cache tier (session, rate-limit, hot read-through).
-    Redis,
-    /// Memcached (legacy cache fallback).
-    Memcached,
-
-    // ── Tier 3 — Vector ───────────────────────────────────────────────────────
-    /// Qdrant — default vector store (embeddings, similarity search).
-    Qdrant,
-    /// Weaviate (alternative vector DB).
-    Weaviate,
-    /// Pinecone (managed vector DB — cloud deployments).
-    Pinecone,
-
-    // ── Tier 4 — Blob / Object ────────────────────────────────────────────────
-    /// MinIO — default S3-compatible object store (artifacts, exports).
-    Minio,
-    /// AWS S3 (cloud deployments).
-    S3,
-    /// Azure Blob Storage.
-    AzureBlob,
-    /// Google Cloud Storage.
-    Gcs,
-
-    // ── Extended stores ───────────────────────────────────────────────────────
-    /// MongoDB (document store for unstructured data).
-    Mongodb,
-    /// Elasticsearch (full-text search + analytics).
-    Elasticsearch,
-    /// Neo4j (graph DB for relationship queries).
-    Neo4j,
-    /// Cassandra / ScyllaDB (wide-column).
-    Cassandra,
-}
+// `BackendKind` was split into `kind.rs` so the WASM/edge-safe
+// `udb-portable` crate can `#[path]`-include just the enum (which the
+// IR→SQL compilers match on) without the native `plugin`/`plugins`
+// driver inventory. All `impl BackendKind { … }` blocks below stay here
+// and reference it via this re-export — the server build is unchanged.
+mod kind;
+pub use kind::BackendKind;
 
 impl BackendKind {
-    /// Returns the canonical lowercase identifier used in DSN scheme construction
-    /// and the `backend` field of `UnifiedDsn`.
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Self::Postgres => "postgres",
-            Self::Mysql => "mysql",
-            Self::Sqlite => "sqlite",
-            Self::Mssql => "sqlserver",
-            Self::Clickhouse => "clickhouse",
-            Self::Redis => "redis",
-            Self::Memcached => "memcached",
-            Self::Qdrant => "qdrant",
-            Self::Weaviate => "weaviate",
-            Self::Pinecone => "pinecone",
-            Self::Minio => "minio",
-            Self::S3 => "s3",
-            Self::AzureBlob => "azureblob",
-            Self::Gcs => "gcs",
-            Self::Mongodb => "mongodb",
-            Self::Elasticsearch => "elasticsearch",
-            Self::Neo4j => "neo4j",
-            Self::Cassandra => "cassandra",
-        }
-    }
+    // `as_str` moved to `kind.rs` (the portable leaf) so `udb-portable`'s
+    // IR compilers can call it; method resolution finds it from either crate.
 
     /// Parse a canonical backend token (the inverse of [`Self::as_str`]) into a
     /// `BackendKind`. Case-insensitive. Returns `None` for unknown tokens.
@@ -215,25 +143,13 @@ impl BackendKind {
             Self::Neo4j => BackendRole::Canonical,
             #[cfg(not(feature = "neo4j"))]
             Self::Neo4j => BackendRole::Projection,
-            // B.11: Qdrant now ships a native SystemStores adapter in qdrant
-            // builds, stored in a dedicated system collection with deterministic
-            // point IDs and strongly ordered writes.
-            #[cfg(feature = "qdrant")]
-            Self::Qdrant => BackendRole::Canonical,
-            #[cfg(not(feature = "qdrant"))]
-            Self::Qdrant => BackendRole::Projection,
-            #[cfg(feature = "pinecone")]
-            Self::Pinecone => BackendRole::Canonical,
-            #[cfg(not(feature = "pinecone"))]
-            Self::Pinecone => BackendRole::Projection,
-            #[cfg(feature = "weaviate")]
-            Self::Weaviate => BackendRole::Canonical,
-            #[cfg(not(feature = "weaviate"))]
-            Self::Weaviate => BackendRole::Projection,
-            #[cfg(feature = "elasticsearch")]
-            Self::Elasticsearch => BackendRole::Canonical,
-            #[cfg(not(feature = "elasticsearch"))]
-            Self::Elasticsearch => BackendRole::Projection,
+            // Vector/search backends are data-plane targets only. They must not
+            // host broker control-plane state until leases, monotonic outbox
+            // sequence allocation, and recovery fences have distributed
+            // conformance evidence.
+            Self::Qdrant | Self::Pinecone | Self::Weaviate | Self::Elasticsearch => {
+                BackendRole::Projection
+            }
             // B.10c: ClickHouse has a native HTTP `SystemStores` canonical store
             // (ReplacingMergeTree(version) + SELECT … FINAL versioned-CAS; full
             // 5-contract conformance verified live). Canonical in `clickhouse`
@@ -284,16 +200,15 @@ impl BackendKind {
                 max_payload_bytes: 0,
                 consistency_model: "strong".into(),
             },
-            // MySQL: XA participant wired via XaMysqlParticipant (NW-deep).
-            // `XA START / END / PREPARE / COMMIT / ROLLBACK` syntax goes
-            // through the executor; the saga compensator is registered
-            // for full row rollback.
+            // MySQL: XA participant is compiled and wired only when the
+            // `mysql` feature is present. Slim builds must not advertise
+            // a runtime they cannot construct.
             Self::Mysql => BackendCapability {
                 supports_sql_ddl: true,
                 supports_transactions: true,
-                supports_xa: true,
-                supports_two_phase_commit: true,
-                supports_rls: true, // session-var enforcement via BackendContextEnforcer (NW-deep)
+                supports_xa: cfg!(feature = "mysql"),
+                supports_two_phase_commit: cfg!(feature = "mysql"),
+                supports_rls: false, // broker-enforced tenant predicates, not native RLS
                 supports_vector_search: false,
                 supports_streaming: true,
                 supports_ttl: false,
@@ -335,7 +250,7 @@ impl BackendKind {
                 supports_transactions: true,
                 supports_xa: false,
                 supports_two_phase_commit: false,
-                supports_rls: true, // temp-table scoping via BackendContextEnforcer
+                supports_rls: false, // broker-enforced tenant predicates, not native RLS
                 supports_vector_search: false,
                 supports_streaming: false,
                 supports_ttl: false,
@@ -648,8 +563,11 @@ impl BackendKind {
             dispatch_operations,
             lifecycle,
             system_store,
+            control_plane_ha_level: self.control_plane_ha_level(),
             canonical_candidate,
             canonical_goal,
+            transport_label: self.transport_label(),
+            live_probe: self.has_runtime_probe(),
             supports_sql_ddl: v1.supports_sql_ddl,
             supports_transactions: v1.supports_transactions,
             supports_xa: v1.supports_xa,
@@ -710,6 +628,61 @@ impl BackendKind {
         }
     }
 
+    /// Phase 1 HA control-plane support level. This separates "has a local
+    /// SystemStores implementation" from "may be advertised as HA canonical".
+    pub fn control_plane_ha_level(&self) -> ControlPlaneHaLevel {
+        if !self.system_store_support().is_canonical() {
+            return ControlPlaneHaLevel::ProjectionOnly;
+        }
+        match self {
+            Self::Sqlite => ControlPlaneHaLevel::DevSingleNode,
+            // ClickHouse's native store carries an explicit single-writer caveat;
+            // it is useful as a constrained SystemStores backend but must not be
+            // advertised as multi-broker HA canonical.
+            Self::Clickhouse => ControlPlaneHaLevel::SystemStoreCapable,
+            _ => ControlPlaneHaLevel::HaCanonical,
+        }
+    }
+
+    /// Operator-facing wire/client transport label used by capability reports,
+    /// admin summaries, and probe metadata.
+    pub fn transport_label(&self) -> &'static str {
+        match self {
+            Self::Postgres => "postgres",
+            Self::Mysql => "mysql",
+            Self::Sqlite => "sqlite",
+            Self::Mssql => "tds",
+            Self::Clickhouse => "http",
+            Self::Redis => "async-redis",
+            Self::Memcached => "memcache",
+            Self::Qdrant => "http",
+            Self::Weaviate => "http",
+            Self::Pinecone => "http",
+            Self::Minio | Self::S3 => "aws-sdk-s3",
+            Self::AzureBlob => "azure-sdk-blob",
+            Self::Gcs => "google-cloud-storage",
+            Self::Mongodb => "atlas_data_api",
+            Self::Elasticsearch => "http",
+            Self::Neo4j => "http",
+            Self::Cassandra => "cql",
+        }
+    }
+
+    /// Whether the runtime has a concrete live health probe for this backend.
+    pub fn has_runtime_probe(&self) -> bool {
+        matches!(
+            self,
+            Self::Postgres
+                | Self::Redis
+                | Self::Qdrant
+                | Self::Minio
+                | Self::S3
+                | Self::Mongodb
+                | Self::Neo4j
+                | Self::Clickhouse
+        )
+    }
+
     /// B.12-B.14 — machine-readable canonical roadmap class for every backend.
     ///
     /// This does not promote a backend. Promotion still requires a concrete
@@ -746,22 +719,10 @@ impl BackendKind {
             Self::Clickhouse => CanonicalCandidateProfile::Implemented,
             #[cfg(not(feature = "clickhouse"))]
             Self::Clickhouse => CanonicalCandidateProfile::SemanticsGated,
-            #[cfg(feature = "qdrant")]
-            Self::Qdrant => CanonicalCandidateProfile::Implemented,
-            #[cfg(not(feature = "qdrant"))]
             Self::Qdrant => CanonicalCandidateProfile::VectorNativeCasUnsupported,
-            #[cfg(feature = "pinecone")]
-            Self::Pinecone => CanonicalCandidateProfile::Implemented,
-            #[cfg(not(feature = "pinecone"))]
-            Self::Pinecone => CanonicalCandidateProfile::VectorFeasibilityRequired,
-            #[cfg(feature = "weaviate")]
-            Self::Weaviate => CanonicalCandidateProfile::Implemented,
-            #[cfg(not(feature = "weaviate"))]
-            Self::Weaviate => CanonicalCandidateProfile::VectorFeasibilityRequired,
-            #[cfg(feature = "elasticsearch")]
-            Self::Elasticsearch => CanonicalCandidateProfile::Implemented,
-            #[cfg(not(feature = "elasticsearch"))]
-            Self::Elasticsearch => CanonicalCandidateProfile::VectorFeasibilityRequired,
+            Self::Pinecone | Self::Weaviate | Self::Elasticsearch => {
+                CanonicalCandidateProfile::VectorFeasibilityRequired
+            }
             Self::Minio | Self::S3 | Self::AzureBlob | Self::Gcs => {
                 CanonicalCandidateProfile::ObjectConditionalWrites
             }
@@ -802,37 +763,17 @@ impl BackendKind {
             Self::Cassandra => {
                 "B.10: implement wide-column SystemStores with compare-and-set claims, quorum guidance, and replay-safe progress tokens"
             }
-            #[cfg(feature = "qdrant")]
             Self::Qdrant => {
-                "B.11: native Qdrant SystemStores implemented with a dedicated system collection, deterministic point IDs, strongly ordered writes, and live conformance under UDB_QDRANT_URL"
+                "B.11: do not use Qdrant as a HA SystemStores backend until distributed lease CAS, monotonic outbox sequence allocation, and recovery fences are conformance-proven"
             }
-            #[cfg(not(feature = "qdrant"))]
-            Self::Qdrant => {
-                "B.11: compile the native Qdrant SystemStores adapter and prove live conformance before canonical promotion"
-            }
-            #[cfg(feature = "pinecone")]
             Self::Pinecone => {
-                "B.12: native Pinecone SystemStores implemented in the shared vector system adapter; keep live conformance under UDB_PINECONE_DSN"
+                "B.12: keep Pinecone projection-only until canonical SystemStores semantics are proven independently of vector upsert/search APIs"
             }
-            #[cfg(not(feature = "pinecone"))]
-            Self::Pinecone => {
-                "B.12: compile the Pinecone vector SystemStores adapter and prove live conformance"
-            }
-            #[cfg(feature = "weaviate")]
             Self::Weaviate => {
-                "B.12: native Weaviate SystemStores implemented in the shared vector system adapter; keep live conformance under UDB_WEAVIATE_DSN"
+                "B.12: keep Weaviate projection-only until canonical SystemStores semantics are proven independently of vector object APIs"
             }
-            #[cfg(not(feature = "weaviate"))]
-            Self::Weaviate => {
-                "B.12: compile the Weaviate vector SystemStores adapter and prove live conformance"
-            }
-            #[cfg(feature = "elasticsearch")]
             Self::Elasticsearch => {
-                "B.12: native Elasticsearch SystemStores implemented in the shared vector system adapter; keep live conformance under UDB_ELASTIC_DSN"
-            }
-            #[cfg(not(feature = "elasticsearch"))]
-            Self::Elasticsearch => {
-                "B.12: compile the Elasticsearch vector/search SystemStores adapter and prove live conformance"
+                "B.12: keep Elasticsearch projection-only until canonical SystemStores semantics are proven independently of search/index APIs"
             }
             Self::Minio | Self::S3 | Self::AzureBlob | Self::Gcs => {
                 "B.13: prove object-store canonical profile using conditional writes, generation/etag fencing, listing recovery, and multipart safety"
@@ -1366,6 +1307,35 @@ impl SystemStoreSupport {
     }
 }
 
+/// Operator-facing HA tier for control-plane state.
+///
+/// This is deliberately stricter than [`BackendRole`]. A backend may have a
+/// compiled `SystemStores` implementation while still needing runtime topology
+/// or single-writer constraints before it can be treated as HA canonical.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ControlPlaneHaLevel {
+    /// Data-plane/projection target only; must not host UDB control-plane state.
+    ProjectionOnly,
+    /// Useful for local/dev or embedded single-node state, not broker HA.
+    DevSingleNode,
+    /// Can host SystemStores but needs deployment constraints before HA use.
+    SystemStoreCapable,
+    /// Eligible for HA canonical control-plane state when runtime probes pass.
+    HaCanonical,
+}
+
+impl ControlPlaneHaLevel {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::ProjectionOnly => "projection_only",
+            Self::DevSingleNode => "dev_single_node",
+            Self::SystemStoreCapable => "system_store_capable",
+            Self::HaCanonical => "ha_canonical",
+        }
+    }
+}
+
 /// B.12-B.15 — canonical promotion roadmap bucket.
 ///
 /// `Implemented` is the only profile that may coincide with
@@ -1476,8 +1446,8 @@ const VECTOR_CANONICAL_PLANE_PREREQS: &[&str] = &[
     "read fence that can prove later reads observe writes up to a token",
 ];
 const QDRANT_BLOCKING_GAPS: &[&str] = &[
-    "qdrant feature not compiled, so the native SystemStores adapter is absent",
-    "live Qdrant conformance proof has not run for this build profile",
+    "distributed leases and outbox sequence allocation are not conformance-proven for multi-writer HA",
+    "live Qdrant HA SystemStores conformance proof has not run for this build profile",
     "native compare-and-set / insert-if-absent primitive is not documented for point or payload updates",
     "insert_only avoids overwriting an existing point but does not return a distributed lease winner",
     "filtered payload updates can select existing points but do not return an atomic claim winner",
@@ -1485,18 +1455,21 @@ const QDRANT_BLOCKING_GAPS: &[&str] = &[
     "strong write ordering orders submitted operations but does not make read-modify-write lease acquisition atomic across brokers",
 ];
 const PINECONE_BLOCKING_GAPS: &[&str] = &[
+    "distributed leases and outbox sequence allocation are not conformance-proven for multi-writer HA",
     "metadata-filter update can change matching records, but does not expose compare-and-set or a claim winner",
     "upsert/update by id has no native monotonic outbox sequence",
     "namespace scoping is usable for tenant isolation but not for durable read fencing",
     "no canonical SystemStores module for the vector plane",
 ];
 const WEAVIATE_BLOCKING_GAPS: &[&str] = &[
+    "distributed leases and outbox sequence allocation are not conformance-proven for multi-writer HA",
     "object update/PATCH and consistency levels do not expose native compare-and-set claim semantics",
     "leaderless/tunable consistency is not a durable ordered outbox token",
     "multi-tenancy scopes records but does not provide recovery ordering for SystemStores",
     "no canonical SystemStores module for the vector plane",
 ];
 const ELASTICSEARCH_VECTOR_BLOCKING_GAPS: &[&str] = &[
+    "distributed leases and outbox sequence allocation are not conformance-proven for multi-writer HA",
     "optimistic concurrency can guard a single document update, but vector/search SystemStores are not implemented",
     "ordered outbox, lease, saga, audit, and migration contracts are not mapped to Elasticsearch",
     "tenant scoping and read fencing need a canonical index/profile, not projection search indexes",
@@ -1529,9 +1502,13 @@ pub struct BackendCapabilityV2 {
     pub lifecycle: LifecycleSupport,
     // Dimension 5 — canonical system-store support.
     pub system_store: SystemStoreSupport,
+    // Phase 1 — operator-facing HA level for control-plane state.
+    pub control_plane_ha_level: ControlPlaneHaLevel,
     // B.12-B.15 — named proof bucket and concrete promotion/conformance goal.
     pub canonical_candidate: CanonicalCandidateProfile,
     pub canonical_goal: &'static str,
+    pub transport_label: &'static str,
+    pub live_probe: bool,
 
     // Feature truths that V1 exposes verbatim and that have no finer V2 split.
     // These stay here so V1 derives entirely from V2 (single source of truth).
@@ -1646,12 +1623,30 @@ pub struct BackendCapabilityMatrixEntry {
     pub max_payload_bytes: u64,
     pub supports_xa: bool,
     pub supports_two_phase_commit: bool,
+    /// Operator-facing transport/client label derived from plugin metadata.
+    #[serde(default = "default_transport_label")]
+    pub transport_label: String,
+    /// True when the runtime ships a live probe for this backend.
+    #[serde(default)]
+    pub live_probe: bool,
+    /// urgent_fix #37: true when this compiled-in backend is actually CONFIGURED at
+    /// runtime (has a backend instance / DSN). The raw `capability_matrix()` lists
+    /// every compiled-in backend; `capability_matrix_configured()` annotates this
+    /// from the live runtime so health/`GetCapabilities`/doctor can distinguish
+    /// "the binary supports this" from "this deployment actually serves it".
+    #[serde(default)]
+    pub configured: bool,
     /// P2P: the backend's role in the data plane. Pinned per backend
     /// kind in [`BackendKind::role`]. Surfaced through `udb doctor`
     /// and `GetCapabilities` so operators see which backends can
     /// host system tables.
     #[serde(default = "default_backend_role")]
     pub role: BackendRole,
+    /// Phase 1: explicit support level for UDB control-plane HA. This prevents
+    /// projection stores from being mistaken for HA SystemStores just because
+    /// they have native data-plane adapters.
+    #[serde(default = "default_control_plane_ha_level")]
+    pub control_plane_ha_level: ControlPlaneHaLevel,
     /// B.12-B.15: roadmap bucket for canonical promotion evidence. This is not
     /// a capability claim by itself; `role` + `system_store` remain authoritative.
     #[serde(default = "default_canonical_candidate_profile")]
@@ -1671,6 +1666,14 @@ pub struct BackendCapabilityMatrixEntry {
 
 fn default_backend_role() -> BackendRole {
     BackendRole::Projection
+}
+
+fn default_control_plane_ha_level() -> ControlPlaneHaLevel {
+    ControlPlaneHaLevel::ProjectionOnly
+}
+
+fn default_transport_label() -> String {
+    "unknown".to_string()
 }
 
 const OP_PING: &str = "ping";
@@ -1797,12 +1800,18 @@ impl BackendKind {
             max_payload_bytes: cap.max_payload_bytes,
             supports_xa: cap.supports_xa,
             supports_two_phase_commit: cap.supports_two_phase_commit,
+            transport_label: self.transport_label().to_string(),
+            live_probe: self.has_runtime_probe(),
             // P2P: include the role so doctor + GetCapabilities show
             // which backends can host system tables.
             role: self.role(),
+            control_plane_ha_level: self.control_plane_ha_level(),
             canonical_candidate: self.canonical_candidate_profile(),
             canonical_goal: self.canonical_promotion_goal().to_string(),
             canonical_feasibility: Some(self.canonical_feasibility_profile()),
+            // Compile-time default: the static matrix can't know runtime config.
+            // `capability_matrix_configured()` flips this from the live instances.
+            configured: false,
         }
     }
 }
@@ -1811,6 +1820,24 @@ pub fn capability_matrix() -> Vec<BackendCapabilityMatrixEntry> {
     all_plugins()
         .into_iter()
         .map(|plugin| plugin.kind().capability_matrix_entry())
+        .collect()
+}
+
+/// urgent_fix #37: the capability matrix annotated with runtime `configured` state.
+/// `configured_backend_tokens` is the set of backend tokens that have a live
+/// instance/DSN (e.g. from `DataBrokerRuntime::backend_instances()`); every entry
+/// whose `backend` token is in that set is marked `configured = true`. This lets
+/// `GetCapabilities` / `doctor` advertise which compiled-in backends are actually
+/// served by THIS deployment instead of implying all of them are available.
+pub fn capability_matrix_configured(
+    configured_backend_tokens: &std::collections::HashSet<String>,
+) -> Vec<BackendCapabilityMatrixEntry> {
+    capability_matrix()
+        .into_iter()
+        .map(|mut entry| {
+            entry.configured = configured_backend_tokens.contains(&entry.backend);
+            entry
+        })
         .collect()
 }
 
@@ -1871,18 +1898,6 @@ pub const CANONICAL_SYSTEM_STORE_BACKENDS: &[BackendKind] = &[
     // passed live on Neo4j 5.
     #[cfg(feature = "neo4j")]
     BackendKind::Neo4j,
-    // B.11: Qdrant native SystemStores — compiled with the `qdrant` feature.
-    // Startup registration verifies the system collection can be created before
-    // exposing the live instance as a SystemStores object.
-    #[cfg(feature = "qdrant")]
-    BackendKind::Qdrant,
-    // B.12: shared vector/search canonical store — compiled per backend feature.
-    #[cfg(feature = "pinecone")]
-    BackendKind::Pinecone,
-    #[cfg(feature = "weaviate")]
-    BackendKind::Weaviate,
-    #[cfg(feature = "elasticsearch")]
-    BackendKind::Elasticsearch,
     // B.10c: ClickHouse native HTTP canonical store (ReplacingMergeTree +
     // versioned-CAS) — compiled with the `clickhouse` feature. Promoted after the
     // full 5-contract conformance passed live on ClickHouse 24.8 (single-writer
@@ -2202,6 +2217,27 @@ mod tests {
             let back: BackendKind = serde_json::from_str(&json).unwrap();
             assert_eq!(back, kind, "serde round-trip failed for {kind:?}");
         }
+    }
+
+    #[test]
+    fn mysql_xa_capability_matches_compiled_runtime() {
+        let cap = BackendKind::Mysql.capabilities();
+        let matrix = BackendKind::Mysql.capability_matrix_entry();
+        assert_eq!(
+            cap.supports_xa,
+            cfg!(feature = "mysql"),
+            "MySQL must advertise XA only when the mysql feature compiles the runtime participant"
+        );
+        assert_eq!(
+            cap.supports_two_phase_commit,
+            cfg!(feature = "mysql"),
+            "MySQL must advertise 2PC only when the mysql feature compiles the runtime participant"
+        );
+        assert_eq!(matrix.supports_xa, cap.supports_xa);
+        assert_eq!(
+            matrix.supports_two_phase_commit,
+            cap.supports_two_phase_commit
+        );
     }
 
     #[test]
@@ -2565,83 +2601,78 @@ mod tests {
         ] {
             let profile = kind.canonical_feasibility_profile();
             assert_eq!(profile.family, "vector", "{kind:?}");
-            if kind.system_store_support().is_canonical() {
-                assert!(profile.implemented, "{kind:?} must expose SystemStores");
-                assert_eq!(kind.role(), BackendRole::Canonical, "{kind:?}");
-                assert_eq!(
-                    kind.system_store_support(),
-                    SystemStoreSupport::Full,
-                    "{kind:?}"
-                );
-                assert!(
-                    profile.blocking_gaps.is_empty(),
-                    "{kind:?} must not carry blockers after promotion"
-                );
-            } else {
-                assert!(!profile.implemented, "{kind:?} must not fake SystemStores");
-                assert_eq!(kind.role(), BackendRole::Projection, "{kind:?}");
-                assert_eq!(
-                    kind.system_store_support(),
-                    SystemStoreSupport::None,
-                    "{kind:?}"
-                );
-                assert!(
-                    !profile.blocking_gaps.is_empty(),
-                    "{kind:?} must expose native vector-plane blockers"
-                );
-            }
+            assert!(!profile.implemented, "{kind:?} must not fake SystemStores");
+            assert_eq!(kind.role(), BackendRole::Projection, "{kind:?}");
+            assert_eq!(
+                kind.system_store_support(),
+                SystemStoreSupport::None,
+                "{kind:?}"
+            );
+            assert!(
+                !profile.blocking_gaps.is_empty(),
+                "{kind:?} must expose native vector-plane blockers"
+            );
             assert!(
                 profile
                     .durability_prerequisites
                     .contains(&"atomic claim winner for leases and task claims"),
                 "{kind:?} must share the vector-plane atomic-claim prerequisite"
             );
-            if kind.system_store_support().is_canonical() {
-                let expected_env = match kind {
-                    BackendKind::Qdrant => "UDB_QDRANT_URL",
-                    BackendKind::Pinecone => "UDB_PINECONE_DSN",
-                    BackendKind::Weaviate => "UDB_WEAVIATE_DSN",
-                    BackendKind::Elasticsearch => "UDB_ELASTIC_DSN",
-                    _ => unreachable!(),
-                };
-                assert_eq!(profile.live_conformance_env, Some(expected_env));
-                assert!(CANONICAL_SYSTEM_STORE_BACKENDS.contains(&kind));
-            } else {
-                assert!(
-                    profile.live_conformance_env.is_some(),
-                    "{kind:?} must advertise the live conformance env for promotion"
-                );
-                assert!(
-                    !CANONICAL_SYSTEM_STORE_BACKENDS.contains(&kind),
-                    "{kind:?} must not enter the canonical allowlist"
-                );
-            }
+            assert!(
+                profile.live_conformance_env.is_some(),
+                "{kind:?} must advertise the live conformance env for promotion"
+            );
+            assert!(
+                !CANONICAL_SYSTEM_STORE_BACKENDS.contains(&kind),
+                "{kind:?} must not enter the canonical allowlist"
+            );
         }
     }
 
     #[test]
-    fn qdrant_canonical_profile_tracks_compiled_adapter() {
+    fn qdrant_stays_projection_until_ha_system_store_conformance_exists() {
         let profile = BackendKind::Qdrant.canonical_feasibility_profile();
-        if cfg!(feature = "qdrant") {
-            assert_eq!(
-                BackendKind::Qdrant.canonical_candidate_profile(),
-                CanonicalCandidateProfile::Implemented
-            );
-            assert!(profile.blocking_gaps.is_empty());
-            assert_eq!(BackendKind::Qdrant.role(), BackendRole::Canonical);
-        } else {
-            assert_eq!(
-                BackendKind::Qdrant.canonical_candidate_profile(),
-                CanonicalCandidateProfile::VectorNativeCasUnsupported
-            );
-            assert!(
-                profile
-                    .blocking_gaps
-                    .iter()
-                    .any(|gap| gap.contains("qdrant feature not compiled")),
-                "Qdrant must explain why the adapter is unavailable"
-            );
-        }
+        assert_eq!(
+            BackendKind::Qdrant.canonical_candidate_profile(),
+            CanonicalCandidateProfile::VectorNativeCasUnsupported
+        );
+        assert_eq!(BackendKind::Qdrant.role(), BackendRole::Projection);
+        assert_eq!(
+            BackendKind::Qdrant.system_store_support(),
+            SystemStoreSupport::None
+        );
+        assert_eq!(
+            BackendKind::Qdrant.control_plane_ha_level(),
+            ControlPlaneHaLevel::ProjectionOnly
+        );
+        assert!(
+            profile
+                .blocking_gaps
+                .iter()
+                .any(|gap| gap.contains("distributed leases")),
+            "Qdrant must explain the HA SystemStores blocker"
+        );
+    }
+
+    #[test]
+    fn control_plane_ha_levels_are_explicit() {
+        assert_eq!(
+            BackendKind::Postgres.control_plane_ha_level(),
+            ControlPlaneHaLevel::HaCanonical
+        );
+        assert_eq!(
+            BackendKind::Sqlite.control_plane_ha_level(),
+            ControlPlaneHaLevel::DevSingleNode
+        );
+        assert_eq!(
+            BackendKind::Qdrant.control_plane_ha_level(),
+            ControlPlaneHaLevel::ProjectionOnly
+        );
+        let matrix = BackendKind::Qdrant.capability_matrix_entry();
+        assert_eq!(
+            matrix.control_plane_ha_level,
+            ControlPlaneHaLevel::ProjectionOnly
+        );
     }
 
     #[test]
@@ -2680,6 +2711,17 @@ mod tests {
         assert_eq!(BackendKind::Clickhouse.role(), BackendRole::Canonical);
         #[cfg(not(feature = "clickhouse"))]
         assert_eq!(BackendKind::Clickhouse.role(), BackendRole::Projection);
+    }
+
+    #[test]
+    fn only_real_database_rls_backends_advertise_rls() {
+        assert!(BackendKind::Postgres.capabilities().supports_rls);
+        for kind in [BackendKind::Mysql, BackendKind::Sqlite, BackendKind::Mssql] {
+            assert!(
+                !kind.capabilities().supports_rls,
+                "{kind:?} must not advertise RLS when isolation is broker-enforced"
+            );
+        }
     }
 
     #[test]

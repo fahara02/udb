@@ -1,0 +1,101 @@
+syntax = "proto3";
+
+package udb.core.authn.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authn.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";
+option java_package = "com.udb.core.authn.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// TokenFamily — refresh-token rotation lineage (Phase 3 / I1, I2.2).
+//
+// Each refresh-token chain is one family. On refresh, the current refresh jti
+// hash is rotated (current → previous, a new current is minted). Presenting a
+// jti that matches `previous_refresh_jti_hash` (or any older one) is reuse: the
+// whole family is revoked and a high-severity audit event is emitted. jti
+// hashes are keyed-HMAC digests and STORAGE_ONLY.
+//
+// Migration order 21.
+// ---------------------------------------------------------------------------
+message TokenFamily {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "token_families"
+    schema_name: "udb_authn"
+    migration_order: 21
+    is_table: true
+    comment: "Refresh-token family lineage for rotation + reuse detection"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_token_families_session"
+      index_type: "BTREE"
+      columns: "session_id"
+    }
+    indexes: {
+      index_name: "idx_token_families_principal"
+      index_type: "BTREE"
+      columns: "principal_id"
+    }
+    indexes: {
+      index_name: "idx_token_families_current_jti"
+      index_type: "HASH"
+      columns: "current_refresh_jti_hash"
+    }
+    replica_hint: "primary"
+    required_scope: "authn:token-families:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "authn.operational"
+    retention_days: 180
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+  };
+
+  string family_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "family_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string session_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "session_id" sql_type: "VARCHAR(128)" comment: "Issuing session handle (hashed)" }];
+
+  string user_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "user_id" sql_type: "VARCHAR(160)" }];
+
+  string principal_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "principal_id" sql_type: "VARCHAR(160)" not_null: true }];
+
+  string tenant_id = 5 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true }];
+
+  string project_id = 6 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" }];
+
+  string device_id = 7 [(udb.core.common.v1.pg_column) = { column_name: "device_id" sql_type: "VARCHAR(64)" comment: "Bound device id (devices.device_id)" }];
+
+  // Keyed-HMAC digest of the currently-valid refresh jti. STORAGE_ONLY.
+  string current_refresh_jti_hash = 8 [(udb.core.common.v1.pg_column) = { column_name: "current_refresh_jti_hash" sql_type: "VARCHAR(128)" comment: "Keyed digest of the current refresh jti" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT hashing_algorithm: "hmac-sha256" }];
+
+  // Keyed-HMAC digest of the previously-rotated refresh jti. STORAGE_ONLY.
+  string previous_refresh_jti_hash = 9 [(udb.core.common.v1.pg_column) = { column_name: "previous_refresh_jti_hash" sql_type: "VARCHAR(128)" comment: "Keyed digest of the prior refresh jti (reuse detection)" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT hashing_algorithm: "hmac-sha256" }];
+
+  google.protobuf.Timestamp reuse_detected_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "reuse_detected_at" sql_type: "TIMESTAMPTZ" }];
+
+  google.protobuf.Timestamp revoked_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "revoked_at" sql_type: "TIMESTAMPTZ" }];
+
+  string revocation_reason = 12 [(udb.core.common.v1.pg_column) = { column_name: "revocation_reason" sql_type: "VARCHAR(120)" }];
+
+  google.protobuf.Timestamp created_at = 13 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  google.protobuf.Timestamp updated_at = 14 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true }];
+}

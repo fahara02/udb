@@ -124,7 +124,7 @@ public enum SecurityClassification
   }
   public static com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(1);
+    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(6);
   }
 
   private static final SecurityClassification[] VALUES = values();

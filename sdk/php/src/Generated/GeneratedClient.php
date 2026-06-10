@@ -18,10 +18,10 @@ use Grpc\ChannelCredentials;
  * the embedded proto descriptor set by `udb sdk generate`, so its surface can
  * never drift from the wire contract.
  *
- *   UDB version ...... 0.3.1
+ *   UDB version ...... 0.3.2
  *   Protocol version . 1.0.0
- *   Services ......... 7
- *   RPCs ............. 153
+ *   Services ......... 16
+ *   RPCs ............. 262
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -32,8 +32,9 @@ use Grpc\ChannelCredentials;
  *
  * Each unary wrapper forwards to the underlying stub method of the same name
  * and adds: per-call deadline, retry with exponential backoff + jitter on
- * transient gRPC codes, TLS/credentials wiring, metadata injection, and typed
- * error mapping (it unpacks the `udb-error-detail-bin` trailer into an
+ * transient gRPC codes (DEADLINE_EXCEEDED only for read-only RPCs),
+ * TLS/credentials wiring, metadata injection, and typed error mapping (it
+ * unpacks the `udb-error-detail-bin` trailer into an
  * {@see \Udb\Entity\V1\ErrorDetail} when the broker attaches one).
  *
  * Streaming RPCs are exposed as accessors returning the live gRPC call object
@@ -46,10 +47,9 @@ use Grpc\ChannelCredentials;
  */
 final class GeneratedClient
 {
-    /** gRPC status codes that are safe to retry for idempotent calls. */
+    /** gRPC status codes that are safe to retry for mutating calls. */
     private const RETRYABLE_CODES = [
         14, // UNAVAILABLE
-        4,  // DEADLINE_EXCEEDED
         8,  // RESOURCE_EXHAUSTED
     ];
 
@@ -132,6 +132,7 @@ final class GeneratedClient
             'udb.core.analytics.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetExecutorPerformance($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetExecutorPerformance'),
         );
     }
     /**
@@ -151,6 +152,7 @@ final class GeneratedClient
             'udb.core.analytics.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPipelineSummary($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetPipelineSummary'),
         );
     }
     /**
@@ -170,6 +172,7 @@ final class GeneratedClient
             'udb.core.analytics.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetReconciliationAnalytics($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetReconciliationAnalytics'),
         );
     }
     /**
@@ -189,6 +192,7 @@ final class GeneratedClient
             'udb.core.analytics.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetSlaCompliance($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetSlaCompliance'),
         );
     }
     /**
@@ -208,6 +212,7 @@ final class GeneratedClient
             'udb.core.analytics.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetThroughput($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetThroughput'),
         );
     }
     /**
@@ -227,6 +232,7 @@ final class GeneratedClient
             'udb.core.analytics.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RecordPipelineMetric($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('RecordPipelineMetric'),
         );
     }
     /**
@@ -246,6 +252,7 @@ final class GeneratedClient
             'udb.core.analytics.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->TriggerSnapshot($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('TriggerSnapshot'),
         );
     }
     /**
@@ -265,6 +272,27 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateApiKey($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('CreateApiKey'),
+        );
+    }
+    /**
+     * udb.core.apikey.services.v1.ApiKeyService / EmergencyRevokeApiKeys (unary).
+     *
+     * Forwards to {@see stubFor()}->EmergencyRevokeApiKeys(); retries transient codes.
+     * Path: /udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded EmergencyRevokeApiKeysResponse
+     */
+    public function emergency_revoke_api_keys($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'EmergencyRevokeApiKeys',
+            'ApiKeyService',
+            'udb.core.apikey.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->EmergencyRevokeApiKeys($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('EmergencyRevokeApiKeys'),
         );
     }
     /**
@@ -284,6 +312,7 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetApiKey($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetApiKey'),
         );
     }
     /**
@@ -303,6 +332,7 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetApiKeyUsageStats($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetApiKeyUsageStats'),
         );
     }
     /**
@@ -322,6 +352,7 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListApiKeys($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListApiKeys'),
         );
     }
     /**
@@ -341,6 +372,27 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeApiKey($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('RevokeApiKey'),
+        );
+    }
+    /**
+     * udb.core.apikey.services.v1.ApiKeyService / RotateApiKey (unary).
+     *
+     * Forwards to {@see stubFor()}->RotateApiKey(); retries transient codes.
+     * Path: /udb.core.apikey.services.v1.ApiKeyService/RotateApiKey
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RotateApiKeyResponse
+     */
+    public function rotate_api_key($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RotateApiKey',
+            'ApiKeyService',
+            'udb.core.apikey.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RotateApiKey($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('RotateApiKey'),
         );
     }
     /**
@@ -360,6 +412,7 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateApiKey($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('UpdateApiKey'),
         );
     }
     /**
@@ -379,6 +432,187 @@ final class GeneratedClient
             'udb.core.apikey.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ValidateApiKey($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ValidateApiKey'),
+        );
+    }
+    /**
+     * udb.core.asset.services.v1.AssetService / CompleteStep (unary).
+     *
+     * Forwards to {@see stubFor()}->CompleteStep(); retries transient codes.
+     * Path: /udb.core.asset.services.v1.AssetService/CompleteStep
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CompleteStepResponse
+     */
+    public function complete_step($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CompleteStep',
+            'AssetService',
+            'udb.core.asset.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CompleteStep($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('CompleteStep'),
+        );
+    }
+    /**
+     * udb.core.asset.services.v1.AssetService / CreatePipelineDefinition (unary).
+     *
+     * Forwards to {@see stubFor()}->CreatePipelineDefinition(); retries transient codes.
+     * Path: /udb.core.asset.services.v1.AssetService/CreatePipelineDefinition
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CreatePipelineDefinitionResponse
+     */
+    public function create_pipeline_definition($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CreatePipelineDefinition',
+            'AssetService',
+            'udb.core.asset.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CreatePipelineDefinition($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('CreatePipelineDefinition'),
+        );
+    }
+    /**
+     * udb.core.asset.services.v1.AssetService / GetAsset (unary).
+     *
+     * Forwards to {@see stubFor()}->GetAsset(); retries transient codes.
+     * Path: /udb.core.asset.services.v1.AssetService/GetAsset
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetAssetResponse
+     */
+    public function get_asset($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetAsset',
+            'AssetService',
+            'udb.core.asset.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetAsset($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('GetAsset'),
+        );
+    }
+    /**
+     * udb.core.asset.services.v1.AssetService / GetPipeline (unary).
+     *
+     * Forwards to {@see stubFor()}->GetPipeline(); retries transient codes.
+     * Path: /udb.core.asset.services.v1.AssetService/GetPipeline
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetPipelineResponse
+     */
+    public function get_pipeline($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetPipeline',
+            'AssetService',
+            'udb.core.asset.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetPipeline($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('GetPipeline'),
+        );
+    }
+    /**
+     * udb.core.asset.services.v1.AssetService / GetPipelineDefinition (unary).
+     *
+     * Forwards to {@see stubFor()}->GetPipelineDefinition(); retries transient codes.
+     * Path: /udb.core.asset.services.v1.AssetService/GetPipelineDefinition
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetPipelineDefinitionResponse
+     */
+    public function get_pipeline_definition($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetPipelineDefinition',
+            'AssetService',
+            'udb.core.asset.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetPipelineDefinition($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('GetPipelineDefinition'),
+        );
+    }
+    /**
+     * udb.core.asset.services.v1.AssetService / ListAssets (unary).
+     *
+     * Forwards to {@see stubFor()}->ListAssets(); retries transient codes.
+     * Path: /udb.core.asset.services.v1.AssetService/ListAssets
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListAssetsResponse
+     */
+    public function list_assets($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListAssets',
+            'AssetService',
+            'udb.core.asset.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListAssets($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ListAssets'),
+        );
+    }
+    /**
+     * udb.core.asset.services.v1.AssetService / RegisterAsset (unary).
+     *
+     * Forwards to {@see stubFor()}->RegisterAsset(); retries transient codes.
+     * Path: /udb.core.asset.services.v1.AssetService/RegisterAsset
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RegisterAssetResponse
+     */
+    public function register_asset($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RegisterAsset',
+            'AssetService',
+            'udb.core.asset.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RegisterAsset($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('RegisterAsset'),
+        );
+    }
+    /**
+     * udb.core.asset.services.v1.AssetService / StartPipeline (unary).
+     *
+     * Forwards to {@see stubFor()}->StartPipeline(); retries transient codes.
+     * Path: /udb.core.asset.services.v1.AssetService/StartPipeline
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded StartPipelineResponse
+     */
+    public function start_pipeline($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'StartPipeline',
+            'AssetService',
+            'udb.core.asset.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->StartPipeline($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('StartPipeline'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / AdminResetMfa (unary).
+     *
+     * Forwards to {@see stubFor()}->AdminResetMfa(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/AdminResetMfa
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded AdminResetMfaResponse
+     */
+    public function admin_reset_mfa($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'AdminResetMfa',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->AdminResetMfa($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('AdminResetMfa'),
         );
     }
     /**
@@ -398,6 +632,67 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->AdminResetPassword($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('AdminResetPassword'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / AdminRevokeAllTenantSessions (unary).
+     *
+     * Forwards to {@see stubFor()}->AdminRevokeAllTenantSessions(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded AdminRevokeAllTenantSessionsResponse
+     */
+    public function admin_revoke_all_tenant_sessions($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'AdminRevokeAllTenantSessions',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->AdminRevokeAllTenantSessions($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('AdminRevokeAllTenantSessions'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / AdminRevokeAllUserSessions (unary).
+     *
+     * Forwards to {@see stubFor()}->AdminRevokeAllUserSessions(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded AdminRevokeAllUserSessionsResponse
+     */
+    public function admin_revoke_all_user_sessions($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'AdminRevokeAllUserSessions',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->AdminRevokeAllUserSessions($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('AdminRevokeAllUserSessions'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / AdminRevokeSession (unary).
+     *
+     * Forwards to {@see stubFor()}->AdminRevokeSession(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/AdminRevokeSession
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded AdminRevokeSessionResponse
+     */
+    public function admin_revoke_session($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'AdminRevokeSession',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->AdminRevokeSession($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('AdminRevokeSession'),
         );
     }
     /**
@@ -417,6 +712,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->Authenticate($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('Authenticate'),
         );
     }
     /**
@@ -436,6 +732,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ChangePassword($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ChangePassword'),
         );
     }
     /**
@@ -455,6 +752,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ChangeUserStatus($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ChangeUserStatus'),
         );
     }
     /**
@@ -474,6 +772,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ConfirmMFAEnrollment($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ConfirmMFAEnrollment'),
         );
     }
     /**
@@ -493,6 +792,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateSession($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('CreateSession'),
         );
     }
     /**
@@ -512,6 +812,67 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateUser($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('CreateUser'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / DeleteWebAuthnCredential (unary).
+     *
+     * Forwards to {@see stubFor()}->DeleteWebAuthnCredential(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DeleteWebAuthnCredentialResponse
+     */
+    public function delete_web_authn_credential($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DeleteWebAuthnCredential',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteWebAuthnCredential($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('DeleteWebAuthnCredential'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / DisableMfaFactor (unary).
+     *
+     * Forwards to {@see stubFor()}->DisableMfaFactor(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/DisableMfaFactor
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DisableMfaFactorResponse
+     */
+    public function disable_mfa_factor($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DisableMfaFactor',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DisableMfaFactor($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('DisableMfaFactor'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / EmergencyRevoke (unary).
+     *
+     * Forwards to {@see stubFor()}->EmergencyRevoke(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/EmergencyRevoke
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded EmergencyRevokeResponse
+     */
+    public function emergency_revoke($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'EmergencyRevoke',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->EmergencyRevoke($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('EmergencyRevoke'),
         );
     }
     /**
@@ -531,6 +892,127 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->EnrollMFA($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('EnrollMFA'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / FinishWebAuthnAuthentication (unary).
+     *
+     * Forwards to {@see stubFor()}->FinishWebAuthnAuthentication(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded FinishWebAuthnAuthenticationResponse
+     */
+    public function finish_web_authn_authentication($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'FinishWebAuthnAuthentication',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->FinishWebAuthnAuthentication($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('FinishWebAuthnAuthentication'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / FinishWebAuthnRegistration (unary).
+     *
+     * Forwards to {@see stubFor()}->FinishWebAuthnRegistration(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded FinishWebAuthnRegistrationResponse
+     */
+    public function finish_web_authn_registration($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'FinishWebAuthnRegistration',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->FinishWebAuthnRegistration($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('FinishWebAuthnRegistration'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / ForgotPassword (unary).
+     *
+     * Forwards to {@see stubFor()}->ForgotPassword(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/ForgotPassword
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ForgotPasswordResponse
+     */
+    public function forgot_password($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ForgotPassword',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ForgotPassword($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ForgotPassword'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / GenerateRecoveryCodes (unary).
+     *
+     * Forwards to {@see stubFor()}->GenerateRecoveryCodes(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GenerateRecoveryCodesResponse
+     */
+    public function generate_recovery_codes($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GenerateRecoveryCodes',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GenerateRecoveryCodes($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('GenerateRecoveryCodes'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / GetJwks (unary).
+     *
+     * Forwards to {@see stubFor()}->GetJwks(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/GetJwks
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetJwksResponse
+     */
+    public function get_jwks($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetJwks',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetJwks($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('GetJwks'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / GetMfaPolicy (unary).
+     *
+     * Forwards to {@see stubFor()}->GetMfaPolicy(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/GetMfaPolicy
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetMfaPolicyResponse
+     */
+    public function get_mfa_policy($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetMfaPolicy',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetMfaPolicy($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('GetMfaPolicy'),
         );
     }
     /**
@@ -550,6 +1032,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetSession($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetSession'),
         );
     }
     /**
@@ -569,6 +1052,87 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetUser($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetUser'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / IntrospectToken (unary).
+     *
+     * Forwards to {@see stubFor()}->IntrospectToken(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/IntrospectToken
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded IntrospectTokenResponse
+     */
+    public function introspect_token($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'IntrospectToken',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->IntrospectToken($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('IntrospectToken'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / IssueMfaChallenge (unary).
+     *
+     * Forwards to {@see stubFor()}->IssueMfaChallenge(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/IssueMfaChallenge
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded IssueMfaChallengeResponse
+     */
+    public function issue_mfa_challenge($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'IssueMfaChallenge',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->IssueMfaChallenge($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('IssueMfaChallenge'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / ListDevices (unary).
+     *
+     * Forwards to {@see stubFor()}->ListDevices(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/ListDevices
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListDevicesResponse
+     */
+    public function list_devices($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListDevices',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListDevices($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ListDevices'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / ListMfaFactors (unary).
+     *
+     * Forwards to {@see stubFor()}->ListMfaFactors(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/ListMfaFactors
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListMfaFactorsResponse
+     */
+    public function list_mfa_factors($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListMfaFactors',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListMfaFactors($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ListMfaFactors'),
         );
     }
     /**
@@ -588,6 +1152,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListSessions($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListSessions'),
         );
     }
     /**
@@ -607,6 +1172,27 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListUsers($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListUsers'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / ListWebAuthnCredentials (unary).
+     *
+     * Forwards to {@see stubFor()}->ListWebAuthnCredentials(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListWebAuthnCredentialsResponse
+     */
+    public function list_web_authn_credentials($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListWebAuthnCredentials',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListWebAuthnCredentials($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ListWebAuthnCredentials'),
         );
     }
     /**
@@ -626,6 +1212,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->Login($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('Login'),
         );
     }
     /**
@@ -645,6 +1232,27 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->Logout($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('Logout'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / PutMfaPolicy (unary).
+     *
+     * Forwards to {@see stubFor()}->PutMfaPolicy(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/PutMfaPolicy
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PutMfaPolicyResponse
+     */
+    public function put_mfa_policy($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PutMfaPolicy',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PutMfaPolicy($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('PutMfaPolicy'),
         );
     }
     /**
@@ -664,6 +1272,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RefreshSession($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('RefreshSession'),
         );
     }
     /**
@@ -683,6 +1292,27 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RefreshToken($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('RefreshToken'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / RenamePasskey (unary).
+     *
+     * Forwards to {@see stubFor()}->RenamePasskey(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/RenamePasskey
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RenamePasskeyResponse
+     */
+    public function rename_passkey($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RenamePasskey',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RenamePasskey($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('RenamePasskey'),
         );
     }
     /**
@@ -702,6 +1332,67 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ResendOTP($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ResendOTP'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / ResetPassword (unary).
+     *
+     * Forwards to {@see stubFor()}->ResetPassword(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/ResetPassword
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ResetPasswordResponse
+     */
+    public function reset_password($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ResetPassword',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ResetPassword($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ResetPassword'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / RevokeDevice (unary).
+     *
+     * Forwards to {@see stubFor()}->RevokeDevice(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/RevokeDevice
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RevokeDeviceResponse
+     */
+    public function revoke_device($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RevokeDevice',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeDevice($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('RevokeDevice'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / RevokeRecoveryCodes (unary).
+     *
+     * Forwards to {@see stubFor()}->RevokeRecoveryCodes(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RevokeRecoveryCodesResponse
+     */
+    public function revoke_recovery_codes($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RevokeRecoveryCodes',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeRecoveryCodes($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('RevokeRecoveryCodes'),
         );
     }
     /**
@@ -721,6 +1412,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeSession($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('RevokeSession'),
         );
     }
     /**
@@ -740,6 +1432,67 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->SendOTP($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('SendOTP'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / SendPhoneVerification (unary).
+     *
+     * Forwards to {@see stubFor()}->SendPhoneVerification(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/SendPhoneVerification
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded SendPhoneVerificationResponse
+     */
+    public function send_phone_verification($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'SendPhoneVerification',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->SendPhoneVerification($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('SendPhoneVerification'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / StartWebAuthnAuthentication (unary).
+     *
+     * Forwards to {@see stubFor()}->StartWebAuthnAuthentication(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded StartWebAuthnAuthenticationResponse
+     */
+    public function start_web_authn_authentication($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'StartWebAuthnAuthentication',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->StartWebAuthnAuthentication($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('StartWebAuthnAuthentication'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / StartWebAuthnRegistration (unary).
+     *
+     * Forwards to {@see stubFor()}->StartWebAuthnRegistration(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded StartWebAuthnRegistrationResponse
+     */
+    public function start_web_authn_registration($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'StartWebAuthnRegistration',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->StartWebAuthnRegistration($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('StartWebAuthnRegistration'),
         );
     }
     /**
@@ -759,6 +1512,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateUser($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('UpdateUser'),
         );
     }
     /**
@@ -778,6 +1532,7 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ValidateCSRF($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ValidateCSRF'),
         );
     }
     /**
@@ -797,6 +1552,27 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ValidateToken($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ValidateToken'),
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / VerifyMfaChallenge (unary).
+     *
+     * Forwards to {@see stubFor()}->VerifyMfaChallenge(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded VerifyMfaChallengeResponse
+     */
+    public function verify_mfa_challenge($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'VerifyMfaChallenge',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->VerifyMfaChallenge($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('VerifyMfaChallenge'),
         );
     }
     /**
@@ -816,6 +1592,67 @@ final class GeneratedClient
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->VerifyOTP($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('VerifyOTP'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / ActivateCanary (unary).
+     *
+     * Forwards to {@see stubFor()}->ActivateCanary(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/ActivateCanary
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CanaryResponse
+     */
+    public function activate_canary($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ActivateCanary',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ActivateCanary($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ActivateCanary'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / ActivatePolicyVersion (unary).
+     *
+     * Forwards to {@see stubFor()}->ActivatePolicyVersion(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ActivationResponse
+     */
+    public function activate_policy_version($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ActivatePolicyVersion',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ActivatePolicyVersion($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ActivatePolicyVersion'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / ApprovePolicyDraft (unary).
+     *
+     * Forwards to {@see stubFor()}->ApprovePolicyDraft(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PolicyApprovalResponse
+     */
+    public function approve_policy_draft($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ApprovePolicyDraft',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ApprovePolicyDraft($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ApprovePolicyDraft'),
         );
     }
     /**
@@ -835,6 +1672,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->AssignRole($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('AssignRole'),
         );
     }
     /**
@@ -854,6 +1692,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->Authorize($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('Authorize'),
         );
     }
     /**
@@ -873,6 +1712,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->BatchCheckPermissions($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('BatchCheckPermissions'),
         );
     }
     /**
@@ -892,6 +1732,27 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CheckAccess($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('CheckAccess'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / CreatePolicyDraft (unary).
+     *
+     * Forwards to {@see stubFor()}->CreatePolicyDraft(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/CreatePolicyDraft
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PolicyDraftResponse
+     */
+    public function create_policy_draft($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CreatePolicyDraft',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CreatePolicyDraft($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('CreatePolicyDraft'),
         );
     }
     /**
@@ -911,6 +1772,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreatePolicyRule($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('CreatePolicyRule'),
         );
     }
     /**
@@ -930,6 +1792,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateRole($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('CreateRole'),
         );
     }
     /**
@@ -949,6 +1812,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DeletePolicyRule($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('DeletePolicyRule'),
         );
     }
     /**
@@ -968,6 +1832,87 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteRole($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('DeleteRole'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / DiffPolicyDraft (unary).
+     *
+     * Forwards to {@see stubFor()}->DiffPolicyDraft(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/DiffPolicyDraft
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DiffPolicyDraftResponse
+     */
+    public function diff_policy_draft($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DiffPolicyDraft',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DiffPolicyDraft($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('DiffPolicyDraft'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / ExplainPolicy (unary).
+     *
+     * Forwards to {@see stubFor()}->ExplainPolicy(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/ExplainPolicy
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ExplainPolicyResponse
+     */
+    public function explain_policy($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ExplainPolicy',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ExplainPolicy($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ExplainPolicy'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / GetAuthzRevision (unary).
+     *
+     * Forwards to {@see stubFor()}->GetAuthzRevision(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/GetAuthzRevision
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetAuthzRevisionResponse
+     */
+    public function get_authz_revision($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetAuthzRevision',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetAuthzRevision($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('GetAuthzRevision'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / GetCanaryStatus (unary).
+     *
+     * Forwards to {@see stubFor()}->GetCanaryStatus(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/GetCanaryStatus
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetCanaryStatusResponse
+     */
+    public function get_canary_status($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetCanaryStatus',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetCanaryStatus($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('GetCanaryStatus'),
         );
     }
     /**
@@ -987,6 +1932,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetNativeAccess($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetNativeAccess'),
         );
     }
     /**
@@ -1006,6 +1952,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPolicyBundle($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetPolicyBundle'),
         );
     }
     /**
@@ -1025,6 +1972,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPolicyRule($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetPolicyRule'),
         );
     }
     /**
@@ -1044,6 +1992,27 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetRole($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetRole'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / InvalidatePolicyBundles (unary).
+     *
+     * Forwards to {@see stubFor()}->InvalidatePolicyBundles(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded InvalidatePolicyBundlesResponse
+     */
+    public function invalidate_policy_bundles($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'InvalidatePolicyBundles',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->InvalidatePolicyBundles($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('InvalidatePolicyBundles'),
         );
     }
     /**
@@ -1063,6 +2032,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->LintAuthzPolicies($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('LintAuthzPolicies'),
         );
     }
     /**
@@ -1082,6 +2052,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListAccessDecisionAudits($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListAccessDecisionAudits'),
         );
     }
     /**
@@ -1101,6 +2072,27 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListPolicyRules($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListPolicyRules'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / ListPolicyVersions (unary).
+     *
+     * Forwards to {@see stubFor()}->ListPolicyVersions(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/ListPolicyVersions
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListPolicyVersionsResponse
+     */
+    public function list_policy_versions($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListPolicyVersions',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListPolicyVersions($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ListPolicyVersions'),
         );
     }
     /**
@@ -1120,6 +2112,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListRoles($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListRoles'),
         );
     }
     /**
@@ -1139,6 +2132,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListUserPermissions($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListUserPermissions'),
         );
     }
     /**
@@ -1158,6 +2152,47 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListUserRoles($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListUserRoles'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / MigrateLegacyPolicies (unary).
+     *
+     * Forwards to {@see stubFor()}->MigrateLegacyPolicies(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded MigrateLegacyPoliciesResponse
+     */
+    public function migrate_legacy_policies($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'MigrateLegacyPolicies',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->MigrateLegacyPolicies($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('MigrateLegacyPolicies'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / PromoteCanary (unary).
+     *
+     * Forwards to {@see stubFor()}->PromoteCanary(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/PromoteCanary
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CanaryResponse
+     */
+    public function promote_canary($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PromoteCanary',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PromoteCanary($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('PromoteCanary'),
         );
     }
     /**
@@ -1177,6 +2212,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutAuthzPolicy($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('PutAuthzPolicy'),
         );
     }
     /**
@@ -1196,6 +2232,7 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutRelationship($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('PutRelationship'),
         );
     }
     /**
@@ -1215,6 +2252,27 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutRoleBinding($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('PutRoleBinding'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / RejectPolicyDraft (unary).
+     *
+     * Forwards to {@see stubFor()}->RejectPolicyDraft(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/RejectPolicyDraft
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PolicyApprovalResponse
+     */
+    public function reject_policy_draft($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RejectPolicyDraft',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RejectPolicyDraft($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('RejectPolicyDraft'),
         );
     }
     /**
@@ -1234,6 +2292,107 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeRole($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('RevokeRole'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / RollbackPolicyVersion (unary).
+     *
+     * Forwards to {@see stubFor()}->RollbackPolicyVersion(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ActivationResponse
+     */
+    public function rollback_policy_version($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RollbackPolicyVersion',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RollbackPolicyVersion($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('RollbackPolicyVersion'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / SeedBuiltinRoles (unary).
+     *
+     * Forwards to {@see stubFor()}->SeedBuiltinRoles(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded SeedBuiltinRolesResponse
+     */
+    public function seed_builtin_roles($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'SeedBuiltinRoles',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->SeedBuiltinRoles($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('SeedBuiltinRoles'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / SimulatePolicy (unary).
+     *
+     * Forwards to {@see stubFor()}->SimulatePolicy(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/SimulatePolicy
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded SimulatePolicyResponse
+     */
+    public function simulate_policy($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'SimulatePolicy',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->SimulatePolicy($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('SimulatePolicy'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / SubmitPolicyDraft (unary).
+     *
+     * Forwards to {@see stubFor()}->SubmitPolicyDraft(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PolicyDraftResponse
+     */
+    public function submit_policy_draft($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'SubmitPolicyDraft',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->SubmitPolicyDraft($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('SubmitPolicyDraft'),
+        );
+    }
+    /**
+     * udb.core.authz.services.v1.AuthzService / UpdatePolicyDraft (unary).
+     *
+     * Forwards to {@see stubFor()}->UpdatePolicyDraft(); retries transient codes.
+     * Path: /udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PolicyDraftResponse
+     */
+    public function update_policy_draft($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'UpdatePolicyDraft',
+            'AuthzService',
+            'udb.core.authz.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->UpdatePolicyDraft($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('UpdatePolicyDraft'),
         );
     }
     /**
@@ -1253,6 +2412,607 @@ final class GeneratedClient
             'udb.core.authz.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateRole($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('UpdateRole'),
+        );
+    }
+    /**
+     * udb.core.control.services.v1.ControlPlaneService / AckStatus (unary).
+     *
+     * Forwards to {@see stubFor()}->AckStatus(); retries transient codes.
+     * Path: /udb.core.control.services.v1.ControlPlaneService/AckStatus
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded AckStatusResponse
+     */
+    public function ack_status($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'AckStatus',
+            'ControlPlaneService',
+            'udb.core.control.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->AckStatus($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('AckStatus'),
+        );
+    }
+    /**
+     * udb.core.control.services.v1.ControlPlaneService / GetResources (unary).
+     *
+     * Forwards to {@see stubFor()}->GetResources(); retries transient codes.
+     * Path: /udb.core.control.services.v1.ControlPlaneService/GetResources
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetResourcesResponse
+     */
+    public function get_resources($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetResources',
+            'ControlPlaneService',
+            'udb.core.control.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetResources($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('GetResources'),
+        );
+    }
+    /**
+     * udb.core.control.services.v1.ControlPlaneService / ListNodeStates (unary).
+     *
+     * Forwards to {@see stubFor()}->ListNodeStates(); retries transient codes.
+     * Path: /udb.core.control.services.v1.ControlPlaneService/ListNodeStates
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListNodeStatesResponse
+     */
+    public function list_node_states($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListNodeStates',
+            'ControlPlaneService',
+            'udb.core.control.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListNodeStates($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ListNodeStates'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / CreateProvider (unary).
+     *
+     * Forwards to {@see stubFor()}->CreateProvider(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/CreateProvider
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CreateProviderResponse
+     */
+    public function create_provider($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CreateProvider',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CreateProvider($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('CreateProvider'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / DisableProvider (unary).
+     *
+     * Forwards to {@see stubFor()}->DisableProvider(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/DisableProvider
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DisableProviderResponse
+     */
+    public function disable_provider($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DisableProvider',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DisableProvider($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('DisableProvider'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ForceJwksRefresh (unary).
+     *
+     * Forwards to {@see stubFor()}->ForceJwksRefresh(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ForceJwksRefreshResponse
+     */
+    public function force_jwks_refresh($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ForceJwksRefresh',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ForceJwksRefresh($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ForceJwksRefresh'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / GetProvider (unary).
+     *
+     * Forwards to {@see stubFor()}->GetProvider(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/GetProvider
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetProviderResponse
+     */
+    public function get_provider($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetProvider',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetProvider($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('GetProvider'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ImportSamlMetadata (unary).
+     *
+     * Forwards to {@see stubFor()}->ImportSamlMetadata(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ImportSamlMetadata
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ImportSamlMetadataResponse
+     */
+    public function import_saml_metadata($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ImportSamlMetadata',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ImportSamlMetadata($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ImportSamlMetadata'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / LinkIdentity (unary).
+     *
+     * Forwards to {@see stubFor()}->LinkIdentity(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/LinkIdentity
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded LinkIdentityResponse
+     */
+    public function link_identity($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'LinkIdentity',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->LinkIdentity($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('LinkIdentity'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ListExternalIdentities (unary).
+     *
+     * Forwards to {@see stubFor()}->ListExternalIdentities(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ListExternalIdentities
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListExternalIdentitiesResponse
+     */
+    public function list_external_identities($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListExternalIdentities',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListExternalIdentities($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ListExternalIdentities'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ListProviders (unary).
+     *
+     * Forwards to {@see stubFor()}->ListProviders(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ListProviders
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListProvidersResponse
+     */
+    public function list_providers($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListProviders',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListProviders($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ListProviders'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / PreviewClaimMapping (unary).
+     *
+     * Forwards to {@see stubFor()}->PreviewClaimMapping(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/PreviewClaimMapping
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PreviewClaimMappingResponse
+     */
+    public function preview_claim_mapping($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PreviewClaimMapping',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PreviewClaimMapping($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('PreviewClaimMapping'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / PreviewGroupMapping (unary).
+     *
+     * Forwards to {@see stubFor()}->PreviewGroupMapping(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/PreviewGroupMapping
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PreviewGroupMappingResponse
+     */
+    public function preview_group_mapping($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PreviewGroupMapping',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PreviewGroupMapping($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('PreviewGroupMapping'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ResolveExternalIdentity (unary).
+     *
+     * Forwards to {@see stubFor()}->ResolveExternalIdentity(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ResolveExternalIdentity
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ResolveExternalIdentityResponse
+     */
+    public function resolve_external_identity($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ResolveExternalIdentity',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ResolveExternalIdentity($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ResolveExternalIdentity'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / SamlAcs (unary).
+     *
+     * Forwards to {@see stubFor()}->SamlAcs(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/SamlAcs
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded SamlAcsResponse
+     */
+    public function saml_acs($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'SamlAcs',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->SamlAcs($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('SamlAcs'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ScimCreateGroup (unary).
+     *
+     * Forwards to {@see stubFor()}->ScimCreateGroup(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ScimCreateGroupResponse
+     */
+    public function scim_create_group($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ScimCreateGroup',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ScimCreateGroup($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ScimCreateGroup'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ScimCreateUser (unary).
+     *
+     * Forwards to {@see stubFor()}->ScimCreateUser(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimCreateUser
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ScimCreateUserResponse
+     */
+    public function scim_create_user($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ScimCreateUser',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ScimCreateUser($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ScimCreateUser'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ScimDeleteGroup (unary).
+     *
+     * Forwards to {@see stubFor()}->ScimDeleteGroup(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ScimDeleteGroupResponse
+     */
+    public function scim_delete_group($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ScimDeleteGroup',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ScimDeleteGroup($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ScimDeleteGroup'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ScimDeleteUser (unary).
+     *
+     * Forwards to {@see stubFor()}->ScimDeleteUser(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimDeleteUser
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ScimDeleteUserResponse
+     */
+    public function scim_delete_user($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ScimDeleteUser',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ScimDeleteUser($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ScimDeleteUser'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ScimGetGroup (unary).
+     *
+     * Forwards to {@see stubFor()}->ScimGetGroup(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ScimGetGroupResponse
+     */
+    public function scim_get_group($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ScimGetGroup',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ScimGetGroup($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ScimGetGroup'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ScimGetUser (unary).
+     *
+     * Forwards to {@see stubFor()}->ScimGetUser(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimGetUser
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ScimGetUserResponse
+     */
+    public function scim_get_user($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ScimGetUser',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ScimGetUser($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ScimGetUser'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ScimListGroups (unary).
+     *
+     * Forwards to {@see stubFor()}->ScimListGroups(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimListGroups
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ScimListGroupsResponse
+     */
+    public function scim_list_groups($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ScimListGroups',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ScimListGroups($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ScimListGroups'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ScimListUsers (unary).
+     *
+     * Forwards to {@see stubFor()}->ScimListUsers(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimListUsers
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ScimListUsersResponse
+     */
+    public function scim_list_users($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ScimListUsers',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ScimListUsers($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ScimListUsers'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ScimPatchGroup (unary).
+     *
+     * Forwards to {@see stubFor()}->ScimPatchGroup(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ScimPatchGroupResponse
+     */
+    public function scim_patch_group($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ScimPatchGroup',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ScimPatchGroup($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ScimPatchGroup'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ScimPatchUser (unary).
+     *
+     * Forwards to {@see stubFor()}->ScimPatchUser(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimPatchUser
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ScimPatchUserResponse
+     */
+    public function scim_patch_user($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ScimPatchUser',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ScimPatchUser($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ScimPatchUser'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / ScimReplaceUser (unary).
+     *
+     * Forwards to {@see stubFor()}->ScimReplaceUser(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/ScimReplaceUser
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ScimReplaceUserResponse
+     */
+    public function scim_replace_user($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ScimReplaceUser',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ScimReplaceUser($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ScimReplaceUser'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / StartSamlLogin (unary).
+     *
+     * Forwards to {@see stubFor()}->StartSamlLogin(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/StartSamlLogin
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded StartSamlLoginResponse
+     */
+    public function start_saml_login($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'StartSamlLogin',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->StartSamlLogin($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('StartSamlLogin'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / TestProviderDiscovery (unary).
+     *
+     * Forwards to {@see stubFor()}->TestProviderDiscovery(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/TestProviderDiscovery
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded TestProviderDiscoveryResponse
+     */
+    public function test_provider_discovery($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'TestProviderDiscovery',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->TestProviderDiscovery($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('TestProviderDiscovery'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / UnlinkIdentity (unary).
+     *
+     * Forwards to {@see stubFor()}->UnlinkIdentity(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/UnlinkIdentity
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded UnlinkIdentityResponse
+     */
+    public function unlink_identity($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'UnlinkIdentity',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->UnlinkIdentity($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('UnlinkIdentity'),
+        );
+    }
+    /**
+     * udb.core.idp.services.v1.IdentityProviderService / UpdateProvider (unary).
+     *
+     * Forwards to {@see stubFor()}->UpdateProvider(); retries transient codes.
+     * Path: /udb.core.idp.services.v1.IdentityProviderService/UpdateProvider
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded UpdateProviderResponse
+     */
+    public function update_provider($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'UpdateProvider',
+            'IdentityProviderService',
+            'udb.core.idp.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateProvider($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('UpdateProvider'),
         );
     }
     /**
@@ -1272,6 +3032,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetDeliveryStats($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetDeliveryStats'),
         );
     }
     /**
@@ -1291,6 +3052,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetNotification($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetNotification'),
         );
     }
     /**
@@ -1310,6 +3072,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetPreference($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetPreference'),
         );
     }
     /**
@@ -1329,6 +3092,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetTemplate($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetTemplate'),
         );
     }
     /**
@@ -1348,6 +3112,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListNotifications($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListNotifications'),
         );
     }
     /**
@@ -1367,6 +3132,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListPreferences($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListPreferences'),
         );
     }
     /**
@@ -1386,6 +3152,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListTemplates($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListTemplates'),
         );
     }
     /**
@@ -1405,6 +3172,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RetryNotification($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('RetryNotification'),
         );
     }
     /**
@@ -1424,6 +3192,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->SendNotification($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('SendNotification'),
         );
     }
     /**
@@ -1443,6 +3212,7 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->SetPreference($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('SetPreference'),
         );
     }
     /**
@@ -1462,6 +3232,147 @@ final class GeneratedClient
             'udb.core.notification.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpsertTemplate($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('UpsertTemplate'),
+        );
+    }
+    /**
+     * udb.core.storage.services.v1.StorageService / DeleteFile (unary).
+     *
+     * Forwards to {@see stubFor()}->DeleteFile(); retries transient codes.
+     * Path: /udb.core.storage.services.v1.StorageService/DeleteFile
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DeleteFileResponse
+     */
+    public function delete_file($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DeleteFile',
+            'StorageService',
+            'udb.core.storage.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteFile($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('DeleteFile'),
+        );
+    }
+    /**
+     * udb.core.storage.services.v1.StorageService / FinalizeUpload (unary).
+     *
+     * Forwards to {@see stubFor()}->FinalizeUpload(); retries transient codes.
+     * Path: /udb.core.storage.services.v1.StorageService/FinalizeUpload
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded FinalizeUploadResponse
+     */
+    public function finalize_upload($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'FinalizeUpload',
+            'StorageService',
+            'udb.core.storage.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->FinalizeUpload($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('FinalizeUpload'),
+        );
+    }
+    /**
+     * udb.core.storage.services.v1.StorageService / GetDownloadUrl (unary).
+     *
+     * Forwards to {@see stubFor()}->GetDownloadUrl(); retries transient codes.
+     * Path: /udb.core.storage.services.v1.StorageService/GetDownloadUrl
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetDownloadUrlResponse
+     */
+    public function get_download_url($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetDownloadUrl',
+            'StorageService',
+            'udb.core.storage.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetDownloadUrl($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('GetDownloadUrl'),
+        );
+    }
+    /**
+     * udb.core.storage.services.v1.StorageService / GetFile (unary).
+     *
+     * Forwards to {@see stubFor()}->GetFile(); retries transient codes.
+     * Path: /udb.core.storage.services.v1.StorageService/GetFile
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetFileResponse
+     */
+    public function get_file($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetFile',
+            'StorageService',
+            'udb.core.storage.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetFile($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('GetFile'),
+        );
+    }
+    /**
+     * udb.core.storage.services.v1.StorageService / ListFiles (unary).
+     *
+     * Forwards to {@see stubFor()}->ListFiles(); retries transient codes.
+     * Path: /udb.core.storage.services.v1.StorageService/ListFiles
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListFilesResponse
+     */
+    public function list_files($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListFiles',
+            'StorageService',
+            'udb.core.storage.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListFiles($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ListFiles'),
+        );
+    }
+    /**
+     * udb.core.storage.services.v1.StorageService / RegisterUpload (unary).
+     *
+     * Forwards to {@see stubFor()}->RegisterUpload(); retries transient codes.
+     * Path: /udb.core.storage.services.v1.StorageService/RegisterUpload
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RegisterUploadResponse
+     */
+    public function register_upload($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RegisterUpload',
+            'StorageService',
+            'udb.core.storage.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RegisterUpload($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('RegisterUpload'),
+        );
+    }
+    /**
+     * udb.core.storage.services.v1.StorageService / UpdateFile (unary).
+     *
+     * Forwards to {@see stubFor()}->UpdateFile(); retries transient codes.
+     * Path: /udb.core.storage.services.v1.StorageService/UpdateFile
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded UpdateFileResponse
+     */
+    public function update_file($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'UpdateFile',
+            'StorageService',
+            'udb.core.storage.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateFile($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('UpdateFile'),
         );
     }
     /**
@@ -1481,6 +3392,7 @@ final class GeneratedClient
             'udb.core.tenant.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateTenant($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('CreateTenant'),
         );
     }
     /**
@@ -1500,6 +3412,7 @@ final class GeneratedClient
             'udb.core.tenant.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetTenant($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetTenant'),
         );
     }
     /**
@@ -1519,6 +3432,7 @@ final class GeneratedClient
             'udb.core.tenant.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetTenantConfig($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetTenantConfig'),
         );
     }
     /**
@@ -1538,6 +3452,7 @@ final class GeneratedClient
             'udb.core.tenant.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListTenants($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListTenants'),
         );
     }
     /**
@@ -1557,6 +3472,7 @@ final class GeneratedClient
             'udb.core.tenant.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateTenant($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('UpdateTenant'),
         );
     }
     /**
@@ -1576,6 +3492,287 @@ final class GeneratedClient
             'udb.core.tenant.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateTenantConfig($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('UpdateTenantConfig'),
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.PeerService / GetPeer (unary).
+     *
+     * Forwards to {@see stubFor()}->GetPeer(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.PeerService/GetPeer
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetPeerResponse
+     */
+    public function get_peer($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetPeer',
+            'PeerService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetPeer($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('GetPeer'),
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.PeerService / JoinRoom (unary).
+     *
+     * Forwards to {@see stubFor()}->JoinRoom(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.PeerService/JoinRoom
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded JoinRoomResponse
+     */
+    public function join_room($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'JoinRoom',
+            'PeerService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->JoinRoom($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('JoinRoom'),
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.PeerService / LeaveRoom (unary).
+     *
+     * Forwards to {@see stubFor()}->LeaveRoom(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.PeerService/LeaveRoom
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded LeaveRoomResponse
+     */
+    public function leave_room($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'LeaveRoom',
+            'PeerService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->LeaveRoom($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('LeaveRoom'),
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.PeerService / ListPeers (unary).
+     *
+     * Forwards to {@see stubFor()}->ListPeers(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.PeerService/ListPeers
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListPeersResponse
+     */
+    public function list_peers($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListPeers',
+            'PeerService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListPeers($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ListPeers'),
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.RoomService / CloseRoom (unary).
+     *
+     * Forwards to {@see stubFor()}->CloseRoom(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.RoomService/CloseRoom
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CloseRoomResponse
+     */
+    public function close_room($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CloseRoom',
+            'RoomService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CloseRoom($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('CloseRoom'),
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.RoomService / CreateRoom (unary).
+     *
+     * Forwards to {@see stubFor()}->CreateRoom(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.RoomService/CreateRoom
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CreateRoomResponse
+     */
+    public function create_room($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CreateRoom',
+            'RoomService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CreateRoom($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('CreateRoom'),
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.RoomService / GetRoom (unary).
+     *
+     * Forwards to {@see stubFor()}->GetRoom(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.RoomService/GetRoom
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetRoomResponse
+     */
+    public function get_room($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetRoom',
+            'RoomService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetRoom($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('GetRoom'),
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.RoomService / ListRooms (unary).
+     *
+     * Forwards to {@see stubFor()}->ListRooms(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.RoomService/ListRooms
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListRoomsResponse
+     */
+    public function list_rooms($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListRooms',
+            'RoomService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListRooms($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ListRooms'),
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.RoomService / UpdateRoom (unary).
+     *
+     * Forwards to {@see stubFor()}->UpdateRoom(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.RoomService/UpdateRoom
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded UpdateRoomResponse
+     */
+    public function update_room($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'UpdateRoom',
+            'RoomService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->UpdateRoom($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('UpdateRoom'),
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.TrackService / ListTracks (unary).
+     *
+     * Forwards to {@see stubFor()}->ListTracks(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.TrackService/ListTracks
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListTracksResponse
+     */
+    public function list_tracks($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListTracks',
+            'TrackService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListTracks($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('ListTracks'),
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.TrackService / MuteTrack (unary).
+     *
+     * Forwards to {@see stubFor()}->MuteTrack(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.TrackService/MuteTrack
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded MuteTrackResponse
+     */
+    public function mute_track($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'MuteTrack',
+            'TrackService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->MuteTrack($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('MuteTrack'),
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.TrackService / PublishTrack (unary).
+     *
+     * Forwards to {@see stubFor()}->PublishTrack(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.TrackService/PublishTrack
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PublishTrackResponse
+     */
+    public function publish_track($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PublishTrack',
+            'TrackService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PublishTrack($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('PublishTrack'),
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.TrackService / UnpublishTrack (unary).
+     *
+     * Forwards to {@see stubFor()}->UnpublishTrack(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.TrackService/UnpublishTrack
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded UnpublishTrackResponse
+     */
+    public function unpublish_track($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'UnpublishTrack',
+            'TrackService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->UnpublishTrack($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('UnpublishTrack'),
+        );
+    }
+    /**
+     * udb.core.webrtc.services.v1.TurnService / IssueCredentials (unary).
+     *
+     * Forwards to {@see stubFor()}->IssueCredentials(); retries transient codes.
+     * Path: /udb.core.webrtc.services.v1.TurnService/IssueCredentials
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded IssueCredentialsResponse
+     */
+    public function issue_credentials($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'IssueCredentials',
+            'TurnService',
+            'udb.core.webrtc.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->IssueCredentials($request, $md, $opts),
+            $metadata,
+            $this->isReadOnlyRpcName('IssueCredentials'),
         );
     }
     /**
@@ -1595,6 +3792,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ActivateCatalog($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ActivateCatalog'),
         );
     }
     /**
@@ -1614,6 +3812,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->AnalyticalQuery($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('AnalyticalQuery'),
         );
     }
     /**
@@ -1633,6 +3832,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ApplyMigration($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ApplyMigration'),
         );
     }
     /**
@@ -1652,6 +3852,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ApproveMigrationPlan($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ApproveMigrationPlan'),
         );
     }
     /**
@@ -1671,6 +3872,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CacheDelete($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('CacheDelete'),
         );
     }
     /**
@@ -1690,6 +3892,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CacheGet($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('CacheGet'),
         );
     }
     /**
@@ -1709,6 +3912,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CacheScan($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('CacheScan'),
         );
     }
     /**
@@ -1728,6 +3932,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CacheSet($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('CacheSet'),
         );
     }
     /**
@@ -1747,6 +3952,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateMaterializedView($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('CreateMaterializedView'),
         );
     }
     /**
@@ -1766,6 +3972,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->Delete($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('Delete'),
         );
     }
     /**
@@ -1785,6 +3992,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DeletePolicy($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('DeletePolicy'),
         );
     }
     /**
@@ -1804,6 +4012,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DismissDlqEvent($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('DismissDlqEvent'),
         );
     }
     /**
@@ -1823,6 +4032,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DocumentDelete($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('DocumentDelete'),
         );
     }
     /**
@@ -1842,6 +4052,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DocumentFind($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('DocumentFind'),
         );
     }
     /**
@@ -1861,6 +4072,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DocumentGet($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('DocumentGet'),
         );
     }
     /**
@@ -1880,6 +4092,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DocumentUpsert($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('DocumentUpsert'),
         );
     }
     /**
@@ -1899,6 +4112,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->DropResource($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('DropResource'),
         );
     }
     /**
@@ -1918,6 +4132,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->EnqueueOutboxEvent($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('EnqueueOutboxEvent'),
         );
     }
     /**
@@ -1937,6 +4152,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->EnsureProject($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('EnsureProject'),
         );
     }
     /**
@@ -1956,6 +4172,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->EnsureResource($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('EnsureResource'),
         );
     }
     /**
@@ -1975,6 +4192,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GeneratePresignedUrl($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GeneratePresignedUrl'),
         );
     }
     /**
@@ -1994,6 +4212,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GenericDispatch($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GenericDispatch'),
         );
     }
     /**
@@ -2013,6 +4232,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetAdminSummary($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetAdminSummary'),
         );
     }
     /**
@@ -2032,6 +4252,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCapabilities($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetCapabilities'),
         );
     }
     /**
@@ -2051,6 +4272,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCatalogManifest($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetCatalogManifest'),
         );
     }
     /**
@@ -2070,6 +4292,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCatalogVersion($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetCatalogVersion'),
         );
     }
     /**
@@ -2089,6 +4312,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCatalogVersions($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetCatalogVersions'),
         );
     }
     /**
@@ -2108,6 +4332,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetCdcStatus($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetCdcStatus'),
         );
     }
     /**
@@ -2127,6 +4352,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetDlqEvent($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetDlqEvent'),
         );
     }
     /**
@@ -2146,6 +4372,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetHealthReport($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetHealthReport'),
         );
     }
     /**
@@ -2165,6 +4392,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetMigrationStatus($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetMigrationStatus'),
         );
     }
     /**
@@ -2184,6 +4412,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetSaga($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GetSaga'),
         );
     }
     /**
@@ -2203,6 +4432,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GraphMutate($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GraphMutate'),
         );
     }
     /**
@@ -2222,6 +4452,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GraphQuery($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('GraphQuery'),
         );
     }
     /**
@@ -2241,6 +4472,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->InitiateMultipartUpload($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('InitiateMultipartUpload'),
         );
     }
     /**
@@ -2260,6 +4492,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->LintPolicies($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('LintPolicies'),
         );
     }
     /**
@@ -2279,6 +4512,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListAdminAuditLogs($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListAdminAuditLogs'),
         );
     }
     /**
@@ -2298,6 +4532,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListDlqEvents($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListDlqEvents'),
         );
     }
     /**
@@ -2317,6 +4552,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListMessageSchemas($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListMessageSchemas'),
         );
     }
     /**
@@ -2336,6 +4572,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListMigrationRuns($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListMigrationRuns'),
         );
     }
     /**
@@ -2355,6 +4592,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListPolicies($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListPolicies'),
         );
     }
     /**
@@ -2374,6 +4612,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListProjects($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListProjects'),
         );
     }
     /**
@@ -2393,6 +4632,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListResources($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListResources'),
         );
     }
     /**
@@ -2412,6 +4652,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListSagas($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ListSagas'),
         );
     }
     /**
@@ -2431,6 +4672,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->LookupMessageSchema($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('LookupMessageSchema'),
         );
     }
     /**
@@ -2450,6 +4692,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->MarkSagaReviewed($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('MarkSagaReviewed'),
         );
     }
     /**
@@ -2469,6 +4712,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PauseCdc($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('PauseCdc'),
         );
     }
     /**
@@ -2488,6 +4732,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PlanMigration($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('PlanMigration'),
         );
     }
     /**
@@ -2507,6 +4752,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PreviewCdcRedaction($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('PreviewCdcRedaction'),
         );
     }
     /**
@@ -2526,6 +4772,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutPolicy($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('PutPolicy'),
         );
     }
     /**
@@ -2545,6 +4792,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->QuarantineDlqEvent($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('QuarantineDlqEvent'),
         );
     }
     /**
@@ -2564,6 +4812,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ReloadPolicies($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ReloadPolicies'),
         );
     }
     /**
@@ -2583,6 +4832,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ReplayDlqEvent($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ReplayDlqEvent'),
         );
     }
     /**
@@ -2602,6 +4852,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ResumeCdc($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ResumeCdc'),
         );
     }
     /**
@@ -2621,6 +4872,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RetrySagaCompensation($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('RetrySagaCompensation'),
         );
     }
     /**
@@ -2640,6 +4892,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->RollbackCatalog($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('RollbackCatalog'),
         );
     }
     /**
@@ -2659,6 +4912,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ScanProjectionDrift($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ScanProjectionDrift'),
         );
     }
     /**
@@ -2678,6 +4932,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->Select($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('Select'),
         );
     }
     /**
@@ -2697,6 +4952,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->StageCatalog($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('StageCatalog'),
         );
     }
     /**
@@ -2716,6 +4972,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->StepDownCdcLeader($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('StepDownCdcLeader'),
         );
     }
     /**
@@ -2735,6 +4992,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->TimeSeriesQuery($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('TimeSeriesQuery'),
         );
     }
     /**
@@ -2754,6 +5012,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->TimeSeriesWrite($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('TimeSeriesWrite'),
         );
     }
     /**
@@ -2773,6 +5032,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->Upsert($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('Upsert'),
         );
     }
     /**
@@ -2792,6 +5052,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ValidateCatalog($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('ValidateCatalog'),
         );
     }
     /**
@@ -2811,6 +5072,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->VectorHybridSearch($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('VectorHybridSearch'),
         );
     }
     /**
@@ -2830,6 +5092,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->VectorSearch($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('VectorSearch'),
         );
     }
     /**
@@ -2849,6 +5112,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->VectorUpsert($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('VectorUpsert'),
         );
     }
     /**
@@ -2868,6 +5132,7 @@ final class GeneratedClient
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->VerifyAdminAuditLog($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('VerifyAdminAuditLog'),
         );
     }
 
@@ -2929,6 +5194,45 @@ final class GeneratedClient
         return $stub->PutObject($this->headers($metadata), $this->callOptions());
     }
 
+    /**
+     * udb.core.control.services.v1.ControlPlaneService / DeltaResources (bidi).
+     *
+     * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
+     * `->read()` / `->writesDone()`. Not retried. Path: /udb.core.control.services.v1.ControlPlaneService/DeltaResources
+     *
+     * @return \Grpc\BidiStreamingCall
+     */
+    public function delta_resources(?UdbMetadata $metadata = null)
+    {
+        $stub = $this->stubFor('ControlPlaneService', 'udb.core.control.services.v1');
+        return $stub->DeltaResources($this->headers($metadata), $this->callOptions());
+    }
+    /**
+     * udb.core.control.services.v1.ControlPlaneService / StreamResources (bidi).
+     *
+     * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
+     * `->read()` / `->writesDone()`. Not retried. Path: /udb.core.control.services.v1.ControlPlaneService/StreamResources
+     *
+     * @return \Grpc\BidiStreamingCall
+     */
+    public function stream_resources(?UdbMetadata $metadata = null)
+    {
+        $stub = $this->stubFor('ControlPlaneService', 'udb.core.control.services.v1');
+        return $stub->StreamResources($this->headers($metadata), $this->callOptions());
+    }
+    /**
+     * udb.core.webrtc.services.v1.SignalingService / Signal (bidi).
+     *
+     * Returns the live {@see \Grpc\BidiStreamingCall}; `->write()` /
+     * `->read()` / `->writesDone()`. Not retried. Path: /udb.core.webrtc.services.v1.SignalingService/Signal
+     *
+     * @return \Grpc\BidiStreamingCall
+     */
+    public function signal(?UdbMetadata $metadata = null)
+    {
+        $stub = $this->stubFor('SignalingService', 'udb.core.webrtc.services.v1');
+        return $stub->Signal($this->headers($metadata), $this->callOptions());
+    }
     /**
      * udb.services.v1.DataBroker / BatchSelect (bidi).
      *
@@ -2998,7 +5302,7 @@ final class GeneratedClient
         return $this->stubFor('AnalyticsService', 'udb.core.analytics.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.apikey.services.v1.ApiKeyService (7 RPC(s)).
+     * Underlying buf-generated stub for udb.core.apikey.services.v1.ApiKeyService (9 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a ApiKeyServiceClient
@@ -3008,7 +5312,17 @@ final class GeneratedClient
         return $this->stubFor('ApiKeyService', 'udb.core.apikey.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.authn.services.v1.AuthnService (23 RPC(s)).
+     * Underlying buf-generated stub for udb.core.asset.services.v1.AssetService (8 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a AssetServiceClient
+     */
+    public function AssetServiceStub(): BaseStub
+    {
+        return $this->stubFor('AssetService', 'udb.core.asset.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.authn.services.v1.AuthnService (50 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a AuthnServiceClient
@@ -3018,7 +5332,7 @@ final class GeneratedClient
         return $this->stubFor('AuthnService', 'udb.core.authn.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.authz.services.v1.AuthzService (23 RPC(s)).
+     * Underlying buf-generated stub for udb.core.authz.services.v1.AuthzService (41 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a AuthzServiceClient
@@ -3026,6 +5340,26 @@ final class GeneratedClient
     public function AuthzServiceStub(): BaseStub
     {
         return $this->stubFor('AuthzService', 'udb.core.authz.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.control.services.v1.ControlPlaneService (5 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a ControlPlaneServiceClient
+     */
+    public function ControlPlaneServiceStub(): BaseStub
+    {
+        return $this->stubFor('ControlPlaneService', 'udb.core.control.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.idp.services.v1.IdentityProviderService (27 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a IdentityProviderServiceClient
+     */
+    public function IdentityProviderServiceStub(): BaseStub
+    {
+        return $this->stubFor('IdentityProviderService', 'udb.core.idp.services.v1');
     }
     /**
      * Underlying buf-generated stub for udb.core.notification.services.v1.NotificationService (11 RPC(s)).
@@ -3038,6 +5372,16 @@ final class GeneratedClient
         return $this->stubFor('NotificationService', 'udb.core.notification.services.v1');
     }
     /**
+     * Underlying buf-generated stub for udb.core.storage.services.v1.StorageService (7 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a StorageServiceClient
+     */
+    public function StorageServiceStub(): BaseStub
+    {
+        return $this->stubFor('StorageService', 'udb.core.storage.services.v1');
+    }
+    /**
      * Underlying buf-generated stub for udb.core.tenant.services.v1.TenantService (6 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
@@ -3046,6 +5390,56 @@ final class GeneratedClient
     public function TenantServiceStub(): BaseStub
     {
         return $this->stubFor('TenantService', 'udb.core.tenant.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.webrtc.services.v1.PeerService (4 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a PeerServiceClient
+     */
+    public function PeerServiceStub(): BaseStub
+    {
+        return $this->stubFor('PeerService', 'udb.core.webrtc.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.webrtc.services.v1.RoomService (5 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a RoomServiceClient
+     */
+    public function RoomServiceStub(): BaseStub
+    {
+        return $this->stubFor('RoomService', 'udb.core.webrtc.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.webrtc.services.v1.SignalingService (1 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a SignalingServiceClient
+     */
+    public function SignalingServiceStub(): BaseStub
+    {
+        return $this->stubFor('SignalingService', 'udb.core.webrtc.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.webrtc.services.v1.TrackService (4 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a TrackServiceClient
+     */
+    public function TrackServiceStub(): BaseStub
+    {
+        return $this->stubFor('TrackService', 'udb.core.webrtc.services.v1');
+    }
+    /**
+     * Underlying buf-generated stub for udb.core.webrtc.services.v1.TurnService (1 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a TurnServiceClient
+     */
+    public function TurnServiceStub(): BaseStub
+    {
+        return $this->stubFor('TurnService', 'udb.core.webrtc.services.v1');
     }
     /**
      * Underlying buf-generated stub for udb.services.v1.DataBroker (76 RPC(s)).
@@ -3174,6 +5568,7 @@ final class GeneratedClient
         string $servicePkg,
         callable $invoker,
         ?UdbMetadata $metadata,
+        bool $readOnly,
     ) {
         $stub = $this->stubFor($serviceName, $servicePkg);
         $md = $this->headers($metadata);
@@ -3206,7 +5601,7 @@ final class GeneratedClient
             }
 
             $lastStatus = $status;
-            if ($attempt < $maxAttempts && $this->isRetryable($code)) {
+            if ($attempt < $maxAttempts && $this->isRetryable($code, $readOnly)) {
                 $this->sleepBackoff($attempt, $baseDelayMs, $maxDelayMs);
                 continue;
             }
@@ -3221,9 +5616,27 @@ final class GeneratedClient
         return is_object($status) ? (int) ($status->code ?? -1) : (int) ($status['code'] ?? -1);
     }
 
-    private function isRetryable(int $code): bool
+    private function isRetryable(int $code, bool $readOnly): bool
     {
+        if ($code === 4) { // DEADLINE_EXCEEDED
+            return $readOnly;
+        }
         return in_array($code, self::RETRYABLE_CODES, true);
+    }
+
+    private function isReadOnlyRpcName(string $name): bool
+    {
+        foreach ([
+            'Get', 'List', 'Check', 'Validate', 'Introspect', 'Authorize',
+            'BatchCheck', 'Preview', 'Resolve', 'Explain', 'Diff', 'Lint',
+            'Test', 'Select', 'AnalyticalQuery', 'VectorSearch', 'GraphQuery',
+            'CacheGet', 'CacheScan', 'DocumentGet', 'DocumentFind',
+        ] as $prefix) {
+            if (str_starts_with($name, $prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

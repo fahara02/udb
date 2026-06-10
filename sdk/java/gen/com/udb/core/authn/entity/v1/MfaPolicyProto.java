@@ -43,35 +43,41 @@ public final class MfaPolicyProto extends com.google.protobuf.GeneratedFile {
       "\n)udb/core/authn/entity/v1/mfa_policy.pr" +
       "oto\022\030udb.core.authn.entity.v1\032\037google/pr" +
       "otobuf/timestamp.proto\032\033udb/core/common/" +
-      "v1/db.proto\"\376\004\n\tMfaPolicy\022I\n\tpolicy_id\030\001" +
-      " \001(\tB,\202\267\030(\n\tpolicy_id\022\004UUID\030\001(\001:\021gen_ran" +
-      "dom_uuid()R\010policyId\022`\n\ttenant_id\030\002 \001(\tB" +
-      "C\202\267\030?\n\ttenant_id\022\014VARCHAR(120)\030\001R\"\n\027idx_" +
-      "mfa_policies_tenant\022\005BTREE\030\001R\010tenantId\022\221" +
-      "\001\n\013require_mfa\030\003 \001(\010Bp\202\267\030l\n\013require_mfa\022" +
-      "\007BOOLEAN\030\001:\005falseZKWhen true, the tenant" +
-      "\'s users must enrol MFA before password " +
-      "login succeedsR\nrequireMfa\022q\n\ncreated_at" +
-      "\030\004 \001(\0132\032.google.protobuf.TimestampB6\202\267\0302" +
-      "\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIM" +
-      "ESTAMP`\001h\001R\tcreatedAt\022m\n\nupdated_at\030\005 \001(" +
-      "\0132\032.google.protobuf.TimestampB2\202\267\030.\n\nupd" +
+      "v1/db.proto\032!udb/core/common/v1/security" +
+      ".proto\"\233\006\n\tMfaPolicy\022I\n\tpolicy_id\030\001 \001(\tB" +
+      ",\202\267\030(\n\tpolicy_id\022\004UUID\030\001(\001:\021gen_random_u" +
+      "uid()R\010policyId\022`\n\ttenant_id\030\002 \001(\tBC\202\267\030?" +
+      "\n\ttenant_id\022\014VARCHAR(120)\030\001R\"\n\027idx_mfa_p" +
+      "olicies_tenant\022\005BTREE\030\001R\010tenantId\022\221\001\n\013re" +
+      "quire_mfa\030\003 \001(\010Bp\202\267\030l\n\013require_mfa\022\007BOOL" +
+      "EAN\030\001:\005falseZKWhen true, the tenant\'s us" +
+      "ers must enrol MFA before password login" +
+      " succeedsR\nrequireMfa\022q\n\ncreated_at\030\004 \001(" +
+      "\0132\032.google.protobuf.TimestampB6\202\267\0302\n\ncre" +
       "ated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAM" +
-      "PR\tupdatedAt:N\372\266\030J\n\014mfa_policies\022\tudb_au" +
-      "thn\030\007 \001*!Per-tenant MFA enforcement poli" +
-      "cy\352\001\007primaryB\371\001\n\034com.udb.core.authn.enti" +
-      "ty.v1B\016MfaPolicyProtoP\001ZDgithub.com/faha" +
-      "ra02/udb/sdk/go/gen/udb/core/authn/entit" +
-      "y/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Authn.En" +
-      "tity.V1\312\002\030Udb\\Core\\Authn\\Entity\\V1\342\002$Udb" +
-      "\\GPBMetadata\\Core\\Authn\\Entity\\V1\352\002\034Udb:" +
-      ":Core::Authn::Entity::V1b\006proto3"
+      "P`\001h\001R\tcreatedAt\022m\n\nupdated_at\030\005 \001(\0132\032.g" +
+      "oogle.protobuf.TimestampB2\202\267\030.\n\nupdated_" +
+      "at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMPR\tup" +
+      "datedAt:\352\001\372\266\030J\n\014mfa_policies\022\tudb_authn\030" +
+      "\007 \001*!Per-tenant MFA enforcement policy\352\001" +
+      "\007primary\212\262\031\227\001\n\006tenant\032\ttenant_id*4tenant" +
+      "_id = current_setting(\'app.current_tenan" +
+      "t_id\')2\013soft_delete:\021authn.operational@\373" +
+      "\023H\002R\006tenantZ\010standardr\025tenant.data_resid" +
+      "encyB\371\001\n\034com.udb.core.authn.entity.v1B\016M" +
+      "faPolicyProtoP\001ZDgithub.com/fahara02/udb" +
+      "/sdk/go/gen/udb/core/authn/entity/v1;ent" +
+      "ityv1\242\002\004UCAE\252\002\030udb.core.Authn.Entity.V1\312" +
+      "\002\030Udb\\Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMeta" +
+      "data\\Core\\Authn\\Entity\\V1\352\002\034Udb::Core::A" +
+      "uthn::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.TimestampProto.getDescriptor(),
           com.udb.core.common.v1.DbProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_authn_entity_v1_MfaPolicy_descriptor =
       getDescriptor().getMessageType(0);
@@ -82,8 +88,10 @@ public final class MfaPolicyProto extends com.google.protobuf.GeneratedFile {
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);
     registry.add(com.udb.core.common.v1.DbProto.pgTable);
     com.google.protobuf.Descriptors.FileDescriptor

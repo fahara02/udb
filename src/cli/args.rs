@@ -2,6 +2,9 @@
 use super::*;
 
 pub(crate) enum Command {
+    InvalidUsage {
+        message: String,
+    },
     Catalog,
     Dsn,
     Sql,
@@ -34,6 +37,8 @@ pub(crate) enum Command {
     ConfigSkeleton,
     /// Scaffold a new UDB project (sample proto, config template, DDL bootstrap, docker-compose).
     InitProject,
+    /// Project-aware UDB scaffold planner/executor.
+    Init(InitArgs),
     /// Start, stop, inspect, or test the local multi-backend UDB sandbox.
     Dev {
         action: DevAction,
@@ -44,7 +49,7 @@ pub(crate) enum Command {
     Explain,
     /// Export the current CatalogManifest to a JSON file (for CI plan approval workflows).
     ManifestExport,
-    /// Lint a set of ABAC policies loaded from UDB_ABAC_POLICY_FILE or stdin (JSON array).
+    /// Lint a set of ABAC policies loaded from UDB_ABAC_POLICY_FILE (JSON array).
     PolicyLint,
     /// Generate INSERT SQL to seed ABAC policies into the configured UDB ABAC table.
     PolicySeed,
@@ -98,6 +103,17 @@ pub(crate) enum Command {
         /// Create-or-merge `buf.yaml` at the project root. On by default;
         /// pass `--no-buf-yaml` to skip touching buf.yaml.
         manage_buf_yaml: bool,
+        /// Run UDB proto formatting after export so long field annotations stay
+        /// on one physical line.
+        format_proto: bool,
+    },
+    /// Format exported proto files so long UDB field annotations stay on one
+    /// physical line. This is intentionally narrower than `buf format`.
+    ProtoFmt {
+        /// Proto file or directory to format. Defaults to `proto`.
+        root: String,
+        /// Do not write files; exit 2 when formatting would change output.
+        check: bool,
     },
     /// Generate the per-language SDK client/robustness layer from the embedded
     /// proto RPC manifest (descriptor set = source of truth) and the editable
@@ -111,7 +127,76 @@ pub(crate) enum Command {
         templates_dir: String,
         /// SDK output root. Defaults to `sdk`.
         out_dir: String,
+        /// RPC-manifest selectors applied before rendering (`generate` only).
+        selector: SdkSelector,
     },
+    /// Inspect and lint the descriptor-derived native service contract, and
+    /// drive the native-service app lifecycle (add/remove/generate/doctor/smoke).
+    Native {
+        action: NativeAction,
+        /// Service IDs / aliases passed positionally (lifecycle actions).
+        services: Vec<String>,
+        /// Output directory for the `.udb/` manifest + generated files.
+        out_dir: String,
+        /// Target SDK language for generated client-factory snippets.
+        lang: Option<String>,
+        /// Target framework hint for generated snippets.
+        framework: String,
+        /// Emit machine-readable JSON where supported (e.g. `native list --json`).
+        json: bool,
+        /// Skip interactive guards / proceed non-interactively.
+        confirmed: bool,
+        /// Path to the committed contract baseline (`--baseline`) for
+        /// `contract-diff` / `contract-baseline`.
+        baseline: String,
+    },
+    /// Scaffold a minimal app integration wiring the `UdbProject` facade for the
+    /// selected native services into `--out`.
+    AppInit {
+        lang: String,
+        framework: String,
+        services: Vec<String>,
+        tenant: String,
+        project: String,
+        auth: String,
+        out_dir: String,
+        package_manager: String,
+        confirmed: bool,
+    },
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct InitArgs {
+    pub tui: bool,
+    pub no_tui: bool,
+    pub confirmed: bool,
+    pub force: bool,
+    pub revert: bool,
+    pub config: Option<String>,
+    pub json_plan: bool,
+    pub dry_run: bool,
+    pub profile: Option<String>,
+    pub framework: Option<String>,
+    pub backends: Vec<String>,
+    pub native_services: Vec<String>,
+    pub features: Vec<String>,
+    pub proto_strategy: Option<String>,
+}
+
+/// RPC-manifest selectors for `udb sdk generate`. Default (all `None`/`false`)
+/// preserves the historical "render every RPC" behavior exactly.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct SdkSelector {
+    /// `--surface <public|control_plane|peer>`.
+    pub surface: Option<String>,
+    /// `--service <id,...>` — comma list of native/logical service IDs.
+    pub services: Vec<String>,
+    /// `--native-services` — restrict to RPCs that carry a `native_service_id`.
+    pub native_only: bool,
+    /// `--include-deps` — also pull in services a selected service depends on.
+    pub include_deps: bool,
+    /// `--strict-server-capabilities` — drop RPCs lacking required backends.
+    pub strict_server_capabilities: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -119,6 +204,28 @@ pub(crate) enum SdkAction {
     Generate,
     Manifest,
     ListLangs,
+    Init,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum NativeAction {
+    Manifest,
+    List,
+    Lint,
+    Add,
+    Remove,
+    Generate,
+    Doctor,
+    Smoke,
+    /// Write the embedded `FileDescriptorSet` bytes to stdout (the contract
+    /// baseline that `contract-diff` compares against).
+    ContractBaseline,
+    /// Diff the live descriptor contract against a committed baseline and exit
+    /// non-zero on auth/db/sdk/event-breaking or removed changes.
+    ContractDiff,
+    /// Emit a Markdown native-service table generated from the descriptor (docs
+    /// are descriptor-driven, not hand-maintained).
+    Docs,
 }
 
 pub(crate) enum AuthCommand {
@@ -139,6 +246,18 @@ pub(crate) enum AuthCommand {
         owner_id: String,
         name: String,
         scopes: Vec<String>,
+    },
+    /// urgent_fix #20: OFFLINE root bootstrap. Creates an initial verified user
+    /// directly against the database (constructing the authn service in-process,
+    /// bypassing the PEP-fronted internal listener — the same path the live tests
+    /// use), so a fresh deployment has a first credential to `Authenticate` with.
+    /// This is the only way to mint the first principal without an existing one.
+    Bootstrap {
+        username: String,
+        email: String,
+        password: String,
+        tenant: String,
+        project: String,
     },
     RoleBind {
         user_id: String,
@@ -176,16 +295,94 @@ pub(crate) enum DevAction {
 }
 
 impl DevAction {
-    pub(crate) fn parse(value: Option<&str>) -> Self {
+    pub(crate) fn parse(value: Option<&str>) -> Result<Self, String> {
         match value.unwrap_or("up") {
-            "up" | "start" => Self::Up,
-            "down" | "stop" => Self::Down,
-            "logs" => Self::Logs,
-            "status" | "ps" => Self::Status,
-            "reset" => Self::Reset,
-            "smoke" | "test" => Self::Smoke,
-            _ => Self::Up,
+            "up" | "start" => Ok(Self::Up),
+            "down" | "stop" => Ok(Self::Down),
+            "logs" => Ok(Self::Logs),
+            "status" | "ps" => Ok(Self::Status),
+            "reset" => Ok(Self::Reset),
+            "smoke" | "test" => Ok(Self::Smoke),
+            other => Err(format!(
+                "unknown dev action '{other}'; known: {}",
+                DEV_ACTIONS.join(", ")
+            )),
         }
+    }
+}
+
+const KNOWN_COMMANDS: &[&str] = &[
+    "catalog",
+    "dsn",
+    "sql",
+    "plan",
+    "lint",
+    "drift",
+    "doctor",
+    "health-check",
+    "init",
+    "init-project",
+    "dev",
+    "explain",
+    "manifest-export",
+    "policy-lint",
+    "policy-seed",
+    "field-mask-preview",
+    "compat-matrix",
+    "sync-migrations",
+    "dbops sync",
+    "auth",
+    "serve",
+    "proto export",
+    "proto fmt",
+    "sdk",
+    "native",
+    "app init",
+    "admin force-sync",
+    "admin release-lock",
+    "admin verify-audit",
+    "admin dry-run",
+    "admin reset-db",
+    "tracker-ddl",
+    "system-ddl",
+    "status-schema",
+    "fsm-states",
+    "config-skeleton",
+];
+
+const DEV_ACTIONS: &[&str] = &[
+    "up/start",
+    "down/stop",
+    "logs",
+    "status/ps",
+    "reset",
+    "smoke/test",
+];
+
+const SDK_ACTIONS: &[&str] = &[
+    "generate",
+    "init/doctor/preflight",
+    "manifest",
+    "list-langs/languages",
+];
+
+const NATIVE_ACTIONS: &[&str] = &[
+    "manifest",
+    "list",
+    "lint",
+    "add",
+    "remove/rm",
+    "generate/gen",
+    "doctor",
+    "smoke",
+    "contract-baseline",
+    "contract-diff",
+    "docs",
+];
+
+fn invalid_usage(message: impl Into<String>) -> Command {
+    Command::InvalidUsage {
+        message: message.into(),
     }
 }
 
@@ -229,6 +426,13 @@ fn parse_auth_subcommand(args: &[String]) -> Option<(AuthCommand, usize)> {
             name: flag_value("--name").unwrap_or_default(),
             scopes: flag_values("--scope"),
         },
+        (Some("bootstrap"), Some("user")) => AuthCommand::Bootstrap {
+            username: flag_value("--username").unwrap_or_else(|| "admin".to_string()),
+            email: flag_value("--email").unwrap_or_else(|| "admin@example.com".to_string()),
+            password: flag_value("--password").unwrap_or_default(),
+            tenant: flag_value("--tenant").unwrap_or_else(|| "acme".to_string()),
+            project: flag_value("--project").unwrap_or_else(|| "default".to_string()),
+        },
         (Some("role"), Some("bind")) => AuthCommand::RoleBind {
             user_id: flag_value("--user").unwrap_or_default(),
             role_id: flag_value("--role").unwrap_or_default(),
@@ -255,6 +459,79 @@ fn parse_auth_subcommand(args: &[String]) -> Option<(AuthCommand, usize)> {
         _ => return None,
     };
     Some((command, 3))
+}
+
+/// Split a comma-separated flag value into trimmed, non-empty tokens.
+pub(crate) fn split_csv(value: &str) -> Vec<String> {
+    value
+        .split(',')
+        .map(|token| token.trim().to_string())
+        .filter(|token| !token.is_empty())
+        .collect()
+}
+
+/// Flags that consume the following argv token as their value. The positional
+/// collector and `collect_positional_services` use this to skip flag values.
+const VALUE_FLAGS: &[&str] = &[
+    "--prior",
+    "--backend",
+    "--out",
+    "--lang",
+    "--templates",
+    "--config",
+    "--tenant",
+    "--project",
+    "--user",
+    "--provider",
+    "--subject",
+    "--session",
+    "--principal",
+    "--owner",
+    "--name",
+    "--scope",
+    "--role",
+    "--domain",
+    "--by",
+    "--relation",
+    "--object",
+    "--action",
+    "--resource",
+    "--effect",
+    "--root",
+    "--limit",
+    "--surface",
+    "--service",
+    "--services",
+    "--framework",
+    "--auth",
+    "--package-manager",
+    "--baseline",
+    "--profile",
+    "--native-service",
+    "--feature",
+    "--proto-strategy",
+];
+
+/// Collect positional (non-flag) tokens after `start`, skipping any token that
+/// is itself a flag or the value consumed by a value-taking flag. Used by the
+/// native lifecycle grammar (`udb native add authn authz ...`).
+fn collect_positional_services(args: &[String], start: usize) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut i = start;
+    while i < args.len() {
+        let arg = args[i].as_str();
+        if VALUE_FLAGS.contains(&arg) {
+            i += 2; // skip flag and its value
+            continue;
+        }
+        if arg.starts_with("--") {
+            i += 1;
+            continue;
+        }
+        out.push(args[i].clone());
+        i += 1;
+    }
+    out
 }
 
 pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
@@ -317,19 +594,55 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
             offset = 1;
             Command::HealthCheck
         }
+        Some("init") => {
+            offset = 1;
+            Command::Init(InitArgs {
+                tui: has_flag("--tui"),
+                no_tui: has_flag("--no-tui"),
+                confirmed: has_flag("--yes"),
+                force: has_flag("--force"),
+                revert: has_flag("--revert"),
+                config: flag_value("--config"),
+                json_plan: has_flag("--json-plan"),
+                dry_run: has_flag("--dry-run"),
+                profile: flag_value("--profile"),
+                framework: flag_value("--framework"),
+                backends: flag_values("--backend")
+                    .into_iter()
+                    .flat_map(|value| split_csv(&value))
+                    .collect(),
+                native_services: flag_values("--native-service")
+                    .into_iter()
+                    .chain(flag_values("--services"))
+                    .flat_map(|value| split_csv(&value))
+                    .collect(),
+                features: flag_values("--feature")
+                    .into_iter()
+                    .flat_map(|value| split_csv(&value))
+                    .collect(),
+                proto_strategy: flag_value("--proto-strategy"),
+            })
+        }
         Some("init-project") => {
             offset = 1;
             Command::InitProject
         }
         Some("dev") => {
             offset = 1;
-            Command::Dev {
-                action: DevAction::parse(args.get(1).map(String::as_str)),
-                service: args
-                    .get(2)
-                    .filter(|value| !value.starts_with("--"))
-                    .cloned(),
-                confirmed: has_flag("--yes"),
+            match DevAction::parse(
+                args.get(1)
+                    .map(String::as_str)
+                    .filter(|value| !value.starts_with("--")),
+            ) {
+                Ok(action) => Command::Dev {
+                    action,
+                    service: args
+                        .get(2)
+                        .filter(|value| !value.starts_with("--"))
+                        .cloned(),
+                    confirmed: has_flag("--yes"),
+                },
+                Err(message) => invalid_usage(message),
             }
         }
         Some("explain") => {
@@ -363,9 +676,16 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                 backend: flag_value("--backend"),
             }
         }
+        Some("dbops") if args.get(1).map(|value| value.as_str()) == Some("sync") => {
+            offset = 2;
+            Command::SyncMigrations {
+                force_bootstrap: has_flag("--force-bootstrap"),
+                backend: flag_value("--backend"),
+            }
+        }
         // The 8-variant `auth …` subcommand grammar lives in
-        // `parse_auth_subcommand`. The guard ensures an unrecognized `auth …`
-        // shape falls through to `_ => Command::Catalog` exactly as before.
+        // `parse_auth_subcommand`. Unrecognized `auth …` shapes now fall
+        // through to InvalidUsage instead of silently running catalog.
         Some("auth") if parse_auth_subcommand(args).is_some() => {
             let (auth_command, consumed) =
                 parse_auth_subcommand(args).expect("guard guarantees Some");
@@ -376,28 +696,131 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
             offset = 1;
             Command::Serve
         }
-        // `udb proto export [<dir>] [--out <dir>] [--buf-yaml]`
+        // `udb proto export [--out <dir>] [--buf-yaml] [--fmt]`
         Some("proto") if args.get(1).map(|value| value.as_str()) == Some("export") => {
             offset = 2;
             Command::ProtoExport {
                 out_dir: flag_value("--out").unwrap_or_default(),
                 manage_buf_yaml: !has_flag("--no-buf-yaml"),
+                format_proto: has_flag("--fmt") || has_flag("--format"),
             }
         }
-        // `udb sdk <generate|manifest|list-langs> [--lang <name>] [--templates <dir>] [--out <dir>]`
+        // `udb proto fmt [<dir>] [--check]`
+        Some("proto") if args.get(1).map(|value| value.as_str()) == Some("fmt") => {
+            offset = 2;
+            Command::ProtoFmt {
+                root: flag_value("--out")
+                    .or_else(|| flag_value("--root"))
+                    .or_else(|| {
+                        args.get(2)
+                            .filter(|value| !value.starts_with("--"))
+                            .cloned()
+                    })
+                    .unwrap_or_default(),
+                check: has_flag("--check"),
+            }
+        }
+        // `udb sdk <init|generate|manifest|list-langs> [--lang <name>] [--templates <dir>] [--out <dir>]
+        //    [--surface <s>] [--service <id,...>] [--native-services] [--include-deps]
+        //    [--strict-server-capabilities]`
         Some("sdk") => {
             offset = 2;
             let action = match args.get(1).map(|value| value.as_str()) {
+                None => SdkAction::Generate,
+                Some(value) if value.starts_with("--") => SdkAction::Generate,
+                Some("generate") | Some("gen") => SdkAction::Generate,
+                Some("init") | Some("doctor") | Some("preflight") => SdkAction::Init,
                 Some("manifest") => SdkAction::Manifest,
                 Some("list-langs") | Some("languages") => SdkAction::ListLangs,
-                _ => SdkAction::Generate,
+                Some(other) => {
+                    return (
+                        invalid_usage(format!(
+                            "unknown sdk action '{other}'; known: {}",
+                            SDK_ACTIONS.join(", ")
+                        )),
+                        "proto".to_string(),
+                        String::new(),
+                        DEFAULT_GRPC_BIND_ADDR.to_string(),
+                    );
+                }
             };
+            let services: Vec<String> = flag_value("--service")
+                .map(|value| split_csv(&value))
+                .unwrap_or_default();
             Command::Sdk {
                 action,
                 lang: flag_value("--lang").unwrap_or_else(|| "all".to_string()),
                 templates_dir: flag_value("--templates")
                     .unwrap_or_else(|| "sdk-templates".to_string()),
                 out_dir: flag_value("--out").unwrap_or_else(|| "sdk".to_string()),
+                selector: SdkSelector {
+                    surface: flag_value("--surface"),
+                    services,
+                    native_only: has_flag("--native-services"),
+                    include_deps: has_flag("--include-deps"),
+                    strict_server_capabilities: has_flag("--strict-server-capabilities"),
+                },
+            }
+        }
+        // `udb native <manifest|list|lint|add|remove|generate|doctor|smoke> [services...]
+        //    [--out <dir>] [--lang <l>] [--framework <f>] [--json] [--yes]`
+        Some("native") => {
+            offset = 2;
+            let action = match args.get(1).map(|value| value.as_str()) {
+                None => NativeAction::Manifest,
+                Some(value) if value.starts_with("--") => NativeAction::Manifest,
+                Some("manifest") => NativeAction::Manifest,
+                Some("list") => NativeAction::List,
+                Some("lint") => NativeAction::Lint,
+                Some("add") => NativeAction::Add,
+                Some("remove") | Some("rm") => NativeAction::Remove,
+                Some("generate") | Some("gen") => NativeAction::Generate,
+                Some("doctor") => NativeAction::Doctor,
+                Some("smoke") => NativeAction::Smoke,
+                Some("contract-baseline") => NativeAction::ContractBaseline,
+                Some("contract-diff") => NativeAction::ContractDiff,
+                Some("docs") => NativeAction::Docs,
+                Some(other) => {
+                    return (
+                        invalid_usage(format!(
+                            "unknown native action '{other}'; known: {}",
+                            NATIVE_ACTIONS.join(", ")
+                        )),
+                        "proto".to_string(),
+                        String::new(),
+                        DEFAULT_GRPC_BIND_ADDR.to_string(),
+                    );
+                }
+            };
+            let services = collect_positional_services(args, 2);
+            Command::Native {
+                action,
+                services,
+                out_dir: flag_value("--out").unwrap_or_else(|| ".".to_string()),
+                lang: flag_value("--lang"),
+                framework: flag_value("--framework").unwrap_or_default(),
+                json: has_flag("--json"),
+                confirmed: has_flag("--yes"),
+                baseline: flag_value("--baseline").unwrap_or_default(),
+            }
+        }
+        // `udb app init [--lang --framework --services --auth --tenant --project
+        //    --out --package-manager --yes]`
+        Some("app") if args.get(1).map(|value| value.as_str()) == Some("init") => {
+            offset = 2;
+            let services: Vec<String> = flag_value("--services")
+                .map(|value| split_csv(&value))
+                .unwrap_or_default();
+            Command::AppInit {
+                lang: flag_value("--lang").unwrap_or_else(|| "typescript".to_string()),
+                framework: flag_value("--framework").unwrap_or_default(),
+                services,
+                tenant: flag_value("--tenant").unwrap_or_default(),
+                project: flag_value("--project").unwrap_or_default(),
+                auth: flag_value("--auth").unwrap_or_default(),
+                out_dir: flag_value("--out").unwrap_or_else(|| ".".to_string()),
+                package_manager: flag_value("--package-manager").unwrap_or_default(),
+                confirmed: has_flag("--yes"),
             }
         }
         Some("admin") if args.get(1).map(|value| value.as_str()) == Some("force-sync") => {
@@ -421,12 +844,12 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                     .unwrap_or(0),
             }
         }
-        // GAP 8: `udb-proto-parser admin dry-run` — generate SQL plan, exit without applying.
+        // GAP 8: `udb admin dry-run` — generate SQL plan, exit without applying.
         Some("admin") if args.get(1).map(|value| value.as_str()) == Some("dry-run") => {
             offset = 2;
             Command::AdminDryRun
         }
-        // `udb-proto-parser admin reset-db [--yes]`
+        // `udb admin reset-db [--yes]`
         // Drops all UDB-managed schemas (discovered from the ledger) and the ledger itself.
         // Requires --yes to prevent accidental data loss.
         Some("admin") if args.get(1).map(|value| value.as_str()) == Some("reset-db") => {
@@ -455,79 +878,48 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
             offset = 1;
             Command::ConfigSkeleton
         }
-        _ => Command::Catalog,
+        Some(other) => invalid_usage(format!(
+            "unknown command '{other}'; known: {}",
+            KNOWN_COMMANDS.join(", ")
+        )),
+        None => Command::Catalog,
     };
     let positional_args: Vec<String> = args
         .iter()
         .enumerate()
         .skip(offset)
         .filter_map(|(index, arg)| {
-            if index > offset
-                && matches!(
-                    args[index - 1].as_str(),
-                    "--prior"
-                        | "--backend"
-                        | "--out"
-                        | "--lang"
-                        | "--templates"
-                        | "--config"
-                        | "--tenant"
-                        | "--project"
-                        | "--user"
-                        | "--provider"
-                        | "--subject"
-                        | "--session"
-                        | "--principal"
-                        | "--owner"
-                        | "--name"
-                        | "--scope"
-                        | "--role"
-                        | "--domain"
-                        | "--by"
-                        | "--relation"
-                        | "--object"
-                        | "--action"
-                        | "--resource"
-                        | "--effect"
-                )
-            {
+            // Drop the value token that follows any value-taking flag.
+            if index > offset && VALUE_FLAGS.contains(&args[index - 1].as_str()) {
                 return None;
             }
 
-            if matches!(
-                arg.as_str(),
-                "--human"
-                    | "--probe"
-                    | "--force-bootstrap"
-                    | "--yes"
-                    | "--all-for-principal"
-                    | "--buf-yaml"
-                    | "--no-buf-yaml"
-                    | "--out"
-                    | "--lang"
-                    | "--templates"
-                    | "--prior"
-                    | "--backend"
-                    | "--tenant"
-                    | "--project"
-                    | "--user"
-                    | "--provider"
-                    | "--subject"
-                    | "--session"
-                    | "--principal"
-                    | "--owner"
-                    | "--name"
-                    | "--scope"
-                    | "--role"
-                    | "--domain"
-                    | "--by"
-                    | "--relation"
-                    | "--object"
-                    | "--action"
-                    | "--resource"
-                    | "--effect"
-                    | "--config"
-            ) {
+            // Drop boolean flags and value-flag names themselves.
+            if VALUE_FLAGS.contains(&arg.as_str())
+                || matches!(
+                    arg.as_str(),
+                    "--human"
+                        | "--probe"
+                        | "--force-bootstrap"
+                        | "--yes"
+                        | "--force"
+                        | "--revert"
+                        | "--all-for-principal"
+                        | "--buf-yaml"
+                        | "--no-buf-yaml"
+                        | "--fmt"
+                        | "--format"
+                        | "--check"
+                        | "--json"
+                        | "--native-services"
+                        | "--include-deps"
+                        | "--strict-server-capabilities"
+                        | "--tui"
+                        | "--no-tui"
+                        | "--json-plan"
+                        | "--dry-run"
+                )
+            {
                 None
             } else {
                 Some(arg.clone())

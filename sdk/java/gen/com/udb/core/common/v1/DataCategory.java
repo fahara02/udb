@@ -142,7 +142,7 @@ public enum DataCategory
   }
   public static com.google.protobuf.Descriptors.EnumDescriptor
       getDescriptor() {
-    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(2);
+    return com.udb.core.common.v1.SecurityProto.getDescriptor().getEnumType(7);
   }
 
   private static final DataCategory[] VALUES = values();

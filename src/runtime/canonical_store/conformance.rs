@@ -108,6 +108,36 @@ pub async fn run_contract(store: Arc<dyn CanonicalStore>) {
         "outbox_max_seq should equal the latest enqueued seq"
     );
 
+    // 7b. Additional Phase 1 HA assertion: repeated writers must receive
+    // distinct, monotone outbox sequence numbers. Live multi-node backends run
+    // this same contract under their env-gated conformance tests; SQLite pins it
+    // on every CI run without infrastructure.
+    let seq_2 = store
+        .enqueue_outbox_event(
+            "33333333-3333-3333-3333-333333333333",
+            "test.conformance",
+            "pk-conformance-2",
+            &serde_json::json!({"step": "enqueue-2"}),
+        )
+        .await
+        .expect("enqueue second event");
+    assert!(
+        seq_2 > seq,
+        "outbox event_seq must be strictly monotone across writers"
+    );
+    assert_ne!(
+        seq_2, seq,
+        "outbox event_seq allocation must never duplicate"
+    );
+    let after_second_max = store
+        .outbox_max_seq()
+        .await
+        .expect("outbox_max_seq after second enqueue");
+    assert_eq!(
+        after_second_max, seq_2,
+        "outbox_max_seq should track the latest unique sequence"
+    );
+
     // 8. Token after a write should be reachable via wait_for_token
     // with a small timeout (the store is talking to itself, no replica
     // lag involved).
@@ -290,6 +320,10 @@ pub async fn run_projection_task_contract(store: Arc<dyn ProjectionTaskStore>) {
     let s2 = store.projection_task_summary().await.unwrap();
     assert_eq!(s2.failed, 1);
     assert_eq!(s2.in_progress, 0);
+
+    // FAILED rows are claimable after their retry backoff elapses. The shared
+    // retry schedule starts at 1s for the first failure.
+    tokio::time::sleep(std::time::Duration::from_millis(1_100)).await;
 
     let reclaimed = store
         .claim_projection_tasks(&ProjectionClaimFilter::default())
@@ -634,7 +668,7 @@ pub async fn run_migration_audit_store_contract(store: Arc<dyn MigrationAuditSto
                 resource_uri: format!("udb://postgres/op{i}.sql"),
                 operation_kind: "apply".to_string(),
                 status,
-                rollback_json: serde_json::json!({"undo": format!("DROP TABLE t{i}")}),
+                payload_json: serde_json::json!({"undo": format!("DROP TABLE t{i}")}),
                 error: String::new(),
             })
             .await

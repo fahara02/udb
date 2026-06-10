@@ -6,6 +6,57 @@ enum MigrationApplyOutcome {
     Verified,
 }
 
+fn migration_approval_tokens_match(provided: &str, stored: &str) -> bool {
+    !provided.trim().is_empty()
+        && !stored.trim().is_empty()
+        && crate::runtime::authn::constant_time_eq(provided.trim(), stored.trim())
+}
+
+/// Fast-fail guard shared by `apply_migration` (before any ledger access) and
+/// [`validate_migration_apply_state_and_token`]: an empty approval token can
+/// never apply a migration.
+fn require_migration_approval_token(approval_token: &str) -> Result<(), tonic::Status> {
+    if approval_token.trim().is_empty() {
+        return Err(tonic::Status::failed_precondition(
+            "approval_token is required",
+        ));
+    }
+    Ok(())
+}
+
+/// Pure state+token validation gate for `DataBrokerRuntime::apply_migration`:
+/// the run must be in a non-terminal approved state (`APPROVED`, or
+/// `APPLYING`/`VERIFYING` when resuming a partially-applied run) and the
+/// caller-provided approval token must match the stored token
+/// (constant-time). Extracted from `apply_migration` so its reject paths are
+/// unit-testable without a live PostgreSQL ledger; `apply_migration` is the
+/// only serving-path caller.
+fn validate_migration_apply_state_and_token(
+    state: &str,
+    provided_token: &str,
+    stored_token: &str,
+) -> Result<(), tonic::Status> {
+    require_migration_approval_token(provided_token)?;
+    if !matches!(state, "APPROVED" | "APPLYING" | "VERIFYING") {
+        return Err(tonic::Status::failed_precondition(
+            "migration run must be approved before apply and not be terminal",
+        ));
+    }
+    if !migration_approval_tokens_match(provided_token, stored_token) {
+        return Err(tonic::Status::failed_precondition(
+            "approval_token is missing or does not match the approved token",
+        ));
+    }
+    Ok(())
+}
+
+fn migration_payload_has_executable_sql(content: &str) -> bool {
+    content.lines().any(|line| {
+        let trimmed = line.trim_start();
+        !trimmed.is_empty() && !trimmed.starts_with("--")
+    })
+}
+
 fn migration_resource_name(payload: &serde_json::Value) -> String {
     payload
         .get("resource_name")
@@ -21,6 +72,320 @@ fn migration_resource_spec_json(payload: &serde_json::Value) -> String {
         .cloned()
         .unwrap_or_else(|| serde_json::json!({}))
         .to_string()
+}
+
+async fn ensure_migration_payload_json_column(
+    pool: &sqlx::PgPool,
+    ledger_rel: &str,
+) -> Result<(), tonic::Status> {
+    let alter = format!(
+        "ALTER TABLE {ledger_rel}
+         ADD COLUMN IF NOT EXISTS payload_json JSONB NOT NULL DEFAULT '{{}}'::JSONB"
+    );
+    sqlx::query(&alter).execute(pool).await.map_err(|err| {
+        tonic::Status::internal(format!(
+            "migration audit payload_json upgrade failed: {err}"
+        ))
+    })?;
+
+    let backfill = format!(
+        "UPDATE {ledger_rel}
+         SET payload_json = rollback_json
+         WHERE payload_json = '{{}}'::JSONB
+           AND rollback_json IS NOT NULL
+           AND rollback_json <> '{{}}'::JSONB"
+    );
+    sqlx::query(&backfill).execute(pool).await.map_err(|err| {
+        tonic::Status::internal(format!(
+            "migration audit payload_json backfill failed: {err}"
+        ))
+    })?;
+    Ok(())
+}
+
+async fn ensure_migration_runs_approved_state(
+    pool: &sqlx::PgPool,
+    runs_rel: &str,
+    runs_table: &str,
+) -> Result<(), tonic::Status> {
+    let auto_constraint = qi_runtime(&format!("{runs_table}_state_check"));
+    let named_constraint = qi_runtime(&format!("chk_{runs_table}_state"));
+    for ddl in [
+        format!("ALTER TABLE {runs_rel} DROP CONSTRAINT IF EXISTS {auto_constraint}"),
+        format!("ALTER TABLE {runs_rel} DROP CONSTRAINT IF EXISTS {named_constraint}"),
+        format!(
+            "ALTER TABLE {runs_rel} ADD CONSTRAINT {named_constraint}
+             CHECK (state IN ('DRY_RUN','PREFLIGHT','APPROVED','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER'))"
+        ),
+    ] {
+        sqlx::query(&ddl).execute(pool).await.map_err(|err| {
+            tonic::Status::internal(format!(
+                "migration audit approved-state upgrade failed: {err}"
+            ))
+        })?;
+    }
+    Ok(())
+}
+
+fn postgres_create_table_payload(
+    table: &ManifestTable,
+    manifest_checksum: &str,
+) -> serde_json::Value {
+    let content = crate::generation::sql::render_bootstrap_table(
+        table,
+        manifest_checksum,
+        &crate::generation::SqlGenerationConfig::default(),
+    );
+    serde_json::json!({
+        "action": "create_table",
+        "schema": table.schema,
+        "table": table.table,
+        "checksum": table.checksum_sha256,
+        "content": content,
+    })
+}
+
+fn migration_phase_ledger_relation(config: &crate::runtime::system::SystemCatalogConfig) -> String {
+    format!(
+        "{}.{}",
+        qi_runtime(&config.cdc.system_schema),
+        qi_runtime("udb_migration_phase_ledger")
+    )
+}
+
+fn migration_artifact_payload(
+    artifact: &GeneratedArtifact,
+) -> Result<(i64, String, String, String, serde_json::Value), crate::migration::ApplyError> {
+    let wrapper: serde_json::Value = serde_json::from_str(&artifact.content).map_err(|err| {
+        crate::migration::ApplyError::BackendRejected {
+            backend: "catalog_admin".to_string(),
+            message: format!("invalid migration artifact payload: {err}"),
+        }
+    })?;
+    let op_id = wrapper
+        .get("op_id")
+        .and_then(|v| v.as_i64())
+        .ok_or_else(|| crate::migration::ApplyError::BackendRejected {
+            backend: "catalog_admin".to_string(),
+            message: "migration artifact missing op_id".to_string(),
+        })?;
+    let backend = wrapper
+        .get("backend")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let resource_uri = wrapper
+        .get("resource_uri")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let operation_kind = wrapper
+        .get("operation_kind")
+        .and_then(|v| v.as_str())
+        .unwrap_or_default()
+        .to_string();
+    let payload = wrapper
+        .get("payload")
+        .cloned()
+        .unwrap_or_else(|| serde_json::json!({}));
+    Ok((op_id, backend, resource_uri, operation_kind, payload))
+}
+
+struct CatalogMigrationApplyTarget<'a> {
+    runtime: &'a DataBrokerRuntime,
+    pool: &'a PgPool,
+}
+
+impl crate::migration::ApplyTarget for CatalogMigrationApplyTarget<'_> {
+    fn backend_name(&self) -> &'static str {
+        "catalog_admin"
+    }
+
+    fn apply_artifact<'a>(
+        &'a self,
+        artifact: &'a GeneratedArtifact,
+    ) -> crate::migration::ApplyFuture<'a, ()> {
+        Box::pin(async move {
+            let (op_id, backend, resource_uri, operation_kind, payload) =
+                migration_artifact_payload(artifact)?;
+            self.runtime
+                .execute_migration_apply_op(
+                    self.pool,
+                    op_id,
+                    &backend,
+                    &resource_uri,
+                    &operation_kind,
+                    &payload,
+                )
+                .await
+                .map(|_| ())
+                .map_err(|message| crate::migration::ApplyError::BackendRejected {
+                    backend,
+                    message,
+                })
+        })
+    }
+
+    fn verify_applied<'a>(
+        &'a self,
+        artifact: &'a GeneratedArtifact,
+    ) -> crate::migration::ApplyFuture<'a, bool> {
+        Box::pin(async move {
+            let (_op_id, backend, _resource_uri, operation_kind, payload) =
+                migration_artifact_payload(artifact)?;
+            match (backend.as_str(), operation_kind.as_str()) {
+                ("postgres", "create_table" | "verify_table") => {
+                    let schema = payload
+                        .get("schema")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or_default();
+                    let table = payload
+                        .get("table")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or_default();
+                    let exists: bool = sqlx::query_scalar(
+                        "SELECT EXISTS (
+                             SELECT 1 FROM information_schema.tables
+                             WHERE table_schema = $1 AND table_name = $2
+                         )",
+                    )
+                    .bind(schema)
+                    .bind(table)
+                    .fetch_one(self.pool)
+                    .await
+                    .map_err(|err| crate::migration::ApplyError::Unreachable(err.to_string()))?;
+                    Ok(exists)
+                }
+                (_, "verify_resource" | "ensure_resource") => {
+                    let resource_name = migration_resource_name(&payload);
+                    let resources = self
+                        .runtime
+                        .list_resources_backend(&backend)
+                        .await
+                        .map_err(|err| {
+                            crate::migration::ApplyError::Unreachable(err.to_string())
+                        })?;
+                    Ok(resources.iter().any(|value| value == &resource_name))
+                }
+                (_, "drop_resource") => {
+                    let resource_name = migration_resource_name(&payload);
+                    let resources = self
+                        .runtime
+                        .list_resources_backend(&backend)
+                        .await
+                        .map_err(|err| {
+                            crate::migration::ApplyError::Unreachable(err.to_string())
+                        })?;
+                    Ok(!resources.iter().any(|value| value == &resource_name))
+                }
+                ("postgres", "apply_sql") => Ok(false),
+                _ => Err(crate::migration::ApplyError::BackendRejected {
+                    backend,
+                    message: format!("unsupported migration operation '{operation_kind}'"),
+                }),
+            }
+        })
+    }
+}
+
+struct ExistingRunMigrationAuditSink<'a> {
+    pool: &'a PgPool,
+    runs_rel: String,
+    ledger_rel: String,
+    run_id: Uuid,
+    op_ids: Vec<i64>,
+    op_kinds: Vec<String>,
+}
+
+impl crate::migration::MigrationAuditSink for ExistingRunMigrationAuditSink<'_> {
+    fn start_run<'a>(
+        &'a self,
+        _catalog_version: &'a str,
+        _operations_hash: &'a str,
+    ) -> crate::migration::ApplyFuture<'a, String> {
+        Box::pin(async move { Ok(self.run_id.to_string()) })
+    }
+
+    fn record_op<'a>(
+        &'a self,
+        _run_id: &'a str,
+        index: usize,
+        result: &'a crate::migration::ArtifactApplyResult,
+    ) -> crate::migration::ApplyFuture<'a, ()> {
+        Box::pin(async move {
+            let op_id = self.op_ids.get(index).copied().ok_or_else(|| {
+                crate::migration::ApplyError::Io(format!(
+                    "artifact result index {index} has no matching planned op"
+                ))
+            })?;
+            let op_kind = self.op_kinds.get(index).map(String::as_str).unwrap_or("");
+            let status = if result.error.is_some() {
+                "FAILED"
+            } else if result.skipped && op_kind.starts_with("verify") {
+                "VERIFIED"
+            } else if result.skipped {
+                "SKIPPED"
+            } else if op_kind.starts_with("verify") {
+                "VERIFIED"
+            } else {
+                "APPLIED"
+            };
+            let error = result.error.clone().unwrap_or_default();
+            sqlx::query(&format!(
+                "UPDATE {}
+                 SET status = $1,
+                     error = $2,
+                     applied_at = CASE WHEN $1 = 'APPLIED' THEN NOW() ELSE applied_at END
+                 WHERE id = $3",
+                self.ledger_rel
+            ))
+            .bind(status)
+            .bind(error)
+            .bind(op_id)
+            .execute(self.pool)
+            .await
+            .map_err(|err| crate::migration::ApplyError::Io(err.to_string()))?;
+            Ok(())
+        })
+    }
+
+    fn finish_run<'a>(
+        &'a self,
+        _run_id: &'a str,
+        state: &'a str,
+        error: &'a str,
+    ) -> crate::migration::ApplyFuture<'a, ()> {
+        Box::pin(async move {
+            let (next_state, finished) = if state == "COMPLETED" {
+                ("VERIFYING", false)
+            } else {
+                ("ERROR", true)
+            };
+            let sql = if finished {
+                format!(
+                    "UPDATE {}
+                     SET state = $1, error = $2, finished_at = NOW()
+                     WHERE run_id = $3",
+                    self.runs_rel
+                )
+            } else {
+                format!(
+                    "UPDATE {}
+                     SET state = $1, error = $2
+                     WHERE run_id = $3",
+                    self.runs_rel
+                )
+            };
+            sqlx::query(&sql)
+                .bind(next_state)
+                .bind(error)
+                .bind(self.run_id)
+                .execute(self.pool)
+                .await
+                .map_err(|err| crate::migration::ApplyError::Io(err.to_string()))?;
+            Ok(())
+        })
+    }
 }
 
 impl DataBrokerRuntime {
@@ -70,7 +435,7 @@ impl DataBrokerRuntime {
                     .get("content")
                     .and_then(|v| v.as_str())
                     .unwrap_or_default();
-                if content.trim().is_empty() || content.trim_start().starts_with("--") {
+                if !migration_payload_has_executable_sql(content) {
                     Err(format!(
                         "operation {op_id} for {resource_uri} has no executable SQL"
                     ))
@@ -440,7 +805,7 @@ impl DataBrokerRuntime {
     /// Loads the ACTIVE `CatalogManifest` for `project_id` from the
     /// `catalog_versions` table, diffs it against the live PostgreSQL schema
     /// using `information_schema`, and writes one row per resource into
-    /// `migration_op_ledger`.  The `rollback_json` column stores a JSON object
+    /// `migration_op_ledger`.  The `payload_json` column stores a JSON object
     /// `{"content": "<comment or DDL>", "checksum": "<sha>"}` that
     /// `apply_migration` reads to drive execution.
     pub async fn plan_migration(
@@ -456,6 +821,7 @@ impl DataBrokerRuntime {
         let runs_rel = config.migration_runs_relation();
         let ledger_rel = config.migration_op_ledger_relation();
         let cat_rel = config.catalog_versions_relation();
+        ensure_migration_payload_json_column(pool, &ledger_rel).await?;
 
         // ── 1. Load the ACTIVE catalog manifest for this project ──────────────
         let manifest_row: Option<(String, String)> = sqlx::query_as(&format!(
@@ -527,14 +893,7 @@ impl DataBrokerRuntime {
                 } else {
                     (
                         "create_table",
-                        serde_json::json!({
-                            "action": "create_table",
-                            "schema": table.schema,
-                            "table": table.table,
-                            "checksum": table.checksum_sha256,
-                            "content": "",
-                            "error": "missing executable SQL; run sync-migrations --backend postgres to generate full DDL",
-                        }),
+                        postgres_create_table_payload(table, &manifest.checksum_sha256),
                     )
                 };
                 operations.push((
@@ -607,7 +966,7 @@ impl DataBrokerRuntime {
             sqlx::query(&format!(
                 "INSERT INTO {ledger_rel}
                      (run_id, operation_index, backend, resource_uri,
-                      operation_kind, status, rollback_json)
+                      operation_kind, status, payload_json)
                  VALUES ($1, $2, $3, $4, $5, 'PENDING', $6::JSONB)"
             ))
             .bind(run_id)
@@ -626,6 +985,49 @@ impl DataBrokerRuntime {
         Ok(run_id.to_string())
     }
 
+    /// Persist an approval token for a planned migration run and transition it
+    /// to the explicit APPROVED state.
+    pub async fn approve_migration_plan(
+        &self,
+        project_id: &str,
+        run_id: &str,
+        approval_token: &str,
+    ) -> Result<(), tonic::Status> {
+        use crate::runtime::system::SystemCatalogConfig;
+        if approval_token.trim().is_empty() {
+            return Err(tonic::Status::invalid_argument(
+                "approval_token must not be empty",
+            ));
+        }
+        let pool = self.pg_pool()?;
+        let config = SystemCatalogConfig::default();
+        let runs_rel = config.migration_runs_relation();
+        ensure_migration_runs_approved_state(pool, &runs_rel, &config.migration_runs_table).await?;
+        let id: Uuid = run_id
+            .parse()
+            .map_err(|_| tonic::Status::invalid_argument("run_id must be a UUID"))?;
+
+        let rows = sqlx::query(&format!(
+            "UPDATE {runs_rel}
+             SET state = 'APPROVED', approval_token = $1, error = ''
+             WHERE run_id = $2 AND project_id = $3
+               AND state = 'PREFLIGHT'
+               AND approval_token = ''"
+        ))
+        .bind(approval_token.trim())
+        .bind(id)
+        .bind(project_id)
+        .execute(pool)
+        .await
+        .map_err(|err| tonic::Status::internal(format!("approve_migration_plan failed: {err}")))?;
+        if rows.rows_affected() == 0 {
+            return Err(tonic::Status::failed_precondition(
+                "migration run not found, not in PREFLIGHT, or already approved",
+            ));
+        }
+        Ok(())
+    }
+
     /// Apply a previously-planned migration run.
     pub async fn apply_migration(
         &self,
@@ -634,21 +1036,51 @@ impl DataBrokerRuntime {
         approval_token: &str,
     ) -> Result<(), tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
+        require_migration_approval_token(approval_token)?;
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let runs_rel = config.migration_runs_relation();
         let ledger_rel = config.migration_op_ledger_relation();
+        let phase_ledger_rel = migration_phase_ledger_relation(&config);
+        ensure_migration_runs_approved_state(pool, &runs_rel, &config.migration_runs_table).await?;
+        ensure_migration_payload_json_column(pool, &ledger_rel).await?;
         let id: Uuid = run_id
             .parse()
             .map_err(|_| tonic::Status::invalid_argument("run_id must be a UUID"))?;
-        // Fetch and preflight all pending operations before moving the run into
-        // APPLYING. This keeps unsupported backend work fail-closed without
-        // partially mutating run state.
-        let pending: Vec<(i64, String, String, String, serde_json::Value)> =
+
+        let run_row = sqlx::query(&format!(
+            "SELECT state, approval_token, catalog_version, operations_hash
+             FROM {runs_rel}
+             WHERE run_id = $1 AND project_id = $2"
+        ))
+        .bind(id)
+        .bind(project_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| tonic::Status::internal(format!("apply_migration run fetch failed: {err}")))?
+        .ok_or_else(|| tonic::Status::not_found("migration run not found"))?;
+        let state = run_row.try_get::<String, _>("state").unwrap_or_default();
+        let stored_token = run_row
+            .try_get::<String, _>("approval_token")
+            .unwrap_or_default();
+        validate_migration_apply_state_and_token(&state, approval_token, &stored_token)?;
+        let catalog_version = run_row
+            .try_get::<String, _>("catalog_version")
+            .unwrap_or_default();
+        let operations_hash = run_row
+            .try_get::<String, _>("operations_hash")
+            .unwrap_or_default();
+
+        // Fetch and preflight all planned operations before moving the run into
+        // APPLYING. On resume, previously APPLIED/VERIFIED/SKIPPED rows are
+        // included so the phased engine can validate them without losing the
+        // original operation ordering.
+        let planned: Vec<(i64, i32, String, String, String, serde_json::Value)> =
             sqlx::query_as(&format!(
-                "SELECT id, backend, resource_uri, operation_kind, rollback_json
+                "SELECT id, operation_index, backend, resource_uri, operation_kind, payload_json
                  FROM {ledger_rel}
-                 WHERE run_id = $1 AND status = 'PENDING'
+                 WHERE run_id = $1
+                   AND status IN ('PENDING','APPLIED','VERIFIED','SKIPPED','FAILED')
                  ORDER BY operation_index ASC"
             ))
             .bind(id)
@@ -657,7 +1089,21 @@ impl DataBrokerRuntime {
             .map_err(|err| {
                 tonic::Status::internal(format!("apply_migration fetch ops failed: {err}"))
             })?;
-        let preflight_errors = self.preflight_migration_apply_ops(&pending);
+        let preflight_ops: Vec<(i64, String, String, String, serde_json::Value)> = planned
+            .iter()
+            .map(
+                |(op_id, _idx, backend, resource_uri, operation_kind, payload)| {
+                    (
+                        *op_id,
+                        backend.clone(),
+                        resource_uri.clone(),
+                        operation_kind.clone(),
+                        payload.clone(),
+                    )
+                },
+            )
+            .collect();
+        let preflight_errors = self.preflight_migration_apply_ops(&preflight_ops);
         if !preflight_errors.is_empty() {
             return Err(tonic::Status::failed_precondition(format!(
                 "apply_migration preflight failed: {}",
@@ -667,89 +1113,174 @@ impl DataBrokerRuntime {
 
         let rows = sqlx::query(&format!(
             "UPDATE {runs_rel}
-             SET state = 'APPLYING', approval_token = $1, started_at = NOW()
+             SET state = 'APPLYING',
+                 started_at = CASE WHEN state = 'APPROVED' THEN NOW() ELSE started_at END,
+                 finished_at = NULL,
+                 error = ''
              WHERE run_id = $2 AND project_id = $3
-               AND state IN ('DRY_RUN','PREFLIGHT')"
+               AND state IN ('APPROVED','APPLYING','VERIFYING')
+               AND approval_token = $1"
         ))
-        .bind(approval_token)
+        .bind(stored_token)
         .bind(id)
         .bind(project_id)
         .execute(pool)
         .await
         .map_err(|err| tonic::Status::internal(format!("apply_migration failed: {err}")))?;
         if rows.rows_affected() == 0 {
-            return Err(tonic::Status::not_found(
-                "migration run not found or not in a plannable state",
+            return Err(tonic::Status::failed_precondition(
+                "migration run approval state changed before apply",
             ));
         }
 
-        let mut error_msgs: Vec<String> = Vec::new();
+        let artifacts: Vec<GeneratedArtifact> = planned
+            .iter()
+            .map(
+                |(op_id, operation_index, backend, resource_uri, operation_kind, payload)| {
+                    GeneratedArtifact {
+                        rel_path: resource_uri.clone(),
+                        kind: operation_kind.clone(),
+                        schema: payload
+                            .get("schema")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or_default()
+                            .to_string(),
+                        table: payload
+                            .get("table")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or_default()
+                            .to_string(),
+                        content: serde_json::json!({
+                            "op_id": op_id,
+                            "operation_index": operation_index,
+                            "backend": backend,
+                            "resource_uri": resource_uri,
+                            "operation_kind": operation_kind,
+                            "payload": payload,
+                        })
+                        .to_string(),
+                    }
+                },
+            )
+            .collect();
+        let op_ids: Vec<i64> = planned
+            .iter()
+            .map(
+                |(op_id, _operation_index, _backend, _resource_uri, _operation_kind, _payload)| {
+                    *op_id
+                },
+            )
+            .collect();
+        let op_kinds: Vec<String> = planned
+            .iter()
+            .map(
+                |(_op_id, _idx, _backend, _resource_uri, operation_kind, _payload)| {
+                    operation_kind.clone()
+                },
+            )
+            .collect();
+        let target = CatalogMigrationApplyTarget {
+            runtime: self,
+            pool,
+        };
+        let sink = ExistingRunMigrationAuditSink {
+            pool,
+            runs_rel: runs_rel.clone(),
+            ledger_rel: ledger_rel.clone(),
+            run_id: id,
+            op_ids,
+            op_kinds,
+        };
+        let phase_ledger = crate::migration::phase_runner::PostgresPhaseLedger::new(
+            (*pool).clone(),
+            phase_ledger_rel,
+        );
+        let phased = crate::migration::apply_artifacts_phased(
+            run_id,
+            &target,
+            &artifacts,
+            &sink,
+            &phase_ledger,
+            &catalog_version,
+            &operations_hash,
+        )
+        .await;
 
-        for (op_id, backend, resource_uri, operation_kind, payload) in &pending {
-            let result = self
-                .execute_migration_apply_op(
-                    pool,
-                    *op_id,
-                    backend,
-                    resource_uri,
-                    operation_kind,
-                    payload,
-                )
-                .await;
+        let outcome = match phased {
+            Ok((outcome, _results)) => outcome,
+            Err(err) => {
+                sqlx::query(&format!(
+                    "UPDATE {runs_rel}
+                     SET state = 'ERROR', finished_at = NOW(), error = $1
+                     WHERE run_id = $2"
+                ))
+                .bind(&err)
+                .bind(id)
+                .execute(pool)
+                .await
+                .map_err(|update_err| {
+                    tonic::Status::internal(format!(
+                        "apply_migration phase failure '{err}', and finalize failed: {update_err}"
+                    ))
+                })?;
+                return Err(tonic::Status::internal(format!(
+                    "apply_migration phased runner failed: {err}"
+                )));
+            }
+        };
 
-            let (new_status, error_str) = match &result {
-                Ok(MigrationApplyOutcome::Applied) => ("APPLIED", String::new()),
-                Ok(MigrationApplyOutcome::Verified) => ("VERIFIED", String::new()),
-                Err(msg) => {
-                    error_msgs.push(msg.clone());
-                    ("FAILED", msg.clone())
-                }
-            };
-
-            sqlx::query(&format!(
-                "UPDATE {ledger_rel}
-                 SET status = $1,
-                     error  = $2,
-                     applied_at = CASE WHEN $1 = 'APPLIED' THEN NOW() ELSE NULL END
-                 WHERE id = $3"
-            ))
-            .bind(new_status)
-            .bind(&error_str)
-            .bind(op_id)
-            .execute(pool)
-            .await
-            .map_err(|err| {
-                tonic::Status::internal(format!("apply_migration ledger update failed: {err}"))
-            })?;
+        match outcome {
+            crate::migration::phase_runner::RunnerOutcome::Completed { .. } => {}
+            crate::migration::phase_runner::RunnerOutcome::Paused { phase, error, .. } => {
+                sqlx::query(&format!(
+                    "UPDATE {runs_rel}
+                     SET state = 'ERROR', finished_at = NOW(), error = $1
+                     WHERE run_id = $2"
+                ))
+                .bind(format!("phase {} paused: {error}", phase.as_str()))
+                .bind(id)
+                .execute(pool)
+                .await
+                .map_err(|err| {
+                    tonic::Status::internal(format!("apply_migration finalize failed: {err}"))
+                })?;
+                return Err(tonic::Status::internal(format!(
+                    "apply_migration paused in phase {}: {error}",
+                    phase.as_str()
+                )));
+            }
+            crate::migration::phase_runner::RunnerOutcome::Refused { phase, .. } => {
+                let error = format!(
+                    "phase {} refused by capability/ledger state",
+                    phase.as_str()
+                );
+                sqlx::query(&format!(
+                    "UPDATE {runs_rel}
+                     SET state = 'ERROR', finished_at = NOW(), error = $1
+                     WHERE run_id = $2"
+                ))
+                .bind(&error)
+                .bind(id)
+                .execute(pool)
+                .await
+                .map_err(|err| {
+                    tonic::Status::internal(format!("apply_migration finalize failed: {err}"))
+                })?;
+                return Err(tonic::Status::failed_precondition(error));
+            }
         }
 
-        // ── Finalise the run ──────────────────────────────────────────────────
-        let (final_state, final_error) = if error_msgs.is_empty() {
-            ("COMPLETED", String::new())
-        } else {
-            ("ERROR", error_msgs.join("; "))
-        };
         sqlx::query(&format!(
             "UPDATE {runs_rel}
-             SET state = $1, finished_at = NOW(), error = $2
-             WHERE run_id = $3"
+             SET state = 'COMPLETED', finished_at = NOW(), error = ''
+             WHERE run_id = $1"
         ))
-        .bind(final_state)
-        .bind(&final_error)
         .bind(id)
         .execute(pool)
         .await
         .map_err(|err| {
             tonic::Status::internal(format!("apply_migration finalize failed: {err}"))
         })?;
-
-        if !error_msgs.is_empty() {
-            return Err(tonic::Status::internal(format!(
-                "apply_migration: {} operation(s) failed — {}",
-                error_msgs.len(),
-                final_error
-            )));
-        }
         Ok(())
     }
 
@@ -1741,320 +2272,107 @@ impl DataBrokerRuntime {
     }
 }
 
-#[derive(Clone, Debug)]
-struct AdminAuditChainRow {
-    audit_id: String,
-    actor: String,
-    operation: String,
-    target: String,
-    request_json: serde_json::Value,
-    result: String,
-    tenant_id: String,
-    project_id: String,
-    correlation_id: String,
-    previous_hash: String,
-    current_hash: String,
-    signer_key_id: String,
-    external_anchor: String,
-}
-
-#[derive(Clone, Debug, Default)]
-struct AdminAuditChainVerification {
-    passed: bool,
-    checked_count: i32,
-    first_broken_audit_id: String,
-    reason: String,
-    expected_previous_hash: String,
-    actual_previous_hash: String,
-    expected_current_hash: String,
-    actual_current_hash: String,
-    last_hash: String,
-}
-
-impl AdminAuditChainVerification {
-    fn passed(checked_count: i32, last_hash: String) -> Self {
-        Self {
-            passed: true,
-            checked_count,
-            last_hash,
-            ..Self::default()
-        }
-    }
-
-    fn to_json(&self) -> serde_json::Value {
-        serde_json::json!({
-            "passed": self.passed,
-            "checked_count": self.checked_count,
-            "first_broken_audit_id": self.first_broken_audit_id,
-            "reason": self.reason,
-            "expected_previous_hash": self.expected_previous_hash,
-            "actual_previous_hash": self.actual_previous_hash,
-            "expected_current_hash": self.expected_current_hash,
-            "actual_current_hash": self.actual_current_hash,
-            "last_hash": self.last_hash,
-        })
-    }
-}
-
 #[cfg(test)]
-fn verify_admin_audit_rows(rows: &[AdminAuditChainRow]) -> AdminAuditChainVerification {
-    let mut previous = String::new();
-    for (idx, row) in rows.iter().enumerate() {
-        match verify_admin_audit_row(row, &previous, idx as i32) {
-            Ok(current_hash) => previous = current_hash,
-            Err(result) => return result,
-        }
-    }
-    AdminAuditChainVerification::passed(rows.len() as i32, previous)
-}
-
-fn verify_admin_audit_row(
-    row: &AdminAuditChainRow,
-    expected_previous_hash: &str,
-    checked_count: i32,
-) -> Result<String, AdminAuditChainVerification> {
-    if row.previous_hash != expected_previous_hash {
-        return Err(AdminAuditChainVerification {
-            passed: false,
-            checked_count,
-            first_broken_audit_id: row.audit_id.clone(),
-            reason: "previous_hash_mismatch".to_string(),
-            expected_previous_hash: expected_previous_hash.to_string(),
-            actual_previous_hash: row.previous_hash.clone(),
-            ..AdminAuditChainVerification::default()
-        });
-    }
-    let expected_current_hash = admin_audit_hash(
-        &row.previous_hash,
-        &row.actor,
-        &row.operation,
-        &row.target,
-        &row.request_json,
-        &row.result,
-        &row.tenant_id,
-        &row.project_id,
-        &row.correlation_id,
-        &row.signer_key_id,
-        &row.external_anchor,
-    );
-    if row.current_hash.is_empty() {
-        return Err(AdminAuditChainVerification {
-            passed: false,
-            checked_count,
-            first_broken_audit_id: row.audit_id.clone(),
-            reason: "missing_current_hash".to_string(),
-            expected_current_hash,
-            actual_current_hash: row.current_hash.clone(),
-            ..AdminAuditChainVerification::default()
-        });
-    }
-    if row.current_hash != expected_current_hash {
-        return Err(AdminAuditChainVerification {
-            passed: false,
-            checked_count,
-            first_broken_audit_id: row.audit_id.clone(),
-            reason: "current_hash_mismatch".to_string(),
-            expected_current_hash,
-            actual_current_hash: row.current_hash.clone(),
-            ..AdminAuditChainVerification::default()
-        });
-    }
-    Ok(row.current_hash.clone())
-}
-
-#[allow(clippy::too_many_arguments)]
-fn admin_audit_hash(
-    previous_hash: &str,
-    actor: &str,
-    operation: &str,
-    target: &str,
-    request_json: &serde_json::Value,
-    result: &str,
-    tenant_id: &str,
-    project_id: &str,
-    correlation_id: &str,
-    signer_key_id: &str,
-    external_anchor: &str,
-) -> String {
-    use sha2::{Digest, Sha256};
-
-    let canonical = serde_json::json!({
-        "previous_hash": previous_hash,
-        "actor": actor,
-        "operation": operation,
-        "target": target,
-        "request_json": request_json,
-        "result": result,
-        "tenant_id": tenant_id,
-        "project_id": project_id,
-        "correlation_id": correlation_id,
-        "signer_key_id": signer_key_id,
-        "external_anchor": external_anchor,
-    });
-    // A-D pass (2026-05-30) bonus fix: `serde_json::Value::Object`
-    // preserves insertion order when ANY transitive dep enables the
-    // `preserve_order` feature (the `bson` crate does, via
-    // `mongodb-driver`). That means two semantically-equal request
-    // payloads could hash differently depending on caller key
-    // order — silently breaking the tamper-evident audit chain.
-    // Walk the tree and re-emit every object with sorted keys
-    // before hashing so the result is canonical regardless of the
-    // active serde_json feature set.
-    let sorted = sort_json_keys(&canonical);
-    let encoded = serde_json::to_vec(&sorted).unwrap_or_default();
-    format!("{:x}", Sha256::digest(encoded))
-}
-
-/// Recursively rewrite every JSON object with keys sorted
-/// lexicographically. Arrays and scalars pass through unchanged.
-/// Used by `admin_audit_hash` to guarantee canonical bytes
-/// regardless of `serde_json`'s `preserve_order` feature.
-fn sort_json_keys(v: &serde_json::Value) -> serde_json::Value {
-    match v {
-        serde_json::Value::Object(map) => {
-            let mut sorted: std::collections::BTreeMap<&String, serde_json::Value> =
-                std::collections::BTreeMap::new();
-            for (k, val) in map.iter() {
-                sorted.insert(k, sort_json_keys(val));
-            }
-            let mut out = serde_json::Map::with_capacity(sorted.len());
-            for (k, val) in sorted {
-                out.insert(k.clone(), val);
-            }
-            serde_json::Value::Object(out)
-        }
-        serde_json::Value::Array(items) => {
-            serde_json::Value::Array(items.iter().map(sort_json_keys).collect())
-        }
-        other => other.clone(),
-    }
-}
-
-#[cfg(test)]
-mod audit_hash_tests {
+mod migration_approval_tests {
     use super::*;
 
     #[test]
-    fn admin_audit_hash_links_previous_hash() {
-        let request = serde_json::json!({"target": "catalog"});
-        let first = admin_audit_hash(
-            "",
-            "actor",
-            "StageCatalog",
-            "catalog:v1",
-            &request,
-            "ok",
-            "tenant",
-            "project",
-            "corr",
-            "key-1",
-            "",
-        );
-        let second = admin_audit_hash(
-            &first,
-            "actor",
-            "ActivateCatalog",
-            "catalog:v1",
-            &request,
-            "ok",
-            "tenant",
-            "project",
-            "corr",
-            "key-1",
-            "",
-        );
-        assert_ne!(first, second);
-        assert_eq!(first.len(), 64);
-        assert_eq!(second.len(), 64);
+    fn approval_token_match_rejects_empty_and_wrong_tokens() {
+        assert!(!migration_approval_tokens_match("", "stored-token"));
+        assert!(!migration_approval_tokens_match("provided-token", ""));
+        assert!(!migration_approval_tokens_match(
+            "wrong-token",
+            "stored-token"
+        ));
+        assert!(migration_approval_tokens_match(
+            "stored-token",
+            "stored-token"
+        ));
+    }
+
+    /// Audit item 10: `apply_migration`'s reject paths, exercised through the
+    /// extracted validator the serving path now calls
+    /// (`validate_migration_apply_state_and_token`), so the empty-token,
+    /// wrong-token and non-APPROVED-state rejections are unit-tested without a
+    /// live PostgreSQL ledger.
+    #[test]
+    fn apply_migration_validation_rejects_empty_token() {
+        let err = validate_migration_apply_state_and_token("APPROVED", "", "stored-token")
+            .expect_err("empty approval_token must be rejected");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert!(err.message().contains("approval_token is required"));
+
+        let err = validate_migration_apply_state_and_token("APPROVED", "   ", "stored-token")
+            .expect_err("whitespace-only approval_token must be rejected");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert!(err.message().contains("approval_token is required"));
     }
 
     #[test]
-    fn admin_audit_hash_is_canonical_for_json_key_order() {
-        let left = serde_json::json!({"a": 1, "b": 2});
-        let right = serde_json::json!({"b": 2, "a": 1});
-        assert_eq!(
-            admin_audit_hash("", "a", "op", "t", &left, "ok", "tenant", "p", "c", "k", ""),
-            admin_audit_hash(
-                "", "a", "op", "t", &right, "ok", "tenant", "p", "c", "k", ""
-            )
-        );
+    fn apply_migration_validation_rejects_wrong_token() {
+        let err =
+            validate_migration_apply_state_and_token("APPROVED", "wrong-token", "stored-token")
+                .expect_err("mismatched approval_token must be rejected");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert!(err.message().contains("does not match the approved token"));
+
+        // A run whose stored token was never set must also fail closed.
+        let err = validate_migration_apply_state_and_token("APPROVED", "provided-token", "")
+            .expect_err("missing stored token must be rejected");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert!(err.message().contains("does not match the approved token"));
     }
 
-    fn audit_row(
-        audit_id: &str,
-        operation: &str,
-        previous_hash: &str,
-        request_json: serde_json::Value,
-    ) -> AdminAuditChainRow {
-        let current_hash = admin_audit_hash(
-            previous_hash,
-            "actor",
-            operation,
-            "target",
-            &request_json,
-            "ok",
-            "tenant",
-            "project",
-            "corr",
-            "key-1",
-            "",
-        );
-        AdminAuditChainRow {
-            audit_id: audit_id.to_string(),
-            actor: "actor".to_string(),
-            operation: operation.to_string(),
-            target: "target".to_string(),
-            request_json,
-            result: "ok".to_string(),
-            tenant_id: "tenant".to_string(),
-            project_id: "project".to_string(),
-            correlation_id: "corr".to_string(),
-            previous_hash: previous_hash.to_string(),
-            current_hash,
-            signer_key_id: "key-1".to_string(),
-            external_anchor: String::new(),
+    #[test]
+    fn apply_migration_validation_rejects_non_approved_states() {
+        for state in ["DRY_RUN", "PREFLIGHT", "COMPLETED", "ERROR", "DEAD_LETTER", ""] {
+            let err =
+                validate_migration_apply_state_and_token(state, "stored-token", "stored-token")
+                    .expect_err("non-approved migration state must be rejected");
+            assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+            assert!(err.message().contains("must be approved before apply"));
         }
     }
 
     #[test]
-    fn verify_admin_audit_rows_accepts_valid_chain() {
-        let first = audit_row("first", "StageCatalog", "", serde_json::json!({"a": 1}));
-        let second = audit_row(
-            "second",
-            "ActivateCatalog",
-            &first.current_hash,
-            serde_json::json!({"a": 2}),
-        );
-        let second_hash = second.current_hash.clone();
-        let result = verify_admin_audit_rows(&[first, second]);
-        assert!(result.passed);
-        assert_eq!(result.checked_count, 2);
-        assert_eq!(result.last_hash, second_hash);
-        assert_eq!(result.last_hash.len(), 64);
+    fn apply_migration_validation_accepts_resumable_states_with_matching_token() {
+        for state in ["APPROVED", "APPLYING", "VERIFYING"] {
+            validate_migration_apply_state_and_token(state, "stored-token", "stored-token")
+                .unwrap_or_else(|err| {
+                    panic!("state {state:?} with matching token must pass: {err}")
+                });
+        }
     }
 
     #[test]
-    fn verify_admin_audit_rows_rejects_current_hash_mismatch() {
-        let mut row = audit_row("first", "StageCatalog", "", serde_json::json!({"a": 1}));
-        row.result = "tampered".to_string();
-        let result = verify_admin_audit_rows(&[row]);
-        assert!(!result.passed);
-        assert_eq!(result.reason, "current_hash_mismatch");
-        assert_eq!(result.first_broken_audit_id, "first");
-    }
+    fn create_table_payload_contains_executable_bootstrap_ddl() {
+        let mut table = crate::generation::ManifestTable {
+            schema: "public".to_string(),
+            table: "widgets".to_string(),
+            checksum_sha256: "table-sha".to_string(),
+            columns: vec![crate::generation::ManifestColumn {
+                field_name: "id".to_string(),
+                column_name: "id".to_string(),
+                proto_type: "string".to_string(),
+                sql_type: "TEXT".to_string(),
+                not_null: true,
+                ..Default::default()
+            }],
+            primary_key: vec!["id".to_string()],
+            ..Default::default()
+        };
+        table.table_security.tenant_isolation_mode = "none".to_string();
 
-    #[test]
-    fn verify_admin_audit_rows_rejects_previous_hash_mismatch() {
-        let first = audit_row("first", "StageCatalog", "", serde_json::json!({"a": 1}));
-        let second = audit_row(
-            "second",
-            "ActivateCatalog",
-            "wrong-previous",
-            serde_json::json!({"a": 2}),
-        );
-        let result = verify_admin_audit_rows(&[first, second]);
-        assert!(!result.passed);
-        assert_eq!(result.reason, "previous_hash_mismatch");
-        assert_eq!(result.first_broken_audit_id, "second");
+        let payload = postgres_create_table_payload(&table, "manifest-sha");
+        let content = payload
+            .get("content")
+            .and_then(|value| value.as_str())
+            .unwrap_or_default();
+
+        assert!(!content.trim().is_empty());
+        assert!(migration_payload_has_executable_sql(content));
+        assert!(content.contains("CREATE TABLE IF NOT EXISTS"));
+        assert!(content.contains("\"public\".\"widgets\""));
+        assert!(content.contains("PRIMARY KEY"));
     }
 }

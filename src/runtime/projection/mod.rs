@@ -183,25 +183,16 @@ fn should_materialize_projection(p: &crate::generation::manifest::ManifestProjec
 /// Hold an `Arc<ProjectionEngine>` in the service; pass pool + runtime to
 /// [`ProjectionWorker`] for the background processing loop.
 ///
-/// NW1-3b — the engine holds **two** handles:
-///
-/// - `pool: PgPool` is used only by [`Self::replay_by_primary_key`] /
-///   [`Self::replay_range`] which scan the canonical Postgres source
-///   tables to re-emit projection tasks for historical rows. Those
-///   reads are inherently PG-coupled because they read tenant
-///   tables (e.g. `udb.public.users`), not UDB system tables.
-/// - `store: Arc<dyn SystemStores>` carries the system-table
-///   surface: every projection-task INSERT and read goes through the
-///   `ProjectionTaskStore` trait so the trait impl owns the DDL
-///   dialect (PG `JSONB`, MySQL `JSON`, SQLite `TEXT`).
-///
-/// Once canonical writes can land on non-PG backends, the pool
-/// field disappears; the replay functions become trait methods on
-/// the canonical store.
+/// The engine holds a `pool: PgPool` used by [`Self::replay_by_primary_key`] /
+/// [`Self::replay_range`] which scan the canonical Postgres source tables to
+/// re-emit projection tasks for historical rows. Those reads are inherently
+/// PG-coupled because they read tenant tables (e.g. `udb.public.users`), not
+/// UDB system tables. Task INSERTs go through [`Self::enqueue_write_tasks_tx`],
+/// which writes inside the caller's canonical Postgres transaction so a task
+/// can never be lost relative to the row it projects.
 #[derive(Clone)]
 pub struct ProjectionEngine {
     pool: PgPool,
-    store: Arc<dyn crate::runtime::canonical_store::SystemStores>,
     config: SystemCatalogConfig,
 }
 
@@ -212,16 +203,8 @@ impl std::fmt::Debug for ProjectionEngine {
 }
 
 impl ProjectionEngine {
-    pub fn new(
-        pool: PgPool,
-        store: Arc<dyn crate::runtime::canonical_store::SystemStores>,
-        config: SystemCatalogConfig,
-    ) -> Self {
-        Self {
-            pool,
-            store,
-            config,
-        }
+    pub fn new(pool: PgPool, config: SystemCatalogConfig) -> Self {
+        Self { pool, config }
     }
 
     /// Compute a deterministic idempotency key for one projection task.
@@ -546,63 +529,6 @@ impl ProjectionEngine {
                     .map_err(|err| format!("projection replay source row decode failed: {err}"))
             })
             .collect()
-    }
-
-    async fn insert_task_if_absent(
-        &self,
-        idempotency_key: &str,
-        project_id: &str,
-        manifest_checksum: &str,
-        message_type: &str,
-        source_schema: &str,
-        source_table: &str,
-        source_row_key: &serde_json::Value,
-        operation: &str,
-        target_backend: &str,
-        target_instance: &str,
-        projection_kind: &str,
-        resource_name: &str,
-        target_options: &[ManifestStoreOption],
-        source_payload: &serde_json::Value,
-        source_checksum: &str,
-    ) -> Result<(), String> {
-        // NW1-3b: route through ProjectionTaskStore. The trait
-        // method is idempotent on `idempotency_key` — re-emission
-        // with the same key returns the existing task_id without
-        // creating a duplicate. Matches the pre-NW1-3b
-        // `INSERT … ON CONFLICT DO NOTHING` semantics.
-        use crate::runtime::canonical_store::system_store::{
-            ProjectionOperation, ProjectionTaskInsert, ProjectionTaskStore,
-        };
-        let op = ProjectionOperation::parse(operation).ok_or_else(|| {
-            format!("unknown projection operation '{operation}' (expected upsert|delete)")
-        })?;
-        let target_options_json =
-            serde_json::to_value(target_options).unwrap_or(serde_json::Value::Array(vec![]));
-        let insert = ProjectionTaskInsert {
-            idempotency_key: idempotency_key.to_string(),
-            project_id: project_id.to_string(),
-            manifest_checksum: manifest_checksum.to_string(),
-            message_type: message_type.to_string(),
-            source_schema: source_schema.to_string(),
-            source_table: source_table.to_string(),
-            source_row_key: source_row_key.clone(),
-            operation: op,
-            target_backend: target_backend.to_string(),
-            target_instance: target_instance.to_string(),
-            projection_kind: projection_kind.to_string(),
-            resource_name: resource_name.to_string(),
-            target_options: target_options_json,
-            source_payload: source_payload.clone(),
-            source_checksum: source_checksum.to_string(),
-        };
-        // `config` is retained for replay paths (PG-canonical reads
-        // below); unused on the trait path.
-        let _ = &self.config;
-        ProjectionTaskStore::enqueue_projection_task(self.store.as_ref(), &insert)
-            .await
-            .map(|_| ())
-            .map_err(|err| format!("enqueue_projection_task: {err}"))
     }
 }
 
@@ -1047,6 +973,14 @@ impl ProjectionWorker {
         } else {
             format!("{}/{}.json", key_prefix.trim_matches('/'), id)
         };
+        let project_id = option_value(target_options, "project_id")
+            .or_else(|| {
+                source_payload
+                    .get("project_id")
+                    .and_then(|value| value.as_str())
+                    .map(str::to_string)
+            })
+            .unwrap_or_default();
         if operation.eq_ignore_ascii_case("delete") {
             // A projected delete must remove the object, not write a tombstone
             // body that leaves the stale object readable.
@@ -1056,7 +990,7 @@ impl ProjectionWorker {
             });
             return self
                 .runtime
-                .delete_object_backend_target(backend, instance, &request.to_string())
+                .delete_object_backend_target(backend, instance, &project_id, &request.to_string())
                 .await
                 .map_err(|s| s.message().to_string());
         }
@@ -1561,8 +1495,7 @@ impl ReconciliationWorker {
     }
 
     async fn replay_source_rows_for_repair(&self) {
-        let engine =
-            ProjectionEngine::new(self.pool.clone(), self.store.clone(), self.config.clone());
+        let engine = ProjectionEngine::new(self.pool.clone(), self.config.clone());
         let mut seen = std::collections::BTreeSet::new();
         for plan in ProjectionPlan::from_manifest(&self.manifest) {
             if !seen.insert(plan.message_type.clone()) {

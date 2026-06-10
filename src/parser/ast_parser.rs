@@ -153,11 +153,20 @@ impl ProtoAstParser {
         ) {
             label = self.consume().value;
         }
-        let field_type = self.read_type_name();
-        if field_type.is_empty() {
+        let raw_field_type = self.read_type_name();
+        if raw_field_type.is_empty() {
             self.skip_to_statement_end();
             return Ok(None);
         }
+        let field_type = if raw_field_type
+            .trim_start()
+            .to_ascii_lowercase()
+            .starts_with("map<")
+        {
+            "map".to_string()
+        } else {
+            raw_field_type
+        };
         let Some(name) = self.consume_ident() else {
             self.skip_to_statement_end();
             return Ok(None);

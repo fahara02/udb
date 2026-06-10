@@ -1,0 +1,65 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>dev.udb.examples</groupId>
+  <artifactId>udb-native-services-java</artifactId>
+  <version>0.3.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <maven.compiler.release>17</maven.compiler.release>
+    <grpc.version>1.81.0</grpc.version>
+    <protobuf.version>4.35.0</protobuf.version>
+    <exec.mainClass>dev.udb.examples.Main</exec.mainClass>
+  </properties>
+
+  <dependencies>
+    <!-- The hand-written UDB Java SDK (facade + auth ergonomics + AuthzCache).
+         Build/install it first:  cd ../../../sdk/java && mvn install -DskipTests
+         That add-sources the generated stubs under sdk/java/gen and publishes
+         dev.udb:udb-java-client to your local ~/.m2 so this example resolves it. -->
+    <dependency>
+      <groupId>dev.udb</groupId>
+      <artifactId>udb-java-client</artifactId>
+      <version>0.3.1-SNAPSHOT</version>
+    </dependency>
+
+    <!-- gRPC runtime (a real transport — the SDK only compile-depends on grpc-api). -->
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-netty-shaded</artifactId>
+      <version>${grpc.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-stub</artifactId>
+      <version>${grpc.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-protobuf</artifactId>
+      <version>${grpc.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>${protobuf.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <configuration>
+          <mainClass>${exec.mainClass}</mainClass>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

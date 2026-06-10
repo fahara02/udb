@@ -7,6 +7,7 @@
 package eventsv1
 
 import (
+	_ "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -736,7 +737,7 @@ var File_udb_core_notification_events_v1_notification_events_proto protoreflect.
 
 const file_udb_core_notification_events_v1_notification_events_proto_rawDesc = "" +
 	"\n" +
-	"9udb/core/notification/events/v1/notification_events.proto\x12\x1fudb.core.notification.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc9\x02\n" +
+	"9udb/core/notification/events/v1/notification_events.proto\x12\x1fudb.core.notification.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!udb/core/common/v1/security.proto\"\xcd\x03\n" +
 	"\x15NotificationSentEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x15\n" +
 	"\x06log_id\x18\x02 \x01(\tR\x05logId\x12\x1f\n" +
@@ -749,7 +750,8 @@ const file_udb_core_notification_events_v1_notification_events_proto_rawDesc = "
 	"\ttenant_id\x18\a \x01(\tR\btenantId\x12%\n" +
 	"\x0ecorrelation_id\x18\b \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt\"\xac\x03\n" +
+	"occurredAt:\x81\x01\x92\xb2\x19}\n" +
+	"5udb.core.notification.events.v1.NotificationSentEvent\x12\x18udb.notification.sent.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xb5\x04\n" +
 	"\x17NotificationFailedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x15\n" +
 	"\x06log_id\x18\x02 \x01(\tR\x05logId\x12\x1f\n" +
@@ -768,7 +770,8 @@ const file_udb_core_notification_events_v1_notification_events_proto_rawDesc = "
 	" \x01(\bR\twillRetry\x12%\n" +
 	"\x0ecorrelation_id\x18\v \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt\"\xe7\x02\n" +
+	"occurredAt:\x86\x01\x92\xb2\x19\x81\x01\n" +
+	"7udb.core.notification.events.v1.NotificationFailedEvent\x12\x1audb.notification.failed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xf8\x03\n" +
 	"\x1bNotificationSuppressedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1f\n" +
 	"\vtemplate_id\x18\x02 \x01(\tR\n" +
@@ -781,7 +784,8 @@ const file_udb_core_notification_events_v1_notification_events_proto_rawDesc = "
 	"\x12suppression_reason\x18\a \x01(\tR\x11suppressionReason\x12%\n" +
 	"\x0ecorrelation_id\x18\b \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt\"\xe9\x01\n" +
+	"occurredAt:\x8e\x01\x92\xb2\x19\x89\x01\n" +
+	";udb.core.notification.events.v1.NotificationSuppressedEvent\x12\x1eudb.notification.suppressed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xf8\x02\n" +
 	"\x1aNotificationDeliveredEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x15\n" +
 	"\x06log_id\x18\x02 \x01(\tR\x05logId\x12\x18\n" +
@@ -789,7 +793,8 @@ const file_udb_core_notification_events_v1_notification_events_proto_rawDesc = "
 	"\ttenant_id\x18\x04 \x01(\tR\btenantId\x12%\n" +
 	"\x0ecorrelation_id\x18\x05 \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt\"\xd8\x02\n" +
+	"occurredAt:\x8c\x01\x92\xb2\x19\x87\x01\n" +
+	":udb.core.notification.events.v1.NotificationDeliveredEvent\x12\x1dudb.notification.delivered.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xf4\x03\n" +
 	" NotificationTemplateChangedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1f\n" +
 	"\vtemplate_id\x18\x02 \x01(\tR\n" +
@@ -804,7 +809,8 @@ const file_udb_core_notification_events_v1_notification_events_proto_rawDesc = "
 	"\x0ecorrelation_id\x18\a \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12\x1b\n" +
-	"\ttenant_id\x18\t \x01(\tR\btenantId\"\x92\x04\n" +
+	"\ttenant_id\x18\t \x01(\tR\btenantId:\x99\x01\x92\xb2\x19\x94\x01\n" +
+	"@udb.core.notification.events.v1.NotificationTemplateChangedEvent\x12$udb.notification.template.changed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xad\x05\n" +
 	"\x19ResourceIngestStatusEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1f\n" +
 	"\vresource_id\x18\x02 \x01(\tR\n" +
@@ -825,7 +831,8 @@ const file_udb_core_notification_events_v1_notification_events_proto_rawDesc = "
 	"\voccurred_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12#\n" +
 	"\rresource_type\x18\x0e \x01(\tR\fresourceType\x12#\n" +
-	"\rresource_name\x18\x0f \x01(\tR\fresourceNameB\xac\x02\n" +
+	"\rresource_name\x18\x0f \x01(\tR\fresourceName:\x98\x01\x92\xb2\x19\x93\x01\n" +
+	"9udb.core.notification.events.v1.ResourceIngestStatusEvent\x12*udb.notification.resource.ingest.status.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\xac\x02\n" +
 	"#com.udb.core.notification.events.v1B\x17NotificationEventsProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/events/v1;eventsv1\xa2\x02\x04UCNE\xaa\x02\x1fudb.core.Notification.Events.V1\xca\x02\x1fUdb\\Core\\Notification\\Events\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Events\\V1\xea\x02#Udb::Core::Notification::Events::V1b\x06proto3"
 
 var (

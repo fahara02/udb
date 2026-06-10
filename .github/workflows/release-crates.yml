@@ -62,6 +62,27 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # urgent_fix #38: a release must clear the SAME hard gates as branch CI,
+      # not just `cargo test --lib`. This standalone tag-triggered workflow cannot
+      # `needs: [ci]` across workflows, so the gates are inlined here so a tag push
+      # can never publish past stale manifests / a broken build / unformatted code.
+      - name: Format gate
+        run: cargo fmt --all -- --check
+      - name: Build all targets
+        run: cargo build --locked --all-targets
+      - name: Native contract manifest drift + lint gate
+        run: |
+          cargo run --locked -q --bin udb -- native manifest > docs/generated/udb-native-contract.json
+          if ! git diff --quiet -- docs/generated/udb-native-contract.json; then
+            echo "::error::Native contract manifest is stale; regenerate and commit before tagging a release."
+            exit 1
+          fi
+          cargo run --locked -q --bin udb -- native lint
+      - name: Native contract breaking-change gate
+        run: |
+          cargo run --locked -q --bin udb -- native contract-diff \
+            --baseline docs/generated/contract-baseline.bin
+
       - name: Run the default test suite before publishing
         run: cargo test --locked --lib
 

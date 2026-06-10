@@ -53,47 +53,58 @@ public final class ApikeyEventsProto extends com.google.protobuf.GeneratedFile {
       "\n-udb/core/apikey/events/v1/apikey_event" +
       "s.proto\022\031udb.core.apikey.events.v1\032\037goog" +
       "le/protobuf/timestamp.proto\032%udb/core/ap" +
-      "ikey/entity/v1/enums.proto\"\227\003\n\022ApiKeyCre" +
-      "atedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\025\n\006" +
-      "key_id\030\002 \001(\tR\005keyId\022\035\n\nkey_prefix\030\003 \001(\tR" +
-      "\tkeyPrefix\022\022\n\004name\030\004 \001(\tR\004name\022I\n\nowner_" +
-      "type\030\005 \001(\0162*.udb.core.apikey.entity.v1.A" +
-      "piKeyOwnerTypeR\townerType\022\031\n\010owner_id\030\006 " +
-      "\001(\tR\007ownerId\022\026\n\006scopes\030\007 \003(\tR\006scopes\022\035\n\n" +
-      "created_by\030\010 \001(\tR\tcreatedBy\022%\n\016correlati" +
-      "on_id\030\t \001(\tR\rcorrelationId\022;\n\013occurred_a" +
-      "t\030\n \001(\0132\032.google.protobuf.TimestampR\nocc" +
-      "urredAt\022\033\n\ttenant_id\030\013 \001(\tR\010tenantId\"\252\002\n" +
-      "\022ApiKeyRevokedEvent\022\031\n\010event_id\030\001 \001(\tR\007e" +
-      "ventId\022\025\n\006key_id\030\002 \001(\tR\005keyId\022\035\n\nkey_pre" +
-      "fix\030\003 \001(\tR\tkeyPrefix\022\035\n\nrevoked_by\030\004 \001(\t" +
-      "R\trevokedBy\022#\n\rrevoke_reason\030\005 \001(\tR\014revo" +
-      "keReason\022%\n\016correlation_id\030\006 \001(\tR\rcorrel" +
-      "ationId\022;\n\013occurred_at\030\007 \001(\0132\032.google.pr" +
-      "otobuf.TimestampR\noccurredAt\022\033\n\ttenant_i" +
-      "d\030\010 \001(\tR\010tenantId\"\351\002\n\026ApiKeyRateLimitedE" +
+      "ikey/entity/v1/enums.proto\032!udb/core/com" +
+      "mon/v1/security.proto\"\216\004\n\022ApiKeyCreatedE" +
       "vent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\025\n\006key_i" +
       "d\030\002 \001(\tR\005keyId\022\035\n\nkey_prefix\030\003 \001(\tR\tkeyP" +
-      "refix\022\032\n\010endpoint\030\004 \001(\tR\010endpoint\022\035\n\nip_" +
-      "address\030\005 \001(\tR\tipAddress\022,\n\022requests_in_" +
-      "window\030\006 \001(\005R\020requestsInWindow\022\024\n\005limit\030" +
-      "\007 \001(\005R\005limit\022%\n\016correlation_id\030\010 \001(\tR\rco" +
-      "rrelationId\022;\n\013occurred_at\030\t \001(\0132\032.googl" +
-      "e.protobuf.TimestampR\noccurredAt\022\033\n\ttena" +
-      "nt_id\030\n \001(\tR\010tenantIdB\202\002\n\035com.udb.core.a" +
-      "pikey.events.v1B\021ApikeyEventsProtoP\001ZEgi" +
-      "thub.com/fahara02/udb/sdk/go/gen/udb/cor" +
-      "e/apikey/events/v1;eventsv1\242\002\004UCAE\252\002\031udb" +
-      ".core.Apikey.Events.V1\312\002\031Udb\\Core\\Apikey" +
-      "\\Events\\V1\342\002%Udb\\GPBMetadata\\Core\\Apikey" +
-      "\\Events\\V1\352\002\035Udb::Core::Apikey::Events::" +
-      "V1b\006proto3"
+      "refix\022\022\n\004name\030\004 \001(\tR\004name\022I\n\nowner_type\030" +
+      "\005 \001(\0162*.udb.core.apikey.entity.v1.ApiKey" +
+      "OwnerTypeR\townerType\022\031\n\010owner_id\030\006 \001(\tR\007" +
+      "ownerId\022\026\n\006scopes\030\007 \003(\tR\006scopes\022\035\n\ncreat" +
+      "ed_by\030\010 \001(\tR\tcreatedBy\022%\n\016correlation_id" +
+      "\030\t \001(\tR\rcorrelationId\022;\n\013occurred_at\030\n \001" +
+      "(\0132\032.google.protobuf.TimestampR\noccurred" +
+      "At\022\033\n\ttenant_id\030\013 \001(\tR\010tenantId:u\222\262\031q\n,u" +
+      "db.core.apikey.events.v1.ApiKeyCreatedEv" +
+      "ent\022\025udb.apikey.created.v1\032\ttenant_id\"\010s" +
+      "tandard*\rat_least_once2\006stable\"\241\003\n\022ApiKe" +
+      "yRevokedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId" +
+      "\022\025\n\006key_id\030\002 \001(\tR\005keyId\022\035\n\nkey_prefix\030\003 " +
+      "\001(\tR\tkeyPrefix\022\035\n\nrevoked_by\030\004 \001(\tR\trevo" +
+      "kedBy\022#\n\rrevoke_reason\030\005 \001(\tR\014revokeReas" +
+      "on\022%\n\016correlation_id\030\006 \001(\tR\rcorrelationI" +
+      "d\022;\n\013occurred_at\030\007 \001(\0132\032.google.protobuf" +
+      ".TimestampR\noccurredAt\022\033\n\ttenant_id\030\010 \001(" +
+      "\tR\010tenantId:u\222\262\031q\n,udb.core.apikey.event" +
+      "s.v1.ApiKeyRevokedEvent\022\025udb.apikey.revo" +
+      "ked.v1\032\ttenant_id\"\010standard*\rat_least_on" +
+      "ce2\006stable\"\351\003\n\026ApiKeyRateLimitedEvent\022\031\n" +
+      "\010event_id\030\001 \001(\tR\007eventId\022\025\n\006key_id\030\002 \001(\t" +
+      "R\005keyId\022\035\n\nkey_prefix\030\003 \001(\tR\tkeyPrefix\022\032" +
+      "\n\010endpoint\030\004 \001(\tR\010endpoint\022\035\n\nip_address" +
+      "\030\005 \001(\tR\tipAddress\022,\n\022requests_in_window\030" +
+      "\006 \001(\005R\020requestsInWindow\022\024\n\005limit\030\007 \001(\005R\005" +
+      "limit\022%\n\016correlation_id\030\010 \001(\tR\rcorrelati" +
+      "onId\022;\n\013occurred_at\030\t \001(\0132\032.google.proto" +
+      "buf.TimestampR\noccurredAt\022\033\n\ttenant_id\030\n" +
+      " \001(\tR\010tenantId:~\222\262\031z\n0udb.core.apikey.ev" +
+      "ents.v1.ApiKeyRateLimitedEvent\022\032udb.apik" +
+      "ey.rate.limited.v1\032\ttenant_id\"\010standard*" +
+      "\rat_least_once2\006stableB\202\002\n\035com.udb.core." +
+      "apikey.events.v1B\021ApikeyEventsProtoP\001ZEg" +
+      "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
+      "re/apikey/events/v1;eventsv1\242\002\004UCAE\252\002\031ud" +
+      "b.core.Apikey.Events.V1\312\002\031Udb\\Core\\Apike" +
+      "y\\Events\\V1\342\002%Udb\\GPBMetadata\\Core\\Apike" +
+      "y\\Events\\V1\352\002\035Udb::Core::Apikey::Events:" +
+      ":V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.TimestampProto.getDescriptor(),
           com.udb.core.apikey.entity.v1.EnumsProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_apikey_events_v1_ApiKeyCreatedEvent_descriptor =
       getDescriptor().getMessageType(0);
@@ -116,6 +127,12 @@ public final class ApikeyEventsProto extends com.google.protobuf.GeneratedFile {
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.apikey.entity.v1.EnumsProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
+    com.google.protobuf.ExtensionRegistry registry =
+        com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.messageEventContract);
+    com.google.protobuf.Descriptors.FileDescriptor
+        .internalUpdateFileDescriptor(descriptor, registry);
   }
 
   // @@protoc_insertion_point(outer_class_scope)

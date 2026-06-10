@@ -179,8 +179,11 @@ impl BackendPluginContract {
         if self.capability_matrix.operations.is_empty() {
             failures.push("capability matrix must declare at least one operation".to_string());
         }
-        // B.3: capability-evidence summary derived from the V2 model so the
-        // conformance report carries the same evidence the matrix tests assert.
+        // B.3/#40: capability-evidence summary. Static compiler availability
+        // comes from the V2 model, but the conformance report's
+        // `compiler_mediated` bit is stricter: it means a runtime path is wired
+        // to consume the neutral IR compiler output for this backend. Do not
+        // claim compiler mediation for raw generic-dispatch paths.
         let kind = BackendKind::from_token(&self.backend);
         let (
             native_executor,
@@ -194,7 +197,7 @@ impl BackendPluginContract {
                 let v2 = k.capabilities_v2();
                 (
                     v2.native_executor,
-                    v2.compiler_mediated,
+                    compiler_mediated_runtime_path_wired(&k),
                     v2.lifecycle.as_str().to_string(),
                     v2.system_store.as_str().to_string(),
                     v2.canonical_candidate.as_str().to_string(),
@@ -230,6 +233,38 @@ impl BackendPluginContract {
     }
 }
 
+fn compiler_mediated_runtime_path_wired(kind: &BackendKind) -> bool {
+    // GenericDispatch now accepts a neutral `ir` envelope, lowers it through
+    // `ir::compile::compile_for_backend`, converts the `CompiledRendering` into
+    // the existing executor request shape, and executes it on the same
+    // channel/breaker/context path as raw dispatch. Keep this stricter than V2:
+    // KV/object compilers exist for planner use, but V2 intentionally does not
+    // classify those backends as compiler-mediated data-plane targets.
+    if !kind.capabilities_v2().compiler_mediated {
+        return false;
+    }
+    match kind {
+        BackendKind::Postgres => true,
+        BackendKind::Mysql => cfg!(any(feature = "mysql", test)),
+        BackendKind::Sqlite => cfg!(any(feature = "sqlite", test)),
+        BackendKind::Mssql => cfg!(any(feature = "mssql", test)),
+        BackendKind::Clickhouse => cfg!(any(feature = "clickhouse", test)),
+        BackendKind::Mongodb => cfg!(any(feature = "mongodb", test)),
+        BackendKind::Neo4j => cfg!(any(feature = "neo4j", test)),
+        BackendKind::Qdrant => cfg!(any(feature = "qdrant", test)),
+        BackendKind::Elasticsearch => cfg!(any(feature = "elasticsearch", test)),
+        BackendKind::Weaviate => cfg!(any(feature = "weaviate", test)),
+        BackendKind::Pinecone => cfg!(any(feature = "pinecone", test)),
+        BackendKind::Cassandra => cfg!(any(feature = "cassandra", test)),
+        BackendKind::Redis
+        | BackendKind::Memcached
+        | BackendKind::Minio
+        | BackendKind::S3
+        | BackendKind::AzureBlob
+        | BackendKind::Gcs => false,
+    }
+}
+
 /// Result of validating one plugin against the stable contract.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BackendConformanceReport {
@@ -240,7 +275,10 @@ pub struct BackendConformanceReport {
     /// V2 dimension 1: backend ships a compiled-in runtime executor.
     #[serde(default)]
     pub native_executor: bool,
-    /// V2 dimension 2: backend has an `ir::compile` dialect compiler.
+    /// True only when runtime dispatch is mediated by the neutral IR compiler.
+    /// Static compiler availability lives in `BackendCapabilityV2`; this report
+    /// is intentionally stricter so raw backend-shaped dispatch is not
+    /// over-reported as compiler-mediated.
     #[serde(default)]
     pub compiler_mediated: bool,
     /// V2 dimension 4: resource-lifecycle kind
@@ -661,7 +699,8 @@ mod tests {
     #[test]
     fn conformance_report_carries_capability_evidence() {
         // B.3: every plugin's conformance report must carry honest capability
-        // evidence matching the V2 model.
+        // evidence. Runtime executor evidence mirrors V2; compiler mediation is
+        // stricter than V2 and must only claim a wired runtime compiler path.
         for plugin in all_plugins() {
             let kind = plugin.kind();
             let report = plugin.conformance_report();
@@ -672,7 +711,15 @@ mod tests {
             );
             let v2 = kind.capabilities_v2();
             assert_eq!(report.native_executor, v2.native_executor, "{kind:?}");
-            assert_eq!(report.compiler_mediated, v2.compiler_mediated, "{kind:?}");
+            assert_eq!(
+                report.compiler_mediated,
+                compiler_mediated_runtime_path_wired(&kind),
+                "{kind:?}"
+            );
+            assert!(
+                !report.compiler_mediated || v2.compiler_mediated,
+                "{kind:?} cannot report compiler mediation without a static compiler"
+            );
             assert_eq!(report.lifecycle, v2.lifecycle.as_str(), "{kind:?}");
             assert_eq!(report.system_store, v2.system_store.as_str(), "{kind:?}");
             assert_eq!(
@@ -687,6 +734,19 @@ mod tests {
                 report.native_executor,
                 "{kind:?} is a registered plugin but reports no native executor"
             );
+        }
+    }
+
+    #[test]
+    fn conformance_report_marks_wired_neutral_ir_dispatch_as_compiler_mediated() {
+        for backend in [BackendKind::Mongodb, BackendKind::Clickhouse] {
+            if let Some(plugin) = plugin_for_kind(&backend) {
+                let report = plugin.conformance_report();
+                assert!(
+                    report.compiler_mediated,
+                    "{backend:?} generic dispatch accepts neutral IR, compiles it, and executes the compiled rendering"
+                );
+            }
         }
     }
 

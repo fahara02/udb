@@ -7,18 +7,19 @@ import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import { file_udb_core_common_v1_db } from "../../../common/v1/db_pb";
+import { file_udb_core_common_v1_security } from "../../../common/v1/security_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file udb/core/authn/entity/v1/mfa_policy.proto.
  */
 export const file_udb_core_authn_entity_v1_mfa_policy: GenFile = /*@__PURE__*/
-  fileDesc("Cil1ZGIvY29yZS9hdXRobi9lbnRpdHkvdjEvbWZhX3BvbGljeS5wcm90bxIYdWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxIsgECglNZmFQb2xpY3kSPwoJcG9saWN5X2lkGAEgASgJQiyCtxgoCglwb2xpY3lfaWQSBFVVSUQYASgBOhFnZW5fcmFuZG9tX3V1aWQoKRJWCgl0ZW5hbnRfaWQYAiABKAlCQ4K3GD8KCXRlbmFudF9pZBIMVkFSQ0hBUigxMjApGAFSIgoXaWR4X21mYV9wb2xpY2llc190ZW5hbnQSBUJUUkVFGAEShQEKC3JlcXVpcmVfbWZhGAMgASgIQnCCtxhsCgtyZXF1aXJlX21mYRIHQk9PTEVBThgBOgVmYWxzZVpLV2hlbiB0cnVlLCB0aGUgdGVuYW50J3MgdXNlcnMgbXVzdCBlbnJvbCBNRkEgYmVmb3JlIHBhc3N3b3JkIGxvZ2luIHN1Y2NlZWRzEmYKCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQjaCtxgyCgpjcmVhdGVkX2F0EgtUSU1FU1RBTVBUWhgBOhFDVVJSRU5UX1RJTUVTVEFNUGABaAESYgoKdXBkYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCMoK3GC4KCnVwZGF0ZWRfYXQSC1RJTUVTVEFNUFRaGAE6EUNVUlJFTlRfVElNRVNUQU1QOk76thhKCgxtZmFfcG9saWNpZXMSCXVkYl9hdXRobhgHIAEqIVBlci10ZW5hbnQgTUZBIGVuZm9yY2VtZW50IHBvbGljeeoBB3ByaW1hcnlC+QEKHGNvbS51ZGIuY29yZS5hdXRobi5lbnRpdHkudjFCDk1mYVBvbGljeVByb3RvUAFaRGdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvYXV0aG4vZW50aXR5L3YxO2VudGl0eXYxogIEVUNBRaoCGHVkYi5jb3JlLkF1dGhuLkVudGl0eS5WMcoCGFVkYlxDb3JlXEF1dGhuXEVudGl0eVxWMeICJFVkYlxHUEJNZXRhZGF0YVxDb3JlXEF1dGhuXEVudGl0eVxWMeoCHFVkYjo6Q29yZTo6QXV0aG46OkVudGl0eTo6VjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_udb_core_common_v1_db]);
+  fileDesc("Cil1ZGIvY29yZS9hdXRobi9lbnRpdHkvdjEvbWZhX3BvbGljeS5wcm90bxIYdWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxIuUFCglNZmFQb2xpY3kSPwoJcG9saWN5X2lkGAEgASgJQiyCtxgoCglwb2xpY3lfaWQSBFVVSUQYASgBOhFnZW5fcmFuZG9tX3V1aWQoKRJWCgl0ZW5hbnRfaWQYAiABKAlCQ4K3GD8KCXRlbmFudF9pZBIMVkFSQ0hBUigxMjApGAFSIgoXaWR4X21mYV9wb2xpY2llc190ZW5hbnQSBUJUUkVFGAEShQEKC3JlcXVpcmVfbWZhGAMgASgIQnCCtxhsCgtyZXF1aXJlX21mYRIHQk9PTEVBThgBOgVmYWxzZVpLV2hlbiB0cnVlLCB0aGUgdGVuYW50J3MgdXNlcnMgbXVzdCBlbnJvbCBNRkEgYmVmb3JlIHBhc3N3b3JkIGxvZ2luIHN1Y2NlZWRzEmYKCmNyZWF0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQjaCtxgyCgpjcmVhdGVkX2F0EgtUSU1FU1RBTVBUWhgBOhFDVVJSRU5UX1RJTUVTVEFNUGABaAESYgoKdXBkYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCMoK3GC4KCnVwZGF0ZWRfYXQSC1RJTUVTVEFNUFRaGAE6EUNVUlJFTlRfVElNRVNUQU1QOuoB+rYYSgoMbWZhX3BvbGljaWVzEgl1ZGJfYXV0aG4YByABKiFQZXItdGVuYW50IE1GQSBlbmZvcmNlbWVudCBwb2xpY3nqAQdwcmltYXJ5irIZlwEKBnRlbmFudBoJdGVuYW50X2lkKjR0ZW5hbnRfaWQgPSBjdXJyZW50X3NldHRpbmcoJ2FwcC5jdXJyZW50X3RlbmFudF9pZCcpMgtzb2Z0X2RlbGV0ZToRYXV0aG4ub3BlcmF0aW9uYWxA+xNIAlIGdGVuYW50WghzdGFuZGFyZHIVdGVuYW50LmRhdGFfcmVzaWRlbmN5QvkBChxjb20udWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxQg5NZmFQb2xpY3lQcm90b1ABWkRnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2F1dGhuL2VudGl0eS92MTtlbnRpdHl2MaICBFVDQUWqAhh1ZGIuY29yZS5BdXRobi5FbnRpdHkuVjHKAhhVZGJcQ29yZVxBdXRoblxFbnRpdHlcVjHiAiRVZGJcR1BCTWV0YWRhdGFcQ29yZVxBdXRoblxFbnRpdHlcVjHqAhxVZGI6OkNvcmU6OkF1dGhuOjpFbnRpdHk6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_udb_core_common_v1_db, file_udb_core_common_v1_security]);
 
 /**
  * ---------------------------------------------------------------------------
  * MfaPolicy — per-tenant MFA enforcement.
- *
+ * 
  * Migration order 7. One row per tenant. When require_mfa is true, password-only
  * login is rejected for that tenant's users until they enrol a second factor.
  * ---------------------------------------------------------------------------

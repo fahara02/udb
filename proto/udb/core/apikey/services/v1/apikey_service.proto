@@ -25,12 +25,93 @@ option php_namespace = "Udb\\Core\\Apikey\\Services\\V1";
 //   4. Enforce rate limits (increment usage counter)
 // ---------------------------------------------------------------------------
 service ApiKeyService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "apikey"
+    logical_service_id: "apikey"
+    proto_service_id: "apikey"
+    display_name: "API Keys"
+    category: "auth"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "apiKeys"
+    cli_scaffold_group: "auth"
+    health_check_ref: "apikey"
+    capability_ref: "native.apikey"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "auth"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "auth"
+    import_path: "udb/native/auth"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.apikey.config"
+    required_native_services: "apikey"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "apikey"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
   // ── Key lifecycle (admin-only) ────────────────────────────────────────────
   // Returns the plain key ONCE in CreateApiKeyResponse — never again.
   rpc CreateApiKey(CreateApiKeyRequest) returns (CreateApiKeyResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:apikey:create-api-key"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "apikey.CreateApiKey"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "create_api_key"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.create_api_key.boilerplate"
+      route_name: "create_api_key"
+      middleware_name: "udb_auth"
+      required_native_services: "apikey"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "apikey"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "apikey.CreateApiKey"
+      outbox_topic: "apikey.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -45,7 +126,48 @@ service ApiKeyService {
   rpc GetApiKey(GetApiKeyRequest) returns (GetApiKeyResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:apikey:get-api-key"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "apikey.GetApiKey"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_api_key"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.get_api_key.boilerplate"
+      route_name: "get_api_key"
+      middleware_name: "udb_auth"
+      required_native_services: "apikey"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "apikey"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "apikey.GetApiKey"
+      outbox_topic: "apikey.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -57,7 +179,48 @@ service ApiKeyService {
   rpc ListApiKeys(ListApiKeysRequest) returns (ListApiKeysResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:apikey:list-api-keys"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "apikey.ListApiKeys"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_api_keys"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.list_api_keys.boilerplate"
+      route_name: "list_api_keys"
+      middleware_name: "udb_auth"
+      required_native_services: "apikey"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "apikey"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "apikey.ListApiKeys"
+      outbox_topic: "apikey.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -69,7 +232,48 @@ service ApiKeyService {
   rpc UpdateApiKey(UpdateApiKeyRequest) returns (UpdateApiKeyResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:apikey:update-api-key"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "apikey.UpdateApiKey"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "update_api_key"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.update_api_key.boilerplate"
+      route_name: "update_api_key"
+      middleware_name: "udb_auth"
+      required_native_services: "apikey"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "apikey"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "apikey.UpdateApiKey"
+      outbox_topic: "apikey.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -84,7 +288,48 @@ service ApiKeyService {
   rpc RevokeApiKey(RevokeApiKeyRequest) returns (RevokeApiKeyResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:apikey:revoke-api-key"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "apikey.RevokeApiKey"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "revoke_api_key"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.revoke_api_key.boilerplate"
+      route_name: "revoke_api_key"
+      middleware_name: "udb_auth"
+      required_native_services: "apikey"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "apikey"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "apikey.RevokeApiKey"
+      outbox_topic: "apikey.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -94,11 +339,133 @@ service ApiKeyService {
     option (google.api.http) = {delete: "/v1/api_keys/{key_id}"};
   }
 
+  // Rotate a key's secret in place (same key_id + lineage). Returns the new
+  // plain key ONCE; the old secret is invalidated immediately.
+  rpc RotateApiKey(RotateApiKeyRequest) returns (RotateApiKeyResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:apikey:rotate-api-key"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "apikey.RotateApiKey"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "rotate_api_key"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "apikey.RotateApiKey"
+      outbox_topic: "apikey.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/api_keys/{key_id}:rotate"
+      body: "*"
+    };
+  }
+
+  // Emergency bulk revoke by selector (prefix/owner/tenant/project/scope/before).
+  rpc EmergencyRevokeApiKeys(EmergencyRevokeApiKeysRequest) returns (EmergencyRevokeApiKeysResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:apikey:emergency-revoke-api-keys"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "apikey.EmergencyRevokeApiKeys"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "emergency_revoke_api_keys"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "apikey.EmergencyRevokeApiKeys"
+      outbox_topic: "apikey.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/api_keys:emergency-revoke"
+      body: "*"
+    };
+  }
+
   // ── Validation (called by API gateway — internal, not public HTTP) ────────
   rpc ValidateApiKey(ValidateApiKeyRequest) returns (ValidateApiKeyResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:apikey:validate-api-key"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "apikey.ValidateApiKey"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "validate_api_key"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.validate_api_key.boilerplate"
+      route_name: "validate_api_key"
+      middleware_name: "udb_auth"
+      required_native_services: "apikey"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "apikey"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "apikey.ValidateApiKey"
+      outbox_topic: "apikey.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -115,7 +482,48 @@ service ApiKeyService {
   rpc GetApiKeyUsageStats(GetApiKeyUsageStatsRequest) returns (GetApiKeyUsageStatsResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:apikey:get-api-key-usage-stats"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "apikey.GetApiKeyUsageStats"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_api_key_usage_stats"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.get_api_key_usage_stats.boilerplate"
+      route_name: "get_api_key_usage_stats"
+      middleware_name: "udb_auth"
+      required_native_services: "apikey"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "apikey"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "apikey.GetApiKeyUsageStats"
+      outbox_topic: "apikey.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true

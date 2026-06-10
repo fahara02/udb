@@ -250,8 +250,13 @@ impl InDoubtRegistry {
     }
 
     pub fn get(&self, label: &str) -> Option<Arc<dyn XaInDoubtParticipant>> {
-        // The ledger stores labels as `<backend>:<instance>` — strip
-        // the instance for the lookup.
+        // Exact `<backend>:<instance>` match first, so multi-instance
+        // backends (e.g. two MySQL servers) resolve to the RIGHT pool…
+        if let Some(p) = self.by_label.get(&label.to_ascii_lowercase()) {
+            return Some(p.clone());
+        }
+        // …then fall back to the bare backend label for participants
+        // registered without an instance suffix.
         let key = label
             .split_once(':')
             .map(|(b, _)| b)
@@ -367,6 +372,12 @@ pub async fn drive_indoubt_row(
                     backend,
                 },
             }),
+            Err(reason) if is_already_terminal_prepared_xid_error(&reason) => {
+                outcomes.push(RecoveryOutcome::AlreadyTerminal {
+                    xid: xid.clone(),
+                    backend,
+                })
+            }
             Err(reason) => outcomes.push(RecoveryOutcome::Failed {
                 xid: xid.clone(),
                 backend,
@@ -375,6 +386,15 @@ pub async fn drive_indoubt_row(
         }
     }
     outcomes
+}
+
+fn is_already_terminal_prepared_xid_error(reason: &str) -> bool {
+    let lower = reason.to_ascii_lowercase();
+    lower.contains("does not exist")
+        || lower.contains("not found")
+        || lower.contains("unknown xid")
+        || lower.contains("xaer_nota")
+        || lower.contains("no such transaction")
 }
 
 /// Recovery worker tunables.
@@ -406,17 +426,67 @@ impl Default for RecoveryConfig {
     }
 }
 
-/// Startup recovery for abandoned PostgreSQL 2PC prepared transactions.
+/// What the presumed-abort sweep should do with one aged `udb-%`
+/// prepared transaction, given its XA-ledger row (if any).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PreparedSweepAction {
+    /// No ledger row (or the ledger says rolled back / prepare failed):
+    /// presumed-abort applies — `ROLLBACK PREPARED`.
+    PresumeAbort,
+    /// The coordinator durably decided COMMIT (write-ahead row or
+    /// terminal `committed` row): drive the straggler forward with
+    /// `COMMIT PREPARED`. NEVER roll back.
+    DriveCommit,
+    /// Owned by the in-doubt recovery worker or parked for an operator:
+    /// leave the prepared transaction untouched.
+    Skip,
+}
+
+/// Item 5: the sweep consults the ledger before presuming abort. Only an
+/// aged prepared xact with NO ledger row may be presumed aborted; any row
+/// carrying a commit decision (terminal `committed`, or in-doubt with
+/// commit intent) must never be rolled back.
+pub fn prepared_sweep_action(ledger: Option<(&str, &str)>) -> PreparedSweepAction {
+    match ledger {
+        None => PreparedSweepAction::PresumeAbort,
+        Some((decision, reason)) => match decision {
+            "committed" => PreparedSweepAction::DriveCommit,
+            "rolled_back" => PreparedSweepAction::PresumeAbort,
+            "in_doubt" => {
+                let row = InDoubtLedgerRow {
+                    xid: String::new(),
+                    participants: Vec::new(),
+                    reason: reason.to_string(),
+                };
+                match row.target_intent() {
+                    // Commit-intent rows belong to the in-doubt worker,
+                    // which drives them to COMMIT — never abort them here.
+                    RecoveryIntent::Commit => PreparedSweepAction::Skip,
+                    RecoveryIntent::Rollback => PreparedSweepAction::PresumeAbort,
+                }
+            }
+            // `manual_review` and anything unknown: fail safe — an
+            // operator owns the decision, do not destroy state.
+            _ => PreparedSweepAction::Skip,
+        },
+    }
+}
+
+/// Startup/periodic recovery for abandoned PostgreSQL 2PC prepared transactions.
 ///
 /// `begin_tx`'s live 2PC path issues `PREPARE TRANSACTION 'udb_<txid>'` and then
 /// `COMMIT PREPARED` on a fresh connection. If the process crashes between the
 /// two, the prepared transaction is stranded in `pg_prepared_xacts` holding its
-/// row locks **forever**. Following the standard 2PC *presumed-abort* rule, this
-/// sweep `ROLLBACK PREPARED`s every `udb_`-prefixed prepared transaction older
-/// than `grace_secs` (the grace window leaves prepares from in-flight requests
-/// untouched). Returns the number rolled back. Safe to call on every startup.
+/// row locks **forever**. This sweep applies the 2PC *presumed-abort* rule
+/// **ledger-aware** (item 5): each aged `udb-`-prefixed prepared transaction is
+/// joined against the XA ledger first — commit-decided xids are driven forward
+/// (or left to the in-doubt worker), and only xids with NO ledger record are
+/// `ROLLBACK PREPARED`-ed. The grace window leaves prepares from in-flight
+/// requests untouched. Returns the number driven terminal (rolled back or
+/// committed). Safe to call on every startup and on a recovery interval.
 pub async fn recover_abandoned_prepared_transactions(
     pool: &sqlx::PgPool,
+    config: &SystemCatalogConfig,
     grace_secs: i64,
 ) -> Result<u64, String> {
     // Coordinator xids are `udb-<uuid>`; never touch a co-tenant application's
@@ -430,33 +500,80 @@ pub async fn recover_abandoned_prepared_transactions(
     .fetch_all(pool)
     .await
     .map_err(|e| format!("scan pg_prepared_xacts failed: {e}"))?;
-    let mut rolled_back = 0u64;
+    if gids.is_empty() {
+        return Ok(0);
+    }
+    ensure_xa_ledger_table(pool, config).await?;
+    let relation = config.xa_ledger_relation();
+    let ledger_rows: Vec<(String, String, String)> = sqlx::query_as(&format!(
+        "SELECT xid, decision, reason FROM {relation} WHERE xid = ANY($1)"
+    ))
+    .bind(&gids)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("join prepared xacts against XA ledger failed: {e}"))?;
+    let ledger_by_xid: HashMap<String, (String, String)> = ledger_rows
+        .into_iter()
+        .map(|(xid, decision, reason)| (xid, (decision, reason)))
+        .collect();
+    let mut driven_terminal = 0u64;
     for gid in gids {
         // Defense-in-depth: gid is operator-data-adjacent, so validate the
-        // charset before interpolating into ROLLBACK PREPARED (xids can't be
-        // parameter-bound in this statement form).
+        // charset before interpolating into COMMIT/ROLLBACK PREPARED (xids
+        // can't be parameter-bound in this statement form).
         if validate_xid(&gid).is_err() {
             tracing::warn!(gid = %gid, "skipping prepared xact with unexpected gid charset");
             continue;
         }
-        match sqlx::query(&format!("ROLLBACK PREPARED '{gid}'"))
-            .execute(pool)
-            .await
-        {
-            Ok(_) => {
-                rolled_back += 1;
-                tracing::warn!(
+        let ledger = ledger_by_xid
+            .get(&gid)
+            .map(|(decision, reason)| (decision.as_str(), reason.as_str()));
+        match prepared_sweep_action(ledger) {
+            PreparedSweepAction::Skip => {
+                tracing::info!(
                     gid = %gid,
-                    "rolled back abandoned UDB prepared transaction (presumed-abort recovery)"
+                    "leaving prepared transaction to the in-doubt recovery worker / operator"
                 );
             }
-            Err(e) => tracing::warn!(
-                gid = %gid,
-                "failed to roll back abandoned prepared transaction: {e}"
-            ),
+            PreparedSweepAction::DriveCommit => {
+                match sqlx::query(&format!("COMMIT PREPARED '{gid}'"))
+                    .execute(pool)
+                    .await
+                {
+                    Ok(_) => {
+                        driven_terminal += 1;
+                        tracing::warn!(
+                            gid = %gid,
+                            "committed straggling prepared transaction per ledger commit decision"
+                        );
+                    }
+                    Err(e) => tracing::warn!(
+                        gid = %gid,
+                        "failed to commit ledger-decided prepared transaction: {e}"
+                    ),
+                }
+            }
+            PreparedSweepAction::PresumeAbort => {
+                match sqlx::query(&format!("ROLLBACK PREPARED '{gid}'"))
+                    .execute(pool)
+                    .await
+                {
+                    Ok(_) => {
+                        driven_terminal += 1;
+                        tracing::warn!(
+                            gid = %gid,
+                            "rolled back abandoned UDB prepared transaction (presumed-abort recovery)"
+                        );
+                    }
+                    Err(e) => tracing::warn!(
+                        gid = %gid,
+                        "failed to roll back abandoned prepared transaction: {e}"
+                    ),
+                }
+            }
         }
     }
-    Ok(rolled_back)
+    Ok(driven_terminal)
 }
 
 pub async fn ensure_xa_ledger_table(
@@ -481,114 +598,200 @@ pub async fn record_xa_ledger_entry(
     let relation = config.xa_ledger_relation();
     let participants = serde_json::to_value(&entry.participants)
         .map_err(|e| format!("serialize XA participants failed: {e}"))?;
-    sqlx::query(&format!(
-        "INSERT INTO {relation}
+    sqlx::query(&record_xa_ledger_upsert_sql(&relation))
+        .bind(&entry.xid)
+        .bind(&entry.tenant_id)
+        .bind(&entry.project_id)
+        .bind(&entry.origin_rpc)
+        .bind(&entry.correlation_id)
+        .bind(participants)
+        .bind(entry.decision.as_str())
+        .bind(&entry.reason)
+        .bind(entry.decided_at_unix_ms as f64)
+        .execute(pool)
+        .await
+        .map_err(|e| format!("record XA ledger failed: {e}"))?;
+    Ok(())
+}
+
+fn record_xa_ledger_upsert_sql(relation: &str) -> String {
+    format!(
+        "INSERT INTO {relation} AS xa_current
              (xid, tenant_id, project_id, origin_rpc, correlation_id,
               participants, decision, reason, decided_at, updated_at)
          VALUES ($1,$2,$3,$4,$5,$6::JSONB,$7,$8,
                  to_timestamp($9::DOUBLE PRECISION / 1000.0), NOW())
          ON CONFLICT (xid) DO UPDATE SET
-              tenant_id = EXCLUDED.tenant_id,
-              project_id = EXCLUDED.project_id,
-              origin_rpc = EXCLUDED.origin_rpc,
-              correlation_id = EXCLUDED.correlation_id,
-              participants = EXCLUDED.participants,
-              decision = EXCLUDED.decision,
-              reason = EXCLUDED.reason,
-              decided_at = EXCLUDED.decided_at,
-              updated_at = NOW()"
-    ))
-    .bind(&entry.xid)
-    .bind(&entry.tenant_id)
-    .bind(&entry.project_id)
-    .bind(&entry.origin_rpc)
-    .bind(&entry.correlation_id)
-    .bind(participants)
-    .bind(entry.decision.as_str())
-    .bind(&entry.reason)
-    .bind(entry.decided_at_unix_ms as f64)
-    .execute(pool)
-    .await
-    .map_err(|e| format!("record XA ledger failed: {e}"))?;
-    Ok(())
+              tenant_id = CASE WHEN xa_current.decision = 'committed' THEN xa_current.tenant_id ELSE EXCLUDED.tenant_id END,
+              project_id = CASE WHEN xa_current.decision = 'committed' THEN xa_current.project_id ELSE EXCLUDED.project_id END,
+              origin_rpc = CASE WHEN xa_current.decision = 'committed' THEN xa_current.origin_rpc ELSE EXCLUDED.origin_rpc END,
+              correlation_id = CASE WHEN xa_current.decision = 'committed' THEN xa_current.correlation_id ELSE EXCLUDED.correlation_id END,
+              participants = CASE WHEN xa_current.decision = 'committed' THEN xa_current.participants ELSE EXCLUDED.participants END,
+              decision = CASE WHEN xa_current.decision = 'committed' THEN xa_current.decision ELSE EXCLUDED.decision END,
+              reason = CASE WHEN xa_current.decision = 'committed' THEN xa_current.reason ELSE EXCLUDED.reason END,
+              decided_at = CASE WHEN xa_current.decision = 'committed' THEN xa_current.decided_at ELSE EXCLUDED.decided_at END,
+              updated_at = CASE WHEN xa_current.decision = 'committed' THEN xa_current.updated_at ELSE NOW() END"
+    )
+}
+
+/// One scan page for the in-doubt sweep. Pagination (item 5c) replaces the
+/// old hard `LIMIT 100`: pages are fetched until the backlog is drained.
+const INDOUBT_SCAN_PAGE_SIZE: usize = 200;
+
+/// Registry with the always-available participant: the broker's own
+/// Postgres pool. Callers (the startup/periodic recovery worker) extend
+/// it with one `MysqlInDoubtParticipant` per configured MySQL instance.
+pub fn default_indoubt_registry(pool: &sqlx::PgPool) -> InDoubtRegistry {
+    let mut registry = InDoubtRegistry::new();
+    registry.register(Arc::new(PostgresInDoubtParticipant {
+        label: "postgres".to_string(),
+        pool: pool.clone(),
+    }));
+    registry
+}
+
+/// Item 24: decide what an in-doubt row's decision becomes after one more
+/// failed recovery attempt. At/after `max_attempts` the row is parked as
+/// `manual_review` and the scan (which only selects `in_doubt`) stops
+/// retrying it. `max_attempts == 0` disables escalation (retry forever).
+pub fn next_decision_after_failed_attempt(
+    attempts_after_increment: u32,
+    max_attempts: u32,
+) -> XaDecision {
+    if max_attempts > 0 && attempts_after_increment >= max_attempts {
+        XaDecision::ManualReview
+    } else {
+        XaDecision::InDoubt
+    }
 }
 
 pub async fn recover_xa_ledger_indoubt(
     pool: &sqlx::PgPool,
     config: &SystemCatalogConfig,
 ) -> Result<u64, String> {
+    let registry = default_indoubt_registry(pool);
+    recover_xa_ledger_indoubt_with(pool, config, &registry, &RecoveryConfig::default()).await
+}
+
+/// In-doubt sweep against an explicit participant registry (item 23 wires
+/// MySQL participants in via the recovery worker) with escalation to
+/// `manual_review` after `recovery.max_attempts` failed sweeps (item 24).
+pub async fn recover_xa_ledger_indoubt_with(
+    pool: &sqlx::PgPool,
+    config: &SystemCatalogConfig,
+    registry: &InDoubtRegistry,
+    recovery: &RecoveryConfig,
+) -> Result<u64, String> {
     ensure_xa_ledger_table(pool, config).await?;
     let relation = config.xa_ledger_relation();
-    let rows = sqlx::query(&format!(
-        "SELECT xid, participants, reason FROM {relation}
-         WHERE decision = 'in_doubt'
-         ORDER BY updated_at ASC
-         LIMIT 100"
-    ))
-    .fetch_all(pool)
-    .await
-    .map_err(|e| format!("load XA in-doubt ledger rows failed: {e}"))?;
-
-    let mut registry = InDoubtRegistry::new();
-    registry.register(Arc::new(PostgresInDoubtParticipant {
-        label: "postgres".to_string(),
-        pool: pool.clone(),
-    }));
-
     let mut terminal = 0u64;
-    for db_row in rows {
-        let xid: String = db_row.try_get("xid").map_err(|e| e.to_string())?;
-        let participants_json: serde_json::Value =
-            db_row.try_get("participants").map_err(|e| e.to_string())?;
-        let participants = serde_json::from_value::<Vec<String>>(participants_json)
-            .map_err(|e| format!("decode XA participants for {xid}: {e}"))?;
-        let reason: String = db_row.try_get("reason").unwrap_or_default();
-        let row = InDoubtLedgerRow {
-            xid: xid.clone(),
-            participants,
-            reason,
-        };
-        let outcomes = drive_indoubt_row(&row, &registry).await;
-        if outcomes.iter().all(RecoveryOutcome::is_terminal) {
-            let decision = if outcomes
-                .iter()
-                .any(|o| matches!(o, RecoveryOutcome::RolledBack { .. }))
-            {
-                XaDecision::RolledBack
-            } else {
-                XaDecision::Committed
+    // Failed rows get `updated_at = NOW()` and re-match the predicate, so
+    // track processed xids to guarantee the page loop terminates after one
+    // full pass over the backlog.
+    let mut processed: std::collections::HashSet<String> = std::collections::HashSet::new();
+    loop {
+        let rows = sqlx::query(&format!(
+            "SELECT xid, participants, reason, recovery_attempts FROM {relation}
+             WHERE decision = 'in_doubt'
+             ORDER BY updated_at ASC
+             LIMIT {INDOUBT_SCAN_PAGE_SIZE}"
+        ))
+        .fetch_all(pool)
+        .await
+        .map_err(|e| format!("load XA in-doubt ledger rows failed: {e}"))?;
+        let page_len = rows.len();
+        let mut progressed = false;
+        for db_row in rows {
+            let xid: String = db_row.try_get("xid").map_err(|e| e.to_string())?;
+            if !processed.insert(xid.clone()) {
+                continue;
+            }
+            progressed = true;
+            let participants_json: serde_json::Value =
+                db_row.try_get("participants").map_err(|e| e.to_string())?;
+            let participants = serde_json::from_value::<Vec<String>>(participants_json)
+                .map_err(|e| format!("decode XA participants for {xid}: {e}"))?;
+            let reason: String = db_row.try_get("reason").unwrap_or_default();
+            let attempts: i32 = db_row.try_get("recovery_attempts").unwrap_or(0);
+            let row = InDoubtLedgerRow {
+                xid: xid.clone(),
+                participants,
+                reason,
             };
-            mark_xa_ledger_decision(pool, config, &xid, decision, "").await?;
-            terminal += 1;
-        } else {
-            let reason = outcomes
-                .iter()
-                .filter_map(|outcome| match outcome {
-                    RecoveryOutcome::Failed {
-                        backend, reason, ..
-                    } => Some(format!("{backend}: {reason}")),
-                    RecoveryOutcome::NoParticipant { backend, .. } => {
-                        Some(format!("{backend}: no in-doubt participant registered"))
-                    }
-                    _ => None,
-                })
-                .collect::<Vec<_>>()
-                .join("; ");
-            sqlx::query(&format!(
-                "UPDATE {relation}
-                 SET recovery_attempts = recovery_attempts + 1,
-                     reason = CASE WHEN $2 = '' THEN reason ELSE $2 END,
-                     updated_at = NOW()
-                 WHERE xid = $1"
-            ))
-            .bind(&xid)
-            .bind(reason)
-            .execute(pool)
-            .await
-            .map_err(|e| format!("update XA retry state failed: {e}"))?;
+            let outcomes = drive_indoubt_row(&row, registry).await;
+            if outcomes.iter().all(RecoveryOutcome::is_terminal) {
+                let decision = if outcomes
+                    .iter()
+                    .any(|o| matches!(o, RecoveryOutcome::RolledBack { .. }))
+                {
+                    XaDecision::RolledBack
+                } else {
+                    XaDecision::Committed
+                };
+                mark_xa_ledger_decision(pool, config, &xid, decision, "").await?;
+                terminal += 1;
+            } else {
+                let reason = outcomes
+                    .iter()
+                    .filter_map(|outcome| match outcome {
+                        RecoveryOutcome::Failed {
+                            backend, reason, ..
+                        } => Some(format!("{backend}: {reason}")),
+                        RecoveryOutcome::NoParticipant { backend, .. } => {
+                            Some(format!("{backend}: no in-doubt participant registered"))
+                        }
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>()
+                    .join("; ");
+                let next_decision = next_decision_after_failed_attempt(
+                    attempts.max(0) as u32 + 1,
+                    recovery.max_attempts,
+                );
+                sqlx::query(&format!(
+                    "UPDATE {relation}
+                     SET recovery_attempts = recovery_attempts + 1,
+                         decision = $3,
+                         reason = CASE WHEN $2 = '' THEN reason ELSE $2 END,
+                         updated_at = NOW()
+                     WHERE xid = $1"
+                ))
+                .bind(&xid)
+                .bind(reason)
+                .bind(next_decision.as_str())
+                .execute(pool)
+                .await
+                .map_err(|e| format!("update XA retry state failed: {e}"))?;
+                if next_decision == XaDecision::ManualReview {
+                    tracing::error!(
+                        xid = %xid,
+                        attempts = attempts + 1,
+                        max_attempts = recovery.max_attempts,
+                        "XA in-doubt transaction exceeded max recovery attempts; parked for manual review"
+                    );
+                }
+            }
+        }
+        if page_len < INDOUBT_SCAN_PAGE_SIZE || !progressed {
+            break;
         }
     }
     Ok(terminal)
+}
+
+/// One full XA recovery pass: drive in-doubt ledger rows terminal, then
+/// run the ledger-aware presumed-abort sweep over aged prepared xacts.
+/// Shared by the startup run and the periodic lease-gated worker (item 24).
+pub async fn run_xa_recovery_pass(
+    pool: &sqlx::PgPool,
+    config: &SystemCatalogConfig,
+    registry: &InDoubtRegistry,
+    recovery: &RecoveryConfig,
+    grace_secs: i64,
+) -> Result<(u64, u64), String> {
+    let ledger = recover_xa_ledger_indoubt_with(pool, config, registry, recovery).await?;
+    let abandoned = recover_abandoned_prepared_transactions(pool, config, grace_secs).await?;
+    Ok((ledger, abandoned))
 }
 
 async fn mark_xa_ledger_decision(
@@ -601,9 +804,19 @@ async fn mark_xa_ledger_decision(
     let relation = config.xa_ledger_relation();
     sqlx::query(&format!(
         "UPDATE {relation}
-         SET decision = $2,
-             reason = CASE WHEN $3 = '' THEN reason ELSE $3 END,
-             updated_at = NOW()
+         SET decision = CASE
+                 WHEN decision = 'committed' AND $2 <> 'committed' THEN decision
+                 ELSE $2
+             END,
+             reason = CASE
+                 WHEN decision = 'committed' AND $2 <> 'committed' THEN reason
+                 WHEN $3 = '' THEN reason
+                 ELSE $3
+             END,
+             updated_at = CASE
+                 WHEN decision = 'committed' AND $2 <> 'committed' THEN updated_at
+                 ELSE NOW()
+             END
          WHERE xid = $1"
     ))
     .bind(xid)
@@ -615,9 +828,10 @@ async fn mark_xa_ledger_decision(
     Ok(())
 }
 
-fn xa_ledger_statements(config: &SystemCatalogConfig) -> [String; 2] {
+fn xa_ledger_statements(config: &SystemCatalogConfig) -> Vec<String> {
     let relation = config.xa_ledger_relation();
-    [
+    let table = &config.xa_ledger_table;
+    vec![
         format!(
             "CREATE TABLE IF NOT EXISTS {relation} (
                 xid TEXT PRIMARY KEY,
@@ -627,12 +841,31 @@ fn xa_ledger_statements(config: &SystemCatalogConfig) -> [String; 2] {
                 correlation_id TEXT NOT NULL DEFAULT '',
                 participants JSONB NOT NULL DEFAULT '[]'::JSONB,
                 decision TEXT NOT NULL DEFAULT 'in_doubt'
-                    CHECK (decision IN ('committed','rolled_back','in_doubt')),
+                    CHECK (decision IN ('committed','rolled_back','in_doubt','manual_review')),
                 reason TEXT NOT NULL DEFAULT '',
                 recovery_attempts INTEGER NOT NULL DEFAULT 0,
                 decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )"
+        ),
+        // Item 24 migration: ledgers created before the `manual_review`
+        // decision existed carry the narrower CHECK. The DO block only
+        // takes the ACCESS EXCLUSIVE lock when the constraint actually
+        // needs widening, so steady-state calls stay catalog-read-only.
+        format!(
+            "DO $$
+             BEGIN
+                 IF EXISTS (
+                     SELECT 1 FROM pg_constraint
+                     WHERE conrelid = to_regclass('{relation}')
+                       AND conname = '{table}_decision_check'
+                       AND pg_get_constraintdef(oid) NOT LIKE '%manual_review%'
+                 ) THEN
+                     ALTER TABLE {relation} DROP CONSTRAINT \"{table}_decision_check\";
+                     ALTER TABLE {relation} ADD CONSTRAINT \"{table}_decision_check\"
+                         CHECK (decision IN ('committed','rolled_back','in_doubt','manual_review'));
+                 END IF;
+             END $$"
         ),
         format!(
             "CREATE INDEX IF NOT EXISTS \"idx_{}_decision_updated\" ON {relation} (decision, updated_at)",
@@ -741,6 +974,62 @@ mod tests {
     }
 
     #[test]
+    fn prepared_sweep_never_rolls_back_commit_decided_rows() {
+        assert_eq!(
+            prepared_sweep_action(Some(("committed", ""))),
+            PreparedSweepAction::DriveCommit
+        );
+        assert_eq!(
+            prepared_sweep_action(Some((
+                "in_doubt",
+                crate::runtime::xa::XA_COMMIT_INTENT_REASON
+            ))),
+            PreparedSweepAction::Skip
+        );
+        assert_eq!(
+            prepared_sweep_action(Some(("manual_review", ""))),
+            PreparedSweepAction::Skip
+        );
+    }
+
+    #[test]
+    fn failed_attempt_policy_escalates_to_manual_review_at_max_attempts() {
+        assert_eq!(
+            next_decision_after_failed_attempt(1, 3),
+            XaDecision::InDoubt
+        );
+        assert_eq!(
+            next_decision_after_failed_attempt(3, 3),
+            XaDecision::ManualReview
+        );
+        assert_eq!(
+            next_decision_after_failed_attempt(99, 0),
+            XaDecision::InDoubt,
+            "max_attempts=0 means retry forever"
+        );
+    }
+
+    #[test]
+    fn indoubt_scan_page_size_processes_more_than_legacy_hundred_rows() {
+        assert!(
+            INDOUBT_SCAN_PAGE_SIZE > 100,
+            "XA in-doubt recovery must page beyond the old hard LIMIT 100"
+        );
+    }
+
+    #[test]
+    fn record_xa_ledger_upsert_preserves_existing_committed_decision() {
+        let sql = record_xa_ledger_upsert_sql("\"system\".\"udb_xa_ledger\"");
+        assert!(sql.contains("AS xa_current"));
+        assert!(sql.contains(
+            "decision = CASE WHEN xa_current.decision = 'committed' THEN xa_current.decision ELSE EXCLUDED.decision END"
+        ));
+        assert!(sql.contains(
+            "updated_at = CASE WHEN xa_current.decision = 'committed' THEN xa_current.updated_at ELSE NOW() END"
+        ));
+    }
+
+    #[test]
     fn validate_xid_accepts_canonical_format() {
         assert!(validate_xid("udb-abc-123").is_ok());
         assert!(validate_xid("udb_xid_42").is_ok());
@@ -839,6 +1128,54 @@ mod tests {
             }
             other => panic!("expected Failed, got {other:?}"),
         }
+    }
+
+    #[tokio::test]
+    async fn split_brain_duplicate_commit_is_treated_as_already_terminal() {
+        let participant = Arc::new(StubParticipant::new("postgres", vec!["udb-x".into()]));
+        *participant.commit_outcome.lock().unwrap() =
+            Err("prepared transaction with identifier \"udb-x\" does not exist".into());
+        let mut registry = InDoubtRegistry::new();
+        registry.register(participant.clone());
+
+        let row = InDoubtLedgerRow {
+            xid: "udb-x".into(),
+            participants: vec!["postgres:primary".into()],
+            reason: "COMMIT PREPARED transport error".into(),
+        };
+        let outcomes = drive_indoubt_row(&row, &registry).await;
+        assert!(matches!(
+            outcomes[0],
+            RecoveryOutcome::AlreadyTerminal { .. }
+        ));
+        assert!(
+            outcomes.iter().all(RecoveryOutcome::is_terminal),
+            "a duplicate recovery worker that loses the final COMMIT race must not poison the ledger"
+        );
+    }
+
+    #[tokio::test]
+    async fn repeated_indoubt_sweeps_do_not_recommit_terminal_xid() {
+        let participant = Arc::new(StubParticipant::new("mysql", vec!["udb-repeat".into()]));
+        let mut registry = InDoubtRegistry::new();
+        registry.register(participant.clone());
+
+        let row = InDoubtLedgerRow {
+            xid: "udb-repeat".into(),
+            participants: vec!["mysql:primary".into()],
+            reason: String::new(),
+        };
+        let first = drive_indoubt_row(&row, &registry).await;
+        assert!(matches!(first[0], RecoveryOutcome::Committed { .. }));
+
+        let second = drive_indoubt_row(&row, &registry).await;
+        assert!(matches!(second[0], RecoveryOutcome::AlreadyTerminal { .. }));
+        let events = participant.events.lock().unwrap().clone();
+        let commits = events
+            .iter()
+            .filter(|event| event.starts_with("commit_prepared"))
+            .count();
+        assert_eq!(commits, 1, "terminal recovery must be idempotent");
     }
 
     #[test]

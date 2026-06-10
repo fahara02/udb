@@ -3,9 +3,16 @@ syntax = "proto3";
 package udb.core.authz.entity.v1;
 
 import public "udb/core/authz/entity/v1/access_decision_audit.proto";
+import public "udb/core/authz/entity/v1/authz_revision.proto";
 import public "udb/core/authz/entity/v1/enums.proto";
+import public "udb/core/authz/entity/v1/governance_enums.proto";
+import public "udb/core/authz/entity/v1/policy_approval.proto";
+import public "udb/core/authz/entity/v1/policy_draft.proto";
 import public "udb/core/authz/entity/v1/policy_rule.proto";
+import public "udb/core/authz/entity/v1/policy_set.proto";
+import public "udb/core/authz/entity/v1/policy_simulation.proto";
 import public "udb/core/authz/entity/v1/policy_tuple.proto";
+import public "udb/core/authz/entity/v1/policy_version.proto";
 import public "udb/core/authz/entity/v1/role.proto";
 import public "udb/core/authz/entity/v1/role_permission.proto";
 import public "udb/core/authz/entity/v1/user_role.proto";

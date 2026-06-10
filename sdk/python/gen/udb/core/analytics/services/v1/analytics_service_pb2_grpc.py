@@ -9,7 +9,7 @@ class AnalyticsServiceStub(object):
     """---------------------------------------------------------------------------
     AnalyticsService - pipeline statistics, performance dashboards, Prometheus
     metric backing, SLA compliance reporting, and executor/reconciliation analytics.
-
+    
     HTTP prefix: /v1/analytics
     ---------------------------------------------------------------------------
 
@@ -62,7 +62,7 @@ class AnalyticsServiceServicer(object):
     """---------------------------------------------------------------------------
     AnalyticsService - pipeline statistics, performance dashboards, Prometheus
     metric backing, SLA compliance reporting, and executor/reconciliation analytics.
-
+    
     HTTP prefix: /v1/analytics
     ---------------------------------------------------------------------------
 
@@ -167,7 +167,7 @@ class AnalyticsService(object):
     """---------------------------------------------------------------------------
     AnalyticsService - pipeline statistics, performance dashboards, Prometheus
     metric backing, SLA compliance reporting, and executor/reconciliation analytics.
-
+    
     HTTP prefix: /v1/analytics
     ---------------------------------------------------------------------------
 

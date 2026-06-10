@@ -82,6 +82,19 @@ message ApiKey {
     replica_hint: "primary"
     required_scope: "apikey:revoke"
   };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "apikey.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
 
   string key_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "key_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
 
@@ -89,7 +102,7 @@ message ApiKey {
   string key_prefix = 2 [(udb.core.common.v1.pg_column) = { column_name: "key_prefix" sql_type: "VARCHAR(20)" not_null: true trigram_index: true comment: "First 8 chars of plain key: prefix_XXXXXXXX — shown in admin UI" }];
 
   // Keyed digest of the full plain key — used for lookup + equality check.
-  string key_hash = 3 [(udb.core.common.v1.pg_column) = { column_name: "key_hash" sql_type: "VARCHAR(128)" not_null: true unique: true index: { index_name: "idx_api_keys_key_hash" index_type: "HASH" unique: true } }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.encrypted_security) = true, (udb.core.common.v1.log_masked) = true];
+  string key_hash = 3 [(udb.core.common.v1.pg_column) = { column_name: "key_hash" sql_type: "VARCHAR(128)" not_null: true unique: true index: { index_name: "idx_api_keys_key_hash" index_type: "HASH" unique: true } }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.encrypted_security) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT hashing_algorithm: "hmac-sha256" uniqueness_scope: "tenant" }];
 
   string name = 4 [(udb.core.common.v1.pg_column) = { column_name: "name" sql_type: "VARCHAR(150)" not_null: true comment: "Human-readable key name" }];
 

@@ -28,7 +28,7 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 use uuid::Uuid;
 
-use super::dialect::apply_projection_summary_bucket;
+use super::dialect::{apply_projection_summary_bucket, projection_retry_delay_secs};
 use super::mysql::MysqlCanonicalStore;
 use super::system_store::{
     DeadLetterGroup, PendingTaskMetric, ProjectionClaimFilter, ProjectionOperation,
@@ -37,11 +37,6 @@ use super::system_store::{
 };
 
 const TABLE: &str = "udb_projection_tasks";
-
-fn projection_retry_delay_secs(retry_count: i32) -> i64 {
-    let attempt = retry_count.max(1).min(12) as u32;
-    (1_i64 << (attempt - 1)).min(3600)
-}
 
 impl MysqlCanonicalStore {
     /// Pool getter for the projection impl.
@@ -394,10 +389,21 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
                 new_status.as_str()
             )));
         }
+        // FAILED tasks back off exponentially before becoming re-claimable
+        // (claim gates on `next_retry_at <= NOW(6)`); DEAD_LETTER is terminal
+        // and keeps `next_retry_at = NULL`. The `?` backoff parameter is
+        // referenced in both CASE branches so the bind count stays correct.
+        let backoff_secs: Option<i64> = match new_status {
+            ProjectionTaskStatus::Failed => Some(projection_retry_delay_secs(new_retry_count)),
+            _ => None,
+        };
         let sql = format!(
             "UPDATE {TABLE}
              SET status = ?, retry_count = ?, last_error = ?,
-                 next_retry_at = NULL,
+                 next_retry_at = CASE
+                     WHEN ? IS NULL THEN NULL
+                     ELSE DATE_ADD(NOW(6), INTERVAL ? SECOND)
+                 END,
                  updated_at = NOW(6)
              WHERE task_id = ?"
         );
@@ -405,6 +411,8 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
             .bind(new_status.as_str())
             .bind(new_retry_count)
             .bind(error)
+            .bind(backoff_secs)
+            .bind(backoff_secs)
             .bind(task_id.to_string())
             .execute(self.mysql_pool())
             .await

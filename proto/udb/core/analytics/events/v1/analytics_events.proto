@@ -3,6 +3,7 @@ syntax = "proto3";
 package udb.core.analytics.events.v1;
 
 import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/security.proto";
 
 option csharp_namespace = "udb.core.Analytics.Events.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/analytics/events/v1;analyticseventsv1";
@@ -13,6 +14,14 @@ option php_namespace = "Udb\\Core\\Analytics\\Events\\V1";
 // Emitted when a pipeline metric snapshot batch is committed (hourly cron).
 // Kafka topic: udb.analytics.pipeline.snapshot.v1
 message PipelineSnapshotCommittedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.analytics.events.v1.PipelineSnapshotCommittedEvent"
+    outbox_topic: "udb.analytics.pipeline.snapshot.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string stage_name = 2;
   string snapshot_hour = 3; // ISO 8601 hour string
@@ -27,6 +36,14 @@ message PipelineSnapshotCommittedEvent {
 // Emitted when SLA breach is detected (p99 > threshold or error_rate > threshold).
 // Kafka topic: udb.analytics.sla.breach.v1
 message SlaBreachDetectedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.analytics.events.v1.SlaBreachDetectedEvent"
+    outbox_topic: "udb.analytics.sla.breach.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string stage_name = 2;
   string breach_type = 3; // "latency_p99" | "error_rate" | "throughput"
@@ -41,6 +58,14 @@ message SlaBreachDetectedEvent {
 // Emitted when daily executor and reconciliation summaries are generated.
 // Kafka topic: udb.analytics.daily.summary.v1
 message DailySummaryGeneratedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.analytics.events.v1.DailySummaryGeneratedEvent"
+    outbox_topic: "udb.analytics.daily.summary.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string summary_date = 2; // ISO 8601 date string
   int32 executor_summaries_count = 3;

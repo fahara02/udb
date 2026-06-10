@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package udb.core.idp.entity.v1;
+
+option csharp_namespace = "udb.core.Idp.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/idp/entity/v1;idpv1";
+option java_package = "com.udb.core.idp.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Idp\\Entity\\V1";
+
+// Kind of identity provider configured for a tenant.
+enum IdpKind {
+  IDP_KIND_UNSPECIFIED = 0;
+  IDP_KIND_NATIVE = 1; // UDB native password/MFA
+  IDP_KIND_OIDC = 2; // OpenID Connect (discovery + JWKS)
+  IDP_KIND_SAML = 3; // SAML 2.0 web SSO
+  IDP_KIND_LDAP = 4; // LDAP / Active Directory bind
+  IDP_KIND_CUSTOM_JWT = 5; // Bring-your-own signed JWT (jwks_url + claims)
+  IDP_KIND_EXTERNAL_SESSION = 6; // Upstream session handed off to UDB
+}
+
+// Normalized authentication assurance level derived from IdP auth-context /
+// MFA claims. Higher ordinal == stronger assurance. Authz policies (Phase K)
+// may require a minimum assurance level; the value is stamped onto sessions and
+// audit records so a decision can be correlated to how the subject authenticated.
+enum AssuranceLevel {
+  ASSURANCE_LEVEL_UNSPECIFIED = 0;
+  ASSURANCE_LEVEL_NONE = 1; // unauthenticated / anonymous
+  ASSURANCE_LEVEL_LOW = 2; // single factor, unverified context
+  ASSURANCE_LEVEL_SINGLE_FACTOR = 3; // single factor, verified (pwd / IdP w/o MFA)
+  ASSURANCE_LEVEL_MULTI_FACTOR = 4; // MFA asserted by IdP (amr/acr)
+  ASSURANCE_LEVEL_HARDWARE = 5; // phishing-resistant / hardware-backed (WebAuthn, smartcard)
+}
+
+// Health of a provider's discovery + key material.
+enum ProviderHealth {
+  PROVIDER_HEALTH_UNSPECIFIED = 0;
+  PROVIDER_HEALTH_HEALTHY = 1;
+  PROVIDER_HEALTH_DEGRADED = 2; // last refresh failed, serving cached keys
+  PROVIDER_HEALTH_UNREACHABLE = 3; // discovery/JWKS unreachable, no usable keys
+}
+
+// What SCIM does with a directory entry that disappears upstream.
+enum DeprovisionPolicy {
+  DEPROVISION_POLICY_UNSPECIFIED = 0;
+  DEPROVISION_POLICY_DEACTIVATE = 1; // suspend user + revoke sessions
+  DEPROVISION_POLICY_DELETE = 2; // soft-delete the external identity link
+  DEPROVISION_POLICY_RETAIN = 3; // keep the link, do nothing
+}

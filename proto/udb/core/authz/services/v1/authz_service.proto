@@ -4,6 +4,7 @@ package udb.core.authz.services.v1;
 
 import "google/api/annotations.proto";
 import "udb/core/authz/services/v1/core.proto";
+import "udb/core/authz/services/v1/governance.proto";
 import "udb/core/common/v1/security.proto";
 
 option csharp_namespace = "udb.core.Authz.Services.V1";
@@ -15,10 +16,91 @@ option php_namespace = "Udb\\Core\\Authz\\Services\\V1";
 // UDB-owned authorization service for RBAC, ABAC, ReBAC, tenant/project
 // domains, and audit-ready access decisions.
 service AuthzService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "authz"
+    logical_service_id: "authz"
+    proto_service_id: "authz"
+    display_name: "Authorization"
+    category: "governance"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "authz"
+    cli_scaffold_group: "authz"
+    health_check_ref: "authz"
+    capability_ref: "native.authz"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "authz"
+    import_path: "udb/native/authz"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.authz.config"
+    required_native_services: "authz"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "authz"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
   rpc Authorize(AuthzRequest) returns (AuthzResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:authorize"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.Authorize"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "authorize"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.authorize.boilerplate"
+      route_name: "authorize"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.Authorize"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -34,7 +116,48 @@ service AuthzService {
   rpc CheckAccess(CheckAccessRequest) returns (CheckAccessResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:check-access"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.CheckAccess"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "check_access"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.check_access.boilerplate"
+      route_name: "check_access"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.CheckAccess"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -50,7 +173,48 @@ service AuthzService {
   rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:create-role"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.CreateRole"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "create_role"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.create_role.boilerplate"
+      route_name: "create_role"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.CreateRole"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -66,7 +230,48 @@ service AuthzService {
   rpc AssignRole(AssignRoleRequest) returns (AssignRoleResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:assign-role"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.AssignRole"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "assign_role"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.assign_role.boilerplate"
+      route_name: "assign_role"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.AssignRole"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -82,7 +287,48 @@ service AuthzService {
   rpc CreatePolicyRule(CreatePolicyRuleRequest) returns (CreatePolicyRuleResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:create-policy-rule"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.CreatePolicyRule"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "create_policy_rule"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.create_policy_rule.boilerplate"
+      route_name: "create_policy_rule"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.CreatePolicyRule"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -98,7 +344,48 @@ service AuthzService {
   rpc ListUserPermissions(ListUserPermissionsRequest) returns (ListUserPermissionsResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:list-user-permissions"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.ListUserPermissions"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_user_permissions"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.list_user_permissions.boilerplate"
+      route_name: "list_user_permissions"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.ListUserPermissions"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -111,7 +398,48 @@ service AuthzService {
   rpc ListAccessDecisionAudits(ListAccessDecisionAuditsRequest) returns (ListAccessDecisionAuditsResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:list-access-decision-audits"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.ListAccessDecisionAudits"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_access_decision_audits"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.list_access_decision_audits.boilerplate"
+      route_name: "list_access_decision_audits"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.ListAccessDecisionAudits"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -125,7 +453,48 @@ service AuthzService {
   rpc RevokeRole(RevokeRoleRequest) returns (RevokeRoleResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:revoke-role"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.RevokeRole"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "revoke_role"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.revoke_role.boilerplate"
+      route_name: "revoke_role"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.RevokeRole"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -142,7 +511,48 @@ service AuthzService {
   rpc ListUserRoles(ListUserRolesRequest) returns (ListUserRolesResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:list-user-roles"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.ListUserRoles"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_user_roles"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.list_user_roles.boilerplate"
+      route_name: "list_user_roles"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.ListUserRoles"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -156,7 +566,48 @@ service AuthzService {
   rpc GetRole(GetRoleRequest) returns (GetRoleResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:get-role"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.GetRole"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_role"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.get_role.boilerplate"
+      route_name: "get_role"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.GetRole"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -170,7 +621,48 @@ service AuthzService {
   rpc ListRoles(ListRolesRequest) returns (ListRolesResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:list-roles"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.ListRoles"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_roles"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.list_roles.boilerplate"
+      route_name: "list_roles"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.ListRoles"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -184,7 +676,48 @@ service AuthzService {
   rpc BatchCheckPermissions(BatchCheckPermissionsRequest) returns (BatchCheckPermissionsResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:batch-check-permissions"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.BatchCheckPermissions"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "batch_check_permissions"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.batch_check_permissions.boilerplate"
+      route_name: "batch_check_permissions"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.BatchCheckPermissions"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -201,7 +734,48 @@ service AuthzService {
   rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:update-role"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.UpdateRole"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "update_role"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.update_role.boilerplate"
+      route_name: "update_role"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.UpdateRole"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -218,7 +792,48 @@ service AuthzService {
   rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:delete-role"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.DeleteRole"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "delete_role"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.delete_role.boilerplate"
+      route_name: "delete_role"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.DeleteRole"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -232,7 +847,48 @@ service AuthzService {
   rpc GetPolicyRule(GetPolicyRuleRequest) returns (GetPolicyRuleResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:get-policy-rule"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.GetPolicyRule"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_policy_rule"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.get_policy_rule.boilerplate"
+      route_name: "get_policy_rule"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.GetPolicyRule"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -246,7 +902,48 @@ service AuthzService {
   rpc ListPolicyRules(ListPolicyRulesRequest) returns (ListPolicyRulesResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:list-policy-rules"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.ListPolicyRules"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_policy_rules"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.list_policy_rules.boilerplate"
+      route_name: "list_policy_rules"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.ListPolicyRules"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -260,7 +957,48 @@ service AuthzService {
   rpc DeletePolicyRule(DeletePolicyRuleRequest) returns (DeletePolicyRuleResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:delete-policy-rule"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.DeletePolicyRule"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "delete_policy_rule"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.delete_policy_rule.boilerplate"
+      route_name: "delete_policy_rule"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.DeletePolicyRule"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -273,7 +1011,48 @@ service AuthzService {
   rpc PutRoleBinding(PutRoleBindingRequest) returns (AuthMutationResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:put-role-binding"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.PutRoleBinding"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "put_role_binding"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.put_role_binding.boilerplate"
+      route_name: "put_role_binding"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.PutRoleBinding"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -289,7 +1068,48 @@ service AuthzService {
   rpc PutRelationship(PutRelationshipRequest) returns (AuthMutationResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:put-relationship"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.PutRelationship"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "put_relationship"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.put_relationship.boilerplate"
+      route_name: "put_relationship"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.PutRelationship"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -305,7 +1125,48 @@ service AuthzService {
   rpc PutAuthzPolicy(PutAuthzPolicyRequest) returns (AuthMutationResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:put-authz-policy"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.PutAuthzPolicy"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "put_authz_policy"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.put_authz_policy.boilerplate"
+      route_name: "put_authz_policy"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.PutAuthzPolicy"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -321,7 +1182,48 @@ service AuthzService {
   rpc LintAuthzPolicies(LintAuthzPoliciesRequest) returns (LintAuthzPoliciesResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:lint-authz-policies"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.LintAuthzPolicies"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "lint_authz_policies"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.lint_authz_policies.boilerplate"
+      route_name: "lint_authz_policies"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.LintAuthzPolicies"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -339,7 +1241,48 @@ service AuthzService {
   rpc GetNativeAccess(NativeAccessRequest) returns (NativeAccessResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:get-native-access"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.GetNativeAccess"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_native_access"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.get_native_access.boilerplate"
+      route_name: "get_native_access"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.GetNativeAccess"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -356,7 +1299,48 @@ service AuthzService {
   rpc GetPolicyBundle(PolicyBundleRequest) returns (PolicyBundleResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:get-policy-bundle"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authz.GetPolicyBundle"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_policy_bundle"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "authz"
+      import_path: "udb/native/authz"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.authz.get_policy_bundle.boilerplate"
+      route_name: "get_policy_bundle"
+      middleware_name: "udb_authz"
+      required_native_services: "authz"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authz"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authz.GetPolicyBundle"
+      outbox_topic: "authz.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -367,5 +1351,376 @@ service AuthzService {
       post: "/v1/authz/policy-bundle"
       body: "*"
     };
+  }
+
+  // ── Phase K: Authz Policy Governance ─────────────────────────────────────
+  // Every governance mutation is itself authorized under
+  // `native.authz.governance` and requires an explicit authz governance scope
+  // (authz:admin / authz:policy:write / authz:role:write) or a break-glass
+  // grant — never a bare bearer token. Drafts and simulations never touch the
+  // live authorization snapshot; only ActivatePolicyVersion / RollbackPolicyVersion do.
+
+  rpc CreatePolicyDraft(CreatePolicyDraftRequest) returns (PolicyDraftResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:policy:write"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.CreatePolicyDraft"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "create_policy_draft"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/drafts" body: "*" };
+  }
+
+  rpc UpdatePolicyDraft(UpdatePolicyDraftRequest) returns (PolicyDraftResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:policy:write"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.UpdatePolicyDraft"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "update_policy_draft"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/drafts:update" body: "*" };
+  }
+
+  rpc DiffPolicyDraft(DiffPolicyDraftRequest) returns (DiffPolicyDraftResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:policy:read"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.DiffPolicyDraft"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "diff_policy_draft"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/drafts:diff" body: "*" };
+  }
+
+  rpc SubmitPolicyDraft(SubmitPolicyDraftRequest) returns (PolicyDraftResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:policy:write"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.SubmitPolicyDraft"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "submit_policy_draft"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/drafts:submit" body: "*" };
+  }
+
+  rpc ApprovePolicyDraft(ApprovePolicyDraftRequest) returns (PolicyApprovalResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:policy:approve"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.ApprovePolicyDraft"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "approve_policy_draft"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/drafts:approve" body: "*" };
+  }
+
+  rpc RejectPolicyDraft(RejectPolicyDraftRequest) returns (PolicyApprovalResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:policy:approve"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.RejectPolicyDraft"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "reject_policy_draft"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/drafts:reject" body: "*" };
+  }
+
+  rpc ActivatePolicyVersion(ActivatePolicyVersionRequest) returns (ActivationResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:admin"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.ActivatePolicyVersion"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "activate_policy_version"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/versions:activate" body: "*" };
+  }
+
+  rpc RollbackPolicyVersion(RollbackPolicyVersionRequest) returns (ActivationResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:admin"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.RollbackPolicyVersion"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "rollback_policy_version"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/versions:rollback" body: "*" };
+  }
+
+  // Activate a policy version to a canary scope (subset of the fleet) before
+  // fleet-wide. A metric-based evaluator then auto-rolls back on breach.
+  rpc ActivateCanary(ActivateCanaryRequest) returns (CanaryResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:admin"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.ActivateCanary"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "activate_canary"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/canaries:activate" body: "*" };
+  }
+
+  // Promote a baked, within-threshold canary to fleet-wide enforcement.
+  rpc PromoteCanary(PromoteCanaryRequest) returns (CanaryResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:admin"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.PromoteCanary"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "promote_canary"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/canaries:promote" body: "*" };
+  }
+
+  // Read a canary's current state + promote-eligibility.
+  rpc GetCanaryStatus(GetCanaryStatusRequest) returns (GetCanaryStatusResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:policy:read"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.GetCanaryStatus"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_canary_status"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/canaries:status" body: "*" };
+  }
+
+  rpc ListPolicyVersions(ListPolicyVersionsRequest) returns (ListPolicyVersionsResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:policy:read"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.ListPolicyVersions"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_policy_versions"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/versions:list" body: "*" };
+  }
+
+  rpc SimulatePolicy(SimulatePolicyRequest) returns (SimulatePolicyResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:policy:read"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.SimulatePolicy"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "simulate_policy"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/simulate" body: "*" };
+  }
+
+  rpc ExplainPolicy(ExplainPolicyRequest) returns (ExplainPolicyResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:policy:read"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.ExplainPolicy"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "explain_policy"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/explain" body: "*" };
+  }
+
+  rpc GetAuthzRevision(GetAuthzRevisionRequest) returns (GetAuthzRevisionResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:policy:read"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.GetAuthzRevision"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_authz_revision"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/revision" body: "*" };
+  }
+
+  rpc InvalidatePolicyBundles(InvalidatePolicyBundlesRequest) returns (InvalidatePolicyBundlesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:admin"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.InvalidatePolicyBundles"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "invalidate_policy_bundles"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/bundles:invalidate" body: "*" };
+  }
+
+  rpc SeedBuiltinRoles(SeedBuiltinRolesRequest) returns (SeedBuiltinRolesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:admin"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.SeedBuiltinRoles"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "seed_builtin_roles"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/roles:seed" body: "*" };
+  }
+
+  rpc MigrateLegacyPolicies(MigrateLegacyPoliciesRequest) returns (MigrateLegacyPoliciesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authz:admin"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "native.authz.governance.MigrateLegacyPolicies"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "migrate_legacy_policies"
+      required_credential_provider: "udb"
+      server_only: true
+      boilerplate_recipe_tags: "authz"
+    };
+    option (google.api.http) = { post: "/v1/authz/governance/legacy:migrate" body: "*" };
   }
 }

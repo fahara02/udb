@@ -72,10 +72,14 @@ fn doc_to_op(doc: &Document) -> SystemStoreResult<MigrationOpRow> {
         resource_uri: get_str(doc, "resource_uri"),
         operation_kind: get_str(doc, "operation_kind"),
         status,
-        rollback_json: get_json(
+        payload_json: get_json(
             doc,
-            "rollback_json",
-            serde_json::Value::Object(Default::default()),
+            "payload_json",
+            get_json(
+                doc,
+                "rollback_json",
+                serde_json::Value::Object(Default::default()),
+            ),
         ),
         error: get_str(doc, "error"),
         applied_at: get_opt_dt(doc, "applied_at"),
@@ -173,7 +177,7 @@ impl MigrationAuditStore for MongoDbCanonicalStore {
             "resource_uri": &op.resource_uri,
             "operation_kind": &op.operation_kind,
             "status": op.status.as_str(),
-            "rollback_json": json_to_bson(&op.rollback_json),
+            "payload_json": json_to_bson(&op.payload_json),
             "error": &op.error,
         };
         if op.status == OpLedgerStatus::Applied {

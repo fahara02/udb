@@ -3,6 +3,8 @@ syntax = "proto3";
 package udb.core.notification.entity.v1;
 
 import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
 import "udb/core/notification/entity/v1/enums.proto";
 
 option csharp_namespace = "udb.core.Notification.Entity.V1";
@@ -13,6 +15,48 @@ option php_namespace = "Udb\\Core\\Notification\\Entity\\V1";
 
 // Notification is the core domain entity for a queued or sent notification.
 message Notification {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "notifications"
+    schema_name: "udb_notification"
+    migration_order: 1
+    is_table: true
+    comment: "Queued, sent, delivered, and failed notification records"
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_notifications_tenant_status"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "status"
+    }
+    indexes: {
+      index_name: "idx_notifications_recipient"
+      index_type: "BTREE"
+      columns: "recipient_id"
+    }
+    replica_hint: "primary"
+    required_scope: "notification:write"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "notification.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "recipient"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
   string notification_id = 1;
   string recipient_id = 2;
   NotificationType type = 3;

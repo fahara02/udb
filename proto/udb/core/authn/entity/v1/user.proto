@@ -18,7 +18,7 @@ option php_namespace = "Udb\\Core\\Authn\\Entity\\V1";
 // authenticated by UDB and authorized by the UDB policy engine.
 //
 // Migration order 1 in schema udb_authn.
-// The password_hash uses bcrypt (cost ≥ 12).
+// The password_hash uses Argon2id PHC strings; legacy keyed-HMAC values are upgraded on login.
 // All PII fields are masked in application logs via (pii) + (log_masked).
 // ---------------------------------------------------------------------------
 message User {
@@ -69,6 +69,19 @@ message User {
     replica_hint: "primary"
     required_scope: "authn:admin"
   };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "authn.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
   option (udb.core.common.v1.cache) = {
     backend: CACHE_BACKEND_REDIS
     key_pattern: "udb:user:{user_id}"
@@ -85,7 +98,7 @@ message User {
 
   string email = 3 [(udb.core.common.v1.pg_column) = { column_name: "email" sql_type: "VARCHAR(255)" not_null: true unique: true trigram_index: true comment: "Primary email used for OTP delivery and account recovery" index: { index_name: "idx_users_email" index_type: "BTREE" unique: true } }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.data_purpose) = "Authentication and communication"];
 
-  string password_hash = 4 [(udb.core.common.v1.pg_column) = { column_name: "password_hash" sql_type: "VARCHAR(255)" not_null: true comment: "bcrypt hash (cost >= 12)" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.encrypted_security) = true, (udb.core.common.v1.log_masked) = true];
+  string password_hash = 4 [(udb.core.common.v1.pg_column) = { column_name: "password_hash" sql_type: "VARCHAR(255)" not_null: true comment: "Argon2id PHC hash, peppered by deployment secret; legacy keyed-HMAC values are upgraded on login" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.encrypted_security) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_CREDENTIAL output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT hashing_algorithm: "argon2id" uniqueness_scope: "none" }];
 
   AccountKind account_kind = 5 [(udb.core.common.v1.pg_column) = { column_name: "account_kind" sql_type: "VARCHAR(40)" not_null: true default_value: "'PERSON'" index: { index_name: "idx_users_account_kind" index_type: "BTREE" } }];
 
@@ -96,7 +109,7 @@ message User {
   string full_name = 8 [(udb.core.common.v1.pg_column) = { column_name: "full_name" sql_type: "VARCHAR(255)" not_null: true }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.data_purpose) = "Display and audit trail"];
 
   // MFA: totp_secret populated only when MFA is enrolled (TOTP authenticator app)
-  string totp_secret_enc = 9 [(udb.core.common.v1.pg_column) = { column_name: "totp_secret_enc" sql_type: "TEXT" comment: "AES-256-GCM encrypted TOTP secret; null if MFA not enrolled" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true];
+  string totp_secret_enc = 9 [(udb.core.common.v1.pg_column) = { column_name: "totp_secret_enc" sql_type: "TEXT" comment: "AES-256-GCM encrypted TOTP secret; null if MFA not enrolled" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_KEY output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "authn-mfa" uniqueness_scope: "none" }];
 
   bool mfa_enabled = 10 [(udb.core.common.v1.pg_column) = { column_name: "mfa_enabled" sql_type: "BOOLEAN" not_null: true default_value: "FALSE" }];
 

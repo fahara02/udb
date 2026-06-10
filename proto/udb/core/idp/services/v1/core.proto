@@ -1,0 +1,452 @@
+syntax = "proto3";
+
+package udb.core.idp.services.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/idp/entity/v1/identity_provider.proto";
+import "udb/core/idp/entity/v1/external_identity.proto";
+import "udb/core/idp/entity/v1/enums.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/types.proto";
+
+option csharp_namespace = "udb.core.Idp.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/idp/services/v1;idpservicev1";
+option java_package = "com.udb.core.idp.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Idp\\Services\\V1";
+option php_namespace = "Udb\\Core\\Idp\\Services\\V1";
+
+// ============================================================
+// Provider administration (J2.6)
+// ============================================================
+
+message CreateProviderRequest {
+  string tenant_id = 1;
+  udb.core.idp.entity.v1.IdpKind kind = 2;
+  string display_name = 3;
+  string issuer = 4;
+  string entity_id = 5;
+  string jwks_url = 6;
+  string saml_metadata_url = 7;
+  repeated string client_ids = 8;
+  repeated string audiences = 9;
+  // JSON objects/strings for the mapping policies.
+  string claim_mapping_json = 10;
+  string group_mapping_json = 11;
+  string jit_policy_json = 12;
+  string account_linking_policy = 13;
+  bool enabled = 14;
+  // Optional confidential-client secret (OIDC) / SCIM bearer (write-only).
+  string client_secret = 15;
+  // Optional SP signing key (PEM) for SAML request signing (write-only).
+  string saml_signing_key_pem = 16;
+  string created_by = 17;
+  udb.core.common.v1.RequestContext context = 18;
+}
+
+message CreateProviderResponse {
+  udb.core.idp.entity.v1.IdentityProvider provider = 1;
+}
+
+message UpdateProviderRequest {
+  string provider_id = 1;
+  string tenant_id = 2;
+  string display_name = 3;
+  string issuer = 4;
+  string entity_id = 5;
+  string jwks_url = 6;
+  string saml_metadata_url = 7;
+  repeated string client_ids = 8;
+  repeated string audiences = 9;
+  string claim_mapping_json = 10;
+  string group_mapping_json = 11;
+  string jit_policy_json = 12;
+  string account_linking_policy = 13;
+  string client_secret = 14; // empty = unchanged
+  string saml_signing_key_pem = 15; // empty = unchanged
+  string updated_by = 16;
+  udb.core.common.v1.RequestContext context = 17;
+}
+
+message UpdateProviderResponse {
+  udb.core.idp.entity.v1.IdentityProvider provider = 1;
+}
+
+message DisableProviderRequest {
+  string provider_id = 1;
+  string tenant_id = 2;
+  string updated_by = 3;
+  udb.core.common.v1.RequestContext context = 4;
+}
+
+message DisableProviderResponse {
+  udb.core.idp.entity.v1.IdentityProvider provider = 1;
+}
+
+message GetProviderRequest {
+  string provider_id = 1;
+  string tenant_id = 2;
+}
+
+message GetProviderResponse {
+  udb.core.idp.entity.v1.IdentityProvider provider = 1;
+}
+
+message ListProvidersRequest {
+  string tenant_id = 1;
+  udb.core.idp.entity.v1.IdpKind kind = 2; // unspecified = all
+  bool enabled_only = 3;
+  udb.core.common.v1.PageRequest page = 4;
+}
+
+message ListProvidersResponse {
+  repeated udb.core.idp.entity.v1.IdentityProvider providers = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+// Resolve discovery + key material for a provider without authenticating.
+message TestProviderDiscoveryRequest {
+  string provider_id = 1;
+  string tenant_id = 2;
+}
+
+message TestProviderDiscoveryResponse {
+  bool reachable = 1;
+  udb.core.idp.entity.v1.ProviderHealth health = 2;
+  string resolved_issuer = 3;
+  string resolved_jwks_url = 4;
+  int32 key_count = 5;
+  repeated string key_ids = 6; // JWKS kid list / SAML cert fingerprints
+  string detail = 7;
+}
+
+message ForceJwksRefreshRequest {
+  string provider_id = 1;
+  string tenant_id = 2;
+}
+
+message ForceJwksRefreshResponse {
+  bool ok = 1;
+  int32 key_count = 2;
+  repeated string key_ids = 3;
+  google.protobuf.Timestamp refreshed_at = 4;
+  string status = 5;
+}
+
+// Preview how raw IdP claims would map to a UDB principal under a mapping.
+message PreviewClaimMappingRequest {
+  string provider_id = 1;
+  string tenant_id = 2;
+  // Raw claims as a JSON object (the IdP token payload).
+  string claims_json = 3;
+  // Optional override mapping; empty = use the stored provider mapping.
+  string claim_mapping_json = 4;
+}
+
+message PreviewClaimMappingResponse {
+  string subject = 1;
+  string email = 2;
+  bool email_verified = 3;
+  string display_name = 4;
+  repeated string groups = 5;
+  udb.core.idp.entity.v1.AssuranceLevel assurance = 6;
+  // Fully-resolved principal fields as JSON for inspection.
+  string mapped_principal_json = 7;
+}
+
+// Preview which UDB roles a set of IdP groups would grant under a group mapping.
+message PreviewGroupMappingRequest {
+  string provider_id = 1;
+  string tenant_id = 2;
+  repeated string groups = 3;
+  string group_mapping_json = 4; // empty = use stored mapping
+}
+
+message PreviewGroupMappingResponse {
+  // Roles granted (only roles explicitly present in the mapping).
+  repeated string roles = 1;
+  // Input groups that matched no mapping entry (granted nothing).
+  repeated string unmapped_groups = 2;
+}
+
+message ListExternalIdentitiesRequest {
+  string tenant_id = 1;
+  string provider_id = 2; // empty = all providers
+  string user_id = 3; // empty = all users
+  udb.core.common.v1.PageRequest page = 4;
+}
+
+message ListExternalIdentitiesResponse {
+  repeated udb.core.idp.entity.v1.ExternalIdentity identities = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+// Explicitly link an IdP subject to an existing UDB user.
+message LinkIdentityRequest {
+  string tenant_id = 1;
+  string provider_id = 2;
+  string subject = 3;
+  string user_id = 4;
+  string email = 5;
+  bool email_verified = 6;
+  udb.core.common.v1.RequestContext context = 7;
+}
+
+message LinkIdentityResponse {
+  udb.core.idp.entity.v1.ExternalIdentity identity = 1;
+}
+
+message UnlinkIdentityRequest {
+  string tenant_id = 1;
+  string external_identity_id = 2;
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message UnlinkIdentityResponse {
+  bool unlinked = 1;
+}
+
+// ============================================================
+// SAML 2.0 (J2.2)
+// ============================================================
+
+// Import IdP metadata (XML) into a provider record: SSO URL, entityID, certs.
+message ImportSamlMetadataRequest {
+  string provider_id = 1;
+  string tenant_id = 2;
+  // Raw SAML metadata XML; if empty the stored saml_metadata_url is fetched.
+  string metadata_xml = 3;
+  string updated_by = 4;
+  udb.core.common.v1.RequestContext context = 5;
+}
+
+message ImportSamlMetadataResponse {
+  string entity_id = 1;
+  string sso_url = 2;
+  int32 cert_count = 3;
+  udb.core.idp.entity.v1.IdentityProvider provider = 4;
+}
+
+// Build a signed (or unsigned) SAML AuthnRequest for redirect to the IdP.
+message StartSamlLoginRequest {
+  string provider_id = 1;
+  string tenant_id = 2;
+  string relay_state = 3;
+}
+
+message StartSamlLoginResponse {
+  // Full redirect URL (SSO endpoint with SAMLRequest + optional Signature).
+  string redirect_url = 1;
+  // Base64 deflate-encoded AuthnRequest.
+  string saml_request = 2;
+  string request_id = 3;
+  bool signed = 4;
+}
+
+// Assertion Consumer Service: validate a posted SAMLResponse and authenticate.
+message SamlAcsRequest {
+  string provider_id = 1;
+  string tenant_id = 2;
+  // Base64-encoded SAMLResponse from the IdP (HTTP-POST binding).
+  string saml_response = 3;
+  string relay_state = 4;
+  udb.core.common.v1.RequestContext context = 5;
+}
+
+message SamlAcsResponse {
+  bool authenticated = 1;
+  string subject = 2; // NameID
+  string user_id = 3;
+  string email = 4;
+  bool email_verified = 5;
+  repeated string groups = 6;
+  repeated string roles = 7; // roles granted via configured group mapping
+  udb.core.idp.entity.v1.AssuranceLevel assurance = 8;
+  // True when the assertion signature could be verified; false + reason when the
+  // verification step is host-blocked (fail-closed: authenticated stays false).
+  bool signature_verified = 9;
+  string detail = 10;
+  // Mapped attributes for inspection (JSON object).
+  string attributes_json = 11;
+}
+
+// ============================================================
+// JIT provisioning + assurance (J2.4 / J2.5)
+// ============================================================
+
+// Resolve (and JIT-provision/link) a UDB user from verified external claims.
+message ResolveExternalIdentityRequest {
+  string provider_id = 1;
+  string tenant_id = 2;
+  // Verified claims as JSON (already authenticated upstream).
+  string claims_json = 3;
+}
+
+message ResolveExternalIdentityResponse {
+  string user_id = 1;
+  string subject = 2;
+  string email = 3;
+  bool provisioned = 4; // a new user was created (JIT)
+  bool linked = 5; // linked to an existing user
+  repeated string roles = 6;
+  udb.core.idp.entity.v1.AssuranceLevel assurance = 7;
+  string detail = 8;
+}
+
+// ============================================================
+// SCIM 2.0 (J2.3)
+// ============================================================
+
+// A SCIM resource carried as its canonical JSON body. CRUD handlers persist
+// into the native external_identities / role-binding tables under the
+// configured mappings; the JSON keeps full SCIM 2.0 schema fidelity for the
+// connector while the broker stays schema-agnostic.
+message ScimUser {
+  string id = 1; // SCIM id (== external_identity_id)
+  string user_name = 2; // SCIM userName (subject)
+  string display_name = 3;
+  string email = 4;
+  bool active = 5;
+  repeated string groups = 6;
+  string raw_json = 7; // full SCIM user JSON
+}
+
+message ScimGroup {
+  string id = 1;
+  string display_name = 2;
+  repeated string members = 3; // member SCIM ids
+  string raw_json = 4;
+}
+
+message ScimCreateUserRequest {
+  string tenant_id = 1;
+  string provider_id = 2;
+  string scim_user_json = 3; // SCIM 2.0 User JSON
+  udb.core.common.v1.RequestContext context = 4;
+}
+
+message ScimCreateUserResponse {
+  ScimUser user = 1;
+}
+
+message ScimGetUserRequest {
+  string tenant_id = 1;
+  string provider_id = 2;
+  string scim_user_id = 3;
+}
+
+message ScimGetUserResponse {
+  ScimUser user = 1;
+}
+
+message ScimListUsersRequest {
+  string tenant_id = 1;
+  string provider_id = 2;
+  string filter = 3; // SCIM filter, e.g. userName eq "x"
+  udb.core.common.v1.PageRequest page = 4;
+}
+
+message ScimListUsersResponse {
+  repeated ScimUser users = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+message ScimReplaceUserRequest {
+  string tenant_id = 1;
+  string provider_id = 2;
+  string scim_user_id = 3;
+  string scim_user_json = 4;
+  udb.core.common.v1.RequestContext context = 5;
+}
+
+message ScimReplaceUserResponse {
+  ScimUser user = 1;
+}
+
+// SCIM PATCH operations (RFC 7644 §3.5.2): add/replace/remove on a path.
+message ScimPatchOp {
+  string op = 1; // add | replace | remove
+  string path = 2; // e.g. "active", "members"
+  string value_json = 3; // JSON-encoded value
+}
+
+message ScimPatchUserRequest {
+  string tenant_id = 1;
+  string provider_id = 2;
+  string scim_user_id = 3;
+  repeated ScimPatchOp operations = 4;
+  udb.core.common.v1.RequestContext context = 5;
+}
+
+message ScimPatchUserResponse {
+  ScimUser user = 1;
+}
+
+message ScimDeleteUserRequest {
+  string tenant_id = 1;
+  string provider_id = 2;
+  string scim_user_id = 3;
+  udb.core.common.v1.RequestContext context = 4;
+}
+
+message ScimDeleteUserResponse {
+  bool deactivated = 1; // mapped to deactivate + session revoke
+}
+
+message ScimCreateGroupRequest {
+  string tenant_id = 1;
+  string provider_id = 2;
+  string scim_group_json = 3;
+  udb.core.common.v1.RequestContext context = 4;
+}
+
+message ScimCreateGroupResponse {
+  ScimGroup group = 1;
+}
+
+message ScimGetGroupRequest {
+  string tenant_id = 1;
+  string provider_id = 2;
+  string scim_group_id = 3;
+}
+
+message ScimGetGroupResponse {
+  ScimGroup group = 1;
+}
+
+message ScimListGroupsRequest {
+  string tenant_id = 1;
+  string provider_id = 2;
+  string filter = 3;
+  udb.core.common.v1.PageRequest page = 4;
+}
+
+message ScimListGroupsResponse {
+  repeated ScimGroup groups = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+message ScimPatchGroupRequest {
+  string tenant_id = 1;
+  string provider_id = 2;
+  string scim_group_id = 3;
+  repeated ScimPatchOp operations = 4;
+  udb.core.common.v1.RequestContext context = 5;
+}
+
+message ScimPatchGroupResponse {
+  ScimGroup group = 1;
+  // Roles granted/revoked as a result of group membership changes (only via
+  // configured group→role mappings).
+  repeated string granted_roles = 2;
+}
+
+message ScimDeleteGroupRequest {
+  string tenant_id = 1;
+  string provider_id = 2;
+  string scim_group_id = 3;
+  udb.core.common.v1.RequestContext context = 4;
+}
+
+message ScimDeleteGroupResponse {
+  bool deleted = 1;
+}

@@ -50,7 +50,7 @@ use crate::backend::BackendKind;
 use crate::generation::ManifestTable;
 use crate::ir::filter::{ComparisonOp, LogicalFilter};
 use crate::ir::operations::{
-    AggregateExpr, AggregateFunc, ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead,
+    AggregateFunc, ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead,
     LogicalResourceOp, LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
 };
 use crate::ir::value::LogicalValue;
@@ -774,7 +774,7 @@ fn value_to_pinecone_json(v: &LogicalValue) -> Json {
 mod tests {
     use super::*;
     use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
-    use crate::ir::operations::LogicalRecord;
+    use crate::ir::operations::{AggregateExpr, LogicalRecord};
     use crate::ir::value::LogicalValue;
 
     fn fixture() -> CatalogManifest {

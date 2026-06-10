@@ -26,15 +26,39 @@ var File_udb_core_apikey_services_v1_apikey_service_proto protoreflect.FileDescr
 
 const file_udb_core_apikey_services_v1_apikey_service_proto_rawDesc = "" +
 	"\n" +
-	"0udb/core/apikey/services/v1/apikey_service.proto\x12\x1budb.core.apikey.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a&udb/core/apikey/services/v1/core.proto\x1a!udb/core/common/v1/security.proto2\xac\t\n" +
-	"\rApiKeyService\x12\x9e\x01\n" +
-	"\fCreateApiKey\x120.udb.core.apikey.services.v1.CreateApiKeyRequest\x1a1.udb.core.apikey.services.v1.CreateApiKeyResponse\")\xca\xf3\x18\x04\b\x02 \x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\x82\xd3\xe4\x93\x02\x11:\x01*\"\f/v1/api_keys\x12\x9b\x01\n" +
-	"\tGetApiKey\x12-.udb.core.apikey.services.v1.GetApiKeyRequest\x1a..udb.core.apikey.services.v1.GetApiKeyResponse\"/\xca\xf3\x18\x04\b\x02 \x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/api_keys/{key_id}\x12\x98\x01\n" +
-	"\vListApiKeys\x12/.udb.core.apikey.services.v1.ListApiKeysRequest\x1a0.udb.core.apikey.services.v1.ListApiKeysResponse\"&\xca\xf3\x18\x04\b\x02 \x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\x82\xd3\xe4\x93\x02\x0e\x12\f/v1/api_keys\x12\xa7\x01\n" +
-	"\fUpdateApiKey\x120.udb.core.apikey.services.v1.UpdateApiKeyRequest\x1a1.udb.core.apikey.services.v1.UpdateApiKeyResponse\"2\xca\xf3\x18\x04\b\x02 \x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\x82\xd3\xe4\x93\x02\x1a:\x01*2\x15/v1/api_keys/{key_id}\x12\xa4\x01\n" +
-	"\fRevokeApiKey\x120.udb.core.apikey.services.v1.RevokeApiKeyRequest\x1a1.udb.core.apikey.services.v1.RevokeApiKeyResponse\"/\xca\xf3\x18\x04\b\x02 \x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\x82\xd3\xe4\x93\x02\x17*\x15/v1/api_keys/{key_id}\x12\xad\x01\n" +
-	"\x0eValidateApiKey\x122.udb.core.apikey.services.v1.ValidateApiKeyRequest\x1a3.udb.core.apikey.services.v1.ValidateApiKeyResponse\"2\xca\xf3\x18\x04\b\x02 \x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\x82\xd3\xe4\x93\x02\x1a:\x01*\"\x15/v1/api_keys:validate\x12\xbf\x01\n" +
-	"\x13GetApiKeyUsageStats\x127.udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest\x1a8.udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse\"5\xca\xf3\x18\x04\b\x02 \x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/api_keys/{key_id}/statsB\x91\x02\n" +
+	"0udb/core/apikey/services/v1/apikey_service.proto\x12\x1budb.core.apikey.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a&udb/core/apikey/services/v1/core.proto\x1a!udb/core/common/v1/security.proto2\xf7#\n" +
+	"\rApiKeyService\x12\xd0\x04\n" +
+	"\fCreateApiKey\x120.udb.core.apikey.services.v1.CreateApiKeyRequest\x1a1.udb.core.apikey.services.v1.CreateApiKeyResponse\"\xda\x03\xca\xf3\x18;\b\x02\x1a\x19udb:apikey:create-api-key \x01J\x02\x01\x02j\x13apikey.CreateApiKey\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18'\b\x01\x12\x0ecreate_api_key\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\xb2\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.auth.create_api_key.boilerplate*\x0ecreate_api_key2\budb_auth:\x06apikeyJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18P\n" +
+	"\x13apikey.CreateApiKey\x12\rapikey.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
+	"\x06apikey\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x11:\x01*\"\f/v1/api_keys\x12\xbb\x04\n" +
+	"\tGetApiKey\x12-.udb.core.apikey.services.v1.GetApiKeyRequest\x1a..udb.core.apikey.services.v1.GetApiKeyResponse\"\xce\x03\xca\xf3\x185\b\x02\x1a\x16udb:apikey:get-api-key \x01J\x02\x01\x02j\x10apikey.GetApiKey\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18$\b\x01\x12\vget_api_key\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\xac\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"'udb.native.auth.get_api_key.boilerplate*\vget_api_key2\budb_auth:\x06apikeyJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18M\n" +
+	"\x10apikey.GetApiKey\x12\rapikey.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
+	"\x06apikey\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/api_keys/{key_id}\x12\xc4\x04\n" +
+	"\vListApiKeys\x12/.udb.core.apikey.services.v1.ListApiKeysRequest\x1a0.udb.core.apikey.services.v1.ListApiKeysResponse\"\xd1\x03\xca\xf3\x189\b\x02\x1a\x18udb:apikey:list-api-keys \x01J\x02\x01\x02j\x12apikey.ListApiKeys\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18&\b\x01\x12\rlist_api_keys\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\xb0\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\")udb.native.auth.list_api_keys.boilerplate*\rlist_api_keys2\budb_auth:\x06apikeyJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18O\n" +
+	"\x12apikey.ListApiKeys\x12\rapikey.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
+	"\x06apikey\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x0e\x12\f/v1/api_keys\x12\xd9\x04\n" +
+	"\fUpdateApiKey\x120.udb.core.apikey.services.v1.UpdateApiKeyRequest\x1a1.udb.core.apikey.services.v1.UpdateApiKeyResponse\"\xe3\x03\xca\xf3\x18;\b\x02\x1a\x19udb:apikey:update-api-key \x01J\x02\x01\x02j\x13apikey.UpdateApiKey\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18'\b\x01\x12\x0eupdate_api_key\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\xb2\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.auth.update_api_key.boilerplate*\x0eupdate_api_key2\budb_auth:\x06apikeyJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18P\n" +
+	"\x13apikey.UpdateApiKey\x12\rapikey.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
+	"\x06apikey\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x1a:\x01*2\x15/v1/api_keys/{key_id}\x12\xd6\x04\n" +
+	"\fRevokeApiKey\x120.udb.core.apikey.services.v1.RevokeApiKeyRequest\x1a1.udb.core.apikey.services.v1.RevokeApiKeyResponse\"\xe0\x03\xca\xf3\x18;\b\x02\x1a\x19udb:apikey:revoke-api-key \x01J\x02\x01\x02j\x13apikey.RevokeApiKey\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18'\b\x01\x12\x0erevoke_api_key\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\xb2\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.auth.revoke_api_key.boilerplate*\x0erevoke_api_key2\budb_auth:\x06apikeyJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18P\n" +
+	"\x13apikey.RevokeApiKey\x12\rapikey.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
+	"\x06apikey\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x17*\x15/v1/api_keys/{key_id}\x12\xeb\x04\n" +
+	"\x0eValidateApiKey\x122.udb.core.apikey.services.v1.ValidateApiKeyRequest\x1a3.udb.core.apikey.services.v1.ValidateApiKeyResponse\"\xef\x03\xca\xf3\x18?\b\x02\x1a\x1budb:apikey:validate-api-key \x01J\x02\x01\x02j\x15apikey.ValidateApiKey\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18)\b\x01\x12\x10validate_api_key\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\xb6\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\",udb.native.auth.validate_api_key.boilerplate*\x10validate_api_key2\budb_auth:\x06apikeyJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18R\n" +
+	"\x15apikey.ValidateApiKey\x12\rapikey.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
+	"\x06apikey\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x1a:\x01*\"\x15/v1/api_keys:validate\x12\xa3\x05\n" +
+	"\x13GetApiKeyUsageStats\x127.udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest\x1a8.udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse\"\x98\x04\xca\xf3\x18K\b\x02\x1a\"udb:apikey:get-api-key-usage-stats \x01J\x02\x01\x02j\x1aapikey.GetApiKeyUsageStats\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x180\b\x01\x12\x17get_api_key_usage_stats\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\xc4\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"3udb.native.auth.get_api_key_usage_stats.boilerplate*\x17get_api_key_usage_stats2\budb_auth:\x06apikeyJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18W\n" +
+	"\x1aapikey.GetApiKeyUsageStats\x12\rapikey.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18@\n" +
+	"\x06apikey\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/api_keys/{key_id}/stats\x1a\xc4\x02\xca\xf0\x19W\n" +
+	"\x06apikey\x12\x06apikey\x1a\x06apikey\"\bAPI Keys*\x04auth0\x018\x01h\x01z\aapiKeys\x82\x01\x04auth\x8a\x01\x06apikey\x92\x01\rnative.apikey\xd2\xf0\x19\x17\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xda\xf0\x19\x85\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x18udb.native.apikey.config:\x06apikeyJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19@\n" +
+	"\x06apikey\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x91\x02\n" +
 	"\x1fcom.udb.core.apikey.services.v1B\x12ApikeyServiceProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1budb.core.Apikey.Services.V1\xca\x02\x1bUdb\\Core\\Apikey\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Apikey\\Services\\V1\xea\x02\x1fUdb::Core::Apikey::Services::V1b\x06proto3"
 
 var file_udb_core_apikey_services_v1_apikey_service_proto_goTypes = []any{

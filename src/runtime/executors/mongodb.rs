@@ -171,15 +171,23 @@ impl crate::runtime::backend_context::BackendContextEnforcer for MongoDbExecutor
         &self,
         ctx: &crate::runtime::backend_context::AppliedContext,
     ) -> crate::runtime::backend_context::ContextEffect {
-        // C7/C8: the Mongo IR compiler now AND-injects `_tenant_id`
-        // and `_project_id` into every read/delete filter AND stamps
-        // them onto every written document. Tenant boundary is
-        // protocol-enforced — a cross-tenant find/update/delete
-        // cannot succeed without going around the broker.
-        crate::runtime::backend_context::enforce_with_mechanism(
-            ctx,
-            "_tenant_id / _project_id stamped on writes; ANDed into read/delete filters",
-        )
+        // HONEST POSTURE: this generic executor accepts caller-provided command
+        // JSON and filters. It can record tenant context for audit/operator
+        // policy, but it does not prove that arbitrary command/filter dispatch
+        // was rewritten with `_tenant_id` / `_project_id` predicates. Treat the
+        // generic path as advisory unless a higher-level compiler path owns and
+        // verifies predicate injection.
+        if ctx.is_empty() {
+            crate::runtime::backend_context::ContextEffect::Advisory {
+                recorded_in: "no_context_to_apply".into(),
+            }
+        } else {
+            crate::runtime::backend_context::ContextEffect::Advisory {
+                recorded_in: "MongoDB context recorded for generic command/filter dispatch; \
+                              _tenant_id/_project_id predicate injection not verified here"
+                    .into(),
+            }
+        }
     }
 }
 
@@ -1336,6 +1344,7 @@ impl BackendExecutor for MongoDbExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runtime::backend_context::{AppliedContext, BackendContextEnforcer, ContextEffect};
 
     #[test]
     fn mongodb_executor_kind_and_name() {
@@ -1350,6 +1359,31 @@ mod tests {
         let exec = MongoDbExecutor::new(cfg);
         assert_eq!(exec.kind(), BackendKind::Mongodb);
         assert_eq!(exec.name(), "MongoDB");
+    }
+
+    #[test]
+    fn mongodb_generic_dispatch_context_is_advisory() {
+        let exec = MongoDbExecutor::new(MongoDbConfig {
+            api_base: "http://localhost:27017".to_string(),
+            api_key: None,
+            database: "testdb".to_string(),
+            is_cloud: false,
+            dev_mode: true,
+            timeout_secs: 30,
+        });
+        let ctx = AppliedContext {
+            tenant_id: "tenant-a".into(),
+            project_id: "project-a".into(),
+            ..Default::default()
+        };
+
+        match BackendContextEnforcer::enforce(&exec, &ctx) {
+            ContextEffect::Advisory { recorded_in } => {
+                assert!(recorded_in.contains("generic command/filter dispatch"));
+                assert!(recorded_in.contains("not verified"));
+            }
+            other => panic!("expected Advisory, got {other:?}"),
+        }
     }
 
     #[tokio::test]

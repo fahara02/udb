@@ -132,6 +132,7 @@ impl BackendHealth for DispatchExecutor {
 }
 
 impl QueryExecutor for DispatchExecutor {
+    #[tracing::instrument(skip_all, name = "backend.query")]
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
         on_variant!(self, e => QueryExecutor::query(e, request_json).await)
     }
@@ -142,6 +143,7 @@ impl QueryExecutor for DispatchExecutor {
 }
 
 impl MutationExecutor for DispatchExecutor {
+    #[tracing::instrument(skip_all, name = "backend.mutate")]
     async fn mutate(&self, request_json: &str) -> Result<String, tonic::Status> {
         on_variant!(self, e => MutationExecutor::mutate(e, request_json).await)
     }

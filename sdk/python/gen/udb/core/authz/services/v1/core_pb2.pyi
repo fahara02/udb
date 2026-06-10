@@ -8,6 +8,7 @@ from udb.core.authz.entity.v1 import policy_rule_pb2 as _policy_rule_pb2
 from udb.core.authz.entity.v1 import role_pb2 as _role_pb2
 from udb.core.authz.entity.v1 import user_role_pb2 as _user_role_pb2
 from udb.core.common.v1 import dto_pb2 as _dto_pb2
+from udb.core.common.v1 import security_pb2 as _security_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message

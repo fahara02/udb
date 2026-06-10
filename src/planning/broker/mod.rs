@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::{BTreeSet, HashMap};
-use std::sync::{Mutex, OnceLock};
+use std::collections::BTreeSet;
 
 use crate::backend::BackendKind;
-use crate::generation::sql::qi;
+use crate::generation::sql::{
+    qi, resolve_project_column, resolve_tenant_column, table_requires_tenant_column,
+};
 use crate::generation::{CatalogManifest, ManifestTable};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -408,7 +409,11 @@ pub fn build_select_query_plan(
         })
         .collect::<Vec<_>>();
     let tenant_column = tenant_column(table);
-    if !tenant_column.is_empty() && !filter_columns.contains(&tenant_column) {
+    if tenant_column.is_empty() {
+        if table_requires_tenant_column(table) {
+            errors.push(unresolved_tenant_column_error(table));
+        }
+    } else if !filter_columns.contains(&tenant_column) {
         errors.push(format!(
             "tenant isolation requires filter on {}",
             tenant_column
@@ -518,7 +523,11 @@ pub fn build_upsert_plan(
     parameter_columns.dedup();
 
     let tenant = tenant_column(table);
-    if !tenant.is_empty() && !parameter_columns.contains(&tenant) {
+    if tenant.is_empty() {
+        if table_requires_tenant_column(table) {
+            errors.push(unresolved_tenant_column_error(table));
+        }
+    } else if !parameter_columns.contains(&tenant) {
         errors.push(format!("tenant isolation requires record field {}", tenant));
     }
     // Look up the tenant value case-insensitively: `record.get(&tenant)` uses the
@@ -668,7 +677,11 @@ pub fn build_delete_plan(
     );
     let filter_columns = filter_columns(&filter, &allowed, &mut errors);
     let tenant = tenant_column(table);
-    if !tenant.is_empty() && !filter_columns.contains(&tenant) {
+    if tenant.is_empty() {
+        if table_requires_tenant_column(table) {
+            errors.push(unresolved_tenant_column_error(table));
+        }
+    } else if !filter_columns.contains(&tenant) {
         errors.push(format!("tenant isolation requires filter on {}", tenant));
     }
     let project = project_column(table);
@@ -1100,58 +1113,12 @@ pub fn build_generic_dispatch_plan(
     }
 }
 
-pub fn table_for_message<'a>(
-    manifest: &'a CatalogManifest,
-    message_type: &str,
-) -> Option<&'a ManifestTable> {
-    static INDEX: OnceLock<Mutex<HashMap<String, HashMap<String, usize>>>> = OnceLock::new();
-    let leaf = message_type
-        .rsplit('.')
-        .next()
-        .unwrap_or(message_type)
-        .to_ascii_lowercase();
-    let exact = message_type.to_ascii_lowercase();
-    let cache_key = if manifest.checksum_sha256.is_empty() {
-        format!("ptr:{:p}:{}", manifest, manifest.tables.len())
-    } else {
-        manifest.checksum_sha256.clone()
-    };
-    let map = INDEX.get_or_init(|| Mutex::new(HashMap::new()));
-    if let Ok(mut guard) = map.lock() {
-        // Bound the process-global cache: manifest checksums change on every
-        // schema reload, so without a cap this map grows forever. When a new
-        // manifest would exceed the cap, drop the whole cache and rebuild lazily
-        // (rebuilding one table's index is cheap) — #136.
-        const INDEX_CACHE_CAP: usize = 64;
-        if guard.len() >= INDEX_CACHE_CAP && !guard.contains_key(&cache_key) {
-            guard.clear();
-        }
-        let index = guard.entry(cache_key).or_insert_with(|| {
-            let mut built = HashMap::new();
-            for (idx, table) in manifest.tables.iter().enumerate() {
-                if !table.message_name.trim().is_empty() {
-                    built.insert(table.message_name.to_ascii_lowercase(), idx);
-                    if let Some(short) = table.message_name.rsplit('.').next() {
-                        built.entry(short.to_ascii_lowercase()).or_insert(idx);
-                    }
-                }
-                if !table.table.trim().is_empty() {
-                    built.insert(table.table.to_ascii_lowercase(), idx);
-                }
-            }
-            built
-        });
-        if let Some(idx) = index.get(&exact).or_else(|| index.get(&leaf)) {
-            return manifest.tables.get(*idx);
-        }
-    }
-    manifest.tables.iter().find(|table| {
-        table.message_name.eq_ignore_ascii_case(message_type)
-            || table.message_name.eq_ignore_ascii_case(&leaf)
-            || table.table.eq_ignore_ascii_case(message_type)
-            || table.table.eq_ignore_ascii_case(&leaf)
-    })
-}
+// `table_for_message` moved to `crate::generation::manifest_index` so the
+// WASM-portable `udb-portable` crate can resolve `crate::broker::table_for_message`
+// (the one broker fn the IR→SQL compilers call) without this native module.
+// Re-exported here so server call-sites (`crate::broker::table_for_message`,
+// `crate::planning::broker::table_for_message`) are unchanged.
+pub use crate::generation::manifest_index::table_for_message;
 
 fn filter_columns(
     value: &Value,
@@ -1211,24 +1178,7 @@ fn is_operator(value: &str) -> bool {
 }
 
 fn tenant_column(table: &ManifestTable) -> String {
-    // Prefer the proto-declared tenant designator (`tenant_column: true`); this
-    // is authoritative and not tied to a particular column name. Fall back to
-    // the well-known tenant column names so existing schemas that predate the
-    // explicit annotation keep their isolation enforcement.
-    table
-        .columns
-        .iter()
-        .find(|column| column.is_tenant_column)
-        .or_else(|| {
-            table.columns.iter().find(|column| {
-                matches!(
-                    column.column_name.as_str(),
-                    "tenant_id" | "org_id" | "institution_id"
-                )
-            })
-        })
-        .map(|column| column.column_name.clone())
-        .unwrap_or_default()
+    resolve_tenant_column(table).unwrap_or_default().to_string()
 }
 
 /// Resolve the project-isolation column for a table: the proto-declared
@@ -1236,18 +1186,16 @@ fn tenant_column(table: &ManifestTable) -> String {
 /// `project_id` name. Mirrors [`tenant_column`]. Empty when the table has no
 /// project key.
 fn project_column(table: &ManifestTable) -> String {
-    table
-        .columns
-        .iter()
-        .find(|column| column.is_project_column)
-        .or_else(|| {
-            table
-                .columns
-                .iter()
-                .find(|column| column.column_name == "project_id")
-        })
-        .map(|column| column.column_name.clone())
+    resolve_project_column(table)
         .unwrap_or_default()
+        .to_string()
+}
+
+fn unresolved_tenant_column_error(table: &ManifestTable) -> String {
+    format!(
+        "tenant-scoped table {}.{} has no resolvable tenant column",
+        table.schema, table.table
+    )
 }
 
 fn masked_columns(table: &ManifestTable) -> Vec<String> {
@@ -1542,7 +1490,7 @@ fn compile_column_predicate(
             parameter_columns.push(column.to_string());
             if matches!(sql_op, "LIKE" | "ILIKE") {
                 parts.push(format!(
-                    "{} {} ${} ESCAPE '\\\\'",
+                    "{} {} ${} ESCAPE '\\'",
                     qi(column),
                     sql_op,
                     next_param
@@ -1594,6 +1542,47 @@ pub(crate) use helpers::*;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::generation::{ManifestColumn, ManifestColumnSecurity, ManifestTableSecurity};
+    use serde_json::json;
+
+    fn test_column(name: &str) -> ManifestColumn {
+        ManifestColumn {
+            field_name: name.to_string(),
+            column_name: name.to_string(),
+            sql_type: "TEXT".to_string(),
+            is_primary: name == "id",
+            ..ManifestColumn::default()
+        }
+    }
+
+    fn test_manifest(mut table: ManifestTable) -> CatalogManifest {
+        table.message_name = "acme.test.v1.Widget".to_string();
+        table.schema = "public".to_string();
+        table.table = "widgets".to_string();
+        table.primary_key = vec!["id".to_string()];
+        CatalogManifest {
+            tables: vec![table],
+            ..CatalogManifest::default()
+        }
+    }
+
+    fn read_context() -> RequestContext {
+        RequestContext {
+            tenant_id: "tenant-a".to_string(),
+            purpose: "test".to_string(),
+            scopes: vec!["udb:read".to_string()],
+            ..RequestContext::default()
+        }
+    }
+
+    fn write_context() -> RequestContext {
+        RequestContext {
+            tenant_id: "tenant-a".to_string(),
+            purpose: "test".to_string(),
+            scopes: vec!["udb:write".to_string()],
+            ..RequestContext::default()
+        }
+    }
 
     #[test]
     fn request_context_consistency_helpers() {
@@ -1614,5 +1603,156 @@ mod tests {
         };
         assert!(!eventual.requires_primary_read());
         assert_eq!(eventual.replica_lag_override(), None);
+    }
+
+    #[test]
+    fn planner_resolves_system_tenant_column() {
+        let mut tenant = test_column("_tenant_id");
+        tenant.is_tenant_column = true;
+        let manifest = test_manifest(ManifestTable {
+            enable_rls: true,
+            columns: vec![test_column("id"), tenant, test_column("status")],
+            ..ManifestTable::default()
+        });
+
+        let plan = build_select_query_plan(
+            &manifest,
+            &SelectPlanRequest {
+                context: read_context(),
+                message_type: "Widget".to_string(),
+                filter: json!({"_tenant_id": "tenant-a"}),
+                ..SelectPlanRequest::default()
+            },
+        );
+
+        assert_eq!(plan.tenant_column, "_tenant_id");
+        assert!(plan.errors.is_empty(), "{:?}", plan.errors);
+    }
+
+    #[test]
+    fn planner_fails_closed_for_scoped_table_without_tenant_column() {
+        let manifest = test_manifest(ManifestTable {
+            enable_rls: true,
+            table_security: ManifestTableSecurity {
+                tenant_isolation_mode: "tenant".to_string(),
+                ..ManifestTableSecurity::default()
+            },
+            columns: vec![test_column("id"), test_column("status")],
+            ..ManifestTable::default()
+        });
+
+        let select = build_select_query_plan(
+            &manifest,
+            &SelectPlanRequest {
+                context: read_context(),
+                message_type: "Widget".to_string(),
+                filter: json!({"status": "open"}),
+                ..SelectPlanRequest::default()
+            },
+        );
+        assert!(
+            select
+                .errors
+                .iter()
+                .any(|error| error.contains("no resolvable tenant column")),
+            "{:?}",
+            select.errors
+        );
+
+        let upsert = build_upsert_plan(
+            &manifest,
+            &UpsertPlanRequest {
+                context: write_context(),
+                message_type: "Widget".to_string(),
+                record: json!({"id": "w1", "status": "open"}),
+                ..UpsertPlanRequest::default()
+            },
+        );
+        assert!(
+            upsert
+                .errors
+                .iter()
+                .any(|error| error.contains("no resolvable tenant column")),
+            "{:?}",
+            upsert.errors
+        );
+
+        let delete = build_delete_plan(
+            &manifest,
+            &DeletePlanRequest {
+                context: write_context(),
+                message_type: "Widget".to_string(),
+                filter: json!({"status": "open"}),
+            },
+        );
+        assert!(
+            delete
+                .errors
+                .iter()
+                .any(|error| error.contains("no resolvable tenant column")),
+            "{:?}",
+            delete.errors
+        );
+    }
+
+    #[test]
+    fn like_escape_clause_renders_single_backslash_character() {
+        let manifest = CatalogManifest {
+            tables: vec![ManifestTable {
+                message_name: "Doc".to_string(),
+                schema: "public".to_string(),
+                table: "docs".to_string(),
+                columns: vec![
+                    ManifestColumn {
+                        field_name: "tenant_id".to_string(),
+                        column_name: "tenant_id".to_string(),
+                        security: ManifestColumnSecurity::default(),
+                        ..ManifestColumn::default()
+                    },
+                    ManifestColumn {
+                        field_name: "name".to_string(),
+                        column_name: "name".to_string(),
+                        security: ManifestColumnSecurity::default(),
+                        ..ManifestColumn::default()
+                    },
+                ],
+                ..ManifestTable::default()
+            }],
+            ..CatalogManifest::default()
+        };
+        let request = SelectPlanRequest {
+            context: RequestContext {
+                tenant_id: "tenant-a".to_string(),
+                purpose: "test".to_string(),
+                scopes: vec!["udb:read".to_string()],
+                ..RequestContext::default()
+            },
+            message_type: "Doc".to_string(),
+            filter: json!({
+                "tenant_id": "tenant-a",
+                "name": {
+                    "$like": "abc\\_%"
+                }
+            }),
+            ..SelectPlanRequest::default()
+        };
+
+        let plan = build_select_query_plan(&manifest, &request);
+
+        assert!(
+            plan.errors.is_empty(),
+            "unexpected planner errors: {:?}",
+            plan.errors
+        );
+        assert!(
+            plan.sql.contains("ESCAPE '\\'"),
+            "rendered SQL should contain one backslash between quotes: {}",
+            plan.sql
+        );
+        assert!(
+            !plan.sql.contains("ESCAPE '\\\\'"),
+            "rendered SQL should not contain two backslashes between quotes: {}",
+            plan.sql
+        );
     }
 }

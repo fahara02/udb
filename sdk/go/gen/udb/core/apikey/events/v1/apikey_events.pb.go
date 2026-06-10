@@ -8,6 +8,7 @@ package eventsv1
 
 import (
 	v1 "github.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1"
+	_ "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -371,7 +372,7 @@ var File_udb_core_apikey_events_v1_apikey_events_proto protoreflect.FileDescript
 
 const file_udb_core_apikey_events_v1_apikey_events_proto_rawDesc = "" +
 	"\n" +
-	"-udb/core/apikey/events/v1/apikey_events.proto\x12\x19udb.core.apikey.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a%udb/core/apikey/entity/v1/enums.proto\"\x97\x03\n" +
+	"-udb/core/apikey/events/v1/apikey_events.proto\x12\x19udb.core.apikey.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a%udb/core/apikey/entity/v1/enums.proto\x1a!udb/core/common/v1/security.proto\"\x8e\x04\n" +
 	"\x12ApiKeyCreatedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x15\n" +
 	"\x06key_id\x18\x02 \x01(\tR\x05keyId\x12\x1d\n" +
@@ -388,7 +389,8 @@ const file_udb_core_apikey_events_v1_apikey_events_proto_rawDesc = "" +
 	"\voccurred_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12\x1b\n" +
-	"\ttenant_id\x18\v \x01(\tR\btenantId\"\xaa\x02\n" +
+	"\ttenant_id\x18\v \x01(\tR\btenantId:u\x92\xb2\x19q\n" +
+	",udb.core.apikey.events.v1.ApiKeyCreatedEvent\x12\x15udb.apikey.created.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xa1\x03\n" +
 	"\x12ApiKeyRevokedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x15\n" +
 	"\x06key_id\x18\x02 \x01(\tR\x05keyId\x12\x1d\n" +
@@ -400,7 +402,8 @@ const file_udb_core_apikey_events_v1_apikey_events_proto_rawDesc = "" +
 	"\x0ecorrelation_id\x18\x06 \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12\x1b\n" +
-	"\ttenant_id\x18\b \x01(\tR\btenantId\"\xe9\x02\n" +
+	"\ttenant_id\x18\b \x01(\tR\btenantId:u\x92\xb2\x19q\n" +
+	",udb.core.apikey.events.v1.ApiKeyRevokedEvent\x12\x15udb.apikey.revoked.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xe9\x03\n" +
 	"\x16ApiKeyRateLimitedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x15\n" +
 	"\x06key_id\x18\x02 \x01(\tR\x05keyId\x12\x1d\n" +
@@ -415,7 +418,8 @@ const file_udb_core_apikey_events_v1_apikey_events_proto_rawDesc = "" +
 	"\voccurred_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12\x1b\n" +
 	"\ttenant_id\x18\n" +
-	" \x01(\tR\btenantIdB\x82\x02\n" +
+	" \x01(\tR\btenantId:~\x92\xb2\x19z\n" +
+	"0udb.core.apikey.events.v1.ApiKeyRateLimitedEvent\x12\x1audb.apikey.rate.limited.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\x82\x02\n" +
 	"\x1dcom.udb.core.apikey.events.v1B\x11ApikeyEventsProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x19udb.core.Apikey.Events.V1\xca\x02\x19Udb\\Core\\Apikey\\Events\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Events\\V1\xea\x02\x1dUdb::Core::Apikey::Events::V1b\x06proto3"
 
 var (

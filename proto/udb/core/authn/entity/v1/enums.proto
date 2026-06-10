@@ -105,3 +105,28 @@ enum TokenType {
   TOKEN_TYPE_API_KEY = 4;
   TOKEN_TYPE_EXTERNAL = 5;
 }
+
+// Lifecycle state of a JWT signing key in the DB-backed key registry. A key is
+// minted as NEXT, promoted to ACTIVE (the sole signing key), demoted to
+// VERIFYING when superseded (still trusted for verification during rotation),
+// then RETIRED (no longer trusted) or COMPROMISED (force-rejected). Rotation
+// with zero downtime relies on the ACTIVE→VERIFYING overlap window.
+enum SigningKeyState {
+  SIGNING_KEY_STATE_UNSPECIFIED = 0;
+  SIGNING_KEY_STATE_NEXT = 1;
+  SIGNING_KEY_STATE_ACTIVE = 2;
+  SIGNING_KEY_STATE_VERIFYING = 3;
+  SIGNING_KEY_STATE_RETIRED = 4;
+  SIGNING_KEY_STATE_COMPROMISED = 5;
+}
+
+// Purpose a step-up MFA challenge is issued for. Binds the challenge record to
+// the operation that requested it so a challenge minted for login cannot be
+// replayed to authorize a sensitive mutation.
+enum MfaChallengePurpose {
+  MFA_CHALLENGE_PURPOSE_UNSPECIFIED = 0;
+  MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP = 1;
+  MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION = 2;
+  MFA_CHALLENGE_PURPOSE_ENROLLMENT = 3;
+  MFA_CHALLENGE_PURPOSE_RECOVERY = 4;
+}

@@ -1,0 +1,64 @@
+name: Deploy site (GitHub Pages)
+
+# Publishes the static landing site under docs/site/ to GitHub Pages.
+# Pages "Source" must be set to "GitHub Actions" in repo Settings → Pages.
+#
+# The brand images live in docs/assets/ (the single source used by the READMEs
+# and docs). This workflow syncs them into docs/site/assets/ at build time, so
+# the published artifact is self-contained and the site's `./assets/...`
+# references resolve without committing duplicated images.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/site/**"
+      - "docs/assets/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment; don't cancel an in-progress publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync brand assets into the site
+        run: |
+          mkdir -p docs/site/assets
+          cp -v docs/assets/*.svg docs/site/assets/
+      - name: Build UDB's parser to WebAssembly (real udb-portable, not a mock)
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo build -p udb-wasm --release --target wasm32-unknown-unknown
+          cp -v target/wasm32-unknown-unknown/release/udb_wasm.wasm docs/site/udb.wasm
+      - name: Sanity-check the site
+        run: |
+          test -f docs/site/index.html
+          test -f docs/site/playground.html
+          test -f docs/site/styles.css
+          test -f docs/site/udb.wasm
+          test -f docs/site/assets/udb_logo.svg
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -233,7 +233,7 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object sessionTokenHash_ = "";
   /**
    * <pre>
-   * bcrypt hash of the session token (for secure verify after lookup).
+   * Keyed HMAC digest of the session token (for secure verify after lookup).
    * </pre>
    *
    * <code>string session_token_hash = 5 [json_name = "sessionTokenHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -254,7 +254,7 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * bcrypt hash of the session token (for secure verify after lookup).
+   * Keyed HMAC digest of the session token (for secure verify after lookup).
    * </pre>
    *
    * <code>string session_token_hash = 5 [json_name = "sessionTokenHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -2221,7 +2221,7 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object sessionTokenHash_ = "";
     /**
      * <pre>
-     * bcrypt hash of the session token (for secure verify after lookup).
+     * Keyed HMAC digest of the session token (for secure verify after lookup).
      * </pre>
      *
      * <code>string session_token_hash = 5 [json_name = "sessionTokenHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -2241,7 +2241,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * bcrypt hash of the session token (for secure verify after lookup).
+     * Keyed HMAC digest of the session token (for secure verify after lookup).
      * </pre>
      *
      * <code>string session_token_hash = 5 [json_name = "sessionTokenHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -2262,7 +2262,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * bcrypt hash of the session token (for secure verify after lookup).
+     * Keyed HMAC digest of the session token (for secure verify after lookup).
      * </pre>
      *
      * <code>string session_token_hash = 5 [json_name = "sessionTokenHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -2279,7 +2279,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * bcrypt hash of the session token (for secure verify after lookup).
+     * Keyed HMAC digest of the session token (for secure verify after lookup).
      * </pre>
      *
      * <code>string session_token_hash = 5 [json_name = "sessionTokenHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -2293,7 +2293,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * bcrypt hash of the session token (for secure verify after lookup).
+     * Keyed HMAC digest of the session token (for secure verify after lookup).
      * </pre>
      *
      * <code>string session_token_hash = 5 [json_name = "sessionTokenHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>

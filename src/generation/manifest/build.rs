@@ -87,6 +87,167 @@ fn validate_check_expression(value: &str) -> Result<(), &'static str> {
     validate_rls_expression(value)
 }
 
+fn manifest_table_security(schema: &ProtoSchema) -> ManifestTableSecurity {
+    ManifestTableSecurity {
+        tenant_isolation_mode: schema
+            .table_security
+            .tenant_isolation_mode
+            .trim()
+            .to_string(),
+        project_isolation_mode: schema
+            .table_security
+            .project_isolation_mode
+            .trim()
+            .to_string(),
+        tenant_column: normalize_ident(&schema.table_security.tenant_column),
+        project_column: normalize_ident(&schema.table_security.project_column),
+        rls_policy_template: schema.table_security.rls_policy_template.trim().to_string(),
+        soft_delete_mode: schema.table_security.soft_delete_mode.trim().to_string(),
+        retention_class: schema.table_security.retention_class.trim().to_string(),
+        retention_days: schema.table_security.retention_days,
+        audit_mode: schema.table_security.audit_mode.trim().to_string(),
+        encryption_profile: schema.table_security.encryption_profile.trim().to_string(),
+        pii_profile: schema.table_security.pii_profile.trim().to_string(),
+        break_glass_visible: schema.table_security.break_glass_visible,
+        export_eligible: schema.table_security.export_eligible,
+        data_residency_policy_ref: schema
+            .table_security
+            .data_residency_policy_ref
+            .trim()
+            .to_string(),
+    }
+}
+
+fn table_security_requires_rls(security: &ManifestTableSecurity) -> bool {
+    tenant_isolation_enabled(&security.tenant_isolation_mode)
+        || tenant_isolation_enabled(&security.project_isolation_mode)
+        || !security.rls_policy_template.trim().is_empty()
+}
+
+fn security_soft_delete_enabled(security: &ManifestTableSecurity) -> bool {
+    matches!(
+        security
+            .soft_delete_mode
+            .trim()
+            .to_ascii_lowercase()
+            .as_str(),
+        "soft_delete" | "soft-delete" | "soft"
+    )
+}
+
+/// Whether `db_table_security.audit_mode` requests audit columns. Any mode other
+/// than empty/`none` (MUTATION/DECISION/FULL) implies audited writes.
+fn security_audit_enabled(security: &ManifestTableSecurity) -> bool {
+    !matches!(
+        security.audit_mode.trim().to_ascii_lowercase().as_str(),
+        "" | "none" | "audit_mode_none" | "audit_mode_unspecified"
+    )
+}
+
+/// Resolve the authoritative retention window. `db_table_security.retention_days`
+/// is the single source of truth (Phase 4 unification); the legacy
+/// `pg_table.retention_days` is only a fallback when security does not specify one.
+fn resolved_retention_days(schema: &ProtoSchema, security: &ManifestTableSecurity) -> i32 {
+    if security.retention_days > 0 {
+        security.retention_days
+    } else {
+        schema.retention_days
+    }
+}
+
+/// urgent_fix #24: detect `pg_table` ↔ `db_table_security` conflicts — the SAME
+/// concern set to diverging values in both annotations. Conservative: only fires
+/// on an unambiguous disagreement (both sides explicitly set the concern), so a
+/// table that configures a concern in exactly one place is never flagged. The
+/// caller (`CatalogManifest::from_schemas`) promotes these to `validation_errors`
+/// so the migration pipeline hard-fails instead of silently preferring one source.
+pub(crate) fn pg_table_security_conflicts(schema: &ProtoSchema) -> Vec<String> {
+    let sec = &schema.table_security;
+    let mut conflicts = Vec::new();
+    // Retention: both explicitly set (>0) and disagree.
+    if schema.retention_days > 0
+        && sec.retention_days > 0
+        && schema.retention_days != sec.retention_days
+    {
+        conflicts.push(format!(
+            "table '{}': pg_table.retention_days={} conflicts with \
+             db_table_security.retention_days={} — set data retention in ONE place",
+            schema.table_name, schema.retention_days, sec.retention_days
+        ));
+    }
+    // Soft-delete: db_table_security explicitly chose a mode that disagrees with
+    // pg_table.soft_delete (true vs an explicit non-soft mode, or vice versa).
+    let sec_mode = sec.soft_delete_mode.trim();
+    if !sec_mode.is_empty() {
+        let sec_soft = matches!(
+            sec_mode.to_ascii_lowercase().as_str(),
+            "soft_delete" | "soft-delete" | "soft"
+        );
+        if sec_soft != schema.soft_delete {
+            conflicts.push(format!(
+                "table '{}': pg_table.soft_delete={} conflicts with \
+                 db_table_security.soft_delete_mode='{}' — declare soft-delete in ONE place",
+                schema.table_name, schema.soft_delete, sec_mode
+            ));
+        }
+    }
+    conflicts
+}
+
+fn derive_security_rls_policies(
+    table_name: &str,
+    security: &ManifestTableSecurity,
+    warnings: &mut Vec<String>,
+) -> Vec<ManifestPolicy> {
+    let mut predicates = Vec::new();
+    if !security.rls_policy_template.trim().is_empty() {
+        predicates.push(security.rls_policy_template.trim().to_string());
+    } else {
+        if tenant_isolation_enabled(&security.tenant_isolation_mode)
+            && !security.tenant_column.trim().is_empty()
+        {
+            predicates.push(format!(
+                "({}::text = current_setting('app.current_tenant_id', true)::text)",
+                security.tenant_column
+            ));
+        }
+        if tenant_isolation_enabled(&security.project_isolation_mode)
+            && !security.project_column.trim().is_empty()
+        {
+            predicates.push(format!(
+                "({}::text = current_setting('app.current_project_id', true)::text)",
+                security.project_column
+            ));
+        }
+    }
+    if predicates.is_empty() {
+        return Vec::new();
+    }
+    let expression = if predicates.len() == 1 {
+        predicates.remove(0)
+    } else {
+        predicates
+            .into_iter()
+            .map(|predicate| format!("({predicate})"))
+            .collect::<Vec<_>>()
+            .join(" AND ")
+    };
+    if let Err(reason) = validate_rls_expression(&expression) {
+        warnings.push(format!(
+            "{} db_table_security derived RLS policy omitted: {}",
+            table_name, reason
+        ));
+        return Vec::new();
+    }
+    vec![ManifestPolicy {
+        name: "table_security_isolation".to_string(),
+        command: "ALL".to_string(),
+        using_expression: expression.clone(),
+        with_check: expression,
+        permissive: true,
+    }]
+}
+
 pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
     let mut columns: Vec<_> = schema.columns.iter().map(column_from_proto).collect();
     columns.sort_by_key(|col| col.field_number);
@@ -219,6 +380,7 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
     }
     checks.sort_by(|a, b| a.expression.cmp(&b.expression));
 
+    let table_security = manifest_table_security(schema);
     let mut rls_policies = schema
         .rls_policies
         .iter()
@@ -248,6 +410,10 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
             }
         })
         .collect::<Vec<_>>();
+    let mut derived_policies =
+        derive_security_rls_policies(&schema.table_name, &table_security, &mut warnings);
+    derived_policies.retain(|derived| !rls_policies.iter().any(|p| p.name == derived.name));
+    rls_policies.extend(derived_policies);
     rls_policies.sort_by(|a, b| a.name.cmp(&b.name));
 
     warnings.extend(validate_table_shape(
@@ -255,7 +421,7 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
         &schema.table_name,
         &columns,
     ));
-    if schema.audit_fields {
+    if schema.audit_fields || security_audit_enabled(&table_security) {
         warnings.extend(validate_audit_fields(
             &schema.schema_name,
             &schema.table_name,
@@ -312,20 +478,23 @@ pub(crate) fn table_from_schema(schema: &ProtoSchema) -> ManifestTable {
         partition_interval: schema.partition_interval.clone(),
         partition_premake: schema.partition_premake,
         partition_default: schema.partition_default,
-        retention_days: schema.retention_days,
+        retention_days: resolved_retention_days(schema, &table_security),
         replica_hint: normalize_replica_hint(&schema.replica_hint),
         cdc_topic: schema.cdc_topic.trim().to_string(),
         required_scope: schema.required_scope.trim().to_string(),
-        enable_rls: schema.enable_rls,
+        enable_rls: schema.enable_rls || table_security_requires_rls(&table_security),
         // force_rls (FORCE ROW LEVEL SECURITY) makes even the table owner subject
         // to RLS policies.  It must only be set when the proto explicitly requests
         // it.  Deriving it from enable_rls would silently promote every
         // enable_rls table to the far more restrictive FORCE setting.
         force_rls: schema.force_rls,
         rls_policies,
-        soft_delete: schema.soft_delete,
+        table_security: table_security.clone(),
+        soft_delete: schema.soft_delete || security_soft_delete_enabled(&table_security),
         soft_delete_column: defaulted(&normalize_ident(&schema.soft_delete_column), "deleted_at"),
-        audit_fields: schema.audit_fields,
+        // db_table_security.audit_mode is authoritative; pg_table.audit_fields is a
+        // legacy fallback. Either requesting audit columns enables them.
+        audit_fields: schema.audit_fields || security_audit_enabled(&table_security),
         security: ManifestSecurity {
             classification_level: schema.security.classification_level.clone(),
             audit_writes: schema.security.audit_writes,
@@ -1119,6 +1288,7 @@ pub(crate) fn validate_manifest_tables(tables: &[ManifestTable]) -> Vec<String> 
         .map(|table| format!("{}.{}", table.schema, table.table))
         .collect::<BTreeSet<_>>();
     for table in tables {
+        errors.extend(validate_table_security_alignment(table));
         for fk in &table.foreign_keys {
             if fk.ref_table.is_empty() {
                 errors.push(format!(
@@ -1140,10 +1310,96 @@ pub(crate) fn validate_manifest_tables(tables: &[ManifestTable]) -> Vec<String> 
     errors
 }
 
+fn validate_table_security_alignment(table: &ManifestTable) -> Vec<String> {
+    let mut errors = Vec::new();
+    let security = &table.table_security;
+    if !table_security_declared(security) {
+        return errors;
+    }
+
+    if tenant_isolation_enabled(&security.tenant_isolation_mode) {
+        if security.tenant_column.trim().is_empty() {
+            errors.push(format!(
+                "{}.{} db_table_security enables tenant isolation but tenant_column is empty",
+                table.schema, table.table
+            ));
+        } else if !column_marked_for_security(table, &security.tenant_column, true) {
+            errors.push(format!(
+                "{}.{} db_table_security tenant_column '{}' does not match a pg_column tenant_column=true field",
+                table.schema, table.table, security.tenant_column
+            ));
+        }
+        if table.rls_policies.is_empty() && security.rls_policy_template.trim().is_empty() {
+            errors.push(format!(
+                "{}.{} db_table_security enables tenant isolation but no RLS policy or rls_policy_template is declared",
+                table.schema, table.table
+            ));
+        }
+    }
+
+    if tenant_isolation_enabled(&security.project_isolation_mode) {
+        if security.project_column.trim().is_empty() {
+            errors.push(format!(
+                "{}.{} db_table_security enables project isolation but project_column is empty",
+                table.schema, table.table
+            ));
+        } else if !column_marked_for_security(table, &security.project_column, false) {
+            errors.push(format!(
+                "{}.{} db_table_security project_column '{}' does not match a pg_column project_column=true field",
+                table.schema, table.table, security.project_column
+            ));
+        }
+    }
+
+    if security_soft_delete_enabled(security) {
+        let soft_delete_column = table.soft_delete_column.trim();
+        if soft_delete_column.is_empty()
+            || !table
+                .columns
+                .iter()
+                .any(|column| column.column_name == soft_delete_column)
+        {
+            errors.push(format!(
+                "{}.{} db_table_security soft_delete_mode requires a real soft_delete_column '{}' field",
+                table.schema, table.table, table.soft_delete_column
+            ));
+        }
+    }
+
+    errors
+}
+
+fn table_security_declared(security: &ManifestTableSecurity) -> bool {
+    !security.tenant_isolation_mode.trim().is_empty()
+        || !security.project_isolation_mode.trim().is_empty()
+        || !security.tenant_column.trim().is_empty()
+        || !security.project_column.trim().is_empty()
+        || !security.rls_policy_template.trim().is_empty()
+        || !security.soft_delete_mode.trim().is_empty()
+}
+
+fn tenant_isolation_enabled(mode: &str) -> bool {
+    !matches!(
+        mode.trim().to_ascii_lowercase().as_str(),
+        "" | "none" | "global" | "disabled" | "off"
+    )
+}
+
+fn column_marked_for_security(table: &ManifestTable, name: &str, tenant: bool) -> bool {
+    table.columns.iter().any(|column| {
+        (column.column_name == name || column.field_name == name)
+            && if tenant {
+                column.is_tenant_column
+            } else {
+                column.is_project_column
+            }
+    })
+}
+
 #[cfg(test)]
 mod oneof_check_tests {
     use super::*;
-    use crate::ast::{ProtoColumn, ProtoSchema};
+    use crate::ast::{ProtoColumn, ProtoSchema, ProtoTableSecurity};
 
     fn col(name: &str, field_number: i32, oneof: &str) -> ProtoColumn {
         ProtoColumn {
@@ -1255,5 +1511,172 @@ mod oneof_check_tests {
             .find(|c| c.name == "chk_accounts_status")
             .expect("benign check_constraint should be emitted");
         assert_eq!(chk.expression, "status IN ('active', 'closed')");
+    }
+
+    #[test]
+    fn db_table_security_derives_rls_but_still_validates_columns() {
+        let mut schema = ProtoSchema::new("Session");
+        schema.table_name = "sessions".to_string();
+        schema.schema_name = "authn".to_string();
+        schema.is_table = true;
+        schema.enable_rls = false;
+        schema.table_security = ProtoTableSecurity {
+            tenant_isolation_mode: "tenant".to_string(),
+            tenant_column: "tenant_id".to_string(),
+            rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')".to_string(),
+            ..ProtoTableSecurity::default()
+        };
+        schema.columns = vec![
+            col("id", 1, ""),
+            ProtoColumn {
+                field_name: "tenant_id".to_string(),
+                column_name: "tenant_id".to_string(),
+                proto_type: "string".to_string(),
+                sql_type: "UUID".to_string(),
+                field_number: 2,
+                is_tenant: false,
+                ..ProtoColumn::default()
+            },
+        ];
+
+        let manifest = CatalogManifest::from_schemas(&[schema]).expect("manifest");
+        let table = manifest
+            .tables
+            .iter()
+            .find(|table| table.table == "sessions")
+            .expect("sessions table");
+        assert!(table.enable_rls, "db_table_security should derive RLS");
+        assert!(
+            table
+                .rls_policies
+                .iter()
+                .any(|policy| policy.name == "table_security_isolation"),
+            "db_table_security should derive a concrete policy"
+        );
+        assert!(manifest.validation_errors.iter().any(|error| {
+            error.contains("tenant_column")
+                && error.contains("does not match a pg_column tenant_column=true")
+        }));
+        assert!(!manifest.validation_errors.iter().any(|error| {
+            error.contains("tenant isolation") && error.contains("enable_rls is false")
+        }));
+    }
+
+    fn secured_schema(policy_template: &str) -> ProtoSchema {
+        let mut schema = ProtoSchema::new("Session");
+        schema.table_name = "sessions".to_string();
+        schema.schema_name = "authn".to_string();
+        schema.is_table = true;
+        schema.table_security = ProtoTableSecurity {
+            tenant_isolation_mode: "tenant".to_string(),
+            tenant_column: "tenant_id".to_string(),
+            rls_policy_template: policy_template.to_string(),
+            ..ProtoTableSecurity::default()
+        };
+        schema.columns = vec![
+            col("id", 1, ""),
+            ProtoColumn {
+                field_name: "tenant_id".to_string(),
+                column_name: "tenant_id".to_string(),
+                proto_type: "string".to_string(),
+                sql_type: "UUID".to_string(),
+                field_number: 2,
+                is_tenant: true,
+                not_null: true,
+                ..ProtoColumn::default()
+            },
+        ];
+        schema
+    }
+
+    #[test]
+    fn db_table_security_retention_overrides_pg_table() {
+        // db_table_security.retention_days is authoritative (Phase 4 unification).
+        let mut schema = ProtoSchema::new("Session");
+        schema.table_name = "sessions".to_string();
+        schema.is_table = true;
+        schema.retention_days = 7; // legacy pg_table value
+        schema.table_security = ProtoTableSecurity {
+            retention_days: 30,
+            ..ProtoTableSecurity::default()
+        };
+        schema.columns = vec![col("id", 1, "")];
+        let table = table_from_schema(&schema);
+        assert_eq!(table.retention_days, 30);
+    }
+
+    #[test]
+    fn pg_table_retention_used_when_security_absent() {
+        let mut schema = ProtoSchema::new("Session");
+        schema.table_name = "sessions".to_string();
+        schema.is_table = true;
+        schema.retention_days = 7;
+        schema.columns = vec![col("id", 1, "")];
+        let table = table_from_schema(&schema);
+        assert_eq!(table.retention_days, 7);
+    }
+
+    #[test]
+    fn db_table_security_audit_mode_enables_audit_fields() {
+        let mut schema = ProtoSchema::new("Session");
+        schema.table_name = "sessions".to_string();
+        schema.is_table = true;
+        schema.audit_fields = false; // pg_table off
+        schema.table_security = ProtoTableSecurity {
+            audit_mode: "FULL".to_string(),
+            ..ProtoTableSecurity::default()
+        };
+        schema.columns = vec![col("id", 1, "")];
+        let table = table_from_schema(&schema);
+        assert!(table.audit_fields);
+    }
+
+    #[test]
+    fn db_table_security_changes_checksums_and_bootstrap_sql() {
+        let a = secured_schema("tenant_id = current_setting('app.current_tenant_id')");
+        let b = secured_schema(
+            "tenant_id = current_setting('app.current_tenant_id') AND current_setting('app.platform_admin', true) <> 'true'",
+        );
+        let manifest_a = CatalogManifest::from_schemas(std::slice::from_ref(&a)).expect("a");
+        let manifest_b = CatalogManifest::from_schemas(std::slice::from_ref(&b)).expect("b");
+        let table_a = manifest_a
+            .tables
+            .iter()
+            .find(|table| table.table == "sessions")
+            .expect("table a");
+        let table_b = manifest_b
+            .tables
+            .iter()
+            .find(|table| table.table == "sessions")
+            .expect("table b");
+
+        assert_ne!(table_a.checksum_sha256, table_b.checksum_sha256);
+        assert_ne!(
+            manifest_a.schema_checksums[0].checksum_sha256,
+            manifest_b.schema_checksums[0].checksum_sha256
+        );
+        assert_ne!(manifest_a.checksum_sha256, manifest_b.checksum_sha256);
+
+        let sql_a = crate::generation::sql::generate_bootstrap_sql(
+            std::slice::from_ref(&a),
+            &crate::generation::sql::SqlGenerationConfig::default(),
+        )
+        .expect("sql a")
+        .into_iter()
+        .map(|artifact| artifact.content)
+        .collect::<Vec<_>>()
+        .join("\n");
+        let sql_b = crate::generation::sql::generate_bootstrap_sql(
+            std::slice::from_ref(&b),
+            &crate::generation::sql::SqlGenerationConfig::default(),
+        )
+        .expect("sql b")
+        .into_iter()
+        .map(|artifact| artifact.content)
+        .collect::<Vec<_>>()
+        .join("\n");
+        assert!(sql_a.contains("ENABLE ROW LEVEL SECURITY"));
+        assert!(sql_a.contains("CREATE POLICY"));
+        assert_ne!(sql_a, sql_b);
     }
 }

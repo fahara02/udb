@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SDKs — UDB</title>
+<meta name="description" content="UDB SDKs for Go, Python, TypeScript, Java, C#, and PHP — all generated from one proto descriptor and held to a cross-language conformance contract.">
+<meta name="theme-color" content="#121214">
+<link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body id="top">
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="./index.html"><img src="./assets/udb_logo.svg" alt="UDB logo">UDB</a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="./architecture.html">Architecture</a>
+      <a href="./data-plane.html">Data&nbsp;Plane</a>
+      <a href="./control-plane.html">Control&nbsp;Plane</a>
+      <a href="./security.html">Security</a>
+      <a href="./enterprise.html">Enterprise</a>
+      <a href="./sdks.html" class="active">SDKs</a>
+      <a href="./playground.html">Playground</a>
+      <a class="nav-cta" href="https://github.com/fahara02/udb">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <div class="eyebrow">SDKs · one descriptor contract</div>
+    <h1>First-class clients in <span class="g">six languages</span></h1>
+    <p class="lead">Every SDK is generated from the same proto descriptor and held to one cross-language
+      conformance contract: identical metadata headers, credential handling, authz-cache semantics, and
+      refresh single-flight behavior. <code>udb sdk generate</code> regenerates all six from the embedded
+      descriptor set.</p>
+  </div>
+
+  <section style="border-top:none;padding-top:18px">
+    <div class="wrap">
+      <div class="sdks reveal">
+        <a class="sdk" href="https://github.com/fahara02/udb/tree/main/sdk/go">Go<small>net/grpc</small></a>
+        <a class="sdk" href="https://github.com/fahara02/udb/tree/main/sdk/python">Python<small>grpcio</small></a>
+        <a class="sdk" href="https://github.com/fahara02/udb/tree/main/sdk/typescript">TypeScript<small>grpc-js</small></a>
+        <a class="sdk" href="https://github.com/fahara02/udb/tree/main/sdk/java">Java<small>grpc-java</small></a>
+        <a class="sdk" href="https://github.com/fahara02/udb/tree/main/sdk/csharp">C#<small>Grpc.Net</small></a>
+        <a class="sdk" href="https://github.com/fahara02/udb/tree/main/sdk/php">PHP<small>ext-grpc</small></a>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow reveal">Quickstart</div>
+      <h2 class="reveal">A project facade, <span class="accent">everywhere</span></h2>
+      <div class="tabs reveal d1 mt28">
+        <input type="radio" name="tab" id="t1" checked><input type="radio" name="tab" id="t2">
+        <input type="radio" name="tab" id="t3"><input type="radio" name="tab" id="t4">
+        <div class="tabbar">
+          <label for="t1">Python</label><label for="t2">Go</label>
+          <label for="t3">TypeScript</label><label for="t4">Java</label>
+        </div>
+        <div class="panels">
+          <div class="panel" id="p1"><pre><span class="k">from</span> udb_client <span class="k">import</span> Metadata, UdbClient, decode_records
+
+meta = <span class="t">Metadata</span>(tenant_id=<span class="s">"acme"</span>, project_id=<span class="s">"billing"</span>,
+                scopes=(<span class="s">"udb:read"</span>, <span class="s">"udb:write"</span>))
+
+<span class="k">with</span> <span class="t">UdbClient</span>(<span class="s">"127.0.0.1:50051"</span>, meta) <span class="k">as</span> udb:
+    rows = udb.select(message_type=<span class="s">"acme.billing.v1.Invoice"</span>, limit=<span class="n">50</span>)
+    <span class="k">print</span>(decode_records(rows))</pre></div>
+          <div class="panel" id="p2"><pre><span class="k">import</span> udb <span class="s">"github.com/fahara02/udb/sdk/go/udbclient"</span>
+
+u, _ := udb.<span class="fn">NewUdb</span>(ctx, udb.Config{
+    Target:    <span class="s">"127.0.0.1:50051"</span>,
+    TenantID:  <span class="s">"acme"</span>,
+    ProjectID: <span class="s">"billing"</span>,
+})
+<span class="k">defer</span> u.<span class="fn">Close</span>()
+rows, _ := u.Data.<span class="fn">Select</span>(ctx, <span class="s">"acme.billing.v1.Invoice"</span>, <span class="n">50</span>)</pre></div>
+          <div class="panel" id="p3"><pre><span class="k">import</span> { createUdb } <span class="k">from</span> <span class="s">"@udb/sdk"</span>;
+
+<span class="k">const</span> udb = <span class="fn">createUdb</span>({
+  target: <span class="s">"127.0.0.1:50051"</span>,
+  tenantId: <span class="s">"acme"</span>, projectId: <span class="s">"billing"</span>,
+});
+<span class="k">const</span> rows = <span class="k">await</span> udb.data.<span class="fn">select</span>({
+  message_type: <span class="s">"acme.billing.v1.Invoice"</span>, limit: <span class="n">50</span>,
+});</pre></div>
+          <div class="panel" id="p4"><pre><span class="k">var</span> udb = <span class="t">UdbProject</span>.<span class="fn">open</span>(<span class="t">UdbProjectConfig</span>.<span class="fn">builder</span>()
+    .<span class="fn">target</span>(<span class="s">"127.0.0.1:50051"</span>)
+    .<span class="fn">tenantId</span>(<span class="s">"acme"</span>)
+    .<span class="fn">projectId</span>(<span class="s">"billing"</span>)
+    .<span class="fn">build</span>());
+<span class="k">var</span> rows = udb.<span class="fn">data</span>().<span class="fn">select</span>(req);</pre></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow reveal">One contract, enforced</div>
+      <h2 class="reveal">Conformance, not <span class="accent">coincidence</span></h2>
+      <div class="grid c3 mt28">
+        <div class="card reveal"><div class="ic">🧾</div><h3>Identical metadata</h3><p>The same <code>x-tenant-id</code>, <code>x-purpose</code>, <code>x-correlation-id</code>, scopes, and project headers across all six languages — bearer as <code>authorization</code>, API key as <code>x-api-key</code>.</p></div>
+        <div class="card reveal d1"><div class="ic">🔄</div><h3>Refresh single-flight</h3><p>Concurrent token refreshes collapse to one <code>RefreshToken</code> RPC, and the refreshed credential is hot-swapped into every outbound channel — verified per language.</p></div>
+        <div class="card warm reveal d2"><div class="ic">✅</div><h3>CI-gated parity</h3><p>A cross-language conformance runner asserts metadata, credential, authz-cache TTL, and policy-bundle-signature behavior; missing tooling or a failing suite is a release failure.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap center">
+      <div class="ctaband reveal">
+        <h2 class="mt0">Generate, scaffold, <span class="accent">ship</span></h2>
+        <p class="lead" style="margin:10px auto 0"><code>udb scaffold</code> emits a starter project; <code>udb sdk generate</code>
+          regenerates all six clients from the descriptor; <code>udb proto export</code> hands you the full proto tree.</p>
+        <div class="cta">
+          <a class="btn primary" href="./playground.html">▶ Try the playground</a>
+          <a class="btn ghost" href="https://github.com/fahara02/udb/tree/main/sdk">Browse the SDKs</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div class="brand"><img src="./assets/udb_logo.svg" alt="" style="width:26px;height:26px;border-radius:7px"> UDB — Universal Data Broker</div>
+    <nav class="foot-links">
+      <a href="./index.html">Home</a><a href="./architecture.html">Architecture</a>
+      <a href="https://github.com/fahara02/udb">GitHub</a>
+      <a href="https://github.com/fahara02/udb/blob/main/LICENSE">MIT</a>
+    </nav>
+  </div>
+  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.3.2 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
+</footer>
+
+<script defer src="./app.js"></script>
+</body>
+</html>

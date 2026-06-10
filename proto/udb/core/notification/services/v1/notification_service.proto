@@ -19,11 +19,97 @@ option php_namespace = "Udb\\Core\\Notification\\Services\\V1";
 // ---------------------------------------------------------------------------
 
 service NotificationService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "notification"
+    logical_service_id: "notification"
+    proto_service_id: "notification"
+    display_name: "Notifications"
+    category: "messaging"
+    default_enabled: true
+    requires_postgres: true
+    requires_kafka: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "notification"
+    cli_scaffold_group: "notification"
+    health_check_ref: "notification"
+    capability_ref: "native.notification"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "notification"
+    import_path: "udb/native/notification"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.notification.config.json"
+    required_native_services: "notification"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "notification"
+    required_backends: "postgres"
+    required_backends: "kafka"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    degraded_when_missing: "kafka"
+  };
+
   // Send a notification (or enqueue it for async delivery).
   rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:notification:send-notification"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "notification.SendNotification"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "send_notification"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "notification"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "notification"
+      import_path: "udb/native/notification"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.notification.send_notification.boilerplate"
+      route_name: "send_notification"
+      middleware_name: "udb_notification"
+      required_native_services: "notification"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "notification"
+      required_backends: "postgres"
+      required_backends: "kafka"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "notification.SendNotification"
+      outbox_topic: "notification.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+      emits: { topic: "udb.notification.sent.v1" partition_key_field: "recipient_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: false }
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -40,7 +126,49 @@ service NotificationService {
   rpc GetNotification(GetNotificationRequest) returns (GetNotificationResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:notification:get-notification"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "notification.GetNotification"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_notification"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "notification"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "notification"
+      import_path: "udb/native/notification"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.notification.get_notification.boilerplate"
+      route_name: "get_notification"
+      middleware_name: "udb_notification"
+      required_native_services: "notification"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "notification"
+      required_backends: "postgres"
+      required_backends: "kafka"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "notification.GetNotification"
+      outbox_topic: "notification.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -54,7 +182,49 @@ service NotificationService {
   rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:notification:list-notifications"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "notification.ListNotifications"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_notifications"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "notification"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "notification"
+      import_path: "udb/native/notification"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.notification.list_notifications.boilerplate"
+      route_name: "list_notifications"
+      middleware_name: "udb_notification"
+      required_native_services: "notification"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "notification"
+      required_backends: "postgres"
+      required_backends: "kafka"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "notification.ListNotifications"
+      outbox_topic: "notification.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -68,7 +238,49 @@ service NotificationService {
   rpc RetryNotification(RetryNotificationRequest) returns (RetryNotificationResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:notification:retry-notification"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "notification.RetryNotification"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "retry_notification"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "notification"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "notification"
+      import_path: "udb/native/notification"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.notification.retry_notification.boilerplate"
+      route_name: "retry_notification"
+      middleware_name: "udb_notification"
+      required_native_services: "notification"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "notification"
+      required_backends: "postgres"
+      required_backends: "kafka"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "notification.RetryNotification"
+      outbox_topic: "notification.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -87,7 +299,49 @@ service NotificationService {
   rpc UpsertTemplate(UpsertTemplateRequest) returns (UpsertTemplateResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:notification:upsert-template"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "notification.UpsertTemplate"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "upsert_template"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "notification"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "notification"
+      import_path: "udb/native/notification"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.notification.upsert_template.boilerplate"
+      route_name: "upsert_template"
+      middleware_name: "udb_notification"
+      required_native_services: "notification"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "notification"
+      required_backends: "postgres"
+      required_backends: "kafka"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "notification.UpsertTemplate"
+      outbox_topic: "notification.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -104,7 +358,49 @@ service NotificationService {
   rpc GetTemplate(GetTemplateRequest) returns (GetTemplateResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:notification:get-template"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "notification.GetTemplate"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_template"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "notification"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "notification"
+      import_path: "udb/native/notification"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.notification.get_template.boilerplate"
+      route_name: "get_template"
+      middleware_name: "udb_notification"
+      required_native_services: "notification"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "notification"
+      required_backends: "postgres"
+      required_backends: "kafka"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "notification.GetTemplate"
+      outbox_topic: "notification.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -118,7 +414,49 @@ service NotificationService {
   rpc ListTemplates(ListTemplatesRequest) returns (ListTemplatesResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:notification:list-templates"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "notification.ListTemplates"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_templates"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "notification"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "notification"
+      import_path: "udb/native/notification"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.notification.list_templates.boilerplate"
+      route_name: "list_templates"
+      middleware_name: "udb_notification"
+      required_native_services: "notification"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "notification"
+      required_backends: "postgres"
+      required_backends: "kafka"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "notification.ListTemplates"
+      outbox_topic: "notification.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -132,7 +470,49 @@ service NotificationService {
   rpc GetDeliveryStats(GetDeliveryStatsRequest) returns (GetDeliveryStatsResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:notification:get-delivery-stats"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "notification.GetDeliveryStats"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_delivery_stats"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "notification"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "notification"
+      import_path: "udb/native/notification"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.notification.get_delivery_stats.boilerplate"
+      route_name: "get_delivery_stats"
+      middleware_name: "udb_notification"
+      required_native_services: "notification"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "notification"
+      required_backends: "postgres"
+      required_backends: "kafka"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "notification.GetDeliveryStats"
+      outbox_topic: "notification.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -148,7 +528,49 @@ service NotificationService {
   rpc SetPreference(SetPreferenceRequest) returns (SetPreferenceResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:notification:set-preference"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "notification.SetPreference"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "set_preference"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "notification"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "notification"
+      import_path: "udb/native/notification"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.notification.set_preference.boilerplate"
+      route_name: "set_preference"
+      middleware_name: "udb_notification"
+      required_native_services: "notification"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "notification"
+      required_backends: "postgres"
+      required_backends: "kafka"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "notification.SetPreference"
+      outbox_topic: "notification.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -165,7 +587,49 @@ service NotificationService {
   rpc GetPreference(GetPreferenceRequest) returns (GetPreferenceResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:notification:get-preference"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "notification.GetPreference"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_preference"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "notification"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "notification"
+      import_path: "udb/native/notification"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.notification.get_preference.boilerplate"
+      route_name: "get_preference"
+      middleware_name: "udb_notification"
+      required_native_services: "notification"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "notification"
+      required_backends: "postgres"
+      required_backends: "kafka"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "notification.GetPreference"
+      outbox_topic: "notification.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -179,7 +643,49 @@ service NotificationService {
   rpc ListPreferences(ListPreferencesRequest) returns (ListPreferencesResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:notification:list-preferences"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "notification.ListPreferences"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_preferences"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "notification"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "notification"
+      import_path: "udb/native/notification"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.notification.list_preferences.boilerplate"
+      route_name: "list_preferences"
+      middleware_name: "udb_notification"
+      required_native_services: "notification"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "notification"
+      required_backends: "postgres"
+      required_backends: "kafka"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "notification.ListPreferences"
+      outbox_topic: "notification.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true

@@ -4,7 +4,7 @@
 
 import type { GenEnum, GenExtension, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, extDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import type { FieldOptions, MethodOptions } from "@bufbuild/protobuf/wkt";
+import type { FieldOptions, MessageOptions, MethodOptions, ServiceOptions } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_descriptor } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/core/common/v1/security.proto.
  */
 export const file_udb_core_common_v1_security: GenFile = /*@__PURE__*/
-  fileDesc("CiF1ZGIvY29yZS9jb21tb24vdjEvc2VjdXJpdHkucHJvdG8SEnVkYi5jb3JlLmNvbW1vbi52MSK9AQoQRW5kcG9pbnRTZWN1cml0eRIqCgRtb2RlGAEgASgOMhwudWRiLmNvcmUuY29tbW9uLnYxLkF1dGhNb2RlEg0KBXJvbGVzGAIgAygJEg4KBnNjb3BlcxgDIAMoCRIXCg90ZW5hbnRfcmVxdWlyZWQYBCABKAgSFQoNY3NyZl9yZXF1aXJlZBgFIAEoCBISCgpwb2xpY3lfcmVmGAYgASgJEhoKEmludGVybmFsX2dycGNfb25seRgHIAEoCCJtCgxSZXN0Q29udHJhY3QSGQoRcmVzcG9uc2VfZW52ZWxvcGUYASABKAgSEQoJYXBpX2Vycm9yGAIgASgIEhcKD3BhZ2luYXRpb25fbWV0YRgDIAEoCBIWCg5leHBsaWNpdF9udWxscxgEIAEoCCqHAQoIQXV0aE1vZGUSGQoVQVVUSF9NT0RFX1VOU1BFQ0lGSUVEEAASFAoQQVVUSF9NT0RFX1BVQkxJQxABEhQKEEFVVEhfTU9ERV9CRUFSRVIQAhIVChFBVVRIX01PREVfQVBJX0tFWRADEh0KGUFVVEhfTU9ERV9TRVJWSUNFX0FDQ09VTlQQBCrdAQoWU2VjdXJpdHlDbGFzc2lmaWNhdGlvbhInCiNTRUNVUklUWV9DTEFTU0lGSUNBVElPTl9VTlNQRUNJRklFRBAAEiIKHlNFQ1VSSVRZX0NMQVNTSUZJQ0FUSU9OX1BVQkxJQxABEiQKIFNFQ1VSSVRZX0NMQVNTSUZJQ0FUSU9OX0lOVEVSTkFMEAISKAokU0VDVVJJVFlfQ0xBU1NJRklDQVRJT05fQ09ORklERU5USUFMEAMSJgoiU0VDVVJJVFlfQ0xBU1NJRklDQVRJT05fUkVTVFJJQ1RFRBAEKtgBCgxEYXRhQ2F0ZWdvcnkSHQoZREFUQV9DQVRFR09SWV9VTlNQRUNJRklFRBAAEhoKFkRBVEFfQ0FURUdPUllfUEVSU09OQUwQARIbChdEQVRBX0NBVEVHT1JZX0ZJTkFOQ0lBTBACEhsKF0RBVEFfQ0FURUdPUllfQklPTUVUUklDEAMSGgoWREFUQV9DQVRFR09SWV9JREVOVElUWRAEEh0KGURBVEFfQ0FURUdPUllfT1BFUkFUSU9OQUwQBRIYChREQVRBX0NBVEVHT1JZX1NZU1RFTRAGOjEKA3BpaRIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMY2oYDIAEoCFIDcGlpOk4KEmVuY3J5cHRlZF9zZWN1cml0eRIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMY24YDIAEoCFIRZW5jcnlwdGVkU2VjdXJpdHk6PgoKbG9nX21hc2tlZBIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMY3IYDIAEoCFIJbG9nTWFza2VkOkIKDGxvZ19yZWRhY3RlZBIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMY3YYDIAEoCFILbG9nUmVkYWN0ZWQ6PQoJc2Vuc2l0aXZlEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjehgMgASgIUglzZW5zaXRpdmU6SgoQcmVxdWlyZXNfY29uc2VudBIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMY34YDIAEoCFIPcmVxdWlyZXNDb25zZW50OkIKDGRhdGFfcHVycG9zZRIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMY4IYDIAEoCVILZGF0YVB1cnBvc2U6RgoOcmV0ZW50aW9uX2RheXMSHS5nb29nbGUucHJvdG9idWYuRmllbGRPcHRpb25zGOGGAyABKAVSDXJldGVudGlvbkRheXM6PQoJdG9rZW5pemVkEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjihgMgASgIUgl0b2tlbml6ZWQ6hAEKF3NlY3VyaXR5X2NsYXNzaWZpY2F0aW9uEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjjhgMgASgOMioudWRiLmNvcmUuY29tbW9uLnYxLlNlY3VyaXR5Q2xhc3NpZmljYXRpb25SFnNlY3VyaXR5Q2xhc3NpZmljYXRpb246ZgoNZGF0YV9jYXRlZ29yeRIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMY5IYDIAEoDjIgLnVkYi5jb3JlLmNvbW1vbi52MS5EYXRhQ2F0ZWdvcnlSDGRhdGFDYXRlZ29yeTpzChFlbmRwb2ludF9zZWN1cml0eRIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGLmOAyABKAsyJC51ZGIuY29yZS5jb21tb24udjEuRW5kcG9pbnRTZWN1cml0eVIQZW5kcG9pbnRTZWN1cml0eTpnCg1yZXN0X2NvbnRyYWN0Eh4uZ29vZ2xlLnByb3RvYnVmLk1ldGhvZE9wdGlvbnMYuo4DIAEoCzIgLnVkYi5jb3JlLmNvbW1vbi52MS5SZXN0Q29udHJhY3RSDHJlc3RDb250cmFjdELSAQoWY29tLnVkYi5jb3JlLmNvbW1vbi52MUINU2VjdXJpdHlQcm90b1ABWj5naXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2NvbW1vbi92MTtjb21tb252MaICA1VDQ6oCEnVkYi5jb3JlLkNvbW1vbi5WMcoCElVkYlxDb3JlXENvbW1vblxWMeICHlVkYlxHUEJNZXRhZGF0YVxDb3JlXENvbW1vblxWMeoCFVVkYjo6Q29yZTo6Q29tbW9uOjpWMWIGcHJvdG8z", [file_google_protobuf_descriptor]);
+  fileDesc("CiF1ZGIvY29yZS9jb21tb24vdjEvc2VjdXJpdHkucHJvdG8SEnVkYi5jb3JlLmNvbW1vbi52MSKVBAoQRW5kcG9pbnRTZWN1cml0eRIqCgRtb2RlGAEgASgOMhwudWRiLmNvcmUuY29tbW9uLnYxLkF1dGhNb2RlEg0KBXJvbGVzGAIgAygJEg4KBnNjb3BlcxgDIAMoCRIXCg90ZW5hbnRfcmVxdWlyZWQYBCABKAgSFQoNY3NyZl9yZXF1aXJlZBgFIAEoCBISCgpwb2xpY3lfcmVmGAYgASgJEhoKEmludGVybmFsX2dycGNfb25seRgHIAEoCBIgChhyZXF1aXJlZF9hc3N1cmFuY2VfbGV2ZWwYCCABKAUSRAoYYWxsb3dlZF9jcmVkZW50aWFsX3R5cGVzGAkgAygOMiIudWRiLmNvcmUuY29tbW9uLnYxLkNyZWRlbnRpYWxUeXBlEh0KFXJhdGVfbGltaXRfcG9saWN5X3JlZhgKIAEoCRIYChBhYnVzZV9wb2xpY3lfcmVmGAsgASgJEhgKEGF1ZGl0X2V2ZW50X3R5cGUYDCABKAkSGQoRZGVjaXNpb25fcmVzb3VyY2UYDSABKAkSEwoLb3duZXJfZmllbGQYDiABKAkSFAoMdGVuYW50X2ZpZWxkGA8gASgJEhUKDXByb2plY3RfZmllbGQYECABKAkSHAoUaWRlbXBvdGVuY3lfcmVxdWlyZWQYESABKAgSIAoYcmVxdWVzdF9jb250ZXh0X3JlcXVpcmVkGBIgASgIIm0KDFJlc3RDb250cmFjdBIZChFyZXNwb25zZV9lbnZlbG9wZRgBIAEoCBIRCglhcGlfZXJyb3IYAiABKAgSFwoPcGFnaW5hdGlvbl9tZXRhGAMgASgIEhYKDmV4cGxpY2l0X251bGxzGAQgASgIIvQDChROYXRpdmVTZXJ2aWNlT3B0aW9ucxISCgpzZXJ2aWNlX2lkGAEgASgJEhoKEmxvZ2ljYWxfc2VydmljZV9pZBgCIAEoCRIYChBwcm90b19zZXJ2aWNlX2lkGAMgASgJEhQKDGRpc3BsYXlfbmFtZRgEIAEoCRIQCghjYXRlZ29yeRgFIAEoCRIXCg9kZWZhdWx0X2VuYWJsZWQYBiABKAgSGQoRcmVxdWlyZXNfcG9zdGdyZXMYByABKAgSFgoOcmVxdWlyZXNfcmVkaXMYCCABKAgSHQoVcmVxdWlyZXNfb2JqZWN0X3N0b3JlGAkgASgIEhYKDnJlcXVpcmVzX2thZmthGAogASgIEhgKEHJlcXVpcmVzX2ZlYXR1cmUYCyABKAkSHwoXcHVibGljX2xpc3RlbmVyX2FsbG93ZWQYDCABKAgSJgoeY29udHJvbF9wbGFuZV9saXN0ZW5lcl9hbGxvd2VkGA0gASgIEh0KFXBlZXJfbGlzdGVuZXJfYWxsb3dlZBgOIAEoCBIXCg9zZGtfZmFjYWRlX25hbWUYDyABKAkSGgoSY2xpX3NjYWZmb2xkX2dyb3VwGBAgASgJEhgKEGhlYWx0aF9jaGVja19yZWYYESABKAkSFgoOY2FwYWJpbGl0eV9yZWYYEiABKAkiqwMKFkRiVGFibGVTZWN1cml0eU9wdGlvbnMSHQoVdGVuYW50X2lzb2xhdGlvbl9tb2RlGAEgASgJEh4KFnByb2plY3RfaXNvbGF0aW9uX21vZGUYAiABKAkSFQoNdGVuYW50X2NvbHVtbhgDIAEoCRIWCg5wcm9qZWN0X2NvbHVtbhgEIAEoCRIbChNybHNfcG9saWN5X3RlbXBsYXRlGAUgASgJEhgKEHNvZnRfZGVsZXRlX21vZGUYBiABKAkSFwoPcmV0ZW50aW9uX2NsYXNzGAcgASgJEhYKDnJldGVudGlvbl9kYXlzGAggASgFEjEKCmF1ZGl0X21vZGUYCSABKA4yHS51ZGIuY29yZS5jb21tb24udjEuQXVkaXRNb2RlEhoKEmVuY3J5cHRpb25fcHJvZmlsZRgKIAEoCRITCgtwaWlfcHJvZmlsZRgLIAEoCRIbChNicmVha19nbGFzc192aXNpYmxlGAwgASgIEhcKD2V4cG9ydF9lbGlnaWJsZRgNIAEoCBIhChlkYXRhX3Jlc2lkZW5jeV9wb2xpY3lfcmVmGA4gASgJIsYDChdEYkNvbHVtblNlY3VyaXR5T3B0aW9ucxJHChVzZWNyZXRfY2xhc3NpZmljYXRpb24YASABKA4yKC51ZGIuY29yZS5jb21tb24udjEuU2VjcmV0Q2xhc3NpZmljYXRpb24SMwoLb3V0cHV0X3ZpZXcYAiABKA4yHi51ZGIuY29yZS5jb21tb24udjEuT3V0cHV0VmlldxJBChJyZWRhY3Rpb25fc3RyYXRlZ3kYAyABKA4yJS51ZGIuY29yZS5jb21tb24udjEuUmVkYWN0aW9uU3RyYXRlZ3kSHQoVdG9rZW5pemF0aW9uX3N0cmF0ZWd5GAQgASgJEhgKEGhhc2hpbmdfc3RyYXRlZ3kYBSABKAkSGQoRaGFzaGluZ19hbGdvcml0aG0YBiABKAkSHAoUZW5jcnlwdGlvbl9rZXlfY2xhc3MYByABKAkSHAoUc2VhcmNoYWJsZV9lbmNyeXB0ZWQYCCABKAgSGAoQdW5pcXVlbmVzc19zY29wZRgJIAEoCRITCgtvd25lcl9maWVsZBgKIAEoCBIUCgx0ZW5hbnRfZmllbGQYCyABKAgSFQoNcHJvamVjdF9maWVsZBgMIAEoCCKyAgoRU2RrU3VyZmFjZU9wdGlvbnMSGQoRaW5jbHVkZV9pbl9mYWNhZGUYASABKAgSFAoMbWV0aG9kX2FsaWFzGAIgASgJEiQKHHJlcXVpcmVkX2NyZWRlbnRpYWxfcHJvdmlkZXIYAyABKAkSHQoVc3RyZWFtaW5nX2hlbHBlcl90eXBlGAQgASgJEhsKE2RlZmF1bHRfZGVhZGxpbmVfbXMYBSABKAUSHAoUZGVmYXVsdF9tYXhfYXR0ZW1wdHMYBiABKAUSFAoMYnJvd3Nlcl9zYWZlGAcgASgIEhMKC3NlcnZlcl9vbmx5GAggASgIEh8KF2JvaWxlcnBsYXRlX3JlY2lwZV90YWdzGAkgAygJEiAKGGdlbmVyYXRlX21pbmltYWxfZXhhbXBsZRgKIAEoCCK+AgoSQ2xpU2NhZmZvbGRPcHRpb25zEhgKEHNjYWZmb2xkX3BhY2thZ2UYASABKAkSEwoLaW1wb3J0X3BhdGgYAiABKAkSFAoMcmVxdWlyZWRfZW52GAMgAygJEhcKD2dlbmVyYXRlZF9maWxlcxgEIAMoCRISCgpyb3V0ZV9uYW1lGAUgASgJEhcKD21pZGRsZXdhcmVfbmFtZRgGIAEoCRIgChhyZXF1aXJlZF9uYXRpdmVfc2VydmljZXMYByADKAkSIAoYb3B0aW9uYWxfbmF0aXZlX3NlcnZpY2VzGAggAygJEhsKE3NlY3JldF9wbGFjZWhvbGRlcnMYCSADKAkSIAoYcG9zdF9nZW5lcmF0aW9uX2NvbW1hbmRzGAogAygJEhoKEnNtb2tlX3Rlc3RfY29tbWFuZBgLIAEoCSK6AQoURXZlbnRDb250cmFjdE9wdGlvbnMSEgoKZXZlbnRfdHlwZRgBIAEoCRIUCgxvdXRib3hfdG9waWMYAiABKAkSGwoTcGFydGl0aW9uX2tleV9maWVsZBgDIAEoCRIhChlwYXlsb2FkX3JlZGFjdGlvbl9wcm9maWxlGAQgASgJEhoKEmRlbGl2ZXJ5X2d1YXJhbnRlZRgFIAEoCRIcChRyZXBsYXlfY29tcGF0aWJpbGl0eRgGIAEoCSLlAQoZRGVwZW5kZW5jeUNvbnRyYWN0T3B0aW9ucxIgChhyZXF1aXJlZF9uYXRpdmVfc2VydmljZXMYASADKAkSIAoYb3B0aW9uYWxfbmF0aXZlX3NlcnZpY2VzGAIgAygJEhkKEXJlcXVpcmVkX2JhY2tlbmRzGAMgAygJEhkKEW9wdGlvbmFsX2JhY2tlbmRzGAQgAygJEhkKEXJlcXVpcmVkX2ZlYXR1cmVzGAUgAygJEhQKDHJlcXVpcmVkX2VudhgGIAMoCRIdChVkZWdyYWRlZF93aGVuX21pc3NpbmcYByADKAkqhwEKCEF1dGhNb2RlEhkKFUFVVEhfTU9ERV9VTlNQRUNJRklFRBAAEhQKEEFVVEhfTU9ERV9QVUJMSUMQARIUChBBVVRIX01PREVfQkVBUkVSEAISFQoRQVVUSF9NT0RFX0FQSV9LRVkQAxIdChlBVVRIX01PREVfU0VSVklDRV9BQ0NPVU5UEAQqvgIKDkNyZWRlbnRpYWxUeXBlEh8KG0NSRURFTlRJQUxfVFlQRV9VTlNQRUNJRklFRBAAEh4KGkNSRURFTlRJQUxfVFlQRV9CRUFSRVJfSldUEAESGwoXQ1JFREVOVElBTF9UWVBFX1NFU1NJT04QAhIbChdDUkVERU5USUFMX1RZUEVfQVBJX0tFWRADEiMKH0NSRURFTlRJQUxfVFlQRV9TRVJWSUNFX0FDQ09VTlQQBBIYChRDUkVERU5USUFMX1RZUEVfTVRMUxAFEhgKFENSRURFTlRJQUxfVFlQRV9PSURDEAYSGAoUQ1JFREVOVElBTF9UWVBFX1NBTUwQBxIcChhDUkVERU5USUFMX1RZUEVfV0VCQVVUSE4QCBIgChxDUkVERU5USUFMX1RZUEVfRVhURVJOQUxfSldUEAkqgwEKCUF1ZGl0TW9kZRIaChZBVURJVF9NT0RFX1VOU1BFQ0lGSUVEEAASEwoPQVVESVRfTU9ERV9OT05FEAESFwoTQVVESVRfTU9ERV9NVVRBVElPThACEhcKE0FVRElUX01PREVfREVDSVNJT04QAxITCg9BVURJVF9NT0RFX0ZVTEwQBCr4AgoUU2VjcmV0Q2xhc3NpZmljYXRpb24SJQohU0VDUkVUX0NMQVNTSUZJQ0FUSU9OX1VOU1BFQ0lGSUVEEAASIAocU0VDUkVUX0NMQVNTSUZJQ0FUSU9OX1BVQkxJQxABEiIKHlNFQ1JFVF9DTEFTU0lGSUNBVElPTl9JTlRFUk5BTBACEiQKIFNFQ1JFVF9DTEFTU0lGSUNBVElPTl9DUkVERU5USUFMEAMSHwobU0VDUkVUX0NMQVNTSUZJQ0FUSU9OX1RPS0VOEAQSHQoZU0VDUkVUX0NMQVNTSUZJQ0FUSU9OX0tFWRAFEiMKH1NFQ1JFVF9DTEFTU0lGSUNBVElPTl9CSU9NRVRSSUMQBhIiCh5TRUNSRVRfQ0xBU1NJRklDQVRJT05fSURFTlRJVFkQBxIdChlTRUNSRVRfQ0xBU1NJRklDQVRJT05fUElJEAgSJQohU0VDUkVUX0NMQVNTSUZJQ0FUSU9OX09QRVJBVElPTkFMEAkqugEKCk91dHB1dFZpZXcSGwoXT1VUUFVUX1ZJRVdfVU5TUEVDSUZJRUQQABIcChhPVVRQVVRfVklFV19TVE9SQUdFX09OTFkQARIWChJPVVRQVVRfVklFV19QVUJMSUMQAhIUChBPVVRQVVRfVklFV19TRUxGEAMSFQoRT1VUUFVUX1ZJRVdfQURNSU4QBBIVChFPVVRQVVRfVklFV19BVURJVBAFEhUKEU9VVFBVVF9WSUVXX05FVkVSEAYq0AEKEVJlZGFjdGlvblN0cmF0ZWd5EiIKHlJFREFDVElPTl9TVFJBVEVHWV9VTlNQRUNJRklFRBAAEhsKF1JFREFDVElPTl9TVFJBVEVHWV9OT05FEAESGwoXUkVEQUNUSU9OX1NUUkFURUdZX01BU0sQAhIdChlSRURBQ1RJT05fU1RSQVRFR1lfUkVEQUNUEAMSIAocUkVEQUNUSU9OX1NUUkFURUdZX0hBU0hfT05MWRAEEhwKGFJFREFDVElPTl9TVFJBVEVHWV9MQVNUNBAFKt0BChZTZWN1cml0eUNsYXNzaWZpY2F0aW9uEicKI1NFQ1VSSVRZX0NMQVNTSUZJQ0FUSU9OX1VOU1BFQ0lGSUVEEAASIgoeU0VDVVJJVFlfQ0xBU1NJRklDQVRJT05fUFVCTElDEAESJAogU0VDVVJJVFlfQ0xBU1NJRklDQVRJT05fSU5URVJOQUwQAhIoCiRTRUNVUklUWV9DTEFTU0lGSUNBVElPTl9DT05GSURFTlRJQUwQAxImCiJTRUNVUklUWV9DTEFTU0lGSUNBVElPTl9SRVNUUklDVEVEEAQq2AEKDERhdGFDYXRlZ29yeRIdChlEQVRBX0NBVEVHT1JZX1VOU1BFQ0lGSUVEEAASGgoWREFUQV9DQVRFR09SWV9QRVJTT05BTBABEhsKF0RBVEFfQ0FURUdPUllfRklOQU5DSUFMEAISGwoXREFUQV9DQVRFR09SWV9CSU9NRVRSSUMQAxIaChZEQVRBX0NBVEVHT1JZX0lERU5USVRZEAQSHQoZREFUQV9DQVRFR09SWV9PUEVSQVRJT05BTBAFEhgKFERBVEFfQ0FURUdPUllfU1lTVEVNEAY6MQoDcGlpEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjahgMgASgIUgNwaWk6TgoSZW5jcnlwdGVkX3NlY3VyaXR5Eh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjbhgMgASgIUhFlbmNyeXB0ZWRTZWN1cml0eTo+Cgpsb2dfbWFza2VkEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjchgMgASgIUglsb2dNYXNrZWQ6QgoMbG9nX3JlZGFjdGVkEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjdhgMgASgIUgtsb2dSZWRhY3RlZDo9CglzZW5zaXRpdmUSHS5nb29nbGUucHJvdG9idWYuRmllbGRPcHRpb25zGN6GAyABKAhSCXNlbnNpdGl2ZTpKChByZXF1aXJlc19jb25zZW50Eh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjfhgMgASgIUg9yZXF1aXJlc0NvbnNlbnQ6QgoMZGF0YV9wdXJwb3NlEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjghgMgASgJUgtkYXRhUHVycG9zZTpGCg5yZXRlbnRpb25fZGF5cxIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMY4YYDIAEoBVINcmV0ZW50aW9uRGF5czo9Cgl0b2tlbml6ZWQSHS5nb29nbGUucHJvdG9idWYuRmllbGRPcHRpb25zGOKGAyABKAhSCXRva2VuaXplZDqEAQoXc2VjdXJpdHlfY2xhc3NpZmljYXRpb24SHS5nb29nbGUucHJvdG9idWYuRmllbGRPcHRpb25zGOOGAyABKA4yKi51ZGIuY29yZS5jb21tb24udjEuU2VjdXJpdHlDbGFzc2lmaWNhdGlvblIWc2VjdXJpdHlDbGFzc2lmaWNhdGlvbjpmCg1kYXRhX2NhdGVnb3J5Eh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjkhgMgASgOMiAudWRiLmNvcmUuY29tbW9uLnYxLkRhdGFDYXRlZ29yeVIMZGF0YUNhdGVnb3J5OnoKEmRiX2NvbHVtbl9zZWN1cml0eRIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMY8YYDIAEoCzIrLnVkYi5jb3JlLmNvbW1vbi52MS5EYkNvbHVtblNlY3VyaXR5T3B0aW9uc1IQZGJDb2x1bW5TZWN1cml0eTpzChFlbmRwb2ludF9zZWN1cml0eRIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGLmOAyABKAsyJC51ZGIuY29yZS5jb21tb24udjEuRW5kcG9pbnRTZWN1cml0eVIQZW5kcG9pbnRTZWN1cml0eTpnCg1yZXN0X2NvbnRyYWN0Eh4uZ29vZ2xlLnByb3RvYnVmLk1ldGhvZE9wdGlvbnMYuo4DIAEoCzIgLnVkYi5jb3JlLmNvbW1vbi52MS5SZXN0Q29udHJhY3RSDHJlc3RDb250cmFjdDpoCgtzZGtfc3VyZmFjZRIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGLuOAyABKAsyJS51ZGIuY29yZS5jb21tb24udjEuU2RrU3VyZmFjZU9wdGlvbnNSCnNka1N1cmZhY2U6eAoTbWV0aG9kX2NsaV9zY2FmZm9sZBIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGLyOAyABKAsyJi51ZGIuY29yZS5jb21tb24udjEuQ2xpU2NhZmZvbGRPcHRpb25zUhFtZXRob2RDbGlTY2FmZm9sZDp+ChVtZXRob2RfZXZlbnRfY29udHJhY3QSHi5nb29nbGUucHJvdG9idWYuTWV0aG9kT3B0aW9ucxi9jgMgASgLMigudWRiLmNvcmUuY29tbW9uLnYxLkV2ZW50Q29udHJhY3RPcHRpb25zUhNtZXRob2RFdmVudENvbnRyYWN0Oo0BChptZXRob2RfZGVwZW5kZW5jeV9jb250cmFjdBIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGL6OAyABKAsyLS51ZGIuY29yZS5jb21tb24udjEuRGVwZW5kZW5jeUNvbnRyYWN0T3B0aW9uc1IYbWV0aG9kRGVwZW5kZW5jeUNvbnRyYWN0OnkKEWRiX3RhYmxlX3NlY3VyaXR5Eh8uZ29vZ2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25zGKGWAyABKAsyKi51ZGIuY29yZS5jb21tb24udjEuRGJUYWJsZVNlY3VyaXR5T3B0aW9uc1IPZGJUYWJsZVNlY3VyaXR5OoEBChZtZXNzYWdlX2V2ZW50X2NvbnRyYWN0Eh8uZ29vZ2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25zGKKWAyABKAsyKC51ZGIuY29yZS5jb21tb24udjEuRXZlbnRDb250cmFjdE9wdGlvbnNSFG1lc3NhZ2VFdmVudENvbnRyYWN0OngKE21lc3NhZ2Vfc2RrX3N1cmZhY2USHy5nb29nbGUucHJvdG9idWYuTWVzc2FnZU9wdGlvbnMYo5YDIAEoCzIlLnVkYi5jb3JlLmNvbW1vbi52MS5TZGtTdXJmYWNlT3B0aW9uc1IRbWVzc2FnZVNka1N1cmZhY2U6kAEKG21lc3NhZ2VfZGVwZW5kZW5jeV9jb250cmFjdBIfLmdvb2dsZS5wcm90b2J1Zi5NZXNzYWdlT3B0aW9ucxiklgMgASgLMi0udWRiLmNvcmUuY29tbW9uLnYxLkRlcGVuZGVuY3lDb250cmFjdE9wdGlvbnNSGW1lc3NhZ2VEZXBlbmRlbmN5Q29udHJhY3Q6cgoObmF0aXZlX3NlcnZpY2USHy5nb29nbGUucHJvdG9idWYuU2VydmljZU9wdGlvbnMYiZ4DIAEoCzIoLnVkYi5jb3JlLmNvbW1vbi52MS5OYXRpdmVTZXJ2aWNlT3B0aW9uc1INbmF0aXZlU2VydmljZTp4ChNzZXJ2aWNlX3Nka19zdXJmYWNlEh8uZ29vZ2xlLnByb3RvYnVmLlNlcnZpY2VPcHRpb25zGIqeAyABKAsyJS51ZGIuY29yZS5jb21tb24udjEuU2RrU3VyZmFjZU9wdGlvbnNSEXNlcnZpY2VTZGtTdXJmYWNlOnsKFHNlcnZpY2VfY2xpX3NjYWZmb2xkEh8uZ29vZ2xlLnByb3RvYnVmLlNlcnZpY2VPcHRpb25zGIueAyABKAsyJi51ZGIuY29yZS5jb21tb24udjEuQ2xpU2NhZmZvbGRPcHRpb25zUhJzZXJ2aWNlQ2xpU2NhZmZvbGQ6kAEKG3NlcnZpY2VfZGVwZW5kZW5jeV9jb250cmFjdBIfLmdvb2dsZS5wcm90b2J1Zi5TZXJ2aWNlT3B0aW9ucxiMngMgASgLMi0udWRiLmNvcmUuY29tbW9uLnYxLkRlcGVuZGVuY3lDb250cmFjdE9wdGlvbnNSGXNlcnZpY2VEZXBlbmRlbmN5Q29udHJhY3RC0gEKFmNvbS51ZGIuY29yZS5jb21tb24udjFCDVNlY3VyaXR5UHJvdG9QAVo+Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9jb21tb24vdjE7Y29tbW9udjGiAgNVQ0OqAhJ1ZGIuY29yZS5Db21tb24uVjHKAhJVZGJcQ29yZVxDb21tb25cVjHiAh5VZGJcR1BCTWV0YWRhdGFcQ29yZVxDb21tb25cVjHqAhVVZGI6OkNvcmU6OkNvbW1vbjo6VjFiBnByb3RvMw", [file_google_protobuf_descriptor]);
 
 /**
  * @generated from message udb.core.common.v1.EndpointSecurity
@@ -52,6 +52,61 @@ export type EndpointSecurity = Message<"udb.core.common.v1.EndpointSecurity"> & 
    * @generated from field: bool internal_grpc_only = 7;
    */
   internalGrpcOnly: boolean;
+
+  /**
+   * @generated from field: int32 required_assurance_level = 8;
+   */
+  requiredAssuranceLevel: number;
+
+  /**
+   * @generated from field: repeated udb.core.common.v1.CredentialType allowed_credential_types = 9;
+   */
+  allowedCredentialTypes: CredentialType[];
+
+  /**
+   * @generated from field: string rate_limit_policy_ref = 10;
+   */
+  rateLimitPolicyRef: string;
+
+  /**
+   * @generated from field: string abuse_policy_ref = 11;
+   */
+  abusePolicyRef: string;
+
+  /**
+   * @generated from field: string audit_event_type = 12;
+   */
+  auditEventType: string;
+
+  /**
+   * @generated from field: string decision_resource = 13;
+   */
+  decisionResource: string;
+
+  /**
+   * @generated from field: string owner_field = 14;
+   */
+  ownerField: string;
+
+  /**
+   * @generated from field: string tenant_field = 15;
+   */
+  tenantField: string;
+
+  /**
+   * @generated from field: string project_field = 16;
+   */
+  projectField: string;
+
+  /**
+   * @generated from field: bool idempotency_required = 17;
+   */
+  idempotencyRequired: boolean;
+
+  /**
+   * @generated from field: bool request_context_required = 18;
+   */
+  requestContextRequired: boolean;
 };
 
 /**
@@ -94,6 +149,480 @@ export const RestContractSchema: GenMessage<RestContract> = /*@__PURE__*/
   messageDesc(file_udb_core_common_v1_security, 1);
 
 /**
+ * @generated from message udb.core.common.v1.NativeServiceOptions
+ */
+export type NativeServiceOptions = Message<"udb.core.common.v1.NativeServiceOptions"> & {
+  /**
+   * @generated from field: string service_id = 1;
+   */
+  serviceId: string;
+
+  /**
+   * @generated from field: string logical_service_id = 2;
+   */
+  logicalServiceId: string;
+
+  /**
+   * @generated from field: string proto_service_id = 3;
+   */
+  protoServiceId: string;
+
+  /**
+   * @generated from field: string display_name = 4;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: string category = 5;
+   */
+  category: string;
+
+  /**
+   * @generated from field: bool default_enabled = 6;
+   */
+  defaultEnabled: boolean;
+
+  /**
+   * @generated from field: bool requires_postgres = 7;
+   */
+  requiresPostgres: boolean;
+
+  /**
+   * @generated from field: bool requires_redis = 8;
+   */
+  requiresRedis: boolean;
+
+  /**
+   * @generated from field: bool requires_object_store = 9;
+   */
+  requiresObjectStore: boolean;
+
+  /**
+   * @generated from field: bool requires_kafka = 10;
+   */
+  requiresKafka: boolean;
+
+  /**
+   * @generated from field: string requires_feature = 11;
+   */
+  requiresFeature: string;
+
+  /**
+   * @generated from field: bool public_listener_allowed = 12;
+   */
+  publicListenerAllowed: boolean;
+
+  /**
+   * @generated from field: bool control_plane_listener_allowed = 13;
+   */
+  controlPlaneListenerAllowed: boolean;
+
+  /**
+   * @generated from field: bool peer_listener_allowed = 14;
+   */
+  peerListenerAllowed: boolean;
+
+  /**
+   * @generated from field: string sdk_facade_name = 15;
+   */
+  sdkFacadeName: string;
+
+  /**
+   * @generated from field: string cli_scaffold_group = 16;
+   */
+  cliScaffoldGroup: string;
+
+  /**
+   * @generated from field: string health_check_ref = 17;
+   */
+  healthCheckRef: string;
+
+  /**
+   * @generated from field: string capability_ref = 18;
+   */
+  capabilityRef: string;
+};
+
+/**
+ * Describes the message udb.core.common.v1.NativeServiceOptions.
+ * Use `create(NativeServiceOptionsSchema)` to create a new message.
+ */
+export const NativeServiceOptionsSchema: GenMessage<NativeServiceOptions> = /*@__PURE__*/
+  messageDesc(file_udb_core_common_v1_security, 2);
+
+/**
+ * @generated from message udb.core.common.v1.DbTableSecurityOptions
+ */
+export type DbTableSecurityOptions = Message<"udb.core.common.v1.DbTableSecurityOptions"> & {
+  /**
+   * @generated from field: string tenant_isolation_mode = 1;
+   */
+  tenantIsolationMode: string;
+
+  /**
+   * @generated from field: string project_isolation_mode = 2;
+   */
+  projectIsolationMode: string;
+
+  /**
+   * @generated from field: string tenant_column = 3;
+   */
+  tenantColumn: string;
+
+  /**
+   * @generated from field: string project_column = 4;
+   */
+  projectColumn: string;
+
+  /**
+   * @generated from field: string rls_policy_template = 5;
+   */
+  rlsPolicyTemplate: string;
+
+  /**
+   * @generated from field: string soft_delete_mode = 6;
+   */
+  softDeleteMode: string;
+
+  /**
+   * @generated from field: string retention_class = 7;
+   */
+  retentionClass: string;
+
+  /**
+   * @generated from field: int32 retention_days = 8;
+   */
+  retentionDays: number;
+
+  /**
+   * @generated from field: udb.core.common.v1.AuditMode audit_mode = 9;
+   */
+  auditMode: AuditMode;
+
+  /**
+   * @generated from field: string encryption_profile = 10;
+   */
+  encryptionProfile: string;
+
+  /**
+   * @generated from field: string pii_profile = 11;
+   */
+  piiProfile: string;
+
+  /**
+   * @generated from field: bool break_glass_visible = 12;
+   */
+  breakGlassVisible: boolean;
+
+  /**
+   * @generated from field: bool export_eligible = 13;
+   */
+  exportEligible: boolean;
+
+  /**
+   * @generated from field: string data_residency_policy_ref = 14;
+   */
+  dataResidencyPolicyRef: string;
+};
+
+/**
+ * Describes the message udb.core.common.v1.DbTableSecurityOptions.
+ * Use `create(DbTableSecurityOptionsSchema)` to create a new message.
+ */
+export const DbTableSecurityOptionsSchema: GenMessage<DbTableSecurityOptions> = /*@__PURE__*/
+  messageDesc(file_udb_core_common_v1_security, 3);
+
+/**
+ * @generated from message udb.core.common.v1.DbColumnSecurityOptions
+ */
+export type DbColumnSecurityOptions = Message<"udb.core.common.v1.DbColumnSecurityOptions"> & {
+  /**
+   * @generated from field: udb.core.common.v1.SecretClassification secret_classification = 1;
+   */
+  secretClassification: SecretClassification;
+
+  /**
+   * @generated from field: udb.core.common.v1.OutputView output_view = 2;
+   */
+  outputView: OutputView;
+
+  /**
+   * @generated from field: udb.core.common.v1.RedactionStrategy redaction_strategy = 3;
+   */
+  redactionStrategy: RedactionStrategy;
+
+  /**
+   * @generated from field: string tokenization_strategy = 4;
+   */
+  tokenizationStrategy: string;
+
+  /**
+   * @generated from field: string hashing_strategy = 5;
+   */
+  hashingStrategy: string;
+
+  /**
+   * @generated from field: string hashing_algorithm = 6;
+   */
+  hashingAlgorithm: string;
+
+  /**
+   * @generated from field: string encryption_key_class = 7;
+   */
+  encryptionKeyClass: string;
+
+  /**
+   * @generated from field: bool searchable_encrypted = 8;
+   */
+  searchableEncrypted: boolean;
+
+  /**
+   * @generated from field: string uniqueness_scope = 9;
+   */
+  uniquenessScope: string;
+
+  /**
+   * @generated from field: bool owner_field = 10;
+   */
+  ownerField: boolean;
+
+  /**
+   * @generated from field: bool tenant_field = 11;
+   */
+  tenantField: boolean;
+
+  /**
+   * @generated from field: bool project_field = 12;
+   */
+  projectField: boolean;
+};
+
+/**
+ * Describes the message udb.core.common.v1.DbColumnSecurityOptions.
+ * Use `create(DbColumnSecurityOptionsSchema)` to create a new message.
+ */
+export const DbColumnSecurityOptionsSchema: GenMessage<DbColumnSecurityOptions> = /*@__PURE__*/
+  messageDesc(file_udb_core_common_v1_security, 4);
+
+/**
+ * @generated from message udb.core.common.v1.SdkSurfaceOptions
+ */
+export type SdkSurfaceOptions = Message<"udb.core.common.v1.SdkSurfaceOptions"> & {
+  /**
+   * @generated from field: bool include_in_facade = 1;
+   */
+  includeInFacade: boolean;
+
+  /**
+   * @generated from field: string method_alias = 2;
+   */
+  methodAlias: string;
+
+  /**
+   * @generated from field: string required_credential_provider = 3;
+   */
+  requiredCredentialProvider: string;
+
+  /**
+   * @generated from field: string streaming_helper_type = 4;
+   */
+  streamingHelperType: string;
+
+  /**
+   * @generated from field: int32 default_deadline_ms = 5;
+   */
+  defaultDeadlineMs: number;
+
+  /**
+   * @generated from field: int32 default_max_attempts = 6;
+   */
+  defaultMaxAttempts: number;
+
+  /**
+   * @generated from field: bool browser_safe = 7;
+   */
+  browserSafe: boolean;
+
+  /**
+   * @generated from field: bool server_only = 8;
+   */
+  serverOnly: boolean;
+
+  /**
+   * @generated from field: repeated string boilerplate_recipe_tags = 9;
+   */
+  boilerplateRecipeTags: string[];
+
+  /**
+   * @generated from field: bool generate_minimal_example = 10;
+   */
+  generateMinimalExample: boolean;
+};
+
+/**
+ * Describes the message udb.core.common.v1.SdkSurfaceOptions.
+ * Use `create(SdkSurfaceOptionsSchema)` to create a new message.
+ */
+export const SdkSurfaceOptionsSchema: GenMessage<SdkSurfaceOptions> = /*@__PURE__*/
+  messageDesc(file_udb_core_common_v1_security, 5);
+
+/**
+ * @generated from message udb.core.common.v1.CliScaffoldOptions
+ */
+export type CliScaffoldOptions = Message<"udb.core.common.v1.CliScaffoldOptions"> & {
+  /**
+   * @generated from field: string scaffold_package = 1;
+   */
+  scaffoldPackage: string;
+
+  /**
+   * @generated from field: string import_path = 2;
+   */
+  importPath: string;
+
+  /**
+   * @generated from field: repeated string required_env = 3;
+   */
+  requiredEnv: string[];
+
+  /**
+   * @generated from field: repeated string generated_files = 4;
+   */
+  generatedFiles: string[];
+
+  /**
+   * @generated from field: string route_name = 5;
+   */
+  routeName: string;
+
+  /**
+   * @generated from field: string middleware_name = 6;
+   */
+  middlewareName: string;
+
+  /**
+   * @generated from field: repeated string required_native_services = 7;
+   */
+  requiredNativeServices: string[];
+
+  /**
+   * @generated from field: repeated string optional_native_services = 8;
+   */
+  optionalNativeServices: string[];
+
+  /**
+   * @generated from field: repeated string secret_placeholders = 9;
+   */
+  secretPlaceholders: string[];
+
+  /**
+   * @generated from field: repeated string post_generation_commands = 10;
+   */
+  postGenerationCommands: string[];
+
+  /**
+   * @generated from field: string smoke_test_command = 11;
+   */
+  smokeTestCommand: string;
+};
+
+/**
+ * Describes the message udb.core.common.v1.CliScaffoldOptions.
+ * Use `create(CliScaffoldOptionsSchema)` to create a new message.
+ */
+export const CliScaffoldOptionsSchema: GenMessage<CliScaffoldOptions> = /*@__PURE__*/
+  messageDesc(file_udb_core_common_v1_security, 6);
+
+/**
+ * @generated from message udb.core.common.v1.EventContractOptions
+ */
+export type EventContractOptions = Message<"udb.core.common.v1.EventContractOptions"> & {
+  /**
+   * @generated from field: string event_type = 1;
+   */
+  eventType: string;
+
+  /**
+   * @generated from field: string outbox_topic = 2;
+   */
+  outboxTopic: string;
+
+  /**
+   * @generated from field: string partition_key_field = 3;
+   */
+  partitionKeyField: string;
+
+  /**
+   * @generated from field: string payload_redaction_profile = 4;
+   */
+  payloadRedactionProfile: string;
+
+  /**
+   * @generated from field: string delivery_guarantee = 5;
+   */
+  deliveryGuarantee: string;
+
+  /**
+   * @generated from field: string replay_compatibility = 6;
+   */
+  replayCompatibility: string;
+};
+
+/**
+ * Describes the message udb.core.common.v1.EventContractOptions.
+ * Use `create(EventContractOptionsSchema)` to create a new message.
+ */
+export const EventContractOptionsSchema: GenMessage<EventContractOptions> = /*@__PURE__*/
+  messageDesc(file_udb_core_common_v1_security, 7);
+
+/**
+ * @generated from message udb.core.common.v1.DependencyContractOptions
+ */
+export type DependencyContractOptions = Message<"udb.core.common.v1.DependencyContractOptions"> & {
+  /**
+   * @generated from field: repeated string required_native_services = 1;
+   */
+  requiredNativeServices: string[];
+
+  /**
+   * @generated from field: repeated string optional_native_services = 2;
+   */
+  optionalNativeServices: string[];
+
+  /**
+   * @generated from field: repeated string required_backends = 3;
+   */
+  requiredBackends: string[];
+
+  /**
+   * @generated from field: repeated string optional_backends = 4;
+   */
+  optionalBackends: string[];
+
+  /**
+   * @generated from field: repeated string required_features = 5;
+   */
+  requiredFeatures: string[];
+
+  /**
+   * @generated from field: repeated string required_env = 6;
+   */
+  requiredEnv: string[];
+
+  /**
+   * @generated from field: repeated string degraded_when_missing = 7;
+   */
+  degradedWhenMissing: string[];
+};
+
+/**
+ * Describes the message udb.core.common.v1.DependencyContractOptions.
+ * Use `create(DependencyContractOptionsSchema)` to create a new message.
+ */
+export const DependencyContractOptionsSchema: GenMessage<DependencyContractOptions> = /*@__PURE__*/
+  messageDesc(file_udb_core_common_v1_security, 8);
+
+/**
  * @generated from enum udb.core.common.v1.AuthMode
  */
 export enum AuthMode {
@@ -130,6 +659,251 @@ export const AuthModeSchema: GenEnum<AuthMode> = /*@__PURE__*/
   enumDesc(file_udb_core_common_v1_security, 0);
 
 /**
+ * @generated from enum udb.core.common.v1.CredentialType
+ */
+export enum CredentialType {
+  /**
+   * @generated from enum value: CREDENTIAL_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: CREDENTIAL_TYPE_BEARER_JWT = 1;
+   */
+  BEARER_JWT = 1,
+
+  /**
+   * @generated from enum value: CREDENTIAL_TYPE_SESSION = 2;
+   */
+  SESSION = 2,
+
+  /**
+   * @generated from enum value: CREDENTIAL_TYPE_API_KEY = 3;
+   */
+  API_KEY = 3,
+
+  /**
+   * @generated from enum value: CREDENTIAL_TYPE_SERVICE_ACCOUNT = 4;
+   */
+  SERVICE_ACCOUNT = 4,
+
+  /**
+   * @generated from enum value: CREDENTIAL_TYPE_MTLS = 5;
+   */
+  MTLS = 5,
+
+  /**
+   * @generated from enum value: CREDENTIAL_TYPE_OIDC = 6;
+   */
+  OIDC = 6,
+
+  /**
+   * @generated from enum value: CREDENTIAL_TYPE_SAML = 7;
+   */
+  SAML = 7,
+
+  /**
+   * @generated from enum value: CREDENTIAL_TYPE_WEBAUTHN = 8;
+   */
+  WEBAUTHN = 8,
+
+  /**
+   * @generated from enum value: CREDENTIAL_TYPE_EXTERNAL_JWT = 9;
+   */
+  EXTERNAL_JWT = 9,
+}
+
+/**
+ * Describes the enum udb.core.common.v1.CredentialType.
+ */
+export const CredentialTypeSchema: GenEnum<CredentialType> = /*@__PURE__*/
+  enumDesc(file_udb_core_common_v1_security, 1);
+
+/**
+ * @generated from enum udb.core.common.v1.AuditMode
+ */
+export enum AuditMode {
+  /**
+   * @generated from enum value: AUDIT_MODE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: AUDIT_MODE_NONE = 1;
+   */
+  NONE = 1,
+
+  /**
+   * @generated from enum value: AUDIT_MODE_MUTATION = 2;
+   */
+  MUTATION = 2,
+
+  /**
+   * @generated from enum value: AUDIT_MODE_DECISION = 3;
+   */
+  DECISION = 3,
+
+  /**
+   * @generated from enum value: AUDIT_MODE_FULL = 4;
+   */
+  FULL = 4,
+}
+
+/**
+ * Describes the enum udb.core.common.v1.AuditMode.
+ */
+export const AuditModeSchema: GenEnum<AuditMode> = /*@__PURE__*/
+  enumDesc(file_udb_core_common_v1_security, 2);
+
+/**
+ * @generated from enum udb.core.common.v1.SecretClassification
+ */
+export enum SecretClassification {
+  /**
+   * @generated from enum value: SECRET_CLASSIFICATION_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: SECRET_CLASSIFICATION_PUBLIC = 1;
+   */
+  PUBLIC = 1,
+
+  /**
+   * @generated from enum value: SECRET_CLASSIFICATION_INTERNAL = 2;
+   */
+  INTERNAL = 2,
+
+  /**
+   * @generated from enum value: SECRET_CLASSIFICATION_CREDENTIAL = 3;
+   */
+  CREDENTIAL = 3,
+
+  /**
+   * @generated from enum value: SECRET_CLASSIFICATION_TOKEN = 4;
+   */
+  TOKEN = 4,
+
+  /**
+   * @generated from enum value: SECRET_CLASSIFICATION_KEY = 5;
+   */
+  KEY = 5,
+
+  /**
+   * @generated from enum value: SECRET_CLASSIFICATION_BIOMETRIC = 6;
+   */
+  BIOMETRIC = 6,
+
+  /**
+   * @generated from enum value: SECRET_CLASSIFICATION_IDENTITY = 7;
+   */
+  IDENTITY = 7,
+
+  /**
+   * @generated from enum value: SECRET_CLASSIFICATION_PII = 8;
+   */
+  PII = 8,
+
+  /**
+   * @generated from enum value: SECRET_CLASSIFICATION_OPERATIONAL = 9;
+   */
+  OPERATIONAL = 9,
+}
+
+/**
+ * Describes the enum udb.core.common.v1.SecretClassification.
+ */
+export const SecretClassificationSchema: GenEnum<SecretClassification> = /*@__PURE__*/
+  enumDesc(file_udb_core_common_v1_security, 3);
+
+/**
+ * @generated from enum udb.core.common.v1.OutputView
+ */
+export enum OutputView {
+  /**
+   * @generated from enum value: OUTPUT_VIEW_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: OUTPUT_VIEW_STORAGE_ONLY = 1;
+   */
+  STORAGE_ONLY = 1,
+
+  /**
+   * @generated from enum value: OUTPUT_VIEW_PUBLIC = 2;
+   */
+  PUBLIC = 2,
+
+  /**
+   * @generated from enum value: OUTPUT_VIEW_SELF = 3;
+   */
+  SELF = 3,
+
+  /**
+   * @generated from enum value: OUTPUT_VIEW_ADMIN = 4;
+   */
+  ADMIN = 4,
+
+  /**
+   * @generated from enum value: OUTPUT_VIEW_AUDIT = 5;
+   */
+  AUDIT = 5,
+
+  /**
+   * @generated from enum value: OUTPUT_VIEW_NEVER = 6;
+   */
+  NEVER = 6,
+}
+
+/**
+ * Describes the enum udb.core.common.v1.OutputView.
+ */
+export const OutputViewSchema: GenEnum<OutputView> = /*@__PURE__*/
+  enumDesc(file_udb_core_common_v1_security, 4);
+
+/**
+ * @generated from enum udb.core.common.v1.RedactionStrategy
+ */
+export enum RedactionStrategy {
+  /**
+   * @generated from enum value: REDACTION_STRATEGY_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: REDACTION_STRATEGY_NONE = 1;
+   */
+  NONE = 1,
+
+  /**
+   * @generated from enum value: REDACTION_STRATEGY_MASK = 2;
+   */
+  MASK = 2,
+
+  /**
+   * @generated from enum value: REDACTION_STRATEGY_REDACT = 3;
+   */
+  REDACT = 3,
+
+  /**
+   * @generated from enum value: REDACTION_STRATEGY_HASH_ONLY = 4;
+   */
+  HASH_ONLY = 4,
+
+  /**
+   * @generated from enum value: REDACTION_STRATEGY_LAST4 = 5;
+   */
+  LAST4 = 5,
+}
+
+/**
+ * Describes the enum udb.core.common.v1.RedactionStrategy.
+ */
+export const RedactionStrategySchema: GenEnum<RedactionStrategy> = /*@__PURE__*/
+  enumDesc(file_udb_core_common_v1_security, 5);
+
+/**
  * @generated from enum udb.core.common.v1.SecurityClassification
  */
 export enum SecurityClassification {
@@ -163,7 +937,7 @@ export enum SecurityClassification {
  * Describes the enum udb.core.common.v1.SecurityClassification.
  */
 export const SecurityClassificationSchema: GenEnum<SecurityClassification> = /*@__PURE__*/
-  enumDesc(file_udb_core_common_v1_security, 1);
+  enumDesc(file_udb_core_common_v1_security, 6);
 
 /**
  * @generated from enum udb.core.common.v1.DataCategory
@@ -209,7 +983,7 @@ export enum DataCategory {
  * Describes the enum udb.core.common.v1.DataCategory.
  */
 export const DataCategorySchema: GenEnum<DataCategory> = /*@__PURE__*/
-  enumDesc(file_udb_core_common_v1_security, 2);
+  enumDesc(file_udb_core_common_v1_security, 7);
 
 /**
  * @generated from extension: bool pii = 50010;
@@ -278,14 +1052,95 @@ export const data_category: GenExtension<FieldOptions, DataCategory> = /*@__PURE
   extDesc(file_udb_core_common_v1_security, 10);
 
 /**
+ * Enterprise contract v1 additive field option. This does not replace the
+ * scalar options above; generators normalize both shapes into one manifest.
+ *
+ * @generated from extension: udb.core.common.v1.DbColumnSecurityOptions db_column_security = 50033;
+ */
+export const db_column_security: GenExtension<FieldOptions, DbColumnSecurityOptions> = /*@__PURE__*/
+  extDesc(file_udb_core_common_v1_security, 11);
+
+/**
  * @generated from extension: udb.core.common.v1.EndpointSecurity endpoint_security = 51001;
  */
 export const endpoint_security: GenExtension<MethodOptions, EndpointSecurity> = /*@__PURE__*/
-  extDesc(file_udb_core_common_v1_security, 11);
+  extDesc(file_udb_core_common_v1_security, 12);
 
 /**
  * @generated from extension: udb.core.common.v1.RestContract rest_contract = 51002;
  */
 export const rest_contract: GenExtension<MethodOptions, RestContract> = /*@__PURE__*/
-  extDesc(file_udb_core_common_v1_security, 12);
+  extDesc(file_udb_core_common_v1_security, 13);
+
+/**
+ * @generated from extension: udb.core.common.v1.SdkSurfaceOptions sdk_surface = 51003;
+ */
+export const sdk_surface: GenExtension<MethodOptions, SdkSurfaceOptions> = /*@__PURE__*/
+  extDesc(file_udb_core_common_v1_security, 14);
+
+/**
+ * @generated from extension: udb.core.common.v1.CliScaffoldOptions method_cli_scaffold = 51004;
+ */
+export const method_cli_scaffold: GenExtension<MethodOptions, CliScaffoldOptions> = /*@__PURE__*/
+  extDesc(file_udb_core_common_v1_security, 15);
+
+/**
+ * @generated from extension: udb.core.common.v1.EventContractOptions method_event_contract = 51005;
+ */
+export const method_event_contract: GenExtension<MethodOptions, EventContractOptions> = /*@__PURE__*/
+  extDesc(file_udb_core_common_v1_security, 16);
+
+/**
+ * @generated from extension: udb.core.common.v1.DependencyContractOptions method_dependency_contract = 51006;
+ */
+export const method_dependency_contract: GenExtension<MethodOptions, DependencyContractOptions> = /*@__PURE__*/
+  extDesc(file_udb_core_common_v1_security, 17);
+
+/**
+ * @generated from extension: udb.core.common.v1.DbTableSecurityOptions db_table_security = 52001;
+ */
+export const db_table_security: GenExtension<MessageOptions, DbTableSecurityOptions> = /*@__PURE__*/
+  extDesc(file_udb_core_common_v1_security, 18);
+
+/**
+ * @generated from extension: udb.core.common.v1.EventContractOptions message_event_contract = 52002;
+ */
+export const message_event_contract: GenExtension<MessageOptions, EventContractOptions> = /*@__PURE__*/
+  extDesc(file_udb_core_common_v1_security, 19);
+
+/**
+ * @generated from extension: udb.core.common.v1.SdkSurfaceOptions message_sdk_surface = 52003;
+ */
+export const message_sdk_surface: GenExtension<MessageOptions, SdkSurfaceOptions> = /*@__PURE__*/
+  extDesc(file_udb_core_common_v1_security, 20);
+
+/**
+ * @generated from extension: udb.core.common.v1.DependencyContractOptions message_dependency_contract = 52004;
+ */
+export const message_dependency_contract: GenExtension<MessageOptions, DependencyContractOptions> = /*@__PURE__*/
+  extDesc(file_udb_core_common_v1_security, 21);
+
+/**
+ * @generated from extension: udb.core.common.v1.NativeServiceOptions native_service = 53001;
+ */
+export const native_service: GenExtension<ServiceOptions, NativeServiceOptions> = /*@__PURE__*/
+  extDesc(file_udb_core_common_v1_security, 22);
+
+/**
+ * @generated from extension: udb.core.common.v1.SdkSurfaceOptions service_sdk_surface = 53002;
+ */
+export const service_sdk_surface: GenExtension<ServiceOptions, SdkSurfaceOptions> = /*@__PURE__*/
+  extDesc(file_udb_core_common_v1_security, 23);
+
+/**
+ * @generated from extension: udb.core.common.v1.CliScaffoldOptions service_cli_scaffold = 53003;
+ */
+export const service_cli_scaffold: GenExtension<ServiceOptions, CliScaffoldOptions> = /*@__PURE__*/
+  extDesc(file_udb_core_common_v1_security, 24);
+
+/**
+ * @generated from extension: udb.core.common.v1.DependencyContractOptions service_dependency_contract = 53004;
+ */
+export const service_dependency_contract: GenExtension<ServiceOptions, DependencyContractOptions> = /*@__PURE__*/
+  extDesc(file_udb_core_common_v1_security, 25);
 

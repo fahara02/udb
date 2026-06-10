@@ -4,6 +4,7 @@ package udb.core.authn.entity.v1;
 
 import "google/protobuf/timestamp.proto";
 import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
 
 option csharp_namespace = "udb.core.Authn.Entity.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";
@@ -27,8 +28,26 @@ message RecoveryCode {
     comment: "Hashed single-use MFA recovery/backup codes"
     soft_delete: false
     audit_fields: false
-    enable_rls: false
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id IS NULL OR tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
     replica_hint: "primary"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "authn.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
   };
 
   string recovery_code_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "recovery_code_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
@@ -36,9 +55,12 @@ message RecoveryCode {
   string user_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "user_id" sql_type: "UUID" not_null: true comment: "FK to udb_authn.users.user_id" foreign_key: { references_table: "users" references_schema: "udb_authn" references_column: "user_id" on_delete: REFERENTIAL_ACTION_CASCADE constraint_name: "fk_recovery_codes_user_id" } index: { index_name: "idx_recovery_codes_user" index_type: "BTREE" columns: "user_id" } }];
 
   // Keyed digest of the recovery code; never stored in plaintext.
-  string code_hash = 3 [(udb.core.common.v1.pg_column) = { column_name: "code_hash" sql_type: "VARCHAR(128)" not_null: true comment: "Keyed HMAC digest of the recovery code" }];
+  string code_hash = 3 [(udb.core.common.v1.pg_column) = { column_name: "code_hash" sql_type: "VARCHAR(128)" not_null: true comment: "Keyed HMAC digest of the recovery code" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT hashing_algorithm: "hmac-sha256" uniqueness_scope: "tenant" }];
 
   google.protobuf.Timestamp used_at = 4 [(udb.core.common.v1.pg_column) = { column_name: "used_at" sql_type: "TIMESTAMPTZ" comment: "Timestamp the code was consumed; NULL while unused" }];
 
   google.protobuf.Timestamp created_at = 5 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  // Nullable so existing inserts can't break; RLS policy tolerates NULL.
+  string tenant_id = 6 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" comment: "Tenant boundary (denormalized from the owning user)" index: { index_name: "idx_recovery_codes_tenant_id" index_type: "BTREE" } }];
 }

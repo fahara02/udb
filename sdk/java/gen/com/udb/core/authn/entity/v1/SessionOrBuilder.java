@@ -69,7 +69,7 @@ public interface SessionOrBuilder extends
 
   /**
    * <pre>
-   * bcrypt hash of the session token (for secure verify after lookup).
+   * Keyed HMAC digest of the session token (for secure verify after lookup).
    * </pre>
    *
    * <code>string session_token_hash = 5 [json_name = "sessionTokenHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -78,7 +78,7 @@ public interface SessionOrBuilder extends
   java.lang.String getSessionTokenHash();
   /**
    * <pre>
-   * bcrypt hash of the session token (for secure verify after lookup).
+   * Keyed HMAC digest of the session token (for secure verify after lookup).
    * </pre>
    *
    * <code>string session_token_hash = 5 [json_name = "sessionTokenHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = { ... }</code>

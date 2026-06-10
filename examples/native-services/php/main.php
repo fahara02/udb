@@ -49,10 +49,32 @@ if ($apiKey !== '') {
 
 // ── Step 2: authorize a resource/action ──────────────────────────────────────
 $invoice = (new ResourceRef())->setResourceName('invoice')->setMessageType('invoice');
-[$allowed, $decision] = $auth->can($invoice, 'data.select');
+// `can` now forwards requested_scopes (explicit arg, else metadata scopes) and
+// memoises the decision in an in-process, server-TTL'd cache.
+[$allowed, $decision] = $auth->can($invoice, 'data.select', scopes: ['data.read']);
 printf("2) can data.select on invoice → %s (decision_id=%s)\n", $allowed ? 'true' : 'false', $decision->getDecisionId());
 [$denied] = $auth->can($invoice, 'data.delete');
 printf("   can data.delete on invoice → %s\n", $denied ? 'true' : 'false');
+
+// `explain` returns the decision without throwing; `require` throws
+// UdbAuthzDeniedException on deny (ideal at the top of a controller action).
+$exp = $auth->explain($invoice, 'data.select');
+printf("   explain data.select → allowed=%s reason=%s\n", $exp->getAllowed() ? 'true' : 'false', $exp->getDenyReason());
+try {
+    $auth->require($invoice, 'data.delete', scopes: ['data.write']);
+    echo "   require data.delete → allowed\n";
+} catch (\Fahara02\UdbLaravel\Exceptions\UdbAuthzDeniedException $e) {
+    printf("   require data.delete → denied: %s\n", $e->denyReason() ?: '(no reason)');
+}
+
+// `batchCan` checks many object/action pairs in one RPC.
+$results = $auth->batchCan([
+    ['object' => 'invoice', 'action' => 'data.select'],
+    ['object' => 'invoice', 'action' => 'data.delete'],
+]);
+foreach ($results as $key => $ok) {
+    printf("   batchCan %s → %s\n", $key, $ok ? 'true' : 'false');
+}
 
 // ── Step 3 (advanced): native DB fast-path grant ─────────────────────────────
 try {
@@ -69,3 +91,21 @@ try {
 } catch (\Throwable $e) {
     printf("3) native access denied/unavailable: %s\n", $e->getMessage());
 }
+
+// ── Step 4: the unified UdbProject facade (one config, every service) ─────────
+// `createUdb` builds a portable client exposing data()/auth()/authz()/apiKey()/
+// tenant()/notification()/analytics() — sharing one metadata + channel.
+$udb = \Fahara02\UdbLaravel\createUdb([
+    'target' => $endpoint,
+    'tenantId' => 'acme',
+    'projectId' => 'billing',
+    'purpose' => 'control-plane',
+    'scopes' => ['udb:*'],
+    'serviceIdentity' => 'examples.native-php',
+]);
+[$ok] = $udb->authz()->can($invoice, 'data.select');
+printf("4) UdbProject facade: authz()->can data.select → %s\n", $ok ? 'true' : 'false');
+echo "   services available: data, auth, authz, apiKey, tenant, notification, analytics\n";
+// e.g. $udb->notification()->send('invoice.created', 'user-123');
+//      $udb->apiKey()->create('ci-bot', ownerType: 1, ownerId: 'svc');
+//      $udb->tenant()->onboard(code: 'acme', name: 'Acme Inc');

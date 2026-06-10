@@ -1,5 +1,6 @@
 //! main.rs split — doctor (Phase H).
 use super::*;
+use std::collections::HashSet;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct DoctorReport {
@@ -20,6 +21,7 @@ pub(crate) struct DoctorReport {
     postgres_privileges: Option<PostgresPrivilegeReport>,
     backend_probes: Vec<BackendProbeResult>,
     backend_capabilities: Vec<BackendCapabilityMatrixEntry>,
+    native_services: Vec<udb::runtime::service::native_registry::NativeServiceStatus>,
     errors: Vec<String>,
     warnings: Vec<String>,
 }
@@ -51,6 +53,12 @@ pub(crate) fn doctor_status(report: &DoctorReport) -> DoctorStatus {
     }
 }
 
+fn capability_matrix_for_configured_backends(
+    configured_backend_tokens: &HashSet<String>,
+) -> Vec<BackendCapabilityMatrixEntry> {
+    udb::backend::capability_matrix_configured(configured_backend_tokens)
+}
+
 pub(crate) async fn run_doctor(with_probes: bool) -> DoctorReport {
     let runtime = DataBrokerRuntime::from_env().await;
     let init = runtime.init_report();
@@ -59,6 +67,8 @@ pub(crate) async fn run_doctor(with_probes: bool) -> DoctorReport {
     let mut system_catalog = None;
     let mut postgres_privileges = None;
     let mut backend_probes = Vec::new();
+    let native_services =
+        udb::runtime::service::native_registry::resolved_native_service_statuses(runtime.config());
 
     // ── mTLS diagnostics ──────────────────────────────────────────────────────
     let tls_cert = env::var("UDB_TLS_CERT_PATH").unwrap_or_default();
@@ -156,11 +166,30 @@ pub(crate) async fn run_doctor(with_probes: bool) -> DoctorReport {
             "ClickHouse is not configured; analytics/column RPCs will be unavailable".to_string(),
         );
     }
+    for status in &native_services {
+        if status.enabled && status.degraded {
+            warnings.push(format!(
+                "native service {} is enabled but degraded: {}",
+                status.service_id, status.disabled_reason
+            ));
+        }
+        if !status.enabled && status.configured {
+            warnings.push(format!(
+                "native service {} is selected/configured but disabled: {}",
+                status.service_id, status.disabled_reason
+            ));
+        }
+    }
 
     // ── B.13/B.14 canonical-feasibility honesty warnings ──────────────────────
     // Prerequisite wording is read from the live feasibility profiles so doctor
-    // never drifts from `udb::backend::capability_matrix()`. Join with "; ".
-    let capability_matrix = udb::backend::capability_matrix();
+    // never drifts from the configured capability matrix. Join with "; ".
+    let configured_backends: HashSet<String> = runtime
+        .backend_instances()
+        .iter()
+        .map(|inst| inst.backend.clone())
+        .collect();
+    let capability_matrix = capability_matrix_for_configured_backends(&configured_backends);
     let prereqs_for = |backend: &str| -> Option<String> {
         capability_matrix
             .iter()
@@ -186,25 +215,8 @@ pub(crate) async fn run_doctor(with_probes: bool) -> DoctorReport {
 
     // Optional live backend probes (--probe flag or when all backends are configured).
     if with_probes {
-        #[cfg(feature = "redis")]
-        if init.redis_configured {
-            backend_probes.push(runtime.probe_redis_ping().await);
-        }
-        if init.qdrant_configured {
-            backend_probes.push(runtime.probe_qdrant_collections().await);
-        }
-        #[cfg(feature = "s3")]
-        if init.s3_configured {
-            backend_probes.push(runtime.probe_s3_access().await);
-        }
-        if init.mongodb_configured {
-            backend_probes.push(runtime.probe_mongodb_ping().await);
-        }
-        if init.neo4j_configured {
-            backend_probes.push(runtime.probe_neo4j_ping().await);
-        }
-        if init.clickhouse_configured {
-            backend_probes.push(runtime.probe_clickhouse_ping().await);
+        for backend in runtime.configured_probe_backends(false) {
+            backend_probes.push(runtime.probe_backend(backend).await);
         }
         #[cfg(feature = "kafka")]
         backend_probes.push(runtime.probe_kafka_metadata());
@@ -214,6 +226,29 @@ pub(crate) async fn run_doctor(with_probes: bool) -> DoctorReport {
             {
                 warnings.push(format!("{} probe: {}", probe.backend, err));
             }
+        }
+    }
+
+    // ── Phase 10: unified readiness contract ──────────────────────────────────
+    // doctor, GetHealthReport, gRPC health, and the auth-plane readiness checks
+    // all derive from the same `slo::ReadinessFacts` shape so the surfaces report
+    // the same facts. We reuse the live auth-plane checks (signing keys / casbin
+    // / JWKS / audit-sink / token-issuance posture) instead of re-deriving them.
+    // `auth_readiness_triples` is re-exported from `udb::runtime::service`
+    // (parent `service/mod.rs`: `pub use auth_service::auth_readiness_triples;`).
+    let auth_triples = udb::runtime::service::auth_readiness_triples(
+        &udb::runtime::security::SecurityConfig::current(),
+    )
+    .await;
+    let readiness = udb::runtime::slo::build_readiness_facts(init, &native_services, &auth_triples);
+    for err in readiness.errors() {
+        if !errors.contains(&err) {
+            errors.push(err);
+        }
+    }
+    for warn in readiness.warnings() {
+        if !warnings.contains(&warn) {
+            warnings.push(warn);
         }
     }
 
@@ -235,6 +270,7 @@ pub(crate) async fn run_doctor(with_probes: bool) -> DoctorReport {
         postgres_privileges,
         backend_probes,
         backend_capabilities: capability_matrix,
+        native_services,
         errors,
         warnings,
     }
@@ -242,108 +278,32 @@ pub(crate) async fn run_doctor(with_probes: bool) -> DoctorReport {
 
 #[derive(serde::Serialize)]
 pub(crate) struct CompatEntry {
-    option_name: &'static str,
-    option_type: &'static str,
-    target: &'static str,
-    required: bool,
-    since_version: &'static str,
-    description: &'static str,
-    example: &'static str,
+    pub(crate) option_name: &'static str,
+    pub(crate) option_kind: &'static str,
+    pub(crate) option_type: &'static str,
+    pub(crate) target: &'static str,
+    pub(crate) required: bool,
+    pub(crate) since_version: &'static str,
+    pub(crate) description: &'static str,
+    pub(crate) example: &'static str,
+    pub(crate) accepted_keys: &'static [&'static str],
 }
 
 pub(crate) fn build_compat_matrix() -> Vec<CompatEntry> {
-    vec![
-        CompatEntry {
-            option_name: "db.table",
-            option_type: "MessageOptions",
-            target: "PostgreSQL / Qdrant / S3 / Redis / Neo4j",
-            required: true,
-            since_version: "0.1.0",
-            description: "Marks a proto message as a mapped UDB table.",
-            example: r#"option (db.table) = { name: "users" schema: "app" primary_key: "id" };"#,
-        },
-        CompatEntry {
-            option_name: "db.column",
-            option_type: "FieldOptions",
-            target: "PostgreSQL",
-            required: false,
-            since_version: "0.1.0",
-            description: "Maps a proto field to a SQL column.",
-            example: r#"string email = 2 [(db.column).name = "email", (db.column).type = "TEXT"];"#,
-        },
-        CompatEntry {
-            option_name: "db.vector_column",
-            option_type: "FieldOptions",
-            target: "Qdrant",
-            required: false,
-            since_version: "0.2.0",
-            description: "Declares a field as a vector embedding column for Qdrant.",
-            example: r#"repeated float embedding = 5 [(db.vector_column).dimension = 1536];"#,
-        },
-        CompatEntry {
-            option_name: "db.object_store",
-            option_type: "MessageOptions",
-            target: "S3 / MinIO",
-            required: false,
-            since_version: "0.2.0",
-            description: "Routes a message type to an S3-compatible object store bucket.",
-            example: r#"option (db.object_store) = { bucket: "artifacts" prefix: "docs/" };"#,
-        },
-        CompatEntry {
-            option_name: "db.cache",
-            option_type: "MessageOptions",
-            target: "Redis",
-            required: false,
-            since_version: "0.3.0",
-            description: "Enables Redis caching for a message type.",
-            example: r#"option (db.cache) = { ttl_seconds: 300 key_prefix: "user:" };"#,
-        },
-        CompatEntry {
-            option_name: "db.index",
-            option_type: "FieldOptions",
-            target: "PostgreSQL",
-            required: false,
-            since_version: "0.1.0",
-            description: "Creates a secondary index on the mapped column.",
-            example: r#"string email = 2 [(db.column).name = "email", (db.index).unique = true];"#,
-        },
-        CompatEntry {
-            option_name: "db.foreign_key",
-            option_type: "FieldOptions",
-            target: "PostgreSQL",
-            required: false,
-            since_version: "0.1.0",
-            description: "Declares a foreign key reference to another table.",
-            example: r#"string user_id = 3 [(db.foreign_key) = { ref_table: "users" ref_column: "id" }];"#,
-        },
-        CompatEntry {
-            option_name: "db.cdc",
-            option_type: "MessageOptions",
-            target: "PostgreSQL (outbox) → Kafka",
-            required: false,
-            since_version: "0.4.0",
-            description: "Enables change-data-capture outbox publishing for a table.",
-            example: r#"option (db.cdc) = { topic: "app.events.users" format: "json" };"#,
-        },
-        CompatEntry {
-            option_name: "db.abac",
-            option_type: "MessageOptions",
-            target: "UDB security layer",
-            required: false,
-            since_version: "0.3.0",
-            description: "Attaches ABAC access-control metadata to a message type.",
-            example: r#"option (db.abac) = { required_scope: "users:read" purpose: "identity" };"#,
-        },
-        CompatEntry {
-            option_name: "db.field_mask",
-            option_type: "FieldOptions",
-            target: "UDB security layer",
-            required: false,
-            since_version: "0.3.0",
-            description: "Marks a field as masked unless the caller presents the required scope.",
-            example: r#"string ssn = 8 [(db.field_mask).required_scope = "pii:read"];"#,
-        },
-    ]
+    udb::parser::documented_option_metadata()
+        .iter()
+        .map(|option| CompatEntry {
+            option_name: option.option_name,
+            option_kind: option.kind,
+            option_type: option.option_type,
+            target: option.target,
+            required: option.required,
+            since_version: option.since_version,
+            description: option.description,
+            example: option.example,
+            accepted_keys: option.accepted_keys,
+        })
+        .collect()
 }
 
 /// Emit a human-readable ASCII summary of a DoctorReport.
@@ -429,6 +389,42 @@ pub(crate) fn print_doctor_human(report: &DoctorReport) {
             );
         }
     }
+    if !report.native_services.is_empty() {
+        println!();
+        println!("Native Services:");
+        for status in &report.native_services {
+            let state = if status.healthy {
+                "healthy"
+            } else if status.degraded {
+                "degraded"
+            } else if status.enabled {
+                "enabled"
+            } else {
+                "disabled"
+            };
+            println!(
+                "  {:18} {:9} surface={} listener={} migrate={} workers={} deps=[{}]{}",
+                status.service_id,
+                state,
+                status.surface,
+                status.listener_kind,
+                status.migration_status,
+                if status.background_worker_enabled {
+                    status.background_workers.join(",")
+                } else if status.owns_background_workers {
+                    "disabled".to_string()
+                } else {
+                    "none".to_string()
+                },
+                status.required_backends.join(","),
+                if status.disabled_reason.is_empty() {
+                    String::new()
+                } else {
+                    format!(" reason={}", status.disabled_reason)
+                }
+            );
+        }
+    }
     let canonical_feasibility: Vec<&BackendCapabilityMatrixEntry> = report
         .backend_capabilities
         .iter()
@@ -504,6 +500,34 @@ pub(crate) fn print_doctor_human(report: &DoctorReport) {
 
 pub(crate) fn bool_icon(v: bool) -> &'static str {
     if v { "ok" } else { "MISSING" }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn doctor_capability_matrix_marks_configured_tokens_only() {
+        let configured = HashSet::from(["postgres".to_string(), "redis".to_string()]);
+        let matrix = capability_matrix_for_configured_backends(&configured);
+
+        let postgres = matrix
+            .iter()
+            .find(|entry| entry.backend == "postgres")
+            .expect("postgres capability exists");
+        let redis = matrix
+            .iter()
+            .find(|entry| entry.backend == "redis")
+            .expect("redis capability exists");
+        let qdrant = matrix
+            .iter()
+            .find(|entry| entry.backend == "qdrant")
+            .expect("qdrant capability exists");
+
+        assert!(postgres.configured);
+        assert!(redis.configured);
+        assert!(!qdrant.configured);
+    }
 }
 
 /// Emit a human-readable lint report to stdout.

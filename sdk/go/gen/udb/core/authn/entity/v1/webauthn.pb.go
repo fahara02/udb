@@ -243,7 +243,7 @@ var File_udb_core_authn_entity_v1_webauthn_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_webauthn_proto_rawDesc = "" +
 	"\n" +
-	"'udb/core/authn/entity/v1/webauthn.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xbb\b\n" +
+	"'udb/core/authn/entity/v1/webauthn.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xd7\t\n" +
 	"\x12WebAuthnCredential\x12J\n" +
 	"\rcredential_id\x18\x01 \x01(\tB%\x82\xb7\x18!\n" +
 	"\rcredential_id\x12\fVARCHAR(512)\x18\x01(\x01R\fcredentialId\x12\x96\x01\n" +
@@ -272,9 +272,10 @@ const file_udb_core_authn_entity_v1_webauthn_proto_rawDesc = "" +
 	"updated_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01R\tupdatedAt\x12]\n" +
 	"\flast_used_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampB\x1f\x82\xb7\x18\x1b\n" +
 	"\flast_used_at\x12\vTIMESTAMPTZR\n" +
-	"lastUsedAt:\xda\x01\xfa\xb6\x18\xd5\x01\n" +
+	"lastUsedAt:\xf6\x02\xfa\xb6\x18\xd5\x01\n" +
 	"\x14webauthn_credentials\x12\tudb_authn\x18\x04 \x01*0Server-side WebAuthn passkeys bound to UDB users@\x01b^\n" +
-	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xea\x01\aprimary\xfa\x01\x0fauthn:mfa:write\"\xc4\b\n" +
+	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xea\x01\aprimary\xfa\x01\x0fauthn:mfa:write\x8a\xb2\x19\x97\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residency\"\xc4\b\n" +
 	"\x11WebAuthnChallenge\x12R\n" +
 	"\fchallenge_id\x18\x01 \x01(\tB/\x82\xb7\x18+\n" +
 	"\fchallenge_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\vchallengeId\x12U\n" +

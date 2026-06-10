@@ -164,126 +164,149 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
       "roto\032=udb/core/notification/entity/v1/no" +
       "tification_preference.proto\032;udb/core/no" +
       "tification/entity/v1/notification_templa" +
-      "te.proto\"\245\005\n\027SendNotificationRequest\022\035\n\n" +
-      "event_type\030\001 \001(\tR\teventType\022!\n\014recipient" +
-      "_id\030\002 \001(\tR\013recipientId\022+\n\021recipient_addr" +
-      "ess\030\003 \001(\tR\020recipientAddress\022\033\n\ttenant_id" +
-      "\030\004 \001(\tR\010tenantId\022\035\n\nproject_id\030\005 \001(\tR\tpr" +
-      "ojectId\022#\n\rresource_type\030\006 \001(\tR\014resource" +
-      "Type\022\037\n\013resource_id\030\007 \001(\tR\nresourceId\022#\n" +
-      "\rresource_name\030\010 \001(\tR\014resourceName\022%\n\016co" +
-      "rrelation_id\030\t \001(\tR\rcorrelationId\022\026\n\006loc" +
-      "ale\030\n \001(\tR\006locale\022g\n\tvariables\030\013 \003(\0132I.u" +
-      "db.core.notification.services.v1.SendNot" +
-      "ificationRequest.VariablesEntryR\tvariabl" +
-      "es\022P\n\010channels\030\014 \003(\01624.udb.core.notifica" +
-      "tion.entity.v1.NotificationChannelR\010chan" +
-      "nels\022<\n\007context\030\r \001(\0132\".udb.core.common." +
-      "v1.RequestContextR\007context\032<\n\016VariablesE" +
-      "ntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005v" +
-      "alue:\0028\001\"`\n\030SendNotificationResponse\022D\n\004" +
-      "logs\030\001 \003(\01320.udb.core.notification.entit" +
-      "y.v1.NotificationLogR\004logs\"/\n\026GetNotific" +
-      "ationRequest\022\025\n\006log_id\030\001 \001(\tR\005logId\"]\n\027G" +
-      "etNotificationResponse\022B\n\003log\030\001 \001(\01320.ud" +
-      "b.core.notification.entity.v1.Notificati" +
-      "onLogR\003log\"\260\003\n\030ListNotificationsRequest\022" +
-      "!\n\014recipient_id\030\001 \001(\tR\013recipientId\022\033\n\tte" +
-      "nant_id\030\002 \001(\tR\010tenantId\022\035\n\nproject_id\030\003 " +
-      "\001(\tR\tprojectId\022#\n\rresource_type\030\004 \001(\tR\014r" +
-      "esourceType\022\037\n\013resource_id\030\005 \001(\tR\nresour" +
-      "ceId\022\035\n\nevent_type\030\006 \001(\tR\teventType\022N\n\007c" +
-      "hannel\030\007 \001(\01624.udb.core.notification.ent" +
-      "ity.v1.NotificationChannelR\007channel\022K\n\006s" +
-      "tatus\030\010 \001(\01623.udb.core.notification.enti" +
-      "ty.v1.NotificationStatusR\006status\0223\n\004page" +
-      "\030\t \001(\0132\037.udb.core.common.v1.PageRequestR" +
-      "\004page\"\227\001\n\031ListNotificationsResponse\022D\n\004l" +
-      "ogs\030\001 \003(\01320.udb.core.notification.entity" +
-      ".v1.NotificationLogR\004logs\0224\n\004page\030\002 \001(\0132" +
-      " .udb.core.common.v1.PageResponseR\004page\"" +
-      "o\n\030RetryNotificationRequest\022\025\n\006log_id\030\001 " +
-      "\001(\tR\005logId\022<\n\007context\030\002 \001(\0132\".udb.core.c" +
-      "ommon.v1.RequestContextR\007context\"_\n\031Retr" +
-      "yNotificationResponse\022B\n\003log\030\001 \001(\01320.udb" +
-      ".core.notification.entity.v1.Notificatio" +
-      "nLogR\003log\"\311\002\n\025UpsertTemplateRequest\022\035\n\ne" +
-      "vent_type\030\001 \001(\tR\teventType\022N\n\007channel\030\002 " +
-      "\001(\01624.udb.core.notification.entity.v1.No" +
-      "tificationChannelR\007channel\022\026\n\006locale\030\003 \001" +
-      "(\tR\006locale\022)\n\020subject_template\030\004 \001(\tR\017su" +
-      "bjectTemplate\022#\n\rbody_template\030\005 \001(\tR\014bo" +
-      "dyTemplate\022\033\n\tis_active\030\006 \001(\010R\010isActive\022" +
-      "<\n\007context\030\007 \001(\0132\".udb.core.common.v1.Re" +
-      "questContextR\007context\"k\n\026UpsertTemplateR" +
-      "esponse\022Q\n\010template\030\001 \001(\01325.udb.core.not" +
-      "ification.entity.v1.NotificationTemplate" +
-      "R\010template\"\233\001\n\022GetTemplateRequest\022\035\n\neve" +
-      "nt_type\030\001 \001(\tR\teventType\022N\n\007channel\030\002 \001(" +
-      "\01624.udb.core.notification.entity.v1.Noti" +
-      "ficationChannelR\007channel\022\026\n\006locale\030\003 \001(\t" +
-      "R\006locale\"h\n\023GetTemplateResponse\022Q\n\010templ" +
-      "ate\030\001 \001(\01325.udb.core.notification.entity" +
-      ".v1.NotificationTemplateR\010template\"\333\001\n\024L" +
-      "istTemplatesRequest\022\035\n\nevent_type\030\001 \001(\tR" +
-      "\teventType\022N\n\007channel\030\002 \001(\01624.udb.core.n" +
-      "otification.entity.v1.NotificationChanne" +
-      "lR\007channel\022\037\n\013active_only\030\003 \001(\010R\nactiveO" +
-      "nly\0223\n\004page\030\004 \001(\0132\037.udb.core.common.v1.P" +
-      "ageRequestR\004page\"\242\001\n\025ListTemplatesRespon" +
-      "se\022S\n\ttemplates\030\001 \003(\01325.udb.core.notific" +
-      "ation.entity.v1.NotificationTemplateR\tte" +
-      "mplates\0224\n\004page\030\002 \001(\0132 .udb.core.common." +
-      "v1.PageResponseR\004page\"\213\001\n\027GetDeliverySta" +
-      "tsRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\035" +
-      "\n\nevent_type\030\002 \001(\tR\teventType\022\033\n\tdate_fr" +
-      "om\030\003 \001(\tR\010dateFrom\022\027\n\007date_to\030\004 \001(\tR\006dat" +
-      "eTo\"\355\001\n\014ChannelStats\022N\n\007channel\030\001 \001(\01624." +
+      "te.proto\032!udb/core/common/v1/security.pr" +
+      "oto\"\312\005\n\027SendNotificationRequest\022\035\n\nevent" +
+      "_type\030\001 \001(\tR\teventType\022!\n\014recipient_id\030\002" +
+      " \001(\tR\013recipientId\022+\n\021recipient_address\030\003" +
+      " \001(\tR\020recipientAddress\022\033\n\ttenant_id\030\004 \001(" +
+      "\tR\010tenantId\022\035\n\nproject_id\030\005 \001(\tR\tproject" +
+      "Id\022#\n\rresource_type\030\006 \001(\tR\014resourceType\022" +
+      "\037\n\013resource_id\030\007 \001(\tR\nresourceId\022#\n\rreso" +
+      "urce_name\030\010 \001(\tR\014resourceName\022%\n\016correla" +
+      "tion_id\030\t \001(\tR\rcorrelationId\022\026\n\006locale\030\n" +
+      " \001(\tR\006locale\022g\n\tvariables\030\013 \003(\0132I.udb.co" +
+      "re.notification.services.v1.SendNotifica" +
+      "tionRequest.VariablesEntryR\tvariables\022P\n" +
+      "\010channels\030\014 \003(\01624.udb.core.notification." +
+      "entity.v1.NotificationChannelR\010channels\022" +
+      "<\n\007context\030\r \001(\0132\".udb.core.common.v1.Re" +
+      "questContextR\007context\032<\n\016VariablesEntry\022" +
+      "\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:" +
+      "\0028\001:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notificationP\001" +
+      "\"\205\001\n\030SendNotificationResponse\022D\n\004logs\030\001 " +
+      "\003(\01320.udb.core.notification.entity.v1.No" +
+      "tificationLogR\004logs:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001" +
+      "J\014notificationP\001\"T\n\026GetNotificationReque" +
+      "st\022\025\n\006log_id\030\001 \001(\tR\005logId:#\232\262\031\037\010\001\032\003udb(\260" +
+      "\352\0010\003@\001J\014notificationP\001\"\202\001\n\027GetNotificati" +
+      "onResponse\022B\n\003log\030\001 \001(\01320.udb.core.notif" +
+      "ication.entity.v1.NotificationLogR\003log:#" +
+      "\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notificationP\001\"\325\003\n\030" +
+      "ListNotificationsRequest\022!\n\014recipient_id" +
+      "\030\001 \001(\tR\013recipientId\022\033\n\ttenant_id\030\002 \001(\tR\010" +
+      "tenantId\022\035\n\nproject_id\030\003 \001(\tR\tprojectId\022" +
+      "#\n\rresource_type\030\004 \001(\tR\014resourceType\022\037\n\013" +
+      "resource_id\030\005 \001(\tR\nresourceId\022\035\n\nevent_t" +
+      "ype\030\006 \001(\tR\teventType\022N\n\007channel\030\007 \001(\01624." +
       "udb.core.notification.entity.v1.Notifica" +
-      "tionChannelR\007channel\022\022\n\004sent\030\002 \001(\003R\004sent" +
-      "\022\034\n\tdelivered\030\003 \001(\003R\tdelivered\022\026\n\006failed" +
-      "\030\004 \001(\003R\006failed\022\036\n\nsuppressed\030\005 \001(\003R\nsupp" +
-      "ressed\022#\n\rdelivery_rate\030\006 \001(\001R\014deliveryR" +
-      "ate\"\211\002\n\030GetDeliveryStatsResponse\022\035\n\ntota" +
-      "l_sent\030\001 \001(\003R\ttotalSent\022\'\n\017total_deliver" +
-      "ed\030\002 \001(\003R\016totalDelivered\022!\n\014total_failed" +
-      "\030\003 \001(\003R\013totalFailed\0222\n\025overall_delivery_" +
-      "rate\030\004 \001(\001R\023overallDeliveryRate\022N\n\nby_ch" +
-      "annel\030\005 \003(\0132/.udb.core.notification.serv" +
-      "ices.v1.ChannelStatsR\tbyChannel\"\233\002\n\024SetP" +
-      "referenceRequest\022\027\n\007user_id\030\001 \001(\tR\006userI" +
-      "d\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId\022N\n\007channe" +
-      "l\030\003 \001(\01624.udb.core.notification.entity.v" +
-      "1.NotificationChannelR\007channel\022\035\n\nevent_" +
-      "type\030\004 \001(\tR\teventType\022 \n\014is_opted_out\030\005 " +
-      "\001(\010R\nisOptedOut\022<\n\007context\030\006 \001(\0132\".udb.c" +
-      "ore.common.v1.RequestContextR\007context\"p\n" +
-      "\025SetPreferenceResponse\022W\n\npreference\030\001 \001" +
-      "(\01327.udb.core.notification.entity.v1.Not" +
-      "ificationPreferenceR\npreference\"\273\001\n\024GetP" +
-      "referenceRequest\022\027\n\007user_id\030\001 \001(\tR\006userI" +
-      "d\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId\022N\n\007channe" +
-      "l\030\003 \001(\01624.udb.core.notification.entity.v" +
-      "1.NotificationChannelR\007channel\022\035\n\nevent_" +
-      "type\030\004 \001(\tR\teventType\"p\n\025GetPreferenceRe" +
-      "sponse\022W\n\npreference\030\001 \001(\01327.udb.core.no" +
-      "tification.entity.v1.NotificationPrefere" +
-      "nceR\npreference\"\203\001\n\026ListPreferencesReque" +
-      "st\022\027\n\007user_id\030\001 \001(\tR\006userId\022\033\n\ttenant_id" +
-      "\030\002 \001(\tR\010tenantId\0223\n\004page\030\003 \001(\0132\037.udb.cor" +
-      "e.common.v1.PageRequestR\004page\"\252\001\n\027ListPr" +
-      "eferencesResponse\022Y\n\013preferences\030\001 \003(\01327" +
+      "tionChannelR\007channel\022K\n\006status\030\010 \001(\01623.u" +
+      "db.core.notification.entity.v1.Notificat" +
+      "ionStatusR\006status\0223\n\004page\030\t \001(\0132\037.udb.co" +
+      "re.common.v1.PageRequestR\004page:#\232\262\031\037\010\001\032\003" +
+      "udb(\260\352\0010\003@\001J\014notificationP\001\"\274\001\n\031ListNoti" +
+      "ficationsResponse\022D\n\004logs\030\001 \003(\01320.udb.co" +
+      "re.notification.entity.v1.NotificationLo" +
+      "gR\004logs\0224\n\004page\030\002 \001(\0132 .udb.core.common." +
+      "v1.PageResponseR\004page:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003" +
+      "@\001J\014notificationP\001\"\224\001\n\030RetryNotification" +
+      "Request\022\025\n\006log_id\030\001 \001(\tR\005logId\022<\n\007contex" +
+      "t\030\002 \001(\0132\".udb.core.common.v1.RequestCont" +
+      "extR\007context:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notif" +
+      "icationP\001\"\204\001\n\031RetryNotificationResponse\022" +
+      "B\n\003log\030\001 \001(\01320.udb.core.notification.ent" +
+      "ity.v1.NotificationLogR\003log:#\232\262\031\037\010\001\032\003udb" +
+      "(\260\352\0010\003@\001J\014notificationP\001\"\356\002\n\025UpsertTempl" +
+      "ateRequest\022\035\n\nevent_type\030\001 \001(\tR\teventTyp" +
+      "e\022N\n\007channel\030\002 \001(\01624.udb.core.notificati" +
+      "on.entity.v1.NotificationChannelR\007channe" +
+      "l\022\026\n\006locale\030\003 \001(\tR\006locale\022)\n\020subject_tem" +
+      "plate\030\004 \001(\tR\017subjectTemplate\022#\n\rbody_tem" +
+      "plate\030\005 \001(\tR\014bodyTemplate\022\033\n\tis_active\030\006" +
+      " \001(\010R\010isActive\022<\n\007context\030\007 \001(\0132\".udb.co" +
+      "re.common.v1.RequestContextR\007context:#\232\262" +
+      "\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notificationP\001\"\220\001\n\026Up" +
+      "sertTemplateResponse\022Q\n\010template\030\001 \001(\01325" +
       ".udb.core.notification.entity.v1.Notific" +
-      "ationPreferenceR\013preferences\0224\n\004page\030\002 \001" +
-      "(\0132 .udb.core.common.v1.PageResponseR\004pa" +
-      "geB\254\002\n%com.udb.core.notification.service" +
-      "s.v1B\tCoreProtoP\001ZOgithub.com/fahara02/u" +
-      "db/sdk/go/gen/udb/core/notification/serv" +
-      "ices/v1;servicesv1\242\002\004UCNS\252\002!udb.core.Not" +
-      "ification.Services.V1\312\002!Udb\\Core\\Notific" +
-      "ation\\Services\\V1\342\002-Udb\\GPBMetadata\\Core" +
-      "\\Notification\\Services\\V1\352\002%Udb::Core::N" +
-      "otification::Services::V1b\006proto3"
+      "ationTemplateR\010template:#\232\262\031\037\010\001\032\003udb(\260\352\001" +
+      "0\003@\001J\014notificationP\001\"\300\001\n\022GetTemplateRequ" +
+      "est\022\035\n\nevent_type\030\001 \001(\tR\teventType\022N\n\007ch" +
+      "annel\030\002 \001(\01624.udb.core.notification.enti" +
+      "ty.v1.NotificationChannelR\007channel\022\026\n\006lo" +
+      "cale\030\003 \001(\tR\006locale:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J" +
+      "\014notificationP\001\"\215\001\n\023GetTemplateResponse\022" +
+      "Q\n\010template\030\001 \001(\01325.udb.core.notificatio" +
+      "n.entity.v1.NotificationTemplateR\010templa" +
+      "te:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notificationP\001\"" +
+      "\200\002\n\024ListTemplatesRequest\022\035\n\nevent_type\030\001" +
+      " \001(\tR\teventType\022N\n\007channel\030\002 \001(\01624.udb.c" +
+      "ore.notification.entity.v1.NotificationC" +
+      "hannelR\007channel\022\037\n\013active_only\030\003 \001(\010R\nac" +
+      "tiveOnly\0223\n\004page\030\004 \001(\0132\037.udb.core.common" +
+      ".v1.PageRequestR\004page:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003" +
+      "@\001J\014notificationP\001\"\307\001\n\025ListTemplatesResp" +
+      "onse\022S\n\ttemplates\030\001 \003(\01325.udb.core.notif" +
+      "ication.entity.v1.NotificationTemplateR\t" +
+      "templates\0224\n\004page\030\002 \001(\0132 .udb.core.commo" +
+      "n.v1.PageResponseR\004page:#\232\262\031\037\010\001\032\003udb(\260\352\001" +
+      "0\003@\001J\014notificationP\001\"\260\001\n\027GetDeliveryStat" +
+      "sRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\035\n" +
+      "\nevent_type\030\002 \001(\tR\teventType\022\033\n\tdate_fro" +
+      "m\030\003 \001(\tR\010dateFrom\022\027\n\007date_to\030\004 \001(\tR\006date" +
+      "To:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notificationP\001\"" +
+      "\222\002\n\014ChannelStats\022N\n\007channel\030\001 \001(\01624.udb." +
+      "core.notification.entity.v1.Notification" +
+      "ChannelR\007channel\022\022\n\004sent\030\002 \001(\003R\004sent\022\034\n\t" +
+      "delivered\030\003 \001(\003R\tdelivered\022\026\n\006failed\030\004 \001" +
+      "(\003R\006failed\022\036\n\nsuppressed\030\005 \001(\003R\nsuppress" +
+      "ed\022#\n\rdelivery_rate\030\006 \001(\001R\014deliveryRate:" +
+      "#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notificationP\001\"\256\002\n" +
+      "\030GetDeliveryStatsResponse\022\035\n\ntotal_sent\030" +
+      "\001 \001(\003R\ttotalSent\022\'\n\017total_delivered\030\002 \001(" +
+      "\003R\016totalDelivered\022!\n\014total_failed\030\003 \001(\003R" +
+      "\013totalFailed\0222\n\025overall_delivery_rate\030\004 " +
+      "\001(\001R\023overallDeliveryRate\022N\n\nby_channel\030\005" +
+      " \003(\0132/.udb.core.notification.services.v1" +
+      ".ChannelStatsR\tbyChannel:#\232\262\031\037\010\001\032\003udb(\260\352" +
+      "\0010\003@\001J\014notificationP\001\"\300\002\n\024SetPreferenceR" +
+      "equest\022\027\n\007user_id\030\001 \001(\tR\006userId\022\033\n\ttenan" +
+      "t_id\030\002 \001(\tR\010tenantId\022N\n\007channel\030\003 \001(\01624." +
+      "udb.core.notification.entity.v1.Notifica" +
+      "tionChannelR\007channel\022\035\n\nevent_type\030\004 \001(\t" +
+      "R\teventType\022 \n\014is_opted_out\030\005 \001(\010R\nisOpt" +
+      "edOut\022<\n\007context\030\006 \001(\0132\".udb.core.common" +
+      ".v1.RequestContextR\007context:#\232\262\031\037\010\001\032\003udb" +
+      "(\260\352\0010\003@\001J\014notificationP\001\"\225\001\n\025SetPreferen" +
+      "ceResponse\022W\n\npreference\030\001 \001(\01327.udb.cor" +
+      "e.notification.entity.v1.NotificationPre" +
+      "ferenceR\npreference:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001" +
+      "J\014notificationP\001\"\340\001\n\024GetPreferenceReques" +
+      "t\022\027\n\007user_id\030\001 \001(\tR\006userId\022\033\n\ttenant_id\030" +
+      "\002 \001(\tR\010tenantId\022N\n\007channel\030\003 \001(\01624.udb.c" +
+      "ore.notification.entity.v1.NotificationC" +
+      "hannelR\007channel\022\035\n\nevent_type\030\004 \001(\tR\teve" +
+      "ntType:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notificatio" +
+      "nP\001\"\225\001\n\025GetPreferenceResponse\022W\n\nprefere" +
+      "nce\030\001 \001(\01327.udb.core.notification.entity" +
+      ".v1.NotificationPreferenceR\npreference:#" +
+      "\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notificationP\001\"\250\001\n\026" +
+      "ListPreferencesRequest\022\027\n\007user_id\030\001 \001(\tR" +
+      "\006userId\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId\0223\n\004" +
+      "page\030\003 \001(\0132\037.udb.core.common.v1.PageRequ" +
+      "estR\004page:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001J\014notifica" +
+      "tionP\001\"\317\001\n\027ListPreferencesResponse\022Y\n\013pr" +
+      "eferences\030\001 \003(\01327.udb.core.notification." +
+      "entity.v1.NotificationPreferenceR\013prefer" +
+      "ences\0224\n\004page\030\002 \001(\0132 .udb.core.common.v1" +
+      ".PageResponseR\004page:#\232\262\031\037\010\001\032\003udb(\260\352\0010\003@\001" +
+      "J\014notificationP\001B\254\002\n%com.udb.core.notifi" +
+      "cation.services.v1B\tCoreProtoP\001ZOgithub." +
+      "com/fahara02/udb/sdk/go/gen/udb/core/not" +
+      "ification/services/v1;servicesv1\242\002\004UCNS\252" +
+      "\002!udb.core.Notification.Services.V1\312\002!Ud" +
+      "b\\Core\\Notification\\Services\\V1\342\002-Udb\\GP" +
+      "BMetadata\\Core\\Notification\\Services\\V1\352" +
+      "\002%Udb::Core::Notification::Services::V1b" +
+      "\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -294,6 +317,7 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
           com.udb.core.notification.entity.v1.NotificationLogProto.getDescriptor(),
           com.udb.core.notification.entity.v1.NotificationPreferenceProto.getDescriptor(),
           com.udb.core.notification.entity.v1.NotificationTemplateProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_notification_services_v1_SendNotificationRequest_descriptor =
       getDescriptor().getMessageType(0);
@@ -446,6 +470,12 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
     com.udb.core.notification.entity.v1.NotificationLogProto.getDescriptor();
     com.udb.core.notification.entity.v1.NotificationPreferenceProto.getDescriptor();
     com.udb.core.notification.entity.v1.NotificationTemplateProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
+    com.google.protobuf.ExtensionRegistry registry =
+        com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.messageSdkSurface);
+    com.google.protobuf.Descriptors.FileDescriptor
+        .internalUpdateFileDescriptor(descriptor, registry);
   }
 
   // @@protoc_insertion_point(outer_class_scope)

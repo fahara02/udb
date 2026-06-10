@@ -6,8 +6,11 @@ import "google/protobuf/timestamp.proto";
 import "udb/core/authn/entity/v1/enums.proto";
 import "udb/core/authn/entity/v1/session.proto";
 import "udb/core/authn/entity/v1/user.proto";
+import "udb/core/authn/entity/v1/device.proto";
+import "udb/core/authn/entity/v1/mfa_challenge.proto";
 import "udb/core/common/v1/dto.proto";
 import "udb/core/common/v1/types.proto";
+import "udb/core/common/v1/security.proto";
 
 option csharp_namespace = "udb.core.Authn.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/services/v1;authnservicev1";
@@ -20,6 +23,15 @@ option php_namespace = "Udb\\Core\\Authn\\Services\\V1";
 // ============================================================
 
 message CreateUserRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string username = 1;
   string email = 2;
   string password = 3; // Min 10 chars; 1 upper, 1 lower, 1 digit, 1 special
@@ -34,21 +46,57 @@ message CreateUserRequest {
 }
 
 message CreateUserResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   udb.core.authn.entity.v1.User user = 1;
   string otp_id = 2; // Verification OTP sent to email
 }
 
 message GetUserRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1; // lookup by ID
   string username = 2; // or by username
   string email = 3; // or by email
 }
 
 message GetUserResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   udb.core.authn.entity.v1.User user = 1;
 }
 
 message ListUsersRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string tenant_id = 1;
   udb.core.authn.entity.v1.AccountKind account_kind = 2;
   udb.core.authn.entity.v1.UserStatus status = 3;
@@ -56,11 +104,29 @@ message ListUsersRequest {
 }
 
 message ListUsersResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   repeated udb.core.authn.entity.v1.User users = 1;
   udb.core.common.v1.PageResponse page = 2;
 }
 
 message UpdateUserRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1;
   string full_name = 2;
   string email = 3;
@@ -74,10 +140,28 @@ message UpdateUserRequest {
 }
 
 message UpdateUserResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   udb.core.authn.entity.v1.User user = 1;
 }
 
 message ChangeUserStatusRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1;
   udb.core.authn.entity.v1.UserStatus new_status = 2;
   string reason = 3;
@@ -85,16 +169,43 @@ message ChangeUserStatusRequest {
 }
 
 message ChangeUserStatusResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   udb.core.authn.entity.v1.User user = 1;
 }
 
 // Admin password reset (generates a temporary password + sends email OTP)
 message AdminResetPasswordRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1;
   udb.core.common.v1.RequestContext context = 2;
 }
 
 message AdminResetPasswordResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string otp_id = 1; // OTP to complete the reset flow
 }
 
@@ -103,6 +214,15 @@ message AdminResetPasswordResponse {
 // ============================================================
 
 message SendOTPRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1;
   udb.core.authn.entity.v1.OTPType otp_type = 2;
   // correlation_id to link the OTP to an in-flight operation
@@ -111,28 +231,73 @@ message SendOTPRequest {
 }
 
 message SendOTPResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string otp_id = 1;
   int32 expires_in_seconds = 2;
   int32 cooldown_seconds = 3; // Wait before next resend
 }
 
 message VerifyOTPRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string otp_id = 1;
   string code = 2; // Plain 6-digit code (transmitted over TLS; hashed server-side)
 }
 
 message VerifyOTPResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   bool verified = 1;
   string user_id = 2;
   udb.core.authn.entity.v1.OTPType otp_type = 3;
 }
 
 message ResendOTPRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string original_otp_id = 1;
   string reason = 2; // "not_received" | "expired" | "delivery_failed"
 }
 
 message ResendOTPResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string otp_id = 1;
   int32 expires_in_seconds = 2;
   int32 cooldown_seconds = 3;
@@ -146,6 +311,15 @@ message ResendOTPResponse {
 // An authenticated caller, normalized to the claims UDB and project services
 // need after token/session/API-key validation.
 message Principal {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string principal_id = 1;
   string subject = 2;
   string user_id = 3;
@@ -163,6 +337,15 @@ message Principal {
 }
 
 message AuthnRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string bearer_token = 1;
   string session_id = 2;
   string api_key = 3;
@@ -179,6 +362,15 @@ message AuthnRequest {
 }
 
 message AuthnResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   Principal principal = 1;
   string session_id = 2;
   string access_token = 3;
@@ -188,6 +380,15 @@ message AuthnResponse {
 }
 
 message LoginRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string username = 1;
   string password = 2;
   udb.core.authn.entity.v1.DeviceType device_type = 3;
@@ -210,6 +411,15 @@ message LoginRequest {
 }
 
 message LoginResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1;
   string session_id = 2;
 
@@ -225,19 +435,58 @@ message LoginResponse {
 
   bool mfa_required = 8; // true = client must re-call Login with password + second factor
   string mfa_otp_id = 9; // reserved for a future server-issued MFA challenge id (currently empty)
+
+  // Absolute lifetime (seconds) of the rotating refresh token (field 4). The
+  // refresh token is a token-family credential (rt_<family>.<jti>), rotated on
+  // every RefreshToken call; reuse of a superseded value revokes the family.
+  int32 refresh_token_expires_in = 10;
 }
 
 message RefreshTokenRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string refresh_token = 1;
   string session_id = 2;
 }
 
 message RefreshTokenResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string access_token = 1;
   int32 access_token_expires_in = 2;
+
+  // Rotated refresh token (token-family credential). Issued on every successful
+  // refresh: the presented refresh token is single-use and is invalidated as the
+  // new one is minted (atomic rotation). Empty when the caller refreshed with a
+  // legacy server-side session id rather than a token-family credential.
+  string refresh_token = 3;
+  int32 refresh_token_expires_in = 4;
 }
 
 message LogoutRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string session_id = 1;
   bool all_sessions = 2; // if true, revoke all sessions for this user
   string revoke_reason = 3;
@@ -245,10 +494,28 @@ message LogoutRequest {
 }
 
 message LogoutResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   int32 sessions_revoked = 1;
 }
 
 message ChangePasswordRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1;
   string current_password = 2;
   string new_password = 3;
@@ -257,6 +524,15 @@ message ChangePasswordRequest {
 }
 
 message ChangePasswordResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1;
   google.protobuf.Timestamp changed_at = 2;
   string operation_id = 3;
@@ -267,11 +543,29 @@ message ChangePasswordResponse {
 // ============================================================
 
 message ValidateTokenRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string token = 1; // raw JWT or session_token
   udb.core.authn.entity.v1.TokenType token_type = 2;
 }
 
 message ValidateTokenResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   bool valid = 1;
   string user_id = 2;
   string session_id = 3;
@@ -295,46 +589,127 @@ message ValidateTokenResponse {
 // ============================================================
 
 message CreateSessionRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   Principal principal = 1;
   int64 ttl_seconds = 2;
   string client_fingerprint = 3;
 }
 
 message CreateSessionResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string session_id = 1;
   int64 expires_at_unix = 2;
 }
 
 message RefreshSessionRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string session_id = 1;
   int64 ttl_seconds = 2;
 }
 
 message RefreshSessionResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   int64 expires_at_unix = 1;
   bool active = 2;
 }
 
 message GetSessionRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string session_id = 1;
 }
 
 message GetSessionResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   udb.core.authn.entity.v1.Session session = 1;
 }
 
 message ListSessionsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1;
   bool active_only = 2;
   udb.core.common.v1.PageRequest page = 3;
 }
 
 message ListSessionsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   repeated udb.core.authn.entity.v1.Session sessions = 1;
   udb.core.common.v1.PageResponse page = 2;
 }
 
 message RevokeSessionRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string session_id = 1;
   string revoke_reason = 2;
   udb.core.common.v1.RequestContext context = 3;
@@ -343,6 +718,15 @@ message RevokeSessionRequest {
 }
 
 message RevokeSessionResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string session_id = 1;
   google.protobuf.Timestamp revoked_at = 2;
   string operation_id = 3;
@@ -354,11 +738,29 @@ message RevokeSessionResponse {
 // ============================================================
 
 message ValidateCSRFRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string session_id = 1;
   string csrf_token = 2; // value from the csrf cookie / header
 }
 
 message ValidateCSRFResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   bool valid = 1;
 }
 
@@ -367,12 +769,30 @@ message ValidateCSRFResponse {
 // ============================================================
 
 message EnrollMFARequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1;
   udb.core.authn.entity.v1.AuthFactorKind mfa_type = 2;
   udb.core.common.v1.RequestContext context = 3;
 }
 
 message EnrollMFAResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   // For TOTP: base32 secret + QR code URI so user can scan with authenticator app
   string totp_secret = 1; // base32 raw secret (shown once, not stored in plaintext)
   string totp_qr_uri = 2; // otpauth:// URI for QR rendering
@@ -380,6 +800,15 @@ message EnrollMFAResponse {
 }
 
 message ConfirmMFAEnrollmentRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1;
   string otp_id = 2;
   string code = 3; // TOTP code or email OTP code to confirm
@@ -387,16 +816,43 @@ message ConfirmMFAEnrollmentRequest {
 }
 
 message ConfirmMFAEnrollmentResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   bool enrolled = 1;
 }
 
 message GenerateRecoveryCodesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1;
   int32 count = 2; // number of codes to generate (server clamps to a sane range; default 10)
   udb.core.common.v1.RequestContext context = 3;
 }
 
 message GenerateRecoveryCodesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   // Plaintext codes, returned exactly ONCE. Only keyed hashes are stored; any
   // previously-issued codes for the user are invalidated.
   repeated string codes = 1;
@@ -404,38 +860,101 @@ message GenerateRecoveryCodesResponse {
 }
 
 message PutMfaPolicyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string tenant_id = 1;
   bool require_mfa = 2;
   udb.core.common.v1.RequestContext context = 3;
 }
 
 message PutMfaPolicyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string tenant_id = 1;
   bool require_mfa = 2;
 }
 
 message GetMfaPolicyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string tenant_id = 1;
   udb.core.common.v1.RequestContext context = 2;
 }
 
 message GetMfaPolicyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string tenant_id = 1;
   bool require_mfa = 2;
 }
 
 message ForgotPasswordRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string identifier = 1; // username or email
   udb.core.common.v1.RequestContext context = 2;
 }
 
 message ForgotPasswordResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   // Id of the PASSWORD_RESET OTP issued (empty when the account is unknown; the
   // response shape is uniform so it is not an account-enumeration oracle).
   string otp_id = 1;
 }
 
 message ResetPasswordRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string otp_id = 1;
   string code = 2;
   string new_password = 3;
@@ -443,43 +962,120 @@ message ResetPasswordRequest {
 }
 
 message ResetPasswordResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1;
   int64 changed_at_unix = 2;
 }
 
 message IntrospectTokenRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string token = 1;
   udb.core.common.v1.RequestContext context = 2;
 }
 
 message IntrospectTokenResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   bool active = 1;
   string subject = 2;
   string tenant_id = 3;
   string service_identity = 4;
   repeated string scopes = 5;
   int64 expires_at_unix = 6;
+  // Real introspection metadata (Phase 3 / I2.1).
+  string key_id = 7; // kid of the signing key that produced the token
+  string token_type = 8; // jwt_access | jwt_refresh | session | api_key
+  string session_id = 9; // issuing session handle, when present
+  string revocation_reason = 10; // populated when active=false due to revocation
 }
 
 message GetJwksRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   udb.core.common.v1.RequestContext context = 1;
 }
 
 message GetJwksResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string jwks_json = 1; // RFC 7517 JWK Set document for verifying UDB-issued JWTs
 }
 
 message SendPhoneVerificationRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1;
   string phone = 2; // E.164 number to set + verify
   udb.core.common.v1.RequestContext context = 3;
 }
 
 message SendPhoneVerificationResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string otp_id = 1;
 }
 
 message StartWebAuthnRegistrationRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1;
   string label = 2;
   string tenant_id = 3;
@@ -488,12 +1084,30 @@ message StartWebAuthnRegistrationRequest {
 }
 
 message StartWebAuthnRegistrationResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string challenge_id = 1;
   string public_key_credential_creation_options_json = 2;
   int64 expires_at_unix = 3;
 }
 
 message FinishWebAuthnRegistrationRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string challenge_id = 1;
   string public_key_credential_json = 2;
   string label = 3;
@@ -501,12 +1115,30 @@ message FinishWebAuthnRegistrationRequest {
 }
 
 message FinishWebAuthnRegistrationResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   bool registered = 1;
   string credential_id = 2;
   string user_id = 3;
 }
 
 message StartWebAuthnAuthenticationRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string user_id = 1;
   string tenant_id = 2;
   string project_id = 3;
@@ -514,21 +1146,272 @@ message StartWebAuthnAuthenticationRequest {
 }
 
 message StartWebAuthnAuthenticationResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string challenge_id = 1;
   string public_key_credential_request_options_json = 2;
   int64 expires_at_unix = 3;
 }
 
 message FinishWebAuthnAuthenticationRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   string challenge_id = 1;
   string public_key_credential_json = 2;
   udb.core.common.v1.RequestContext context = 3;
 }
 
 message FinishWebAuthnAuthenticationResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
   Principal principal = 1;
   string session_id = 2;
   string access_token = 3;
   int64 expires_at_unix = 4;
   string credential_id = 5;
+}
+
+// ============================================================
+// Device + session revocation lifecycle (Phase 3 / I2.4)
+// ============================================================
+
+message ListDevicesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string user_id = 1;
+  udb.core.common.v1.PageRequest page = 2;
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message ListDevicesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  repeated udb.core.authn.entity.v1.Device devices = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+message RevokeDeviceRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string device_id = 1;
+  string reason = 2;
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message RevokeDeviceResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  bool revoked = 1;
+  string device_id = 2;
+  int64 sessions_revoked = 3;
+}
+
+message AdminRevokeSessionRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string user_id = 1;
+  string session_id = 2; // public session handle
+  string reason = 3;
+  udb.core.common.v1.RequestContext context = 4;
+}
+
+message AdminRevokeSessionResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  bool revoked = 1;
+  int64 sessions_revoked = 2;
+}
+
+message AdminRevokeAllUserSessionsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string user_id = 1;
+  string reason = 2;
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message AdminRevokeAllUserSessionsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  int64 sessions_revoked = 1;
+}
+
+message AdminRevokeAllTenantSessionsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string tenant_id = 1;
+  string reason = 2;
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message AdminRevokeAllTenantSessionsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  int64 sessions_revoked = 1;
+}
+
+// Emergency global revoke by signing key / token family / tenant / principal.
+message EmergencyRevokeRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string signing_key_id = 1;
+  string token_family_id = 2;
+  string tenant_id = 3;
+  string principal_id = 4;
+  string reason = 5;
+  udb.core.common.v1.RequestContext context = 6;
+}
+
+message EmergencyRevokeResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  int64 families_revoked = 1;
+  int64 sessions_revoked = 2;
+  int64 keys_compromised = 3;
+  string operation_id = 4;
+}
+
+// ============================================================
+// MFA challenge + factor lifecycle (Phase 3 / I2.6)
+// ============================================================
+
+message IssueMfaChallengeRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string user_id = 1;
+  udb.core.authn.entity.v1.AuthFactorKind factor_kind = 2;
+  udb.core.authn.entity.v1.MfaChallengePurpose purpose = 3;
+  string device_fingerprint = 4;
+  string ip_address = 5;
+  udb.core.common.v1.RequestContext context = 6;
+}
+
+message IssueMfaChallengeResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string challenge_id = 1;
+  int64 expires_at_unix = 2;
+  udb.core.authn.entity.v1.AuthFactorKind factor_kind = 3;
+}
+
+message VerifyMfaChallengeRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string challenge_id = 1;
+  string code = 2; // TOTP / OTP / recovery code proof
+  string device_fingerprint = 3;
+  udb.core.common.v1.RequestContext context = 4;
+}
+
+message VerifyMfaChallengeResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  bool verified = 1;
+  string user_id = 2;
+}
+
+message MfaFactorSummary {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1;
+  bool enabled = 2;
+  string label = 3;
+}
+
+message ListMfaFactorsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string user_id = 1;
+  udb.core.common.v1.RequestContext context = 2;
+}
+
+message ListMfaFactorsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  repeated MfaFactorSummary factors = 1;
+}
+
+message DisableMfaFactorRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string user_id = 1;
+  udb.core.authn.entity.v1.AuthFactorKind factor_kind = 2;
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message DisableMfaFactorResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  bool disabled = 1;
+}
+
+message RenamePasskeyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string user_id = 1;
+  string credential_id = 2;
+  string new_label = 3;
+  udb.core.common.v1.RequestContext context = 4;
+}
+
+message RenamePasskeyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  bool renamed = 1;
+}
+
+message RevokeRecoveryCodesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string user_id = 1;
+  udb.core.common.v1.RequestContext context = 2;
+}
+
+message RevokeRecoveryCodesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  int64 revoked_count = 1;
+}
+
+message AdminResetMfaRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string user_id = 1;
+  string reason = 2;
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message AdminResetMfaResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  bool reset = 1;
+}
+
+// ============================================================
+// WebAuthn enterprise credential lifecycle (Phase 3 / I2.7)
+// ============================================================
+
+message WebAuthnCredentialSummary {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string credential_id = 1;
+  string label = 2;
+  int64 created_at_unix = 3;
+  int64 last_used_at_unix = 4;
+}
+
+message ListWebAuthnCredentialsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string user_id = 1;
+  udb.core.common.v1.RequestContext context = 2;
+}
+
+message ListWebAuthnCredentialsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  repeated WebAuthnCredentialSummary credentials = 1;
+}
+
+message DeleteWebAuthnCredentialRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string user_id = 1;
+  string credential_id = 2;
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message DeleteWebAuthnCredentialResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  bool deleted = 1;
 }

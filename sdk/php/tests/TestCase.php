@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Fahara02\UdbLaravel\Tests;
 
+use Fahara02\UdbLaravel\Tests\Support\GrpcFreeUdbClient;
+use Fahara02\UdbLaravel\UdbClient;
 use Fahara02\UdbLaravel\UdbServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 
@@ -19,6 +21,15 @@ use Orchestra\Testbench\TestCase as Orchestra;
  */
 abstract class TestCase extends Orchestra
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        if (! \extension_loaded('grpc')) {
+            $this->app->singleton(UdbClient::class, fn (): UdbClient => new GrpcFreeUdbClient());
+        }
+    }
+
     /**
      * @param  \Illuminate\Foundation\Application  $app
      * @return list<class-string>

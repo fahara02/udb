@@ -6,18 +6,25 @@
 //! [`NativeModel`] (see `runtime::native_catalog`), so the SQL here follows the
 //! same single-source-of-truth rule as the rest of the native services.
 
+use std::sync::Arc;
+
 use sqlx::{PgPool, Row};
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
+use crate::metrics::{MetricsRecorder, NoopMetrics};
 use crate::proto::udb::core::tenant::entity::v1 as tenant_entity_pb;
 use crate::proto::udb::core::tenant::services::v1 as tenant_pb;
 use crate::proto::udb::core::tenant::services::v1::tenant_service_server::TenantService;
+use crate::runtime::channels::{ChannelManager, OperationChannel};
 use crate::runtime::native_catalog::{NativeModel, native_model};
 
 pub use crate::proto::udb::core::tenant::services::v1::tenant_service_server::TenantServiceServer;
 
 use super::DataBrokerService;
+use super::native_helpers::{
+    MAX_LIST_ROWS, admit_on as native_admit_on, non_empty_json, parse_uuid, validate_request_tenant,
+};
 
 const TENANT_MSG: &str = "udb.core.tenant.entity.v1.Tenant";
 const TENANT_CONFIG_MSG: &str = "udb.core.tenant.entity.v1.TenantConfig";
@@ -25,15 +32,39 @@ const TENANT_CONFIG_MSG: &str = "udb.core.tenant.entity.v1.TenantConfig";
 /// Postgres-backed `TenantService` handler.
 pub struct TenantServiceImpl {
     pg_pool: Option<PgPool>,
+    /// Per-tenant fair-admission manager (the SAME one the data plane uses via
+    /// `execute_with_channel_scoped`). Control-plane mutating/listing RPCs acquire
+    /// a per-tenant budget through this so one tenant can't starve the shared
+    /// control plane. `None` only in bare unit-test construction (no runtime
+    /// wired) — `build_tenant_service` always wires it in production.
+    channels: Option<ChannelManager>,
+    metrics: Arc<dyn MetricsRecorder>,
 }
 
 impl TenantServiceImpl {
     pub fn new() -> Self {
-        Self { pg_pool: None }
+        Self {
+            pg_pool: None,
+            channels: None,
+            metrics: Arc::new(NoopMetrics),
+        }
     }
 
     pub fn with_postgres(mut self, pool: Option<PgPool>) -> Self {
         self.pg_pool = pool;
+        self
+    }
+
+    pub(crate) fn with_metrics(mut self, metrics: Arc<dyn MetricsRecorder>) -> Self {
+        self.metrics = metrics;
+        self
+    }
+
+    /// Wire the shared per-tenant fair-admission manager (same one the data plane
+    /// uses) so control-plane RPCs are bounded per tenant. No-op (`None`) leaves
+    /// admission disabled for bare unit-test construction.
+    pub(crate) fn with_channels(mut self, channels: Option<ChannelManager>) -> Self {
+        self.channels = channels;
         self
     }
 
@@ -83,11 +114,6 @@ fn tenant_config_model() -> NativeModel {
             "description",
         ],
     )
-}
-
-fn parse_uuid(field: &str, value: &str) -> Result<Uuid, Status> {
-    Uuid::parse_str(value.trim())
-        .map_err(|_| Status::invalid_argument(format!("{field} must be a valid UUID")))
 }
 
 // ── enum<->db (stored as VARCHAR via the proto_enum serializer) ───────────────
@@ -196,15 +222,6 @@ fn config_type_to_db(value: &str, default: &str) -> Result<String, Status> {
     Ok(short.to_string())
 }
 
-fn non_empty_json(value: &str) -> String {
-    let v = value.trim();
-    if v.is_empty() {
-        "{}".to_string()
-    } else {
-        v.to_string()
-    }
-}
-
 // ── projections + row mappers ─────────────────────────────────────────────────
 
 fn tenant_select_projection(m: &NativeModel) -> String {
@@ -275,6 +292,17 @@ impl TenantService for TenantServiceImpl {
         if req.code.trim().is_empty() || req.name.trim().is_empty() {
             return Err(Status::invalid_argument("code and name are required"));
         }
+        // Per-tenant fair admission. CreateTenant has no body tenant_id yet, so it
+        // scopes to the parent tenant when supplied (else the shared base budget).
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "tenant",
+            OperationChannel::Admin,
+            &req.parent_tenant_id,
+            None,
+        )
+        .await?;
         let pool = self.require_pool()?;
         let m = tenant_model();
         let rel = m.relation.clone();
@@ -316,7 +344,18 @@ impl TenantService for TenantServiceImpl {
         &self,
         request: Request<tenant_pb::GetTenantRequest>,
     ) -> Result<Response<tenant_pb::GetTenantResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "tenant",
+            OperationChannel::Read,
+            &req.tenant_id,
+            None,
+        )
+        .await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
         let pool = self.require_pool()?;
         let m = tenant_model();
@@ -347,13 +386,25 @@ impl TenantService for TenantServiceImpl {
         request: Request<tenant_pb::ListTenantsRequest>,
     ) -> Result<Response<tenant_pb::ListTenantsResponse>, Status> {
         let req = request.into_inner();
+        // Platform-scope listing (no body tenant to spoof); bound it on the shared
+        // base Read budget so a list flood can't starve the control plane.
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "tenant",
+            OperationChannel::Read,
+            "",
+            None,
+        )
+        .await?;
         let pool = self.require_pool()?;
         let m = tenant_model();
         let rel = m.relation.clone();
         let projection = tenant_select_projection(&m);
         let type_filter = tenant_type_to_db(&req.r#type, "")?;
         let status_filter = tenant_status_to_db(&req.status, "")?;
-        let page_size = if req.page_size > 0 { req.page_size } else { 50 }.min(500) as i64;
+        let page_size =
+            if req.page_size > 0 { req.page_size } else { 50 }.min(MAX_LIST_ROWS as i32) as i64;
         let page = if req.page > 0 { req.page } else { 1 } as i64;
         let offset = (page - 1) * page_size;
         let where_clause = format!(
@@ -395,7 +446,18 @@ impl TenantService for TenantServiceImpl {
         &self,
         request: Request<tenant_pb::UpdateTenantRequest>,
     ) -> Result<Response<tenant_pb::UpdateTenantResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "tenant",
+            OperationChannel::Admin,
+            &req.tenant_id,
+            None,
+        )
+        .await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
         let pool = self.require_pool()?;
         let m = tenant_model();
@@ -437,7 +499,18 @@ impl TenantService for TenantServiceImpl {
         &self,
         request: Request<tenant_pb::GetTenantConfigRequest>,
     ) -> Result<Response<tenant_pb::GetTenantConfigResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "tenant",
+            OperationChannel::Read,
+            &req.tenant_id,
+            None,
+        )
+        .await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
         let pool = self.require_pool()?;
         let m = tenant_config_model();
@@ -466,7 +539,18 @@ impl TenantService for TenantServiceImpl {
         &self,
         request: Request<tenant_pb::UpdateTenantConfigRequest>,
     ) -> Result<Response<tenant_pb::UpdateTenantConfigResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "tenant",
+            OperationChannel::Admin,
+            &req.tenant_id,
+            None,
+        )
+        .await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
         if req.config_key.trim().is_empty() {
             return Err(Status::invalid_argument("config_key is required"));
@@ -501,11 +585,41 @@ impl TenantService for TenantServiceImpl {
     }
 }
 
+#[cfg(test)]
+mod tenant_scope_tests {
+    use super::*;
+    use tonic::metadata::MetadataValue;
+
+    /// A caller scoped to tenant-a must not read another tenant by putting a
+    /// foreign tenant_id in the request BODY; the scope guard rejects this before
+    /// any pool/DB access (no Postgres needed).
+    #[tokio::test]
+    async fn get_tenant_rejects_cross_tenant_body() {
+        let svc = TenantServiceImpl::new(); // no pool, no channels (admit no-op)
+        let mut request = Request::new(tenant_pb::GetTenantRequest {
+            tenant_id: "tenant-b".to_string(),
+            ..Default::default()
+        });
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+        let err = svc
+            .get_tenant(request)
+            .await
+            .expect_err("cross-tenant body must be rejected");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    }
+}
+
 impl DataBrokerService {
     /// Build the native `TenantService`, wired to the broker's Postgres pool.
     pub(crate) fn build_tenant_service(&self) -> TenantServiceImpl {
         let runtime = self.runtime.load_full();
         let pg_pool = runtime.pg_pool().ok().cloned();
-        TenantServiceImpl::new().with_postgres(pg_pool)
+        let channels = Some(runtime.channels().clone());
+        TenantServiceImpl::new()
+            .with_postgres(pg_pool)
+            .with_channels(channels)
+            .with_metrics(self.metrics.clone())
     }
 }

@@ -7,10 +7,12 @@ use crate::ast::{
 
 use super::naming::{infer_sql_type, to_plural, to_snake_case};
 use super::options::{
-    OptionKind, OptionValue, apply_column_security_values, apply_column_value, apply_column_values,
-    apply_schema_security_values, apply_table_values, cache_from_values, column_store_from_values,
-    document_store_from_values, foreign_key_from_reference, generic_store_from_values,
-    graph_from_values, model_registry_from_values, option_kind, storage_from_values,
+    OptionKind, OptionValue, apply_column_security_scalar_option, apply_column_security_values,
+    apply_column_value, apply_column_values, apply_db_column_security_values,
+    apply_schema_security_values, apply_table_security_values, apply_table_values,
+    cache_from_values, column_store_from_values, document_store_from_values,
+    foreign_key_from_reference, generic_store_from_values, graph_from_values,
+    is_numeric_annotation_key, model_registry_from_values, option_kind, storage_from_values,
     timeseries_from_values, vector_from_values,
 };
 use super::paths::{resolve_migration_dir, resolve_schema_from_path};
@@ -59,6 +61,19 @@ impl<'a> ProtoParser<'a> {
 
     pub(super) fn parse_report(&mut self) -> Result<ParseReport, ParseError> {
         let schemas = self.parse_schemas()?;
+        if self.config.annotation_mode == AnnotationParserMode::Strict
+            && let Some(diagnostic) = self
+                .diagnostics
+                .iter()
+                .find(|diagnostic| is_strict_parse_failure_diagnostic(diagnostic))
+        {
+            return Err(ParseError::Syntax {
+                file: diagnostic.file.clone(),
+                line: diagnostic.line,
+                column: diagnostic.column,
+                message: format!("[{}]: {}", diagnostic.code, diagnostic.message),
+            });
+        }
         Ok(ParseReport {
             schemas,
             diagnostics: std::mem::take(&mut self.diagnostics),
@@ -356,6 +371,7 @@ impl<'a> ProtoParser<'a> {
             }
             OptionKind::Cache => schema.cache = Some(cache_from_values(&values)),
             OptionKind::Security => apply_schema_security_values(&mut schema.security, &values),
+            OptionKind::TableSecurity => apply_table_security_values(schema, &values),
             OptionKind::ModelRegistry => {
                 schema.model_registry = Some(model_registry_from_values(&values))
             }
@@ -619,18 +635,39 @@ impl<'a> ProtoParser<'a> {
                     Some(OptionKind::Security) => {
                         apply_column_security_values(&mut column.security, &values);
                     }
+                    Some(OptionKind::ColumnSecurity) => {
+                        apply_db_column_security_values(&mut column.security, &values);
+                    }
                     _ => {}
                 }
             } else {
+                let value_token = self.cur().clone();
                 let value = self.read_option_value();
-                if matches!(option_kind, Some(OptionKind::Column)) && !sub_field.is_empty() {
-                    apply_column_value(column, &sub_field, &value);
-                } else if option_kind.is_some() && sub_field.is_empty() {
-                    self.diagnostic_at(
-                        &span,
-                        "db_option_expected_block",
-                        &format!("DB field option `{option_name}` must use a `{{}}` block"),
-                    );
+                if !sub_field.is_empty() {
+                    self.validate_numeric_annotation_value(&sub_field, &value, &value_token);
+                } else if matches!(option_kind, Some(OptionKind::FieldSecurityScalar)) {
+                    let key = annotation_leaf_name(&option_name);
+                    self.validate_numeric_annotation_value(&key, &value, &value_token);
+                }
+                match option_kind {
+                    Some(OptionKind::Column) if !sub_field.is_empty() => {
+                        apply_column_value(column, &sub_field, &value);
+                    }
+                    Some(OptionKind::FieldSecurityScalar) => {
+                        apply_column_security_scalar_option(
+                            &mut column.security,
+                            &option_name,
+                            &value,
+                        );
+                    }
+                    Some(_) if sub_field.is_empty() => {
+                        self.diagnostic_at(
+                            &span,
+                            "db_option_expected_block",
+                            &format!("DB field option `{option_name}` must use a `{{}}` block"),
+                        );
+                    }
+                    _ => {}
                 }
             }
 
@@ -691,7 +728,10 @@ impl<'a> ProtoParser<'a> {
             } else if self.cur().kind == TokenKind::LBracket {
                 self.parse_option_list(option_name, &key)
             } else {
-                vec![OptionValue::Scalar(self.read_option_value())]
+                let value_token = self.cur().clone();
+                let value = self.read_option_value();
+                self.validate_numeric_annotation_value(&key, &value, &value_token);
+                vec![OptionValue::Scalar(value)]
             };
             values.entry(key).or_default().extend(parsed_values);
             if self.cur().kind == TokenKind::Comma {
@@ -725,7 +765,10 @@ impl<'a> ProtoParser<'a> {
             let value = if self.cur().kind == TokenKind::LBrace {
                 OptionValue::Block(self.parse_option_block(option_name))
             } else {
-                OptionValue::Scalar(self.read_option_value())
+                let value_token = self.cur().clone();
+                let value = self.read_option_value();
+                self.validate_numeric_annotation_value(key, &value, &value_token);
+                OptionValue::Scalar(value)
             };
             values.push(value);
 
@@ -745,6 +788,19 @@ impl<'a> ProtoParser<'a> {
         }
 
         values
+    }
+
+    fn validate_numeric_annotation_value(&mut self, key: &str, value: &str, token: &Token) {
+        if !self.should_lint_contract() || !is_numeric_annotation_key(key) {
+            return;
+        }
+        if value.trim().parse::<i32>().is_err() {
+            self.diagnostic_at(
+                token,
+                "malformed_numeric_annotation_value",
+                &format!("numeric annotation `{key}=\"{value}\"` must be a valid i32"),
+            );
+        }
     }
 
     fn read_option_name(&mut self) -> String {
@@ -1063,6 +1119,19 @@ fn normalize_annotation_name(option_name: &str) -> String {
 
 fn is_annotation_version_option(option_name: &str) -> bool {
     normalize_annotation_name(option_name) == "udb.annotation_version"
+}
+
+fn annotation_leaf_name(option_name: &str) -> String {
+    let normalized = normalize_annotation_name(option_name);
+    normalized
+        .rsplit('.')
+        .next()
+        .unwrap_or(normalized.as_str())
+        .to_string()
+}
+
+fn is_strict_parse_failure_diagnostic(diagnostic: &ParserDiagnostic) -> bool {
+    diagnostic.code == "malformed_numeric_annotation_value"
 }
 
 /// Parse the key/value type names out of a `map<K, V>` proto type token (the

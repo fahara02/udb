@@ -62,6 +62,11 @@ public final class AdminProto extends com.google.protobuf.GeneratedFile {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_entity_v1_BackendInstanceStatus_LabelsEntry_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_NativeServiceStatus_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_NativeServiceStatus_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_entity_v1_CatalogManifestRequest_descriptor;
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -404,7 +409,7 @@ public final class AdminProto extends com.google.protobuf.GeneratedFile {
       "v1\032\033udb/entity/v1/context.proto\"m\n\023Capab" +
       "ilitiesRequest\0227\n\007context\030\001 \001(\0132\035.udb.en" +
       "tity.v1.RequestContextR\007context\022\035\n\nproje" +
-      "ct_id\030\002 \001(\tR\tprojectId\"\201\005\n\024CapabilitiesR" +
+      "ct_id\030\002 \001(\tR\tprojectId\"\316\005\n\024CapabilitiesR" +
       "esponse\022\'\n\017schema_checksum\030\001 \001(\tR\016schema" +
       "Checksum\022)\n\020protocol_version\030\002 \001(\tR\017prot" +
       "ocolVersion\022)\n\020enabled_backends\030\003 \003(\tR\017e" +
@@ -420,94 +425,113 @@ public final class AdminProto extends com.google.protobuf.GeneratedFile {
       "2\036.udb.entity.v1.ProtocolSupportR\017protoc" +
       "olSupport\022_\n\030backend_protocol_support\030\n " +
       "\003(\0132%.udb.entity.v1.BackendProtocolSuppo" +
-      "rtR\026backendProtocolSupport\"\274\003\n\017ProtocolS" +
-      "upport\0220\n\024min_protocol_version\030\001 \001(\tR\022mi" +
-      "nProtocolVersion\0220\n\024max_protocol_version" +
-      "\030\002 \001(\tR\022maxProtocolVersion\022\034\n\tencodings\030" +
-      "\003 \003(\tR\tencodings\022 \n\013compression\030\004 \003(\tR\013c" +
-      "ompression\0228\n\030supports_streaming_reads\030\005" +
-      " \001(\010R\026supportsStreamingReads\022:\n\031supports" +
-      "_object_streaming\030\006 \001(\010R\027supportsObjectS" +
-      "treaming\0223\n\026max_recv_message_bytes\030\007 \001(\003" +
-      "R\023maxRecvMessageBytes\0223\n\026max_send_messag" +
-      "e_bytes\030\010 \001(\003R\023maxSendMessageBytes\022%\n\016su" +
-      "pported_rpcs\030\t \003(\tR\rsupportedRpcs\"\306\001\n\026Ba" +
-      "ckendProtocolSupport\022\030\n\007backend\030\001 \001(\tR\007b" +
-      "ackend\0228\n\030supports_streaming_reads\030\002 \001(\010" +
-      "R\026supportsStreamingReads\022:\n\031supports_obj" +
-      "ect_streaming\030\003 \001(\010R\027supportsObjectStrea" +
-      "ming\022\034\n\tencodings\030\004 \003(\tR\tencodings\"\326\002\n\033B" +
-      "ackendCapabilityDescriptor\022\030\n\007backend\030\001 " +
-      "\001(\tR\007backend\022\022\n\004tier\030\002 \001(\tR\004tier\022\036\n\noper" +
-      "ations\030\003 \003(\tR\noperations\0224\n\026unsupported_" +
-      "error_code\030\004 \001(\tR\024unsupportedErrorCode\022+" +
-      "\n\021consistency_model\030\005 \001(\tR\020consistencyMo" +
-      "del\022*\n\021max_payload_bytes\030\006 \001(\003R\017maxPaylo" +
-      "adBytes\022\037\n\013supports_xa\030\007 \001(\010R\nsupportsXa" +
-      "\0229\n\031supports_two_phase_commit\030\010 \001(\010R\026sup" +
-      "portsTwoPhaseCommit\"\223\004\n\025BackendInstanceS" +
-      "tatus\022\030\n\007backend\030\001 \001(\tR\007backend\022#\n\rinsta" +
-      "nce_name\030\002 \001(\tR\014instanceName\022\022\n\004role\030\003 \001" +
-      "(\tR\004role\022\030\n\007enabled\030\004 \001(\010R\007enabled\022\036\n\nco" +
-      "nfigured\030\005 \001(\010R\nconfigured\022\034\n\tconnected\030" +
-      "\006 \001(\010R\tconnected\022\037\n\013read_weight\030\007 \001(\rR\nr" +
-      "eadWeight\022!\n\014write_weight\030\010 \001(\rR\013writeWe" +
-      "ight\022H\n\006labels\030\t \003(\01320.udb.entity.v1.Bac" +
-      "kendInstanceStatus.LabelsEntryR\006labels\022\"" +
-      "\n\014capabilities\030\n \003(\tR\014capabilities\022%\n\016ro" +
-      "uting_status\030\013 \001(\tR\rroutingStatus\022\030\n\007hea" +
-      "lthy\030\014 \001(\010R\007healthy\022!\n\014circuit_open\030\r \001(" +
-      "\010R\013circuitOpen\0329\n\013LabelsEntry\022\020\n\003key\030\001 \001" +
-      "(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"i\n\026Cat" +
-      "alogManifestRequest\0227\n\007context\030\001 \001(\0132\035.u" +
-      "db.entity.v1.RequestContextR\007context\022\026\n\006" +
-      "redact\030\002 \001(\010R\006redact\">\n\027CatalogManifestR" +
-      "esponse\022#\n\rmanifest_json\030\001 \001(\014R\014manifest" +
-      "Json\"\315\001\n\032MessageSchemaLookupRequest\0227\n\007c" +
-      "ontext\030\001 \001(\0132\035.udb.entity.v1.RequestCont" +
-      "extR\007context\022\035\n\nproject_id\030\002 \001(\tR\tprojec" +
-      "tId\022!\n\014message_type\030\003 \001(\tR\013messageType\0224" +
-      "\n\026client_catalog_version\030\004 \001(\tR\024clientCa" +
-      "talogVersion\"\334\001\n\026MessageFieldDescriptor\022" +
-      "\022\n\004name\030\001 \001(\tR\004name\022\037\n\013column_name\030\002 \001(\t" +
-      "R\ncolumnName\022\035\n\nproto_type\030\003 \001(\tR\tprotoT" +
-      "ype\022\031\n\010sql_type\030\004 \001(\tR\007sqlType\022\031\n\010not_nu" +
-      "ll\030\005 \001(\010R\007notNull\022\035\n\nis_primary\030\006 \001(\010R\ti" +
-      "sPrimary\022\031\n\010is_array\030\007 \001(\010R\007isArray\"\277\002\n\027" +
-      "MessageSchemaDescriptor\022!\n\014message_type\030" +
-      "\001 \001(\tR\013messageType\022\035\n\nproject_id\030\002 \001(\tR\t" +
-      "projectId\022\'\n\017catalog_version\030\003 \001(\tR\016cata" +
-      "logVersion\022+\n\021manifest_checksum\030\004 \001(\tR\020m" +
-      "anifestChecksum\022\026\n\006schema\030\005 \001(\tR\006schema\022" +
-      "\024\n\005table\030\006 \001(\tR\005table\022\037\n\013primary_key\030\007 \003" +
-      "(\tR\nprimaryKey\022=\n\006fields\030\010 \003(\0132%.udb.ent" +
-      "ity.v1.MessageFieldDescriptorR\006fields\"]\n" +
-      "\033MessageSchemaLookupResponse\022>\n\006schema\030\001" +
-      " \001(\0132&.udb.entity.v1.MessageSchemaDescri" +
-      "ptorR\006schema\"\250\001\n\030MessageSchemaListReques" +
-      "t\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Reque" +
-      "stContextR\007context\022\035\n\nproject_id\030\002 \001(\tR\t" +
-      "projectId\0224\n\026client_catalog_version\030\003 \001(" +
-      "\tR\024clientCatalogVersion\"\265\001\n\031MessageSchem" +
-      "aListResponse\022\035\n\nproject_id\030\001 \001(\tR\tproje" +
-      "ctId\022\'\n\017catalog_version\030\002 \001(\tR\016catalogVe" +
-      "rsion\022+\n\021manifest_checksum\030\003 \001(\tR\020manife" +
-      "stChecksum\022#\n\rmessage_types\030\004 \003(\tR\014messa" +
-      "geTypes\"\216\001\n\023HealthReportRequest\0227\n\007conte" +
-      "xt\030\001 \001(\0132\035.udb.entity.v1.RequestContextR" +
-      "\007context\022\037\n\013with_probes\030\002 \001(\010R\nwithProbe" +
-      "s\022\035\n\nproject_id\030\003 \001(\tR\tprojectId\"\255\003\n\024Hea" +
-      "lthReportResponse\022\026\n\006passed\030\001 \001(\010R\006passe" +
-      "d\022/\n\023postgres_configured\030\002 \001(\010R\022postgres" +
-      "Configured\022)\n\020redis_configured\030\003 \001(\010R\017re" +
-      "disConfigured\022+\n\021qdrant_configured\030\004 \001(\010" +
-      "R\020qdrantConfigured\022#\n\rs3_configured\030\005 \001(" +
-      "\010R\014s3Configured\022\026\n\006errors\030\006 \003(\tR\006errors\022" +
-      "\032\n\010warnings\030\007 \003(\tR\010warnings\022\'\n\017privilege" +
-      "s_json\030\010 \001(\014R\016privilegesJson\022\037\n\013probes_j" +
-      "son\030\t \001(\014R\nprobesJson\022Q\n\021backend_instanc" +
-      "es\030\n \003(\0132$.udb.entity.v1.BackendInstance" +
-      "StatusR\020backendInstances\"\325\002\n\026GenericDisp" +
+      "rtR\026backendProtocolSupport\022K\n\017native_ser" +
+      "vices\030\013 \003(\0132\".udb.entity.v1.NativeServic" +
+      "eStatusR\016nativeServices\"\274\003\n\017ProtocolSupp" +
+      "ort\0220\n\024min_protocol_version\030\001 \001(\tR\022minPr" +
+      "otocolVersion\0220\n\024max_protocol_version\030\002 " +
+      "\001(\tR\022maxProtocolVersion\022\034\n\tencodings\030\003 \003" +
+      "(\tR\tencodings\022 \n\013compression\030\004 \003(\tR\013comp" +
+      "ression\0228\n\030supports_streaming_reads\030\005 \001(" +
+      "\010R\026supportsStreamingReads\022:\n\031supports_ob" +
+      "ject_streaming\030\006 \001(\010R\027supportsObjectStre" +
+      "aming\0223\n\026max_recv_message_bytes\030\007 \001(\003R\023m" +
+      "axRecvMessageBytes\0223\n\026max_send_message_b" +
+      "ytes\030\010 \001(\003R\023maxSendMessageBytes\022%\n\016suppo" +
+      "rted_rpcs\030\t \003(\tR\rsupportedRpcs\"\306\001\n\026Backe" +
+      "ndProtocolSupport\022\030\n\007backend\030\001 \001(\tR\007back" +
+      "end\0228\n\030supports_streaming_reads\030\002 \001(\010R\026s" +
+      "upportsStreamingReads\022:\n\031supports_object" +
+      "_streaming\030\003 \001(\010R\027supportsObjectStreamin" +
+      "g\022\034\n\tencodings\030\004 \003(\tR\tencodings\"\326\002\n\033Back" +
+      "endCapabilityDescriptor\022\030\n\007backend\030\001 \001(\t" +
+      "R\007backend\022\022\n\004tier\030\002 \001(\tR\004tier\022\036\n\noperati" +
+      "ons\030\003 \003(\tR\noperations\0224\n\026unsupported_err" +
+      "or_code\030\004 \001(\tR\024unsupportedErrorCode\022+\n\021c" +
+      "onsistency_model\030\005 \001(\tR\020consistencyModel" +
+      "\022*\n\021max_payload_bytes\030\006 \001(\003R\017maxPayloadB" +
+      "ytes\022\037\n\013supports_xa\030\007 \001(\010R\nsupportsXa\0229\n" +
+      "\031supports_two_phase_commit\030\010 \001(\010R\026suppor" +
+      "tsTwoPhaseCommit\"\223\004\n\025BackendInstanceStat" +
+      "us\022\030\n\007backend\030\001 \001(\tR\007backend\022#\n\rinstance" +
+      "_name\030\002 \001(\tR\014instanceName\022\022\n\004role\030\003 \001(\tR" +
+      "\004role\022\030\n\007enabled\030\004 \001(\010R\007enabled\022\036\n\nconfi" +
+      "gured\030\005 \001(\010R\nconfigured\022\034\n\tconnected\030\006 \001" +
+      "(\010R\tconnected\022\037\n\013read_weight\030\007 \001(\rR\nread" +
+      "Weight\022!\n\014write_weight\030\010 \001(\rR\013writeWeigh" +
+      "t\022H\n\006labels\030\t \003(\01320.udb.entity.v1.Backen" +
+      "dInstanceStatus.LabelsEntryR\006labels\022\"\n\014c" +
+      "apabilities\030\n \003(\tR\014capabilities\022%\n\016routi" +
+      "ng_status\030\013 \001(\tR\rroutingStatus\022\030\n\007health" +
+      "y\030\014 \001(\010R\007healthy\022!\n\014circuit_open\030\r \001(\010R\013" +
+      "circuitOpen\0329\n\013LabelsEntry\022\020\n\003key\030\001 \001(\tR" +
+      "\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001\"\333\004\n\023Nativ" +
+      "eServiceStatus\022\035\n\nservice_id\030\001 \001(\tR\tserv" +
+      "iceId\022.\n\023proto_service_names\030\002 \003(\tR\021prot" +
+      "oServiceNames\022\030\n\007enabled\030\003 \001(\010R\007enabled\022" +
+      "\036\n\nconfigured\030\004 \001(\010R\nconfigured\022\030\n\007mount" +
+      "ed\030\005 \001(\010R\007mounted\022\030\n\007healthy\030\006 \001(\010R\007heal" +
+      "thy\022\032\n\010degraded\030\007 \001(\010R\010degraded\022\030\n\007surfa" +
+      "ce\030\010 \001(\tR\007surface\022#\n\rlistener_kind\030\t \001(\t" +
+      "R\014listenerKind\022%\n\016supported_rpcs\030\n \003(\tR\r" +
+      "supportedRpcs\022\"\n\014capabilities\030\013 \003(\tR\014cap" +
+      "abilities\022+\n\021required_backends\030\014 \003(\tR\020re" +
+      "quiredBackends\0221\n\024missing_dependencies\030\r" +
+      " \003(\tR\023missingDependencies\022\'\n\017disabled_re" +
+      "ason\030\016 \001(\tR\016disabledReason\022)\n\020migration_" +
+      "status\030\017 \001(\tR\017migrationStatus\022-\n\022descrip" +
+      "tor_version\030\020 \001(\tR\021descriptorVersion\"i\n\026" +
+      "CatalogManifestRequest\0227\n\007context\030\001 \001(\0132" +
+      "\035.udb.entity.v1.RequestContextR\007context\022" +
+      "\026\n\006redact\030\002 \001(\010R\006redact\">\n\027CatalogManife" +
+      "stResponse\022#\n\rmanifest_json\030\001 \001(\014R\014manif" +
+      "estJson\"\315\001\n\032MessageSchemaLookupRequest\0227" +
+      "\n\007context\030\001 \001(\0132\035.udb.entity.v1.RequestC" +
+      "ontextR\007context\022\035\n\nproject_id\030\002 \001(\tR\tpro" +
+      "jectId\022!\n\014message_type\030\003 \001(\tR\013messageTyp" +
+      "e\0224\n\026client_catalog_version\030\004 \001(\tR\024clien" +
+      "tCatalogVersion\"\334\001\n\026MessageFieldDescript" +
+      "or\022\022\n\004name\030\001 \001(\tR\004name\022\037\n\013column_name\030\002 " +
+      "\001(\tR\ncolumnName\022\035\n\nproto_type\030\003 \001(\tR\tpro" +
+      "toType\022\031\n\010sql_type\030\004 \001(\tR\007sqlType\022\031\n\010not" +
+      "_null\030\005 \001(\010R\007notNull\022\035\n\nis_primary\030\006 \001(\010" +
+      "R\tisPrimary\022\031\n\010is_array\030\007 \001(\010R\007isArray\"\277" +
+      "\002\n\027MessageSchemaDescriptor\022!\n\014message_ty" +
+      "pe\030\001 \001(\tR\013messageType\022\035\n\nproject_id\030\002 \001(" +
+      "\tR\tprojectId\022\'\n\017catalog_version\030\003 \001(\tR\016c" +
+      "atalogVersion\022+\n\021manifest_checksum\030\004 \001(\t" +
+      "R\020manifestChecksum\022\026\n\006schema\030\005 \001(\tR\006sche" +
+      "ma\022\024\n\005table\030\006 \001(\tR\005table\022\037\n\013primary_key\030" +
+      "\007 \003(\tR\nprimaryKey\022=\n\006fields\030\010 \003(\0132%.udb." +
+      "entity.v1.MessageFieldDescriptorR\006fields" +
+      "\"]\n\033MessageSchemaLookupResponse\022>\n\006schem" +
+      "a\030\001 \001(\0132&.udb.entity.v1.MessageSchemaDes" +
+      "criptorR\006schema\"\250\001\n\030MessageSchemaListReq" +
+      "uest\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Re" +
+      "questContextR\007context\022\035\n\nproject_id\030\002 \001(" +
+      "\tR\tprojectId\0224\n\026client_catalog_version\030\003" +
+      " \001(\tR\024clientCatalogVersion\"\265\001\n\031MessageSc" +
+      "hemaListResponse\022\035\n\nproject_id\030\001 \001(\tR\tpr" +
+      "ojectId\022\'\n\017catalog_version\030\002 \001(\tR\016catalo" +
+      "gVersion\022+\n\021manifest_checksum\030\003 \001(\tR\020man" +
+      "ifestChecksum\022#\n\rmessage_types\030\004 \003(\tR\014me" +
+      "ssageTypes\"\216\001\n\023HealthReportRequest\0227\n\007co" +
+      "ntext\030\001 \001(\0132\035.udb.entity.v1.RequestConte" +
+      "xtR\007context\022\037\n\013with_probes\030\002 \001(\010R\nwithPr" +
+      "obes\022\035\n\nproject_id\030\003 \001(\tR\tprojectId\"\372\003\n\024" +
+      "HealthReportResponse\022\026\n\006passed\030\001 \001(\010R\006pa" +
+      "ssed\022/\n\023postgres_configured\030\002 \001(\010R\022postg" +
+      "resConfigured\022)\n\020redis_configured\030\003 \001(\010R" +
+      "\017redisConfigured\022+\n\021qdrant_configured\030\004 " +
+      "\001(\010R\020qdrantConfigured\022#\n\rs3_configured\030\005" +
+      " \001(\010R\014s3Configured\022\026\n\006errors\030\006 \003(\tR\006erro" +
+      "rs\022\032\n\010warnings\030\007 \003(\tR\010warnings\022\'\n\017privil" +
+      "eges_json\030\010 \001(\014R\016privilegesJson\022\037\n\013probe" +
+      "s_json\030\t \001(\014R\nprobesJson\022Q\n\021backend_inst" +
+      "ances\030\n \003(\0132$.udb.entity.v1.BackendInsta" +
+      "nceStatusR\020backendInstances\022K\n\017native_se" +
+      "rvices\030\013 \003(\0132\".udb.entity.v1.NativeServi" +
+      "ceStatusR\016nativeServices\"\325\002\n\026GenericDisp" +
       "atchRequest\0227\n\007context\030\001 \001(\0132\035.udb.entit" +
       "y.v1.RequestContextR\007context\022\030\n\007backend\030" +
       "\002 \001(\tR\007backend\022\034\n\toperation\030\003 \001(\tR\topera" +
@@ -780,7 +804,7 @@ public final class AdminProto extends com.google.protobuf.GeneratedFile {
       "\027supportsSchemaMigration\0224\n\026supports_vec" +
       "tor_search\030\007 \001(\010R\024supportsVectorSearch\0224" +
       "\n\026supports_hybrid_search\030\010 \001(\010R\024supports" +
-      "HybridSearch\022*\n\021max_payload_bytes\030\t \001(\003R" +
+      "HybridSearch\022*\n\021max_payload_bytes\030\t \001(\003R",
       "\017maxPayloadBytes\022\031\n\010probe_ok\030\n \001(\010R\007prob" +
       "eOk\022(\n\020probe_latency_ms\030\013 \001(\003R\016probeLate" +
       "ncyMs\022#\n\rinstance_name\030\014 \001(\tR\014instanceNa" +
@@ -799,7 +823,7 @@ public final class AdminProto extends com.google.protobuf.GeneratedFile {
       "e\022 \n\013compensated\030\002 \001(\003R\013compensated\022/\n\023f" +
       "ailed_compensation\030\003 \001(\003R\022failedCompensa" +
       "tion\022#\n\rmanual_review\030\004 \001(\003R\014manualRevie" +
-      "w\022$\n\rindeterminate\030\005 \001(\003R\rindeterminate\"",
+      "w\022$\n\rindeterminate\030\005 \001(\003R\rindeterminate\"" +
       "\241\002\n\023AdminCatalogSummary\022\035\n\nproject_id\030\001 " +
       "\001(\tR\tprojectId\022%\n\016active_version\030\002 \001(\tR\r" +
       "activeVersion\022\'\n\017active_checksum\030\003 \001(\tR\016" +
@@ -839,7 +863,7 @@ public final class AdminProto extends com.google.protobuf.GeneratedFile {
     internal_static_udb_entity_v1_CapabilitiesResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CapabilitiesResponse_descriptor,
-        new java.lang.String[] { "SchemaChecksum", "ProtocolVersion", "EnabledBackends", "DegradedBackends", "SystemCatalogRelations", "SupportedRpcs", "BackendInstances", "BackendCapabilities", "ProtocolSupport", "BackendProtocolSupport", });
+        new java.lang.String[] { "SchemaChecksum", "ProtocolVersion", "EnabledBackends", "DegradedBackends", "SystemCatalogRelations", "SupportedRpcs", "BackendInstances", "BackendCapabilities", "ProtocolSupport", "BackendProtocolSupport", "NativeServices", });
     internal_static_udb_entity_v1_ProtocolSupport_descriptor =
       getDescriptor().getMessageType(2);
     internal_static_udb_entity_v1_ProtocolSupport_fieldAccessorTable = new
@@ -870,368 +894,374 @@ public final class AdminProto extends com.google.protobuf.GeneratedFile {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_BackendInstanceStatus_LabelsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
-    internal_static_udb_entity_v1_CatalogManifestRequest_descriptor =
+    internal_static_udb_entity_v1_NativeServiceStatus_descriptor =
       getDescriptor().getMessageType(6);
+    internal_static_udb_entity_v1_NativeServiceStatus_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_NativeServiceStatus_descriptor,
+        new java.lang.String[] { "ServiceId", "ProtoServiceNames", "Enabled", "Configured", "Mounted", "Healthy", "Degraded", "Surface", "ListenerKind", "SupportedRpcs", "Capabilities", "RequiredBackends", "MissingDependencies", "DisabledReason", "MigrationStatus", "DescriptorVersion", });
+    internal_static_udb_entity_v1_CatalogManifestRequest_descriptor =
+      getDescriptor().getMessageType(7);
     internal_static_udb_entity_v1_CatalogManifestRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CatalogManifestRequest_descriptor,
         new java.lang.String[] { "Context", "Redact", });
     internal_static_udb_entity_v1_CatalogManifestResponse_descriptor =
-      getDescriptor().getMessageType(7);
+      getDescriptor().getMessageType(8);
     internal_static_udb_entity_v1_CatalogManifestResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CatalogManifestResponse_descriptor,
         new java.lang.String[] { "ManifestJson", });
     internal_static_udb_entity_v1_MessageSchemaLookupRequest_descriptor =
-      getDescriptor().getMessageType(8);
+      getDescriptor().getMessageType(9);
     internal_static_udb_entity_v1_MessageSchemaLookupRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MessageSchemaLookupRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "MessageType", "ClientCatalogVersion", });
     internal_static_udb_entity_v1_MessageFieldDescriptor_descriptor =
-      getDescriptor().getMessageType(9);
+      getDescriptor().getMessageType(10);
     internal_static_udb_entity_v1_MessageFieldDescriptor_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MessageFieldDescriptor_descriptor,
         new java.lang.String[] { "Name", "ColumnName", "ProtoType", "SqlType", "NotNull", "IsPrimary", "IsArray", });
     internal_static_udb_entity_v1_MessageSchemaDescriptor_descriptor =
-      getDescriptor().getMessageType(10);
+      getDescriptor().getMessageType(11);
     internal_static_udb_entity_v1_MessageSchemaDescriptor_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MessageSchemaDescriptor_descriptor,
         new java.lang.String[] { "MessageType", "ProjectId", "CatalogVersion", "ManifestChecksum", "Schema", "Table", "PrimaryKey", "Fields", });
     internal_static_udb_entity_v1_MessageSchemaLookupResponse_descriptor =
-      getDescriptor().getMessageType(11);
+      getDescriptor().getMessageType(12);
     internal_static_udb_entity_v1_MessageSchemaLookupResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MessageSchemaLookupResponse_descriptor,
         new java.lang.String[] { "Schema", });
     internal_static_udb_entity_v1_MessageSchemaListRequest_descriptor =
-      getDescriptor().getMessageType(12);
+      getDescriptor().getMessageType(13);
     internal_static_udb_entity_v1_MessageSchemaListRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MessageSchemaListRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "ClientCatalogVersion", });
     internal_static_udb_entity_v1_MessageSchemaListResponse_descriptor =
-      getDescriptor().getMessageType(13);
+      getDescriptor().getMessageType(14);
     internal_static_udb_entity_v1_MessageSchemaListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MessageSchemaListResponse_descriptor,
         new java.lang.String[] { "ProjectId", "CatalogVersion", "ManifestChecksum", "MessageTypes", });
     internal_static_udb_entity_v1_HealthReportRequest_descriptor =
-      getDescriptor().getMessageType(14);
+      getDescriptor().getMessageType(15);
     internal_static_udb_entity_v1_HealthReportRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_HealthReportRequest_descriptor,
         new java.lang.String[] { "Context", "WithProbes", "ProjectId", });
     internal_static_udb_entity_v1_HealthReportResponse_descriptor =
-      getDescriptor().getMessageType(15);
+      getDescriptor().getMessageType(16);
     internal_static_udb_entity_v1_HealthReportResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_HealthReportResponse_descriptor,
-        new java.lang.String[] { "Passed", "PostgresConfigured", "RedisConfigured", "QdrantConfigured", "S3Configured", "Errors", "Warnings", "PrivilegesJson", "ProbesJson", "BackendInstances", });
+        new java.lang.String[] { "Passed", "PostgresConfigured", "RedisConfigured", "QdrantConfigured", "S3Configured", "Errors", "Warnings", "PrivilegesJson", "ProbesJson", "BackendInstances", "NativeServices", });
     internal_static_udb_entity_v1_GenericDispatchRequest_descriptor =
-      getDescriptor().getMessageType(16);
+      getDescriptor().getMessageType(17);
     internal_static_udb_entity_v1_GenericDispatchRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_GenericDispatchRequest_descriptor,
         new java.lang.String[] { "Context", "Backend", "Operation", "ResourceKind", "ResourceName", "ResourceUri", "SpecJson", "IdempotencyKey", "DryRun", });
     internal_static_udb_entity_v1_GenericDispatchResponse_descriptor =
-      getDescriptor().getMessageType(17);
+      getDescriptor().getMessageType(18);
     internal_static_udb_entity_v1_GenericDispatchResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_GenericDispatchResponse_descriptor,
         new java.lang.String[] { "Backend", "Operation", "ResourceUri", "ResultJson", "Errors", });
     internal_static_udb_entity_v1_ResourceAdminRequest_descriptor =
-      getDescriptor().getMessageType(18);
+      getDescriptor().getMessageType(19);
     internal_static_udb_entity_v1_ResourceAdminRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ResourceAdminRequest_descriptor,
         new java.lang.String[] { "Context", "Backend", "ResourceName", "SpecJson", "IdempotencyKey", "DryRun", });
     internal_static_udb_entity_v1_ResourceListResponse_descriptor =
-      getDescriptor().getMessageType(19);
+      getDescriptor().getMessageType(20);
     internal_static_udb_entity_v1_ResourceListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ResourceListResponse_descriptor,
         new java.lang.String[] { "Backend", "Resources", });
     internal_static_udb_entity_v1_StageCatalogRequest_descriptor =
-      getDescriptor().getMessageType(20);
+      getDescriptor().getMessageType(21);
     internal_static_udb_entity_v1_StageCatalogRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_StageCatalogRequest_descriptor,
         new java.lang.String[] { "Context", "ManifestJson", "ProjectId", "Reason", "IdempotencyKey", });
     internal_static_udb_entity_v1_CatalogVersionRequest_descriptor =
-      getDescriptor().getMessageType(21);
+      getDescriptor().getMessageType(22);
     internal_static_udb_entity_v1_CatalogVersionRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CatalogVersionRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "Version", "Reason", "IdempotencyKey", });
     internal_static_udb_entity_v1_CatalogVersionResponse_descriptor =
-      getDescriptor().getMessageType(22);
+      getDescriptor().getMessageType(23);
     internal_static_udb_entity_v1_CatalogVersionResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CatalogVersionResponse_descriptor,
         new java.lang.String[] { "CatalogId", "ProjectId", "Version", "Status", "ChecksumSha256", "CreatedAtUnix", "Errors", "Warnings", });
     internal_static_udb_entity_v1_CatalogValidationResponse_descriptor =
-      getDescriptor().getMessageType(23);
+      getDescriptor().getMessageType(24);
     internal_static_udb_entity_v1_CatalogValidationResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CatalogValidationResponse_descriptor,
         new java.lang.String[] { "Valid", "ChecksumSha256", "Errors", "Warnings", });
     internal_static_udb_entity_v1_CatalogVersionListResponse_descriptor =
-      getDescriptor().getMessageType(24);
+      getDescriptor().getMessageType(25);
     internal_static_udb_entity_v1_CatalogVersionListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CatalogVersionListResponse_descriptor,
         new java.lang.String[] { "ProjectId", "Versions", "ActiveVersion", });
     internal_static_udb_entity_v1_MigrationPlanRequest_descriptor =
-      getDescriptor().getMessageType(25);
+      getDescriptor().getMessageType(26);
     internal_static_udb_entity_v1_MigrationPlanRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationPlanRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "DryRun", });
     internal_static_udb_entity_v1_MigrationPlanResponse_descriptor =
-      getDescriptor().getMessageType(26);
+      getDescriptor().getMessageType(27);
     internal_static_udb_entity_v1_MigrationPlanResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationPlanResponse_descriptor,
         new java.lang.String[] { "RunId", "ProjectId", "CatalogVersion", "State", "Operations", "RequiresReview", "Blocked", "OperationsHash", });
     internal_static_udb_entity_v1_MigrationApplyRequest_descriptor =
-      getDescriptor().getMessageType(27);
+      getDescriptor().getMessageType(28);
     internal_static_udb_entity_v1_MigrationApplyRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationApplyRequest_descriptor,
         new java.lang.String[] { "Context", "RunId", "ProjectId", "ApprovalToken", "IdempotencyKey", });
     internal_static_udb_entity_v1_MigrationRunRequest_descriptor =
-      getDescriptor().getMessageType(28);
+      getDescriptor().getMessageType(29);
     internal_static_udb_entity_v1_MigrationRunRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationRunRequest_descriptor,
         new java.lang.String[] { "Context", "RunId", "ProjectId", "IdempotencyKey", });
     internal_static_udb_entity_v1_MigrationRunListRequest_descriptor =
-      getDescriptor().getMessageType(29);
+      getDescriptor().getMessageType(30);
     internal_static_udb_entity_v1_MigrationRunListRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationRunListRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "StateFilter", "Limit", "PageToken", });
     internal_static_udb_entity_v1_MigrationRunListResponse_descriptor =
-      getDescriptor().getMessageType(30);
+      getDescriptor().getMessageType(31);
     internal_static_udb_entity_v1_MigrationRunListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationRunListResponse_descriptor,
         new java.lang.String[] { "Runs", "NextPageToken", "TotalCount", });
     internal_static_udb_entity_v1_MigrationStatusResponse_descriptor =
-      getDescriptor().getMessageType(31);
+      getDescriptor().getMessageType(32);
     internal_static_udb_entity_v1_MigrationStatusResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationStatusResponse_descriptor,
         new java.lang.String[] { "RunId", "ProjectId", "CatalogVersion", "State", "StartedAt", "FinishedAt", "Operations", "Error", });
     internal_static_udb_entity_v1_MigrationOperationStatus_descriptor =
-      getDescriptor().getMessageType(32);
+      getDescriptor().getMessageType(33);
     internal_static_udb_entity_v1_MigrationOperationStatus_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MigrationOperationStatus_descriptor,
         new java.lang.String[] { "Index", "Backend", "ResourceUri", "OperationKind", "Status", "Error", });
     internal_static_udb_entity_v1_DlqListRequest_descriptor =
-      getDescriptor().getMessageType(33);
+      getDescriptor().getMessageType(34);
     internal_static_udb_entity_v1_DlqListRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_DlqListRequest_descriptor,
         new java.lang.String[] { "Context", "Topic", "StatusFilter", "Limit", "PageToken", });
     internal_static_udb_entity_v1_DlqEventRecord_descriptor =
-      getDescriptor().getMessageType(34);
+      getDescriptor().getMessageType(35);
     internal_static_udb_entity_v1_DlqEventRecord_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_DlqEventRecord_descriptor,
         new java.lang.String[] { "DlqId", "EventId", "Topic", "PayloadJson", "ErrorType", "ErrorMessage", "Status", "CreatedAtUnix", "UpdatedAtUnix", });
     internal_static_udb_entity_v1_DlqListResponse_descriptor =
-      getDescriptor().getMessageType(35);
+      getDescriptor().getMessageType(36);
     internal_static_udb_entity_v1_DlqListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_DlqListResponse_descriptor,
         new java.lang.String[] { "Events", "NextPageToken", "TotalCount", });
     internal_static_udb_entity_v1_DlqEventRequest_descriptor =
-      getDescriptor().getMessageType(36);
+      getDescriptor().getMessageType(37);
     internal_static_udb_entity_v1_DlqEventRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_DlqEventRequest_descriptor,
         new java.lang.String[] { "Context", "DlqId", });
     internal_static_udb_entity_v1_DlqEventResponse_descriptor =
-      getDescriptor().getMessageType(37);
+      getDescriptor().getMessageType(38);
     internal_static_udb_entity_v1_DlqEventResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_DlqEventResponse_descriptor,
         new java.lang.String[] { "Event", });
     internal_static_udb_entity_v1_DlqActionRequest_descriptor =
-      getDescriptor().getMessageType(38);
+      getDescriptor().getMessageType(39);
     internal_static_udb_entity_v1_DlqActionRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_DlqActionRequest_descriptor,
         new java.lang.String[] { "Context", "DlqId", "PreserveEventId", "Reason", });
     internal_static_udb_entity_v1_CdcRedactionPreviewRequest_descriptor =
-      getDescriptor().getMessageType(39);
+      getDescriptor().getMessageType(40);
     internal_static_udb_entity_v1_CdcRedactionPreviewRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CdcRedactionPreviewRequest_descriptor,
         new java.lang.String[] { "Context", "MessageType", "Topic", "SchemaUri", "PayloadJson", "RedactionMode", "RedactionVersion", });
     internal_static_udb_entity_v1_CdcRedactionPreviewResponse_descriptor =
-      getDescriptor().getMessageType(40);
+      getDescriptor().getMessageType(41);
     internal_static_udb_entity_v1_CdcRedactionPreviewResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CdcRedactionPreviewResponse_descriptor,
         new java.lang.String[] { "PayloadJson", "RedactedFields", "RedactionMode", "RedactionVersion", "WouldRedact", });
     internal_static_udb_entity_v1_ProjectionDriftScanRequest_descriptor =
-      getDescriptor().getMessageType(41);
+      getDescriptor().getMessageType(42);
     internal_static_udb_entity_v1_ProjectionDriftScanRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ProjectionDriftScanRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "MessageType", "ScanMode", "RowsPerTarget", "Repair", "Limit", });
     internal_static_udb_entity_v1_ProjectionDriftDivergentRow_descriptor =
-      getDescriptor().getMessageType(42);
+      getDescriptor().getMessageType(43);
     internal_static_udb_entity_v1_ProjectionDriftDivergentRow_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ProjectionDriftDivergentRow_descriptor,
         new java.lang.String[] { "RowKeyJson", "SourceChecksum", "TargetChecksum", "Kind", });
     internal_static_udb_entity_v1_ProjectionDriftTargetReport_descriptor =
-      getDescriptor().getMessageType(43);
+      getDescriptor().getMessageType(44);
     internal_static_udb_entity_v1_ProjectionDriftTargetReport_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ProjectionDriftTargetReport_descriptor,
         new java.lang.String[] { "TargetBackend", "TargetInstance", "TargetResource", "SourceRowsScanned", "DivergentRows", "RowsToRepair", "EstimatedCostUnits", "RepairTasksEnqueued", "Warnings", });
     internal_static_udb_entity_v1_ProjectionDriftScanResponse_descriptor =
-      getDescriptor().getMessageType(44);
+      getDescriptor().getMessageType(45);
     internal_static_udb_entity_v1_ProjectionDriftScanResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ProjectionDriftScanResponse_descriptor,
         new java.lang.String[] { "ProjectId", "MessageType", "ScanMode", "SourceRowsLoaded", "Reports", "SummaryJson", "Warnings", });
     internal_static_udb_entity_v1_SagaListRequest_descriptor =
-      getDescriptor().getMessageType(45);
+      getDescriptor().getMessageType(46);
     internal_static_udb_entity_v1_SagaListRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_SagaListRequest_descriptor,
         new java.lang.String[] { "Context", "TenantIdFilter", "StatusFilter", "TxIdFilter", "CorrelationIdFilter", "Limit", "PageToken", });
     internal_static_udb_entity_v1_SagaRecord_descriptor =
-      getDescriptor().getMessageType(46);
+      getDescriptor().getMessageType(47);
     internal_static_udb_entity_v1_SagaRecord_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_SagaRecord_descriptor,
         new java.lang.String[] { "SagaId", "TxId", "TenantId", "CorrelationId", "Status", "CurrentStep", "StepsJson", "CompensationsJson", "LastError", "CreatedAtUnix", "UpdatedAtUnix", });
     internal_static_udb_entity_v1_SagaListResponse_descriptor =
-      getDescriptor().getMessageType(47);
+      getDescriptor().getMessageType(48);
     internal_static_udb_entity_v1_SagaListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_SagaListResponse_descriptor,
         new java.lang.String[] { "Sagas", "NextPageToken", "TotalCount", });
     internal_static_udb_entity_v1_SagaRequest_descriptor =
-      getDescriptor().getMessageType(48);
+      getDescriptor().getMessageType(49);
     internal_static_udb_entity_v1_SagaRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_SagaRequest_descriptor,
         new java.lang.String[] { "Context", "SagaId", "Reason", "IdempotencyKey", });
     internal_static_udb_entity_v1_SagaResponse_descriptor =
-      getDescriptor().getMessageType(49);
+      getDescriptor().getMessageType(50);
     internal_static_udb_entity_v1_SagaResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_SagaResponse_descriptor,
         new java.lang.String[] { "Saga", "Errors", });
     internal_static_udb_entity_v1_PolicyRecord_descriptor =
-      getDescriptor().getMessageType(50);
+      getDescriptor().getMessageType(51);
     internal_static_udb_entity_v1_PolicyRecord_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_PolicyRecord_descriptor,
         new java.lang.String[] { "PolicyId", "Effect", "ServiceIdentity", "TenantId", "Purpose", "MessageType", "Operation", "RequiredScope", "Priority", "Enabled", });
     internal_static_udb_entity_v1_PolicyListRequest_descriptor =
-      getDescriptor().getMessageType(51);
+      getDescriptor().getMessageType(52);
     internal_static_udb_entity_v1_PolicyListRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_PolicyListRequest_descriptor,
         new java.lang.String[] { "Context", "IncludeDisabled", "Limit", "PageToken", });
     internal_static_udb_entity_v1_PolicyListResponse_descriptor =
-      getDescriptor().getMessageType(52);
+      getDescriptor().getMessageType(53);
     internal_static_udb_entity_v1_PolicyListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_PolicyListResponse_descriptor,
         new java.lang.String[] { "Policies", "NextPageToken", "TotalCount", });
     internal_static_udb_entity_v1_PutPolicyRequest_descriptor =
-      getDescriptor().getMessageType(53);
+      getDescriptor().getMessageType(54);
     internal_static_udb_entity_v1_PutPolicyRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_PutPolicyRequest_descriptor,
         new java.lang.String[] { "Context", "Policy", });
     internal_static_udb_entity_v1_PolicyRequest_descriptor =
-      getDescriptor().getMessageType(54);
+      getDescriptor().getMessageType(55);
     internal_static_udb_entity_v1_PolicyRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_PolicyRequest_descriptor,
         new java.lang.String[] { "Context", "PolicyId", });
     internal_static_udb_entity_v1_PolicyLintResponse_descriptor =
-      getDescriptor().getMessageType(55);
+      getDescriptor().getMessageType(56);
     internal_static_udb_entity_v1_PolicyLintResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_PolicyLintResponse_descriptor,
         new java.lang.String[] { "Passed", "Findings", });
     internal_static_udb_entity_v1_EnsureProjectRequest_descriptor =
-      getDescriptor().getMessageType(56);
+      getDescriptor().getMessageType(57);
     internal_static_udb_entity_v1_EnsureProjectRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_EnsureProjectRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "Name", "CdcTopicPrefix", });
     internal_static_udb_entity_v1_ProjectRecord_descriptor =
-      getDescriptor().getMessageType(57);
+      getDescriptor().getMessageType(58);
     internal_static_udb_entity_v1_ProjectRecord_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ProjectRecord_descriptor,
         new java.lang.String[] { "ProjectId", "Name", "CdcTopicPrefix", "ActiveCatalogVersion", "CreatedAtUnix", });
     internal_static_udb_entity_v1_ProjectListRequest_descriptor =
-      getDescriptor().getMessageType(58);
+      getDescriptor().getMessageType(59);
     internal_static_udb_entity_v1_ProjectListRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ProjectListRequest_descriptor,
         new java.lang.String[] { "Context", "Limit", "PageToken", });
     internal_static_udb_entity_v1_ProjectListResponse_descriptor =
-      getDescriptor().getMessageType(59);
+      getDescriptor().getMessageType(60);
     internal_static_udb_entity_v1_ProjectListResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ProjectListResponse_descriptor,
         new java.lang.String[] { "Projects", "NextPageToken", "TotalCount", });
     internal_static_udb_entity_v1_AdminSummaryRequest_descriptor =
-      getDescriptor().getMessageType(60);
+      getDescriptor().getMessageType(61);
     internal_static_udb_entity_v1_AdminSummaryRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminSummaryRequest_descriptor,
         new java.lang.String[] { "Context", "ProjectId", "WithProbes", "Redact", });
     internal_static_udb_entity_v1_AdminAuditLogRequest_descriptor =
-      getDescriptor().getMessageType(61);
+      getDescriptor().getMessageType(62);
     internal_static_udb_entity_v1_AdminAuditLogRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminAuditLogRequest_descriptor,
         new java.lang.String[] { "Context", "OperationFilter", "ActorFilter", "TenantIdFilter", "ProjectIdFilter", "Limit", "PageToken", "Redact", });
     internal_static_udb_entity_v1_AdminAuditLogRecord_descriptor =
-      getDescriptor().getMessageType(62);
+      getDescriptor().getMessageType(63);
     internal_static_udb_entity_v1_AdminAuditLogRecord_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminAuditLogRecord_descriptor,
         new java.lang.String[] { "AuditId", "Actor", "Operation", "Target", "RequestJson", "Result", "TenantId", "ProjectId", "CorrelationId", "CreatedAtUnix", "PreviousHash", "CurrentHash", "SignerKeyId", "ExternalAnchor", });
     internal_static_udb_entity_v1_AdminAuditLogResponse_descriptor =
-      getDescriptor().getMessageType(63);
+      getDescriptor().getMessageType(64);
     internal_static_udb_entity_v1_AdminAuditLogResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminAuditLogResponse_descriptor,
         new java.lang.String[] { "Logs", "NextPageToken", "TotalCount", });
     internal_static_udb_entity_v1_AdminAuditVerifyRequest_descriptor =
-      getDescriptor().getMessageType(64);
+      getDescriptor().getMessageType(65);
     internal_static_udb_entity_v1_AdminAuditVerifyRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminAuditVerifyRequest_descriptor,
         new java.lang.String[] { "Context", "Limit", });
     internal_static_udb_entity_v1_AdminAuditVerifyResponse_descriptor =
-      getDescriptor().getMessageType(65);
+      getDescriptor().getMessageType(66);
     internal_static_udb_entity_v1_AdminAuditVerifyResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminAuditVerifyResponse_descriptor,
         new java.lang.String[] { "Passed", "CheckedCount", "FirstBrokenAuditId", "Reason", "ExpectedPreviousHash", "ActualPreviousHash", "ExpectedCurrentHash", "ActualCurrentHash", "LastHash", });
     internal_static_udb_entity_v1_AdminBackendSummary_descriptor =
-      getDescriptor().getMessageType(66);
+      getDescriptor().getMessageType(67);
     internal_static_udb_entity_v1_AdminBackendSummary_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminBackendSummary_descriptor,
@@ -1243,25 +1273,25 @@ public final class AdminProto extends com.google.protobuf.GeneratedFile {
         internal_static_udb_entity_v1_AdminBackendSummary_LabelsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_udb_entity_v1_AdminCdcSummary_descriptor =
-      getDescriptor().getMessageType(67);
+      getDescriptor().getMessageType(68);
     internal_static_udb_entity_v1_AdminCdcSummary_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminCdcSummary_descriptor,
         new java.lang.String[] { "IsLeader", "Paused", "SlotName", "LastEventId", "LagSeconds", "OutboxDepth", "DlqOpenCount", });
     internal_static_udb_entity_v1_AdminSagaSummary_descriptor =
-      getDescriptor().getMessageType(68);
+      getDescriptor().getMessageType(69);
     internal_static_udb_entity_v1_AdminSagaSummary_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminSagaSummary_descriptor,
         new java.lang.String[] { "Active", "Compensated", "FailedCompensation", "ManualReview", "Indeterminate", });
     internal_static_udb_entity_v1_AdminCatalogSummary_descriptor =
-      getDescriptor().getMessageType(69);
+      getDescriptor().getMessageType(70);
     internal_static_udb_entity_v1_AdminCatalogSummary_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminCatalogSummary_descriptor,
         new java.lang.String[] { "ProjectId", "ActiveVersion", "ActiveChecksum", "ActiveSince", "TableCount", "StoreCount", "PendingMigrationState", });
     internal_static_udb_entity_v1_AdminSummaryResponse_descriptor =
-      getDescriptor().getMessageType(70);
+      getDescriptor().getMessageType(71);
     internal_static_udb_entity_v1_AdminSummaryResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AdminSummaryResponse_descriptor,

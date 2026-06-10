@@ -160,6 +160,17 @@ impl DataBrokerRuntime {
             .filter(|mutation| !mutation.commit)
             .collect();
         let mut pending_saga_steps: Vec<PendingSagaStep> = Vec::new();
+        // Item 23: when this transaction will commit via live 2PC and MySQL
+        // instances are configured, capture every executed plan statement so
+        // `XaMysqlParticipant` can replay it (translated to MySQL dialect)
+        // between `XA START` and `XA END` on each MySQL participant.
+        #[cfg(feature = "mysql")]
+        let mysql_xa_capture = commit
+            && strategy == TxStrategy::TwoPhase
+            && super::two_phase_runtime_enabled()
+            && !self.mysql_instances.is_empty();
+        #[cfg(feature = "mysql")]
+        let mut mysql_xa_statements: Vec<(String, Vec<JsonValue>)> = Vec::new();
         for (mutation_index, mutation) in tx_mutations.iter().enumerate() {
             let context = merge_context(mutation.context.as_ref(), metadata_context.clone());
             let operation = mutation.operation.to_ascii_lowercase();
@@ -191,19 +202,26 @@ impl DataBrokerRuntime {
                                         ..UpsertPlanRequest::default()
                                     },
                                 );
+                                let bind_values =
+                                    record_values(&encrypted_record, &plan.parameter_columns)
+                                        .unwrap_or_default();
                                 let affected = execute_tx_plan(
                                     &mut tx,
                                     manifest,
                                     &mutation.message_type,
                                     &plan.sql,
                                     &plan.parameter_columns,
-                                    &record_values(&encrypted_record, &plan.parameter_columns)
-                                        .unwrap_or_default(),
+                                    &bind_values,
                                     &plan.errors,
                                 )
                                 .await;
                                 match affected {
                                     Ok(affected) => {
+                                        #[cfg(feature = "mysql")]
+                                        if mysql_xa_capture {
+                                            mysql_xa_statements
+                                                .push((plan.sql.clone(), bind_values.clone()));
+                                        }
                                         if affected > 0
                                             && let Err(err) = crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
                                                 &mut tx,
@@ -245,18 +263,23 @@ impl DataBrokerRuntime {
                         filter: filter.clone(),
                     },
                 );
+                let bind_values = filter_bind_values(&filter);
                 let affected = execute_tx_plan(
                     &mut tx,
                     manifest,
                     &mutation.message_type,
                     &plan.sql,
                     &plan.parameter_columns,
-                    &filter_bind_values(&filter),
+                    &bind_values,
                     &plan.errors,
                 )
                 .await;
                 match affected {
                     Ok(affected) => {
+                        #[cfg(feature = "mysql")]
+                        if mysql_xa_capture {
+                            mysql_xa_statements.push((plan.sql.clone(), bind_values.clone()));
+                        }
                         if affected > 0
                             && let Err(err) = crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
                                 &mut tx,
@@ -372,15 +395,36 @@ impl DataBrokerRuntime {
                                     } else {
                                         Some(mutation.content_type.as_str())
                                     };
-                                    let payload = crate::runtime::cdc::apply_manifest_cdc_redaction(
-                                        manifest,
-                                        &mutation.message_type,
-                                        topic,
-                                        schema_uri,
-                                        payload,
-                                        cdc_config.redaction_mode,
-                                        cdc_config.redaction_version,
-                                    );
+                                    let mut payload =
+                                        crate::runtime::cdc::apply_manifest_cdc_redaction(
+                                            manifest,
+                                            &mutation.message_type,
+                                            topic,
+                                            schema_uri,
+                                            payload,
+                                            cdc_config.redaction_mode,
+                                            cdc_config.redaction_version,
+                                        );
+                                    if let Some(obj) = payload.as_object_mut() {
+                                        if !context.tenant_id.trim().is_empty() {
+                                            obj.entry("tenant_id".to_string()).or_insert_with(
+                                                || {
+                                                    serde_json::Value::String(
+                                                        context.tenant_id.clone(),
+                                                    )
+                                                },
+                                            );
+                                        }
+                                        if !context.project_id.trim().is_empty() {
+                                            obj.entry("project_id".to_string()).or_insert_with(
+                                                || {
+                                                    serde_json::Value::String(
+                                                        context.project_id.clone(),
+                                                    )
+                                                },
+                                            );
+                                        }
+                                    }
                                     match prepare_outbox_envelope(
                                         topic,
                                         &mutation.object_key,
@@ -488,21 +532,89 @@ impl DataBrokerRuntime {
                     ))));
                     return statuses;
                 }
+                // Item 23: configured MySQL instances join the 2PC as XA
+                // participants, replaying the captured plan statements
+                // translated to MySQL dialect. Translation failures fail
+                // CLOSED here — before any PREPARE side effect is issued.
+                #[cfg(feature = "mysql")]
+                let mysql_participants: Vec<
+                    Box<dyn crate::runtime::xa::XaParticipant>,
+                > = if mysql_xa_capture {
+                    let mut translated: Vec<(String, Vec<JsonValue>)> =
+                        Vec::with_capacity(mysql_xa_statements.len());
+                    let mut translation_error: Option<String> = None;
+                    for (sql, values) in &mysql_xa_statements {
+                        match crate::runtime::xa::translate_pg_plan_sql_to_mysql(sql) {
+                            Ok(mysql_sql) => translated.push((mysql_sql, values.clone())),
+                            Err(err) => {
+                                translation_error = Some(err);
+                                break;
+                            }
+                        }
+                    }
+                    if let Some(err) = translation_error {
+                        let _ = tx.rollback().await;
+                        if let Some(ref sid) = saga_id {
+                            self.saga_set_status(sid, "failed").await;
+                        }
+                        statuses.push(Err(tonic::Status::failed_precondition(format!(
+                            "2PC refused before side effects: plan SQL cannot be replayed \
+                                 on the MySQL XA participant: {err}"
+                        ))));
+                        return statuses;
+                    }
+                    let mut instance_names: Vec<String> =
+                        self.mysql_instances.keys().cloned().collect();
+                    instance_names.sort();
+                    instance_names
+                        .into_iter()
+                        .filter_map(|name| {
+                            self.mysql_instances.get(&name).map(|mysql_pool| {
+                                Box::new(crate::runtime::xa::XaMysqlParticipant::new(
+                                    name.clone(),
+                                    mysql_pool.clone(),
+                                    translated.clone(),
+                                ))
+                                    as Box<dyn crate::runtime::xa::XaParticipant>
+                            })
+                        })
+                        .collect()
+                } else {
+                    Vec::new()
+                };
                 let participant = crate::runtime::xa_postgres::ActivePostgresXaParticipant::new(
                     "primary",
                     pool.clone(),
                     tx,
                 );
+                let mut participants: Vec<Box<dyn crate::runtime::xa::XaParticipant>> =
+                    vec![Box::new(participant)];
+                #[cfg(feature = "mysql")]
+                participants.extend(mysql_participants);
                 let xa_request = crate::runtime::xa::XaRequest {
                     tenant_id: metadata_context.tenant_id.clone(),
                     project_id: metadata_context.project_id.clone(),
                     origin_rpc: "BeginTx".to_string(),
                     correlation_id: metadata_context.correlation_id.clone(),
                 };
-                let xa_result = crate::runtime::xa::XaCoordinator::execute(
+                // Item 5: write-ahead decision record — the commit intent is
+                // durably inserted into the XA ledger BEFORE the first
+                // COMMIT PREPARED, so a crash mid-PHASE-2 leaves a
+                // commit-intent row the presumed-abort sweep must honour.
+                let write_ahead_pool = pool.clone();
+                let write_ahead_config = sys_config.clone();
+                let xa_result = crate::runtime::xa::XaCoordinator::execute_with_write_ahead(
                     xa_request,
-                    vec![Box::new(participant)],
+                    participants,
                     &crate::backend::capability_matrix(),
+                    move |entry| async move {
+                        crate::runtime::xa_recovery::record_xa_ledger_entry(
+                            &write_ahead_pool,
+                            &write_ahead_config,
+                            &entry,
+                        )
+                        .await
+                    },
                 )
                 .await;
                 match xa_result {
@@ -656,10 +768,6 @@ impl DataBrokerRuntime {
             )
             .await;
         }
-    }
-
-    pub fn publish_cdc(&self, _request: CdcSubscriptionRequest) -> Vec<CdcEnvelope> {
-        Vec::new()
     }
 
     pub async fn create_materialized_view(

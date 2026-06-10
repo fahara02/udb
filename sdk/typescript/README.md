@@ -1,5 +1,16 @@
 # UDB TypeScript SDK
 
+<!-- UDB_BRAND_HEADER_START -->
+<p align="center">
+  <img src="../../docs/assets/udb_logo.svg" alt="UDB logo" width="96">
+</p>
+
+<p align="center">
+  <strong>UDB :: Universal Data Broker</strong><br>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.2 | protocol v1.0.0</sub>
+</p>
+<!-- UDB_BRAND_HEADER_END -->
+
 `@udb_plus/sdk` is the Node.js client for UDB. Use it when a TypeScript service
 needs to read or write through the broker, call UDB auth/authz, or run the
 version-matched `udb` CLI from a project that installed the package.
@@ -7,7 +18,7 @@ version-matched `udb` CLI from a project that installed the package.
 ## Install
 
 ```bash
-npm i @udb_plus/sdk@0.3.1
+npm i @udb_plus/sdk@0.3.2
 ```
 
 Runtime: Node 18+
@@ -24,7 +35,7 @@ If your app owns `.proto` schemas and wants to use UDB annotations, export the
 shared UDB protos into your project:
 
 ```bash
-npx udb proto export
+npx udb proto export --fmt
 ```
 
 Then your app protos can import:
@@ -36,6 +47,9 @@ import "udb/core/common/v1/db.proto";
 `proto export` is safe to re-run. It refreshes `proto/udb/**`, vendors the
 `google/api/**` protos needed for offline generation, and can merge `buf.yaml`
 without replacing your own settings.
+
+Run `npx udb proto fmt` any time after export or edits to keep long UDB field
+annotations on one line for easier review.
 
 ## Connect And Query
 

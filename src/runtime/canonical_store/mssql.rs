@@ -20,16 +20,10 @@
 //!
 //! ## Durability token strategy
 //!
-//! SQL Server's true write-progress signal is the LSN
-//! (`sys.fn_dblog` / `fn_dump_dblog`), but those are privileged and
-//! awkward to poll. For a **standalone primary** a monotonic
-//! wall-clock token is sufficient: the store mints
-//! `DATEDIFF_BIG(MICROSECOND, '1970-01-01', SYSUTCDATETIME())` (UTC
-//! microseconds since the Unix epoch) as a decimal string and
-//! `wait_for_token` clears as soon as the current clock reaches the
-//! target. This matches the SQLite store's "talking to itself"
-//! posture. A future phase can swap in a real LSN-based token for
-//! Always-On / replica topologies without changing this trait surface.
+//! SQL Server's write-progress token is the canonical outbox high-water mark.
+//! The `event_seq` IDENTITY value is assigned by the write transaction itself,
+//! so `current_durability_token` returns `MAX(event_seq)` and `wait_for_token`
+//! polls that value instead of comparing wall-clock time.
 
 use std::time::{Duration, Instant};
 
@@ -38,8 +32,7 @@ use async_trait::async_trait;
 use super::{CanonicalStore, DurabilityToken};
 use crate::runtime::executors::mssql::{MssqlClient, SqlParam};
 
-/// Poll interval used while waiting for the wall-clock durability
-/// token to advance. Small because the token is local wall-clock.
+/// Poll interval used while waiting for the outbox high-water mark to advance.
 const MSSQL_DURABILITY_POLL_MS: u64 = 10;
 
 pub struct MssqlCanonicalStore {
@@ -130,25 +123,8 @@ impl CanonicalStore for MssqlCanonicalStore {
     }
 
     async fn current_durability_token(&self) -> Result<DurabilityToken, String> {
-        // Monotonic wall-clock token: UTC microseconds since the Unix
-        // epoch, rendered as a decimal string. Sufficient for a
-        // standalone primary (the store waits on its own clock); a
-        // future phase can replace this with a real LSN for replica
-        // topologies without changing the trait surface.
-        let rows = self
-            .client
-            .fetch_rows(
-                "SELECT CONVERT(BIGINT, DATEDIFF_BIG(MICROSECOND, '1970-01-01T00:00:00', SYSUTCDATETIME()))",
-                &[],
-            )
-            .await?;
-        let micros: i64 = rows
-            .first()
-            .ok_or_else(|| "durability token query returned no rows".to_string())?
-            .try_get::<i64, _>(0)
-            .map_err(|e| format!("durability token decode failed: {e}"))?
-            .ok_or_else(|| "durability token was NULL".to_string())?;
-        Ok(DurabilityToken::new("mssql", micros.to_string()))
+        let seq = self.outbox_max_seq().await?;
+        Ok(DurabilityToken::new("mssql", seq.to_string()))
     }
 
     async fn wait_for_token(
@@ -170,8 +146,8 @@ impl CanonicalStore for MssqlCanonicalStore {
         let poll = super::durability_poll_interval(timeout, MSSQL_DURABILITY_POLL_MS);
         loop {
             let current = self.current_durability_token().await?;
-            // Both values are decimal UTC-microsecond integers minted by
-            // the same store, so a numeric compare is correct.
+            // Both values are decimal outbox `event_seq` high-water marks minted
+            // by the same store, so a numeric compare is correct.
             let cur: i64 = current
                 .value
                 .parse()

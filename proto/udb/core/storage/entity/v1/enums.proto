@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package udb.core.storage.entity.v1;
+
+option csharp_namespace = "udb.core.Storage.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/storage/entity/v1;storagev1";
+option java_package = "com.udb.core.storage.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Storage\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Storage\\Entity\\V1";
+
+enum FileType {
+  FILE_TYPE_UNSPECIFIED = 0;
+  FILE_TYPE_IMAGE = 1;
+  FILE_TYPE_VIDEO = 2;
+  FILE_TYPE_AUDIO = 3;
+  FILE_TYPE_PDF = 4;
+  FILE_TYPE_DOCUMENT = 5;
+  FILE_TYPE_ARCHIVE = 6;
+  FILE_TYPE_OTHER = 99;
+}
+
+enum FileStatus {
+  FILE_STATUS_UNSPECIFIED = 0;
+  FILE_STATUS_PENDING = 1;
+  FILE_STATUS_ACTIVE = 2;
+  FILE_STATUS_DELETED = 3;
+}

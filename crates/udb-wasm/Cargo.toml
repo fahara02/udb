@@ -1,0 +1,25 @@
+# udb-wasm — a thin cdylib bridge that exposes udb-portable's REAL parser,
+# AST, and deterministic schema checksum to the browser via a minimal C ABI
+# (no wasm-bindgen needed). It adds ZERO logic of its own: it only marshals
+# UTF-8 bytes in/out of wasm linear memory and calls udb-portable. The actual
+# UDB code (parser/lexer/AST/checksum) is the same source the server compiles.
+#
+# Build:  cargo build -p udb-wasm --release --target wasm32-unknown-unknown
+# Output: target/wasm32-unknown-unknown/release/udb_wasm.wasm
+[package]
+name = "udb-wasm"
+version = "0.1.0"
+edition = "2024"
+description = "Browser (cdylib) bridge exposing udb-portable's real proto parser + checksum"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+name = "udb_wasm"
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[dependencies]
+udb-portable = { path = "../udb-portable" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

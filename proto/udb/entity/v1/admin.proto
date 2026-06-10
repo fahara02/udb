@@ -45,6 +45,7 @@ message CapabilitiesResponse {
   // for a specific backend, whether server-streaming reads / object streaming
   // are available and which wire encodings that backend can emit.
   repeated BackendProtocolSupport backend_protocol_support = 10;
+  repeated NativeServiceStatus native_services = 11;
 }
 
 // ── Protocol V2 negotiation ───────────────────────────────────────────────────
@@ -121,6 +122,28 @@ message BackendInstanceStatus {
   string routing_status = 11;
   bool healthy = 12;
   bool circuit_open = 13;
+}
+
+message NativeServiceStatus {
+  string service_id = 1;
+  repeated string proto_service_names = 2;
+  bool enabled = 3;
+  bool configured = 4;
+  bool mounted = 5;
+  bool healthy = 6;
+  bool degraded = 7;
+  string surface = 8;
+  string listener_kind = 9;
+  repeated string supported_rpcs = 10;
+  repeated string capabilities = 11;
+  repeated string required_backends = 12;
+  repeated string missing_dependencies = 13;
+  string disabled_reason = 14;
+  string migration_status = 15;
+  string descriptor_version = 16;
+  bool owns_background_workers = 17;
+  bool background_worker_enabled = 18;
+  repeated string background_workers = 19;
 }
 
 message CatalogManifestRequest {
@@ -206,6 +229,7 @@ message HealthReportResponse {
   // JSON-encoded list of BackendProbeResult objects (populated only when with_probes=true).
   bytes probes_json = 9;
   repeated BackendInstanceStatus backend_instances = 10;
+  repeated NativeServiceStatus native_services = 11;
 }
 
 // Generic resource administration.

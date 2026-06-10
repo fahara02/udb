@@ -68,75 +68,99 @@ public final class NotificationEventsProto extends com.google.protobuf.Generated
       "\n9udb/core/notification/events/v1/notifi" +
       "cation_events.proto\022\037udb.core.notificati" +
       "on.events.v1\032\037google/protobuf/timestamp." +
-      "proto\"\311\002\n\025NotificationSentEvent\022\031\n\010event" +
-      "_id\030\001 \001(\tR\007eventId\022\025\n\006log_id\030\002 \001(\tR\005logI" +
-      "d\022\037\n\013template_id\030\003 \001(\tR\ntemplateId\022\035\n\nev" +
-      "ent_type\030\004 \001(\tR\teventType\022\030\n\007channel\030\005 \001" +
-      "(\tR\007channel\022#\n\rrecipient_ref\030\006 \001(\tR\014reci" +
-      "pientRef\022\033\n\ttenant_id\030\007 \001(\tR\010tenantId\022%\n" +
-      "\016correlation_id\030\010 \001(\tR\rcorrelationId\022;\n\013" +
-      "occurred_at\030\t \001(\0132\032.google.protobuf.Time" +
-      "stampR\noccurredAt\"\254\003\n\027NotificationFailed" +
-      "Event\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\025\n\006log_" +
-      "id\030\002 \001(\tR\005logId\022\037\n\013template_id\030\003 \001(\tR\nte" +
-      "mplateId\022\035\n\nevent_type\030\004 \001(\tR\teventType\022" +
-      "\030\n\007channel\030\005 \001(\tR\007channel\022\033\n\ttenant_id\030\006" +
-      " \001(\tR\010tenantId\022\035\n\nerror_code\030\007 \001(\tR\terro" +
-      "rCode\022!\n\014error_detail\030\010 \001(\tR\013errorDetail" +
-      "\022#\n\rretry_attempt\030\t \001(\005R\014retryAttempt\022\035\n" +
-      "\nwill_retry\030\n \001(\010R\twillRetry\022%\n\016correlat" +
-      "ion_id\030\013 \001(\tR\rcorrelationId\022;\n\013occurred_" +
-      "at\030\014 \001(\0132\032.google.protobuf.TimestampR\noc" +
-      "curredAt\"\347\002\n\033NotificationSuppressedEvent" +
-      "\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\037\n\013template_" +
-      "id\030\002 \001(\tR\ntemplateId\022\035\n\nevent_type\030\003 \001(\t" +
-      "R\teventType\022\030\n\007channel\030\004 \001(\tR\007channel\022#\n" +
-      "\rrecipient_ref\030\005 \001(\tR\014recipientRef\022\033\n\tte" +
-      "nant_id\030\006 \001(\tR\010tenantId\022-\n\022suppression_r" +
-      "eason\030\007 \001(\tR\021suppressionReason\022%\n\016correl" +
-      "ation_id\030\010 \001(\tR\rcorrelationId\022;\n\013occurre" +
-      "d_at\030\t \001(\0132\032.google.protobuf.TimestampR\n" +
-      "occurredAt\"\351\001\n\032NotificationDeliveredEven" +
-      "t\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\025\n\006log_id\030\002" +
-      " \001(\tR\005logId\022\030\n\007channel\030\003 \001(\tR\007channel\022\033\n" +
-      "\ttenant_id\030\004 \001(\tR\010tenantId\022%\n\016correlatio" +
-      "n_id\030\005 \001(\tR\rcorrelationId\022;\n\013occurred_at" +
-      "\030\006 \001(\0132\032.google.protobuf.TimestampR\noccu" +
-      "rredAt\"\330\002\n NotificationTemplateChangedEv" +
-      "ent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\037\n\013templa" +
-      "te_id\030\002 \001(\tR\ntemplateId\022\035\n\nevent_type\030\003 " +
-      "\001(\tR\teventType\022\030\n\007channel\030\004 \001(\tR\007channel" +
-      "\022\037\n\013change_type\030\005 \001(\tR\nchangeType\022\035\n\ncha" +
-      "nged_by\030\006 \001(\tR\tchangedBy\022%\n\016correlation_" +
-      "id\030\007 \001(\tR\rcorrelationId\022;\n\013occurred_at\030\010" +
-      " \001(\0132\032.google.protobuf.TimestampR\noccurr" +
-      "edAt\022\033\n\ttenant_id\030\t \001(\tR\010tenantId\"\222\004\n\031Re" +
-      "sourceIngestStatusEvent\022\031\n\010event_id\030\001 \001(" +
-      "\tR\007eventId\022\037\n\013resource_id\030\002 \001(\tR\nresourc" +
-      "eId\022\033\n\ttenant_id\030\003 \001(\tR\010tenantId\022\035\n\nproj" +
-      "ect_id\030\004 \001(\tR\tprojectId\022\026\n\006status\030\005 \001(\tR" +
-      "\006status\022\032\n\010filename\030\006 \001(\tR\010filename\022\033\n\tm" +
-      "ime_type\030\007 \001(\tR\010mimeType\022\035\n\nsize_bytes\030\010" +
-      " \001(\003R\tsizeBytes\022\026\n\006sha256\030\t \001(\tR\006sha256\022" +
-      "#\n\rerror_message\030\n \001(\tR\014errorMessage\022\"\n\r" +
-      "ingest_job_id\030\013 \001(\tR\013ingestJobId\022%\n\016corr" +
-      "elation_id\030\014 \001(\tR\rcorrelationId\022;\n\013occur" +
-      "red_at\030\r \001(\0132\032.google.protobuf.Timestamp" +
-      "R\noccurredAt\022#\n\rresource_type\030\016 \001(\tR\014res" +
-      "ourceType\022#\n\rresource_name\030\017 \001(\tR\014resour" +
-      "ceNameB\254\002\n#com.udb.core.notification.eve" +
-      "nts.v1B\027NotificationEventsProtoP\001ZKgithu" +
-      "b.com/fahara02/udb/sdk/go/gen/udb/core/n" +
-      "otification/events/v1;eventsv1\242\002\004UCNE\252\002\037" +
-      "udb.core.Notification.Events.V1\312\002\037Udb\\Co" +
-      "re\\Notification\\Events\\V1\342\002+Udb\\GPBMetad" +
-      "ata\\Core\\Notification\\Events\\V1\352\002#Udb::C" +
-      "ore::Notification::Events::V1b\006proto3"
+      "proto\032!udb/core/common/v1/security.proto" +
+      "\"\315\003\n\025NotificationSentEvent\022\031\n\010event_id\030\001" +
+      " \001(\tR\007eventId\022\025\n\006log_id\030\002 \001(\tR\005logId\022\037\n\013" +
+      "template_id\030\003 \001(\tR\ntemplateId\022\035\n\nevent_t" +
+      "ype\030\004 \001(\tR\teventType\022\030\n\007channel\030\005 \001(\tR\007c" +
+      "hannel\022#\n\rrecipient_ref\030\006 \001(\tR\014recipient" +
+      "Ref\022\033\n\ttenant_id\030\007 \001(\tR\010tenantId\022%\n\016corr" +
+      "elation_id\030\010 \001(\tR\rcorrelationId\022;\n\013occur" +
+      "red_at\030\t \001(\0132\032.google.protobuf.Timestamp" +
+      "R\noccurredAt:\201\001\222\262\031}\n5udb.core.notificati" +
+      "on.events.v1.NotificationSentEvent\022\030udb." +
+      "notification.sent.v1\032\ttenant_id\"\010standar" +
+      "d*\rat_least_once2\006stable\"\265\004\n\027Notificatio" +
+      "nFailedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022" +
+      "\025\n\006log_id\030\002 \001(\tR\005logId\022\037\n\013template_id\030\003 " +
+      "\001(\tR\ntemplateId\022\035\n\nevent_type\030\004 \001(\tR\teve" +
+      "ntType\022\030\n\007channel\030\005 \001(\tR\007channel\022\033\n\ttena" +
+      "nt_id\030\006 \001(\tR\010tenantId\022\035\n\nerror_code\030\007 \001(" +
+      "\tR\terrorCode\022!\n\014error_detail\030\010 \001(\tR\013erro" +
+      "rDetail\022#\n\rretry_attempt\030\t \001(\005R\014retryAtt" +
+      "empt\022\035\n\nwill_retry\030\n \001(\010R\twillRetry\022%\n\016c" +
+      "orrelation_id\030\013 \001(\tR\rcorrelationId\022;\n\013oc" +
+      "curred_at\030\014 \001(\0132\032.google.protobuf.Timest" +
+      "ampR\noccurredAt:\206\001\222\262\031\201\001\n7udb.core.notifi" +
+      "cation.events.v1.NotificationFailedEvent" +
+      "\022\032udb.notification.failed.v1\032\ttenant_id\"" +
+      "\010standard*\rat_least_once2\006stable\"\370\003\n\033Not" +
+      "ificationSuppressedEvent\022\031\n\010event_id\030\001 \001" +
+      "(\tR\007eventId\022\037\n\013template_id\030\002 \001(\tR\ntempla" +
+      "teId\022\035\n\nevent_type\030\003 \001(\tR\teventType\022\030\n\007c" +
+      "hannel\030\004 \001(\tR\007channel\022#\n\rrecipient_ref\030\005" +
+      " \001(\tR\014recipientRef\022\033\n\ttenant_id\030\006 \001(\tR\010t" +
+      "enantId\022-\n\022suppression_reason\030\007 \001(\tR\021sup" +
+      "pressionReason\022%\n\016correlation_id\030\010 \001(\tR\r" +
+      "correlationId\022;\n\013occurred_at\030\t \001(\0132\032.goo" +
+      "gle.protobuf.TimestampR\noccurredAt:\216\001\222\262\031" +
+      "\211\001\n;udb.core.notification.events.v1.Noti" +
+      "ficationSuppressedEvent\022\036udb.notificatio" +
+      "n.suppressed.v1\032\ttenant_id\"\010standard*\rat" +
+      "_least_once2\006stable\"\370\002\n\032NotificationDeli" +
+      "veredEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\025\n" +
+      "\006log_id\030\002 \001(\tR\005logId\022\030\n\007channel\030\003 \001(\tR\007c" +
+      "hannel\022\033\n\ttenant_id\030\004 \001(\tR\010tenantId\022%\n\016c" +
+      "orrelation_id\030\005 \001(\tR\rcorrelationId\022;\n\013oc" +
+      "curred_at\030\006 \001(\0132\032.google.protobuf.Timest" +
+      "ampR\noccurredAt:\214\001\222\262\031\207\001\n:udb.core.notifi" +
+      "cation.events.v1.NotificationDeliveredEv" +
+      "ent\022\035udb.notification.delivered.v1\032\ttena" +
+      "nt_id\"\010standard*\rat_least_once2\006stable\"\364" +
+      "\003\n NotificationTemplateChangedEvent\022\031\n\010e" +
+      "vent_id\030\001 \001(\tR\007eventId\022\037\n\013template_id\030\002 " +
+      "\001(\tR\ntemplateId\022\035\n\nevent_type\030\003 \001(\tR\teve" +
+      "ntType\022\030\n\007channel\030\004 \001(\tR\007channel\022\037\n\013chan" +
+      "ge_type\030\005 \001(\tR\nchangeType\022\035\n\nchanged_by\030" +
+      "\006 \001(\tR\tchangedBy\022%\n\016correlation_id\030\007 \001(\t" +
+      "R\rcorrelationId\022;\n\013occurred_at\030\010 \001(\0132\032.g" +
+      "oogle.protobuf.TimestampR\noccurredAt\022\033\n\t" +
+      "tenant_id\030\t \001(\tR\010tenantId:\231\001\222\262\031\224\001\n@udb.c" +
+      "ore.notification.events.v1.NotificationT" +
+      "emplateChangedEvent\022$udb.notification.te" +
+      "mplate.changed.v1\032\ttenant_id\"\010standard*\r" +
+      "at_least_once2\006stable\"\255\005\n\031ResourceIngest" +
+      "StatusEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\037" +
+      "\n\013resource_id\030\002 \001(\tR\nresourceId\022\033\n\ttenan" +
+      "t_id\030\003 \001(\tR\010tenantId\022\035\n\nproject_id\030\004 \001(\t" +
+      "R\tprojectId\022\026\n\006status\030\005 \001(\tR\006status\022\032\n\010f" +
+      "ilename\030\006 \001(\tR\010filename\022\033\n\tmime_type\030\007 \001" +
+      "(\tR\010mimeType\022\035\n\nsize_bytes\030\010 \001(\003R\tsizeBy" +
+      "tes\022\026\n\006sha256\030\t \001(\tR\006sha256\022#\n\rerror_mes" +
+      "sage\030\n \001(\tR\014errorMessage\022\"\n\ringest_job_i" +
+      "d\030\013 \001(\tR\013ingestJobId\022%\n\016correlation_id\030\014" +
+      " \001(\tR\rcorrelationId\022;\n\013occurred_at\030\r \001(\013" +
+      "2\032.google.protobuf.TimestampR\noccurredAt" +
+      "\022#\n\rresource_type\030\016 \001(\tR\014resourceType\022#\n" +
+      "\rresource_name\030\017 \001(\tR\014resourceName:\230\001\222\262\031" +
+      "\223\001\n9udb.core.notification.events.v1.Reso" +
+      "urceIngestStatusEvent\022*udb.notification." +
+      "resource.ingest.status.v1\032\ttenant_id\"\010st" +
+      "andard*\rat_least_once2\006stableB\254\002\n#com.ud" +
+      "b.core.notification.events.v1B\027Notificat" +
+      "ionEventsProtoP\001ZKgithub.com/fahara02/ud" +
+      "b/sdk/go/gen/udb/core/notification/event" +
+      "s/v1;eventsv1\242\002\004UCNE\252\002\037udb.core.Notifica" +
+      "tion.Events.V1\312\002\037Udb\\Core\\Notification\\E" +
+      "vents\\V1\342\002+Udb\\GPBMetadata\\Core\\Notifica" +
+      "tion\\Events\\V1\352\002#Udb::Core::Notification" +
+      "::Events::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.TimestampProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_notification_events_v1_NotificationSentEvent_descriptor =
       getDescriptor().getMessageType(0);
@@ -176,6 +200,12 @@ public final class NotificationEventsProto extends com.google.protobuf.Generated
         new java.lang.String[] { "EventId", "ResourceId", "TenantId", "ProjectId", "Status", "Filename", "MimeType", "SizeBytes", "Sha256", "ErrorMessage", "IngestJobId", "CorrelationId", "OccurredAt", "ResourceType", "ResourceName", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
+    com.google.protobuf.ExtensionRegistry registry =
+        com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.messageEventContract);
+    com.google.protobuf.Descriptors.FileDescriptor
+        .internalUpdateFileDescriptor(descriptor, registry);
   }
 
   // @@protoc_insertion_point(outer_class_scope)

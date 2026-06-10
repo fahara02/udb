@@ -53,7 +53,7 @@ const OP_SEQ_CAS_MAX_ATTEMPTS: u32 = 64;
 const RUN_COLS: &str = "run_id, project_id, catalog_version, state, operations_hash, \
      approval_token, started_at, finished_at, error";
 const OP_COLS: &str = "id, run_id, operation_index, backend, resource_uri, operation_kind, \
-     status, rollback_json, error, applied_at";
+     status, payload_json, error, applied_at";
 
 fn row_to_run(row: &Row) -> SystemStoreResult<MigrationRunRow> {
     let run_id = get_uuid(row, 0)?;
@@ -92,7 +92,7 @@ fn row_to_op(row: &Row) -> SystemStoreResult<MigrationOpRow> {
         resource_uri: get_text(row, 4),
         operation_kind: get_text(row, 5),
         status,
-        rollback_json: get_json(row, 7, serde_json::Value::Object(Default::default())),
+        payload_json: get_json(row, 7, serde_json::Value::Object(Default::default())),
         error: get_text(row, 8),
         applied_at: get_opt_dt(row, 9),
     })
@@ -107,6 +107,56 @@ impl CassandraCanonicalStore {
     }
     fn op_seq_table(&self) -> String {
         self.qualified("udb_migration_op_seq")
+    }
+
+    async fn has_ledger_column(&self, column: &str) -> SystemStoreResult<bool> {
+        let rows = self
+            .client()
+            .cql_query_rows(
+                "SELECT column_name FROM system_schema.columns \
+                 WHERE keyspace_name = ? AND table_name = ? AND column_name = ?",
+                (self.keyspace.as_str(), "udb_migration_op_ledger", column),
+            )
+            .await
+            .map_err(|e| cass_err("has_ledger_column", e))?;
+        Ok(!rows.is_empty())
+    }
+
+    async fn backfill_payload_json_from_rollback_json(&self) -> SystemStoreResult<()> {
+        if !self.has_ledger_column("rollback_json").await? {
+            return Ok(());
+        }
+        let scan = format!(
+            "SELECT run_id, operation_index, id, rollback_json FROM {tbl}",
+            tbl = self.ledger_table(),
+        );
+        let rows = self
+            .client()
+            .cql_query_rows(&scan, ())
+            .await
+            .map_err(|e| cass_err("payload_json backfill scan", e))?;
+        let update = format!(
+            "UPDATE {tbl} SET payload_json = ? \
+             WHERE run_id = ? AND operation_index = ? AND id = ?",
+            tbl = self.ledger_table(),
+        );
+        for row in &rows {
+            let payload = get_text(row, 3);
+            if payload.is_empty() {
+                continue;
+            }
+            let run_id = get_text(row, 0);
+            let operation_index = get_i32(row, 1);
+            let id = get_i64(row, 2);
+            self.client()
+                .cql_execute(
+                    &update,
+                    (payload.as_str(), run_id.as_str(), operation_index, id),
+                )
+                .await
+                .map_err(|e| cass_err("payload_json backfill update", e))?;
+        }
+        Ok(())
     }
 
     /// Allocate the next monotone ledger id via the LWT-CAS counter (same
@@ -202,7 +252,7 @@ impl MigrationAuditStore for CassandraCanonicalStore {
                 resource_uri text, \
                 operation_kind text, \
                 status text, \
-                rollback_json text, \
+                payload_json text, \
                 error text, \
                 applied_at timestamp, \
                 PRIMARY KEY (run_id, operation_index, id) \
@@ -213,6 +263,17 @@ impl MigrationAuditStore for CassandraCanonicalStore {
             .cql_execute(&ledger_ddl, ())
             .await
             .map_err(|e| cass_err("ensure_migration_audit_tables ledger", e))?;
+        if !self.has_ledger_column("payload_json").await? {
+            let payload_col = format!(
+                "ALTER TABLE {tbl} ADD payload_json text",
+                tbl = self.ledger_table(),
+            );
+            self.client()
+                .cql_execute(&payload_col, ())
+                .await
+                .map_err(|e| cass_err("ensure_migration_audit_tables payload_json", e))?;
+        }
+        self.backfill_payload_json_from_rollback_json().await?;
         let seq_ddl = format!(
             "CREATE TABLE IF NOT EXISTS {tbl} ( id text PRIMARY KEY, seq bigint )",
             tbl = self.op_seq_table(),
@@ -266,7 +327,7 @@ impl MigrationAuditStore for CassandraCanonicalStore {
         let sql = format!(
             "INSERT INTO {tbl} ( \
                 run_id, operation_index, id, backend, resource_uri, operation_kind, \
-                status, rollback_json, error, applied_at \
+                status, payload_json, error, applied_at \
              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             tbl = self.ledger_table(),
         );
@@ -281,7 +342,7 @@ impl MigrationAuditStore for CassandraCanonicalStore {
                     op.resource_uri.as_str(),
                     op.operation_kind.as_str(),
                     op.status.as_str(),
-                    op.rollback_json.to_string(),
+                    op.payload_json.to_string(),
                     op.error.as_str(),
                     applied_at,
                 ),

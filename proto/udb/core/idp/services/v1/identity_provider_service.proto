@@ -1,0 +1,460 @@
+syntax = "proto3";
+
+package udb.core.idp.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/idp/services/v1/core.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Idp.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/idp/services/v1;idpservicev1";
+option java_package = "com.udb.core.idp.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Idp\\Services\\V1";
+option php_namespace = "Udb\\Core\\Idp\\Services\\V1";
+
+// ---------------------------------------------------------------------------
+// IdentityProviderService — Enterprise identity-provider lifecycle, SAML 2.0
+// web SSO (metadata import + ACS), SCIM 2.0 provisioning, JIT user
+// provisioning, and external-identity linking. All RPCs are tenant-scoped and
+// server-only (control-plane); they run on the isolated native auth listener.
+// ---------------------------------------------------------------------------
+service IdentityProviderService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "idp"
+    logical_service_id: "idp"
+    proto_service_id: "idp"
+    display_name: "Identity Providers"
+    category: "auth"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "identityProviders"
+    cli_scaffold_group: "auth"
+    health_check_ref: "idp"
+    capability_ref: "native.idp"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "idp"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "idp"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // ── Provider administration (J2.6) ────────────────────────────────────────
+  rpc CreateProvider(CreateProviderRequest) returns (CreateProviderResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:create-provider"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.CreateProvider"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/idp/providers"
+      body: "*"
+    };
+  }
+
+  rpc UpdateProvider(UpdateProviderRequest) returns (UpdateProviderResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:update-provider"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.UpdateProvider"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      patch: "/v1/idp/providers/{provider_id}"
+      body: "*"
+    };
+  }
+
+  rpc DisableProvider(DisableProviderRequest) returns (DisableProviderResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:disable-provider"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.DisableProvider"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/idp/providers/{provider_id}:disable"
+      body: "*"
+    };
+  }
+
+  rpc GetProvider(GetProviderRequest) returns (GetProviderResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:get-provider"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.GetProvider"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {get: "/v1/idp/providers/{provider_id}"};
+  }
+
+  rpc ListProviders(ListProvidersRequest) returns (ListProvidersResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:list-providers"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ListProviders"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {get: "/v1/idp/providers"};
+  }
+
+  rpc TestProviderDiscovery(TestProviderDiscoveryRequest) returns (TestProviderDiscoveryResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:test-provider-discovery"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.TestProviderDiscovery"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/idp/providers/{provider_id}:test-discovery"
+      body: "*"
+    };
+  }
+
+  rpc ForceJwksRefresh(ForceJwksRefreshRequest) returns (ForceJwksRefreshResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:force-jwks-refresh"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ForceJwksRefresh"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/idp/providers/{provider_id}:refresh-jwks"
+      body: "*"
+    };
+  }
+
+  rpc PreviewClaimMapping(PreviewClaimMappingRequest) returns (PreviewClaimMappingResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:preview-claim-mapping"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.PreviewClaimMapping"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/idp/providers/{provider_id}:preview-claim-mapping"
+      body: "*"
+    };
+  }
+
+  rpc PreviewGroupMapping(PreviewGroupMappingRequest) returns (PreviewGroupMappingResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:preview-group-mapping"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.PreviewGroupMapping"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/idp/providers/{provider_id}:preview-group-mapping"
+      body: "*"
+    };
+  }
+
+  rpc ListExternalIdentities(ListExternalIdentitiesRequest) returns (ListExternalIdentitiesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:list-external-identities"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ListExternalIdentities"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {get: "/v1/idp/external-identities"};
+  }
+
+  rpc LinkIdentity(LinkIdentityRequest) returns (LinkIdentityResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:link-identity"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.LinkIdentity"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/idp/external-identities:link"
+      body: "*"
+    };
+  }
+
+  rpc UnlinkIdentity(UnlinkIdentityRequest) returns (UnlinkIdentityResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:unlink-identity"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.UnlinkIdentity"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/idp/external-identities/{external_identity_id}:unlink"
+      body: "*"
+    };
+  }
+
+  // ── SAML 2.0 (J2.2) ───────────────────────────────────────────────────────
+  rpc ImportSamlMetadata(ImportSamlMetadataRequest) returns (ImportSamlMetadataResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:import-saml-metadata"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ImportSamlMetadata"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/idp/providers/{provider_id}:import-saml-metadata"
+      body: "*"
+    };
+  }
+
+  rpc StartSamlLogin(StartSamlLoginRequest) returns (StartSamlLoginResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:start-saml-login"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.StartSamlLogin"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/idp/providers/{provider_id}:start-saml-login"
+      body: "*"
+    };
+  }
+
+  rpc SamlAcs(SamlAcsRequest) returns (SamlAcsResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:saml-acs"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.SamlAcs"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/idp/providers/{provider_id}:saml-acs"
+      body: "*"
+    };
+  }
+
+  // ── JIT provisioning + assurance (J2.4 / J2.5) ────────────────────────────
+  rpc ResolveExternalIdentity(ResolveExternalIdentityRequest) returns (ResolveExternalIdentityResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:resolve-external-identity"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ResolveExternalIdentity"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/idp/providers/{provider_id}:resolve-identity"
+      body: "*"
+    };
+  }
+
+  // ── SCIM 2.0 (J2.3) ───────────────────────────────────────────────────────
+  rpc ScimCreateUser(ScimCreateUserRequest) returns (ScimCreateUserResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:scim-create-user"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ScimCreateUser"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/idp/scim/{provider_id}/Users"
+      body: "*"
+    };
+  }
+
+  rpc ScimGetUser(ScimGetUserRequest) returns (ScimGetUserResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:scim-get-user"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ScimGetUser"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {get: "/v1/idp/scim/{provider_id}/Users/{scim_user_id}"};
+  }
+
+  rpc ScimListUsers(ScimListUsersRequest) returns (ScimListUsersResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:scim-list-users"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ScimListUsers"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {get: "/v1/idp/scim/{provider_id}/Users"};
+  }
+
+  rpc ScimReplaceUser(ScimReplaceUserRequest) returns (ScimReplaceUserResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:scim-replace-user"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ScimReplaceUser"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      put: "/v1/idp/scim/{provider_id}/Users/{scim_user_id}"
+      body: "*"
+    };
+  }
+
+  rpc ScimPatchUser(ScimPatchUserRequest) returns (ScimPatchUserResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:scim-patch-user"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ScimPatchUser"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      patch: "/v1/idp/scim/{provider_id}/Users/{scim_user_id}"
+      body: "*"
+    };
+  }
+
+  rpc ScimDeleteUser(ScimDeleteUserRequest) returns (ScimDeleteUserResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:scim-delete-user"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ScimDeleteUser"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {delete: "/v1/idp/scim/{provider_id}/Users/{scim_user_id}"};
+  }
+
+  rpc ScimCreateGroup(ScimCreateGroupRequest) returns (ScimCreateGroupResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:scim-create-group"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ScimCreateGroup"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      post: "/v1/idp/scim/{provider_id}/Groups"
+      body: "*"
+    };
+  }
+
+  rpc ScimGetGroup(ScimGetGroupRequest) returns (ScimGetGroupResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:scim-get-group"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ScimGetGroup"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {get: "/v1/idp/scim/{provider_id}/Groups/{scim_group_id}"};
+  }
+
+  rpc ScimListGroups(ScimListGroupsRequest) returns (ScimListGroupsResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:scim-list-groups"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ScimListGroups"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {get: "/v1/idp/scim/{provider_id}/Groups"};
+  }
+
+  rpc ScimPatchGroup(ScimPatchGroupRequest) returns (ScimPatchGroupResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:scim-patch-group"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ScimPatchGroup"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {
+      patch: "/v1/idp/scim/{provider_id}/Groups/{scim_group_id}"
+      body: "*"
+    };
+  }
+
+  rpc ScimDeleteGroup(ScimDeleteGroupRequest) returns (ScimDeleteGroupResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:idp:scim-delete-group"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "idp.ScimDeleteGroup"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (google.api.http) = {delete: "/v1/idp/scim/{provider_id}/Groups/{scim_group_id}"};
+  }
+}

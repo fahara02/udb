@@ -131,7 +131,7 @@ impl MigrationAuditSink for PostgresMigrationAuditSink {
                 // The old code stored rollback_json as `{}` (default);
                 // preserve until a future op-level rollback emitter
                 // populates it.
-                rollback_json: serde_json::Value::Object(Default::default()),
+                payload_json: serde_json::Value::Object(Default::default()),
                 error: result.error.clone().unwrap_or_default(),
             };
             store

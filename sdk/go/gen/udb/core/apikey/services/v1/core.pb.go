@@ -1019,7 +1019,7 @@ var File_udb_core_apikey_services_v1_core_proto protoreflect.FileDescriptor
 
 const file_udb_core_apikey_services_v1_core_proto_rawDesc = "" +
 	"\n" +
-	"&udb/core/apikey/services/v1/core.proto\x12\x1budb.core.apikey.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a'udb/core/apikey/entity/v1/api_key.proto\x1a%udb/core/apikey/entity/v1/enums.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\"\xc5\x03\n" +
+	"&udb/core/apikey/services/v1/core.proto\x12\x1budb.core.apikey.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a'udb/core/apikey/entity/v1/api_key.proto\x1a%udb/core/apikey/entity/v1/enums.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a!udb/core/common/v1/security.proto\"\xe4\x03\n" +
 	"\x13CreateApiKeyRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12I\n" +
@@ -1033,32 +1033,32 @@ const file_udb_core_apikey_services_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"expires_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12<\n" +
 	"\acontext\x18\n" +
-	" \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"h\n" +
+	" \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\x87\x01\n" +
 	"\x14CreateApiKeyResponse\x123\n" +
 	"\x03key\x18\x01 \x01(\v2!.udb.core.apikey.entity.v1.ApiKeyR\x03key\x12\x1b\n" +
-	"\tplain_key\x18\x02 \x01(\tR\bplainKey\")\n" +
+	"\tplain_key\x18\x02 \x01(\tR\bplainKey:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"H\n" +
 	"\x10GetApiKeyRequest\x12\x15\n" +
-	"\x06key_id\x18\x01 \x01(\tR\x05keyId\"H\n" +
+	"\x06key_id\x18\x01 \x01(\tR\x05keyId:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"g\n" +
 	"\x11GetApiKeyResponse\x123\n" +
-	"\x03key\x18\x01 \x01(\v2!.udb.core.apikey.entity.v1.ApiKeyR\x03key\"\xf0\x01\n" +
+	"\x03key\x18\x01 \x01(\v2!.udb.core.apikey.entity.v1.ApiKeyR\x03key:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\x8f\x02\n" +
 	"\x12ListApiKeysRequest\x12\x19\n" +
 	"\bowner_id\x18\x01 \x01(\tR\aownerId\x12I\n" +
 	"\n" +
 	"owner_type\x18\x02 \x01(\x0e2*.udb.core.apikey.entity.v1.ApiKeyOwnerTypeR\townerType\x12?\n" +
 	"\x06status\x18\x03 \x01(\x0e2'.udb.core.apikey.entity.v1.ApiKeyStatusR\x06status\x123\n" +
-	"\x04page\x18\x04 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page\"\x82\x01\n" +
+	"\x04page\x18\x04 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\xa1\x01\n" +
 	"\x13ListApiKeysResponse\x125\n" +
 	"\x04keys\x18\x01 \x03(\v2!.udb.core.apikey.entity.v1.ApiKeyR\x04keys\x124\n" +
-	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page\"\x8f\x01\n" +
+	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\xae\x01\n" +
 	"\x13RevokeApiKeyRequest\x12\x15\n" +
 	"\x06key_id\x18\x01 \x01(\tR\x05keyId\x12#\n" +
 	"\rrevoke_reason\x18\x02 \x01(\tR\frevokeReason\x12<\n" +
-	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"\x8b\x01\n" +
+	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\xaa\x01\n" +
 	"\x14RevokeApiKeyResponse\x12\x15\n" +
 	"\x06key_id\x18\x01 \x01(\tR\x05keyId\x129\n" +
 	"\n" +
 	"revoked_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\trevokedAt\x12!\n" +
-	"\foperation_id\x18\x03 \x01(\tR\voperationId\"\xf6\x02\n" +
+	"\foperation_id\x18\x03 \x01(\tR\voperationId:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\x95\x03\n" +
 	"\x13UpdateApiKeyRequest\x12\x15\n" +
 	"\x06key_id\x18\x01 \x01(\tR\x05keyId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -1069,15 +1069,15 @@ const file_udb_core_apikey_services_v1_core_proto_rawDesc = "" +
 	"\x12rate_limit_per_day\x18\a \x01(\x03R\x0frateLimitPerDay\x129\n" +
 	"\n" +
 	"expires_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12<\n" +
-	"\acontext\x18\t \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"K\n" +
+	"\acontext\x18\t \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"j\n" +
 	"\x14UpdateApiKeyResponse\x123\n" +
-	"\x03key\x18\x01 \x01(\v2!.udb.core.apikey.entity.v1.ApiKeyR\x03key\"\x96\x01\n" +
+	"\x03key\x18\x01 \x01(\v2!.udb.core.apikey.entity.v1.ApiKeyR\x03key:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\xb5\x01\n" +
 	"\x15ValidateApiKeyRequest\x12\x1b\n" +
 	"\tplain_key\x18\x01 \x01(\tR\bplainKey\x12\x1a\n" +
 	"\bendpoint\x18\x02 \x01(\tR\bendpoint\x12%\n" +
 	"\x0erequired_scope\x18\x03 \x01(\tR\rrequiredScope\x12\x1d\n" +
 	"\n" +
-	"ip_address\x18\x04 \x01(\tR\tipAddress\"\xe6\x01\n" +
+	"ip_address\x18\x04 \x01(\tR\tipAddress:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\x85\x02\n" +
 	"\x16ValidateApiKeyResponse\x12\x14\n" +
 	"\x05valid\x18\x01 \x01(\bR\x05valid\x12\x15\n" +
 	"\x06key_id\x18\x02 \x01(\tR\x05keyId\x12\x19\n" +
@@ -1085,11 +1085,11 @@ const file_udb_core_apikey_services_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"owner_type\x18\x04 \x01(\x0e2*.udb.core.apikey.entity.v1.ApiKeyOwnerTypeR\townerType\x12\x16\n" +
 	"\x06scopes\x18\x05 \x03(\tR\x06scopes\x12!\n" +
-	"\frate_limited\x18\x06 \x01(\bR\vrateLimited\"\x8f\x01\n" +
+	"\frate_limited\x18\x06 \x01(\bR\vrateLimited:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\xae\x01\n" +
 	"\x1aGetApiKeyUsageStatsRequest\x12\x15\n" +
 	"\x06key_id\x18\x01 \x01(\tR\x05keyId\x12.\n" +
 	"\x04from\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x04from\x12*\n" +
-	"\x02to\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x02to\"\xc6\x02\n" +
+	"\x02to\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x02to:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\xe5\x02\n" +
 	"\x0fApiKeyDailyStat\x12\x12\n" +
 	"\x04date\x18\x01 \x01(\tR\x04date\x12%\n" +
 	"\x0etotal_requests\x18\x02 \x01(\x03R\rtotalRequests\x12,\n" +
@@ -1098,10 +1098,10 @@ const file_udb_core_apikey_services_v1_core_proto_rawDesc = "" +
 	"\rstatus_counts\x18\x05 \x03(\v2>.udb.core.apikey.services.v1.ApiKeyDailyStat.StatusCountsEntryR\fstatusCounts\x1a?\n" +
 	"\x11StatusCountsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\x88\x01\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01\"\xa7\x01\n" +
 	"\x1bGetApiKeyUsageStatsResponse\x12B\n" +
 	"\x05stats\x18\x01 \x03(\v2,.udb.core.apikey.services.v1.ApiKeyDailyStatR\x05stats\x12%\n" +
-	"\x0etotal_requests\x18\x02 \x01(\x03R\rtotalRequestsB\x88\x02\n" +
+	"\x0etotal_requests\x18\x02 \x01(\x03R\rtotalRequests:\x1d\x9a\xb2\x19\x19\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x06apikeyP\x01B\x88\x02\n" +
 	"\x1fcom.udb.core.apikey.services.v1B\tCoreProtoP\x01ZIgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1budb.core.Apikey.Services.V1\xca\x02\x1bUdb\\Core\\Apikey\\Services\\V1\xe2\x02'Udb\\GPBMetadata\\Core\\Apikey\\Services\\V1\xea\x02\x1fUdb::Core::Apikey::Services::V1b\x06proto3"
 
 var (

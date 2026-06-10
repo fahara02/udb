@@ -18,6 +18,67 @@ fn install_test_security() {
     );
 }
 
+#[test]
+fn secure_transport_gate_requires_server_identity_when_enabled() {
+    let mut service = crate::runtime::config::ServiceSettings {
+        require_secure_transport: true,
+        ..crate::runtime::config::ServiceSettings::default()
+    };
+    assert!(validate_secure_transport(&service).is_err());
+
+    service.tls.cert_pem = Some("-----BEGIN CERTIFICATE-----\ntest\n".to_string());
+    service.tls.key_pem = Some("-----BEGIN PRIVATE KEY-----\ntest\n".to_string());
+    assert!(validate_secure_transport(&service).is_ok());
+}
+
+#[test]
+fn mtls_gate_requires_client_ca() {
+    let mut service = crate::runtime::config::ServiceSettings {
+        mtls_required: true,
+        ..crate::runtime::config::ServiceSettings::default()
+    };
+    service.tls.cert_pem = Some("cert".to_string());
+    service.tls.key_pem = Some("key".to_string());
+
+    let err = validate_secure_transport(&service).expect_err("client CA required");
+    assert!(err.contains("CLIENT_CA"));
+
+    service.tls.client_ca_pem = Some("ca".to_string());
+    assert!(validate_secure_transport(&service).is_ok());
+}
+
+#[test]
+fn broker_to_broker_mtls_gate_requires_client_ca() {
+    let mut service = crate::runtime::config::ServiceSettings {
+        broker_to_broker_mtls_required: true,
+        ..crate::runtime::config::ServiceSettings::default()
+    };
+    service.tls.cert_pem = Some("cert".to_string());
+    service.tls.key_pem = Some("key".to_string());
+
+    let err = validate_secure_transport(&service).expect_err("client CA required");
+    assert!(err.contains("CLIENT_CA"));
+
+    service.tls.client_ca_pem = Some("ca".to_string());
+    assert!(validate_secure_transport(&service).is_ok());
+}
+
+#[test]
+fn internal_control_mtls_gate_requires_client_ca() {
+    let mut service = crate::runtime::config::ServiceSettings {
+        internal_control_mtls_required: true,
+        ..crate::runtime::config::ServiceSettings::default()
+    };
+    service.tls.cert_pem = Some("cert".to_string());
+    service.tls.key_pem = Some("key".to_string());
+
+    let err = validate_secure_transport(&service).expect_err("client CA required");
+    assert!(err.contains("CLIENT_CA"));
+
+    service.tls.client_ca_pem = Some("ca".to_string());
+    assert!(validate_secure_transport(&service).is_ok());
+}
+
 fn test_manifest() -> CatalogManifest {
     let col_id = ManifestColumn {
         field_name: "id".to_string(),
@@ -59,13 +120,53 @@ fn ready_service() -> DataBrokerService {
 }
 
 #[test]
+fn rls_bypass_guard_blocks_resource_drop_without_ack() {
+    let err = guard_rls_bypass_operation("drop_resource", "{}")
+        .expect_err("resource drops must require explicit RLS-bypass acknowledgement");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+}
+
+#[test]
+fn rls_bypass_guard_allows_resource_drop_with_ack() {
+    guard_rls_bypass_operation("drop_resource", r#"{"udb_allow_rls_bypass":true}"#)
+        .expect("explicitly reviewed resource drop should pass");
+}
+
+#[test]
+fn rls_bypass_guard_blocks_truncate_sql_without_ack() {
+    let err = guard_rls_bypass_operation("transaction", r#"{"sql":"TRUNCATE tenant.orders"}"#)
+        .expect_err("TRUNCATE can bypass tenant isolation and must be reviewed");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+}
+
+#[test]
+fn rls_bypass_guard_blocks_fk_cascade_without_ack() {
+    let err = guard_rls_bypass_operation(
+        "mutate",
+        r#"{"sql":"ALTER TABLE tenant.orders ADD CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES tenant.users(id) ON DELETE CASCADE"}"#,
+    )
+    .expect_err("FK cascade effects can cross tenant scope and must be reviewed");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+}
+
+#[test]
+fn rls_bypass_guard_blocks_unique_constraint_without_ack() {
+    let err = guard_rls_bypass_operation(
+        "query",
+        r#"{"sql":"CREATE UNIQUE INDEX users_email_uq ON tenant.users (email)"}"#,
+    )
+    .expect_err("unique constraints can leak cross-tenant existence and must be reviewed");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+}
+
+#[test]
 fn descriptor_set_exposes_databroker_reflection_surface() {
     let descriptor =
         <prost_types::FileDescriptorSet as prost::Message>::decode(UDB_FILE_DESCRIPTOR_SET)
             .expect("descriptor set should decode");
     assert!(descriptor.file.iter().any(|file| {
         file.package.as_deref() == Some("udb.services.v1")
-            || file.package.as_deref() == Some("lifeplus.udb.services.v1")
+            || file.package.as_deref() == Some("legacy.udb.services.v1")
     }));
 
     let service = descriptor
@@ -83,6 +184,53 @@ fn descriptor_set_exposes_databroker_reflection_surface() {
     assert!(methods.contains("Select"));
     assert!(methods.contains("LookupMessageSchema"));
     assert!(methods.contains("GetHealthReport"));
+}
+
+#[test]
+fn supported_rpcs_match_databroker_descriptor_surface() {
+    let descriptor =
+        <prost_types::FileDescriptorSet as prost::Message>::decode(UDB_FILE_DESCRIPTOR_SET)
+            .expect("descriptor set should decode");
+    let descriptor_methods = descriptor
+        .file
+        .iter()
+        .filter(|file| file.package.as_deref() == Some("udb.services.v1"))
+        .flat_map(|file| file.service.iter())
+        .find(|service| service.name.as_deref() == Some("DataBroker"))
+        .expect("udb.services.v1.DataBroker service should be in descriptor set")
+        .method
+        .iter()
+        .filter_map(|method| method.name.clone())
+        .collect::<std::collections::BTreeSet<_>>();
+    let advertised = SUPPORTED_RPC_NAMES
+        .iter()
+        .map(|name| (*name).to_string())
+        .collect::<std::collections::BTreeSet<_>>();
+
+    assert_eq!(
+        advertised, descriptor_methods,
+        "GetCapabilities.supported_rpcs must advertise exactly the DataBroker RPC surface"
+    );
+    for typed_store_rpc in [
+        "CacheGet",
+        "CacheSet",
+        "CacheDelete",
+        "CacheScan",
+        "DocumentGet",
+        "DocumentFind",
+        "DocumentUpsert",
+        "DocumentDelete",
+        "GraphQuery",
+        "GraphMutate",
+        "TimeSeriesWrite",
+        "TimeSeriesQuery",
+        "AnalyticalQuery",
+    ] {
+        assert!(
+            advertised.contains(typed_store_rpc),
+            "typed-store RPC {typed_store_rpc} must be advertised"
+        );
+    }
 }
 
 /// C.1 — native proto baseline lock. Decodes the compiled descriptor set and
@@ -182,7 +330,11 @@ fn native_service_descriptor_baseline_is_locked() {
 #[test]
 fn full_service_descriptor_surface_snapshot() {
     // Golden inventory captured from `UDB_FILE_DESCRIPTOR_SET` (proto source of
-    // truth). 7 services / 157 RPCs at lock time.
+    // truth): 16 UDB service descriptors — the native control-plane set
+    // (authn/authz/apikey/idp/control/tenant/notification/analytics/storage/asset
+    // + the five WebRTC services) plus the DataBroker data plane. The per-service
+    // method lists are a SUBSET assertion (new RPCs may be added without editing
+    // here); only the service SET is matched exactly.
     const GOLDEN: &[(&str, &[&str])] = &[
         (
             "udb.core.analytics.services.v1.AnalyticsService",
@@ -206,6 +358,48 @@ fn full_service_descriptor_surface_snapshot() {
                 "RevokeApiKey",
                 "UpdateApiKey",
                 "ValidateApiKey",
+            ],
+        ),
+        (
+            "udb.core.idp.services.v1.IdentityProviderService",
+            &[
+                "CreateProvider",
+                "DisableProvider",
+                "ForceJwksRefresh",
+                "GetProvider",
+                "ImportSamlMetadata",
+                "LinkIdentity",
+                "ListExternalIdentities",
+                "ListProviders",
+                "PreviewClaimMapping",
+                "PreviewGroupMapping",
+                "ResolveExternalIdentity",
+                "SamlAcs",
+                "ScimCreateGroup",
+                "ScimCreateUser",
+                "ScimDeleteGroup",
+                "ScimDeleteUser",
+                "ScimGetGroup",
+                "ScimGetUser",
+                "ScimListGroups",
+                "ScimListUsers",
+                "ScimPatchGroup",
+                "ScimPatchUser",
+                "ScimReplaceUser",
+                "StartSamlLogin",
+                "TestProviderDiscovery",
+                "UnlinkIdentity",
+                "UpdateProvider",
+            ],
+        ),
+        (
+            "udb.core.control.services.v1.ControlPlaneService",
+            &[
+                "AckStatus",
+                "DeltaResources",
+                "GetResources",
+                "ListNodeStates",
+                "StreamResources",
             ],
         ),
         (
@@ -268,6 +462,54 @@ fn full_service_descriptor_surface_snapshot() {
                 "UpdateRole",
             ],
         ),
+        (
+            "udb.core.storage.services.v1.StorageService",
+            &[
+                "DeleteFile",
+                "FinalizeUpload",
+                "GetDownloadUrl",
+                "GetFile",
+                "ListFiles",
+                "RegisterUpload",
+                "UpdateFile",
+            ],
+        ),
+        (
+            "udb.core.asset.services.v1.AssetService",
+            &[
+                "CompleteStep",
+                "CreatePipelineDefinition",
+                "GetAsset",
+                "GetPipeline",
+                "GetPipelineDefinition",
+                "ListAssets",
+                "RegisterAsset",
+                "StartPipeline",
+            ],
+        ),
+        (
+            "udb.core.webrtc.services.v1.RoomService",
+            &[
+                "CloseRoom",
+                "CreateRoom",
+                "GetRoom",
+                "ListRooms",
+                "UpdateRoom",
+            ],
+        ),
+        (
+            "udb.core.webrtc.services.v1.PeerService",
+            &["GetPeer", "JoinRoom", "LeaveRoom", "ListPeers"],
+        ),
+        (
+            "udb.core.webrtc.services.v1.TrackService",
+            &["ListTracks", "MuteTrack", "PublishTrack", "UnpublishTrack"],
+        ),
+        (
+            "udb.core.webrtc.services.v1.TurnService",
+            &["IssueCredentials"],
+        ),
+        ("udb.core.webrtc.services.v1.SignalingService", &["Signal"]),
         (
             "udb.core.notification.services.v1.NotificationService",
             &[

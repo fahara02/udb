@@ -199,7 +199,7 @@ var File_udb_core_authz_entity_v1_role_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_entity_v1_role_proto_rawDesc = "" +
 	"\n" +
-	"#udb/core/authz/entity/v1/role.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\"\xb7\x11\n" +
+	"#udb/core/authz/entity/v1/role.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xd3\x12\n" +
 	"\x04Role\x12C\n" +
 	"\arole_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
 	"\arole_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06roleId\x12r\n" +
@@ -254,7 +254,7 @@ const file_udb_core_authz_entity_v1_role_proto_rawDesc = "" +
 	"\x0eaccess_surface\x18\x10 \x01(\tB]\x82\xb7\x18Y\n" +
 	"\x0eaccess_surface\x12\vVARCHAR(80)Z:Optional UI/API/workload surface this role is intended forR\raccessSurface\x12o\n" +
 	"\rmetadata_json\x18\x11 \x01(\tBJ\x82\xb7\x18F\n" +
-	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1dProject-defined role metadatax\x01R\fmetadataJson:\xfc\x03\xfa\xb6\x18\xf7\x03\n" +
+	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1dProject-defined role metadatax\x01R\fmetadataJson:\x98\x05\xfa\xb6\x18\xf7\x03\n" +
 	"\x05roles\x12\tudb_authz\x18\x02 \x01*INamed roles scoped by tenant, project, resource domain, or access surface0\x018\x01@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xaa\x01O\n" +
 	"\x1atrg_roles_touch_updated_at\x12\x06BEFORE\x1a\x06UPDATE\"\x1cudb_authz.touch_updated_at()*\x03ROW\xc2\x01\xda\x01\n" +
@@ -266,7 +266,8 @@ const file_udb_core_authz_entity_v1_role_proto_rawDesc = "" +
 	"  NEW.updated_at = CURRENT_TIMESTAMP;\n" +
 	"  RETURN NEW;\n" +
 	"END;\n" +
-	"$$;B\xf4\x01\n" +
+	"$$;\x8a\xb2\x19\x97\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x11authz.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf4\x01\n" +
 	"\x1ccom.udb.core.authz.entity.v1B\tRoleProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
 
 var (

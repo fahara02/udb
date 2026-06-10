@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security &amp; Compliance — UDB</title>
+<meta name="description" content="UDB security: per-tenant RLS, field-level encryption, mTLS by default, fail-closed posture, a unified compliance audit envelope, and SOC 2 / ISO 27001 / PCI-HIPAA deployment profiles.">
+<meta name="theme-color" content="#121214">
+<link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body id="top">
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="./index.html"><img src="./assets/udb_logo.svg" alt="UDB logo">UDB</a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="./architecture.html">Architecture</a>
+      <a href="./data-plane.html">Data&nbsp;Plane</a>
+      <a href="./control-plane.html">Control&nbsp;Plane</a>
+      <a href="./security.html" class="active">Security</a>
+      <a href="./enterprise.html">Enterprise</a>
+      <a href="./sdks.html">SDKs</a>
+      <a href="./playground.html">Playground</a>
+      <a class="nav-cta" href="https://github.com/fahara02/udb">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <div class="eyebrow">Security &amp; compliance</div>
+    <h1>Isolation that holds <span class="g">across every path</span></h1>
+    <p class="lead">RLS alone is not enough — CDC, backup/restore, replication, TRUNCATE, constraints, and
+      cross-backend paths can bypass tenant isolation unless they’re explicitly closed. UDB closes them, and
+      treats HA, tenant isolation, compliance, and SDK parity as release gates, not marketing claims.</p>
+  </div>
+
+  <section style="border-top:none">
+    <div class="wrap">
+      <div class="grid c3">
+        <div class="card reveal"><div class="ic">🧱</div><h3>Per-tenant RLS</h3><p>Row-level security with tenant context applied via <code>SET LOCAL</code> (transaction-scoped, pool-safe). Where a backend can’t enforce engine RLS, the broker applies tenant predicates on every read and write — and capability reporting never claims RLS it can’t enforce.</p></div>
+        <div class="card warm reveal d1"><div class="ic">🔐</div><h3>Field-level encryption</h3><p>AES-256-GCM-SIV encryption-at-rest for UDB-owned sensitive state: outbox/CDC payloads, object/native-service state, and auth secrets — with active-version selection, old-version decrypt, and a key rotation / compromise workflow.</p></div>
+        <div class="card reveal d2"><div class="ic">🔗</div><h3>mTLS by default</h3><p>Mutual TLS for internal gRPC — broker-to-broker, the control-plane listener, internal workers, and the WebRTC peer listener. <code>UDB_REQUIRE_SECURE_TRANSPORT</code> hardens client-facing transport; enterprise mode refuses insecure transport unless explicitly configured for development.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow reveal">Closed bypass paths</div>
+      <h2 class="reveal">Tenant isolation, <span class="accent">everywhere data moves</span></h2>
+      <div class="tablewrap mt28 reveal d1">
+        <table>
+          <thead><tr><th>Path</th><th>How UDB closes it</th></tr></thead>
+          <tbody>
+            <tr><td>Request body tenant</td><td>Native handlers validate the decoded request tenant/project against the authenticated principal — a body <code>tenant_id</code> can’t override the bearer scope.</td></tr>
+            <tr><td>CDC streams</td><td>Tenant-scoped topics refuse to emit or stream without tenant scope; replay/live events are filtered by tenant/project, and the envelope carries tenant + redaction status.</td></tr>
+            <tr><td>Backup / restore</td><td>Unscoped backup/export is rejected; cross-tenant restore is blocked unless an explicit privileged override is present.</td></tr>
+            <tr><td>Replication</td><td>Publications require a tenant scope or explicit tenant filter; unknown scope fails closed.</td></tr>
+            <tr><td>RLS-bypass ops</td><td>TRUNCATE, FK cascades, unique/PK leakage, and privileged maintenance are guarded.</td></tr>
+            <tr><td>Endpoint security</td><td>A descriptor-driven method-security tower layer enforces auth mode, scopes/roles, tenant/project equality, CSRF, internal-only, and credential-type contracts per RPC.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow reveal">Fail-closed by design</div>
+      <h2 class="reveal">When something’s wrong, UDB <span class="accent">denies</span></h2>
+      <div class="grid c2 mt28">
+        <ul class="flist reveal">
+          <li><span class="mk">✓</span><div><b>Revocation-store errors</b> deny in fail-closed mode; a short-TTL cluster jti denylist accelerates cross-node revocation.</div></li>
+          <li><span class="mk">✓</span><div><b>Signing-key / JWKS errors</b> fail closed; rotation actually re-signs with the active key, and compromised keys are excluded.</div></li>
+          <li><span class="mk">✓</span><div><b>Descriptor decode failure</b> aborts startup — a corrupt contract never serves traffic.</div></li>
+        </ul>
+        <ul class="flist reveal d1">
+          <li><span class="mk">✓</span><div><b>Audit sink validation</b> rejects invalid or non-redacted events in enterprise mode, before insert.</div></li>
+          <li><span class="mk">✓</span><div><b>Transactional audit</b> — every multi-op auth mutation commits with its audit/outbox event or rolls back.</div></li>
+          <li><span class="mk">✓</span><div><b>API-key rate-limit store errors</b> fail closed in production.</div></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow reveal">Evidence, not assertions</div>
+      <h2 class="reveal">One compliance <span class="accent">audit envelope</span></h2>
+      <p class="lead reveal d1">Every lane — authn, authz, API keys, IdP, tenant, notification, storage, asset, WebRTC,
+        policy governance, emergency ops, and CDC delivery — emits the same envelope: actor, auth method, decision id,
+        policy revision, operation, resource, trace/correlation, and redaction status. A production incident can be
+        traced from SDK request → gRPC handler → auth decision → backend op → outbox event → CDC publish → audit export.</p>
+      <div class="grid c3 mt28">
+        <div class="card reveal"><div class="ic">📋</div><h3>SOC 2 Type 2</h3><p>Hardened config profile, evidence collection, audit-log retention, access review, and incident response workflows.</p></div>
+        <div class="card reveal d1"><div class="ic">🌐</div><h3>ISO 27001 / 27017</h3><p>Named posture requirements enforced by config validation, with a checked-in hardened YAML that passes production validation.</p></div>
+        <div class="card warm reveal d2"><div class="ic">💳</div><h3>PCI / HIPAA</h3><p>A deployment posture mapped to real <code>UDB_*</code> settings and proven by tests — a tested posture, not just a document.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div class="brand"><img src="./assets/udb_logo.svg" alt="" style="width:26px;height:26px;border-radius:7px"> UDB — Universal Data Broker</div>
+    <nav class="foot-links">
+      <a href="./index.html">Home</a><a href="./enterprise.html">Enterprise</a>
+      <a href="https://github.com/fahara02/udb">GitHub</a>
+      <a href="https://github.com/fahara02/udb/blob/main/LICENSE">MIT</a>
+    </nav>
+  </div>
+  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.3.2 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
+</footer>
+
+<script defer src="./app.js"></script>
+</body>
+</html>

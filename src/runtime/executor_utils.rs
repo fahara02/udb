@@ -21,6 +21,11 @@ use crate::proto::{RecordSet, RequestContext as ProtoRequestContext, Row as Prot
 /// presigned/resumable upload flows rather than the generic RPC body.
 pub(crate) const INLINE_OBJECT_LIMIT_BYTES: usize = 1_048_576;
 
+/// Suggested client backoff (ms) advertised on transient backend failures
+/// (HTTP 5xx / server errors) via [`retryable_status`]. SDKs read it from the
+/// typed `ErrorDetail.retry_after_ms` to pace automatic retries.
+pub(crate) const HTTP_RETRYABLE_BACKOFF_MS: i64 = 250;
+
 pub(crate) fn executor_timeout_duration() -> Duration {
     let millis = env::var("UDB_EXECUTOR_TIMEOUT_MS")
         .ok()
@@ -136,6 +141,15 @@ pub(crate) fn retryable_status(
 /// `ErrorDetail` (`kind = SCHEMA`, code carried in `capability_required`).
 /// `InvalidArgument` matches the existing compile-error mapping. Additive — the
 /// human message is preserved.
+///
+/// Currently exercised only by unit tests: the IR compiler's `CompileError` is
+/// not yet surfaced through a request handler (the data plane compiles IR deeper
+/// in the stack, where its error is propagated directly), so there is no
+/// production call site to wire into. Scoped to `#[cfg(test)]` so it is honestly
+/// not-dead in the shipped binary; un-gate it when an IR-compile step lands in a
+/// handler that must map `CompileError` -> `tonic::Status` (mirror of the
+/// already-wired `retryable_status`).
+#[cfg(test)]
 pub(crate) fn compile_error_status(
     backend: impl Into<String>,
     operation: impl Into<String>,
@@ -849,7 +863,10 @@ where
     for<'a> String: sqlx::Decode<'a, R::Database> + sqlx::Type<R::Database>,
     for<'a> Vec<u8>: sqlx::Decode<'a, R::Database> + sqlx::Type<R::Database>,
 {
-    use sqlx::{Column as _, Row as _};
+    // `Column` is needed for `col.name()`; `Row`'s methods (`columns`,
+    // `try_get`) are callable directly on the `R: sqlx::Row`-bounded param
+    // without importing the trait into scope.
+    use sqlx::Column as _;
     let mut obj = serde_json::Map::new();
     for (i, col) in row.columns().iter().enumerate() {
         let name = col.name().to_string();
@@ -1027,7 +1044,14 @@ pub(crate) fn http_status_to_tonic(
         404 => tonic::Status::not_found(format!("{backend} 404: {detail}")),
         409 => tonic::Status::already_exists(format!("{backend} 409: {detail}")),
         429 => tonic::Status::resource_exhausted(format!("{backend} 429: {detail}")),
-        500..=599 => tonic::Status::unavailable(format!("{backend} {code}: {detail}")),
+        // 5xx is a transient server-side failure: emit the typed retryable detail
+        // (Unavailable, retryable=true, suggested backoff) so SDK clients retry.
+        500..=599 => retryable_status(
+            backend,
+            "request",
+            HTTP_RETRYABLE_BACKOFF_MS,
+            format!("{backend} {code}: {detail}"),
+        ),
         _ => tonic::Status::internal(format!("{backend} {code}: {detail}")),
     }
 }
@@ -1059,6 +1083,14 @@ pub(crate) fn build_probe(
 pub(crate) fn qdrant_status(status: reqwest::StatusCode) -> Result<(), tonic::Status> {
     if status.is_success() {
         Ok(())
+    } else if status.is_server_error() {
+        // 5xx from Qdrant is transient: typed retryable detail + backoff.
+        Err(retryable_status(
+            "qdrant",
+            "request",
+            HTTP_RETRYABLE_BACKOFF_MS,
+            format!("Qdrant returned HTTP {status}"),
+        ))
     } else {
         Err(tonic::Status::unavailable(format!(
             "Qdrant returned HTTP {status}"

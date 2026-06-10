@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Plane — UDB</title>
+<meta name="description" content="The DataBroker data plane: 76 RPCs across relational, vector, object, cache, document, graph, time-series, and analytical backends — with 2PC/XA, sagas, and CDC.">
+<meta name="theme-color" content="#121214">
+<link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body id="top">
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="./index.html"><img src="./assets/udb_logo.svg" alt="UDB logo">UDB</a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">&#9776;</button>
+    <nav class="nav-links">
+      <a href="./architecture.html">Architecture</a>
+      <a href="./data-plane.html" class="active">Data&nbsp;Plane</a>
+      <a href="./control-plane.html">Control&nbsp;Plane</a>
+      <a href="./security.html">Security</a>
+      <a href="./enterprise.html">Enterprise</a>
+      <a href="./sdks.html">SDKs</a>
+      <a href="./playground.html">Playground</a>
+      <a class="nav-cta" href="https://github.com/fahara02/udb">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <div class="eyebrow">Data plane · DataBroker · 76 RPCs</div>
+    <h1>Every backend behind <span class="g">one typed API</span></h1>
+    <p class="lead">The <code>DataBroker</code> contract covers relational, vector, object, cache,
+      document, graph, time-series, and analytical operations — plus transactions, CDC, catalog,
+      migration, DLQ, saga, policy, project, health, and admin/audit surfaces.</p>
+  </div>
+
+  <section style="border-top:none">
+    <div class="wrap">
+      <div class="grid c3">
+        <div class="card"><div class="ic">🗄️</div><h3>Relational + batch</h3><p><code>Select</code> / <code>BatchSelect</code> / <code>Upsert</code> / <code>BatchUpsert</code> / <code>Delete</code> over Postgres, MySQL, SQLite, MSSQL.</p></div>
+        <div class="card"><div class="ic">🧭</div><h3>Vector &amp; hybrid</h3><p>Similarity, hybrid search, and upsert over Qdrant, Weaviate, Pinecone, and Elasticsearch kNN.</p></div>
+        <div class="card"><div class="ic">📦</div><h3>Object / blob</h3><p>Put/get, presigned URLs, and multipart over S3, MinIO, Azure Blob, and GCS.</p></div>
+        <div class="card"><div class="ic">⚡</div><h3>Cache</h3><p>Get/set/delete/scan over Redis and Memcached with TTL semantics.</p></div>
+        <div class="card"><div class="ic">🌐</div><h3>Document · graph · analytical</h3><p>MongoDB documents, Neo4j graph edges, ClickHouse analytics, Cassandra time-series.</p></div>
+        <div class="card"><div class="ic">🪞</div><h3>Projections &amp; views</h3><p>Materialized views and projections as first-class, typed read/write targets.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">Consistency</div>
+      <h2>Transactions, <span class="accent">2PC/XA</span>, and sagas</h2>
+      <div class="grid c3 mt28">
+        <div class="card warm"><div class="ic">🔁</div><h3>Per-request transactionality</h3><p>Reads/writes within a request commit or roll back together; RLS context is tx-scoped (<code>SET LOCAL</code>), so transaction pooling is safe.</p></div>
+        <div class="card warm"><div class="ic">🧩</div><h3>Real 2PC / XA</h3><p>Postgres two-phase commit and MySQL XA behind <code>UDB_2PC_ENABLED</code>, with a durable in-doubt participant ledger and idempotent commit/rollback.</p></div>
+        <div class="card warm"><div class="ic">↩️</div><h3>Sagas with recovery</h3><p>Durable saga state transitions, idempotent compensations, and lease-protected recovery that resumes after a broker restart.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">Change data capture</div>
+      <h2>CDC to Kafka, <span class="accent">exactly where it matters</span></h2>
+      <div class="grid c2 mt28" style="align-items:start">
+        <ul class="flist">
+          <li><span class="mk">›</span><div><b>Transactional outbox</b> relay — events commit with the mutation, never lost or double-sent.</div></li>
+          <li><span class="mk">›</span><div><b>Durable delivery proof</b> — a CDC journal gates ack/delete; no evidence ⇒ re-publish (at-least-once), Kafka transactions for exactly-once.</div></li>
+          <li><span class="mk">›</span><div><b>DLQ &amp; topic policy</b> — malformed events route to a dead-letter queue; topics are validated before publish.</div></li>
+          <li><span class="mk">›</span><div><b>Tenant-scoped, fail-closed</b> — tenant-scoped topics refuse to emit or stream without tenant scope.</div></li>
+          <li><span class="mk">›</span><div><b>Versioned dot topics</b> — e.g. <code>udb.storage.file.finalized.v1</code>, reconciled against proto event contracts.</div></li>
+        </ul>
+        <div class="callout cool">
+          <p style="margin-top:0"><b>Non-Postgres sources too.</b> External CDC sources route through the same pipeline as the Postgres outbox: validation, redaction, topic policy, DLQ, a durable delivery journal, deterministic source event ids, and transactional publish where configured.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">Schema lifecycle</div>
+      <h2>Catalog, migrations, and <span class="accent">review gates</span></h2>
+      <ul class="flist mt28">
+        <li><span class="mk">✓</span><div><b>Staged catalogs</b> — stage → activate → rollback, with deterministic checksums.</div></li>
+        <li><span class="mk">✓</span><div><b>Proto-driven migrations</b> — plan/apply derived from annotations, with an audited op ledger.</div></li>
+        <li><span class="mk">✓</span><div><b>Review-required DDL</b> — raw SQL, materialized views, triggers, unsafe enum changes, and RLS changes are review-gated; they can’t be applied unattended in production.</div></li>
+        <li><span class="mk">✓</span><div><b>Security-aware drift</b> — table/column security changes produce visible migration/drift items and CI drift checks.</div></li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap center">
+      <h2>Route to the right store, <span class="accent">per tenant and project</span></h2>
+      <p class="lead" style="margin:12px auto 0">Data-plane routing uses <code>tenant_id</code>/<code>project_id</code> as the primary key, with explicit scatter-gather fallback and observable cross-shard metrics.</p>
+      <div class="cta">
+        <a class="btn primary" href="./sdks.html">Try the SDKs</a>
+        <a class="btn ghost" href="./control-plane.html">Auth &amp; control plane</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div class="brand"><img src="./assets/udb_logo.svg" alt="" style="width:26px;height:26px;border-radius:7px"> UDB — Universal Data Broker</div>
+    <nav class="foot-links">
+      <a href="./index.html">Home</a><a href="./architecture.html">Architecture</a>
+      <a href="https://github.com/fahara02/udb">GitHub</a>
+      <a href="https://github.com/fahara02/udb/blob/main/LICENSE">MIT License</a>
+    </nav>
+  </div>
+  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.3.2 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
+</footer>
+
+<script defer src="./app.js"></script>
+
+</body>
+</html>

@@ -25,7 +25,7 @@ public sealed record UdbCallOptions
     /// <summary>Default per-attempt deadline. <c>null</c> means no client deadline.</summary>
     public TimeSpan? Timeout { get; init; } = TimeSpan.FromSeconds(30);
 
-    /// <summary>Maximum number of attempts (1 = no retry) for idempotent unary calls.</summary>
+    /// <summary>Maximum number of attempts (1 = no retry) for retry-safe unary calls.</summary>
     public int MaxAttempts { get; init; } = 4;
 
     /// <summary>Base backoff before the first retry.</summary>
@@ -37,11 +37,10 @@ public sealed record UdbCallOptions
     /// <summary>Exponential growth multiplier between attempts.</summary>
     public double BackoffMultiplier { get; init; } = 2.0;
 
-    /// <summary>gRPC status codes treated as transient (retryable).</summary>
+    /// <summary>gRPC status codes treated as transient for mutating calls.</summary>
     public IReadOnlySet<StatusCode> RetryableCodes { get; init; } = new HashSet<StatusCode>
     {
         StatusCode.Unavailable,
-        StatusCode.DeadlineExceeded,
         StatusCode.ResourceExhausted,
     };
 }
@@ -114,8 +113,9 @@ public abstract class GeneratedServiceBase
     }
 
     /// <summary>
-    /// Invoke an idempotent unary RPC with retry + backoff + jitter on transient
-    /// codes. <paramref name="call"/> forwards to the stub's <c>&lt;Name&gt;Async</c>
+    /// Invoke a unary RPC with retry + backoff + jitter on transient codes.
+    /// <c>DeadlineExceeded</c> is retried only when <paramref name="readOnly"/> is true.
+    /// <paramref name="call"/> forwards to the stub's <c>&lt;Name&gt;Async</c>
     /// and returns the boxed <c>AsyncUnaryCall&lt;TResp&gt;</c> as <see cref="object"/>,
     /// so the closed generic stays concrete at runtime (no dynamic-to-generic
     /// cast). The strongly-typed protobuf response is returned as <c>dynamic</c>.
@@ -124,7 +124,8 @@ public abstract class GeneratedServiceBase
         string rpcPath,
         Func<CallOptions, object> call,
         TimeSpan? deadline,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool readOnly)
     {
         var backoff = Options.InitialBackoff;
         for (var attempt = 1; ; attempt++)
@@ -140,7 +141,7 @@ public abstract class GeneratedServiceBase
             }
             catch (RpcException ex) when (
                 attempt < Options.MaxAttempts &&
-                Options.RetryableCodes.Contains(ex.StatusCode) &&
+                IsRetryable(ex.StatusCode, readOnly) &&
                 !ct.IsCancellationRequested)
             {
                 await Task.Delay(NextBackoff(ref backoff), ct).ConfigureAwait(false);
@@ -150,6 +151,30 @@ public abstract class GeneratedServiceBase
                 throw new UdbRpcException(rpcPath, ex);
             }
         }
+    }
+
+    protected static bool IsReadOnlyRpcName(string name)
+    {
+        string[] prefixes =
+        {
+            "Get", "List", "Check", "Validate", "Introspect", "Authorize",
+            "BatchCheck", "Preview", "Resolve", "Explain", "Diff", "Lint",
+            "Test", "Select", "AnalyticalQuery", "VectorSearch", "GraphQuery",
+            "CacheGet", "CacheScan", "DocumentGet", "DocumentFind",
+        };
+        foreach (var prefix in prefixes)
+        {
+            if (name.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private bool IsRetryable(StatusCode code, bool readOnly)
+    {
+        return code == StatusCode.DeadlineExceeded ? readOnly : Options.RetryableCodes.Contains(code);
     }
 
     /// <summary>

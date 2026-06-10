@@ -12,6 +12,7 @@ use sqlx::query::Query;
 use uuid::Uuid;
 
 use crate::broker::{RequestContext, table_for_message};
+use crate::generation::sql::{resolve_tenant_column_ref, table_requires_tenant_column};
 use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
 use crate::proto::{Mutation, SelectRequest, UpsertRequest};
 
@@ -109,11 +110,20 @@ pub(crate) fn build_join_fusion_sql(
 
     let mut bindings = Vec::new();
     let mut predicates = Vec::new();
-    if let Some(column) = tenant_column_ref(tables[0]) {
+    for (table_idx, table) in tables.iter().enumerate() {
+        let Some(column) = tenant_column_ref(table) else {
+            if table_requires_tenant_column(table) {
+                return Err(tonic::Status::failed_precondition(format!(
+                    "join fusion cannot safely select scoped table {}.{} without a tenant column",
+                    table.schema, table.table
+                )));
+            }
+            continue;
+        };
         bindings.push((column.clone(), JsonValue::String(context.tenant_id.clone())));
         predicates.push(format!(
             "{}.{} = ${}",
-            qi_runtime(&aliases[0]),
+            qi_runtime(&aliases[table_idx]),
             qi_runtime(&column.column_name),
             bindings.len()
         ));
@@ -283,12 +293,7 @@ fn join_predicate(
 }
 
 pub(crate) fn tenant_column_ref(table: &ManifestTable) -> Option<&ManifestColumn> {
-    table.columns.iter().find(|column| {
-        matches!(
-            column.column_name.as_str(),
-            "tenant_id" | "org_id" | "institution_id"
-        )
-    })
+    resolve_tenant_column_ref(table)
 }
 
 // ── Parameter binding ─────────────────────────────────────────────────────────
@@ -483,5 +488,170 @@ fn collect_filter_values(value: &JsonValue, out: &mut Vec<JsonValue>) {
             }
         }
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::generation::{CatalogManifest, ManifestForeignKey, ManifestTableSecurity};
+
+    fn ctx() -> RequestContext {
+        RequestContext {
+            tenant_id: "acme".to_string(),
+            ..RequestContext::default()
+        }
+    }
+
+    fn col(name: &str) -> ManifestColumn {
+        ManifestColumn {
+            field_name: name.to_string(),
+            column_name: name.to_string(),
+            proto_type: "string".to_string(),
+            sql_type: "text".to_string(),
+            ..ManifestColumn::default()
+        }
+    }
+
+    fn tenant_col(field_name: &str, column_name: &str, flagged: bool) -> ManifestColumn {
+        ManifestColumn {
+            field_name: field_name.to_string(),
+            column_name: column_name.to_string(),
+            proto_type: "string".to_string(),
+            sql_type: "text".to_string(),
+            is_tenant_column: flagged,
+            ..ManifestColumn::default()
+        }
+    }
+
+    fn table(message: &str, physical: &str, columns: Vec<ManifestColumn>) -> ManifestTable {
+        ManifestTable {
+            message_name: format!("acme.test.v1.{message}"),
+            schema: "public".to_string(),
+            table: physical.to_string(),
+            columns,
+            primary_key: vec!["id".to_string()],
+            ..ManifestTable::default()
+        }
+    }
+
+    fn join_manifest(mut left: ManifestTable, right: ManifestTable) -> CatalogManifest {
+        left.foreign_keys.push(ManifestForeignKey {
+            name: "fk_right".to_string(),
+            columns: vec!["right_id".to_string()],
+            ref_schema: right.schema.clone(),
+            ref_table: right.table.clone(),
+            ref_columns: vec!["id".to_string()],
+            ..ManifestForeignKey::default()
+        });
+        CatalogManifest {
+            tables: vec![left, right],
+            ..CatalogManifest::default()
+        }
+    }
+
+    fn join_request() -> SelectRequest {
+        SelectRequest {
+            message_type: "Left,Right".to_string(),
+            limit: 25,
+            ..SelectRequest::default()
+        }
+    }
+
+    #[test]
+    fn tenant_column_ref_prefers_declared_table_security_column() {
+        let mut table = table(
+            "Left",
+            "lefts",
+            vec![
+                col("id"),
+                tenant_col("tenant_id", "tenant_id", true),
+                tenant_col("account", "account_id", false),
+            ],
+        );
+        table.table_security = ManifestTableSecurity {
+            tenant_column: "account".to_string(),
+            ..ManifestTableSecurity::default()
+        };
+
+        let resolved = tenant_column_ref(&table).expect("tenant column");
+
+        assert_eq!(resolved.column_name, "account_id");
+    }
+
+    #[test]
+    fn tenant_column_ref_uses_system_and_legacy_names() {
+        let system = table(
+            "Left",
+            "lefts",
+            vec![col("id"), tenant_col("_tenant_id", "_tenant_id", false)],
+        );
+        assert_eq!(
+            tenant_column_ref(&system).map(|column| column.column_name.as_str()),
+            Some("_tenant_id")
+        );
+
+        let legacy = table(
+            "Left",
+            "lefts",
+            vec![col("id"), tenant_col("org_id", "organization_id", false)],
+        );
+        assert_eq!(
+            tenant_column_ref(&legacy).map(|column| column.column_name.as_str()),
+            Some("organization_id")
+        );
+    }
+
+    #[test]
+    fn join_fusion_adds_tenant_predicate_for_every_joined_tenant_table() {
+        let mut left = table(
+            "Left",
+            "lefts",
+            vec![
+                col("id"),
+                col("right_id"),
+                tenant_col("tenant_id", "tenant_id", true),
+            ],
+        );
+        left.enable_rls = true;
+        let mut right = table(
+            "Right",
+            "rights",
+            vec![col("id"), tenant_col("tenant_id", "tenant_id", true)],
+        );
+        right.enable_rls = true;
+        let manifest = join_manifest(left, right);
+
+        let plan =
+            build_join_fusion_sql(&manifest, &join_request(), &ctx(), &JsonValue::Null).unwrap();
+
+        assert!(
+            plan.sql.contains(r#""t0"."tenant_id" = $1"#),
+            "{}",
+            plan.sql
+        );
+        assert!(
+            plan.sql.contains(r#""t1"."tenant_id" = $2"#),
+            "{}",
+            plan.sql
+        );
+        assert_eq!(plan.bindings.len(), 2);
+        assert_eq!(plan.bindings[0].1, JsonValue::String("acme".to_string()));
+        assert_eq!(plan.bindings[1].1, JsonValue::String("acme".to_string()));
+    }
+
+    #[test]
+    fn join_fusion_fails_closed_for_scoped_table_without_tenant_column() {
+        let mut left = table("Left", "lefts", vec![col("id"), col("right_id")]);
+        left.enable_rls = true;
+        let right = table("Right", "rights", vec![col("id")]);
+        let manifest = join_manifest(left, right);
+
+        let err = build_join_fusion_sql(&manifest, &join_request(), &ctx(), &JsonValue::Null)
+            .err()
+            .expect("scoped table without tenant column must fail closed");
+
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert!(err.message().contains("without a tenant column"));
     }
 }

@@ -8,6 +8,7 @@ package eventsv1
 
 import (
 	v1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1"
+	_ "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -1125,7 +1126,7 @@ var File_udb_core_authn_events_v1_authn_events_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_events_v1_authn_events_proto_rawDesc = "" +
 	"\n" +
-	"+udb/core/authn/events/v1/authn_events.proto\x12\x18udb.core.authn.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\"\xf5\x03\n" +
+	"+udb/core/authn/events/v1/authn_events.proto\x12\x18udb.core.authn.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a!udb/core/common/v1/security.proto\"\xf3\x04\n" +
 	"\x13UserRegisteredEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1a\n" +
@@ -1144,7 +1145,8 @@ const file_udb_core_authn_events_v1_authn_events_proto_rawDesc = "" +
 	"\faccount_kind\x18\v \x01(\x0e2%.udb.core.authn.entity.v1.AccountKindR\vaccountKind\x12'\n" +
 	"\x0fcontact_address\x18\f \x01(\tR\x0econtactAddress\x12\x1f\n" +
 	"\vprovider_id\x18\r \x01(\tR\n" +
-	"providerId\"\x80\x04\n" +
+	"providerId:|\x92\xb2\x19x\n" +
+	",udb.core.authn.events.v1.UserRegisteredEvent\x12\x1cudb.authn.user.registered.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xf7\x04\n" +
 	"\x11UserLoggedInEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1d\n" +
@@ -1163,7 +1165,8 @@ const file_udb_core_authn_events_v1_authn_events_proto_rawDesc = "" +
 	"project_id\x18\n" +
 	" \x01(\tR\tprojectId\x12!\n" +
 	"\fprincipal_id\x18\v \x01(\tR\vprincipalId\x12%\n" +
-	"\x0eaccess_surface\x18\f \x01(\tR\raccessSurface\"\xad\x02\n" +
+	"\x0eaccess_surface\x18\f \x01(\tR\raccessSurface:u\x92\xb2\x19q\n" +
+	"*udb.core.authn.events.v1.UserLoggedInEvent\x12\x17udb.authn.user.login.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xab\x03\n" +
 	"\x13SessionRevokedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1d\n" +
 	"\n" +
@@ -1175,7 +1178,8 @@ const file_udb_core_authn_events_v1_authn_events_proto_rawDesc = "" +
 	"\x0ecorrelation_id\x18\x06 \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12\x1b\n" +
-	"\ttenant_id\x18\b \x01(\tR\btenantId\"\xc9\x02\n" +
+	"\ttenant_id\x18\b \x01(\tR\btenantId:|\x92\xb2\x19x\n" +
+	",udb.core.authn.events.v1.SessionRevokedEvent\x12\x1cudb.authn.session.revoked.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xbf\x03\n" +
 	"\x0fUserLockedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12#\n" +
@@ -1186,7 +1190,8 @@ const file_udb_core_authn_events_v1_authn_events_proto_rawDesc = "" +
 	"\x0ecorrelation_id\x18\x06 \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12\x1b\n" +
-	"\ttenant_id\x18\b \x01(\tR\btenantId\"\xa4\x02\n" +
+	"\ttenant_id\x18\b \x01(\tR\btenantId:t\x92\xb2\x19p\n" +
+	"(udb.core.authn.events.v1.UserLockedEvent\x12\x18udb.authn.user.locked.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xaa\x03\n" +
 	"\x14PasswordChangedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x19\n" +
@@ -1198,7 +1203,8 @@ const file_udb_core_authn_events_v1_authn_events_proto_rawDesc = "" +
 	"occurredAt\x12\x1b\n" +
 	"\ttenant_id\x18\a \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
-	"ip_address\x18\b \x01(\tR\tipAddress\"\xf1\x02\n" +
+	"ip_address\x18\b \x01(\tR\tipAddress:\x83\x01\x92\xb2\x19\x7f\n" +
+	"-udb.core.authn.events.v1.PasswordChangedEvent\x12\"udb.authn.user.password.changed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xe1\x03\n" +
 	"\fOTPSentEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x15\n" +
 	"\x06otp_id\x18\x02 \x01(\tR\x05otpId\x12\x17\n" +
@@ -1209,7 +1215,8 @@ const file_udb_core_authn_events_v1_authn_events_proto_rawDesc = "" +
 	"\x0ecorrelation_id\x18\a \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12\x1b\n" +
-	"\ttenant_id\x18\t \x01(\tR\btenantId\"\x8e\x03\n" +
+	"\ttenant_id\x18\t \x01(\tR\btenantId:n\x92\xb2\x19j\n" +
+	"%udb.core.authn.events.v1.OTPSentEvent\x12\x15udb.authn.otp.sent.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\x94\x04\n" +
 	"\x16UserStatusChangedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12C\n" +
@@ -1223,7 +1230,8 @@ const file_udb_core_authn_events_v1_authn_events_proto_rawDesc = "" +
 	"\x0ecorrelation_id\x18\a \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12\x1b\n" +
-	"\ttenant_id\x18\t \x01(\tR\btenantId\"\xdf\x01\n" +
+	"\ttenant_id\x18\t \x01(\tR\btenantId:\x83\x01\x92\xb2\x19\x7f\n" +
+	"/udb.core.authn.events.v1.UserStatusChangedEvent\x12 udb.authn.user.status.changed.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xe0\x02\n" +
 	"\x12EmailVerifiedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x14\n" +
@@ -1231,7 +1239,8 @@ const file_udb_core_authn_events_v1_authn_events_proto_rawDesc = "" +
 	"\x0ecorrelation_id\x18\x04 \x01(\tR\rcorrelationId\x12\x1b\n" +
 	"\ttenant_id\x18\x05 \x01(\tR\btenantId\x12;\n" +
 	"\voccurred_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt\"\x97\x03\n" +
+	"occurredAt:\x7f\x92\xb2\x19{\n" +
+	"+udb.core.authn.events.v1.EmailVerifiedEvent\x12 udb.authn.user.email.verified.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xad\x04\n" +
 	"\x1bPasswordResetRequestedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12'\n" +
@@ -1247,7 +1256,8 @@ const file_udb_core_authn_events_v1_authn_events_proto_rawDesc = "" +
 	"\ttenant_id\x18\t \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\n" +
-	" \x01(\tR\tprojectId\"\xb2\x02\n" +
+	" \x01(\tR\tprojectId:\x93\x01\x92\xb2\x19\x8e\x01\n" +
+	"4udb.core.authn.events.v1.PasswordResetRequestedEvent\x12*udb.authn.user.password.reset.requested.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xd5\x03\n" +
 	"\"PasswordResetByEmailRequestedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
@@ -1258,7 +1268,8 @@ const file_udb_core_authn_events_v1_authn_events_proto_rawDesc = "" +
 	"\x0ecorrelation_id\x18\x06 \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12\x1b\n" +
-	"\ttenant_id\x18\b \x01(\tR\btenantIdB\xfb\x01\n" +
+	"\ttenant_id\x18\b \x01(\tR\btenantId:\xa0\x01\x92\xb2\x19\x9b\x01\n" +
+	";udb.core.authn.events.v1.PasswordResetByEmailRequestedEvent\x120udb.authn.user.email.password.reset.requested.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\xfb\x01\n" +
 	"\x1ccom.udb.core.authn.events.v1B\x10AuthnEventsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Events.V1\xca\x02\x18Udb\\Core\\Authn\\Events\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Events\\V1\xea\x02\x1cUdb::Core::Authn::Events::V1b\x06proto3"
 
 var (

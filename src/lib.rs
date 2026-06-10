@@ -9,13 +9,16 @@ pub mod backend;
 pub mod control;
 pub mod embedded;
 pub mod generation;
+pub mod init;
 pub mod ir;
 pub mod migration;
 pub mod parser;
 pub mod planning;
+pub mod proto_redaction;
 pub mod protocol;
 pub mod runtime;
 pub mod schema;
+pub mod tui;
 
 // D.2: hidden, feature-gated benchmarking shims over hot `pub(crate)` helpers.
 #[cfg(feature = "bench-internals")]
@@ -90,7 +93,7 @@ pub use migration::{
 pub use parser::{
     AnnotationParserMode, ParseReport, ParserConfig, ParserDiagnostic, UDB_ANNOTATION_VERSION,
     parse_ast_file, parse_ast_source, parse_directory, parse_directory_report, parse_file,
-    parse_file_report,
+    parse_file_report, parse_proto_source,
 };
 
 pub use auto_alter::{LintInput, RepairDecision, RepairKind, RepairPlan, plan_repairs};

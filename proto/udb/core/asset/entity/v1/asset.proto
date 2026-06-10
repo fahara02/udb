@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package udb.core.asset.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/common/v1/types.proto";
+import "udb/core/asset/entity/v1/enums.proto";
+
+option csharp_namespace = "udb.core.Asset.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/asset/entity/v1;assetv1";
+option java_package = "com.udb.core.asset.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Asset\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Asset\\Entity\\V1";
+
+// Asset wraps a storage File and tracks its processing lifecycle.
+message Asset {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "assets"
+    schema_name: "udb_asset"
+    migration_order: 1
+    is_table: true
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "assets_tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_assets_tenant"
+      index_type: "BTREE"
+      columns: "tenant_id"
+    }
+    indexes: {
+      index_name: "idx_assets_file"
+      index_type: "BTREE"
+      columns: "file_id"
+    }
+    cdc_topic: "udb.asset.assets.cdc"
+    required_scope: "asset:read"
+    comment: "Managed assets wrapping storage files with processing lifecycle"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "asset.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string asset_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "asset_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  // @inject_tag: gorm:"primaryKey;column:asset_id;not null"
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "UUID" not_null: true }];
+  // @inject_tag: gorm:"column:tenant_id;not null"
+
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "UUID" }];
+  // @inject_tag: gorm:"column:project_id"
+
+  string file_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "file_id" sql_type: "UUID" not_null: true comment: "The storage File this asset wraps" }];
+  // @inject_tag: gorm:"column:file_id;not null"
+
+  string name = 5 [(udb.core.common.v1.pg_column) = { column_name: "name" sql_type: "VARCHAR(512)" }];
+  // @inject_tag: gorm:"column:name"
+
+  string media_type = 6 [(udb.core.common.v1.pg_column) = { column_name: "media_type" sql_type: "VARCHAR(40)" }];
+  // @inject_tag: gorm:"column:media_type"
+
+  AssetStatus status = 7 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'PENDING'" index: { index_name: "idx_assets_status" index_type: "BTREE" } }];
+  // @inject_tag: gorm:"column:status;not null;serializer:proto_enum"
+
+  string metadata = 8 [(udb.core.common.v1.pg_column) = { column_name: "metadata" sql_type: "JSONB" is_json: true comment: "Arbitrary asset metadata" }];
+  // @inject_tag: gorm:"column:metadata"
+
+  udb.core.common.v1.AuditInfo audit_info = 9 [(udb.core.common.v1.pg_column) = { column_name: "audit_info" sql_type: "JSONB" not_null: true default_value: "'{}'::jsonb" is_json: true comment: "Audit trail stored as JSON" }];
+  // @inject_tag: gorm:"column:audit_info;not null"
+
+  google.protobuf.Timestamp deleted_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" comment: "Soft delete timestamp" }];
+  string deleted_by = 11 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" comment: "Soft delete actor" }];
+}

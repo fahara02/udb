@@ -43,57 +43,61 @@ public final class ExecutorPerformanceSummaryProto extends com.google.protobuf.G
       "\n?udb/core/analytics/entity/v1/executor_" +
       "performance_summary.proto\022\034udb.core.anal" +
       "ytics.entity.v1\032\037google/protobuf/timesta" +
-      "mp.proto\032\033udb/core/common/v1/db.proto\"\224\013" +
-      "\n\032ExecutorPerformanceSummary\022L\n\nsummary_" +
-      "id\030\001 \001(\tB-\202\267\030)\n\nsummary_id\022\004UUID\030\001(\001:\021ge" +
-      "n_random_uuid()R\tsummaryId\022\230\001\n\014summary_d" +
-      "ate\030\002 \001(\0132\032.google.protobuf.TimestampBY\202" +
-      "\267\030U\n\014summary_date\022\004DATE\030\001R=\n\037idx_executo" +
-      "r_perf_date_executor\022\005BTREE\030\001Z\021executor_" +
-      "identityR\013summaryDate\022T\n\021executor_identi" +
-      "ty\030\003 \001(\tB\'\202\267\030#\n\021executor_identity\022\014VARCH" +
-      "AR(120)\030\001R\020executorIdentity\022F\n\rworkload_" +
-      "kind\030\004 \001(\tB!\202\267\030\035\n\rworkload_kind\022\014VARCHAR" +
-      "(120)R\014workloadKind\022N\n\020total_dispatches\030" +
-      "\005 \001(\003B#\202\267\030\037\n\020total_dispatches\022\006BIGINT\030\001:" +
-      "\0010R\017totalDispatches\022T\n\022successful_result" +
-      "s\030\006 \001(\003B%\202\267\030!\n\022successful_results\022\006BIGIN" +
-      "T\030\001:\0010R\021successfulResults\022E\n\rtimeout_cou" +
-      "nt\030\007 \001(\003B \202\267\030\034\n\rtimeout_count\022\006BIGINT\030\001:" +
-      "\0010R\014timeoutCount\022?\n\013error_count\030\010 \001(\003B\036\202" +
-      "\267\030\032\n\013error_count\022\006BIGINT\030\001:\0010R\nerrorCoun" +
-      "t\022R\n\020avg_execution_ms\030\t \001(\001B(\202\267\030$\n\020avg_e" +
-      "xecution_ms\022\020DOUBLE PRECISIONR\016avgExecut" +
-      "ionMs\022R\n\020p99_execution_ms\030\n \001(\001B(\202\267\030$\n\020p" +
-      "99_execution_ms\022\020DOUBLE PRECISIONR\016p99Ex" +
-      "ecutionMs\022M\n\016avg_confidence\030\013 \001(\001B&\202\267\030\"\n" +
-      "\016avg_confidence\022\020DOUBLE PRECISIONR\ravgCo" +
-      "nfidence\022G\n\014success_rate\030\014 \001(\001B$\202\267\030 \n\014su" +
-      "ccess_rate\022\020DOUBLE PRECISIONR\013successRat" +
-      "e\022j\n\030avg_capacity_utilisation\030\r \001(\001B0\202\267\030" +
-      ",\n\030avg_capacity_utilisation\022\020DOUBLE PREC" +
-      "ISIONR\026avgCapacityUtilisation\022t\n\013recorde" +
-      "d_at\030\016 \001(\0132\032.google.protobuf.TimestampB7" +
-      "\202\267\0303\n\013recorded_at\022\013TIMESTAMPTZ\030\001:\021CURREN" +
-      "T_TIMESTAMP`\001h\001R\nrecordedAt:\236\001\372\266\030\231\001\n\036exe" +
-      "cutor_performance_summaries\022\rudb_analyti" +
-      "cs\030\002 \001*GDaily executor performance roll-" +
-      "up for project-defined processing unitsH" +
-      "\003R\014summary_dateX\355\002\352\001\007replicaB\242\002\n com.udb" +
-      ".core.analytics.entity.v1B\037ExecutorPerfo" +
-      "rmanceSummaryProtoP\001ZHgithub.com/fahara0" +
-      "2/udb/sdk/go/gen/udb/core/analytics/enti" +
-      "ty/v1;entityv1\242\002\004UCAE\252\002\034udb.core.Analyti" +
-      "cs.Entity.V1\312\002\034Udb\\Core\\Analytics\\Entity" +
-      "\\V1\342\002(Udb\\GPBMetadata\\Core\\Analytics\\Ent" +
-      "ity\\V1\352\002 Udb::Core::Analytics::Entity::V" +
-      "1b\006proto3"
+      "mp.proto\032\033udb/core/common/v1/db.proto\032!u" +
+      "db/core/common/v1/security.proto\"\362\013\n\032Exe" +
+      "cutorPerformanceSummary\022L\n\nsummary_id\030\001 " +
+      "\001(\tB-\202\267\030)\n\nsummary_id\022\004UUID\030\001(\001:\021gen_ran" +
+      "dom_uuid()R\tsummaryId\022\230\001\n\014summary_date\030\002" +
+      " \001(\0132\032.google.protobuf.TimestampBY\202\267\030U\n\014" +
+      "summary_date\022\004DATE\030\001R=\n\037idx_executor_per" +
+      "f_date_executor\022\005BTREE\030\001Z\021executor_ident" +
+      "ityR\013summaryDate\022T\n\021executor_identity\030\003 " +
+      "\001(\tB\'\202\267\030#\n\021executor_identity\022\014VARCHAR(12" +
+      "0)\030\001R\020executorIdentity\022F\n\rworkload_kind\030" +
+      "\004 \001(\tB!\202\267\030\035\n\rworkload_kind\022\014VARCHAR(120)" +
+      "R\014workloadKind\022N\n\020total_dispatches\030\005 \001(\003" +
+      "B#\202\267\030\037\n\020total_dispatches\022\006BIGINT\030\001:\0010R\017t" +
+      "otalDispatches\022T\n\022successful_results\030\006 \001" +
+      "(\003B%\202\267\030!\n\022successful_results\022\006BIGINT\030\001:\001" +
+      "0R\021successfulResults\022E\n\rtimeout_count\030\007 " +
+      "\001(\003B \202\267\030\034\n\rtimeout_count\022\006BIGINT\030\001:\0010R\014t" +
+      "imeoutCount\022?\n\013error_count\030\010 \001(\003B\036\202\267\030\032\n\013" +
+      "error_count\022\006BIGINT\030\001:\0010R\nerrorCount\022R\n\020" +
+      "avg_execution_ms\030\t \001(\001B(\202\267\030$\n\020avg_execut" +
+      "ion_ms\022\020DOUBLE PRECISIONR\016avgExecutionMs" +
+      "\022R\n\020p99_execution_ms\030\n \001(\001B(\202\267\030$\n\020p99_ex" +
+      "ecution_ms\022\020DOUBLE PRECISIONR\016p99Executi" +
+      "onMs\022M\n\016avg_confidence\030\013 \001(\001B&\202\267\030\"\n\016avg_" +
+      "confidence\022\020DOUBLE PRECISIONR\ravgConfide" +
+      "nce\022G\n\014success_rate\030\014 \001(\001B$\202\267\030 \n\014success" +
+      "_rate\022\020DOUBLE PRECISIONR\013successRate\022j\n\030" +
+      "avg_capacity_utilisation\030\r \001(\001B0\202\267\030,\n\030av" +
+      "g_capacity_utilisation\022\020DOUBLE PRECISION" +
+      "R\026avgCapacityUtilisation\022t\n\013recorded_at\030" +
+      "\016 \001(\0132\032.google.protobuf.TimestampB7\202\267\0303\n" +
+      "\013recorded_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIM" +
+      "ESTAMP`\001h\001R\nrecordedAt:\374\001\372\266\030\231\001\n\036executor" +
+      "_performance_summaries\022\rudb_analytics\030\002 " +
+      "\001*GDaily executor performance roll-up fo" +
+      "r project-defined processing unitsH\003R\014su" +
+      "mmary_dateX\355\002\352\001\007replica\212\262\031Z\n\006global2\013sof" +
+      "t_delete:\025analytics.operational@\373\023H\002R\006te" +
+      "nantZ\010standardr\025tenant.data_residencyB\242\002" +
+      "\n com.udb.core.analytics.entity.v1B\037Exec" +
+      "utorPerformanceSummaryProtoP\001ZHgithub.co" +
+      "m/fahara02/udb/sdk/go/gen/udb/core/analy" +
+      "tics/entity/v1;entityv1\242\002\004UCAE\252\002\034udb.cor" +
+      "e.Analytics.Entity.V1\312\002\034Udb\\Core\\Analyti" +
+      "cs\\Entity\\V1\342\002(Udb\\GPBMetadata\\Core\\Anal" +
+      "ytics\\Entity\\V1\352\002 Udb::Core::Analytics::" +
+      "Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.TimestampProto.getDescriptor(),
           com.udb.core.common.v1.DbProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_analytics_entity_v1_ExecutorPerformanceSummary_descriptor =
       getDescriptor().getMessageType(0);
@@ -104,8 +108,10 @@ public final class ExecutorPerformanceSummaryProto extends com.google.protobuf.G
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);
     registry.add(com.udb.core.common.v1.DbProto.pgTable);
     com.google.protobuf.Descriptors.FileDescriptor

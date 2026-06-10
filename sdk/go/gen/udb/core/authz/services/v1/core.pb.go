@@ -3927,7 +3927,7 @@ var File_udb_core_authz_services_v1_core_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"\n" +
-	"%udb/core/authz/services/v1/core.proto\x12\x1audb.core.authz.services.v1\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a4udb/core/authz/entity/v1/access_decision_audit.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a*udb/core/authz/entity/v1/policy_rule.proto\x1a#udb/core/authz/entity/v1/role.proto\x1a(udb/core/authz/entity/v1/user_role.proto\x1a\x1cudb/core/common/v1/dto.proto\"\xb1\x04\n" +
+	"%udb/core/authz/services/v1/core.proto\x12\x1audb.core.authz.services.v1\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a4udb/core/authz/entity/v1/access_decision_audit.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a*udb/core/authz/entity/v1/policy_rule.proto\x1a#udb/core/authz/entity/v1/role.proto\x1a(udb/core/authz/entity/v1/user_role.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\"\xcf\x04\n" +
 	"\tPrincipal\x12!\n" +
 	"\fprincipal_id\x18\x01 \x01(\tR\vprincipalId\x12\x18\n" +
 	"\asubject\x18\x02 \x01(\tR\asubject\x12\x17\n" +
@@ -3951,7 +3951,7 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"attributes\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xcb\x04\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xe9\x04\n" +
 	"\vResourceRef\x12#\n" +
 	"\rresource_type\x18\x01 \x01(\tR\fresourceType\x12#\n" +
 	"\rresource_name\x18\x02 \x01(\tR\fresourceName\x12!\n" +
@@ -3978,7 +3978,7 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"attributes\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x82\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xa0\x03\n" +
 	"\bDecision\x12\x1f\n" +
 	"\vdecision_id\x18\x01 \x01(\tR\n" +
 	"decisionId\x12\x18\n" +
@@ -3992,7 +3992,7 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"\x14relationship_version\x18\b \x01(\tR\x13relationshipVersion\x12*\n" +
 	"\x11cache_ttl_seconds\x18\t \x01(\x04R\x0fcacheTtlSeconds\x12%\n" +
 	"\x0eaudit_required\x18\n" +
-	" \x01(\bR\rauditRequired\"\xbe\x02\n" +
+	" \x01(\bR\rauditRequired:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xdc\x02\n" +
 	"\rAccessContext\x12\x1d\n" +
 	"\n" +
 	"ip_address\x18\x01 \x01(\tR\tipAddress\x12\x1d\n" +
@@ -4007,7 +4007,7 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"attributes\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xeb\x04\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\x89\x05\n" +
 	"\x12CheckAccessRequest\x12\x1c\n" +
 	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06userId\x12\x1b\n" +
 	"\x06domain\x18\x02 \x01(\tB\x03\xe0A\x02R\x06domain\x12\x1b\n" +
@@ -4026,13 +4026,13 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"attributes\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xec\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\x8a\x02\n" +
 	"\x13CheckAccessResponse\x12\x18\n" +
 	"\aallowed\x18\x01 \x01(\bR\aallowed\x12>\n" +
 	"\x06effect\x18\x02 \x01(\x0e2&.udb.core.authz.entity.v1.PolicyEffectR\x06effect\x12!\n" +
 	"\fmatched_rule\x18\x03 \x01(\tR\vmatchedRule\x12\x16\n" +
 	"\x06reason\x18\x04 \x01(\tR\x06reason\x12@\n" +
-	"\bdecision\x18\x05 \x01(\v2$.udb.core.authz.services.v1.DecisionR\bdecision\"\xc6\x04\n" +
+	"\bdecision\x18\x05 \x01(\v2$.udb.core.authz.services.v1.DecisionR\bdecision:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xe4\x04\n" +
 	"\fAuthzRequest\x12C\n" +
 	"\tprincipal\x18\x01 \x01(\v2%.udb.core.authz.services.v1.PrincipalR\tprincipal\x12\x1d\n" +
 	"\n" +
@@ -4052,9 +4052,9 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"\x06domain\x18\v \x01(\tR\x06domain\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"Q\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"o\n" +
 	"\rAuthzResponse\x12@\n" +
-	"\bdecision\x18\x01 \x01(\v2$.udb.core.authz.services.v1.DecisionR\bdecision\"\x8b\x04\n" +
+	"\bdecision\x18\x01 \x01(\v2$.udb.core.authz.services.v1.DecisionR\bdecision:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xa9\x04\n" +
 	"\x11CreateRoleRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tB\x03\xe0A\x01R\vdescription\x12\"\n" +
@@ -4072,9 +4072,9 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	" \x03(\v2;.udb.core.authz.services.v1.CreateRoleRequest.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"H\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"f\n" +
 	"\x12CreateRoleResponse\x122\n" +
-	"\x04role\x18\x01 \x01(\v2\x1e.udb.core.authz.entity.v1.RoleR\x04role\"\x95\x03\n" +
+	"\x04role\x18\x01 \x01(\v2\x1e.udb.core.authz.entity.v1.RoleR\x04role:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xb3\x03\n" +
 	"\x11AssignRoleRequest\x12\x1c\n" +
 	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06userId\x12\x1c\n" +
 	"\arole_id\x18\x02 \x01(\tB\x03\xe0A\x02R\x06roleId\x12\x1b\n" +
@@ -4087,9 +4087,9 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"\x0eprincipal_kind\x18\a \x01(\x0e2'.udb.core.authz.entity.v1.PrincipalKindB\x03\xe0A\x01R\rprincipalKind\x12 \n" +
 	"\ttenant_id\x18\b \x01(\tB\x03\xe0A\x01R\btenantId\x12\"\n" +
 	"\n" +
-	"project_id\x18\t \x01(\tB\x03\xe0A\x01R\tprojectId\"U\n" +
+	"project_id\x18\t \x01(\tB\x03\xe0A\x01R\tprojectId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"s\n" +
 	"\x12AssignRoleResponse\x12?\n" +
-	"\tuser_role\x18\x01 \x01(\v2\".udb.core.authz.entity.v1.UserRoleR\buserRole\"\xd6\x04\n" +
+	"\tuser_role\x18\x01 \x01(\v2\".udb.core.authz.entity.v1.UserRoleR\buserRole:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xf4\x04\n" +
 	"\x17CreatePolicyRuleRequest\x12\x1d\n" +
 	"\asubject\x18\x01 \x01(\tB\x03\xe0A\x02R\asubject\x12\x1b\n" +
 	"\x06domain\x18\x02 \x01(\tB\x03\xe0A\x02R\x06domain\x12\x1b\n" +
@@ -4110,119 +4110,119 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"attributes\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"X\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"v\n" +
 	"\x18CreatePolicyRuleResponse\x12<\n" +
-	"\x06policy\x18\x01 \x01(\v2$.udb.core.authz.entity.v1.PolicyRuleR\x06policy\"W\n" +
+	"\x06policy\x18\x01 \x01(\v2$.udb.core.authz.entity.v1.PolicyRuleR\x06policy:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"u\n" +
 	"\x1aListUserPermissionsRequest\x12\x1c\n" +
 	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06userId\x12\x1b\n" +
-	"\x06domain\x18\x02 \x01(\tB\x03\xe0A\x02R\x06domain\"\x9d\x01\n" +
+	"\x06domain\x18\x02 \x01(\tB\x03\xe0A\x02R\x06domain:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xbb\x01\n" +
 	"\x13EffectivePermission\x12\x16\n" +
 	"\x06object\x18\x01 \x01(\tR\x06object\x12\x16\n" +
 	"\x06action\x18\x02 \x01(\tR\x06action\x12\x19\n" +
 	"\bvia_role\x18\x03 \x01(\tR\aviaRole\x12#\n" +
 	"\rresource_type\x18\x04 \x01(\tR\fresourceType\x12\x16\n" +
-	"\x06domain\x18\x05 \x01(\tR\x06domain\"p\n" +
+	"\x06domain\x18\x05 \x01(\tR\x06domain:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\x8e\x01\n" +
 	"\x1bListUserPermissionsResponse\x12Q\n" +
-	"\vpermissions\x18\x01 \x03(\v2/.udb.core.authz.services.v1.EffectivePermissionR\vpermissions\"\xc2\x01\n" +
+	"\vpermissions\x18\x01 \x03(\v2/.udb.core.authz.services.v1.EffectivePermissionR\vpermissions:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xe0\x01\n" +
 	"\x1fListAccessDecisionAuditsRequest\x12\x1c\n" +
 	"\auser_id\x18\x01 \x01(\tB\x03\xe0A\x01R\x06userId\x12\x1b\n" +
 	"\x06domain\x18\x02 \x01(\tB\x03\xe0A\x01R\x06domain\x12*\n" +
 	"\x0ecorrelation_id\x18\x03 \x01(\tB\x03\xe0A\x01R\rcorrelationId\x128\n" +
-	"\x04page\x18\x04 \x01(\v2\x1f.udb.core.common.v1.PageRequestB\x03\xe0A\x01R\x04page\"\x9f\x01\n" +
+	"\x04page\x18\x04 \x01(\v2\x1f.udb.core.common.v1.PageRequestB\x03\xe0A\x01R\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xbd\x01\n" +
 	" ListAccessDecisionAuditsResponse\x12E\n" +
 	"\x06audits\x18\x01 \x03(\v2-.udb.core.authz.entity.v1.AccessDecisionAuditR\x06audits\x124\n" +
-	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page\"\x85\x01\n" +
+	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xa3\x01\n" +
 	"\x11RevokeRoleRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12 \n" +
 	"\fuser_role_id\x18\x02 \x01(\tR\n" +
 	"userRoleId\x12\x16\n" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\x12\x1d\n" +
 	"\n" +
-	"revoked_by\x18\x04 \x01(\tR\trevokedBy\".\n" +
+	"revoked_by\x18\x04 \x01(\tR\trevokedBy:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"L\n" +
 	"\x12RevokeRoleResponse\x12\x18\n" +
-	"\arevoked\x18\x01 \x01(\bR\arevoked\"h\n" +
+	"\arevoked\x18\x01 \x01(\bR\arevoked:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\x86\x01\n" +
 	"\x14ListUserRolesRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x16\n" +
 	"\x06domain\x18\x02 \x01(\tR\x06domain\x12\x1f\n" +
 	"\vactive_only\x18\x03 \x01(\bR\n" +
-	"activeOnly\"Z\n" +
+	"activeOnly:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"x\n" +
 	"\x15ListUserRolesResponse\x12A\n" +
 	"\n" +
-	"user_roles\x18\x01 \x03(\v2\".udb.core.authz.entity.v1.UserRoleR\tuserRoles\"^\n" +
+	"user_roles\x18\x01 \x03(\v2\".udb.core.authz.entity.v1.UserRoleR\tuserRoles:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"|\n" +
 	"\x0eGetRoleRequest\x12\x17\n" +
 	"\arole_id\x18\x01 \x01(\tR\x06roleId\x12\x1b\n" +
 	"\trole_code\x18\x02 \x01(\tR\broleCode\x12\x16\n" +
-	"\x06domain\x18\x03 \x01(\tR\x06domain\"E\n" +
+	"\x06domain\x18\x03 \x01(\tR\x06domain:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"c\n" +
 	"\x0fGetRoleResponse\x122\n" +
-	"\x04role\x18\x01 \x01(\v2\x1e.udb.core.authz.entity.v1.RoleR\x04role\"\x80\x01\n" +
+	"\x04role\x18\x01 \x01(\v2\x1e.udb.core.authz.entity.v1.RoleR\x04role:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\x9e\x01\n" +
 	"\x10ListRolesRequest\x12\x16\n" +
 	"\x06domain\x18\x01 \x01(\tR\x06domain\x12\x1f\n" +
 	"\vactive_only\x18\x02 \x01(\bR\n" +
 	"activeOnly\x123\n" +
-	"\x04page\x18\x03 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page\"\x7f\n" +
+	"\x04page\x18\x03 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\x9d\x01\n" +
 	"\x11ListRolesResponse\x124\n" +
 	"\x05roles\x18\x01 \x03(\v2\x1e.udb.core.authz.entity.v1.RoleR\x05roles\x124\n" +
-	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page\"A\n" +
+	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"_\n" +
 	"\x0fPermissionCheck\x12\x16\n" +
 	"\x06object\x18\x01 \x01(\tR\x06object\x12\x16\n" +
-	"\x06action\x18\x02 \x01(\tR\x06action\"\xd9\x01\n" +
+	"\x06action\x18\x02 \x01(\tR\x06action:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xf7\x01\n" +
 	"\x1cBatchCheckPermissionsRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x16\n" +
 	"\x06domain\x18\x02 \x01(\tR\x06domain\x12C\n" +
 	"\x06checks\x18\x03 \x03(\v2+.udb.core.authz.services.v1.PermissionCheckR\x06checks\x12C\n" +
-	"\acontext\x18\x04 \x01(\v2).udb.core.authz.services.v1.AccessContextR\acontext\"\xbd\x01\n" +
+	"\acontext\x18\x04 \x01(\v2).udb.core.authz.services.v1.AccessContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xdb\x01\n" +
 	"\x1dBatchCheckPermissionsResponse\x12`\n" +
 	"\aresults\x18\x01 \x03(\v2F.udb.core.authz.services.v1.BatchCheckPermissionsResponse.ResultsEntryR\aresults\x1a:\n" +
 	"\fResultsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"\xca\x01\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xe8\x01\n" +
 	"\x11UpdateRoleRequest\x12\x1c\n" +
 	"\arole_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06roleId\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tB\x03\xe0A\x01R\x04name\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tB\x03\xe0A\x01R\vdescription\x12%\n" +
 	"\tis_active\x18\x04 \x01(\bB\x03\xe0A\x01H\x00R\bisActive\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"updated_by\x18\x05 \x01(\tB\x03\xe0A\x02R\tupdatedByB\f\n" +
+	"updated_by\x18\x05 \x01(\tB\x03\xe0A\x02R\tupdatedBy:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01B\f\n" +
 	"\n" +
-	"_is_active\"H\n" +
+	"_is_active\"f\n" +
 	"\x12UpdateRoleResponse\x122\n" +
-	"\x04role\x18\x01 \x01(\v2\x1e.udb.core.authz.entity.v1.RoleR\x04role\"U\n" +
+	"\x04role\x18\x01 \x01(\v2\x1e.udb.core.authz.entity.v1.RoleR\x04role:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"s\n" +
 	"\x11DeleteRoleRequest\x12\x1c\n" +
 	"\arole_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06roleId\x12\"\n" +
 	"\n" +
-	"deleted_by\x18\x02 \x01(\tB\x03\xe0A\x02R\tdeletedBy\".\n" +
+	"deleted_by\x18\x02 \x01(\tB\x03\xe0A\x02R\tdeletedBy:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"L\n" +
 	"\x12DeleteRoleResponse\x12\x18\n" +
-	"\adeleted\x18\x01 \x01(\bR\adeleted\"3\n" +
+	"\adeleted\x18\x01 \x01(\bR\adeleted:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"Q\n" +
 	"\x14GetPolicyRuleRequest\x12\x1b\n" +
-	"\tpolicy_id\x18\x01 \x01(\tR\bpolicyId\"U\n" +
+	"\tpolicy_id\x18\x01 \x01(\tR\bpolicyId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"s\n" +
 	"\x15GetPolicyRuleResponse\x12<\n" +
-	"\x06policy\x18\x01 \x01(\v2$.udb.core.authz.entity.v1.PolicyRuleR\x06policy\"\xb8\x01\n" +
+	"\x06policy\x18\x01 \x01(\v2$.udb.core.authz.entity.v1.PolicyRuleR\x06policy:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xd6\x01\n" +
 	"\x16ListPolicyRulesRequest\x12\x16\n" +
 	"\x06domain\x18\x01 \x01(\tR\x06domain\x12\x18\n" +
 	"\asubject\x18\x02 \x01(\tR\asubject\x12\x16\n" +
 	"\x06object\x18\x03 \x01(\tR\x06object\x12\x1f\n" +
 	"\vactive_only\x18\x04 \x01(\bR\n" +
 	"activeOnly\x123\n" +
-	"\x04page\x18\x05 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page\"\x91\x01\n" +
+	"\x04page\x18\x05 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xaf\x01\n" +
 	"\x17ListPolicyRulesResponse\x12@\n" +
 	"\bpolicies\x18\x01 \x03(\v2$.udb.core.authz.entity.v1.PolicyRuleR\bpolicies\x124\n" +
-	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page\"U\n" +
+	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"s\n" +
 	"\x17DeletePolicyRuleRequest\x12\x1b\n" +
 	"\tpolicy_id\x18\x01 \x01(\tR\bpolicyId\x12\x1d\n" +
 	"\n" +
-	"deleted_by\x18\x02 \x01(\tR\tdeletedBy\"4\n" +
+	"deleted_by\x18\x02 \x01(\tR\tdeletedBy:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"R\n" +
 	"\x18DeletePolicyRuleResponse\x12\x18\n" +
-	"\adeleted\x18\x01 \x01(\bR\adeleted\"@\n" +
+	"\adeleted\x18\x01 \x01(\bR\adeleted:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"^\n" +
 	"\x14AuthMutationResponse\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\xad\x01\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xcb\x01\n" +
 	"\vRoleBinding\x12\x18\n" +
 	"\asubject\x18\x01 \x01(\tR\asubject\x12\x12\n" +
 	"\x04role\x18\x02 \x01(\tR\x04role\x12\x16\n" +
 	"\x06tenant\x18\x03 \x01(\tR\x06tenant\x12\x18\n" +
 	"\aproject\x18\x04 \x01(\tR\aproject\x12&\n" +
 	"\x0fexpires_at_unix\x18\x05 \x01(\x03R\rexpiresAtUnix\x12\x16\n" +
-	"\x06source\x18\x06 \x01(\tR\x06source\"\xed\x01\n" +
+	"\x06source\x18\x06 \x01(\tR\x06source:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\x8b\x02\n" +
 	"\x11RelationshipTuple\x12\x18\n" +
 	"\asubject\x18\x01 \x01(\tR\asubject\x12\x1a\n" +
 	"\brelation\x18\x02 \x01(\tR\brelation\x12\x16\n" +
@@ -4231,7 +4231,7 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"\aproject\x18\x05 \x01(\tR\aproject\x12\x18\n" +
 	"\aversion\x18\x06 \x01(\x03R\aversion\x12&\n" +
 	"\x0fexpires_at_unix\x18\a \x01(\x03R\rexpiresAtUnix\x12\x16\n" +
-	"\x06source\x18\b \x01(\tR\x06source\"\x8a\x04\n" +
+	"\x06source\x18\b \x01(\tR\x06source:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xa8\x04\n" +
 	"\x11AuthzPolicyRecord\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bpriority\x18\x02 \x01(\x05R\bpriority\x12\x18\n" +
@@ -4252,16 +4252,16 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"\x0frequired_scopes\x18\x0e \x03(\tR\x0erequiredScopes\x1a=\n" +
 	"\x0fConditionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"Z\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"x\n" +
 	"\x15PutRoleBindingRequest\x12A\n" +
-	"\abinding\x18\x01 \x01(\v2'.udb.core.authz.services.v1.RoleBindingR\abinding\"]\n" +
+	"\abinding\x18\x01 \x01(\v2'.udb.core.authz.services.v1.RoleBindingR\abinding:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"{\n" +
 	"\x16PutRelationshipRequest\x12C\n" +
-	"\x05tuple\x18\x01 \x01(\v2-.udb.core.authz.services.v1.RelationshipTupleR\x05tuple\"^\n" +
+	"\x05tuple\x18\x01 \x01(\v2-.udb.core.authz.services.v1.RelationshipTupleR\x05tuple:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"|\n" +
 	"\x15PutAuthzPolicyRequest\x12E\n" +
-	"\x06policy\x18\x01 \x01(\v2-.udb.core.authz.services.v1.AuthzPolicyRecordR\x06policy\"\x1a\n" +
-	"\x18LintAuthzPoliciesRequest\"7\n" +
+	"\x06policy\x18\x01 \x01(\v2-.udb.core.authz.services.v1.AuthzPolicyRecordR\x06policy:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"8\n" +
+	"\x18LintAuthzPoliciesRequest:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"U\n" +
 	"\x19LintAuthzPoliciesResponse\x12\x1a\n" +
-	"\bfindings\x18\x01 \x03(\tR\bfindings\"\xd6\x04\n" +
+	"\bfindings\x18\x01 \x03(\tR\bfindings:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xf4\x04\n" +
 	"\x13NativeAccessRequest\x12C\n" +
 	"\tprincipal\x18\x01 \x01(\v2%.udb.core.authz.services.v1.PrincipalR\tprincipal\x12\x1d\n" +
 	"\n" +
@@ -4281,7 +4281,7 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"attributes\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x87\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xa5\x03\n" +
 	"\x11NativeAccessGrant\x12\x10\n" +
 	"\x03dsn\x18\x01 \x01(\tR\x03dsn\x12\x12\n" +
 	"\x04role\x18\x02 \x01(\tR\x04role\x12\x18\n" +
@@ -4294,15 +4294,15 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"ttlSeconds\x1aC\n" +
 	"\x15SessionVariablesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9d\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xbb\x01\n" +
 	"\x14NativeAccessResponse\x12@\n" +
 	"\bdecision\x18\x01 \x01(\v2$.udb.core.authz.services.v1.DecisionR\bdecision\x12C\n" +
-	"\x05grant\x18\x02 \x01(\v2-.udb.core.authz.services.v1.NativeAccessGrantR\x05grant\"i\n" +
+	"\x05grant\x18\x02 \x01(\v2-.udb.core.authz.services.v1.NativeAccessGrantR\x05grant:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\x87\x01\n" +
 	"\x13PolicyBundleRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x02 \x01(\tR\tprojectId\x12\x16\n" +
-	"\x06domain\x18\x03 \x01(\tR\x06domain\"\xc8\x02\n" +
+	"\x06domain\x18\x03 \x01(\tR\x06domain:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xe6\x02\n" +
 	"\x12SignedPolicyBundle\x12\x16\n" +
 	"\x06bundle\x18\x01 \x01(\fR\x06bundle\x12\x1c\n" +
 	"\tsignature\x18\x02 \x01(\tR\tsignature\x12\x15\n" +
@@ -4313,9 +4313,9 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"\x0eissued_at_unix\x18\a \x01(\x03R\fissuedAtUnix\x12&\n" +
 	"\x0fexpires_at_unix\x18\b \x01(\x03R\rexpiresAtUnix\x12\x1f\n" +
 	"\vttl_seconds\x18\t \x01(\x04R\n" +
-	"ttlSeconds\"^\n" +
+	"ttlSeconds:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"|\n" +
 	"\x14PolicyBundleResponse\x12F\n" +
-	"\x06bundle\x18\x01 \x01(\v2..udb.core.authz.services.v1.SignedPolicyBundleR\x06bundleB\x82\x02\n" +
+	"\x06bundle\x18\x01 \x01(\v2..udb.core.authz.services.v1.SignedPolicyBundleR\x06bundle:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01B\x82\x02\n" +
 	"\x1ecom.udb.core.authz.services.v1B\tCoreProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1audb.core.Authz.Services.V1\xca\x02\x1aUdb\\Core\\Authz\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Authz\\Services\\V1\xea\x02\x1eUdb::Core::Authz::Services::V1b\x06proto3"
 
 var (

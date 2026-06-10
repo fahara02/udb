@@ -76,11 +76,26 @@ fn four_usize() -> usize {
 }
 
 fn bool_env(key: &str) -> Option<bool> {
+    std::env::var(key)
+        .ok()
+        .map(|value| parse_bool_env_value(&value))
+}
+
+fn parse_bool_env_value(value: &str) -> bool {
+    !matches!(
+        value.trim().to_ascii_lowercase().as_str(),
+        "0" | "false" | "no" | "off"
+    )
+}
+
+fn csv_env(key: &str) -> Option<Vec<String>> {
     std::env::var(key).ok().map(|value| {
-        !matches!(
-            value.to_ascii_lowercase().as_str(),
-            "0" | "false" | "no" | "off"
-        )
+        value
+            .split(',')
+            .map(str::trim)
+            .filter(|part| !part.is_empty())
+            .map(ToString::to_string)
+            .collect()
     })
 }
 
@@ -242,6 +257,15 @@ impl Default for TlsSettings {
 }
 
 impl TlsSettings {
+    pub fn has_server_identity(&self) -> bool {
+        (has_non_empty(&self.cert_pem) || has_non_empty(&self.cert_path))
+            && (has_non_empty(&self.key_pem) || has_non_empty(&self.key_path))
+    }
+
+    pub fn has_client_ca(&self) -> bool {
+        has_non_empty(&self.client_ca_pem) || has_non_empty(&self.client_ca_path)
+    }
+
     pub fn merge_env(&mut self) {
         if let Ok(value) = std::env::var("UDB_TLS_CERT_PEM") {
             self.cert_pem = Some(value);
@@ -279,6 +303,10 @@ pub struct ServiceSettings {
     pub rate_limit_enabled: bool,
     pub rate_limit_window_secs: u64,
     pub rate_limit_max_per_window: u32,
+    pub require_secure_transport: bool,
+    pub mtls_required: bool,
+    pub broker_to_broker_mtls_required: bool,
+    pub internal_control_mtls_required: bool,
     pub tls: TlsSettings,
 }
 
@@ -297,13 +325,38 @@ impl Default for ServiceSettings {
             rate_limit_enabled: true,
             rate_limit_window_secs: 60,
             rate_limit_max_per_window: 1000,
+            require_secure_transport: false,
+            mtls_required: false,
+            broker_to_broker_mtls_required: false,
+            internal_control_mtls_required: false,
             tls: TlsSettings::default(),
         }
     }
 }
 
 impl ServiceSettings {
+    fn apply_security_posture(&mut self, production_env: bool) {
+        if production_env {
+            self.require_secure_transport = true;
+            self.mtls_required = true;
+            self.broker_to_broker_mtls_required = true;
+            self.internal_control_mtls_required = true;
+        }
+        if self.mtls_required {
+            self.broker_to_broker_mtls_required = true;
+            self.internal_control_mtls_required = true;
+        }
+    }
+
     pub fn merge_env(&mut self) {
+        let production_env = std::env::var("UDB_ENV")
+            .map(|value| {
+                matches!(
+                    value.trim().to_ascii_lowercase().as_str(),
+                    "production" | "prod"
+                )
+            })
+            .unwrap_or(false);
         if let Ok(value) = std::env::var("UDB_METRICS_ADDR")
             && !value.trim().is_empty()
         {
@@ -348,8 +401,34 @@ impl ServiceSettings {
         if let Some(value) = env_u32("UDB_RATE_LIMIT_MAX_PER_WINDOW") {
             self.rate_limit_max_per_window = value;
         }
+        if let Some(value) =
+            bool_env("UDB_REQUIRE_SECURE_TRANSPORT").or_else(|| bool_env("UDB_TLS_REQUIRED"))
+        {
+            self.require_secure_transport = value;
+        }
+        if let Some(value) = bool_env("UDB_MTLS_REQUIRED") {
+            self.mtls_required = value;
+        }
+        if let Some(value) = bool_env("UDB_BROKER_MTLS_REQUIRED")
+            .or_else(|| bool_env("UDB_BROKER_TO_BROKER_MTLS_REQUIRED"))
+        {
+            self.broker_to_broker_mtls_required = value;
+        }
+        if let Some(value) = bool_env("UDB_INTERNAL_CONTROL_MTLS_REQUIRED")
+            .or_else(|| bool_env("UDB_WORKER_CONTROL_MTLS_REQUIRED"))
+        {
+            self.internal_control_mtls_required = value;
+        }
         self.tls.merge_env();
+        self.apply_security_posture(production_env);
     }
+}
+
+fn has_non_empty(value: &Option<String>) -> bool {
+    value
+        .as_deref()
+        .map(|value| !value.trim().is_empty())
+        .unwrap_or(false)
 }
 
 fn normalize_catalog_compatibility_level(value: &str) -> String {
@@ -550,6 +629,8 @@ pub struct EncryptionSettings {
     pub vault_timeout_secs: u64,
     /// Permit plain-HTTP Vault endpoints for local development.
     pub dev_mode: bool,
+    /// Require at-rest encryption for UDB-owned object metadata/native state.
+    pub object_native_state_required: bool,
 }
 
 impl Default for EncryptionSettings {
@@ -563,6 +644,7 @@ impl Default for EncryptionSettings {
             vault_transit_mount: "transit".to_string(),
             vault_timeout_secs: 10,
             dev_mode: false,
+            object_native_state_required: false,
         }
     }
 }
@@ -603,6 +685,35 @@ impl EncryptionSettings {
         if let Some(value) = bool_env("UDB_DEV_MODE") {
             self.dev_mode = value;
         }
+        if let Some(value) = bool_env("UDB_OBJECT_NATIVE_STATE_ENCRYPTION_REQUIRED")
+            .or_else(|| bool_env("UDB_NATIVE_STATE_ENCRYPTION_REQUIRED"))
+        {
+            self.object_native_state_required = value;
+        }
+    }
+
+    pub fn has_key_source(&self) -> bool {
+        !self.keys.is_empty()
+            || (self
+                .vault_addr
+                .as_deref()
+                .map(|value| !value.trim().is_empty())
+                .unwrap_or(false)
+                && self
+                    .vault_token
+                    .as_deref()
+                    .map(|value| !value.trim().is_empty())
+                    .unwrap_or(false))
+    }
+
+    pub fn validate_required_key_source(&self) -> Result<(), String> {
+        if self.object_native_state_required && !self.has_key_source() {
+            return Err(
+                "object/native-state encryption is required but no UDB_ENCRYPTION_KEY/Vault key source is configured"
+                    .to_string(),
+            );
+        }
+        Ok(())
     }
 }
 
@@ -842,6 +953,8 @@ pub struct UdbConfig {
     pub audit_sink: AuditSinkConfig,
     /// Service/server settings such as gRPC, metrics, TLS, and degraded mode.
     pub service: ServiceSettings,
+    /// Native UDB services such as authn/authz/storage/asset/WebRTC.
+    pub native_services: NativeServicesSettings,
     /// Operation channel limits/timeouts.
     pub channels: ChannelSettings,
     /// CDC/outbox settings.
@@ -940,6 +1053,151 @@ pub struct StartupHealthGate {
     pub message: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct NativeServicesSettings {
+    pub enabled: bool,
+    pub migrate_enabled: bool,
+    pub control_plane_enabled: bool,
+    pub control_plane_addr: String,
+    pub webrtc_peer_enabled: bool,
+    pub webrtc_peer_addr: String,
+    pub default_enabled: bool,
+    pub services: BTreeMap<String, NativeServiceConfig>,
+}
+
+impl Default for NativeServicesSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            migrate_enabled: true,
+            control_plane_enabled: true,
+            control_plane_addr: String::new(),
+            webrtc_peer_enabled: true,
+            webrtc_peer_addr: String::new(),
+            default_enabled: true,
+            services: BTreeMap::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct NativeServiceConfig {
+    pub enabled: Option<bool>,
+    pub migrate: Option<bool>,
+    pub required_backends: Vec<String>,
+    pub capability_overrides: Vec<String>,
+    pub dependency_overrides: Vec<String>,
+    pub worker_config: BTreeMap<String, String>,
+}
+
+impl NativeServicesSettings {
+    pub fn merge_env(&mut self) {
+        let canonical_enabled = std::env::var("UDB_NATIVE_SERVICES_ENABLED").ok();
+        let legacy_enabled = std::env::var("UDB_NATIVE_AUTH").ok();
+        self.merge_enabled_env_values(canonical_enabled.as_deref(), legacy_enabled.as_deref());
+        if let Some(value) = bool_env("UDB_NATIVE_SERVICES_MIGRATE_ENABLED") {
+            self.migrate_enabled = value;
+        }
+        if let Some(value) = bool_env("UDB_NATIVE_CONTROL_PLANE_ENABLED") {
+            self.control_plane_enabled = value;
+        }
+        if let Ok(value) = std::env::var("UDB_AUTH_GRPC_ADDR")
+            && !value.trim().is_empty()
+        {
+            self.control_plane_addr = value.trim().to_string();
+        }
+        if let Some(value) = bool_env("UDB_NATIVE_WEBRTC_PEER_ENABLED") {
+            self.webrtc_peer_enabled = value;
+        }
+        if let Ok(value) = std::env::var("UDB_WEBRTC_GRPC_ADDR")
+            && !value.trim().is_empty()
+        {
+            self.webrtc_peer_addr = value.trim().to_string();
+        }
+        if let Some(selected) = csv_env("UDB_NATIVE_SERVICES")
+            && !selected.is_empty()
+        {
+            self.default_enabled = false;
+            for service in selected {
+                self.services.entry(service).or_default().enabled = Some(true);
+            }
+        }
+        for id in crate::runtime::service::native_registry::native_service_ids() {
+            let env_id = crate::runtime::service::native_registry::canonical_service_id(&id)
+                .to_ascii_uppercase();
+            if let Some(value) = bool_env(&format!("UDB_NATIVE_{env_id}_ENABLED")) {
+                self.services.entry(id.clone()).or_default().enabled = Some(value);
+            }
+            if let Some(value) = bool_env(&format!("UDB_NATIVE_{env_id}_MIGRATE_ENABLED")) {
+                self.services.entry(id.clone()).or_default().migrate = Some(value);
+            }
+        }
+    }
+
+    pub(crate) fn merge_enabled_env_values(
+        &mut self,
+        canonical_enabled: Option<&str>,
+        legacy_enabled: Option<&str>,
+    ) {
+        if canonical_enabled.is_some() && legacy_enabled.is_some() {
+            tracing::warn!(
+                "both UDB_NATIVE_SERVICES_ENABLED and deprecated UDB_NATIVE_AUTH are set; UDB_NATIVE_SERVICES_ENABLED wins"
+            );
+        }
+        if let Some(value) = canonical_enabled
+            .map(parse_bool_env_value)
+            .or_else(|| legacy_enabled.map(parse_bool_env_value))
+        {
+            self.enabled = value;
+        }
+    }
+
+    pub fn merge_over(self, base: Self) -> Self {
+        let mut services = base.services;
+        for (id, source) in self.services {
+            let entry = services.entry(id).or_default();
+            if source.enabled.is_some() {
+                entry.enabled = source.enabled;
+            }
+            if source.migrate.is_some() {
+                entry.migrate = source.migrate;
+            }
+            if !source.required_backends.is_empty() {
+                entry.required_backends = source.required_backends;
+            }
+            if !source.capability_overrides.is_empty() {
+                entry.capability_overrides = source.capability_overrides;
+            }
+            if !source.dependency_overrides.is_empty() {
+                entry.dependency_overrides = source.dependency_overrides;
+            }
+            if !source.worker_config.is_empty() {
+                entry.worker_config = source.worker_config;
+            }
+        }
+        Self {
+            enabled: self.enabled,
+            migrate_enabled: self.migrate_enabled,
+            control_plane_enabled: self.control_plane_enabled,
+            control_plane_addr: if self.control_plane_addr.is_empty() {
+                base.control_plane_addr
+            } else {
+                self.control_plane_addr
+            },
+            webrtc_peer_enabled: self.webrtc_peer_enabled,
+            webrtc_peer_addr: if self.webrtc_peer_addr.is_empty() {
+                base.webrtc_peer_addr
+            } else {
+                self.webrtc_peer_addr
+            },
+            default_enabled: self.default_enabled,
+            services,
+        }
+    }
+}
+
 /// B (2026-05-30): operator opt-in for live two-phase commit.
 /// When `UDB_2PC_ENABLED=true`, the gRPC handler routes
 /// `tx_strategy=two_phase` requests through PREPARE TRANSACTION +
@@ -984,6 +1242,7 @@ pub fn merge_udb_config(base: UdbConfig, source: UdbConfig) -> UdbConfig {
         migration: source.migration,
         audit_sink: source.audit_sink,
         service: source.service,
+        native_services: source.native_services.merge_over(base.native_services),
         channels: source.channels,
         cdc: source.cdc,
         security: source.security,
@@ -1205,6 +1464,14 @@ impl UdbConfig {
     /// Overlay environment variables onto this config. OS env wins over file values.
     #[allow(clippy::field_reassign_with_default)]
     pub fn merge_env(&mut self) {
+        let production_env = std::env::var("UDB_ENV")
+            .map(|value| {
+                matches!(
+                    value.trim().to_ascii_lowercase().as_str(),
+                    "production" | "prod"
+                )
+            })
+            .unwrap_or(false);
         // Deployment profile
         let profile = DeployProfile::from_env();
         self.deploy = profile.clone();
@@ -1359,10 +1626,14 @@ impl UdbConfig {
         self.migration.merge_env();
         self.audit_sink.merge_env();
         self.service.merge_env();
+        self.native_services.merge_env();
         self.channels.merge_env();
         self.cdc.merge_env();
         self.security.merge_env();
         self.encryption.merge_env();
+        if production_env {
+            self.encryption.object_native_state_required = true;
+        }
         self.saga.merge_env();
         self.circuit_breaker.merge_env();
         if let Ok(v) = std::env::var("UDB_PROJECT_ROUTING_MODE")
@@ -1490,6 +1761,9 @@ pub fn validate_udb_config(
 
     errors.extend(config.backend_instances.validate());
     errors.extend(config.audit_sink.validate());
+    if let Err(err) = config.encryption.validate_required_key_source() {
+        errors.push(err);
+    }
 
     health_gates.push(health_gate(
         "sql",
@@ -1502,6 +1776,38 @@ pub fn validate_udb_config(
     health_gates.push(health_gate("cache", "redis", false, config.has_redis()));
     health_gates.push(health_gate("vector", "qdrant", false, config.has_qdrant()));
     health_gates.push(health_gate("object", "minio", false, config.has_minio()));
+    for status in crate::runtime::service::native_registry::resolved_native_service_statuses(config)
+        .into_iter()
+        .filter(|status| status.enabled && !status.required_backends.is_empty())
+    {
+        for backend in &status.required_backends {
+            health_gates.push(StartupHealthGate {
+                tier: "native_service".to_string(),
+                backend: format!("{}:{backend}", status.service_id),
+                required: true,
+                configured: !status
+                    .missing_dependencies
+                    .iter()
+                    .any(|missing| missing == backend),
+                degraded_mode_allowed: true,
+                message: if status
+                    .missing_dependencies
+                    .iter()
+                    .any(|missing| missing == backend)
+                {
+                    format!(
+                        "native service {} requires backend {}",
+                        status.service_id, backend
+                    )
+                } else {
+                    format!(
+                        "native service {} dependency {} configured",
+                        status.service_id, backend
+                    )
+                },
+            });
+        }
+    }
 
     if let Some(catalog) = catalog {
         let active_backends = config.active_tiers().into_iter().collect::<BTreeSet<_>>();

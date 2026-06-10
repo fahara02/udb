@@ -1495,7 +1495,7 @@ var File_udb_core_notification_services_v1_core_proto protoreflect.FileDescripto
 
 const file_udb_core_notification_services_v1_core_proto_rawDesc = "" +
 	"\n" +
-	",udb/core/notification/services/v1/core.proto\x12!udb.core.notification.services.v1\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a+udb/core/notification/entity/v1/enums.proto\x1a6udb/core/notification/entity/v1/notification_log.proto\x1a=udb/core/notification/entity/v1/notification_preference.proto\x1a;udb/core/notification/entity/v1/notification_template.proto\"\xa5\x05\n" +
+	",udb/core/notification/services/v1/core.proto\x12!udb.core.notification.services.v1\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a+udb/core/notification/entity/v1/enums.proto\x1a6udb/core/notification/entity/v1/notification_log.proto\x1a=udb/core/notification/entity/v1/notification_preference.proto\x1a;udb/core/notification/entity/v1/notification_template.proto\x1a!udb/core/common/v1/security.proto\"\xca\x05\n" +
 	"\x17SendNotificationRequest\x12\x1d\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\tR\teventType\x12!\n" +
@@ -1516,13 +1516,13 @@ const file_udb_core_notification_services_v1_core_proto_rawDesc = "" +
 	"\acontext\x18\r \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\x1a<\n" +
 	"\x0eVariablesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"`\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\x85\x01\n" +
 	"\x18SendNotificationResponse\x12D\n" +
-	"\x04logs\x18\x01 \x03(\v20.udb.core.notification.entity.v1.NotificationLogR\x04logs\"/\n" +
+	"\x04logs\x18\x01 \x03(\v20.udb.core.notification.entity.v1.NotificationLogR\x04logs:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"T\n" +
 	"\x16GetNotificationRequest\x12\x15\n" +
-	"\x06log_id\x18\x01 \x01(\tR\x05logId\"]\n" +
+	"\x06log_id\x18\x01 \x01(\tR\x05logId:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\x82\x01\n" +
 	"\x17GetNotificationResponse\x12B\n" +
-	"\x03log\x18\x01 \x01(\v20.udb.core.notification.entity.v1.NotificationLogR\x03log\"\xb0\x03\n" +
+	"\x03log\x18\x01 \x01(\v20.udb.core.notification.entity.v1.NotificationLogR\x03log:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\xd5\x03\n" +
 	"\x18ListNotificationsRequest\x12!\n" +
 	"\frecipient_id\x18\x01 \x01(\tR\vrecipientId\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1d\n" +
@@ -1535,15 +1535,15 @@ const file_udb_core_notification_services_v1_core_proto_rawDesc = "" +
 	"event_type\x18\x06 \x01(\tR\teventType\x12N\n" +
 	"\achannel\x18\a \x01(\x0e24.udb.core.notification.entity.v1.NotificationChannelR\achannel\x12K\n" +
 	"\x06status\x18\b \x01(\x0e23.udb.core.notification.entity.v1.NotificationStatusR\x06status\x123\n" +
-	"\x04page\x18\t \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page\"\x97\x01\n" +
+	"\x04page\x18\t \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\xbc\x01\n" +
 	"\x19ListNotificationsResponse\x12D\n" +
 	"\x04logs\x18\x01 \x03(\v20.udb.core.notification.entity.v1.NotificationLogR\x04logs\x124\n" +
-	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page\"o\n" +
+	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\x94\x01\n" +
 	"\x18RetryNotificationRequest\x12\x15\n" +
 	"\x06log_id\x18\x01 \x01(\tR\x05logId\x12<\n" +
-	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"_\n" +
+	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\x84\x01\n" +
 	"\x19RetryNotificationResponse\x12B\n" +
-	"\x03log\x18\x01 \x01(\v20.udb.core.notification.entity.v1.NotificationLogR\x03log\"\xc9\x02\n" +
+	"\x03log\x18\x01 \x01(\v20.udb.core.notification.entity.v1.NotificationLogR\x03log:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\xee\x02\n" +
 	"\x15UpsertTemplateRequest\x12\x1d\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\tR\teventType\x12N\n" +
@@ -1552,32 +1552,32 @@ const file_udb_core_notification_services_v1_core_proto_rawDesc = "" +
 	"\x10subject_template\x18\x04 \x01(\tR\x0fsubjectTemplate\x12#\n" +
 	"\rbody_template\x18\x05 \x01(\tR\fbodyTemplate\x12\x1b\n" +
 	"\tis_active\x18\x06 \x01(\bR\bisActive\x12<\n" +
-	"\acontext\x18\a \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"k\n" +
+	"\acontext\x18\a \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\x90\x01\n" +
 	"\x16UpsertTemplateResponse\x12Q\n" +
-	"\btemplate\x18\x01 \x01(\v25.udb.core.notification.entity.v1.NotificationTemplateR\btemplate\"\x9b\x01\n" +
+	"\btemplate\x18\x01 \x01(\v25.udb.core.notification.entity.v1.NotificationTemplateR\btemplate:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\xc0\x01\n" +
 	"\x12GetTemplateRequest\x12\x1d\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\tR\teventType\x12N\n" +
 	"\achannel\x18\x02 \x01(\x0e24.udb.core.notification.entity.v1.NotificationChannelR\achannel\x12\x16\n" +
-	"\x06locale\x18\x03 \x01(\tR\x06locale\"h\n" +
+	"\x06locale\x18\x03 \x01(\tR\x06locale:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\x8d\x01\n" +
 	"\x13GetTemplateResponse\x12Q\n" +
-	"\btemplate\x18\x01 \x01(\v25.udb.core.notification.entity.v1.NotificationTemplateR\btemplate\"\xdb\x01\n" +
+	"\btemplate\x18\x01 \x01(\v25.udb.core.notification.entity.v1.NotificationTemplateR\btemplate:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\x80\x02\n" +
 	"\x14ListTemplatesRequest\x12\x1d\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\tR\teventType\x12N\n" +
 	"\achannel\x18\x02 \x01(\x0e24.udb.core.notification.entity.v1.NotificationChannelR\achannel\x12\x1f\n" +
 	"\vactive_only\x18\x03 \x01(\bR\n" +
 	"activeOnly\x123\n" +
-	"\x04page\x18\x04 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page\"\xa2\x01\n" +
+	"\x04page\x18\x04 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\xc7\x01\n" +
 	"\x15ListTemplatesResponse\x12S\n" +
 	"\ttemplates\x18\x01 \x03(\v25.udb.core.notification.entity.v1.NotificationTemplateR\ttemplates\x124\n" +
-	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page\"\x8b\x01\n" +
+	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\xb0\x01\n" +
 	"\x17GetDeliveryStatsRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
 	"event_type\x18\x02 \x01(\tR\teventType\x12\x1b\n" +
 	"\tdate_from\x18\x03 \x01(\tR\bdateFrom\x12\x17\n" +
-	"\adate_to\x18\x04 \x01(\tR\x06dateTo\"\xed\x01\n" +
+	"\adate_to\x18\x04 \x01(\tR\x06dateTo:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\x92\x02\n" +
 	"\fChannelStats\x12N\n" +
 	"\achannel\x18\x01 \x01(\x0e24.udb.core.notification.entity.v1.NotificationChannelR\achannel\x12\x12\n" +
 	"\x04sent\x18\x02 \x01(\x03R\x04sent\x12\x1c\n" +
@@ -1586,7 +1586,7 @@ const file_udb_core_notification_services_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"suppressed\x18\x05 \x01(\x03R\n" +
 	"suppressed\x12#\n" +
-	"\rdelivery_rate\x18\x06 \x01(\x01R\fdeliveryRate\"\x89\x02\n" +
+	"\rdelivery_rate\x18\x06 \x01(\x01R\fdeliveryRate:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\xae\x02\n" +
 	"\x18GetDeliveryStatsResponse\x12\x1d\n" +
 	"\n" +
 	"total_sent\x18\x01 \x01(\x03R\ttotalSent\x12'\n" +
@@ -1594,7 +1594,7 @@ const file_udb_core_notification_services_v1_core_proto_rawDesc = "" +
 	"\ftotal_failed\x18\x03 \x01(\x03R\vtotalFailed\x122\n" +
 	"\x15overall_delivery_rate\x18\x04 \x01(\x01R\x13overallDeliveryRate\x12N\n" +
 	"\n" +
-	"by_channel\x18\x05 \x03(\v2/.udb.core.notification.services.v1.ChannelStatsR\tbyChannel\"\x9b\x02\n" +
+	"by_channel\x18\x05 \x03(\v2/.udb.core.notification.services.v1.ChannelStatsR\tbyChannel:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\xc0\x02\n" +
 	"\x14SetPreferenceRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12N\n" +
@@ -1603,28 +1603,28 @@ const file_udb_core_notification_services_v1_core_proto_rawDesc = "" +
 	"event_type\x18\x04 \x01(\tR\teventType\x12 \n" +
 	"\fis_opted_out\x18\x05 \x01(\bR\n" +
 	"isOptedOut\x12<\n" +
-	"\acontext\x18\x06 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"p\n" +
+	"\acontext\x18\x06 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\x95\x01\n" +
 	"\x15SetPreferenceResponse\x12W\n" +
 	"\n" +
 	"preference\x18\x01 \x01(\v27.udb.core.notification.entity.v1.NotificationPreferenceR\n" +
-	"preference\"\xbb\x01\n" +
+	"preference:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\xe0\x01\n" +
 	"\x14GetPreferenceRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12N\n" +
 	"\achannel\x18\x03 \x01(\x0e24.udb.core.notification.entity.v1.NotificationChannelR\achannel\x12\x1d\n" +
 	"\n" +
-	"event_type\x18\x04 \x01(\tR\teventType\"p\n" +
+	"event_type\x18\x04 \x01(\tR\teventType:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\x95\x01\n" +
 	"\x15GetPreferenceResponse\x12W\n" +
 	"\n" +
 	"preference\x18\x01 \x01(\v27.udb.core.notification.entity.v1.NotificationPreferenceR\n" +
-	"preference\"\x83\x01\n" +
+	"preference:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\xa8\x01\n" +
 	"\x16ListPreferencesRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x123\n" +
-	"\x04page\x18\x03 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page\"\xaa\x01\n" +
+	"\x04page\x18\x03 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01\"\xcf\x01\n" +
 	"\x17ListPreferencesResponse\x12Y\n" +
 	"\vpreferences\x18\x01 \x03(\v27.udb.core.notification.entity.v1.NotificationPreferenceR\vpreferences\x124\n" +
-	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04pageB\xac\x02\n" +
+	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page:#\x9a\xb2\x19\x1f\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\fnotificationP\x01B\xac\x02\n" +
 	"%com.udb.core.notification.services.v1B\tCoreProtoP\x01ZOgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/services/v1;servicesv1\xa2\x02\x04UCNS\xaa\x02!udb.core.Notification.Services.V1\xca\x02!Udb\\Core\\Notification\\Services\\V1\xe2\x02-Udb\\GPBMetadata\\Core\\Notification\\Services\\V1\xea\x02%Udb::Core::Notification::Services::V1b\x06proto3"
 
 var (

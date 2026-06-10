@@ -3,6 +3,7 @@ syntax = "proto3";
 package udb.core.tenant.events.v1;
 
 import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/security.proto";
 
 option csharp_namespace = "udb.core.Tenant.Events.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/tenant/events/v1;tenanteventsv1";
@@ -12,6 +13,14 @@ option php_namespace = "Udb\\Core\\Tenant\\Events\\V1";
 
 // Kafka event: Tenant created
 message TenantCreatedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.tenant.events.v1.TenantCreatedEvent"
+    outbox_topic: "udb.tenant.tenant_created_event.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string tenant_id = 2;
   string tenant_code = 3;
@@ -23,6 +32,14 @@ message TenantCreatedEvent {
 
 // Kafka event: Tenant status changed
 message TenantStatusChangedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.tenant.events.v1.TenantStatusChangedEvent"
+    outbox_topic: "udb.tenant.tenant_status_changed_event.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string tenant_id = 2;
   string old_status = 3;

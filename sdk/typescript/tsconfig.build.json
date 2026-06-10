@@ -8,5 +8,5 @@
     "sourceMap": true,
     "noEmit": false
   },
-  "include": ["index.ts", "client.ts", "auth.ts", "negotiation.ts", "generatedClient.ts", "protoRoot.ts"]
+  "include": ["index.ts", "client.ts", "auth.ts", "negotiation.ts", "generatedClient.ts", "project.ts", "protoRoot.ts", "adapters/**/*.ts"]
 }

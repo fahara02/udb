@@ -26,63 +26,231 @@ namespace udb.core.Common.V1 {
           string.Concat(
             "CiF1ZGIvY29yZS9jb21tb24vdjEvc2VjdXJpdHkucHJvdG8SEnVkYi5jb3Jl",
             "LmNvbW1vbi52MRogZ29vZ2xlL3Byb3RvYnVmL2Rlc2NyaXB0b3IucHJvdG8i",
-            "jQIKEEVuZHBvaW50U2VjdXJpdHkSMAoEbW9kZRgBIAEoDjIcLnVkYi5jb3Jl",
+            "rwYKEEVuZHBvaW50U2VjdXJpdHkSMAoEbW9kZRgBIAEoDjIcLnVkYi5jb3Jl",
             "LmNvbW1vbi52MS5BdXRoTW9kZVIEbW9kZRIUCgVyb2xlcxgCIAMoCVIFcm9s",
             "ZXMSFgoGc2NvcGVzGAMgAygJUgZzY29wZXMSJwoPdGVuYW50X3JlcXVpcmVk",
             "GAQgASgIUg50ZW5hbnRSZXF1aXJlZBIjCg1jc3JmX3JlcXVpcmVkGAUgASgI",
             "Ugxjc3JmUmVxdWlyZWQSHQoKcG9saWN5X3JlZhgGIAEoCVIJcG9saWN5UmVm",
             "EiwKEmludGVybmFsX2dycGNfb25seRgHIAEoCFIQaW50ZXJuYWxHcnBjT25s",
-            "eSKoAQoMUmVzdENvbnRyYWN0EisKEXJlc3BvbnNlX2VudmVsb3BlGAEgASgI",
-            "UhByZXNwb25zZUVudmVsb3BlEhsKCWFwaV9lcnJvchgCIAEoCFIIYXBpRXJy",
-            "b3ISJwoPcGFnaW5hdGlvbl9tZXRhGAMgASgIUg5wYWdpbmF0aW9uTWV0YRIl",
-            "Cg5leHBsaWNpdF9udWxscxgEIAEoCFINZXhwbGljaXROdWxscyqHAQoIQXV0",
-            "aE1vZGUSGQoVQVVUSF9NT0RFX1VOU1BFQ0lGSUVEEAASFAoQQVVUSF9NT0RF",
-            "X1BVQkxJQxABEhQKEEFVVEhfTU9ERV9CRUFSRVIQAhIVChFBVVRIX01PREVf",
-            "QVBJX0tFWRADEh0KGUFVVEhfTU9ERV9TRVJWSUNFX0FDQ09VTlQQBCrdAQoW",
-            "U2VjdXJpdHlDbGFzc2lmaWNhdGlvbhInCiNTRUNVUklUWV9DTEFTU0lGSUNB",
-            "VElPTl9VTlNQRUNJRklFRBAAEiIKHlNFQ1VSSVRZX0NMQVNTSUZJQ0FUSU9O",
-            "X1BVQkxJQxABEiQKIFNFQ1VSSVRZX0NMQVNTSUZJQ0FUSU9OX0lOVEVSTkFM",
-            "EAISKAokU0VDVVJJVFlfQ0xBU1NJRklDQVRJT05fQ09ORklERU5USUFMEAMS",
-            "JgoiU0VDVVJJVFlfQ0xBU1NJRklDQVRJT05fUkVTVFJJQ1RFRBAEKtgBCgxE",
-            "YXRhQ2F0ZWdvcnkSHQoZREFUQV9DQVRFR09SWV9VTlNQRUNJRklFRBAAEhoK",
-            "FkRBVEFfQ0FURUdPUllfUEVSU09OQUwQARIbChdEQVRBX0NBVEVHT1JZX0ZJ",
-            "TkFOQ0lBTBACEhsKF0RBVEFfQ0FURUdPUllfQklPTUVUUklDEAMSGgoWREFU",
-            "QV9DQVRFR09SWV9JREVOVElUWRAEEh0KGURBVEFfQ0FURUdPUllfT1BFUkFU",
-            "SU9OQUwQBRIYChREQVRBX0NBVEVHT1JZX1NZU1RFTRAGOjEKA3BpaRIdLmdv",
-            "b2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMY2oYDIAEoCFIDcGlpOk4KEmVu",
-            "Y3J5cHRlZF9zZWN1cml0eRIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlv",
-            "bnMY24YDIAEoCFIRZW5jcnlwdGVkU2VjdXJpdHk6PgoKbG9nX21hc2tlZBId",
-            "Lmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMY3IYDIAEoCFIJbG9nTWFz",
-            "a2VkOkIKDGxvZ19yZWRhY3RlZBIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9w",
-            "dGlvbnMY3YYDIAEoCFILbG9nUmVkYWN0ZWQ6PQoJc2Vuc2l0aXZlEh0uZ29v",
-            "Z2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjehgMgASgIUglzZW5zaXRpdmU6",
-            "SgoQcmVxdWlyZXNfY29uc2VudBIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9w",
-            "dGlvbnMY34YDIAEoCFIPcmVxdWlyZXNDb25zZW50OkIKDGRhdGFfcHVycG9z",
-            "ZRIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMY4IYDIAEoCVILZGF0",
-            "YVB1cnBvc2U6RgoOcmV0ZW50aW9uX2RheXMSHS5nb29nbGUucHJvdG9idWYu",
-            "RmllbGRPcHRpb25zGOGGAyABKAVSDXJldGVudGlvbkRheXM6PQoJdG9rZW5p",
-            "emVkEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjihgMgASgIUgl0",
-            "b2tlbml6ZWQ6hAEKF3NlY3VyaXR5X2NsYXNzaWZpY2F0aW9uEh0uZ29vZ2xl",
-            "LnByb3RvYnVmLkZpZWxkT3B0aW9ucxjjhgMgASgOMioudWRiLmNvcmUuY29t",
-            "bW9uLnYxLlNlY3VyaXR5Q2xhc3NpZmljYXRpb25SFnNlY3VyaXR5Q2xhc3Np",
-            "ZmljYXRpb246ZgoNZGF0YV9jYXRlZ29yeRIdLmdvb2dsZS5wcm90b2J1Zi5G",
-            "aWVsZE9wdGlvbnMY5IYDIAEoDjIgLnVkYi5jb3JlLmNvbW1vbi52MS5EYXRh",
-            "Q2F0ZWdvcnlSDGRhdGFDYXRlZ29yeTpzChFlbmRwb2ludF9zZWN1cml0eRIe",
-            "Lmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGLmOAyABKAsyJC51ZGIu",
-            "Y29yZS5jb21tb24udjEuRW5kcG9pbnRTZWN1cml0eVIQZW5kcG9pbnRTZWN1",
-            "cml0eTpnCg1yZXN0X2NvbnRyYWN0Eh4uZ29vZ2xlLnByb3RvYnVmLk1ldGhv",
-            "ZE9wdGlvbnMYuo4DIAEoCzIgLnVkYi5jb3JlLmNvbW1vbi52MS5SZXN0Q29u",
-            "dHJhY3RSDHJlc3RDb250cmFjdELSAQoWY29tLnVkYi5jb3JlLmNvbW1vbi52",
-            "MUINU2VjdXJpdHlQcm90b1ABWj5naXRodWIuY29tL2ZhaGFyYTAyL3VkYi9z",
-            "ZGsvZ28vZ2VuL3VkYi9jb3JlL2NvbW1vbi92MTtjb21tb252MaICA1VDQ6oC",
-            "EnVkYi5jb3JlLkNvbW1vbi5WMcoCElVkYlxDb3JlXENvbW1vblxWMeICHlVk",
-            "YlxHUEJNZXRhZGF0YVxDb3JlXENvbW1vblxWMeoCFVVkYjo6Q29yZTo6Q29t",
-            "bW9uOjpWMWIGcHJvdG8z"));
+            "eRI4ChhyZXF1aXJlZF9hc3N1cmFuY2VfbGV2ZWwYCCABKAVSFnJlcXVpcmVk",
+            "QXNzdXJhbmNlTGV2ZWwSXAoYYWxsb3dlZF9jcmVkZW50aWFsX3R5cGVzGAkg",
+            "AygOMiIudWRiLmNvcmUuY29tbW9uLnYxLkNyZWRlbnRpYWxUeXBlUhZhbGxv",
+            "d2VkQ3JlZGVudGlhbFR5cGVzEjEKFXJhdGVfbGltaXRfcG9saWN5X3JlZhgK",
+            "IAEoCVIScmF0ZUxpbWl0UG9saWN5UmVmEigKEGFidXNlX3BvbGljeV9yZWYY",
+            "CyABKAlSDmFidXNlUG9saWN5UmVmEigKEGF1ZGl0X2V2ZW50X3R5cGUYDCAB",
+            "KAlSDmF1ZGl0RXZlbnRUeXBlEisKEWRlY2lzaW9uX3Jlc291cmNlGA0gASgJ",
+            "UhBkZWNpc2lvblJlc291cmNlEh8KC293bmVyX2ZpZWxkGA4gASgJUgpvd25l",
+            "ckZpZWxkEiEKDHRlbmFudF9maWVsZBgPIAEoCVILdGVuYW50RmllbGQSIwoN",
+            "cHJvamVjdF9maWVsZBgQIAEoCVIMcHJvamVjdEZpZWxkEjEKFGlkZW1wb3Rl",
+            "bmN5X3JlcXVpcmVkGBEgASgIUhNpZGVtcG90ZW5jeVJlcXVpcmVkEjgKGHJl",
+            "cXVlc3RfY29udGV4dF9yZXF1aXJlZBgSIAEoCFIWcmVxdWVzdENvbnRleHRS",
+            "ZXF1aXJlZCKoAQoMUmVzdENvbnRyYWN0EisKEXJlc3BvbnNlX2VudmVsb3Bl",
+            "GAEgASgIUhByZXNwb25zZUVudmVsb3BlEhsKCWFwaV9lcnJvchgCIAEoCFII",
+            "YXBpRXJyb3ISJwoPcGFnaW5hdGlvbl9tZXRhGAMgASgIUg5wYWdpbmF0aW9u",
+            "TWV0YRIlCg5leHBsaWNpdF9udWxscxgEIAEoCFINZXhwbGljaXROdWxscyKn",
+            "BgoUTmF0aXZlU2VydmljZU9wdGlvbnMSHQoKc2VydmljZV9pZBgBIAEoCVIJ",
+            "c2VydmljZUlkEiwKEmxvZ2ljYWxfc2VydmljZV9pZBgCIAEoCVIQbG9naWNh",
+            "bFNlcnZpY2VJZBIoChBwcm90b19zZXJ2aWNlX2lkGAMgASgJUg5wcm90b1Nl",
+            "cnZpY2VJZBIhCgxkaXNwbGF5X25hbWUYBCABKAlSC2Rpc3BsYXlOYW1lEhoK",
+            "CGNhdGVnb3J5GAUgASgJUghjYXRlZ29yeRInCg9kZWZhdWx0X2VuYWJsZWQY",
+            "BiABKAhSDmRlZmF1bHRFbmFibGVkEisKEXJlcXVpcmVzX3Bvc3RncmVzGAcg",
+            "ASgIUhByZXF1aXJlc1Bvc3RncmVzEiUKDnJlcXVpcmVzX3JlZGlzGAggASgI",
+            "Ug1yZXF1aXJlc1JlZGlzEjIKFXJlcXVpcmVzX29iamVjdF9zdG9yZRgJIAEo",
+            "CFITcmVxdWlyZXNPYmplY3RTdG9yZRIlCg5yZXF1aXJlc19rYWZrYRgKIAEo",
+            "CFINcmVxdWlyZXNLYWZrYRIpChByZXF1aXJlc19mZWF0dXJlGAsgASgJUg9y",
+            "ZXF1aXJlc0ZlYXR1cmUSNgoXcHVibGljX2xpc3RlbmVyX2FsbG93ZWQYDCAB",
+            "KAhSFXB1YmxpY0xpc3RlbmVyQWxsb3dlZBJDCh5jb250cm9sX3BsYW5lX2xp",
+            "c3RlbmVyX2FsbG93ZWQYDSABKAhSG2NvbnRyb2xQbGFuZUxpc3RlbmVyQWxs",
+            "b3dlZBIyChVwZWVyX2xpc3RlbmVyX2FsbG93ZWQYDiABKAhSE3BlZXJMaXN0",
+            "ZW5lckFsbG93ZWQSJgoPc2RrX2ZhY2FkZV9uYW1lGA8gASgJUg1zZGtGYWNh",
+            "ZGVOYW1lEiwKEmNsaV9zY2FmZm9sZF9ncm91cBgQIAEoCVIQY2xpU2NhZmZv",
+            "bGRHcm91cBIoChBoZWFsdGhfY2hlY2tfcmVmGBEgASgJUg5oZWFsdGhDaGVj",
+            "a1JlZhIlCg5jYXBhYmlsaXR5X3JlZhgSIAEoCVINY2FwYWJpbGl0eVJlZiKa",
+            "BQoWRGJUYWJsZVNlY3VyaXR5T3B0aW9ucxIyChV0ZW5hbnRfaXNvbGF0aW9u",
+            "X21vZGUYASABKAlSE3RlbmFudElzb2xhdGlvbk1vZGUSNAoWcHJvamVjdF9p",
+            "c29sYXRpb25fbW9kZRgCIAEoCVIUcHJvamVjdElzb2xhdGlvbk1vZGUSIwoN",
+            "dGVuYW50X2NvbHVtbhgDIAEoCVIMdGVuYW50Q29sdW1uEiUKDnByb2plY3Rf",
+            "Y29sdW1uGAQgASgJUg1wcm9qZWN0Q29sdW1uEi4KE3Jsc19wb2xpY3lfdGVt",
+            "cGxhdGUYBSABKAlSEXJsc1BvbGljeVRlbXBsYXRlEigKEHNvZnRfZGVsZXRl",
+            "X21vZGUYBiABKAlSDnNvZnREZWxldGVNb2RlEicKD3JldGVudGlvbl9jbGFz",
+            "cxgHIAEoCVIOcmV0ZW50aW9uQ2xhc3MSJQoOcmV0ZW50aW9uX2RheXMYCCAB",
+            "KAVSDXJldGVudGlvbkRheXMSPAoKYXVkaXRfbW9kZRgJIAEoDjIdLnVkYi5j",
+            "b3JlLmNvbW1vbi52MS5BdWRpdE1vZGVSCWF1ZGl0TW9kZRItChJlbmNyeXB0",
+            "aW9uX3Byb2ZpbGUYCiABKAlSEWVuY3J5cHRpb25Qcm9maWxlEh8KC3BpaV9w",
+            "cm9maWxlGAsgASgJUgpwaWlQcm9maWxlEi4KE2JyZWFrX2dsYXNzX3Zpc2li",
+            "bGUYDCABKAhSEWJyZWFrR2xhc3NWaXNpYmxlEicKD2V4cG9ydF9lbGlnaWJs",
+            "ZRgNIAEoCFIOZXhwb3J0RWxpZ2libGUSOQoZZGF0YV9yZXNpZGVuY3lfcG9s",
+            "aWN5X3JlZhgOIAEoCVIWZGF0YVJlc2lkZW5jeVBvbGljeVJlZiKVBQoXRGJD",
+            "b2x1bW5TZWN1cml0eU9wdGlvbnMSXQoVc2VjcmV0X2NsYXNzaWZpY2F0aW9u",
+            "GAEgASgOMigudWRiLmNvcmUuY29tbW9uLnYxLlNlY3JldENsYXNzaWZpY2F0",
+            "aW9uUhRzZWNyZXRDbGFzc2lmaWNhdGlvbhI/CgtvdXRwdXRfdmlldxgCIAEo",
+            "DjIeLnVkYi5jb3JlLmNvbW1vbi52MS5PdXRwdXRWaWV3UgpvdXRwdXRWaWV3",
+            "ElQKEnJlZGFjdGlvbl9zdHJhdGVneRgDIAEoDjIlLnVkYi5jb3JlLmNvbW1v",
+            "bi52MS5SZWRhY3Rpb25TdHJhdGVneVIRcmVkYWN0aW9uU3RyYXRlZ3kSMwoV",
+            "dG9rZW5pemF0aW9uX3N0cmF0ZWd5GAQgASgJUhR0b2tlbml6YXRpb25TdHJh",
+            "dGVneRIpChBoYXNoaW5nX3N0cmF0ZWd5GAUgASgJUg9oYXNoaW5nU3RyYXRl",
+            "Z3kSKwoRaGFzaGluZ19hbGdvcml0aG0YBiABKAlSEGhhc2hpbmdBbGdvcml0",
+            "aG0SMAoUZW5jcnlwdGlvbl9rZXlfY2xhc3MYByABKAlSEmVuY3J5cHRpb25L",
+            "ZXlDbGFzcxIxChRzZWFyY2hhYmxlX2VuY3J5cHRlZBgIIAEoCFITc2VhcmNo",
+            "YWJsZUVuY3J5cHRlZBIpChB1bmlxdWVuZXNzX3Njb3BlGAkgASgJUg91bmlx",
+            "dWVuZXNzU2NvcGUSHwoLb3duZXJfZmllbGQYCiABKAhSCm93bmVyRmllbGQS",
+            "IQoMdGVuYW50X2ZpZWxkGAsgASgIUgt0ZW5hbnRGaWVsZBIjCg1wcm9qZWN0",
+            "X2ZpZWxkGAwgASgIUgxwcm9qZWN0RmllbGQi8AMKEVNka1N1cmZhY2VPcHRp",
+            "b25zEioKEWluY2x1ZGVfaW5fZmFjYWRlGAEgASgIUg9pbmNsdWRlSW5GYWNh",
+            "ZGUSIQoMbWV0aG9kX2FsaWFzGAIgASgJUgttZXRob2RBbGlhcxJAChxyZXF1",
+            "aXJlZF9jcmVkZW50aWFsX3Byb3ZpZGVyGAMgASgJUhpyZXF1aXJlZENyZWRl",
+            "bnRpYWxQcm92aWRlchIyChVzdHJlYW1pbmdfaGVscGVyX3R5cGUYBCABKAlS",
+            "E3N0cmVhbWluZ0hlbHBlclR5cGUSLgoTZGVmYXVsdF9kZWFkbGluZV9tcxgF",
+            "IAEoBVIRZGVmYXVsdERlYWRsaW5lTXMSMAoUZGVmYXVsdF9tYXhfYXR0ZW1w",
+            "dHMYBiABKAVSEmRlZmF1bHRNYXhBdHRlbXB0cxIhCgxicm93c2VyX3NhZmUY",
+            "ByABKAhSC2Jyb3dzZXJTYWZlEh8KC3NlcnZlcl9vbmx5GAggASgIUgpzZXJ2",
+            "ZXJPbmx5EjYKF2JvaWxlcnBsYXRlX3JlY2lwZV90YWdzGAkgAygJUhVib2ls",
+            "ZXJwbGF0ZVJlY2lwZVRhZ3MSOAoYZ2VuZXJhdGVfbWluaW1hbF9leGFtcGxl",
+            "GAogASgIUhZnZW5lcmF0ZU1pbmltYWxFeGFtcGxlIoEEChJDbGlTY2FmZm9s",
+            "ZE9wdGlvbnMSKQoQc2NhZmZvbGRfcGFja2FnZRgBIAEoCVIPc2NhZmZvbGRQ",
+            "YWNrYWdlEh8KC2ltcG9ydF9wYXRoGAIgASgJUgppbXBvcnRQYXRoEiEKDHJl",
+            "cXVpcmVkX2VudhgDIAMoCVILcmVxdWlyZWRFbnYSJwoPZ2VuZXJhdGVkX2Zp",
+            "bGVzGAQgAygJUg5nZW5lcmF0ZWRGaWxlcxIdCgpyb3V0ZV9uYW1lGAUgASgJ",
+            "Uglyb3V0ZU5hbWUSJwoPbWlkZGxld2FyZV9uYW1lGAYgASgJUg5taWRkbGV3",
+            "YXJlTmFtZRI4ChhyZXF1aXJlZF9uYXRpdmVfc2VydmljZXMYByADKAlSFnJl",
+            "cXVpcmVkTmF0aXZlU2VydmljZXMSOAoYb3B0aW9uYWxfbmF0aXZlX3NlcnZp",
+            "Y2VzGAggAygJUhZvcHRpb25hbE5hdGl2ZVNlcnZpY2VzEi8KE3NlY3JldF9w",
+            "bGFjZWhvbGRlcnMYCSADKAlSEnNlY3JldFBsYWNlaG9sZGVycxI4Chhwb3N0",
+            "X2dlbmVyYXRpb25fY29tbWFuZHMYCiADKAlSFnBvc3RHZW5lcmF0aW9uQ29t",
+            "bWFuZHMSLAoSc21va2VfdGVzdF9jb21tYW5kGAsgASgJUhBzbW9rZVRlc3RD",
+            "b21tYW5kIqYCChRFdmVudENvbnRyYWN0T3B0aW9ucxIdCgpldmVudF90eXBl",
+            "GAEgASgJUglldmVudFR5cGUSIQoMb3V0Ym94X3RvcGljGAIgASgJUgtvdXRi",
+            "b3hUb3BpYxIuChNwYXJ0aXRpb25fa2V5X2ZpZWxkGAMgASgJUhFwYXJ0aXRp",
+            "b25LZXlGaWVsZBI6ChlwYXlsb2FkX3JlZGFjdGlvbl9wcm9maWxlGAQgASgJ",
+            "UhdwYXlsb2FkUmVkYWN0aW9uUHJvZmlsZRItChJkZWxpdmVyeV9ndWFyYW50",
+            "ZWUYBSABKAlSEWRlbGl2ZXJ5R3VhcmFudGVlEjEKFHJlcGxheV9jb21wYXRp",
+            "YmlsaXR5GAYgASgJUhNyZXBsYXlDb21wYXRpYmlsaXR5Iu0CChlEZXBlbmRl",
+            "bmN5Q29udHJhY3RPcHRpb25zEjgKGHJlcXVpcmVkX25hdGl2ZV9zZXJ2aWNl",
+            "cxgBIAMoCVIWcmVxdWlyZWROYXRpdmVTZXJ2aWNlcxI4ChhvcHRpb25hbF9u",
+            "YXRpdmVfc2VydmljZXMYAiADKAlSFm9wdGlvbmFsTmF0aXZlU2VydmljZXMS",
+            "KwoRcmVxdWlyZWRfYmFja2VuZHMYAyADKAlSEHJlcXVpcmVkQmFja2VuZHMS",
+            "KwoRb3B0aW9uYWxfYmFja2VuZHMYBCADKAlSEG9wdGlvbmFsQmFja2VuZHMS",
+            "KwoRcmVxdWlyZWRfZmVhdHVyZXMYBSADKAlSEHJlcXVpcmVkRmVhdHVyZXMS",
+            "IQoMcmVxdWlyZWRfZW52GAYgAygJUgtyZXF1aXJlZEVudhIyChVkZWdyYWRl",
+            "ZF93aGVuX21pc3NpbmcYByADKAlSE2RlZ3JhZGVkV2hlbk1pc3NpbmcqhwEK",
+            "CEF1dGhNb2RlEhkKFUFVVEhfTU9ERV9VTlNQRUNJRklFRBAAEhQKEEFVVEhf",
+            "TU9ERV9QVUJMSUMQARIUChBBVVRIX01PREVfQkVBUkVSEAISFQoRQVVUSF9N",
+            "T0RFX0FQSV9LRVkQAxIdChlBVVRIX01PREVfU0VSVklDRV9BQ0NPVU5UEAQq",
+            "vgIKDkNyZWRlbnRpYWxUeXBlEh8KG0NSRURFTlRJQUxfVFlQRV9VTlNQRUNJ",
+            "RklFRBAAEh4KGkNSRURFTlRJQUxfVFlQRV9CRUFSRVJfSldUEAESGwoXQ1JF",
+            "REVOVElBTF9UWVBFX1NFU1NJT04QAhIbChdDUkVERU5USUFMX1RZUEVfQVBJ",
+            "X0tFWRADEiMKH0NSRURFTlRJQUxfVFlQRV9TRVJWSUNFX0FDQ09VTlQQBBIY",
+            "ChRDUkVERU5USUFMX1RZUEVfTVRMUxAFEhgKFENSRURFTlRJQUxfVFlQRV9P",
+            "SURDEAYSGAoUQ1JFREVOVElBTF9UWVBFX1NBTUwQBxIcChhDUkVERU5USUFM",
+            "X1RZUEVfV0VCQVVUSE4QCBIgChxDUkVERU5USUFMX1RZUEVfRVhURVJOQUxf",
+            "SldUEAkqgwEKCUF1ZGl0TW9kZRIaChZBVURJVF9NT0RFX1VOU1BFQ0lGSUVE",
+            "EAASEwoPQVVESVRfTU9ERV9OT05FEAESFwoTQVVESVRfTU9ERV9NVVRBVElP",
+            "ThACEhcKE0FVRElUX01PREVfREVDSVNJT04QAxITCg9BVURJVF9NT0RFX0ZV",
+            "TEwQBCr4AgoUU2VjcmV0Q2xhc3NpZmljYXRpb24SJQohU0VDUkVUX0NMQVNT",
+            "SUZJQ0FUSU9OX1VOU1BFQ0lGSUVEEAASIAocU0VDUkVUX0NMQVNTSUZJQ0FU",
+            "SU9OX1BVQkxJQxABEiIKHlNFQ1JFVF9DTEFTU0lGSUNBVElPTl9JTlRFUk5B",
+            "TBACEiQKIFNFQ1JFVF9DTEFTU0lGSUNBVElPTl9DUkVERU5USUFMEAMSHwob",
+            "U0VDUkVUX0NMQVNTSUZJQ0FUSU9OX1RPS0VOEAQSHQoZU0VDUkVUX0NMQVNT",
+            "SUZJQ0FUSU9OX0tFWRAFEiMKH1NFQ1JFVF9DTEFTU0lGSUNBVElPTl9CSU9N",
+            "RVRSSUMQBhIiCh5TRUNSRVRfQ0xBU1NJRklDQVRJT05fSURFTlRJVFkQBxId",
+            "ChlTRUNSRVRfQ0xBU1NJRklDQVRJT05fUElJEAgSJQohU0VDUkVUX0NMQVNT",
+            "SUZJQ0FUSU9OX09QRVJBVElPTkFMEAkqugEKCk91dHB1dFZpZXcSGwoXT1VU",
+            "UFVUX1ZJRVdfVU5TUEVDSUZJRUQQABIcChhPVVRQVVRfVklFV19TVE9SQUdF",
+            "X09OTFkQARIWChJPVVRQVVRfVklFV19QVUJMSUMQAhIUChBPVVRQVVRfVklF",
+            "V19TRUxGEAMSFQoRT1VUUFVUX1ZJRVdfQURNSU4QBBIVChFPVVRQVVRfVklF",
+            "V19BVURJVBAFEhUKEU9VVFBVVF9WSUVXX05FVkVSEAYq0AEKEVJlZGFjdGlv",
+            "blN0cmF0ZWd5EiIKHlJFREFDVElPTl9TVFJBVEVHWV9VTlNQRUNJRklFRBAA",
+            "EhsKF1JFREFDVElPTl9TVFJBVEVHWV9OT05FEAESGwoXUkVEQUNUSU9OX1NU",
+            "UkFURUdZX01BU0sQAhIdChlSRURBQ1RJT05fU1RSQVRFR1lfUkVEQUNUEAMS",
+            "IAocUkVEQUNUSU9OX1NUUkFURUdZX0hBU0hfT05MWRAEEhwKGFJFREFDVElP",
+            "Tl9TVFJBVEVHWV9MQVNUNBAFKt0BChZTZWN1cml0eUNsYXNzaWZpY2F0aW9u",
+            "EicKI1NFQ1VSSVRZX0NMQVNTSUZJQ0FUSU9OX1VOU1BFQ0lGSUVEEAASIgoe",
+            "U0VDVVJJVFlfQ0xBU1NJRklDQVRJT05fUFVCTElDEAESJAogU0VDVVJJVFlf",
+            "Q0xBU1NJRklDQVRJT05fSU5URVJOQUwQAhIoCiRTRUNVUklUWV9DTEFTU0lG",
+            "SUNBVElPTl9DT05GSURFTlRJQUwQAxImCiJTRUNVUklUWV9DTEFTU0lGSUNB",
+            "VElPTl9SRVNUUklDVEVEEAQq2AEKDERhdGFDYXRlZ29yeRIdChlEQVRBX0NB",
+            "VEVHT1JZX1VOU1BFQ0lGSUVEEAASGgoWREFUQV9DQVRFR09SWV9QRVJTT05B",
+            "TBABEhsKF0RBVEFfQ0FURUdPUllfRklOQU5DSUFMEAISGwoXREFUQV9DQVRF",
+            "R09SWV9CSU9NRVRSSUMQAxIaChZEQVRBX0NBVEVHT1JZX0lERU5USVRZEAQS",
+            "HQoZREFUQV9DQVRFR09SWV9PUEVSQVRJT05BTBAFEhgKFERBVEFfQ0FURUdP",
+            "UllfU1lTVEVNEAY6MQoDcGlpEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0",
+            "aW9ucxjahgMgASgIUgNwaWk6TgoSZW5jcnlwdGVkX3NlY3VyaXR5Eh0uZ29v",
+            "Z2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjbhgMgASgIUhFlbmNyeXB0ZWRT",
+            "ZWN1cml0eTo+Cgpsb2dfbWFza2VkEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxk",
+            "T3B0aW9ucxjchgMgASgIUglsb2dNYXNrZWQ6QgoMbG9nX3JlZGFjdGVkEh0u",
+            "Z29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjdhgMgASgIUgtsb2dSZWRh",
+            "Y3RlZDo9CglzZW5zaXRpdmUSHS5nb29nbGUucHJvdG9idWYuRmllbGRPcHRp",
+            "b25zGN6GAyABKAhSCXNlbnNpdGl2ZTpKChByZXF1aXJlc19jb25zZW50Eh0u",
+            "Z29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjfhgMgASgIUg9yZXF1aXJl",
+            "c0NvbnNlbnQ6QgoMZGF0YV9wdXJwb3NlEh0uZ29vZ2xlLnByb3RvYnVmLkZp",
+            "ZWxkT3B0aW9ucxjghgMgASgJUgtkYXRhUHVycG9zZTpGCg5yZXRlbnRpb25f",
+            "ZGF5cxIdLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMY4YYDIAEoBVIN",
+            "cmV0ZW50aW9uRGF5czo9Cgl0b2tlbml6ZWQSHS5nb29nbGUucHJvdG9idWYu",
+            "RmllbGRPcHRpb25zGOKGAyABKAhSCXRva2VuaXplZDqEAQoXc2VjdXJpdHlf",
+            "Y2xhc3NpZmljYXRpb24SHS5nb29nbGUucHJvdG9idWYuRmllbGRPcHRpb25z",
+            "GOOGAyABKA4yKi51ZGIuY29yZS5jb21tb24udjEuU2VjdXJpdHlDbGFzc2lm",
+            "aWNhdGlvblIWc2VjdXJpdHlDbGFzc2lmaWNhdGlvbjpmCg1kYXRhX2NhdGVn",
+            "b3J5Eh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjkhgMgASgOMiAu",
+            "dWRiLmNvcmUuY29tbW9uLnYxLkRhdGFDYXRlZ29yeVIMZGF0YUNhdGVnb3J5",
+            "OnoKEmRiX2NvbHVtbl9zZWN1cml0eRIdLmdvb2dsZS5wcm90b2J1Zi5GaWVs",
+            "ZE9wdGlvbnMY8YYDIAEoCzIrLnVkYi5jb3JlLmNvbW1vbi52MS5EYkNvbHVt",
+            "blNlY3VyaXR5T3B0aW9uc1IQZGJDb2x1bW5TZWN1cml0eTpzChFlbmRwb2lu",
+            "dF9zZWN1cml0eRIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGLmO",
+            "AyABKAsyJC51ZGIuY29yZS5jb21tb24udjEuRW5kcG9pbnRTZWN1cml0eVIQ",
+            "ZW5kcG9pbnRTZWN1cml0eTpnCg1yZXN0X2NvbnRyYWN0Eh4uZ29vZ2xlLnBy",
+            "b3RvYnVmLk1ldGhvZE9wdGlvbnMYuo4DIAEoCzIgLnVkYi5jb3JlLmNvbW1v",
+            "bi52MS5SZXN0Q29udHJhY3RSDHJlc3RDb250cmFjdDpoCgtzZGtfc3VyZmFj",
+            "ZRIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25zGLuOAyABKAsyJS51",
+            "ZGIuY29yZS5jb21tb24udjEuU2RrU3VyZmFjZU9wdGlvbnNSCnNka1N1cmZh",
+            "Y2U6eAoTbWV0aG9kX2NsaV9zY2FmZm9sZBIeLmdvb2dsZS5wcm90b2J1Zi5N",
+            "ZXRob2RPcHRpb25zGLyOAyABKAsyJi51ZGIuY29yZS5jb21tb24udjEuQ2xp",
+            "U2NhZmZvbGRPcHRpb25zUhFtZXRob2RDbGlTY2FmZm9sZDp+ChVtZXRob2Rf",
+            "ZXZlbnRfY29udHJhY3QSHi5nb29nbGUucHJvdG9idWYuTWV0aG9kT3B0aW9u",
+            "cxi9jgMgASgLMigudWRiLmNvcmUuY29tbW9uLnYxLkV2ZW50Q29udHJhY3RP",
+            "cHRpb25zUhNtZXRob2RFdmVudENvbnRyYWN0Oo0BChptZXRob2RfZGVwZW5k",
+            "ZW5jeV9jb250cmFjdBIeLmdvb2dsZS5wcm90b2J1Zi5NZXRob2RPcHRpb25z",
+            "GL6OAyABKAsyLS51ZGIuY29yZS5jb21tb24udjEuRGVwZW5kZW5jeUNvbnRy",
+            "YWN0T3B0aW9uc1IYbWV0aG9kRGVwZW5kZW5jeUNvbnRyYWN0OnkKEWRiX3Rh",
+            "YmxlX3NlY3VyaXR5Eh8uZ29vZ2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25z",
+            "GKGWAyABKAsyKi51ZGIuY29yZS5jb21tb24udjEuRGJUYWJsZVNlY3VyaXR5",
+            "T3B0aW9uc1IPZGJUYWJsZVNlY3VyaXR5OoEBChZtZXNzYWdlX2V2ZW50X2Nv",
+            "bnRyYWN0Eh8uZ29vZ2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25zGKKWAyAB",
+            "KAsyKC51ZGIuY29yZS5jb21tb24udjEuRXZlbnRDb250cmFjdE9wdGlvbnNS",
+            "FG1lc3NhZ2VFdmVudENvbnRyYWN0OngKE21lc3NhZ2Vfc2RrX3N1cmZhY2US",
+            "Hy5nb29nbGUucHJvdG9idWYuTWVzc2FnZU9wdGlvbnMYo5YDIAEoCzIlLnVk",
+            "Yi5jb3JlLmNvbW1vbi52MS5TZGtTdXJmYWNlT3B0aW9uc1IRbWVzc2FnZVNk",
+            "a1N1cmZhY2U6kAEKG21lc3NhZ2VfZGVwZW5kZW5jeV9jb250cmFjdBIfLmdv",
+            "b2dsZS5wcm90b2J1Zi5NZXNzYWdlT3B0aW9ucxiklgMgASgLMi0udWRiLmNv",
+            "cmUuY29tbW9uLnYxLkRlcGVuZGVuY3lDb250cmFjdE9wdGlvbnNSGW1lc3Nh",
+            "Z2VEZXBlbmRlbmN5Q29udHJhY3Q6cgoObmF0aXZlX3NlcnZpY2USHy5nb29n",
+            "bGUucHJvdG9idWYuU2VydmljZU9wdGlvbnMYiZ4DIAEoCzIoLnVkYi5jb3Jl",
+            "LmNvbW1vbi52MS5OYXRpdmVTZXJ2aWNlT3B0aW9uc1INbmF0aXZlU2Vydmlj",
+            "ZTp4ChNzZXJ2aWNlX3Nka19zdXJmYWNlEh8uZ29vZ2xlLnByb3RvYnVmLlNl",
+            "cnZpY2VPcHRpb25zGIqeAyABKAsyJS51ZGIuY29yZS5jb21tb24udjEuU2Rr",
+            "U3VyZmFjZU9wdGlvbnNSEXNlcnZpY2VTZGtTdXJmYWNlOnsKFHNlcnZpY2Vf",
+            "Y2xpX3NjYWZmb2xkEh8uZ29vZ2xlLnByb3RvYnVmLlNlcnZpY2VPcHRpb25z",
+            "GIueAyABKAsyJi51ZGIuY29yZS5jb21tb24udjEuQ2xpU2NhZmZvbGRPcHRp",
+            "b25zUhJzZXJ2aWNlQ2xpU2NhZmZvbGQ6kAEKG3NlcnZpY2VfZGVwZW5kZW5j",
+            "eV9jb250cmFjdBIfLmdvb2dsZS5wcm90b2J1Zi5TZXJ2aWNlT3B0aW9ucxiM",
+            "ngMgASgLMi0udWRiLmNvcmUuY29tbW9uLnYxLkRlcGVuZGVuY3lDb250cmFj",
+            "dE9wdGlvbnNSGXNlcnZpY2VEZXBlbmRlbmN5Q29udHJhY3RC0gEKFmNvbS51",
+            "ZGIuY29yZS5jb21tb24udjFCDVNlY3VyaXR5UHJvdG9QAVo+Z2l0aHViLmNv",
+            "bS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9jb21tb24vdjE7",
+            "Y29tbW9udjGiAgNVQ0OqAhJ1ZGIuY29yZS5Db21tb24uVjHKAhJVZGJcQ29y",
+            "ZVxDb21tb25cVjHiAh5VZGJcR1BCTWV0YWRhdGFcQ29yZVxDb21tb25cVjHq",
+            "AhVVZGI6OkNvcmU6OkNvbW1vbjo6VjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.Reflection.DescriptorReflection.Descriptor, },
-          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::udb.core.Common.V1.AuthMode), typeof(global::udb.core.Common.V1.SecurityClassification), typeof(global::udb.core.Common.V1.DataCategory), }, new pb::Extension[] { SecurityExtensions.Pii, SecurityExtensions.EncryptedSecurity, SecurityExtensions.LogMasked, SecurityExtensions.LogRedacted, SecurityExtensions.Sensitive, SecurityExtensions.RequiresConsent, SecurityExtensions.DataPurpose, SecurityExtensions.RetentionDays, SecurityExtensions.Tokenized, SecurityExtensions.SecurityClassification, SecurityExtensions.DataCategory, SecurityExtensions.EndpointSecurity, SecurityExtensions.RestContract }, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Common.V1.EndpointSecurity), global::udb.core.Common.V1.EndpointSecurity.Parser, new[]{ "Mode", "Roles", "Scopes", "TenantRequired", "CsrfRequired", "PolicyRef", "InternalGrpcOnly" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Common.V1.RestContract), global::udb.core.Common.V1.RestContract.Parser, new[]{ "ResponseEnvelope", "ApiError", "PaginationMeta", "ExplicitNulls" }, null, null, null, null)
+          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::udb.core.Common.V1.AuthMode), typeof(global::udb.core.Common.V1.CredentialType), typeof(global::udb.core.Common.V1.AuditMode), typeof(global::udb.core.Common.V1.SecretClassification), typeof(global::udb.core.Common.V1.OutputView), typeof(global::udb.core.Common.V1.RedactionStrategy), typeof(global::udb.core.Common.V1.SecurityClassification), typeof(global::udb.core.Common.V1.DataCategory), }, new pb::Extension[] { SecurityExtensions.Pii, SecurityExtensions.EncryptedSecurity, SecurityExtensions.LogMasked, SecurityExtensions.LogRedacted, SecurityExtensions.Sensitive, SecurityExtensions.RequiresConsent, SecurityExtensions.DataPurpose, SecurityExtensions.RetentionDays, SecurityExtensions.Tokenized, SecurityExtensions.SecurityClassification, SecurityExtensions.DataCategory, SecurityExtensions.DbColumnSecurity, SecurityExtensions.EndpointSecurity, SecurityExtensions.RestContract, SecurityExtensions.SdkSurface, SecurityExtensions.MethodCliScaffold, SecurityExtensions.MethodEventContract, SecurityExtensions.MethodDependencyContract, SecurityExtensions.DbTableSecurity, SecurityExtensions.MessageEventContract, SecurityExtensions.MessageSdkSurface, SecurityExtensions.MessageDependencyContract, SecurityExtensions.NativeService, SecurityExtensions.ServiceSdkSurface, SecurityExtensions.ServiceCliScaffold, SecurityExtensions.ServiceDependencyContract }, new pbr::GeneratedClrTypeInfo[] {
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Common.V1.EndpointSecurity), global::udb.core.Common.V1.EndpointSecurity.Parser, new[]{ "Mode", "Roles", "Scopes", "TenantRequired", "CsrfRequired", "PolicyRef", "InternalGrpcOnly", "RequiredAssuranceLevel", "AllowedCredentialTypes", "RateLimitPolicyRef", "AbusePolicyRef", "AuditEventType", "DecisionResource", "OwnerField", "TenantField", "ProjectField", "IdempotencyRequired", "RequestContextRequired" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Common.V1.RestContract), global::udb.core.Common.V1.RestContract.Parser, new[]{ "ResponseEnvelope", "ApiError", "PaginationMeta", "ExplicitNulls" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Common.V1.NativeServiceOptions), global::udb.core.Common.V1.NativeServiceOptions.Parser, new[]{ "ServiceId", "LogicalServiceId", "ProtoServiceId", "DisplayName", "Category", "DefaultEnabled", "RequiresPostgres", "RequiresRedis", "RequiresObjectStore", "RequiresKafka", "RequiresFeature", "PublicListenerAllowed", "ControlPlaneListenerAllowed", "PeerListenerAllowed", "SdkFacadeName", "CliScaffoldGroup", "HealthCheckRef", "CapabilityRef" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Common.V1.DbTableSecurityOptions), global::udb.core.Common.V1.DbTableSecurityOptions.Parser, new[]{ "TenantIsolationMode", "ProjectIsolationMode", "TenantColumn", "ProjectColumn", "RlsPolicyTemplate", "SoftDeleteMode", "RetentionClass", "RetentionDays", "AuditMode", "EncryptionProfile", "PiiProfile", "BreakGlassVisible", "ExportEligible", "DataResidencyPolicyRef" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Common.V1.DbColumnSecurityOptions), global::udb.core.Common.V1.DbColumnSecurityOptions.Parser, new[]{ "SecretClassification", "OutputView", "RedactionStrategy", "TokenizationStrategy", "HashingStrategy", "HashingAlgorithm", "EncryptionKeyClass", "SearchableEncrypted", "UniquenessScope", "OwnerField", "TenantField", "ProjectField" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Common.V1.SdkSurfaceOptions), global::udb.core.Common.V1.SdkSurfaceOptions.Parser, new[]{ "IncludeInFacade", "MethodAlias", "RequiredCredentialProvider", "StreamingHelperType", "DefaultDeadlineMs", "DefaultMaxAttempts", "BrowserSafe", "ServerOnly", "BoilerplateRecipeTags", "GenerateMinimalExample" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Common.V1.CliScaffoldOptions), global::udb.core.Common.V1.CliScaffoldOptions.Parser, new[]{ "ScaffoldPackage", "ImportPath", "RequiredEnv", "GeneratedFiles", "RouteName", "MiddlewareName", "RequiredNativeServices", "OptionalNativeServices", "SecretPlaceholders", "PostGenerationCommands", "SmokeTestCommand" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Common.V1.EventContractOptions), global::udb.core.Common.V1.EventContractOptions.Parser, new[]{ "EventType", "OutboxTopic", "PartitionKeyField", "PayloadRedactionProfile", "DeliveryGuarantee", "ReplayCompatibility" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Common.V1.DependencyContractOptions), global::udb.core.Common.V1.DependencyContractOptions.Parser, new[]{ "RequiredNativeServices", "OptionalNativeServices", "RequiredBackends", "OptionalBackends", "RequiredFeatures", "RequiredEnv", "DegradedWhenMissing" }, null, null, null, null)
           }));
     }
     #endregion
@@ -112,10 +280,40 @@ namespace udb.core.Common.V1 {
       new pb::Extension<global::Google.Protobuf.Reflection.FieldOptions, global::udb.core.Common.V1.SecurityClassification>(50019, pb::FieldCodec.ForEnum(400152, x => (int) x, x => (global::udb.core.Common.V1.SecurityClassification) x, global::udb.core.Common.V1.SecurityClassification.Unspecified));
     public static readonly pb::Extension<global::Google.Protobuf.Reflection.FieldOptions, global::udb.core.Common.V1.DataCategory> DataCategory =
       new pb::Extension<global::Google.Protobuf.Reflection.FieldOptions, global::udb.core.Common.V1.DataCategory>(50020, pb::FieldCodec.ForEnum(400160, x => (int) x, x => (global::udb.core.Common.V1.DataCategory) x, global::udb.core.Common.V1.DataCategory.Unspecified));
+    /// <summary>
+    /// Enterprise contract v1 additive field option. This does not replace the
+    /// scalar options above; generators normalize both shapes into one manifest.
+    /// </summary>
+    public static readonly pb::Extension<global::Google.Protobuf.Reflection.FieldOptions, global::udb.core.Common.V1.DbColumnSecurityOptions> DbColumnSecurity =
+      new pb::Extension<global::Google.Protobuf.Reflection.FieldOptions, global::udb.core.Common.V1.DbColumnSecurityOptions>(50033, pb::FieldCodec.ForMessage(400266, global::udb.core.Common.V1.DbColumnSecurityOptions.Parser));
     public static readonly pb::Extension<global::Google.Protobuf.Reflection.MethodOptions, global::udb.core.Common.V1.EndpointSecurity> EndpointSecurity =
       new pb::Extension<global::Google.Protobuf.Reflection.MethodOptions, global::udb.core.Common.V1.EndpointSecurity>(51001, pb::FieldCodec.ForMessage(408010, global::udb.core.Common.V1.EndpointSecurity.Parser));
     public static readonly pb::Extension<global::Google.Protobuf.Reflection.MethodOptions, global::udb.core.Common.V1.RestContract> RestContract =
       new pb::Extension<global::Google.Protobuf.Reflection.MethodOptions, global::udb.core.Common.V1.RestContract>(51002, pb::FieldCodec.ForMessage(408018, global::udb.core.Common.V1.RestContract.Parser));
+    public static readonly pb::Extension<global::Google.Protobuf.Reflection.MethodOptions, global::udb.core.Common.V1.SdkSurfaceOptions> SdkSurface =
+      new pb::Extension<global::Google.Protobuf.Reflection.MethodOptions, global::udb.core.Common.V1.SdkSurfaceOptions>(51003, pb::FieldCodec.ForMessage(408026, global::udb.core.Common.V1.SdkSurfaceOptions.Parser));
+    public static readonly pb::Extension<global::Google.Protobuf.Reflection.MethodOptions, global::udb.core.Common.V1.CliScaffoldOptions> MethodCliScaffold =
+      new pb::Extension<global::Google.Protobuf.Reflection.MethodOptions, global::udb.core.Common.V1.CliScaffoldOptions>(51004, pb::FieldCodec.ForMessage(408034, global::udb.core.Common.V1.CliScaffoldOptions.Parser));
+    public static readonly pb::Extension<global::Google.Protobuf.Reflection.MethodOptions, global::udb.core.Common.V1.EventContractOptions> MethodEventContract =
+      new pb::Extension<global::Google.Protobuf.Reflection.MethodOptions, global::udb.core.Common.V1.EventContractOptions>(51005, pb::FieldCodec.ForMessage(408042, global::udb.core.Common.V1.EventContractOptions.Parser));
+    public static readonly pb::Extension<global::Google.Protobuf.Reflection.MethodOptions, global::udb.core.Common.V1.DependencyContractOptions> MethodDependencyContract =
+      new pb::Extension<global::Google.Protobuf.Reflection.MethodOptions, global::udb.core.Common.V1.DependencyContractOptions>(51006, pb::FieldCodec.ForMessage(408050, global::udb.core.Common.V1.DependencyContractOptions.Parser));
+    public static readonly pb::Extension<global::Google.Protobuf.Reflection.MessageOptions, global::udb.core.Common.V1.DbTableSecurityOptions> DbTableSecurity =
+      new pb::Extension<global::Google.Protobuf.Reflection.MessageOptions, global::udb.core.Common.V1.DbTableSecurityOptions>(52001, pb::FieldCodec.ForMessage(416010, global::udb.core.Common.V1.DbTableSecurityOptions.Parser));
+    public static readonly pb::Extension<global::Google.Protobuf.Reflection.MessageOptions, global::udb.core.Common.V1.EventContractOptions> MessageEventContract =
+      new pb::Extension<global::Google.Protobuf.Reflection.MessageOptions, global::udb.core.Common.V1.EventContractOptions>(52002, pb::FieldCodec.ForMessage(416018, global::udb.core.Common.V1.EventContractOptions.Parser));
+    public static readonly pb::Extension<global::Google.Protobuf.Reflection.MessageOptions, global::udb.core.Common.V1.SdkSurfaceOptions> MessageSdkSurface =
+      new pb::Extension<global::Google.Protobuf.Reflection.MessageOptions, global::udb.core.Common.V1.SdkSurfaceOptions>(52003, pb::FieldCodec.ForMessage(416026, global::udb.core.Common.V1.SdkSurfaceOptions.Parser));
+    public static readonly pb::Extension<global::Google.Protobuf.Reflection.MessageOptions, global::udb.core.Common.V1.DependencyContractOptions> MessageDependencyContract =
+      new pb::Extension<global::Google.Protobuf.Reflection.MessageOptions, global::udb.core.Common.V1.DependencyContractOptions>(52004, pb::FieldCodec.ForMessage(416034, global::udb.core.Common.V1.DependencyContractOptions.Parser));
+    public static readonly pb::Extension<global::Google.Protobuf.Reflection.ServiceOptions, global::udb.core.Common.V1.NativeServiceOptions> NativeService =
+      new pb::Extension<global::Google.Protobuf.Reflection.ServiceOptions, global::udb.core.Common.V1.NativeServiceOptions>(53001, pb::FieldCodec.ForMessage(424010, global::udb.core.Common.V1.NativeServiceOptions.Parser));
+    public static readonly pb::Extension<global::Google.Protobuf.Reflection.ServiceOptions, global::udb.core.Common.V1.SdkSurfaceOptions> ServiceSdkSurface =
+      new pb::Extension<global::Google.Protobuf.Reflection.ServiceOptions, global::udb.core.Common.V1.SdkSurfaceOptions>(53002, pb::FieldCodec.ForMessage(424018, global::udb.core.Common.V1.SdkSurfaceOptions.Parser));
+    public static readonly pb::Extension<global::Google.Protobuf.Reflection.ServiceOptions, global::udb.core.Common.V1.CliScaffoldOptions> ServiceCliScaffold =
+      new pb::Extension<global::Google.Protobuf.Reflection.ServiceOptions, global::udb.core.Common.V1.CliScaffoldOptions>(53003, pb::FieldCodec.ForMessage(424026, global::udb.core.Common.V1.CliScaffoldOptions.Parser));
+    public static readonly pb::Extension<global::Google.Protobuf.Reflection.ServiceOptions, global::udb.core.Common.V1.DependencyContractOptions> ServiceDependencyContract =
+      new pb::Extension<global::Google.Protobuf.Reflection.ServiceOptions, global::udb.core.Common.V1.DependencyContractOptions>(53004, pb::FieldCodec.ForMessage(424034, global::udb.core.Common.V1.DependencyContractOptions.Parser));
   }
 
   #region Enums
@@ -125,6 +323,59 @@ namespace udb.core.Common.V1 {
     [pbr::OriginalName("AUTH_MODE_BEARER")] Bearer = 2,
     [pbr::OriginalName("AUTH_MODE_API_KEY")] ApiKey = 3,
     [pbr::OriginalName("AUTH_MODE_SERVICE_ACCOUNT")] ServiceAccount = 4,
+  }
+
+  public enum CredentialType {
+    [pbr::OriginalName("CREDENTIAL_TYPE_UNSPECIFIED")] Unspecified = 0,
+    [pbr::OriginalName("CREDENTIAL_TYPE_BEARER_JWT")] BearerJwt = 1,
+    [pbr::OriginalName("CREDENTIAL_TYPE_SESSION")] Session = 2,
+    [pbr::OriginalName("CREDENTIAL_TYPE_API_KEY")] ApiKey = 3,
+    [pbr::OriginalName("CREDENTIAL_TYPE_SERVICE_ACCOUNT")] ServiceAccount = 4,
+    [pbr::OriginalName("CREDENTIAL_TYPE_MTLS")] Mtls = 5,
+    [pbr::OriginalName("CREDENTIAL_TYPE_OIDC")] Oidc = 6,
+    [pbr::OriginalName("CREDENTIAL_TYPE_SAML")] Saml = 7,
+    [pbr::OriginalName("CREDENTIAL_TYPE_WEBAUTHN")] Webauthn = 8,
+    [pbr::OriginalName("CREDENTIAL_TYPE_EXTERNAL_JWT")] ExternalJwt = 9,
+  }
+
+  public enum AuditMode {
+    [pbr::OriginalName("AUDIT_MODE_UNSPECIFIED")] Unspecified = 0,
+    [pbr::OriginalName("AUDIT_MODE_NONE")] None = 1,
+    [pbr::OriginalName("AUDIT_MODE_MUTATION")] Mutation = 2,
+    [pbr::OriginalName("AUDIT_MODE_DECISION")] Decision = 3,
+    [pbr::OriginalName("AUDIT_MODE_FULL")] Full = 4,
+  }
+
+  public enum SecretClassification {
+    [pbr::OriginalName("SECRET_CLASSIFICATION_UNSPECIFIED")] Unspecified = 0,
+    [pbr::OriginalName("SECRET_CLASSIFICATION_PUBLIC")] Public = 1,
+    [pbr::OriginalName("SECRET_CLASSIFICATION_INTERNAL")] Internal = 2,
+    [pbr::OriginalName("SECRET_CLASSIFICATION_CREDENTIAL")] Credential = 3,
+    [pbr::OriginalName("SECRET_CLASSIFICATION_TOKEN")] Token = 4,
+    [pbr::OriginalName("SECRET_CLASSIFICATION_KEY")] Key = 5,
+    [pbr::OriginalName("SECRET_CLASSIFICATION_BIOMETRIC")] Biometric = 6,
+    [pbr::OriginalName("SECRET_CLASSIFICATION_IDENTITY")] Identity = 7,
+    [pbr::OriginalName("SECRET_CLASSIFICATION_PII")] Pii = 8,
+    [pbr::OriginalName("SECRET_CLASSIFICATION_OPERATIONAL")] Operational = 9,
+  }
+
+  public enum OutputView {
+    [pbr::OriginalName("OUTPUT_VIEW_UNSPECIFIED")] Unspecified = 0,
+    [pbr::OriginalName("OUTPUT_VIEW_STORAGE_ONLY")] StorageOnly = 1,
+    [pbr::OriginalName("OUTPUT_VIEW_PUBLIC")] Public = 2,
+    [pbr::OriginalName("OUTPUT_VIEW_SELF")] Self = 3,
+    [pbr::OriginalName("OUTPUT_VIEW_ADMIN")] Admin = 4,
+    [pbr::OriginalName("OUTPUT_VIEW_AUDIT")] Audit = 5,
+    [pbr::OriginalName("OUTPUT_VIEW_NEVER")] Never = 6,
+  }
+
+  public enum RedactionStrategy {
+    [pbr::OriginalName("REDACTION_STRATEGY_UNSPECIFIED")] Unspecified = 0,
+    [pbr::OriginalName("REDACTION_STRATEGY_NONE")] None = 1,
+    [pbr::OriginalName("REDACTION_STRATEGY_MASK")] Mask = 2,
+    [pbr::OriginalName("REDACTION_STRATEGY_REDACT")] Redact = 3,
+    [pbr::OriginalName("REDACTION_STRATEGY_HASH_ONLY")] HashOnly = 4,
+    [pbr::OriginalName("REDACTION_STRATEGY_LAST4")] Last4 = 5,
   }
 
   public enum SecurityClassification {
@@ -190,6 +441,17 @@ namespace udb.core.Common.V1 {
       csrfRequired_ = other.csrfRequired_;
       policyRef_ = other.policyRef_;
       internalGrpcOnly_ = other.internalGrpcOnly_;
+      requiredAssuranceLevel_ = other.requiredAssuranceLevel_;
+      allowedCredentialTypes_ = other.allowedCredentialTypes_.Clone();
+      rateLimitPolicyRef_ = other.rateLimitPolicyRef_;
+      abusePolicyRef_ = other.abusePolicyRef_;
+      auditEventType_ = other.auditEventType_;
+      decisionResource_ = other.decisionResource_;
+      ownerField_ = other.ownerField_;
+      tenantField_ = other.tenantField_;
+      projectField_ = other.projectField_;
+      idempotencyRequired_ = other.idempotencyRequired_;
+      requestContextRequired_ = other.requestContextRequired_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -281,6 +543,137 @@ namespace udb.core.Common.V1 {
       }
     }
 
+    /// <summary>Field number for the "required_assurance_level" field.</summary>
+    public const int RequiredAssuranceLevelFieldNumber = 8;
+    private int requiredAssuranceLevel_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int RequiredAssuranceLevel {
+      get { return requiredAssuranceLevel_; }
+      set {
+        requiredAssuranceLevel_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "allowed_credential_types" field.</summary>
+    public const int AllowedCredentialTypesFieldNumber = 9;
+    private static readonly pb::FieldCodec<global::udb.core.Common.V1.CredentialType> _repeated_allowedCredentialTypes_codec
+        = pb::FieldCodec.ForEnum(74, x => (int) x, x => (global::udb.core.Common.V1.CredentialType) x);
+    private readonly pbc::RepeatedField<global::udb.core.Common.V1.CredentialType> allowedCredentialTypes_ = new pbc::RepeatedField<global::udb.core.Common.V1.CredentialType>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::udb.core.Common.V1.CredentialType> AllowedCredentialTypes {
+      get { return allowedCredentialTypes_; }
+    }
+
+    /// <summary>Field number for the "rate_limit_policy_ref" field.</summary>
+    public const int RateLimitPolicyRefFieldNumber = 10;
+    private string rateLimitPolicyRef_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RateLimitPolicyRef {
+      get { return rateLimitPolicyRef_; }
+      set {
+        rateLimitPolicyRef_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "abuse_policy_ref" field.</summary>
+    public const int AbusePolicyRefFieldNumber = 11;
+    private string abusePolicyRef_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string AbusePolicyRef {
+      get { return abusePolicyRef_; }
+      set {
+        abusePolicyRef_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "audit_event_type" field.</summary>
+    public const int AuditEventTypeFieldNumber = 12;
+    private string auditEventType_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string AuditEventType {
+      get { return auditEventType_; }
+      set {
+        auditEventType_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "decision_resource" field.</summary>
+    public const int DecisionResourceFieldNumber = 13;
+    private string decisionResource_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string DecisionResource {
+      get { return decisionResource_; }
+      set {
+        decisionResource_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "owner_field" field.</summary>
+    public const int OwnerFieldFieldNumber = 14;
+    private string ownerField_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string OwnerField {
+      get { return ownerField_; }
+      set {
+        ownerField_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "tenant_field" field.</summary>
+    public const int TenantFieldFieldNumber = 15;
+    private string tenantField_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantField {
+      get { return tenantField_; }
+      set {
+        tenantField_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "project_field" field.</summary>
+    public const int ProjectFieldFieldNumber = 16;
+    private string projectField_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectField {
+      get { return projectField_; }
+      set {
+        projectField_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "idempotency_required" field.</summary>
+    public const int IdempotencyRequiredFieldNumber = 17;
+    private bool idempotencyRequired_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool IdempotencyRequired {
+      get { return idempotencyRequired_; }
+      set {
+        idempotencyRequired_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "request_context_required" field.</summary>
+    public const int RequestContextRequiredFieldNumber = 18;
+    private bool requestContextRequired_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool RequestContextRequired {
+      get { return requestContextRequired_; }
+      set {
+        requestContextRequired_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -303,6 +696,17 @@ namespace udb.core.Common.V1 {
       if (CsrfRequired != other.CsrfRequired) return false;
       if (PolicyRef != other.PolicyRef) return false;
       if (InternalGrpcOnly != other.InternalGrpcOnly) return false;
+      if (RequiredAssuranceLevel != other.RequiredAssuranceLevel) return false;
+      if(!allowedCredentialTypes_.Equals(other.allowedCredentialTypes_)) return false;
+      if (RateLimitPolicyRef != other.RateLimitPolicyRef) return false;
+      if (AbusePolicyRef != other.AbusePolicyRef) return false;
+      if (AuditEventType != other.AuditEventType) return false;
+      if (DecisionResource != other.DecisionResource) return false;
+      if (OwnerField != other.OwnerField) return false;
+      if (TenantField != other.TenantField) return false;
+      if (ProjectField != other.ProjectField) return false;
+      if (IdempotencyRequired != other.IdempotencyRequired) return false;
+      if (RequestContextRequired != other.RequestContextRequired) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -317,6 +721,17 @@ namespace udb.core.Common.V1 {
       if (CsrfRequired != false) hash ^= CsrfRequired.GetHashCode();
       if (PolicyRef.Length != 0) hash ^= PolicyRef.GetHashCode();
       if (InternalGrpcOnly != false) hash ^= InternalGrpcOnly.GetHashCode();
+      if (RequiredAssuranceLevel != 0) hash ^= RequiredAssuranceLevel.GetHashCode();
+      hash ^= allowedCredentialTypes_.GetHashCode();
+      if (RateLimitPolicyRef.Length != 0) hash ^= RateLimitPolicyRef.GetHashCode();
+      if (AbusePolicyRef.Length != 0) hash ^= AbusePolicyRef.GetHashCode();
+      if (AuditEventType.Length != 0) hash ^= AuditEventType.GetHashCode();
+      if (DecisionResource.Length != 0) hash ^= DecisionResource.GetHashCode();
+      if (OwnerField.Length != 0) hash ^= OwnerField.GetHashCode();
+      if (TenantField.Length != 0) hash ^= TenantField.GetHashCode();
+      if (ProjectField.Length != 0) hash ^= ProjectField.GetHashCode();
+      if (IdempotencyRequired != false) hash ^= IdempotencyRequired.GetHashCode();
+      if (RequestContextRequired != false) hash ^= RequestContextRequired.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -357,6 +772,47 @@ namespace udb.core.Common.V1 {
         output.WriteRawTag(56);
         output.WriteBool(InternalGrpcOnly);
       }
+      if (RequiredAssuranceLevel != 0) {
+        output.WriteRawTag(64);
+        output.WriteInt32(RequiredAssuranceLevel);
+      }
+      allowedCredentialTypes_.WriteTo(output, _repeated_allowedCredentialTypes_codec);
+      if (RateLimitPolicyRef.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(RateLimitPolicyRef);
+      }
+      if (AbusePolicyRef.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(AbusePolicyRef);
+      }
+      if (AuditEventType.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(AuditEventType);
+      }
+      if (DecisionResource.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(DecisionResource);
+      }
+      if (OwnerField.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(OwnerField);
+      }
+      if (TenantField.Length != 0) {
+        output.WriteRawTag(122);
+        output.WriteString(TenantField);
+      }
+      if (ProjectField.Length != 0) {
+        output.WriteRawTag(130, 1);
+        output.WriteString(ProjectField);
+      }
+      if (IdempotencyRequired != false) {
+        output.WriteRawTag(136, 1);
+        output.WriteBool(IdempotencyRequired);
+      }
+      if (RequestContextRequired != false) {
+        output.WriteRawTag(144, 1);
+        output.WriteBool(RequestContextRequired);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -389,6 +845,47 @@ namespace udb.core.Common.V1 {
         output.WriteRawTag(56);
         output.WriteBool(InternalGrpcOnly);
       }
+      if (RequiredAssuranceLevel != 0) {
+        output.WriteRawTag(64);
+        output.WriteInt32(RequiredAssuranceLevel);
+      }
+      allowedCredentialTypes_.WriteTo(ref output, _repeated_allowedCredentialTypes_codec);
+      if (RateLimitPolicyRef.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(RateLimitPolicyRef);
+      }
+      if (AbusePolicyRef.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(AbusePolicyRef);
+      }
+      if (AuditEventType.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(AuditEventType);
+      }
+      if (DecisionResource.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(DecisionResource);
+      }
+      if (OwnerField.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(OwnerField);
+      }
+      if (TenantField.Length != 0) {
+        output.WriteRawTag(122);
+        output.WriteString(TenantField);
+      }
+      if (ProjectField.Length != 0) {
+        output.WriteRawTag(130, 1);
+        output.WriteString(ProjectField);
+      }
+      if (IdempotencyRequired != false) {
+        output.WriteRawTag(136, 1);
+        output.WriteBool(IdempotencyRequired);
+      }
+      if (RequestContextRequired != false) {
+        output.WriteRawTag(144, 1);
+        output.WriteBool(RequestContextRequired);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -415,6 +912,37 @@ namespace udb.core.Common.V1 {
       }
       if (InternalGrpcOnly != false) {
         size += 1 + 1;
+      }
+      if (RequiredAssuranceLevel != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(RequiredAssuranceLevel);
+      }
+      size += allowedCredentialTypes_.CalculateSize(_repeated_allowedCredentialTypes_codec);
+      if (RateLimitPolicyRef.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RateLimitPolicyRef);
+      }
+      if (AbusePolicyRef.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(AbusePolicyRef);
+      }
+      if (AuditEventType.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(AuditEventType);
+      }
+      if (DecisionResource.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(DecisionResource);
+      }
+      if (OwnerField.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(OwnerField);
+      }
+      if (TenantField.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantField);
+      }
+      if (ProjectField.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(ProjectField);
+      }
+      if (IdempotencyRequired != false) {
+        size += 2 + 1;
+      }
+      if (RequestContextRequired != false) {
+        size += 2 + 1;
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -444,6 +972,37 @@ namespace udb.core.Common.V1 {
       }
       if (other.InternalGrpcOnly != false) {
         InternalGrpcOnly = other.InternalGrpcOnly;
+      }
+      if (other.RequiredAssuranceLevel != 0) {
+        RequiredAssuranceLevel = other.RequiredAssuranceLevel;
+      }
+      allowedCredentialTypes_.Add(other.allowedCredentialTypes_);
+      if (other.RateLimitPolicyRef.Length != 0) {
+        RateLimitPolicyRef = other.RateLimitPolicyRef;
+      }
+      if (other.AbusePolicyRef.Length != 0) {
+        AbusePolicyRef = other.AbusePolicyRef;
+      }
+      if (other.AuditEventType.Length != 0) {
+        AuditEventType = other.AuditEventType;
+      }
+      if (other.DecisionResource.Length != 0) {
+        DecisionResource = other.DecisionResource;
+      }
+      if (other.OwnerField.Length != 0) {
+        OwnerField = other.OwnerField;
+      }
+      if (other.TenantField.Length != 0) {
+        TenantField = other.TenantField;
+      }
+      if (other.ProjectField.Length != 0) {
+        ProjectField = other.ProjectField;
+      }
+      if (other.IdempotencyRequired != false) {
+        IdempotencyRequired = other.IdempotencyRequired;
+      }
+      if (other.RequestContextRequired != false) {
+        RequestContextRequired = other.RequestContextRequired;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -492,6 +1051,51 @@ namespace udb.core.Common.V1 {
             InternalGrpcOnly = input.ReadBool();
             break;
           }
+          case 64: {
+            RequiredAssuranceLevel = input.ReadInt32();
+            break;
+          }
+          case 74:
+          case 72: {
+            allowedCredentialTypes_.AddEntriesFrom(input, _repeated_allowedCredentialTypes_codec);
+            break;
+          }
+          case 82: {
+            RateLimitPolicyRef = input.ReadString();
+            break;
+          }
+          case 90: {
+            AbusePolicyRef = input.ReadString();
+            break;
+          }
+          case 98: {
+            AuditEventType = input.ReadString();
+            break;
+          }
+          case 106: {
+            DecisionResource = input.ReadString();
+            break;
+          }
+          case 114: {
+            OwnerField = input.ReadString();
+            break;
+          }
+          case 122: {
+            TenantField = input.ReadString();
+            break;
+          }
+          case 130: {
+            ProjectField = input.ReadString();
+            break;
+          }
+          case 136: {
+            IdempotencyRequired = input.ReadBool();
+            break;
+          }
+          case 144: {
+            RequestContextRequired = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -537,6 +1141,51 @@ namespace udb.core.Common.V1 {
           }
           case 56: {
             InternalGrpcOnly = input.ReadBool();
+            break;
+          }
+          case 64: {
+            RequiredAssuranceLevel = input.ReadInt32();
+            break;
+          }
+          case 74:
+          case 72: {
+            allowedCredentialTypes_.AddEntriesFrom(ref input, _repeated_allowedCredentialTypes_codec);
+            break;
+          }
+          case 82: {
+            RateLimitPolicyRef = input.ReadString();
+            break;
+          }
+          case 90: {
+            AbusePolicyRef = input.ReadString();
+            break;
+          }
+          case 98: {
+            AuditEventType = input.ReadString();
+            break;
+          }
+          case 106: {
+            DecisionResource = input.ReadString();
+            break;
+          }
+          case 114: {
+            OwnerField = input.ReadString();
+            break;
+          }
+          case 122: {
+            TenantField = input.ReadString();
+            break;
+          }
+          case 130: {
+            ProjectField = input.ReadString();
+            break;
+          }
+          case 136: {
+            IdempotencyRequired = input.ReadBool();
+            break;
+          }
+          case 144: {
+            RequestContextRequired = input.ReadBool();
             break;
           }
         }
@@ -846,6 +1495,3865 @@ namespace udb.core.Common.V1 {
           }
           case 32: {
             ExplicitNulls = input.ReadBool();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class NativeServiceOptions : pb::IMessage<NativeServiceOptions>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<NativeServiceOptions> _parser = new pb::MessageParser<NativeServiceOptions>(() => new NativeServiceOptions());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<NativeServiceOptions> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Common.V1.SecurityReflection.Descriptor.MessageTypes[2]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NativeServiceOptions() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NativeServiceOptions(NativeServiceOptions other) : this() {
+      serviceId_ = other.serviceId_;
+      logicalServiceId_ = other.logicalServiceId_;
+      protoServiceId_ = other.protoServiceId_;
+      displayName_ = other.displayName_;
+      category_ = other.category_;
+      defaultEnabled_ = other.defaultEnabled_;
+      requiresPostgres_ = other.requiresPostgres_;
+      requiresRedis_ = other.requiresRedis_;
+      requiresObjectStore_ = other.requiresObjectStore_;
+      requiresKafka_ = other.requiresKafka_;
+      requiresFeature_ = other.requiresFeature_;
+      publicListenerAllowed_ = other.publicListenerAllowed_;
+      controlPlaneListenerAllowed_ = other.controlPlaneListenerAllowed_;
+      peerListenerAllowed_ = other.peerListenerAllowed_;
+      sdkFacadeName_ = other.sdkFacadeName_;
+      cliScaffoldGroup_ = other.cliScaffoldGroup_;
+      healthCheckRef_ = other.healthCheckRef_;
+      capabilityRef_ = other.capabilityRef_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NativeServiceOptions Clone() {
+      return new NativeServiceOptions(this);
+    }
+
+    /// <summary>Field number for the "service_id" field.</summary>
+    public const int ServiceIdFieldNumber = 1;
+    private string serviceId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ServiceId {
+      get { return serviceId_; }
+      set {
+        serviceId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "logical_service_id" field.</summary>
+    public const int LogicalServiceIdFieldNumber = 2;
+    private string logicalServiceId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string LogicalServiceId {
+      get { return logicalServiceId_; }
+      set {
+        logicalServiceId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "proto_service_id" field.</summary>
+    public const int ProtoServiceIdFieldNumber = 3;
+    private string protoServiceId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProtoServiceId {
+      get { return protoServiceId_; }
+      set {
+        protoServiceId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "display_name" field.</summary>
+    public const int DisplayNameFieldNumber = 4;
+    private string displayName_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string DisplayName {
+      get { return displayName_; }
+      set {
+        displayName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "category" field.</summary>
+    public const int CategoryFieldNumber = 5;
+    private string category_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Category {
+      get { return category_; }
+      set {
+        category_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "default_enabled" field.</summary>
+    public const int DefaultEnabledFieldNumber = 6;
+    private bool defaultEnabled_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool DefaultEnabled {
+      get { return defaultEnabled_; }
+      set {
+        defaultEnabled_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "requires_postgres" field.</summary>
+    public const int RequiresPostgresFieldNumber = 7;
+    private bool requiresPostgres_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool RequiresPostgres {
+      get { return requiresPostgres_; }
+      set {
+        requiresPostgres_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "requires_redis" field.</summary>
+    public const int RequiresRedisFieldNumber = 8;
+    private bool requiresRedis_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool RequiresRedis {
+      get { return requiresRedis_; }
+      set {
+        requiresRedis_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "requires_object_store" field.</summary>
+    public const int RequiresObjectStoreFieldNumber = 9;
+    private bool requiresObjectStore_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool RequiresObjectStore {
+      get { return requiresObjectStore_; }
+      set {
+        requiresObjectStore_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "requires_kafka" field.</summary>
+    public const int RequiresKafkaFieldNumber = 10;
+    private bool requiresKafka_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool RequiresKafka {
+      get { return requiresKafka_; }
+      set {
+        requiresKafka_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "requires_feature" field.</summary>
+    public const int RequiresFeatureFieldNumber = 11;
+    private string requiresFeature_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RequiresFeature {
+      get { return requiresFeature_; }
+      set {
+        requiresFeature_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "public_listener_allowed" field.</summary>
+    public const int PublicListenerAllowedFieldNumber = 12;
+    private bool publicListenerAllowed_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool PublicListenerAllowed {
+      get { return publicListenerAllowed_; }
+      set {
+        publicListenerAllowed_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "control_plane_listener_allowed" field.</summary>
+    public const int ControlPlaneListenerAllowedFieldNumber = 13;
+    private bool controlPlaneListenerAllowed_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool ControlPlaneListenerAllowed {
+      get { return controlPlaneListenerAllowed_; }
+      set {
+        controlPlaneListenerAllowed_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "peer_listener_allowed" field.</summary>
+    public const int PeerListenerAllowedFieldNumber = 14;
+    private bool peerListenerAllowed_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool PeerListenerAllowed {
+      get { return peerListenerAllowed_; }
+      set {
+        peerListenerAllowed_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "sdk_facade_name" field.</summary>
+    public const int SdkFacadeNameFieldNumber = 15;
+    private string sdkFacadeName_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string SdkFacadeName {
+      get { return sdkFacadeName_; }
+      set {
+        sdkFacadeName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "cli_scaffold_group" field.</summary>
+    public const int CliScaffoldGroupFieldNumber = 16;
+    private string cliScaffoldGroup_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string CliScaffoldGroup {
+      get { return cliScaffoldGroup_; }
+      set {
+        cliScaffoldGroup_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "health_check_ref" field.</summary>
+    public const int HealthCheckRefFieldNumber = 17;
+    private string healthCheckRef_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string HealthCheckRef {
+      get { return healthCheckRef_; }
+      set {
+        healthCheckRef_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "capability_ref" field.</summary>
+    public const int CapabilityRefFieldNumber = 18;
+    private string capabilityRef_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string CapabilityRef {
+      get { return capabilityRef_; }
+      set {
+        capabilityRef_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as NativeServiceOptions);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(NativeServiceOptions other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ServiceId != other.ServiceId) return false;
+      if (LogicalServiceId != other.LogicalServiceId) return false;
+      if (ProtoServiceId != other.ProtoServiceId) return false;
+      if (DisplayName != other.DisplayName) return false;
+      if (Category != other.Category) return false;
+      if (DefaultEnabled != other.DefaultEnabled) return false;
+      if (RequiresPostgres != other.RequiresPostgres) return false;
+      if (RequiresRedis != other.RequiresRedis) return false;
+      if (RequiresObjectStore != other.RequiresObjectStore) return false;
+      if (RequiresKafka != other.RequiresKafka) return false;
+      if (RequiresFeature != other.RequiresFeature) return false;
+      if (PublicListenerAllowed != other.PublicListenerAllowed) return false;
+      if (ControlPlaneListenerAllowed != other.ControlPlaneListenerAllowed) return false;
+      if (PeerListenerAllowed != other.PeerListenerAllowed) return false;
+      if (SdkFacadeName != other.SdkFacadeName) return false;
+      if (CliScaffoldGroup != other.CliScaffoldGroup) return false;
+      if (HealthCheckRef != other.HealthCheckRef) return false;
+      if (CapabilityRef != other.CapabilityRef) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ServiceId.Length != 0) hash ^= ServiceId.GetHashCode();
+      if (LogicalServiceId.Length != 0) hash ^= LogicalServiceId.GetHashCode();
+      if (ProtoServiceId.Length != 0) hash ^= ProtoServiceId.GetHashCode();
+      if (DisplayName.Length != 0) hash ^= DisplayName.GetHashCode();
+      if (Category.Length != 0) hash ^= Category.GetHashCode();
+      if (DefaultEnabled != false) hash ^= DefaultEnabled.GetHashCode();
+      if (RequiresPostgres != false) hash ^= RequiresPostgres.GetHashCode();
+      if (RequiresRedis != false) hash ^= RequiresRedis.GetHashCode();
+      if (RequiresObjectStore != false) hash ^= RequiresObjectStore.GetHashCode();
+      if (RequiresKafka != false) hash ^= RequiresKafka.GetHashCode();
+      if (RequiresFeature.Length != 0) hash ^= RequiresFeature.GetHashCode();
+      if (PublicListenerAllowed != false) hash ^= PublicListenerAllowed.GetHashCode();
+      if (ControlPlaneListenerAllowed != false) hash ^= ControlPlaneListenerAllowed.GetHashCode();
+      if (PeerListenerAllowed != false) hash ^= PeerListenerAllowed.GetHashCode();
+      if (SdkFacadeName.Length != 0) hash ^= SdkFacadeName.GetHashCode();
+      if (CliScaffoldGroup.Length != 0) hash ^= CliScaffoldGroup.GetHashCode();
+      if (HealthCheckRef.Length != 0) hash ^= HealthCheckRef.GetHashCode();
+      if (CapabilityRef.Length != 0) hash ^= CapabilityRef.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (ServiceId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ServiceId);
+      }
+      if (LogicalServiceId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(LogicalServiceId);
+      }
+      if (ProtoServiceId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(ProtoServiceId);
+      }
+      if (DisplayName.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(DisplayName);
+      }
+      if (Category.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(Category);
+      }
+      if (DefaultEnabled != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(DefaultEnabled);
+      }
+      if (RequiresPostgres != false) {
+        output.WriteRawTag(56);
+        output.WriteBool(RequiresPostgres);
+      }
+      if (RequiresRedis != false) {
+        output.WriteRawTag(64);
+        output.WriteBool(RequiresRedis);
+      }
+      if (RequiresObjectStore != false) {
+        output.WriteRawTag(72);
+        output.WriteBool(RequiresObjectStore);
+      }
+      if (RequiresKafka != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(RequiresKafka);
+      }
+      if (RequiresFeature.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(RequiresFeature);
+      }
+      if (PublicListenerAllowed != false) {
+        output.WriteRawTag(96);
+        output.WriteBool(PublicListenerAllowed);
+      }
+      if (ControlPlaneListenerAllowed != false) {
+        output.WriteRawTag(104);
+        output.WriteBool(ControlPlaneListenerAllowed);
+      }
+      if (PeerListenerAllowed != false) {
+        output.WriteRawTag(112);
+        output.WriteBool(PeerListenerAllowed);
+      }
+      if (SdkFacadeName.Length != 0) {
+        output.WriteRawTag(122);
+        output.WriteString(SdkFacadeName);
+      }
+      if (CliScaffoldGroup.Length != 0) {
+        output.WriteRawTag(130, 1);
+        output.WriteString(CliScaffoldGroup);
+      }
+      if (HealthCheckRef.Length != 0) {
+        output.WriteRawTag(138, 1);
+        output.WriteString(HealthCheckRef);
+      }
+      if (CapabilityRef.Length != 0) {
+        output.WriteRawTag(146, 1);
+        output.WriteString(CapabilityRef);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (ServiceId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ServiceId);
+      }
+      if (LogicalServiceId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(LogicalServiceId);
+      }
+      if (ProtoServiceId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(ProtoServiceId);
+      }
+      if (DisplayName.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(DisplayName);
+      }
+      if (Category.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(Category);
+      }
+      if (DefaultEnabled != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(DefaultEnabled);
+      }
+      if (RequiresPostgres != false) {
+        output.WriteRawTag(56);
+        output.WriteBool(RequiresPostgres);
+      }
+      if (RequiresRedis != false) {
+        output.WriteRawTag(64);
+        output.WriteBool(RequiresRedis);
+      }
+      if (RequiresObjectStore != false) {
+        output.WriteRawTag(72);
+        output.WriteBool(RequiresObjectStore);
+      }
+      if (RequiresKafka != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(RequiresKafka);
+      }
+      if (RequiresFeature.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(RequiresFeature);
+      }
+      if (PublicListenerAllowed != false) {
+        output.WriteRawTag(96);
+        output.WriteBool(PublicListenerAllowed);
+      }
+      if (ControlPlaneListenerAllowed != false) {
+        output.WriteRawTag(104);
+        output.WriteBool(ControlPlaneListenerAllowed);
+      }
+      if (PeerListenerAllowed != false) {
+        output.WriteRawTag(112);
+        output.WriteBool(PeerListenerAllowed);
+      }
+      if (SdkFacadeName.Length != 0) {
+        output.WriteRawTag(122);
+        output.WriteString(SdkFacadeName);
+      }
+      if (CliScaffoldGroup.Length != 0) {
+        output.WriteRawTag(130, 1);
+        output.WriteString(CliScaffoldGroup);
+      }
+      if (HealthCheckRef.Length != 0) {
+        output.WriteRawTag(138, 1);
+        output.WriteString(HealthCheckRef);
+      }
+      if (CapabilityRef.Length != 0) {
+        output.WriteRawTag(146, 1);
+        output.WriteString(CapabilityRef);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (ServiceId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ServiceId);
+      }
+      if (LogicalServiceId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(LogicalServiceId);
+      }
+      if (ProtoServiceId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProtoServiceId);
+      }
+      if (DisplayName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(DisplayName);
+      }
+      if (Category.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Category);
+      }
+      if (DefaultEnabled != false) {
+        size += 1 + 1;
+      }
+      if (RequiresPostgres != false) {
+        size += 1 + 1;
+      }
+      if (RequiresRedis != false) {
+        size += 1 + 1;
+      }
+      if (RequiresObjectStore != false) {
+        size += 1 + 1;
+      }
+      if (RequiresKafka != false) {
+        size += 1 + 1;
+      }
+      if (RequiresFeature.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RequiresFeature);
+      }
+      if (PublicListenerAllowed != false) {
+        size += 1 + 1;
+      }
+      if (ControlPlaneListenerAllowed != false) {
+        size += 1 + 1;
+      }
+      if (PeerListenerAllowed != false) {
+        size += 1 + 1;
+      }
+      if (SdkFacadeName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(SdkFacadeName);
+      }
+      if (CliScaffoldGroup.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(CliScaffoldGroup);
+      }
+      if (HealthCheckRef.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(HealthCheckRef);
+      }
+      if (CapabilityRef.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(CapabilityRef);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(NativeServiceOptions other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ServiceId.Length != 0) {
+        ServiceId = other.ServiceId;
+      }
+      if (other.LogicalServiceId.Length != 0) {
+        LogicalServiceId = other.LogicalServiceId;
+      }
+      if (other.ProtoServiceId.Length != 0) {
+        ProtoServiceId = other.ProtoServiceId;
+      }
+      if (other.DisplayName.Length != 0) {
+        DisplayName = other.DisplayName;
+      }
+      if (other.Category.Length != 0) {
+        Category = other.Category;
+      }
+      if (other.DefaultEnabled != false) {
+        DefaultEnabled = other.DefaultEnabled;
+      }
+      if (other.RequiresPostgres != false) {
+        RequiresPostgres = other.RequiresPostgres;
+      }
+      if (other.RequiresRedis != false) {
+        RequiresRedis = other.RequiresRedis;
+      }
+      if (other.RequiresObjectStore != false) {
+        RequiresObjectStore = other.RequiresObjectStore;
+      }
+      if (other.RequiresKafka != false) {
+        RequiresKafka = other.RequiresKafka;
+      }
+      if (other.RequiresFeature.Length != 0) {
+        RequiresFeature = other.RequiresFeature;
+      }
+      if (other.PublicListenerAllowed != false) {
+        PublicListenerAllowed = other.PublicListenerAllowed;
+      }
+      if (other.ControlPlaneListenerAllowed != false) {
+        ControlPlaneListenerAllowed = other.ControlPlaneListenerAllowed;
+      }
+      if (other.PeerListenerAllowed != false) {
+        PeerListenerAllowed = other.PeerListenerAllowed;
+      }
+      if (other.SdkFacadeName.Length != 0) {
+        SdkFacadeName = other.SdkFacadeName;
+      }
+      if (other.CliScaffoldGroup.Length != 0) {
+        CliScaffoldGroup = other.CliScaffoldGroup;
+      }
+      if (other.HealthCheckRef.Length != 0) {
+        HealthCheckRef = other.HealthCheckRef;
+      }
+      if (other.CapabilityRef.Length != 0) {
+        CapabilityRef = other.CapabilityRef;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            ServiceId = input.ReadString();
+            break;
+          }
+          case 18: {
+            LogicalServiceId = input.ReadString();
+            break;
+          }
+          case 26: {
+            ProtoServiceId = input.ReadString();
+            break;
+          }
+          case 34: {
+            DisplayName = input.ReadString();
+            break;
+          }
+          case 42: {
+            Category = input.ReadString();
+            break;
+          }
+          case 48: {
+            DefaultEnabled = input.ReadBool();
+            break;
+          }
+          case 56: {
+            RequiresPostgres = input.ReadBool();
+            break;
+          }
+          case 64: {
+            RequiresRedis = input.ReadBool();
+            break;
+          }
+          case 72: {
+            RequiresObjectStore = input.ReadBool();
+            break;
+          }
+          case 80: {
+            RequiresKafka = input.ReadBool();
+            break;
+          }
+          case 90: {
+            RequiresFeature = input.ReadString();
+            break;
+          }
+          case 96: {
+            PublicListenerAllowed = input.ReadBool();
+            break;
+          }
+          case 104: {
+            ControlPlaneListenerAllowed = input.ReadBool();
+            break;
+          }
+          case 112: {
+            PeerListenerAllowed = input.ReadBool();
+            break;
+          }
+          case 122: {
+            SdkFacadeName = input.ReadString();
+            break;
+          }
+          case 130: {
+            CliScaffoldGroup = input.ReadString();
+            break;
+          }
+          case 138: {
+            HealthCheckRef = input.ReadString();
+            break;
+          }
+          case 146: {
+            CapabilityRef = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            ServiceId = input.ReadString();
+            break;
+          }
+          case 18: {
+            LogicalServiceId = input.ReadString();
+            break;
+          }
+          case 26: {
+            ProtoServiceId = input.ReadString();
+            break;
+          }
+          case 34: {
+            DisplayName = input.ReadString();
+            break;
+          }
+          case 42: {
+            Category = input.ReadString();
+            break;
+          }
+          case 48: {
+            DefaultEnabled = input.ReadBool();
+            break;
+          }
+          case 56: {
+            RequiresPostgres = input.ReadBool();
+            break;
+          }
+          case 64: {
+            RequiresRedis = input.ReadBool();
+            break;
+          }
+          case 72: {
+            RequiresObjectStore = input.ReadBool();
+            break;
+          }
+          case 80: {
+            RequiresKafka = input.ReadBool();
+            break;
+          }
+          case 90: {
+            RequiresFeature = input.ReadString();
+            break;
+          }
+          case 96: {
+            PublicListenerAllowed = input.ReadBool();
+            break;
+          }
+          case 104: {
+            ControlPlaneListenerAllowed = input.ReadBool();
+            break;
+          }
+          case 112: {
+            PeerListenerAllowed = input.ReadBool();
+            break;
+          }
+          case 122: {
+            SdkFacadeName = input.ReadString();
+            break;
+          }
+          case 130: {
+            CliScaffoldGroup = input.ReadString();
+            break;
+          }
+          case 138: {
+            HealthCheckRef = input.ReadString();
+            break;
+          }
+          case 146: {
+            CapabilityRef = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class DbTableSecurityOptions : pb::IMessage<DbTableSecurityOptions>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<DbTableSecurityOptions> _parser = new pb::MessageParser<DbTableSecurityOptions>(() => new DbTableSecurityOptions());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<DbTableSecurityOptions> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Common.V1.SecurityReflection.Descriptor.MessageTypes[3]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DbTableSecurityOptions() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DbTableSecurityOptions(DbTableSecurityOptions other) : this() {
+      tenantIsolationMode_ = other.tenantIsolationMode_;
+      projectIsolationMode_ = other.projectIsolationMode_;
+      tenantColumn_ = other.tenantColumn_;
+      projectColumn_ = other.projectColumn_;
+      rlsPolicyTemplate_ = other.rlsPolicyTemplate_;
+      softDeleteMode_ = other.softDeleteMode_;
+      retentionClass_ = other.retentionClass_;
+      retentionDays_ = other.retentionDays_;
+      auditMode_ = other.auditMode_;
+      encryptionProfile_ = other.encryptionProfile_;
+      piiProfile_ = other.piiProfile_;
+      breakGlassVisible_ = other.breakGlassVisible_;
+      exportEligible_ = other.exportEligible_;
+      dataResidencyPolicyRef_ = other.dataResidencyPolicyRef_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DbTableSecurityOptions Clone() {
+      return new DbTableSecurityOptions(this);
+    }
+
+    /// <summary>Field number for the "tenant_isolation_mode" field.</summary>
+    public const int TenantIsolationModeFieldNumber = 1;
+    private string tenantIsolationMode_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantIsolationMode {
+      get { return tenantIsolationMode_; }
+      set {
+        tenantIsolationMode_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "project_isolation_mode" field.</summary>
+    public const int ProjectIsolationModeFieldNumber = 2;
+    private string projectIsolationMode_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectIsolationMode {
+      get { return projectIsolationMode_; }
+      set {
+        projectIsolationMode_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "tenant_column" field.</summary>
+    public const int TenantColumnFieldNumber = 3;
+    private string tenantColumn_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantColumn {
+      get { return tenantColumn_; }
+      set {
+        tenantColumn_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "project_column" field.</summary>
+    public const int ProjectColumnFieldNumber = 4;
+    private string projectColumn_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectColumn {
+      get { return projectColumn_; }
+      set {
+        projectColumn_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "rls_policy_template" field.</summary>
+    public const int RlsPolicyTemplateFieldNumber = 5;
+    private string rlsPolicyTemplate_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RlsPolicyTemplate {
+      get { return rlsPolicyTemplate_; }
+      set {
+        rlsPolicyTemplate_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "soft_delete_mode" field.</summary>
+    public const int SoftDeleteModeFieldNumber = 6;
+    private string softDeleteMode_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string SoftDeleteMode {
+      get { return softDeleteMode_; }
+      set {
+        softDeleteMode_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "retention_class" field.</summary>
+    public const int RetentionClassFieldNumber = 7;
+    private string retentionClass_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RetentionClass {
+      get { return retentionClass_; }
+      set {
+        retentionClass_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "retention_days" field.</summary>
+    public const int RetentionDaysFieldNumber = 8;
+    private int retentionDays_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int RetentionDays {
+      get { return retentionDays_; }
+      set {
+        retentionDays_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "audit_mode" field.</summary>
+    public const int AuditModeFieldNumber = 9;
+    private global::udb.core.Common.V1.AuditMode auditMode_ = global::udb.core.Common.V1.AuditMode.Unspecified;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Common.V1.AuditMode AuditMode {
+      get { return auditMode_; }
+      set {
+        auditMode_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "encryption_profile" field.</summary>
+    public const int EncryptionProfileFieldNumber = 10;
+    private string encryptionProfile_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EncryptionProfile {
+      get { return encryptionProfile_; }
+      set {
+        encryptionProfile_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "pii_profile" field.</summary>
+    public const int PiiProfileFieldNumber = 11;
+    private string piiProfile_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string PiiProfile {
+      get { return piiProfile_; }
+      set {
+        piiProfile_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "break_glass_visible" field.</summary>
+    public const int BreakGlassVisibleFieldNumber = 12;
+    private bool breakGlassVisible_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool BreakGlassVisible {
+      get { return breakGlassVisible_; }
+      set {
+        breakGlassVisible_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "export_eligible" field.</summary>
+    public const int ExportEligibleFieldNumber = 13;
+    private bool exportEligible_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool ExportEligible {
+      get { return exportEligible_; }
+      set {
+        exportEligible_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "data_residency_policy_ref" field.</summary>
+    public const int DataResidencyPolicyRefFieldNumber = 14;
+    private string dataResidencyPolicyRef_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string DataResidencyPolicyRef {
+      get { return dataResidencyPolicyRef_; }
+      set {
+        dataResidencyPolicyRef_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as DbTableSecurityOptions);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(DbTableSecurityOptions other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (TenantIsolationMode != other.TenantIsolationMode) return false;
+      if (ProjectIsolationMode != other.ProjectIsolationMode) return false;
+      if (TenantColumn != other.TenantColumn) return false;
+      if (ProjectColumn != other.ProjectColumn) return false;
+      if (RlsPolicyTemplate != other.RlsPolicyTemplate) return false;
+      if (SoftDeleteMode != other.SoftDeleteMode) return false;
+      if (RetentionClass != other.RetentionClass) return false;
+      if (RetentionDays != other.RetentionDays) return false;
+      if (AuditMode != other.AuditMode) return false;
+      if (EncryptionProfile != other.EncryptionProfile) return false;
+      if (PiiProfile != other.PiiProfile) return false;
+      if (BreakGlassVisible != other.BreakGlassVisible) return false;
+      if (ExportEligible != other.ExportEligible) return false;
+      if (DataResidencyPolicyRef != other.DataResidencyPolicyRef) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (TenantIsolationMode.Length != 0) hash ^= TenantIsolationMode.GetHashCode();
+      if (ProjectIsolationMode.Length != 0) hash ^= ProjectIsolationMode.GetHashCode();
+      if (TenantColumn.Length != 0) hash ^= TenantColumn.GetHashCode();
+      if (ProjectColumn.Length != 0) hash ^= ProjectColumn.GetHashCode();
+      if (RlsPolicyTemplate.Length != 0) hash ^= RlsPolicyTemplate.GetHashCode();
+      if (SoftDeleteMode.Length != 0) hash ^= SoftDeleteMode.GetHashCode();
+      if (RetentionClass.Length != 0) hash ^= RetentionClass.GetHashCode();
+      if (RetentionDays != 0) hash ^= RetentionDays.GetHashCode();
+      if (AuditMode != global::udb.core.Common.V1.AuditMode.Unspecified) hash ^= AuditMode.GetHashCode();
+      if (EncryptionProfile.Length != 0) hash ^= EncryptionProfile.GetHashCode();
+      if (PiiProfile.Length != 0) hash ^= PiiProfile.GetHashCode();
+      if (BreakGlassVisible != false) hash ^= BreakGlassVisible.GetHashCode();
+      if (ExportEligible != false) hash ^= ExportEligible.GetHashCode();
+      if (DataResidencyPolicyRef.Length != 0) hash ^= DataResidencyPolicyRef.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (TenantIsolationMode.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TenantIsolationMode);
+      }
+      if (ProjectIsolationMode.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(ProjectIsolationMode);
+      }
+      if (TenantColumn.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TenantColumn);
+      }
+      if (ProjectColumn.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ProjectColumn);
+      }
+      if (RlsPolicyTemplate.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(RlsPolicyTemplate);
+      }
+      if (SoftDeleteMode.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(SoftDeleteMode);
+      }
+      if (RetentionClass.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(RetentionClass);
+      }
+      if (RetentionDays != 0) {
+        output.WriteRawTag(64);
+        output.WriteInt32(RetentionDays);
+      }
+      if (AuditMode != global::udb.core.Common.V1.AuditMode.Unspecified) {
+        output.WriteRawTag(72);
+        output.WriteEnum((int) AuditMode);
+      }
+      if (EncryptionProfile.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(EncryptionProfile);
+      }
+      if (PiiProfile.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(PiiProfile);
+      }
+      if (BreakGlassVisible != false) {
+        output.WriteRawTag(96);
+        output.WriteBool(BreakGlassVisible);
+      }
+      if (ExportEligible != false) {
+        output.WriteRawTag(104);
+        output.WriteBool(ExportEligible);
+      }
+      if (DataResidencyPolicyRef.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(DataResidencyPolicyRef);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (TenantIsolationMode.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TenantIsolationMode);
+      }
+      if (ProjectIsolationMode.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(ProjectIsolationMode);
+      }
+      if (TenantColumn.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TenantColumn);
+      }
+      if (ProjectColumn.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ProjectColumn);
+      }
+      if (RlsPolicyTemplate.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(RlsPolicyTemplate);
+      }
+      if (SoftDeleteMode.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(SoftDeleteMode);
+      }
+      if (RetentionClass.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(RetentionClass);
+      }
+      if (RetentionDays != 0) {
+        output.WriteRawTag(64);
+        output.WriteInt32(RetentionDays);
+      }
+      if (AuditMode != global::udb.core.Common.V1.AuditMode.Unspecified) {
+        output.WriteRawTag(72);
+        output.WriteEnum((int) AuditMode);
+      }
+      if (EncryptionProfile.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(EncryptionProfile);
+      }
+      if (PiiProfile.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(PiiProfile);
+      }
+      if (BreakGlassVisible != false) {
+        output.WriteRawTag(96);
+        output.WriteBool(BreakGlassVisible);
+      }
+      if (ExportEligible != false) {
+        output.WriteRawTag(104);
+        output.WriteBool(ExportEligible);
+      }
+      if (DataResidencyPolicyRef.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(DataResidencyPolicyRef);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (TenantIsolationMode.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantIsolationMode);
+      }
+      if (ProjectIsolationMode.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectIsolationMode);
+      }
+      if (TenantColumn.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantColumn);
+      }
+      if (ProjectColumn.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectColumn);
+      }
+      if (RlsPolicyTemplate.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RlsPolicyTemplate);
+      }
+      if (SoftDeleteMode.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(SoftDeleteMode);
+      }
+      if (RetentionClass.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RetentionClass);
+      }
+      if (RetentionDays != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(RetentionDays);
+      }
+      if (AuditMode != global::udb.core.Common.V1.AuditMode.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) AuditMode);
+      }
+      if (EncryptionProfile.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EncryptionProfile);
+      }
+      if (PiiProfile.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(PiiProfile);
+      }
+      if (BreakGlassVisible != false) {
+        size += 1 + 1;
+      }
+      if (ExportEligible != false) {
+        size += 1 + 1;
+      }
+      if (DataResidencyPolicyRef.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(DataResidencyPolicyRef);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(DbTableSecurityOptions other) {
+      if (other == null) {
+        return;
+      }
+      if (other.TenantIsolationMode.Length != 0) {
+        TenantIsolationMode = other.TenantIsolationMode;
+      }
+      if (other.ProjectIsolationMode.Length != 0) {
+        ProjectIsolationMode = other.ProjectIsolationMode;
+      }
+      if (other.TenantColumn.Length != 0) {
+        TenantColumn = other.TenantColumn;
+      }
+      if (other.ProjectColumn.Length != 0) {
+        ProjectColumn = other.ProjectColumn;
+      }
+      if (other.RlsPolicyTemplate.Length != 0) {
+        RlsPolicyTemplate = other.RlsPolicyTemplate;
+      }
+      if (other.SoftDeleteMode.Length != 0) {
+        SoftDeleteMode = other.SoftDeleteMode;
+      }
+      if (other.RetentionClass.Length != 0) {
+        RetentionClass = other.RetentionClass;
+      }
+      if (other.RetentionDays != 0) {
+        RetentionDays = other.RetentionDays;
+      }
+      if (other.AuditMode != global::udb.core.Common.V1.AuditMode.Unspecified) {
+        AuditMode = other.AuditMode;
+      }
+      if (other.EncryptionProfile.Length != 0) {
+        EncryptionProfile = other.EncryptionProfile;
+      }
+      if (other.PiiProfile.Length != 0) {
+        PiiProfile = other.PiiProfile;
+      }
+      if (other.BreakGlassVisible != false) {
+        BreakGlassVisible = other.BreakGlassVisible;
+      }
+      if (other.ExportEligible != false) {
+        ExportEligible = other.ExportEligible;
+      }
+      if (other.DataResidencyPolicyRef.Length != 0) {
+        DataResidencyPolicyRef = other.DataResidencyPolicyRef;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            TenantIsolationMode = input.ReadString();
+            break;
+          }
+          case 18: {
+            ProjectIsolationMode = input.ReadString();
+            break;
+          }
+          case 26: {
+            TenantColumn = input.ReadString();
+            break;
+          }
+          case 34: {
+            ProjectColumn = input.ReadString();
+            break;
+          }
+          case 42: {
+            RlsPolicyTemplate = input.ReadString();
+            break;
+          }
+          case 50: {
+            SoftDeleteMode = input.ReadString();
+            break;
+          }
+          case 58: {
+            RetentionClass = input.ReadString();
+            break;
+          }
+          case 64: {
+            RetentionDays = input.ReadInt32();
+            break;
+          }
+          case 72: {
+            AuditMode = (global::udb.core.Common.V1.AuditMode) input.ReadEnum();
+            break;
+          }
+          case 82: {
+            EncryptionProfile = input.ReadString();
+            break;
+          }
+          case 90: {
+            PiiProfile = input.ReadString();
+            break;
+          }
+          case 96: {
+            BreakGlassVisible = input.ReadBool();
+            break;
+          }
+          case 104: {
+            ExportEligible = input.ReadBool();
+            break;
+          }
+          case 114: {
+            DataResidencyPolicyRef = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            TenantIsolationMode = input.ReadString();
+            break;
+          }
+          case 18: {
+            ProjectIsolationMode = input.ReadString();
+            break;
+          }
+          case 26: {
+            TenantColumn = input.ReadString();
+            break;
+          }
+          case 34: {
+            ProjectColumn = input.ReadString();
+            break;
+          }
+          case 42: {
+            RlsPolicyTemplate = input.ReadString();
+            break;
+          }
+          case 50: {
+            SoftDeleteMode = input.ReadString();
+            break;
+          }
+          case 58: {
+            RetentionClass = input.ReadString();
+            break;
+          }
+          case 64: {
+            RetentionDays = input.ReadInt32();
+            break;
+          }
+          case 72: {
+            AuditMode = (global::udb.core.Common.V1.AuditMode) input.ReadEnum();
+            break;
+          }
+          case 82: {
+            EncryptionProfile = input.ReadString();
+            break;
+          }
+          case 90: {
+            PiiProfile = input.ReadString();
+            break;
+          }
+          case 96: {
+            BreakGlassVisible = input.ReadBool();
+            break;
+          }
+          case 104: {
+            ExportEligible = input.ReadBool();
+            break;
+          }
+          case 114: {
+            DataResidencyPolicyRef = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class DbColumnSecurityOptions : pb::IMessage<DbColumnSecurityOptions>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<DbColumnSecurityOptions> _parser = new pb::MessageParser<DbColumnSecurityOptions>(() => new DbColumnSecurityOptions());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<DbColumnSecurityOptions> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Common.V1.SecurityReflection.Descriptor.MessageTypes[4]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DbColumnSecurityOptions() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DbColumnSecurityOptions(DbColumnSecurityOptions other) : this() {
+      secretClassification_ = other.secretClassification_;
+      outputView_ = other.outputView_;
+      redactionStrategy_ = other.redactionStrategy_;
+      tokenizationStrategy_ = other.tokenizationStrategy_;
+      hashingStrategy_ = other.hashingStrategy_;
+      hashingAlgorithm_ = other.hashingAlgorithm_;
+      encryptionKeyClass_ = other.encryptionKeyClass_;
+      searchableEncrypted_ = other.searchableEncrypted_;
+      uniquenessScope_ = other.uniquenessScope_;
+      ownerField_ = other.ownerField_;
+      tenantField_ = other.tenantField_;
+      projectField_ = other.projectField_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DbColumnSecurityOptions Clone() {
+      return new DbColumnSecurityOptions(this);
+    }
+
+    /// <summary>Field number for the "secret_classification" field.</summary>
+    public const int SecretClassificationFieldNumber = 1;
+    private global::udb.core.Common.V1.SecretClassification secretClassification_ = global::udb.core.Common.V1.SecretClassification.Unspecified;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Common.V1.SecretClassification SecretClassification {
+      get { return secretClassification_; }
+      set {
+        secretClassification_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "output_view" field.</summary>
+    public const int OutputViewFieldNumber = 2;
+    private global::udb.core.Common.V1.OutputView outputView_ = global::udb.core.Common.V1.OutputView.Unspecified;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Common.V1.OutputView OutputView {
+      get { return outputView_; }
+      set {
+        outputView_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "redaction_strategy" field.</summary>
+    public const int RedactionStrategyFieldNumber = 3;
+    private global::udb.core.Common.V1.RedactionStrategy redactionStrategy_ = global::udb.core.Common.V1.RedactionStrategy.Unspecified;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Common.V1.RedactionStrategy RedactionStrategy {
+      get { return redactionStrategy_; }
+      set {
+        redactionStrategy_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "tokenization_strategy" field.</summary>
+    public const int TokenizationStrategyFieldNumber = 4;
+    private string tokenizationStrategy_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TokenizationStrategy {
+      get { return tokenizationStrategy_; }
+      set {
+        tokenizationStrategy_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "hashing_strategy" field.</summary>
+    public const int HashingStrategyFieldNumber = 5;
+    private string hashingStrategy_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string HashingStrategy {
+      get { return hashingStrategy_; }
+      set {
+        hashingStrategy_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "hashing_algorithm" field.</summary>
+    public const int HashingAlgorithmFieldNumber = 6;
+    private string hashingAlgorithm_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string HashingAlgorithm {
+      get { return hashingAlgorithm_; }
+      set {
+        hashingAlgorithm_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "encryption_key_class" field.</summary>
+    public const int EncryptionKeyClassFieldNumber = 7;
+    private string encryptionKeyClass_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EncryptionKeyClass {
+      get { return encryptionKeyClass_; }
+      set {
+        encryptionKeyClass_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "searchable_encrypted" field.</summary>
+    public const int SearchableEncryptedFieldNumber = 8;
+    private bool searchableEncrypted_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool SearchableEncrypted {
+      get { return searchableEncrypted_; }
+      set {
+        searchableEncrypted_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "uniqueness_scope" field.</summary>
+    public const int UniquenessScopeFieldNumber = 9;
+    private string uniquenessScope_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string UniquenessScope {
+      get { return uniquenessScope_; }
+      set {
+        uniquenessScope_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "owner_field" field.</summary>
+    public const int OwnerFieldFieldNumber = 10;
+    private bool ownerField_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool OwnerField {
+      get { return ownerField_; }
+      set {
+        ownerField_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "tenant_field" field.</summary>
+    public const int TenantFieldFieldNumber = 11;
+    private bool tenantField_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool TenantField {
+      get { return tenantField_; }
+      set {
+        tenantField_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "project_field" field.</summary>
+    public const int ProjectFieldFieldNumber = 12;
+    private bool projectField_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool ProjectField {
+      get { return projectField_; }
+      set {
+        projectField_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as DbColumnSecurityOptions);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(DbColumnSecurityOptions other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (SecretClassification != other.SecretClassification) return false;
+      if (OutputView != other.OutputView) return false;
+      if (RedactionStrategy != other.RedactionStrategy) return false;
+      if (TokenizationStrategy != other.TokenizationStrategy) return false;
+      if (HashingStrategy != other.HashingStrategy) return false;
+      if (HashingAlgorithm != other.HashingAlgorithm) return false;
+      if (EncryptionKeyClass != other.EncryptionKeyClass) return false;
+      if (SearchableEncrypted != other.SearchableEncrypted) return false;
+      if (UniquenessScope != other.UniquenessScope) return false;
+      if (OwnerField != other.OwnerField) return false;
+      if (TenantField != other.TenantField) return false;
+      if (ProjectField != other.ProjectField) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (SecretClassification != global::udb.core.Common.V1.SecretClassification.Unspecified) hash ^= SecretClassification.GetHashCode();
+      if (OutputView != global::udb.core.Common.V1.OutputView.Unspecified) hash ^= OutputView.GetHashCode();
+      if (RedactionStrategy != global::udb.core.Common.V1.RedactionStrategy.Unspecified) hash ^= RedactionStrategy.GetHashCode();
+      if (TokenizationStrategy.Length != 0) hash ^= TokenizationStrategy.GetHashCode();
+      if (HashingStrategy.Length != 0) hash ^= HashingStrategy.GetHashCode();
+      if (HashingAlgorithm.Length != 0) hash ^= HashingAlgorithm.GetHashCode();
+      if (EncryptionKeyClass.Length != 0) hash ^= EncryptionKeyClass.GetHashCode();
+      if (SearchableEncrypted != false) hash ^= SearchableEncrypted.GetHashCode();
+      if (UniquenessScope.Length != 0) hash ^= UniquenessScope.GetHashCode();
+      if (OwnerField != false) hash ^= OwnerField.GetHashCode();
+      if (TenantField != false) hash ^= TenantField.GetHashCode();
+      if (ProjectField != false) hash ^= ProjectField.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (SecretClassification != global::udb.core.Common.V1.SecretClassification.Unspecified) {
+        output.WriteRawTag(8);
+        output.WriteEnum((int) SecretClassification);
+      }
+      if (OutputView != global::udb.core.Common.V1.OutputView.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) OutputView);
+      }
+      if (RedactionStrategy != global::udb.core.Common.V1.RedactionStrategy.Unspecified) {
+        output.WriteRawTag(24);
+        output.WriteEnum((int) RedactionStrategy);
+      }
+      if (TokenizationStrategy.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(TokenizationStrategy);
+      }
+      if (HashingStrategy.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(HashingStrategy);
+      }
+      if (HashingAlgorithm.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(HashingAlgorithm);
+      }
+      if (EncryptionKeyClass.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(EncryptionKeyClass);
+      }
+      if (SearchableEncrypted != false) {
+        output.WriteRawTag(64);
+        output.WriteBool(SearchableEncrypted);
+      }
+      if (UniquenessScope.Length != 0) {
+        output.WriteRawTag(74);
+        output.WriteString(UniquenessScope);
+      }
+      if (OwnerField != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(OwnerField);
+      }
+      if (TenantField != false) {
+        output.WriteRawTag(88);
+        output.WriteBool(TenantField);
+      }
+      if (ProjectField != false) {
+        output.WriteRawTag(96);
+        output.WriteBool(ProjectField);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (SecretClassification != global::udb.core.Common.V1.SecretClassification.Unspecified) {
+        output.WriteRawTag(8);
+        output.WriteEnum((int) SecretClassification);
+      }
+      if (OutputView != global::udb.core.Common.V1.OutputView.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) OutputView);
+      }
+      if (RedactionStrategy != global::udb.core.Common.V1.RedactionStrategy.Unspecified) {
+        output.WriteRawTag(24);
+        output.WriteEnum((int) RedactionStrategy);
+      }
+      if (TokenizationStrategy.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(TokenizationStrategy);
+      }
+      if (HashingStrategy.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(HashingStrategy);
+      }
+      if (HashingAlgorithm.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(HashingAlgorithm);
+      }
+      if (EncryptionKeyClass.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(EncryptionKeyClass);
+      }
+      if (SearchableEncrypted != false) {
+        output.WriteRawTag(64);
+        output.WriteBool(SearchableEncrypted);
+      }
+      if (UniquenessScope.Length != 0) {
+        output.WriteRawTag(74);
+        output.WriteString(UniquenessScope);
+      }
+      if (OwnerField != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(OwnerField);
+      }
+      if (TenantField != false) {
+        output.WriteRawTag(88);
+        output.WriteBool(TenantField);
+      }
+      if (ProjectField != false) {
+        output.WriteRawTag(96);
+        output.WriteBool(ProjectField);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (SecretClassification != global::udb.core.Common.V1.SecretClassification.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) SecretClassification);
+      }
+      if (OutputView != global::udb.core.Common.V1.OutputView.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) OutputView);
+      }
+      if (RedactionStrategy != global::udb.core.Common.V1.RedactionStrategy.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) RedactionStrategy);
+      }
+      if (TokenizationStrategy.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TokenizationStrategy);
+      }
+      if (HashingStrategy.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(HashingStrategy);
+      }
+      if (HashingAlgorithm.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(HashingAlgorithm);
+      }
+      if (EncryptionKeyClass.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EncryptionKeyClass);
+      }
+      if (SearchableEncrypted != false) {
+        size += 1 + 1;
+      }
+      if (UniquenessScope.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(UniquenessScope);
+      }
+      if (OwnerField != false) {
+        size += 1 + 1;
+      }
+      if (TenantField != false) {
+        size += 1 + 1;
+      }
+      if (ProjectField != false) {
+        size += 1 + 1;
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(DbColumnSecurityOptions other) {
+      if (other == null) {
+        return;
+      }
+      if (other.SecretClassification != global::udb.core.Common.V1.SecretClassification.Unspecified) {
+        SecretClassification = other.SecretClassification;
+      }
+      if (other.OutputView != global::udb.core.Common.V1.OutputView.Unspecified) {
+        OutputView = other.OutputView;
+      }
+      if (other.RedactionStrategy != global::udb.core.Common.V1.RedactionStrategy.Unspecified) {
+        RedactionStrategy = other.RedactionStrategy;
+      }
+      if (other.TokenizationStrategy.Length != 0) {
+        TokenizationStrategy = other.TokenizationStrategy;
+      }
+      if (other.HashingStrategy.Length != 0) {
+        HashingStrategy = other.HashingStrategy;
+      }
+      if (other.HashingAlgorithm.Length != 0) {
+        HashingAlgorithm = other.HashingAlgorithm;
+      }
+      if (other.EncryptionKeyClass.Length != 0) {
+        EncryptionKeyClass = other.EncryptionKeyClass;
+      }
+      if (other.SearchableEncrypted != false) {
+        SearchableEncrypted = other.SearchableEncrypted;
+      }
+      if (other.UniquenessScope.Length != 0) {
+        UniquenessScope = other.UniquenessScope;
+      }
+      if (other.OwnerField != false) {
+        OwnerField = other.OwnerField;
+      }
+      if (other.TenantField != false) {
+        TenantField = other.TenantField;
+      }
+      if (other.ProjectField != false) {
+        ProjectField = other.ProjectField;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            SecretClassification = (global::udb.core.Common.V1.SecretClassification) input.ReadEnum();
+            break;
+          }
+          case 16: {
+            OutputView = (global::udb.core.Common.V1.OutputView) input.ReadEnum();
+            break;
+          }
+          case 24: {
+            RedactionStrategy = (global::udb.core.Common.V1.RedactionStrategy) input.ReadEnum();
+            break;
+          }
+          case 34: {
+            TokenizationStrategy = input.ReadString();
+            break;
+          }
+          case 42: {
+            HashingStrategy = input.ReadString();
+            break;
+          }
+          case 50: {
+            HashingAlgorithm = input.ReadString();
+            break;
+          }
+          case 58: {
+            EncryptionKeyClass = input.ReadString();
+            break;
+          }
+          case 64: {
+            SearchableEncrypted = input.ReadBool();
+            break;
+          }
+          case 74: {
+            UniquenessScope = input.ReadString();
+            break;
+          }
+          case 80: {
+            OwnerField = input.ReadBool();
+            break;
+          }
+          case 88: {
+            TenantField = input.ReadBool();
+            break;
+          }
+          case 96: {
+            ProjectField = input.ReadBool();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            SecretClassification = (global::udb.core.Common.V1.SecretClassification) input.ReadEnum();
+            break;
+          }
+          case 16: {
+            OutputView = (global::udb.core.Common.V1.OutputView) input.ReadEnum();
+            break;
+          }
+          case 24: {
+            RedactionStrategy = (global::udb.core.Common.V1.RedactionStrategy) input.ReadEnum();
+            break;
+          }
+          case 34: {
+            TokenizationStrategy = input.ReadString();
+            break;
+          }
+          case 42: {
+            HashingStrategy = input.ReadString();
+            break;
+          }
+          case 50: {
+            HashingAlgorithm = input.ReadString();
+            break;
+          }
+          case 58: {
+            EncryptionKeyClass = input.ReadString();
+            break;
+          }
+          case 64: {
+            SearchableEncrypted = input.ReadBool();
+            break;
+          }
+          case 74: {
+            UniquenessScope = input.ReadString();
+            break;
+          }
+          case 80: {
+            OwnerField = input.ReadBool();
+            break;
+          }
+          case 88: {
+            TenantField = input.ReadBool();
+            break;
+          }
+          case 96: {
+            ProjectField = input.ReadBool();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class SdkSurfaceOptions : pb::IMessage<SdkSurfaceOptions>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<SdkSurfaceOptions> _parser = new pb::MessageParser<SdkSurfaceOptions>(() => new SdkSurfaceOptions());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<SdkSurfaceOptions> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Common.V1.SecurityReflection.Descriptor.MessageTypes[5]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public SdkSurfaceOptions() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public SdkSurfaceOptions(SdkSurfaceOptions other) : this() {
+      includeInFacade_ = other.includeInFacade_;
+      methodAlias_ = other.methodAlias_;
+      requiredCredentialProvider_ = other.requiredCredentialProvider_;
+      streamingHelperType_ = other.streamingHelperType_;
+      defaultDeadlineMs_ = other.defaultDeadlineMs_;
+      defaultMaxAttempts_ = other.defaultMaxAttempts_;
+      browserSafe_ = other.browserSafe_;
+      serverOnly_ = other.serverOnly_;
+      boilerplateRecipeTags_ = other.boilerplateRecipeTags_.Clone();
+      generateMinimalExample_ = other.generateMinimalExample_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public SdkSurfaceOptions Clone() {
+      return new SdkSurfaceOptions(this);
+    }
+
+    /// <summary>Field number for the "include_in_facade" field.</summary>
+    public const int IncludeInFacadeFieldNumber = 1;
+    private bool includeInFacade_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool IncludeInFacade {
+      get { return includeInFacade_; }
+      set {
+        includeInFacade_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "method_alias" field.</summary>
+    public const int MethodAliasFieldNumber = 2;
+    private string methodAlias_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string MethodAlias {
+      get { return methodAlias_; }
+      set {
+        methodAlias_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "required_credential_provider" field.</summary>
+    public const int RequiredCredentialProviderFieldNumber = 3;
+    private string requiredCredentialProvider_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RequiredCredentialProvider {
+      get { return requiredCredentialProvider_; }
+      set {
+        requiredCredentialProvider_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "streaming_helper_type" field.</summary>
+    public const int StreamingHelperTypeFieldNumber = 4;
+    private string streamingHelperType_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string StreamingHelperType {
+      get { return streamingHelperType_; }
+      set {
+        streamingHelperType_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "default_deadline_ms" field.</summary>
+    public const int DefaultDeadlineMsFieldNumber = 5;
+    private int defaultDeadlineMs_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int DefaultDeadlineMs {
+      get { return defaultDeadlineMs_; }
+      set {
+        defaultDeadlineMs_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "default_max_attempts" field.</summary>
+    public const int DefaultMaxAttemptsFieldNumber = 6;
+    private int defaultMaxAttempts_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int DefaultMaxAttempts {
+      get { return defaultMaxAttempts_; }
+      set {
+        defaultMaxAttempts_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "browser_safe" field.</summary>
+    public const int BrowserSafeFieldNumber = 7;
+    private bool browserSafe_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool BrowserSafe {
+      get { return browserSafe_; }
+      set {
+        browserSafe_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "server_only" field.</summary>
+    public const int ServerOnlyFieldNumber = 8;
+    private bool serverOnly_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool ServerOnly {
+      get { return serverOnly_; }
+      set {
+        serverOnly_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "boilerplate_recipe_tags" field.</summary>
+    public const int BoilerplateRecipeTagsFieldNumber = 9;
+    private static readonly pb::FieldCodec<string> _repeated_boilerplateRecipeTags_codec
+        = pb::FieldCodec.ForString(74);
+    private readonly pbc::RepeatedField<string> boilerplateRecipeTags_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> BoilerplateRecipeTags {
+      get { return boilerplateRecipeTags_; }
+    }
+
+    /// <summary>Field number for the "generate_minimal_example" field.</summary>
+    public const int GenerateMinimalExampleFieldNumber = 10;
+    private bool generateMinimalExample_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool GenerateMinimalExample {
+      get { return generateMinimalExample_; }
+      set {
+        generateMinimalExample_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as SdkSurfaceOptions);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(SdkSurfaceOptions other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (IncludeInFacade != other.IncludeInFacade) return false;
+      if (MethodAlias != other.MethodAlias) return false;
+      if (RequiredCredentialProvider != other.RequiredCredentialProvider) return false;
+      if (StreamingHelperType != other.StreamingHelperType) return false;
+      if (DefaultDeadlineMs != other.DefaultDeadlineMs) return false;
+      if (DefaultMaxAttempts != other.DefaultMaxAttempts) return false;
+      if (BrowserSafe != other.BrowserSafe) return false;
+      if (ServerOnly != other.ServerOnly) return false;
+      if(!boilerplateRecipeTags_.Equals(other.boilerplateRecipeTags_)) return false;
+      if (GenerateMinimalExample != other.GenerateMinimalExample) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (IncludeInFacade != false) hash ^= IncludeInFacade.GetHashCode();
+      if (MethodAlias.Length != 0) hash ^= MethodAlias.GetHashCode();
+      if (RequiredCredentialProvider.Length != 0) hash ^= RequiredCredentialProvider.GetHashCode();
+      if (StreamingHelperType.Length != 0) hash ^= StreamingHelperType.GetHashCode();
+      if (DefaultDeadlineMs != 0) hash ^= DefaultDeadlineMs.GetHashCode();
+      if (DefaultMaxAttempts != 0) hash ^= DefaultMaxAttempts.GetHashCode();
+      if (BrowserSafe != false) hash ^= BrowserSafe.GetHashCode();
+      if (ServerOnly != false) hash ^= ServerOnly.GetHashCode();
+      hash ^= boilerplateRecipeTags_.GetHashCode();
+      if (GenerateMinimalExample != false) hash ^= GenerateMinimalExample.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (IncludeInFacade != false) {
+        output.WriteRawTag(8);
+        output.WriteBool(IncludeInFacade);
+      }
+      if (MethodAlias.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(MethodAlias);
+      }
+      if (RequiredCredentialProvider.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(RequiredCredentialProvider);
+      }
+      if (StreamingHelperType.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(StreamingHelperType);
+      }
+      if (DefaultDeadlineMs != 0) {
+        output.WriteRawTag(40);
+        output.WriteInt32(DefaultDeadlineMs);
+      }
+      if (DefaultMaxAttempts != 0) {
+        output.WriteRawTag(48);
+        output.WriteInt32(DefaultMaxAttempts);
+      }
+      if (BrowserSafe != false) {
+        output.WriteRawTag(56);
+        output.WriteBool(BrowserSafe);
+      }
+      if (ServerOnly != false) {
+        output.WriteRawTag(64);
+        output.WriteBool(ServerOnly);
+      }
+      boilerplateRecipeTags_.WriteTo(output, _repeated_boilerplateRecipeTags_codec);
+      if (GenerateMinimalExample != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(GenerateMinimalExample);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (IncludeInFacade != false) {
+        output.WriteRawTag(8);
+        output.WriteBool(IncludeInFacade);
+      }
+      if (MethodAlias.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(MethodAlias);
+      }
+      if (RequiredCredentialProvider.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(RequiredCredentialProvider);
+      }
+      if (StreamingHelperType.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(StreamingHelperType);
+      }
+      if (DefaultDeadlineMs != 0) {
+        output.WriteRawTag(40);
+        output.WriteInt32(DefaultDeadlineMs);
+      }
+      if (DefaultMaxAttempts != 0) {
+        output.WriteRawTag(48);
+        output.WriteInt32(DefaultMaxAttempts);
+      }
+      if (BrowserSafe != false) {
+        output.WriteRawTag(56);
+        output.WriteBool(BrowserSafe);
+      }
+      if (ServerOnly != false) {
+        output.WriteRawTag(64);
+        output.WriteBool(ServerOnly);
+      }
+      boilerplateRecipeTags_.WriteTo(ref output, _repeated_boilerplateRecipeTags_codec);
+      if (GenerateMinimalExample != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(GenerateMinimalExample);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (IncludeInFacade != false) {
+        size += 1 + 1;
+      }
+      if (MethodAlias.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(MethodAlias);
+      }
+      if (RequiredCredentialProvider.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RequiredCredentialProvider);
+      }
+      if (StreamingHelperType.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(StreamingHelperType);
+      }
+      if (DefaultDeadlineMs != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(DefaultDeadlineMs);
+      }
+      if (DefaultMaxAttempts != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(DefaultMaxAttempts);
+      }
+      if (BrowserSafe != false) {
+        size += 1 + 1;
+      }
+      if (ServerOnly != false) {
+        size += 1 + 1;
+      }
+      size += boilerplateRecipeTags_.CalculateSize(_repeated_boilerplateRecipeTags_codec);
+      if (GenerateMinimalExample != false) {
+        size += 1 + 1;
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(SdkSurfaceOptions other) {
+      if (other == null) {
+        return;
+      }
+      if (other.IncludeInFacade != false) {
+        IncludeInFacade = other.IncludeInFacade;
+      }
+      if (other.MethodAlias.Length != 0) {
+        MethodAlias = other.MethodAlias;
+      }
+      if (other.RequiredCredentialProvider.Length != 0) {
+        RequiredCredentialProvider = other.RequiredCredentialProvider;
+      }
+      if (other.StreamingHelperType.Length != 0) {
+        StreamingHelperType = other.StreamingHelperType;
+      }
+      if (other.DefaultDeadlineMs != 0) {
+        DefaultDeadlineMs = other.DefaultDeadlineMs;
+      }
+      if (other.DefaultMaxAttempts != 0) {
+        DefaultMaxAttempts = other.DefaultMaxAttempts;
+      }
+      if (other.BrowserSafe != false) {
+        BrowserSafe = other.BrowserSafe;
+      }
+      if (other.ServerOnly != false) {
+        ServerOnly = other.ServerOnly;
+      }
+      boilerplateRecipeTags_.Add(other.boilerplateRecipeTags_);
+      if (other.GenerateMinimalExample != false) {
+        GenerateMinimalExample = other.GenerateMinimalExample;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            IncludeInFacade = input.ReadBool();
+            break;
+          }
+          case 18: {
+            MethodAlias = input.ReadString();
+            break;
+          }
+          case 26: {
+            RequiredCredentialProvider = input.ReadString();
+            break;
+          }
+          case 34: {
+            StreamingHelperType = input.ReadString();
+            break;
+          }
+          case 40: {
+            DefaultDeadlineMs = input.ReadInt32();
+            break;
+          }
+          case 48: {
+            DefaultMaxAttempts = input.ReadInt32();
+            break;
+          }
+          case 56: {
+            BrowserSafe = input.ReadBool();
+            break;
+          }
+          case 64: {
+            ServerOnly = input.ReadBool();
+            break;
+          }
+          case 74: {
+            boilerplateRecipeTags_.AddEntriesFrom(input, _repeated_boilerplateRecipeTags_codec);
+            break;
+          }
+          case 80: {
+            GenerateMinimalExample = input.ReadBool();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            IncludeInFacade = input.ReadBool();
+            break;
+          }
+          case 18: {
+            MethodAlias = input.ReadString();
+            break;
+          }
+          case 26: {
+            RequiredCredentialProvider = input.ReadString();
+            break;
+          }
+          case 34: {
+            StreamingHelperType = input.ReadString();
+            break;
+          }
+          case 40: {
+            DefaultDeadlineMs = input.ReadInt32();
+            break;
+          }
+          case 48: {
+            DefaultMaxAttempts = input.ReadInt32();
+            break;
+          }
+          case 56: {
+            BrowserSafe = input.ReadBool();
+            break;
+          }
+          case 64: {
+            ServerOnly = input.ReadBool();
+            break;
+          }
+          case 74: {
+            boilerplateRecipeTags_.AddEntriesFrom(ref input, _repeated_boilerplateRecipeTags_codec);
+            break;
+          }
+          case 80: {
+            GenerateMinimalExample = input.ReadBool();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class CliScaffoldOptions : pb::IMessage<CliScaffoldOptions>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<CliScaffoldOptions> _parser = new pb::MessageParser<CliScaffoldOptions>(() => new CliScaffoldOptions());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<CliScaffoldOptions> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Common.V1.SecurityReflection.Descriptor.MessageTypes[6]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public CliScaffoldOptions() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public CliScaffoldOptions(CliScaffoldOptions other) : this() {
+      scaffoldPackage_ = other.scaffoldPackage_;
+      importPath_ = other.importPath_;
+      requiredEnv_ = other.requiredEnv_.Clone();
+      generatedFiles_ = other.generatedFiles_.Clone();
+      routeName_ = other.routeName_;
+      middlewareName_ = other.middlewareName_;
+      requiredNativeServices_ = other.requiredNativeServices_.Clone();
+      optionalNativeServices_ = other.optionalNativeServices_.Clone();
+      secretPlaceholders_ = other.secretPlaceholders_.Clone();
+      postGenerationCommands_ = other.postGenerationCommands_.Clone();
+      smokeTestCommand_ = other.smokeTestCommand_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public CliScaffoldOptions Clone() {
+      return new CliScaffoldOptions(this);
+    }
+
+    /// <summary>Field number for the "scaffold_package" field.</summary>
+    public const int ScaffoldPackageFieldNumber = 1;
+    private string scaffoldPackage_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ScaffoldPackage {
+      get { return scaffoldPackage_; }
+      set {
+        scaffoldPackage_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "import_path" field.</summary>
+    public const int ImportPathFieldNumber = 2;
+    private string importPath_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ImportPath {
+      get { return importPath_; }
+      set {
+        importPath_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "required_env" field.</summary>
+    public const int RequiredEnvFieldNumber = 3;
+    private static readonly pb::FieldCodec<string> _repeated_requiredEnv_codec
+        = pb::FieldCodec.ForString(26);
+    private readonly pbc::RepeatedField<string> requiredEnv_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> RequiredEnv {
+      get { return requiredEnv_; }
+    }
+
+    /// <summary>Field number for the "generated_files" field.</summary>
+    public const int GeneratedFilesFieldNumber = 4;
+    private static readonly pb::FieldCodec<string> _repeated_generatedFiles_codec
+        = pb::FieldCodec.ForString(34);
+    private readonly pbc::RepeatedField<string> generatedFiles_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> GeneratedFiles {
+      get { return generatedFiles_; }
+    }
+
+    /// <summary>Field number for the "route_name" field.</summary>
+    public const int RouteNameFieldNumber = 5;
+    private string routeName_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RouteName {
+      get { return routeName_; }
+      set {
+        routeName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "middleware_name" field.</summary>
+    public const int MiddlewareNameFieldNumber = 6;
+    private string middlewareName_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string MiddlewareName {
+      get { return middlewareName_; }
+      set {
+        middlewareName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "required_native_services" field.</summary>
+    public const int RequiredNativeServicesFieldNumber = 7;
+    private static readonly pb::FieldCodec<string> _repeated_requiredNativeServices_codec
+        = pb::FieldCodec.ForString(58);
+    private readonly pbc::RepeatedField<string> requiredNativeServices_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> RequiredNativeServices {
+      get { return requiredNativeServices_; }
+    }
+
+    /// <summary>Field number for the "optional_native_services" field.</summary>
+    public const int OptionalNativeServicesFieldNumber = 8;
+    private static readonly pb::FieldCodec<string> _repeated_optionalNativeServices_codec
+        = pb::FieldCodec.ForString(66);
+    private readonly pbc::RepeatedField<string> optionalNativeServices_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> OptionalNativeServices {
+      get { return optionalNativeServices_; }
+    }
+
+    /// <summary>Field number for the "secret_placeholders" field.</summary>
+    public const int SecretPlaceholdersFieldNumber = 9;
+    private static readonly pb::FieldCodec<string> _repeated_secretPlaceholders_codec
+        = pb::FieldCodec.ForString(74);
+    private readonly pbc::RepeatedField<string> secretPlaceholders_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> SecretPlaceholders {
+      get { return secretPlaceholders_; }
+    }
+
+    /// <summary>Field number for the "post_generation_commands" field.</summary>
+    public const int PostGenerationCommandsFieldNumber = 10;
+    private static readonly pb::FieldCodec<string> _repeated_postGenerationCommands_codec
+        = pb::FieldCodec.ForString(82);
+    private readonly pbc::RepeatedField<string> postGenerationCommands_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> PostGenerationCommands {
+      get { return postGenerationCommands_; }
+    }
+
+    /// <summary>Field number for the "smoke_test_command" field.</summary>
+    public const int SmokeTestCommandFieldNumber = 11;
+    private string smokeTestCommand_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string SmokeTestCommand {
+      get { return smokeTestCommand_; }
+      set {
+        smokeTestCommand_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as CliScaffoldOptions);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(CliScaffoldOptions other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ScaffoldPackage != other.ScaffoldPackage) return false;
+      if (ImportPath != other.ImportPath) return false;
+      if(!requiredEnv_.Equals(other.requiredEnv_)) return false;
+      if(!generatedFiles_.Equals(other.generatedFiles_)) return false;
+      if (RouteName != other.RouteName) return false;
+      if (MiddlewareName != other.MiddlewareName) return false;
+      if(!requiredNativeServices_.Equals(other.requiredNativeServices_)) return false;
+      if(!optionalNativeServices_.Equals(other.optionalNativeServices_)) return false;
+      if(!secretPlaceholders_.Equals(other.secretPlaceholders_)) return false;
+      if(!postGenerationCommands_.Equals(other.postGenerationCommands_)) return false;
+      if (SmokeTestCommand != other.SmokeTestCommand) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ScaffoldPackage.Length != 0) hash ^= ScaffoldPackage.GetHashCode();
+      if (ImportPath.Length != 0) hash ^= ImportPath.GetHashCode();
+      hash ^= requiredEnv_.GetHashCode();
+      hash ^= generatedFiles_.GetHashCode();
+      if (RouteName.Length != 0) hash ^= RouteName.GetHashCode();
+      if (MiddlewareName.Length != 0) hash ^= MiddlewareName.GetHashCode();
+      hash ^= requiredNativeServices_.GetHashCode();
+      hash ^= optionalNativeServices_.GetHashCode();
+      hash ^= secretPlaceholders_.GetHashCode();
+      hash ^= postGenerationCommands_.GetHashCode();
+      if (SmokeTestCommand.Length != 0) hash ^= SmokeTestCommand.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (ScaffoldPackage.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ScaffoldPackage);
+      }
+      if (ImportPath.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(ImportPath);
+      }
+      requiredEnv_.WriteTo(output, _repeated_requiredEnv_codec);
+      generatedFiles_.WriteTo(output, _repeated_generatedFiles_codec);
+      if (RouteName.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(RouteName);
+      }
+      if (MiddlewareName.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(MiddlewareName);
+      }
+      requiredNativeServices_.WriteTo(output, _repeated_requiredNativeServices_codec);
+      optionalNativeServices_.WriteTo(output, _repeated_optionalNativeServices_codec);
+      secretPlaceholders_.WriteTo(output, _repeated_secretPlaceholders_codec);
+      postGenerationCommands_.WriteTo(output, _repeated_postGenerationCommands_codec);
+      if (SmokeTestCommand.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(SmokeTestCommand);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (ScaffoldPackage.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ScaffoldPackage);
+      }
+      if (ImportPath.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(ImportPath);
+      }
+      requiredEnv_.WriteTo(ref output, _repeated_requiredEnv_codec);
+      generatedFiles_.WriteTo(ref output, _repeated_generatedFiles_codec);
+      if (RouteName.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(RouteName);
+      }
+      if (MiddlewareName.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(MiddlewareName);
+      }
+      requiredNativeServices_.WriteTo(ref output, _repeated_requiredNativeServices_codec);
+      optionalNativeServices_.WriteTo(ref output, _repeated_optionalNativeServices_codec);
+      secretPlaceholders_.WriteTo(ref output, _repeated_secretPlaceholders_codec);
+      postGenerationCommands_.WriteTo(ref output, _repeated_postGenerationCommands_codec);
+      if (SmokeTestCommand.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(SmokeTestCommand);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (ScaffoldPackage.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ScaffoldPackage);
+      }
+      if (ImportPath.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ImportPath);
+      }
+      size += requiredEnv_.CalculateSize(_repeated_requiredEnv_codec);
+      size += generatedFiles_.CalculateSize(_repeated_generatedFiles_codec);
+      if (RouteName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RouteName);
+      }
+      if (MiddlewareName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(MiddlewareName);
+      }
+      size += requiredNativeServices_.CalculateSize(_repeated_requiredNativeServices_codec);
+      size += optionalNativeServices_.CalculateSize(_repeated_optionalNativeServices_codec);
+      size += secretPlaceholders_.CalculateSize(_repeated_secretPlaceholders_codec);
+      size += postGenerationCommands_.CalculateSize(_repeated_postGenerationCommands_codec);
+      if (SmokeTestCommand.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(SmokeTestCommand);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(CliScaffoldOptions other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ScaffoldPackage.Length != 0) {
+        ScaffoldPackage = other.ScaffoldPackage;
+      }
+      if (other.ImportPath.Length != 0) {
+        ImportPath = other.ImportPath;
+      }
+      requiredEnv_.Add(other.requiredEnv_);
+      generatedFiles_.Add(other.generatedFiles_);
+      if (other.RouteName.Length != 0) {
+        RouteName = other.RouteName;
+      }
+      if (other.MiddlewareName.Length != 0) {
+        MiddlewareName = other.MiddlewareName;
+      }
+      requiredNativeServices_.Add(other.requiredNativeServices_);
+      optionalNativeServices_.Add(other.optionalNativeServices_);
+      secretPlaceholders_.Add(other.secretPlaceholders_);
+      postGenerationCommands_.Add(other.postGenerationCommands_);
+      if (other.SmokeTestCommand.Length != 0) {
+        SmokeTestCommand = other.SmokeTestCommand;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            ScaffoldPackage = input.ReadString();
+            break;
+          }
+          case 18: {
+            ImportPath = input.ReadString();
+            break;
+          }
+          case 26: {
+            requiredEnv_.AddEntriesFrom(input, _repeated_requiredEnv_codec);
+            break;
+          }
+          case 34: {
+            generatedFiles_.AddEntriesFrom(input, _repeated_generatedFiles_codec);
+            break;
+          }
+          case 42: {
+            RouteName = input.ReadString();
+            break;
+          }
+          case 50: {
+            MiddlewareName = input.ReadString();
+            break;
+          }
+          case 58: {
+            requiredNativeServices_.AddEntriesFrom(input, _repeated_requiredNativeServices_codec);
+            break;
+          }
+          case 66: {
+            optionalNativeServices_.AddEntriesFrom(input, _repeated_optionalNativeServices_codec);
+            break;
+          }
+          case 74: {
+            secretPlaceholders_.AddEntriesFrom(input, _repeated_secretPlaceholders_codec);
+            break;
+          }
+          case 82: {
+            postGenerationCommands_.AddEntriesFrom(input, _repeated_postGenerationCommands_codec);
+            break;
+          }
+          case 90: {
+            SmokeTestCommand = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            ScaffoldPackage = input.ReadString();
+            break;
+          }
+          case 18: {
+            ImportPath = input.ReadString();
+            break;
+          }
+          case 26: {
+            requiredEnv_.AddEntriesFrom(ref input, _repeated_requiredEnv_codec);
+            break;
+          }
+          case 34: {
+            generatedFiles_.AddEntriesFrom(ref input, _repeated_generatedFiles_codec);
+            break;
+          }
+          case 42: {
+            RouteName = input.ReadString();
+            break;
+          }
+          case 50: {
+            MiddlewareName = input.ReadString();
+            break;
+          }
+          case 58: {
+            requiredNativeServices_.AddEntriesFrom(ref input, _repeated_requiredNativeServices_codec);
+            break;
+          }
+          case 66: {
+            optionalNativeServices_.AddEntriesFrom(ref input, _repeated_optionalNativeServices_codec);
+            break;
+          }
+          case 74: {
+            secretPlaceholders_.AddEntriesFrom(ref input, _repeated_secretPlaceholders_codec);
+            break;
+          }
+          case 82: {
+            postGenerationCommands_.AddEntriesFrom(ref input, _repeated_postGenerationCommands_codec);
+            break;
+          }
+          case 90: {
+            SmokeTestCommand = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class EventContractOptions : pb::IMessage<EventContractOptions>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<EventContractOptions> _parser = new pb::MessageParser<EventContractOptions>(() => new EventContractOptions());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<EventContractOptions> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Common.V1.SecurityReflection.Descriptor.MessageTypes[7]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public EventContractOptions() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public EventContractOptions(EventContractOptions other) : this() {
+      eventType_ = other.eventType_;
+      outboxTopic_ = other.outboxTopic_;
+      partitionKeyField_ = other.partitionKeyField_;
+      payloadRedactionProfile_ = other.payloadRedactionProfile_;
+      deliveryGuarantee_ = other.deliveryGuarantee_;
+      replayCompatibility_ = other.replayCompatibility_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public EventContractOptions Clone() {
+      return new EventContractOptions(this);
+    }
+
+    /// <summary>Field number for the "event_type" field.</summary>
+    public const int EventTypeFieldNumber = 1;
+    private string eventType_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventType {
+      get { return eventType_; }
+      set {
+        eventType_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "outbox_topic" field.</summary>
+    public const int OutboxTopicFieldNumber = 2;
+    private string outboxTopic_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string OutboxTopic {
+      get { return outboxTopic_; }
+      set {
+        outboxTopic_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "partition_key_field" field.</summary>
+    public const int PartitionKeyFieldFieldNumber = 3;
+    private string partitionKeyField_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string PartitionKeyField {
+      get { return partitionKeyField_; }
+      set {
+        partitionKeyField_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "payload_redaction_profile" field.</summary>
+    public const int PayloadRedactionProfileFieldNumber = 4;
+    private string payloadRedactionProfile_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string PayloadRedactionProfile {
+      get { return payloadRedactionProfile_; }
+      set {
+        payloadRedactionProfile_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "delivery_guarantee" field.</summary>
+    public const int DeliveryGuaranteeFieldNumber = 5;
+    private string deliveryGuarantee_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string DeliveryGuarantee {
+      get { return deliveryGuarantee_; }
+      set {
+        deliveryGuarantee_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "replay_compatibility" field.</summary>
+    public const int ReplayCompatibilityFieldNumber = 6;
+    private string replayCompatibility_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ReplayCompatibility {
+      get { return replayCompatibility_; }
+      set {
+        replayCompatibility_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as EventContractOptions);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(EventContractOptions other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (EventType != other.EventType) return false;
+      if (OutboxTopic != other.OutboxTopic) return false;
+      if (PartitionKeyField != other.PartitionKeyField) return false;
+      if (PayloadRedactionProfile != other.PayloadRedactionProfile) return false;
+      if (DeliveryGuarantee != other.DeliveryGuarantee) return false;
+      if (ReplayCompatibility != other.ReplayCompatibility) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (EventType.Length != 0) hash ^= EventType.GetHashCode();
+      if (OutboxTopic.Length != 0) hash ^= OutboxTopic.GetHashCode();
+      if (PartitionKeyField.Length != 0) hash ^= PartitionKeyField.GetHashCode();
+      if (PayloadRedactionProfile.Length != 0) hash ^= PayloadRedactionProfile.GetHashCode();
+      if (DeliveryGuarantee.Length != 0) hash ^= DeliveryGuarantee.GetHashCode();
+      if (ReplayCompatibility.Length != 0) hash ^= ReplayCompatibility.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (EventType.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventType);
+      }
+      if (OutboxTopic.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(OutboxTopic);
+      }
+      if (PartitionKeyField.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(PartitionKeyField);
+      }
+      if (PayloadRedactionProfile.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(PayloadRedactionProfile);
+      }
+      if (DeliveryGuarantee.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(DeliveryGuarantee);
+      }
+      if (ReplayCompatibility.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ReplayCompatibility);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (EventType.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(EventType);
+      }
+      if (OutboxTopic.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(OutboxTopic);
+      }
+      if (PartitionKeyField.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(PartitionKeyField);
+      }
+      if (PayloadRedactionProfile.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(PayloadRedactionProfile);
+      }
+      if (DeliveryGuarantee.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(DeliveryGuarantee);
+      }
+      if (ReplayCompatibility.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ReplayCompatibility);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (EventType.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventType);
+      }
+      if (OutboxTopic.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(OutboxTopic);
+      }
+      if (PartitionKeyField.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(PartitionKeyField);
+      }
+      if (PayloadRedactionProfile.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(PayloadRedactionProfile);
+      }
+      if (DeliveryGuarantee.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(DeliveryGuarantee);
+      }
+      if (ReplayCompatibility.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ReplayCompatibility);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(EventContractOptions other) {
+      if (other == null) {
+        return;
+      }
+      if (other.EventType.Length != 0) {
+        EventType = other.EventType;
+      }
+      if (other.OutboxTopic.Length != 0) {
+        OutboxTopic = other.OutboxTopic;
+      }
+      if (other.PartitionKeyField.Length != 0) {
+        PartitionKeyField = other.PartitionKeyField;
+      }
+      if (other.PayloadRedactionProfile.Length != 0) {
+        PayloadRedactionProfile = other.PayloadRedactionProfile;
+      }
+      if (other.DeliveryGuarantee.Length != 0) {
+        DeliveryGuarantee = other.DeliveryGuarantee;
+      }
+      if (other.ReplayCompatibility.Length != 0) {
+        ReplayCompatibility = other.ReplayCompatibility;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            EventType = input.ReadString();
+            break;
+          }
+          case 18: {
+            OutboxTopic = input.ReadString();
+            break;
+          }
+          case 26: {
+            PartitionKeyField = input.ReadString();
+            break;
+          }
+          case 34: {
+            PayloadRedactionProfile = input.ReadString();
+            break;
+          }
+          case 42: {
+            DeliveryGuarantee = input.ReadString();
+            break;
+          }
+          case 50: {
+            ReplayCompatibility = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            EventType = input.ReadString();
+            break;
+          }
+          case 18: {
+            OutboxTopic = input.ReadString();
+            break;
+          }
+          case 26: {
+            PartitionKeyField = input.ReadString();
+            break;
+          }
+          case 34: {
+            PayloadRedactionProfile = input.ReadString();
+            break;
+          }
+          case 42: {
+            DeliveryGuarantee = input.ReadString();
+            break;
+          }
+          case 50: {
+            ReplayCompatibility = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class DependencyContractOptions : pb::IMessage<DependencyContractOptions>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<DependencyContractOptions> _parser = new pb::MessageParser<DependencyContractOptions>(() => new DependencyContractOptions());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<DependencyContractOptions> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Common.V1.SecurityReflection.Descriptor.MessageTypes[8]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DependencyContractOptions() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DependencyContractOptions(DependencyContractOptions other) : this() {
+      requiredNativeServices_ = other.requiredNativeServices_.Clone();
+      optionalNativeServices_ = other.optionalNativeServices_.Clone();
+      requiredBackends_ = other.requiredBackends_.Clone();
+      optionalBackends_ = other.optionalBackends_.Clone();
+      requiredFeatures_ = other.requiredFeatures_.Clone();
+      requiredEnv_ = other.requiredEnv_.Clone();
+      degradedWhenMissing_ = other.degradedWhenMissing_.Clone();
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DependencyContractOptions Clone() {
+      return new DependencyContractOptions(this);
+    }
+
+    /// <summary>Field number for the "required_native_services" field.</summary>
+    public const int RequiredNativeServicesFieldNumber = 1;
+    private static readonly pb::FieldCodec<string> _repeated_requiredNativeServices_codec
+        = pb::FieldCodec.ForString(10);
+    private readonly pbc::RepeatedField<string> requiredNativeServices_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> RequiredNativeServices {
+      get { return requiredNativeServices_; }
+    }
+
+    /// <summary>Field number for the "optional_native_services" field.</summary>
+    public const int OptionalNativeServicesFieldNumber = 2;
+    private static readonly pb::FieldCodec<string> _repeated_optionalNativeServices_codec
+        = pb::FieldCodec.ForString(18);
+    private readonly pbc::RepeatedField<string> optionalNativeServices_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> OptionalNativeServices {
+      get { return optionalNativeServices_; }
+    }
+
+    /// <summary>Field number for the "required_backends" field.</summary>
+    public const int RequiredBackendsFieldNumber = 3;
+    private static readonly pb::FieldCodec<string> _repeated_requiredBackends_codec
+        = pb::FieldCodec.ForString(26);
+    private readonly pbc::RepeatedField<string> requiredBackends_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> RequiredBackends {
+      get { return requiredBackends_; }
+    }
+
+    /// <summary>Field number for the "optional_backends" field.</summary>
+    public const int OptionalBackendsFieldNumber = 4;
+    private static readonly pb::FieldCodec<string> _repeated_optionalBackends_codec
+        = pb::FieldCodec.ForString(34);
+    private readonly pbc::RepeatedField<string> optionalBackends_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> OptionalBackends {
+      get { return optionalBackends_; }
+    }
+
+    /// <summary>Field number for the "required_features" field.</summary>
+    public const int RequiredFeaturesFieldNumber = 5;
+    private static readonly pb::FieldCodec<string> _repeated_requiredFeatures_codec
+        = pb::FieldCodec.ForString(42);
+    private readonly pbc::RepeatedField<string> requiredFeatures_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> RequiredFeatures {
+      get { return requiredFeatures_; }
+    }
+
+    /// <summary>Field number for the "required_env" field.</summary>
+    public const int RequiredEnvFieldNumber = 6;
+    private static readonly pb::FieldCodec<string> _repeated_requiredEnv_codec
+        = pb::FieldCodec.ForString(50);
+    private readonly pbc::RepeatedField<string> requiredEnv_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> RequiredEnv {
+      get { return requiredEnv_; }
+    }
+
+    /// <summary>Field number for the "degraded_when_missing" field.</summary>
+    public const int DegradedWhenMissingFieldNumber = 7;
+    private static readonly pb::FieldCodec<string> _repeated_degradedWhenMissing_codec
+        = pb::FieldCodec.ForString(58);
+    private readonly pbc::RepeatedField<string> degradedWhenMissing_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> DegradedWhenMissing {
+      get { return degradedWhenMissing_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as DependencyContractOptions);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(DependencyContractOptions other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if(!requiredNativeServices_.Equals(other.requiredNativeServices_)) return false;
+      if(!optionalNativeServices_.Equals(other.optionalNativeServices_)) return false;
+      if(!requiredBackends_.Equals(other.requiredBackends_)) return false;
+      if(!optionalBackends_.Equals(other.optionalBackends_)) return false;
+      if(!requiredFeatures_.Equals(other.requiredFeatures_)) return false;
+      if(!requiredEnv_.Equals(other.requiredEnv_)) return false;
+      if(!degradedWhenMissing_.Equals(other.degradedWhenMissing_)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      hash ^= requiredNativeServices_.GetHashCode();
+      hash ^= optionalNativeServices_.GetHashCode();
+      hash ^= requiredBackends_.GetHashCode();
+      hash ^= optionalBackends_.GetHashCode();
+      hash ^= requiredFeatures_.GetHashCode();
+      hash ^= requiredEnv_.GetHashCode();
+      hash ^= degradedWhenMissing_.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      requiredNativeServices_.WriteTo(output, _repeated_requiredNativeServices_codec);
+      optionalNativeServices_.WriteTo(output, _repeated_optionalNativeServices_codec);
+      requiredBackends_.WriteTo(output, _repeated_requiredBackends_codec);
+      optionalBackends_.WriteTo(output, _repeated_optionalBackends_codec);
+      requiredFeatures_.WriteTo(output, _repeated_requiredFeatures_codec);
+      requiredEnv_.WriteTo(output, _repeated_requiredEnv_codec);
+      degradedWhenMissing_.WriteTo(output, _repeated_degradedWhenMissing_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      requiredNativeServices_.WriteTo(ref output, _repeated_requiredNativeServices_codec);
+      optionalNativeServices_.WriteTo(ref output, _repeated_optionalNativeServices_codec);
+      requiredBackends_.WriteTo(ref output, _repeated_requiredBackends_codec);
+      optionalBackends_.WriteTo(ref output, _repeated_optionalBackends_codec);
+      requiredFeatures_.WriteTo(ref output, _repeated_requiredFeatures_codec);
+      requiredEnv_.WriteTo(ref output, _repeated_requiredEnv_codec);
+      degradedWhenMissing_.WriteTo(ref output, _repeated_degradedWhenMissing_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      size += requiredNativeServices_.CalculateSize(_repeated_requiredNativeServices_codec);
+      size += optionalNativeServices_.CalculateSize(_repeated_optionalNativeServices_codec);
+      size += requiredBackends_.CalculateSize(_repeated_requiredBackends_codec);
+      size += optionalBackends_.CalculateSize(_repeated_optionalBackends_codec);
+      size += requiredFeatures_.CalculateSize(_repeated_requiredFeatures_codec);
+      size += requiredEnv_.CalculateSize(_repeated_requiredEnv_codec);
+      size += degradedWhenMissing_.CalculateSize(_repeated_degradedWhenMissing_codec);
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(DependencyContractOptions other) {
+      if (other == null) {
+        return;
+      }
+      requiredNativeServices_.Add(other.requiredNativeServices_);
+      optionalNativeServices_.Add(other.optionalNativeServices_);
+      requiredBackends_.Add(other.requiredBackends_);
+      optionalBackends_.Add(other.optionalBackends_);
+      requiredFeatures_.Add(other.requiredFeatures_);
+      requiredEnv_.Add(other.requiredEnv_);
+      degradedWhenMissing_.Add(other.degradedWhenMissing_);
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            requiredNativeServices_.AddEntriesFrom(input, _repeated_requiredNativeServices_codec);
+            break;
+          }
+          case 18: {
+            optionalNativeServices_.AddEntriesFrom(input, _repeated_optionalNativeServices_codec);
+            break;
+          }
+          case 26: {
+            requiredBackends_.AddEntriesFrom(input, _repeated_requiredBackends_codec);
+            break;
+          }
+          case 34: {
+            optionalBackends_.AddEntriesFrom(input, _repeated_optionalBackends_codec);
+            break;
+          }
+          case 42: {
+            requiredFeatures_.AddEntriesFrom(input, _repeated_requiredFeatures_codec);
+            break;
+          }
+          case 50: {
+            requiredEnv_.AddEntriesFrom(input, _repeated_requiredEnv_codec);
+            break;
+          }
+          case 58: {
+            degradedWhenMissing_.AddEntriesFrom(input, _repeated_degradedWhenMissing_codec);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            requiredNativeServices_.AddEntriesFrom(ref input, _repeated_requiredNativeServices_codec);
+            break;
+          }
+          case 18: {
+            optionalNativeServices_.AddEntriesFrom(ref input, _repeated_optionalNativeServices_codec);
+            break;
+          }
+          case 26: {
+            requiredBackends_.AddEntriesFrom(ref input, _repeated_requiredBackends_codec);
+            break;
+          }
+          case 34: {
+            optionalBackends_.AddEntriesFrom(ref input, _repeated_optionalBackends_codec);
+            break;
+          }
+          case 42: {
+            requiredFeatures_.AddEntriesFrom(ref input, _repeated_requiredFeatures_codec);
+            break;
+          }
+          case 50: {
+            requiredEnv_.AddEntriesFrom(ref input, _repeated_requiredEnv_codec);
+            break;
+          }
+          case 58: {
+            degradedWhenMissing_.AddEntriesFrom(ref input, _repeated_degradedWhenMissing_codec);
             break;
           }
         }

@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package udb.core.asset.entity.v1;
+
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/common/v1/types.proto";
+
+option csharp_namespace = "udb.core.Asset.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/asset/entity/v1;assetv1";
+option java_package = "com.udb.core.asset.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Asset\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Asset\\Entity\\V1";
+
+// PipelineDefinition is a reusable, versioned processing-pipeline template.
+message PipelineDefinition {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "pipeline_definitions"
+    schema_name: "udb_asset"
+    migration_order: 2
+    is_table: true
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "pipeline_definitions_tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_pipeline_def_name_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "name"
+    }
+    cdc_topic: "udb.asset.pipeline_definitions.cdc"
+    required_scope: "asset:read"
+    comment: "Reusable versioned processing-pipeline definitions"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "asset.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string definition_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "definition_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  // @inject_tag: gorm:"primaryKey;column:definition_id;not null"
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "UUID" not_null: true }];
+  // @inject_tag: gorm:"column:tenant_id;not null"
+
+  string name = 3 [(udb.core.common.v1.pg_column) = { column_name: "name" sql_type: "VARCHAR(255)" not_null: true }];
+  // @inject_tag: gorm:"column:name;not null"
+
+  string description = 4 [(udb.core.common.v1.pg_column) = { column_name: "description" sql_type: "TEXT" }];
+  // @inject_tag: gorm:"column:description"
+
+  string media_type = 5 [(udb.core.common.v1.pg_column) = { column_name: "media_type" sql_type: "VARCHAR(40)" }];
+  // @inject_tag: gorm:"column:media_type"
+
+  string steps = 6 [(udb.core.common.v1.pg_column) = { column_name: "steps" sql_type: "JSONB" not_null: true default_value: "'[]'::jsonb" is_json: true comment: "Array of {name,type,params,depends_on}" }];
+  // @inject_tag: gorm:"column:steps;not null"
+
+  int32 version = 7 [(udb.core.common.v1.pg_column) = { column_name: "version" sql_type: "INTEGER" not_null: true default_value: "1" }];
+  // @inject_tag: gorm:"column:version;not null"
+
+  string status = 8 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'ACTIVE'" }];
+  // @inject_tag: gorm:"column:status;not null"
+
+  udb.core.common.v1.AuditInfo audit_info = 9 [(udb.core.common.v1.pg_column) = { column_name: "audit_info" sql_type: "JSONB" not_null: true default_value: "'{}'::jsonb" is_json: true comment: "Audit trail stored as JSON" }];
+  // @inject_tag: gorm:"column:audit_info;not null"
+}

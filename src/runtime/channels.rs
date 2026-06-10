@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -107,6 +107,16 @@ pub struct FairAdmissionSnapshot {
     pub burst: u64,
 }
 
+/// Per-operation + per-tenant/project/instance concurrency control with bounded
+/// queueing (backpressure → `ResourceExhausted`).
+///
+/// **Scope (urgent_fix #39):** these semaphores and fairness maps are
+/// **instance-local**. Behind a load balancer, each broker replica enforces its
+/// OWN limits, so the effective fleet-wide concurrency for a tenant is
+/// `configured_limit × replica_count`, not `configured_limit`. This is intentional
+/// for the current single-process admission model; true fleet-wide limits require a
+/// shared (e.g. Redis-backed) token store. Size per-replica limits with the replica
+/// count in mind, or front the broker with an LB-level per-tenant rate limit.
 #[derive(Debug, Clone)]
 pub struct ChannelManager {
     read_sem: Arc<Semaphore>,
@@ -124,7 +134,17 @@ pub struct ChannelManager {
     backend_instance_sems: ScopeSemMap,
     fairness: Arc<Mutex<HashMap<String, TokenBucket>>>,
     controls: Arc<Mutex<HashMap<String, ScopeControl>>>,
+    env_config: Arc<ChannelEnvConfig>,
 
+    read_limit: usize,
+    write_limit: usize,
+    tx_limit: usize,
+    migration_limit: usize,
+    cdc_limit: usize,
+    admin_limit: usize,
+    vector_limit: usize,
+    object_limit: usize,
+    generic_limit: usize,
     pub read_timeout: u64,
     pub write_timeout: u64,
     pub tx_timeout: u64,
@@ -151,9 +171,22 @@ struct TokenBucket {
     last_refill: Instant,
 }
 
-/// Per-scope semaphore map value: the semaphore plus its last-access instant
-/// (the latter drives idle-TTL eviction). (#206)
-type ScopeSemMap = Arc<Mutex<HashMap<String, (Arc<Semaphore>, Instant)>>>;
+#[derive(Debug)]
+struct ScopedSemaphoreEntry {
+    sem: Arc<Semaphore>,
+    last_access: Instant,
+    limit: usize,
+}
+
+impl ScopedSemaphoreEntry {
+    fn has_outstanding_permits(&self) -> bool {
+        self.sem.available_permits() < self.limit
+    }
+}
+
+/// Per-scope semaphore map value: the semaphore plus metadata used by
+/// idle-TTL eviction. (#206/#31)
+type ScopeSemMap = Arc<Mutex<HashMap<String, ScopedSemaphoreEntry>>>;
 
 /// Max live entries in any per-scope map before idle/over-cap eviction kicks in.
 const SCOPE_MAP_MAX_ENTRIES: usize = 10_000;
@@ -161,8 +194,8 @@ const SCOPE_MAP_MAX_ENTRIES: usize = 10_000;
 const SCOPE_MAP_IDLE_TTL: std::time::Duration = std::time::Duration::from_secs(3600);
 
 /// Bound a per-scope map (#206/#211): evict idle (> `ttl`) entries, then the
-/// oldest entries until below `cap`. Lazy — only scans once the map has reached
-/// `cap`, so the common small-map path stays O(1). `last` reads each value's
+/// oldest entries until the map is back at `cap`. Lazy — only scans once the map
+/// has reached `cap`, so the common small-map path stays O(1). `last` reads each value's
 /// last-access instant (the sidecar `Instant` for semaphores, `last_refill`
 /// for token buckets, the staged-at instant for catalogs).
 fn evict_scope_map<V>(
@@ -170,20 +203,110 @@ fn evict_scope_map<V>(
     cap: usize,
     ttl: std::time::Duration,
     last: impl Fn(&V) -> Instant,
+    can_evict: impl Fn(&V) -> bool,
 ) {
     if map.len() < cap {
         return;
     }
     let now = Instant::now();
-    map.retain(|_, v| now.saturating_duration_since(last(v)) < ttl);
-    if map.len() >= cap {
-        let mut ages: Vec<(String, Instant)> =
-            map.iter().map(|(k, v)| (k.clone(), last(v))).collect();
+    map.retain(|_, v| !can_evict(v) || now.saturating_duration_since(last(v)) < ttl);
+    if map.len() > cap {
+        let mut ages: Vec<(String, Instant)> = map
+            .iter()
+            .filter(|(_, v)| can_evict(v))
+            .map(|(k, v)| (k.clone(), last(v)))
+            .collect();
         ages.sort_by_key(|(_, t)| *t);
-        let to_remove = map.len() + 1 - cap;
+        let to_remove = map.len() - cap;
         for (k, _) in ages.into_iter().take(to_remove) {
             map.remove(&k);
         }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct ChannelEnvConfig {
+    usize_values: HashMap<String, usize>,
+    u64_values: HashMap<String, u64>,
+    f64_values: HashMap<String, f64>,
+    scope_controls: HashMap<String, ScopeControl>,
+}
+
+impl ChannelEnvConfig {
+    fn from_env() -> Self {
+        Self::from_pairs(env::vars())
+    }
+
+    fn from_pairs<I, K, V>(pairs: I) -> Self
+    where
+        I: IntoIterator<Item = (K, V)>,
+        K: Into<String>,
+        V: Into<String>,
+    {
+        let raw: HashMap<String, String> = pairs
+            .into_iter()
+            .map(|(key, value)| (key.into(), value.into()))
+            .collect();
+        let usize_values = raw
+            .iter()
+            .filter_map(|(key, value)| value.parse().ok().map(|parsed| (key.clone(), parsed)))
+            .collect();
+        let u64_values = raw
+            .iter()
+            .filter_map(|(key, value)| value.parse().ok().map(|parsed| (key.clone(), parsed)))
+            .collect();
+        let f64_values = raw
+            .iter()
+            .filter_map(|(key, value)| value.parse().ok().map(|parsed| (key.clone(), parsed)))
+            .collect();
+        let mut scope_controls = HashMap::new();
+        for (suffix, control) in [
+            ("SHED", ScopeControl::Shed),
+            ("DRAINING", ScopeControl::Draining),
+            ("PAUSED", ScopeControl::Paused),
+        ] {
+            for (scope, key) in [
+                ("tenant", format!("UDB_{suffix}_TENANTS")),
+                ("project", format!("UDB_{suffix}_PROJECTS")),
+            ] {
+                if let Some(value) = raw.get(&key) {
+                    for item in value
+                        .split(',')
+                        .map(str::trim)
+                        .filter(|item| !item.is_empty())
+                    {
+                        scope_controls.insert(format!("{scope}:{}", env_part(item)), control);
+                    }
+                }
+            }
+        }
+        Self {
+            usize_values,
+            u64_values,
+            f64_values,
+            scope_controls,
+        }
+    }
+
+    fn usize_for(&self, keys: &[String]) -> Option<usize> {
+        keys.iter()
+            .find_map(|key| self.usize_values.get(key).copied())
+    }
+
+    fn u64_for(&self, keys: &[String]) -> Option<u64> {
+        keys.iter()
+            .find_map(|key| self.u64_values.get(key).copied())
+    }
+
+    fn f64_for(&self, keys: &[String]) -> Option<f64> {
+        keys.iter()
+            .find_map(|key| self.f64_values.get(key).copied())
+    }
+
+    fn scope_control(&self, scope: &str, value: &str) -> Option<ScopeControl> {
+        self.scope_controls
+            .get(&format!("{scope}:{}", env_part(value)))
+            .copied()
     }
 }
 
@@ -360,6 +483,58 @@ impl ChannelManager {
     }
 
     pub fn from_settings(settings: &ChannelSettings) -> Self {
+        Self::from_settings_with_env_config(settings, ChannelEnvConfig::from_env())
+    }
+
+    fn from_settings_with_env_config(
+        settings: &ChannelSettings,
+        env_config: ChannelEnvConfig,
+    ) -> Self {
+        let read_limit = configured_base_limit(
+            &env_config,
+            OperationChannel::Read,
+            settings.read_max_concurrent,
+        );
+        let write_limit = configured_base_limit(
+            &env_config,
+            OperationChannel::Write,
+            settings.write_max_concurrent,
+        );
+        let tx_limit = configured_base_limit(
+            &env_config,
+            OperationChannel::Transaction,
+            settings.tx_max_concurrent,
+        );
+        let migration_limit = configured_base_limit(
+            &env_config,
+            OperationChannel::Migration,
+            settings.migration_max_concurrent,
+        );
+        let cdc_limit = configured_base_limit(
+            &env_config,
+            OperationChannel::Cdc,
+            settings.cdc_max_concurrent,
+        );
+        let admin_limit = configured_base_limit(
+            &env_config,
+            OperationChannel::Admin,
+            settings.admin_max_concurrent,
+        );
+        let vector_limit = configured_base_limit(
+            &env_config,
+            OperationChannel::Vector,
+            settings.vector_max_concurrent,
+        );
+        let object_limit = configured_base_limit(
+            &env_config,
+            OperationChannel::Object,
+            settings.object_max_concurrent,
+        );
+        let generic_limit = configured_base_limit(
+            &env_config,
+            OperationChannel::GenericDispatch,
+            settings.generic_max_concurrent,
+        );
         Self {
             read_sem: Arc::new(Semaphore::new(settings.read_max_concurrent)),
             write_sem: Arc::new(Semaphore::new(settings.write_max_concurrent)),
@@ -376,7 +551,17 @@ impl ChannelManager {
             backend_instance_sems: Arc::new(Mutex::new(HashMap::new())),
             fairness: Arc::new(Mutex::new(HashMap::new())),
             controls: Arc::new(Mutex::new(HashMap::new())),
+            env_config: Arc::new(env_config),
 
+            read_limit,
+            write_limit,
+            tx_limit,
+            migration_limit,
+            cdc_limit,
+            admin_limit,
+            vector_limit,
+            object_limit,
+            generic_limit,
             read_timeout: settings.read_timeout_secs,
             write_timeout: settings.write_timeout_secs,
             tx_timeout: settings.tx_timeout_secs,
@@ -565,84 +750,93 @@ impl ChannelManager {
     fn scoped_sem(&self, map: &ScopeSemMap, key: String, limit: usize) -> Arc<Semaphore> {
         let mut guard = map.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
         // #206: bound the map before inserting a new scope's semaphore.
-        evict_scope_map(
-            &mut guard,
-            SCOPE_MAP_MAX_ENTRIES,
-            SCOPE_MAP_IDLE_TTL,
-            |(_, t)| *t,
-        );
+        if !guard.contains_key(&key) {
+            evict_scope_map(
+                &mut guard,
+                SCOPE_MAP_MAX_ENTRIES.saturating_sub(1),
+                SCOPE_MAP_IDLE_TTL,
+                |entry| entry.last_access,
+                |entry| !entry.has_outstanding_permits(),
+            );
+        }
         let now = Instant::now();
-        let entry = guard
-            .entry(key)
-            .or_insert_with(|| (Arc::new(Semaphore::new(limit)), now));
-        entry.1 = now; // touch last-access for idle-TTL tracking
-        Arc::clone(&entry.0)
+        let entry = guard.entry(key).or_insert_with(|| ScopedSemaphoreEntry {
+            sem: Arc::new(Semaphore::new(limit)),
+            last_access: now,
+            limit,
+        });
+        entry.last_access = now;
+        Arc::clone(&entry.sem)
     }
 
     fn tenant_limit(&self, op: OperationChannel, tenant: &str) -> usize {
-        env_usize(&[
-            format!(
-                "UDB_CHANNEL_TENANT_{}_{}_LIMIT",
-                env_part(tenant),
-                op.env_suffix()
-            ),
-            format!(
-                "UDB_TENANT_{}_{}_MAX_CONCURRENT",
-                env_part(tenant),
-                op.env_suffix()
-            ),
-        ])
-        .unwrap_or_else(|| self.base_limit(op))
+        self.env_config
+            .usize_for(&[
+                format!(
+                    "UDB_CHANNEL_TENANT_{}_{}_LIMIT",
+                    env_part(tenant),
+                    op.env_suffix()
+                ),
+                format!(
+                    "UDB_TENANT_{}_{}_MAX_CONCURRENT",
+                    env_part(tenant),
+                    op.env_suffix()
+                ),
+            ])
+            .unwrap_or_else(|| self.base_limit(op))
     }
 
     fn project_limit(&self, op: OperationChannel, project: &str) -> usize {
-        env_usize(&[
-            format!(
-                "UDB_CHANNEL_PROJECT_{}_{}_LIMIT",
-                env_part(project),
-                op.env_suffix()
-            ),
-            format!(
-                "UDB_PROJECT_{}_{}_MAX_CONCURRENT",
-                env_part(project),
-                op.env_suffix()
-            ),
-        ])
-        .unwrap_or_else(|| self.base_limit(op))
+        self.env_config
+            .usize_for(&[
+                format!(
+                    "UDB_CHANNEL_PROJECT_{}_{}_LIMIT",
+                    env_part(project),
+                    op.env_suffix()
+                ),
+                format!(
+                    "UDB_PROJECT_{}_{}_MAX_CONCURRENT",
+                    env_part(project),
+                    op.env_suffix()
+                ),
+            ])
+            .unwrap_or_else(|| self.base_limit(op))
     }
 
     fn instance_limit(&self, op: OperationChannel, instance: &str) -> usize {
-        env_usize(&[
-            format!(
-                "UDB_CHANNEL_INSTANCE_{}_{}_LIMIT",
-                env_part(instance),
-                op.env_suffix()
-            ),
-            format!(
-                "UDB_INSTANCE_{}_{}_MAX_CONCURRENT",
-                env_part(instance),
-                op.env_suffix()
-            ),
-        ])
-        .unwrap_or_else(|| self.base_limit(op))
+        self.env_config
+            .usize_for(&[
+                format!(
+                    "UDB_CHANNEL_INSTANCE_{}_{}_LIMIT",
+                    env_part(instance),
+                    op.env_suffix()
+                ),
+                format!(
+                    "UDB_INSTANCE_{}_{}_MAX_CONCURRENT",
+                    env_part(instance),
+                    op.env_suffix()
+                ),
+            ])
+            .unwrap_or_else(|| self.base_limit(op))
     }
 
     fn backend_instance_limit(&self, op: OperationChannel, backend: &str, instance: &str) -> usize {
-        env_usize(&[
-            format!(
-                "UDB_CHANNEL_BACKEND_INSTANCE_{}_{}_{}_LIMIT",
-                env_part(backend),
-                env_part(instance),
-                op.env_suffix()
-            ),
-            format!(
-                "UDB_BACKEND_INSTANCE_{}_{}_{}_MAX_CONCURRENT",
-                env_part(backend),
-                env_part(instance),
-                op.env_suffix()
-            ),
-        ])
-        .unwrap_or_else(|| self.base_limit(op))
+        self.env_config
+            .usize_for(&[
+                format!(
+                    "UDB_CHANNEL_BACKEND_INSTANCE_{}_{}_{}_LIMIT",
+                    env_part(backend),
+                    env_part(instance),
+                    op.env_suffix()
+                ),
+                format!(
+                    "UDB_BACKEND_INSTANCE_{}_{}_{}_MAX_CONCURRENT",
+                    env_part(backend),
+                    env_part(instance),
+                    op.env_suffix()
+                ),
+            ])
+            .unwrap_or_else(|| self.base_limit(op))
     }
 
     fn check_controls(
@@ -690,19 +884,9 @@ impl ChannelManager {
         {
             return control;
         }
-        let paused = env_csv(&format!("UDB_PAUSED_{}S", scope.to_ascii_uppercase()));
-        if paused.contains(&env_part(value)) {
-            return ScopeControl::Paused;
-        }
-        let draining = env_csv(&format!("UDB_DRAINING_{}S", scope.to_ascii_uppercase()));
-        if draining.contains(&env_part(value)) {
-            return ScopeControl::Draining;
-        }
-        let shed = env_csv(&format!("UDB_SHED_{}S", scope.to_ascii_uppercase()));
-        if shed.contains(&env_part(value)) {
-            return ScopeControl::Shed;
-        }
-        ScopeControl::Active
+        self.env_config
+            .scope_control(scope, value)
+            .unwrap_or(ScopeControl::Active)
     }
 
     pub fn set_scope_control(&self, scope: &str, value: &str, control: ScopeControl) {
@@ -730,7 +914,7 @@ impl ChannelManager {
         guard
             .iter()
             .map(|(key, bucket)| {
-                let (rate, burst) = bucket_settings_for_key(key, OperationChannel::Read);
+                let (rate, burst) = self.bucket_settings(OperationChannel::Read);
                 FairAdmissionSnapshot {
                     key: key.clone(),
                     tokens_available: bucket.tokens.max(0.0).floor() as u64,
@@ -763,20 +947,24 @@ impl ChannelManager {
             env_part(backend),
             env_part(instance)
         );
-        let (rate, burst) = bucket_settings_for_key(&key, op);
-        let weighted_cost = (cost.max(1) as f64) / fairness_weight(project, tenant, op).max(0.1);
+        let (rate, burst) = self.bucket_settings(op);
+        let weighted_cost =
+            (cost.max(1) as f64) / self.fairness_weight(project, tenant, op).max(0.1);
         let mut guard = self
             .fairness
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         // #206: bound the fairness map (token buckets carry their own
         // `last_refill` instant, which doubles as the last-access time).
-        evict_scope_map(
-            &mut guard,
-            SCOPE_MAP_MAX_ENTRIES,
-            SCOPE_MAP_IDLE_TTL,
-            |b: &TokenBucket| b.last_refill,
-        );
+        if !guard.contains_key(&key) {
+            evict_scope_map(
+                &mut guard,
+                SCOPE_MAP_MAX_ENTRIES.saturating_sub(1),
+                SCOPE_MAP_IDLE_TTL,
+                |b: &TokenBucket| b.last_refill,
+                |_| true,
+            );
+        }
         let bucket = guard.entry(key).or_insert_with(|| TokenBucket {
             tokens: burst,
             last_refill: Instant::now(),
@@ -801,20 +989,17 @@ impl ChannelManager {
     }
 
     fn base_limit(&self, op: OperationChannel) -> usize {
-        env_usize(&[
-            format!("UDB_CHANNEL_{}_LIMIT", op.env_suffix()),
-            format!("UDB_{}_MAX_CONCURRENT", op.env_suffix()),
-        ])
-        .unwrap_or(match op {
-            OperationChannel::Read => 300,
-            OperationChannel::Write => 100,
-            OperationChannel::Transaction => 50,
-            OperationChannel::Migration => 1,
-            OperationChannel::Cdc => 32,
-            OperationChannel::Admin => 20,
-            OperationChannel::Vector | OperationChannel::Object => 80,
-            OperationChannel::GenericDispatch => 50,
-        })
+        match op {
+            OperationChannel::Read => self.read_limit,
+            OperationChannel::Write => self.write_limit,
+            OperationChannel::Transaction => self.tx_limit,
+            OperationChannel::Migration => self.migration_limit,
+            OperationChannel::Cdc => self.cdc_limit,
+            OperationChannel::Admin => self.admin_limit,
+            OperationChannel::Vector => self.vector_limit,
+            OperationChannel::Object => self.object_limit,
+            OperationChannel::GenericDispatch => self.generic_limit,
+        }
     }
 
     pub fn queue_timeout_ms(&self, op: OperationChannel) -> u64 {
@@ -833,7 +1018,7 @@ impl ChannelManager {
 
     pub fn deadline_secs(&self, op: OperationChannel, backend: Option<&str>) -> u64 {
         if let Some(backend) = scoped_value(backend)
-            && let Some(value) = env_u64(&[
+            && let Some(value) = self.env_config.u64_for(&[
                 format!(
                     "UDB_DEADLINE_{}_{}_SECS",
                     env_part(backend),
@@ -845,6 +1030,50 @@ impl ChannelManager {
             return value;
         }
         self.timeout_secs(op)
+    }
+
+    fn bucket_settings(&self, op: OperationChannel) -> (f64, f64) {
+        let rate = self
+            .env_config
+            .f64_for(&[
+                format!("UDB_FAIR_{}_TOKENS_PER_SEC", op.env_suffix()),
+                "UDB_FAIR_TOKENS_PER_SEC".to_string(),
+            ])
+            .unwrap_or(100.0)
+            .max(0.001);
+        let burst = self
+            .env_config
+            .f64_for(&[
+                format!("UDB_FAIR_{}_BURST", op.env_suffix()),
+                "UDB_FAIR_BURST".to_string(),
+            ])
+            .unwrap_or(rate * 2.0)
+            .max(rate);
+        (rate, burst)
+    }
+
+    fn fairness_weight(&self, project: &str, tenant: &str, op: OperationChannel) -> f64 {
+        self.env_config
+            .f64_for(&[
+                format!(
+                    "UDB_FAIR_PROJECT_{}_TENANT_{}_{}_WEIGHT",
+                    env_part(project),
+                    env_part(tenant),
+                    op.env_suffix()
+                ),
+                format!(
+                    "UDB_FAIR_TENANT_{}_{}_WEIGHT",
+                    env_part(tenant),
+                    op.env_suffix()
+                ),
+                format!(
+                    "UDB_FAIR_PROJECT_{}_{}_WEIGHT",
+                    env_part(project),
+                    op.env_suffix()
+                ),
+                "UDB_FAIR_DEFAULT_WEIGHT".to_string(),
+            ])
+            .unwrap_or(1.0)
     }
 
     pub fn timeout_secs(&self, op: OperationChannel) -> u64 {
@@ -879,68 +1108,17 @@ fn env_part(value: &str) -> String {
         .collect()
 }
 
-fn env_usize(keys: &[String]) -> Option<usize> {
-    keys.iter()
-        .find_map(|key| env::var(key).ok().and_then(|value| value.parse().ok()))
-}
-
-fn env_u64(keys: &[String]) -> Option<u64> {
-    keys.iter()
-        .find_map(|key| env::var(key).ok().and_then(|value| value.parse().ok()))
-}
-
-fn env_f64(keys: &[String]) -> Option<f64> {
-    keys.iter()
-        .find_map(|key| env::var(key).ok().and_then(|value| value.parse().ok()))
-}
-
-fn env_csv(key: &str) -> HashSet<String> {
-    env::var(key)
-        .unwrap_or_default()
-        .split(',')
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(env_part)
-        .collect()
-}
-
-fn bucket_settings_for_key(_key: &str, op: OperationChannel) -> (f64, f64) {
-    let rate = env_f64(&[
-        format!("UDB_FAIR_{}_TOKENS_PER_SEC", op.env_suffix()),
-        "UDB_FAIR_TOKENS_PER_SEC".to_string(),
-    ])
-    .unwrap_or(100.0)
-    .max(0.001);
-    let burst = env_f64(&[
-        format!("UDB_FAIR_{}_BURST", op.env_suffix()),
-        "UDB_FAIR_BURST".to_string(),
-    ])
-    .unwrap_or(rate * 2.0)
-    .max(rate);
-    (rate, burst)
-}
-
-fn fairness_weight(project: &str, tenant: &str, op: OperationChannel) -> f64 {
-    env_f64(&[
-        format!(
-            "UDB_FAIR_PROJECT_{}_TENANT_{}_{}_WEIGHT",
-            env_part(project),
-            env_part(tenant),
-            op.env_suffix()
-        ),
-        format!(
-            "UDB_FAIR_TENANT_{}_{}_WEIGHT",
-            env_part(tenant),
-            op.env_suffix()
-        ),
-        format!(
-            "UDB_FAIR_PROJECT_{}_{}_WEIGHT",
-            env_part(project),
-            op.env_suffix()
-        ),
-        "UDB_FAIR_DEFAULT_WEIGHT".to_string(),
-    ])
-    .unwrap_or(1.0)
+fn configured_base_limit(
+    env_config: &ChannelEnvConfig,
+    op: OperationChannel,
+    settings_limit: usize,
+) -> usize {
+    env_config
+        .usize_for(&[
+            format!("UDB_CHANNEL_{}_LIMIT", op.env_suffix()),
+            format!("UDB_{}_MAX_CONCURRENT", op.env_suffix()),
+        ])
+        .unwrap_or(settings_limit)
 }
 
 #[cfg(test)]
@@ -949,6 +1127,13 @@ mod tests {
     use tonic::Code;
 
     fn test_manager(limit: usize) -> ChannelManager {
+        test_manager_with_env(limit, [])
+    }
+
+    fn test_manager_with_env<const N: usize>(
+        limit: usize,
+        pairs: [(&str, &str); N],
+    ) -> ChannelManager {
         let sem = || Arc::new(Semaphore::new(limit));
         ChannelManager {
             read_sem: sem(),
@@ -966,6 +1151,16 @@ mod tests {
             backend_instance_sems: Arc::new(Mutex::new(HashMap::new())),
             fairness: Arc::new(Mutex::new(HashMap::new())),
             controls: Arc::new(Mutex::new(HashMap::new())),
+            env_config: Arc::new(ChannelEnvConfig::from_pairs(pairs)),
+            read_limit: limit,
+            write_limit: limit,
+            tx_limit: limit,
+            migration_limit: limit,
+            cdc_limit: limit,
+            admin_limit: limit,
+            vector_limit: limit,
+            object_limit: limit,
+            generic_limit: limit,
             read_timeout: 1,
             write_timeout: 2,
             tx_timeout: 3,
@@ -1068,6 +1263,88 @@ mod tests {
         assert_eq!(err.code(), Code::ResourceExhausted);
     }
 
+    #[test]
+    fn configured_base_limit_uses_cached_channel_alias() {
+        let env_config = ChannelEnvConfig::from_pairs([("UDB_CHANNEL_READ_LIMIT", "7")]);
+        assert_eq!(
+            configured_base_limit(&env_config, OperationChannel::Read, 300),
+            7
+        );
+    }
+
+    #[test]
+    fn scoped_semaphore_eviction_preserves_entries_with_outstanding_permits() {
+        let old = Instant::now()
+            .checked_sub(Duration::from_secs(7200))
+            .unwrap();
+        let live_sem = Arc::new(Semaphore::new(1));
+        let _permit = live_sem.clone().try_acquire_owned().unwrap();
+        let mut ttl_map = HashMap::from([
+            (
+                "live".to_string(),
+                ScopedSemaphoreEntry {
+                    sem: live_sem.clone(),
+                    last_access: old,
+                    limit: 1,
+                },
+            ),
+            (
+                "idle".to_string(),
+                ScopedSemaphoreEntry {
+                    sem: Arc::new(Semaphore::new(1)),
+                    last_access: old,
+                    limit: 1,
+                },
+            ),
+        ]);
+
+        evict_scope_map(
+            &mut ttl_map,
+            2,
+            Duration::from_secs(1),
+            |entry| entry.last_access,
+            |entry| !entry.has_outstanding_permits(),
+        );
+        assert!(ttl_map.contains_key("live"));
+        assert!(!ttl_map.contains_key("idle"));
+
+        let mut cap_map = HashMap::from([
+            (
+                "live".to_string(),
+                ScopedSemaphoreEntry {
+                    sem: live_sem,
+                    last_access: old,
+                    limit: 1,
+                },
+            ),
+            (
+                "idle-a".to_string(),
+                ScopedSemaphoreEntry {
+                    sem: Arc::new(Semaphore::new(1)),
+                    last_access: old + Duration::from_millis(1),
+                    limit: 1,
+                },
+            ),
+            (
+                "idle-b".to_string(),
+                ScopedSemaphoreEntry {
+                    sem: Arc::new(Semaphore::new(1)),
+                    last_access: old + Duration::from_millis(2),
+                    limit: 1,
+                },
+            ),
+        ]);
+        evict_scope_map(
+            &mut cap_map,
+            2,
+            Duration::from_secs(10_000),
+            |entry| entry.last_access,
+            |entry| !entry.has_outstanding_permits(),
+        );
+        assert!(cap_map.contains_key("live"));
+        assert_eq!(cap_map.len(), 2);
+    }
+
     #[tokio::test]
     async fn queued_acquire_waits_for_selected_channels() {
         let manager = test_manager(1);
@@ -1089,12 +1366,13 @@ mod tests {
 
     #[tokio::test]
     async fn scoped_acquire_enforces_tenant_and_instance_limits() {
-        unsafe {
-            env::set_var("UDB_CHANNEL_TENANT_T1_WRITE_LIMIT", "1");
-            env::set_var("UDB_CHANNEL_INSTANCE_A_WRITE_LIMIT", "1");
-            env::set_var("UDB_WRITE_QUEUE_TIMEOUT_MS", "1");
-        }
-        let manager = test_manager(4);
+        let manager = test_manager_with_env(
+            4,
+            [
+                ("UDB_CHANNEL_TENANT_T1_WRITE_LIMIT", "1"),
+                ("UDB_CHANNEL_INSTANCE_A_WRITE_LIMIT", "1"),
+            ],
+        );
         let _permit = manager
             .acquire_scoped_with_backpressure(OperationChannel::Write, Some("t1"), Some("a"))
             .await
@@ -1104,20 +1382,11 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(err.code(), Code::ResourceExhausted);
-        unsafe {
-            env::remove_var("UDB_CHANNEL_TENANT_T1_WRITE_LIMIT");
-            env::remove_var("UDB_CHANNEL_INSTANCE_A_WRITE_LIMIT");
-            env::remove_var("UDB_WRITE_QUEUE_TIMEOUT_MS");
-        }
     }
 
     #[tokio::test]
     async fn scoped_acquire_enforces_project_limits() {
-        unsafe {
-            env::set_var("UDB_CHANNEL_PROJECT_P1_READ_LIMIT", "1");
-            env::set_var("UDB_READ_QUEUE_TIMEOUT_MS", "1");
-        }
-        let manager = test_manager(4);
+        let manager = test_manager_with_env(4, [("UDB_CHANNEL_PROJECT_P1_READ_LIMIT", "1")]);
         let _permit = manager
             .acquire_fair_with_backpressure(
                 OperationChannel::Read,
@@ -1142,19 +1411,17 @@ mod tests {
             .unwrap_err();
         assert_eq!(err.code(), Code::ResourceExhausted);
         assert!(err.message().contains("project channel"));
-        unsafe {
-            env::remove_var("UDB_CHANNEL_PROJECT_P1_READ_LIMIT");
-            env::remove_var("UDB_READ_QUEUE_TIMEOUT_MS");
-        }
     }
 
     #[tokio::test]
     async fn fair_budget_is_isolated_by_tenant() {
-        unsafe {
-            env::set_var("UDB_FAIR_ADMIN_TOKENS_PER_SEC", "0.001");
-            env::set_var("UDB_FAIR_ADMIN_BURST", "1");
-        }
-        let manager = test_manager(8);
+        let manager = test_manager_with_env(
+            8,
+            [
+                ("UDB_FAIR_ADMIN_TOKENS_PER_SEC", "0.001"),
+                ("UDB_FAIR_ADMIN_BURST", "1"),
+            ],
+        );
         let first = manager
             .acquire_fair_with_backpressure(
                 OperationChannel::Admin,
@@ -1189,10 +1456,6 @@ mod tests {
             )
             .await;
         assert!(other_tenant.is_ok());
-        unsafe {
-            env::remove_var("UDB_FAIR_ADMIN_TOKENS_PER_SEC");
-            env::remove_var("UDB_FAIR_ADMIN_BURST");
-        }
     }
 
     #[tokio::test]
@@ -1241,6 +1504,23 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn env_scope_controls_are_cached_in_manager() {
+        let manager = test_manager_with_env(4, [("UDB_PAUSED_TENANTS", "t1")]);
+        let paused = manager
+            .acquire_fair_with_backpressure(
+                OperationChannel::Read,
+                Some("t1"),
+                Some("p1"),
+                Some("postgres"),
+                Some("primary"),
+                1,
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(paused.code(), Code::Unavailable);
+    }
+
+    #[tokio::test]
     async fn concurrent_read_write_load_uses_independent_backend_channels() {
         let manager = test_manager(2);
         let mut tasks = Vec::new();
@@ -1264,17 +1544,11 @@ mod tests {
 
     #[test]
     fn deadline_can_be_overridden_by_backend_and_operation() {
-        unsafe {
-            env::set_var("UDB_DEADLINE_QDRANT_VECTOR_SECS", "11");
-        }
-        let manager = test_manager(2);
+        let manager = test_manager_with_env(2, [("UDB_DEADLINE_QDRANT_VECTOR_SECS", "11")]);
         assert_eq!(
             manager.deadline_secs(OperationChannel::Vector, Some("qdrant")),
             11
         );
         assert_eq!(manager.deadline_secs(OperationChannel::Vector, None), 7);
-        unsafe {
-            env::remove_var("UDB_DEADLINE_QDRANT_VECTOR_SECS");
-        }
     }
 }

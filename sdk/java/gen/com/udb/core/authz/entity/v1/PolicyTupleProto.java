@@ -42,54 +42,60 @@ public final class PolicyTupleProto extends com.google.protobuf.GeneratedFile {
     java.lang.String[] descriptorData = {
       "\n+udb/core/authz/entity/v1/policy_tuple." +
       "proto\022\030udb.core.authz.entity.v1\032\033udb/cor" +
-      "e/common/v1/db.proto\"\207\013\n\013PolicyTuple\022L\n\017" +
-      "policy_tuple_id\030\001 \001(\003B$\202\267\030 \n\017policy_tupl" +
-      "e_id\022\tBIGSERIAL\030\001(\001R\rpolicyTupleId\022\214\001\n\nt" +
-      "uple_kind\030\002 \001(\tBm\202\267\030i\n\ntuple_kind\022\013VARCH" +
-      "AR(32)\030\001R\037\n\026idx_policy_tuples_kind\022\005BTRE" +
-      "EZ+policy, grouping, relationship, or ov" +
-      "errideR\ttupleKind\022`\n\007subject\030\003 \001(\tBF\202\267\030B" +
-      "\n\007subject\022\004TEXT\030\001:\002\'\'Z+Principal, role, " +
-      "group, or service selectorR\007subject\022j\n\006d" +
-      "omain\030\004 \001(\tBR\202\267\030N\n\006domain\022\004TEXT\030\001:\002\'\'Z8A" +
-      "uthorization domain such as tenant:<id> " +
-      "or project:<id>R\006domain\022Y\n\006object\030\005 \001(\tB" +
-      "A\202\267\030=\n\006object\022\004TEXT\030\001:\002\'\'Z\'Protected obj" +
-      "ect or relationship targetR\006object\022S\n\006ac" +
-      "tion\030\006 \001(\tB;\202\267\0307\n\006action\022\004TEXT\030\001:\002\'\'Z!Ac" +
-      "tion, relation, or matcher verbR\006action\022" +
-      "W\n\006effect\030\007 \001(\tB?\202\267\030;\n\006effect\022\004TEXT\030\001:\002\'" +
-      "\'Z%allow, deny, or tuple-specific effect" +
-      "R\006effect\022h\n\tcondition\030\010 \001(\tBJ\202\267\030F\n\tcondi" +
-      "tion\022\004TEXT\030\001:\002\'\'Z-Reserved condition or " +
-      "ABAC matcher expressionR\tcondition\022\\\n\tte" +
-      "nant_id\030\t \001(\tB?\202\267\030;\n\ttenant_id\022\013VARCHAR(" +
-      "64)\030\001R\037\n\026idx_policytuple_tenant\022\005BTREER\010" +
-      "tenantId\022_\n\nproject_id\030\n \001(\tB@\202\267\030<\n\nproj" +
-      "ect_id\022\014VARCHAR(120)R \n\027idx_policytuple_" +
-      "project\022\005BTREER\tprojectId:\232\003\242\265\030\\\010\001\022/udb:" +
-      "authz:tuple:{tuple_kind}:{subject}:{doma" +
-      "in}\030\254\002 \001(\001:\022REDIS_CLUSTER_ADDRB\014authz_po" +
-      "licy\372\266\030\265\002\n\rpolicy_tuples\022\tudb_authz\030\001 \001*" +
-      "BNormalized authorization policy, groupi" +
-      "ng, and relationship tuples@\001b^\n\020tenant_" +
-      "isolation\032H(tenant_id::text = current_se" +
-      "tting(\'app.current_tenant_id\', true)::te" +
-      "xt)(\001\212\001V\n\026uq_policy_tuples_tuple\022\005BTREE\030" +
-      "\001Z\ntuple_kindZ\007subjectZ\006domainZ\006objectZ\006" +
-      "actionZ\006effect\352\001\007primary\372\001\013authz:adminB\373" +
-      "\001\n\034com.udb.core.authz.entity.v1B\020PolicyT" +
-      "upleProtoP\001ZDgithub.com/fahara02/udb/sdk" +
-      "/go/gen/udb/core/authz/entity/v1;entityv" +
-      "1\242\002\004UCAE\252\002\030udb.core.Authz.Entity.V1\312\002\030Ud" +
-      "b\\Core\\Authz\\Entity\\V1\342\002$Udb\\GPBMetadata" +
-      "\\Core\\Authz\\Entity\\V1\352\002\034Udb::Core::Authz" +
-      "::Entity::V1b\006proto3"
+      "e/common/v1/db.proto\032!udb/core/common/v1" +
+      "/security.proto\"\243\014\n\013PolicyTuple\022L\n\017polic" +
+      "y_tuple_id\030\001 \001(\003B$\202\267\030 \n\017policy_tuple_id\022" +
+      "\tBIGSERIAL\030\001(\001R\rpolicyTupleId\022\214\001\n\ntuple_" +
+      "kind\030\002 \001(\tBm\202\267\030i\n\ntuple_kind\022\013VARCHAR(32" +
+      ")\030\001R\037\n\026idx_policy_tuples_kind\022\005BTREEZ+po" +
+      "licy, grouping, relationship, or overrid" +
+      "eR\ttupleKind\022`\n\007subject\030\003 \001(\tBF\202\267\030B\n\007sub" +
+      "ject\022\004TEXT\030\001:\002\'\'Z+Principal, role, group" +
+      ", or service selectorR\007subject\022j\n\006domain" +
+      "\030\004 \001(\tBR\202\267\030N\n\006domain\022\004TEXT\030\001:\002\'\'Z8Author" +
+      "ization domain such as tenant:<id> or pr" +
+      "oject:<id>R\006domain\022Y\n\006object\030\005 \001(\tBA\202\267\030=" +
+      "\n\006object\022\004TEXT\030\001:\002\'\'Z\'Protected object o" +
+      "r relationship targetR\006object\022S\n\006action\030" +
+      "\006 \001(\tB;\202\267\0307\n\006action\022\004TEXT\030\001:\002\'\'Z!Action," +
+      " relation, or matcher verbR\006action\022W\n\006ef" +
+      "fect\030\007 \001(\tB?\202\267\030;\n\006effect\022\004TEXT\030\001:\002\'\'Z%al" +
+      "low, deny, or tuple-specific effectR\006eff" +
+      "ect\022h\n\tcondition\030\010 \001(\tBJ\202\267\030F\n\tcondition\022" +
+      "\004TEXT\030\001:\002\'\'Z-Reserved condition or ABAC " +
+      "matcher expressionR\tcondition\022\\\n\ttenant_" +
+      "id\030\t \001(\tB?\202\267\030;\n\ttenant_id\022\013VARCHAR(64)\030\001" +
+      "R\037\n\026idx_policytuple_tenant\022\005BTREER\010tenan" +
+      "tId\022_\n\nproject_id\030\n \001(\tB@\202\267\030<\n\nproject_i" +
+      "d\022\014VARCHAR(120)R \n\027idx_policytuple_proje" +
+      "ct\022\005BTREER\tprojectId:\266\004\242\265\030\\\010\001\022/udb:authz" +
+      ":tuple:{tuple_kind}:{subject}:{domain}\030\254" +
+      "\002 \001(\001:\022REDIS_CLUSTER_ADDRB\014authz_policy\372" +
+      "\266\030\265\002\n\rpolicy_tuples\022\tudb_authz\030\001 \001*BNorm" +
+      "alized authorization policy, grouping, a" +
+      "nd relationship tuples@\001b^\n\020tenant_isola" +
+      "tion\032H(tenant_id::text = current_setting" +
+      "(\'app.current_tenant_id\', true)::text)(\001" +
+      "\212\001V\n\026uq_policy_tuples_tuple\022\005BTREE\030\001Z\ntu" +
+      "ple_kindZ\007subjectZ\006domainZ\006objectZ\006actio" +
+      "nZ\006effect\352\001\007primary\372\001\013authz:admin\212\262\031\227\001\n\006" +
+      "tenant\032\ttenant_id*4tenant_id = current_s" +
+      "etting(\'app.current_tenant_id\')2\013soft_de" +
+      "lete:\021authz.operational@\373\023H\002R\006tenantZ\010st" +
+      "andardr\025tenant.data_residencyB\373\001\n\034com.ud" +
+      "b.core.authz.entity.v1B\020PolicyTupleProto" +
+      "P\001ZDgithub.com/fahara02/udb/sdk/go/gen/u" +
+      "db/core/authz/entity/v1;entityv1\242\002\004UCAE\252" +
+      "\002\030udb.core.Authz.Entity.V1\312\002\030Udb\\Core\\Au" +
+      "thz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Aut" +
+      "hz\\Entity\\V1\352\002\034Udb::Core::Authz::Entity:" +
+      ":V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.udb.core.common.v1.DbProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_authz_entity_v1_PolicyTuple_descriptor =
       getDescriptor().getMessageType(0);
@@ -99,9 +105,11 @@ public final class PolicyTupleProto extends com.google.protobuf.GeneratedFile {
         new java.lang.String[] { "PolicyTupleId", "TupleKind", "Subject", "Domain", "Object", "Action", "Effect", "Condition", "TenantId", "ProjectId", });
     descriptor.resolveAllFeaturesImmutable();
     com.udb.core.common.v1.DbProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
     registry.add(com.udb.core.common.v1.DbProto.cache);
+    registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);
     registry.add(com.udb.core.common.v1.DbProto.pgTable);
     com.google.protobuf.Descriptors.FileDescriptor

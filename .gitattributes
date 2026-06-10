@@ -1,0 +1,121 @@
+# ============================================================
+# .gitattributes — UDB repository
+# ============================================================
+# Line-ending normalisation
+# ============================================================
+*               text=auto
+
+# Source code — always LF in repo
+*.rs            text eol=lf
+*.go            text eol=lf
+*.java          text eol=lf
+*.py            text eol=lf
+*.ts            text eol=lf
+*.tsx           text eol=lf
+*.js            text eol=lf
+*.jsx           text eol=lf
+*.proto         text eol=lf
+*.php           text eol=lf
+*.cs            text eol=lf
+*.kt            text eol=lf
+*.swift         text eol=lf
+
+# Config / markup — always LF in repo
+*.toml          text eol=lf
+*.yaml          text eol=lf
+*.yml           text eol=lf
+*.json          text eol=lf
+*.md            text eol=lf
+*.txt           text eol=lf
+*.xml           text eol=lf
+*.html          text eol=lf
+*.css           text eol=lf
+*.sh            text eol=lf
+*.bash          text eol=lf
+*.env           text eol=lf
+*.env.example   text eol=lf
+Dockerfile      text eol=lf
+Makefile        text eol=lf
+
+# Windows scripts — CRLF on checkout
+*.ps1           text eol=crlf
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+
+# True binary — never diff/merge
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.ico           binary
+*.wasm          binary
+*.pdf           binary
+*.zip           binary
+*.tar           binary
+*.gz            binary
+*.tgz           binary
+*.ttf           binary
+*.woff          binary
+*.woff2         binary
+
+# ============================================================
+# GitHub Linguist overrides
+# ============================================================
+# ── Core language: Rust ─────────────────────────────────────
+# Rust source is the canonical codebase; proto definitions are
+# Protocol Buffer.  Everything else is either generated, vendored,
+# template, or documentation and is excluded from language stats.
+
+src/**/*.rs                         linguist-language=Rust
+crates/**/*.rs                      linguist-language=Rust
+build.rs                            linguist-language=Rust
+benches/**/*.rs                     linguist-language=Rust
+tests/**/*.rs                       linguist-language=Rust
+
+# ── Protocol Buffer definitions ─────────────────────────────
+proto/**/*.proto                    linguist-language=Protocol\ Buffer
+third_party/**/*.proto              linguist-language=Protocol\ Buffer
+third_party/**/*.proto              linguist-vendored=true
+
+# ── Generated SDK files (protobuf/grpc codegen) ─────────────
+# These are machine-generated from proto sources; exclude from
+# language statistics so Rust stays #1.
+sdk/go/gen/**                       linguist-generated=true
+sdk/java/gen/**                     linguist-generated=true
+sdk/php/gen/**                      linguist-generated=true
+sdk/csharp/gen/**                   linguist-generated=true
+sdk/python/gen/**                   linguist-generated=true
+sdk/typescript/gen/**               linguist-generated=true
+sdk/typescript/proto/**             linguist-generated=true
+sdk/typescript/third_party/**       linguist-vendored=true
+
+# Generated conformance output
+sdk-conformance/**                  linguist-generated=true
+
+# SDK templates are scaffold, not primary source
+sdk-templates/**                    linguist-documentation=true
+
+# ── Vendored / third-party ───────────────────────────────────
+third_party/**                      linguist-vendored=true
+
+# ── Bench artifacts and history ─────────────────────────────
+bench-artifacts/**                  linguist-documentation=true
+bench-history/**                    linguist-documentation=true
+benches/**                          linguist-language=Rust
+
+# ── Data fixtures ────────────────────────────────────────────
+data/**                             linguist-documentation=true
+
+# ── Node dependencies (if accidentally committed) ────────────
+**/node_modules/**                  linguist-vendored=true
+
+# ── Python venv (if accidentally committed) ─────────────────
+**/.venv/**                         linguist-vendored=true
+
+# ── Documentation assets ────────────────────────────────────
+docs/**/*.md                        linguist-documentation=true
+docs/**/*.svg                       linguist-documentation=true
+docs/**/*.json                      linguist-documentation=true
+
+# ── Diff drivers ────────────────────────────────────────────
+Cargo.lock                          linguist-generated=true

@@ -37,11 +37,11 @@ $env:UDB_RUNNER = "release"
 
 `generate.ps1` uses `uv run --no-project --with grpcio-tools` for Python model generation, then asks UDB to generate `db_ops/` from `proto/`.
 
-Before the first public UDB release exists, the default `releases/latest/download/...` URL will 404. For local pre-release testing, point the script at a binary you already built:
+For local source-checkout testing, point the script at a binary you already built:
 
 ```powershell
-cargo build --bin udb-proto-parser
-$env:UDB_CLI = "E:\Projects\udb\target\debug\udb-proto-parser.exe"
+cargo build --bin udb
+$env:UDB_CLI = "E:/Projects/udb/target/debug/udb.exe"
 .\scripts\generate.ps1 -Runner auto
 ```
 

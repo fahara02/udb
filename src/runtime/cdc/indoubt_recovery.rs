@@ -45,6 +45,108 @@
 //! Returns the number of rows reset so the caller can metric it.
 
 use sqlx::PgPool;
+use uuid::Uuid;
+
+/// Defensive identifier check shared by the sweep and the per-event reset:
+/// reject relation names we'd refuse to qi-quote. The outbox_relation comes
+/// from `CdcConfig::outbox_relation` which is already env-identifier
+/// validated; this is belt-and-braces against a future caller that passes a
+/// raw string.
+fn validate_outbox_relation(outbox_relation: &str) -> Result<(), String> {
+    if outbox_relation.is_empty()
+        || outbox_relation
+            .chars()
+            .any(|c| !(c.is_ascii_alphanumeric() || c == '_' || c == '.' || c == '"'))
+    {
+        return Err(format!(
+            "reset_indoubt_publishing_rows: refusing unsafe outbox_relation '{outbox_relation}'"
+        ));
+    }
+    Ok(())
+}
+
+/// What [`reset_indoubt_publishing_row`] did to the row (FIX-9C).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IndoubtRowOutcome {
+    /// The row already carried a `kafka_offset` — the broker confirmed the
+    /// publish before the in-flight future was dropped, so re-publishing
+    /// would duplicate. Finalized as `acked` (same decision as the sweep).
+    Acked,
+    /// No recorded offset — the publish is unproven. Returned to `pending`
+    /// so the next poll re-publishes it (at-least-once; consumers dedupe on
+    /// `event_id`).
+    Pending,
+    /// The row was not in `publishing` for this epoch (already finalized,
+    /// deleted by an ack, or owned by a different producer epoch). Nothing
+    /// was changed.
+    Untouched,
+}
+
+/// FIX-9C: reset ONE event whose in-flight publish/ack future was dropped
+/// (delivery timeout in `tail_outbox`) — the per-event twin of
+/// [`reset_indoubt_publishing_rows`], with the same ack-vs-pending decision:
+/// a recorded `kafka_offset` is commit proof (finalize `acked`), anything
+/// else returns to `pending`. Unlike the sweep there is no epoch/grace
+/// window — the caller KNOWS the future for this exact event was just
+/// dropped in `current_epoch`, so the row is in-doubt right now; the update
+/// is still guarded to rows that are BOTH still `publishing` AND stamped
+/// with `current_epoch`, so a row another epoch owns is never touched.
+pub async fn reset_indoubt_publishing_row(
+    pool: &PgPool,
+    outbox_relation: &str,
+    event_id: Uuid,
+    current_epoch: i64,
+) -> Result<IndoubtRowOutcome, String> {
+    validate_outbox_relation(outbox_relation)?;
+
+    // Same step order as the sweep: commit-confirmed rows are finalized
+    // first so the pending-reset below can never resurrect a published row.
+    let ack_sql = format!(
+        "UPDATE {outbox_relation} SET \
+            delivery_state = 'acked', \
+            acked_at = NOW(), \
+            last_error = COALESCE(last_error, '') || \
+                ' | udb-cdc-indoubt-recovery: commit confirmed by recorded offset; acking' \
+         WHERE event_id = $1 \
+           AND delivery_state = 'publishing' \
+           AND producer_epoch = $2 \
+           AND kafka_offset IS NOT NULL"
+    );
+    let acked = sqlx::query(&ack_sql)
+        .bind(event_id)
+        .bind(current_epoch)
+        .execute(pool)
+        .await
+        .map(|res| res.rows_affected())
+        .map_err(|e| format!("reset_indoubt_publishing_row (ack) failed: {e}"))?;
+    if acked > 0 {
+        return Ok(IndoubtRowOutcome::Acked);
+    }
+
+    let reset_sql = format!(
+        "UPDATE {outbox_relation} SET \
+            delivery_state = 'pending', \
+            last_error = COALESCE(last_error, '') || \
+                ' | udb-cdc-indoubt-recovery: in-flight publish dropped on delivery timeout; re-publishing', \
+            publishing_started_at = NULL \
+         WHERE event_id = $1 \
+           AND delivery_state = 'publishing' \
+           AND producer_epoch = $2 \
+           AND kafka_offset IS NULL"
+    );
+    let reset = sqlx::query(&reset_sql)
+        .bind(event_id)
+        .bind(current_epoch)
+        .execute(pool)
+        .await
+        .map(|res| res.rows_affected())
+        .map_err(|e| format!("reset_indoubt_publishing_row failed: {e}"))?;
+    if reset > 0 {
+        Ok(IndoubtRowOutcome::Pending)
+    } else {
+        Ok(IndoubtRowOutcome::Untouched)
+    }
+}
 
 /// Reset every `publishing` outbox row from a prior producer epoch
 /// (or older than the grace window) to `pending` so the normal publish
@@ -66,19 +168,7 @@ pub async fn reset_indoubt_publishing_rows(
     current_epoch: i64,
     grace_secs: i64,
 ) -> Result<u64, String> {
-    // Defensive: reject identifiers we'd refuse to qi-quote. The
-    // outbox_relation comes from `CdcConfig::outbox_relation` which is
-    // already env-identifier-validated; this is belt-and-braces against
-    // a future caller that passes a raw string.
-    if outbox_relation.is_empty()
-        || outbox_relation
-            .chars()
-            .any(|c| !(c.is_ascii_alphanumeric() || c == '_' || c == '.' || c == '"'))
-    {
-        return Err(format!(
-            "reset_indoubt_publishing_rows: refusing unsafe outbox_relation '{outbox_relation}'"
-        ));
-    }
+    validate_outbox_relation(outbox_relation)?;
     if grace_secs < 0 {
         return Err(format!(
             "reset_indoubt_publishing_rows: grace_secs must be >= 0 (got {grace_secs})"
@@ -162,6 +252,23 @@ mod tests {
             .await
             .expect_err("should reject empty relation");
         assert!(err2.contains("refusing unsafe"));
+    }
+
+    /// FIX-9C: the per-event reset shares the same relation guard as the
+    /// sweep — an unsafe relation short-circuits before any SQL runs. The
+    /// pending/acked transition itself is covered by the env-gated live test
+    /// `live_tests::live_indoubt_reset_returns_publishing_row_to_pending`,
+    /// which drives this exact function against a real Postgres.
+    #[tokio::test]
+    async fn per_event_reset_rejects_unsafe_relation_name() {
+        let pool = PgPool::connect_lazy("postgres://invalid:0/none").unwrap();
+        let err = reset_indoubt_publishing_row(&pool, "evil; DROP", Uuid::new_v4(), 0)
+            .await
+            .expect_err("should reject unsafe relation");
+        assert!(
+            err.contains("refusing unsafe outbox_relation"),
+            "got: {err}"
+        );
     }
 
     /// Pin: negative grace is rejected. Otherwise the interval would

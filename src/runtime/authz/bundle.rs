@@ -7,8 +7,25 @@
 //! UDB and (b) reject it once expired. UDB remains the policy authority; the
 //! bundle is a signed, time-boxed projection of the authority's state.
 
+use base64::Engine as _;
+
 use crate::runtime::authz::{AuthzPolicy, AuthzSnapshot, Effect};
 use crate::runtime::security::hmac_sha256;
+
+/// Encode an HMAC tag as **Base64 (standard alphabet)**. This is the single,
+/// canonical bundle-signature encoding: the proto
+/// (`SignedPolicyBundle.signature`) documents Base64, so server and every SDK
+/// verifier agree on Base64 — Phase K4 normalization away from the prior
+/// lowercase-hex output, which silently disagreed with the proto contract.
+pub fn encode_bundle_signature(tag: &[u8]) -> String {
+    base64::engine::general_purpose::STANDARD.encode(tag)
+}
+
+/// Inverse of [`encode_bundle_signature`] — decode a Base64 signature so a
+/// verifier can constant-time-compare it against a locally recomputed HMAC.
+pub fn decode_bundle_signature(sig: &str) -> Result<Vec<u8>, base64::DecodeError> {
+    base64::engine::general_purpose::STANDARD.decode(sig.trim())
+}
 
 /// Operator configuration for policy-bundle signing, read from the environment.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -78,7 +95,9 @@ impl PolicyBundleConfig {
         }
         let payload = snapshot_to_json(snapshot, tenant_id, project_id, now_unix, self.ttl_seconds);
         let bundle = serde_json::to_vec(&payload).ok()?;
-        let signature = hex_lower(&hmac_sha256(self.secret.as_bytes(), &bundle));
+        // Base64 (not hex) so the wire signature matches the proto contract and
+        // every SDK verifier (Phase K4).
+        let signature = encode_bundle_signature(&hmac_sha256(self.secret.as_bytes(), &bundle));
         Some(SignedBundle {
             bundle,
             signature,
@@ -204,14 +223,6 @@ fn domain_str_matches(selector: &str, requested: &str) -> bool {
     s.is_empty() || s == "*" || s == requested.trim()
 }
 
-fn hex_lower(bytes: &[u8]) -> String {
-    let mut out = String::with_capacity(bytes.len() * 2);
-    for b in bytes {
-        out.push_str(&format!("{b:02x}"));
-    }
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -264,9 +275,15 @@ mod tests {
         let signed = cfg.sign(&snapshot(), "acme", "", 1000).expect("signed");
         assert_eq!(signed.algorithm, "HMAC-SHA256");
         assert_eq!(signed.expires_at_unix, 1000 + 300);
-        // Signature is deterministic and verifiable with the same key.
-        let expect = hex_lower(&hmac_sha256(b"topsecret", &signed.bundle));
+        // Signature is deterministic, Base64-encoded (proto contract), and
+        // verifiable with the same key.
+        let expect = encode_bundle_signature(&hmac_sha256(b"topsecret", &signed.bundle));
         assert_eq!(signed.signature, expect);
+        // Round-trips through the documented Base64 decoder.
+        assert_eq!(
+            decode_bundle_signature(&signed.signature).unwrap(),
+            hmac_sha256(b"topsecret", &signed.bundle).to_vec()
+        );
 
         let payload: serde_json::Value = serde_json::from_slice(&signed.bundle).unwrap();
         let ids: Vec<&str> = payload["policies"]
@@ -290,7 +307,7 @@ mod tests {
         let signed = cfg.sign(&snapshot(), "acme", "", 1000).expect("signed");
         let mut tampered = signed.bundle.clone();
         tampered[0] ^= 0xff;
-        let recomputed = hex_lower(&hmac_sha256(b"topsecret", &tampered));
+        let recomputed = encode_bundle_signature(&hmac_sha256(b"topsecret", &tampered));
         assert_ne!(signed.signature, recomputed);
     }
 }

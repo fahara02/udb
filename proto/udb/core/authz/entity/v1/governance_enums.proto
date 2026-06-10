@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package udb.core.authz.entity.v1;
+
+option csharp_namespace = "udb.core.Authz.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
+option java_package = "com.udb.core.authz.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Entity\\V1";
+
+// Lifecycle state of a governed policy version (Phase K draft/approval workflow).
+enum PolicyVersionState {
+  POLICY_VERSION_STATE_UNSPECIFIED = 0;
+  POLICY_VERSION_STATE_DRAFT = 1;
+  POLICY_VERSION_STATE_PENDING_REVIEW = 2;
+  POLICY_VERSION_STATE_APPROVED = 3;
+  POLICY_VERSION_STATE_ACTIVE = 4;
+  POLICY_VERSION_STATE_SUPERSEDED = 5;
+  POLICY_VERSION_STATE_REJECTED = 6;
+  POLICY_VERSION_STATE_ROLLED_BACK = 7;
+}
+
+// Reviewer decision on a submitted policy version.
+enum PolicyApprovalDecision {
+  POLICY_APPROVAL_DECISION_UNSPECIFIED = 0;
+  POLICY_APPROVAL_DECISION_APPROVED = 1;
+  POLICY_APPROVAL_DECISION_REJECTED = 2;
+}
+
+// The kind of authz mutation that produced an AuthzRevision bump. Spans every
+// surface whose change must invalidate cached bundles: policy rules, roles,
+// role assignments, and relationship/grouping tuples.
+enum AuthzChangeType {
+  AUTHZ_CHANGE_TYPE_UNSPECIFIED = 0;
+  AUTHZ_CHANGE_TYPE_POLICY = 1;
+  AUTHZ_CHANGE_TYPE_ROLE = 2;
+  AUTHZ_CHANGE_TYPE_ROLE_ASSIGNMENT = 3;
+  AUTHZ_CHANGE_TYPE_RELATIONSHIP = 4;
+  AUTHZ_CHANGE_TYPE_ACTIVATION = 5;
+  AUTHZ_CHANGE_TYPE_ROLLBACK = 6;
+}

@@ -91,11 +91,15 @@ impl DataBrokerRuntime {
             ..Self::default()
         };
         let mut report = RuntimeInitReport::default();
-        let instance_config = effective_backend_instance_config(&config);
+        let mut instance_config = effective_backend_instance_config(&config);
+        merge_runtime_env_backend_instances(&mut instance_config);
         let app_name = effective_app_name(&config);
 
         crate::runtime::cdc::CdcConfig::install_global(config.cdc.clone());
         crate::runtime::security::SecurityConfig::install_global(config.security.clone());
+        crate::runtime::native_catalog::install_native_services_settings(
+            config.native_services.clone(),
+        );
         if config.security.allow_header_scopes {
             tracing::warn!(
                 "UDB_ALLOW_HEADER_SCOPES is enabled: request scopes are trusted from the \
@@ -121,6 +125,7 @@ impl DataBrokerRuntime {
                 plugin.register(&mut ctx).await;
             }
         }
+        assert_pg_outbox_receipt_store_consistency(&runtime);
 
         match EncryptionRuntime::from_settings(&config.encryption).await {
             Ok(Some(encryption)) => {
@@ -315,8 +320,16 @@ impl DataBrokerRuntime {
             },
         )
         .await?;
-        let rows = query.fetch_all(&pool).await.map_err(|err| {
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| tonic::Status::internal(format!("PG transaction begin failed: {e}")))?;
+        set_request_local_settings(&mut tx, &context).await?;
+        let rows = query.fetch_all(&mut *tx).await.map_err(|err| {
             tonic::Status::internal(format!("PostgreSQL join select failed: {err}"))
+        })?;
+        tx.commit().await.map_err(|err| {
+            tonic::Status::internal(format!("PostgreSQL join select commit failed: {err}"))
         })?;
         rows_to_record_set(
             rows,
@@ -1033,8 +1046,13 @@ impl DataBrokerRuntime {
             );
             reject_plan(&decision.errors)?;
             let method = request.method.to_ascii_uppercase();
+            if method != "PUT" && method != "GET" {
+                return Err(tonic::Status::invalid_argument(
+                    "presigned URLs support only PUT or GET",
+                ));
+            }
             let target_instance = if context.target_instance.trim().is_empty() {
-                let write = method == "PUT" || method == "POST";
+                let write = method == "PUT";
                 self.choose_instance_name_for_project("minio", write, &context.project_id)
                     .or_else(|| {
                         self.choose_instance_name_for_project("s3", write, &context.project_id)
@@ -1044,39 +1062,217 @@ impl DataBrokerRuntime {
             };
             let s3 = self.s3_for_instance_for_project(target_instance, &context.project_id)?;
             let ttl = bounded_ttl(request.ttl_seconds);
-            let config = PresigningConfig::expires_in(Duration::from_secs(ttl)).map_err(|err| {
-                tonic::Status::invalid_argument(format!("invalid presign ttl: {err}"))
-            })?;
-            let url = if method == "PUT" {
-                s3.put_object()
-                    .bucket(&request.bucket)
-                    .key(&request.object_key)
-                    .set_content_type(if request.content_type.is_empty() {
-                        None
-                    } else {
-                        Some(request.content_type)
-                    })
-                    .presigned(config)
-                    .await
-                    .map(|presigned| presigned.uri().to_string())
-                    .map_err(|err| {
-                        tonic::Status::unavailable(format!("S3 presign failed: {err}"))
-                    })?
-            } else {
-                s3.get_object()
-                    .bucket(&request.bucket)
-                    .key(&request.object_key)
-                    .presigned(config)
-                    .await
-                    .map(|presigned| presigned.uri().to_string())
-                    .map_err(|err| {
-                        tonic::Status::unavailable(format!("S3 presign failed: {err}"))
-                    })?
-            };
+            let url = presign_s3_url(
+                &s3,
+                &request.bucket,
+                &request.object_key,
+                &method,
+                &request.content_type,
+                ttl,
+            )
+            .await?;
             Ok(UrlResponse {
                 url,
                 expires_at_unix: unix_now() + ttl as i64,
             })
+        }
+    }
+
+    /// Upsert vector points into a collection WITHOUT manifest/policy evaluation
+    /// (admin/native path). Ensures the collection exists (creating it at the
+    /// given dimension, cosine distance) then upserts. Used by the asset service
+    /// to push `EMBED`-step vectors into the configured vector backend.
+    pub async fn vector_upsert_backend_target(
+        &self,
+        instance: Option<&str>,
+        project_id: &str,
+        collection: &str,
+        dimension: i32,
+        points: Vec<VectorPointMutation>,
+    ) -> Result<(), tonic::Status> {
+        #[cfg(not(feature = "qdrant"))]
+        {
+            let _ = (instance, project_id, collection, dimension, points);
+            Err(tonic::Status::failed_precondition(
+                "qdrant/vector feature is not enabled",
+            ))
+        }
+        #[cfg(feature = "qdrant")]
+        {
+            use crate::generation::manifest::{ManifestStore, ManifestStoreOption};
+            let project = project_id.trim();
+            let project = if project.is_empty() {
+                crate::runtime::catalog::DEFAULT_PROJECT_ID
+            } else {
+                project
+            };
+            let client = self.qdrant_for_instance_for_project(instance, project)?;
+            let store = ManifestStore {
+                store_kind: "vector".to_string(),
+                backend: "qdrant".to_string(),
+                logical_name: collection.to_string(),
+                database_name: String::new(),
+                namespace: String::new(),
+                resource_name: collection.to_string(),
+                dsn_env_key: String::new(),
+                dsn: String::new(),
+                owner_schema: String::new(),
+                owner_table: String::new(),
+                payload_schema_json: String::new(),
+                options: vec![
+                    ManifestStoreOption {
+                        key: "dimension".to_string(),
+                        value: dimension.to_string(),
+                    },
+                    ManifestStoreOption {
+                        key: "distance".to_string(),
+                        value: "Cosine".to_string(),
+                    },
+                ],
+            };
+            client.ensure_collection(&store).await?;
+            client
+                .upsert(&VectorUpsertRequest {
+                    context: None,
+                    collection: collection.to_string(),
+                    points,
+                    idempotency_key: String::new(),
+                })
+                .await?;
+            Ok(())
+        }
+    }
+
+    /// Delete vector points by id WITHOUT manifest/policy evaluation (admin/native
+    /// path; parity with `vector_upsert_backend_target`). Used by the asset service
+    /// to remove an embedding when its pipeline fails. No-op for an empty id set.
+    pub async fn vector_delete_backend_target(
+        &self,
+        instance: Option<&str>,
+        project_id: &str,
+        collection: &str,
+        point_ids: Vec<String>,
+    ) -> Result<(), tonic::Status> {
+        #[cfg(not(feature = "qdrant"))]
+        {
+            let _ = (instance, project_id, collection, point_ids);
+            Err(tonic::Status::failed_precondition(
+                "qdrant/vector feature is not enabled",
+            ))
+        }
+        #[cfg(feature = "qdrant")]
+        {
+            if point_ids.is_empty() {
+                return Ok(());
+            }
+            let project = project_id.trim();
+            let project = if project.is_empty() {
+                crate::runtime::catalog::DEFAULT_PROJECT_ID
+            } else {
+                project
+            };
+            let client = self.qdrant_for_instance_for_project(instance, project)?;
+            client.delete_points(collection, &point_ids).await
+        }
+    }
+
+    /// Mint a presigned object URL WITHOUT manifest/policy evaluation — the
+    /// admin/native path (mirrors `*_object_backend_target`). Used by the native
+    /// storage service, which owns its own bucket. `method` is "PUT" or "GET".
+    /// Returns `(url, expires_at_unix)`.
+    pub async fn presign_object_backend_target(
+        &self,
+        instance: Option<&str>,
+        project_id: &str,
+        bucket: &str,
+        object_key: &str,
+        method: &str,
+        content_type: &str,
+        ttl_seconds: i32,
+    ) -> Result<(String, i64), tonic::Status> {
+        #[cfg(not(feature = "s3"))]
+        {
+            let _ = (
+                instance,
+                project_id,
+                bucket,
+                object_key,
+                method,
+                content_type,
+                ttl_seconds,
+            );
+            Err(tonic::Status::failed_precondition(
+                "s3/object-store feature is not enabled",
+            ))
+        }
+        #[cfg(feature = "s3")]
+        {
+            let method = method.to_ascii_uppercase();
+            if method != "PUT" && method != "GET" {
+                return Err(tonic::Status::invalid_argument(
+                    "presigned URLs support only PUT or GET",
+                ));
+            }
+            let project = project_id.trim();
+            let project = if project.is_empty() {
+                crate::runtime::catalog::DEFAULT_PROJECT_ID
+            } else {
+                project
+            };
+            let target_instance = if let Some(i) = instance {
+                Some(i)
+            } else {
+                let write = method == "PUT";
+                self.choose_instance_name_for_project("minio", write, project)
+                    .or_else(|| self.choose_instance_name_for_project("s3", write, project))
+            };
+            let s3 = self.s3_for_instance_for_project(target_instance, project)?;
+            let ttl = bounded_ttl(ttl_seconds);
+            let url = presign_s3_url(&s3, bucket, object_key, &method, content_type, ttl).await?;
+            Ok((url, unix_now() + ttl as i64))
+        }
+    }
+
+    /// Check object presence WITHOUT manifest/policy evaluation — the native
+    /// storage finalize path uses this after a presigned upload before marking
+    /// metadata ACTIVE. S3/MinIO only; metadata-only deployments skip the check.
+    pub async fn object_exists_backend_target(
+        &self,
+        instance: &str,
+        project_id: &str,
+        bucket: &str,
+        object_key: &str,
+    ) -> Result<bool, tonic::Status> {
+        #[cfg(not(feature = "s3"))]
+        {
+            let _ = (instance, project_id, bucket, object_key);
+            Err(tonic::Status::failed_precondition(
+                "s3/object-store feature is not enabled",
+            ))
+        }
+        #[cfg(feature = "s3")]
+        {
+            let project = project_id.trim();
+            let project = if project.is_empty() {
+                crate::runtime::catalog::DEFAULT_PROJECT_ID
+            } else {
+                project
+            };
+            let s3 = self.s3_for_instance_for_project(Some(instance), project)?;
+            match s3.head_object().bucket(bucket).key(object_key).send().await {
+                Ok(_) => Ok(true),
+                Err(err) => {
+                    let msg = err.to_string();
+                    if msg.contains("NotFound") || msg.contains("NoSuchKey") || msg.contains("404")
+                    {
+                        Ok(false)
+                    } else {
+                        Err(tonic::Status::unavailable(format!(
+                            "S3 object head failed: {err}"
+                        )))
+                    }
+                }
+            }
         }
     }
 
@@ -1164,11 +1360,238 @@ impl DataBrokerRuntime {
     }
 }
 
+/// Add convention/env-derived Tier 4+ runtime instances that are not expressible
+/// as legacy top-level config blocks. Explicit file/env `backend_instances`
+/// remain authoritative: if the operator declared any instance for a backend,
+/// this helper does not add a default for that backend.
+fn merge_runtime_env_backend_instances(instance_config: &mut BackendInstanceConfig) {
+    let env_instances = BackendInstanceConfig::from_env();
+    merge_runtime_backend_instances(instance_config, env_instances);
+    instance_config.resolve_env_dsns();
+}
+
+fn merge_runtime_backend_instances(
+    instance_config: &mut BackendInstanceConfig,
+    env_instances: BackendInstanceConfig,
+) {
+    for env_instance in env_instances.instances {
+        let Some(kind) = env_instance.canonical_backend() else {
+            continue;
+        };
+        if !matches!(
+            kind,
+            crate::backend::BackendKind::Mongodb | crate::backend::BackendKind::Clickhouse
+        ) {
+            continue;
+        }
+        if !env_instance.enabled || !env_instance.is_configured() {
+            continue;
+        }
+        if instance_config
+            .instances
+            .iter()
+            .any(|instance| instance.canonical_backend() == Some(kind.clone()))
+        {
+            continue;
+        }
+        instance_config.instances.push(env_instance);
+    }
+}
+
 // ── Per-backend register functions (U2 step 3) ────────────────────────────────
 //
 // Each `register_*` mirrors the inline setup block it replaced. The plugin's
 // `register` method just calls the matching function here; from_config drives
 // the whole list through `for plugin in all_plugins() { plugin.register(ctx) }`.
+
+const PROJECTION_SYSTEM_STORE_OPT_IN_ENV: &str = "UDB_ALLOW_PROJECTION_SYSTEM_STORE";
+
+fn projection_system_store_opt_in_enabled() -> bool {
+    projection_system_store_opt_in_value(std::env::var(PROJECTION_SYSTEM_STORE_OPT_IN_ENV).ok())
+}
+
+fn projection_system_store_opt_in_value(value: Option<String>) -> bool {
+    matches!(value.as_deref().map(str::trim), Some("1"))
+}
+
+fn full_canonical_store_requires_opt_in(kind: &crate::backend::BackendKind) -> bool {
+    !kind.role().can_host_system_tables() || matches!(kind, crate::backend::BackendKind::Clickhouse)
+}
+
+fn ensure_full_canonical_store_registration_allowed(
+    kind: crate::backend::BackendKind,
+) -> Result<(), String> {
+    if !full_canonical_store_requires_opt_in(&kind) || projection_system_store_opt_in_enabled() {
+        return Ok(());
+    }
+    Err(format!(
+        "{kind:?} canonical SystemStores registration refused: backend role is '{}' \
+         and/or the store has a single-writer caveat; set {PROJECTION_SYSTEM_STORE_OPT_IN_ENV}=1 \
+         to opt in explicitly",
+        kind.role().as_str()
+    ))
+}
+
+fn pg_outbox_receipt_store_mismatch(
+    pg_write_path_configured: bool,
+    default_store: Option<(&str, &str)>,
+) -> Option<String> {
+    if !pg_write_path_configured {
+        return None;
+    }
+    let Some((backend, instance)) = default_store else {
+        return None;
+    };
+    if backend.eq_ignore_ascii_case("postgres") && instance == "primary" {
+        return None;
+    }
+    Some(format!(
+        "production outbox consistency assertion failed: native services write directly to the \
+         primary Postgres outbox, but write receipts would read outbox_max_seq from \
+         {backend}:{instance}; configure the primary Postgres SystemStores as the default or \
+         disable the PG direct outbox path"
+    ))
+}
+
+fn assert_pg_outbox_receipt_store_consistency(runtime: &DataBrokerRuntime) {
+    let default_store = runtime.default_system_stores();
+    let default_store_labels = default_store.as_ref().map(|store| {
+        (
+            crate::runtime::canonical_store::CanonicalStore::backend_label(store.as_ref()),
+            crate::runtime::canonical_store::CanonicalStore::instance_name(store.as_ref()),
+        )
+    });
+    if let Some(message) =
+        pg_outbox_receipt_store_mismatch(runtime.pg_pool.is_some(), default_store_labels)
+    {
+        panic!("{message}");
+    }
+}
+
+#[cfg(test)]
+mod setup_data_consistency_tests {
+    use super::{
+        full_canonical_store_requires_opt_in, merge_runtime_backend_instances,
+        pg_outbox_receipt_store_mismatch, projection_system_store_opt_in_value,
+    };
+    use crate::runtime::config::{BackendInstance, BackendInstanceConfig, BackendInstanceRole};
+
+    #[test]
+    fn projection_system_store_opt_in_requires_literal_one() {
+        assert!(projection_system_store_opt_in_value(Some("1".to_string())));
+        assert!(projection_system_store_opt_in_value(Some(
+            " 1 ".to_string()
+        )));
+        assert!(!projection_system_store_opt_in_value(None));
+        assert!(!projection_system_store_opt_in_value(Some(
+            "true".to_string()
+        )));
+        assert!(!projection_system_store_opt_in_value(Some("0".to_string())));
+    }
+
+    #[test]
+    fn projection_role_and_clickhouse_stores_require_explicit_opt_in() {
+        assert!(full_canonical_store_requires_opt_in(
+            &crate::backend::BackendKind::Qdrant
+        ));
+        assert!(full_canonical_store_requires_opt_in(
+            &crate::backend::BackendKind::Pinecone
+        ));
+        assert!(full_canonical_store_requires_opt_in(
+            &crate::backend::BackendKind::Weaviate
+        ));
+        assert!(full_canonical_store_requires_opt_in(
+            &crate::backend::BackendKind::Elasticsearch
+        ));
+        assert!(full_canonical_store_requires_opt_in(
+            &crate::backend::BackendKind::Clickhouse
+        ));
+    }
+
+    #[test]
+    fn pg_direct_outbox_requires_postgres_primary_receipt_store() {
+        assert!(pg_outbox_receipt_store_mismatch(false, Some(("mysql", "primary"))).is_none());
+        assert!(pg_outbox_receipt_store_mismatch(true, None).is_none());
+        assert!(pg_outbox_receipt_store_mismatch(true, Some(("postgres", "primary"))).is_none());
+        assert!(pg_outbox_receipt_store_mismatch(true, Some(("mysql", "primary"))).is_some());
+        assert!(pg_outbox_receipt_store_mismatch(true, Some(("postgres", "analytics"))).is_some());
+    }
+
+    #[test]
+    fn runtime_setup_adds_mongodb_and_clickhouse_env_instances() {
+        let mut config = BackendInstanceConfig {
+            instances: vec![BackendInstance {
+                name: "primary".to_string(),
+                backend: "postgres".to_string(),
+                role: BackendInstanceRole::ReadWrite,
+                dsn: Some("postgres://localhost/udb".to_string()),
+                dsn_env: None,
+                ..BackendInstance::default()
+            }],
+        };
+        let env_instances = BackendInstanceConfig {
+            instances: vec![
+                BackendInstance {
+                    name: "default".to_string(),
+                    backend: "mongodb".to_string(),
+                    role: BackendInstanceRole::ReadWrite,
+                    dsn: Some("mongodb://localhost:27017/udb".to_string()),
+                    dsn_env: None,
+                    ..BackendInstance::default()
+                },
+                BackendInstance {
+                    name: "default".to_string(),
+                    backend: "clickhouse".to_string(),
+                    role: BackendInstanceRole::Read,
+                    dsn: Some("http://localhost:8123/default".to_string()),
+                    dsn_env: None,
+                    ..BackendInstance::default()
+                },
+            ],
+        };
+        merge_runtime_backend_instances(&mut config, env_instances);
+
+        assert!(config.instances.iter().any(|instance| {
+            instance.backend == "mongodb" && instance.name == "default" && instance.dsn.is_some()
+        }));
+        assert!(config.instances.iter().any(|instance| {
+            instance.backend == "clickhouse" && instance.name == "default" && instance.dsn.is_some()
+        }));
+    }
+
+    #[test]
+    fn runtime_setup_does_not_clobber_explicit_backend_instance() {
+        let mut config = BackendInstanceConfig {
+            instances: vec![BackendInstance {
+                name: "analytics".to_string(),
+                backend: "clickhouse".to_string(),
+                role: BackendInstanceRole::Read,
+                dsn: Some("http://clickhouse:8123/analytics".to_string()),
+                dsn_env: None,
+                ..BackendInstance::default()
+            }],
+        };
+        let env_instances = BackendInstanceConfig {
+            instances: vec![BackendInstance {
+                name: "default".to_string(),
+                backend: "clickhouse".to_string(),
+                role: BackendInstanceRole::Read,
+                dsn: Some("http://localhost:8123/default".to_string()),
+                dsn_env: None,
+                ..BackendInstance::default()
+            }],
+        };
+        merge_runtime_backend_instances(&mut config, env_instances);
+
+        let clickhouse_instances = config
+            .instances
+            .iter()
+            .filter(|instance| instance.backend == "clickhouse")
+            .count();
+        assert_eq!(clickhouse_instances, 1);
+        assert_eq!(config.instances[0].name, "analytics");
+    }
+}
 
 /// Wire the PostgreSQL primary pool (and any replicas) into the runtime.
 ///
@@ -1519,7 +1942,13 @@ pub(crate) async fn register_elasticsearch(ctx: &mut RegisterCtx<'_>) {
     runtime
         .elasticsearch_instances
         .insert("primary".to_string(), client.clone());
+    if let Err(err) =
+        ensure_full_canonical_store_registration_allowed(crate::backend::BackendKind::Elasticsearch)
     {
+        report
+            .warnings
+            .push(format!("{err}; search executor remains available"));
+    } else {
         use crate::runtime::canonical_store::CanonicalStore;
         use crate::runtime::canonical_store::SystemStores;
         use crate::runtime::canonical_store::vector_system::VectorSystemCanonicalStore;
@@ -1783,7 +2212,13 @@ pub(crate) async fn register_weaviate(ctx: &mut RegisterCtx<'_>) {
     runtime
         .weaviate_instances
         .insert("primary".to_string(), client.clone());
+    if let Err(err) =
+        ensure_full_canonical_store_registration_allowed(crate::backend::BackendKind::Weaviate)
     {
+        report
+            .warnings
+            .push(format!("{err}; vector executor remains available"));
+    } else {
         use crate::runtime::canonical_store::CanonicalStore;
         use crate::runtime::canonical_store::SystemStores;
         use crate::runtime::canonical_store::vector_system::VectorSystemCanonicalStore;
@@ -1831,7 +2266,13 @@ pub(crate) async fn register_pinecone(ctx: &mut RegisterCtx<'_>) {
     runtime
         .pinecone_instances
         .insert("primary".to_string(), client.clone());
+    if let Err(err) =
+        ensure_full_canonical_store_registration_allowed(crate::backend::BackendKind::Pinecone)
     {
+        report
+            .warnings
+            .push(format!("{err}; vector executor remains available"));
+    } else {
         use crate::runtime::canonical_store::CanonicalStore;
         use crate::runtime::canonical_store::SystemStores;
         use crate::runtime::canonical_store::vector_system::VectorSystemCanonicalStore;
@@ -2124,7 +2565,13 @@ pub(crate) async fn register_qdrant(ctx: &mut RegisterCtx<'_>) {
             client.clone(),
             HashMap::new(),
         );
+        if let Err(err) =
+            ensure_full_canonical_store_registration_allowed(crate::backend::BackendKind::Qdrant)
         {
+            report
+                .warnings
+                .push(format!("{err}; vector executor remains available"));
+        } else {
             use crate::runtime::canonical_store::CanonicalStore;
             use crate::runtime::canonical_store::SystemStores;
             use crate::runtime::canonical_store::qdrant::QdrantCanonicalStore;
@@ -2164,7 +2611,13 @@ pub(crate) async fn register_qdrant(ctx: &mut RegisterCtx<'_>) {
                 client.clone(),
                 instance_labels(instance),
             );
-            {
+            if let Err(err) = ensure_full_canonical_store_registration_allowed(
+                crate::backend::BackendKind::Qdrant,
+            ) {
+                report
+                    .warnings
+                    .push(format!("{err}; vector executor remains available"));
+            } else {
                 use crate::runtime::canonical_store::CanonicalStore;
                 use crate::runtime::canonical_store::SystemStores;
                 use crate::runtime::canonical_store::qdrant::QdrantCanonicalStore;
@@ -2442,24 +2895,35 @@ pub(crate) async fn register_clickhouse(ctx: &mut RegisterCtx<'_>) {
             );
             // B.10c: register the ClickHouse canonical store for the primary
             // instance. Fail-closed on ensure_system_tables (MergeTree +
-            // ReplacingMergeTree tables created via idempotent DDL).
+            // ReplacingMergeTree tables created via idempotent DDL). The store's
+            // sequence/lease CAS is single-writer only, so production promotion
+            // requires the same explicit opt-in used for Projection-role stores.
             #[cfg(feature = "clickhouse")]
             if instance.name == "primary" {
-                use crate::runtime::canonical_store::CanonicalStore;
-                use crate::runtime::canonical_store::SystemStores;
-                use crate::runtime::canonical_store::clickhouse::ClickHouseCanonicalStore;
-                let db = executor.database().to_string();
-                let store = ClickHouseCanonicalStore::new(executor.clone(), "primary", db);
-                match CanonicalStore::ensure_system_tables(&store).await {
-                    Ok(()) => {
-                        let store: std::sync::Arc<dyn SystemStores> = std::sync::Arc::new(store);
-                        runtime.register_full_canonical_store(store);
-                        tracing::info!("ClickHouse canonical store registered (B.10c)");
+                if let Err(err) = ensure_full_canonical_store_registration_allowed(
+                    crate::backend::BackendKind::Clickhouse,
+                ) {
+                    report
+                        .warnings
+                        .push(format!("{err}; ClickHouse executor remains available"));
+                } else {
+                    use crate::runtime::canonical_store::CanonicalStore;
+                    use crate::runtime::canonical_store::SystemStores;
+                    use crate::runtime::canonical_store::clickhouse::ClickHouseCanonicalStore;
+                    let db = executor.database().to_string();
+                    let store = ClickHouseCanonicalStore::new(executor.clone(), "primary", db);
+                    match CanonicalStore::ensure_system_tables(&store).await {
+                        Ok(()) => {
+                            let store: std::sync::Arc<dyn SystemStores> =
+                                std::sync::Arc::new(store);
+                            runtime.register_full_canonical_store(store);
+                            tracing::info!("ClickHouse canonical store registered (B.10c opt-in)");
+                        }
+                        Err(err) => report.warnings.push(format!(
+                            "ClickHouse canonical store not registered \
+                             (ensure_system_tables failed): {err}"
+                        )),
                     }
-                    Err(err) => report.warnings.push(format!(
-                        "ClickHouse canonical store not registered \
-                         (ensure_system_tables failed): {err}"
-                    )),
                 }
             }
             runtime
@@ -2512,7 +2976,60 @@ type ObjectChunkStream = std::pin::Pin<
 /// Build the alias-rich request JSON the object executors parse (each reads its
 /// own bucket/key aliases; including every alias keeps the call backend-agnostic).
 #[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
-fn object_request_json(op: &str, bucket: &str, object_key: &str, content_type: &str) -> String {
+/// Build a presigned S3/MinIO URL for `method` ("PUT"/"GET") — the single home
+/// for the presign call, shared by `generate_presigned_url` (manifest/policy path)
+/// and `presign_object_backend_target` (admin/native path).
+#[cfg(feature = "s3")]
+async fn presign_s3_url(
+    s3: &aws_sdk_s3::Client,
+    bucket: &str,
+    object_key: &str,
+    method: &str,
+    content_type: &str,
+    ttl: u64,
+) -> Result<String, tonic::Status> {
+    if method != "PUT" && method != "GET" {
+        return Err(tonic::Status::invalid_argument(
+            "presigned URLs support only PUT or GET",
+        ));
+    }
+    let config =
+        aws_sdk_s3::presigning::PresigningConfig::expires_in(std::time::Duration::from_secs(ttl))
+            .map_err(|err| tonic::Status::invalid_argument(format!("invalid presign ttl: {err}")))?;
+    // The PUT and GET presign calls return different SdkError<…> error types, so
+    // each branch maps its own result to the shared `String` URL (or a
+    // `tonic::Status`) before the `if`/`else` joins — keeping both arms the same
+    // type.
+    if method == "PUT" {
+        s3.put_object()
+            .bucket(bucket)
+            .key(object_key)
+            .set_content_type(if content_type.is_empty() {
+                None
+            } else {
+                Some(content_type.to_string())
+            })
+            .presigned(config)
+            .await
+            .map(|p| p.uri().to_string())
+            .map_err(|err| tonic::Status::unavailable(format!("S3 presign failed: {err}")))
+    } else {
+        s3.get_object()
+            .bucket(bucket)
+            .key(object_key)
+            .presigned(config)
+            .await
+            .map(|p| p.uri().to_string())
+            .map_err(|err| tonic::Status::unavailable(format!("S3 presign failed: {err}")))
+    }
+}
+
+pub(crate) fn object_request_json(
+    op: &str,
+    bucket: &str,
+    object_key: &str,
+    content_type: &str,
+) -> String {
     let mut value = serde_json::json!({
         "op": op,
         "bucket": bucket,
@@ -2650,23 +3167,22 @@ async fn stream_put_object<E: crate::runtime::executors::ObjectExecutor>(
     Ok(())
 }
 
-/// Typed object RPCs (`GetObject`/`PutObject`) stream through the object
-/// executor for S3/MinIO, GCS, and Azure Blob (A.6). Reject a store whose
-/// manifest declares some other (non-object) backend instead of silently using a
-/// default. Empty / `s3` / `minio` / `gcs` / `azureblob` are accepted; each is
-/// still gated at the call site by its own cargo feature.
+/// Typed object RPCs (`GetObject`/`PutObject`) stream through object-store
+/// backends declared by the backend capability metadata. Reject a store whose
+/// manifest declares some other backend instead of silently using a default.
 /// (`GeneratePresignedUrl` remains S3/MinIO-only — presigning is provider-specific.)
 #[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
 fn ensure_typed_object_backend(backend: &str) -> Result<(), tonic::Status> {
     let normalized = backend.trim().to_ascii_lowercase();
-    if matches!(
-        normalized.as_str(),
-        "" | "s3" | "minio" | "gcs" | "azureblob"
-    ) {
+    if normalized.is_empty()
+        || crate::backend::BackendKind::from_token(&normalized)
+            .map(|kind| kind.capabilities_v2().is_object_store)
+            .unwrap_or(false)
+    {
         Ok(())
     } else {
         Err(tonic::Status::failed_precondition(format!(
-            "typed object RPCs require an object-store backend (s3/minio/gcs/azureblob), but the \
+            "typed object RPCs require an object-store backend, but the \
              store is configured for '{backend}'"
         )))
     }

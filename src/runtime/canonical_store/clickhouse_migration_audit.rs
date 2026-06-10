@@ -47,7 +47,7 @@ const OP_SEQ_ID: &str = "migration_op";
 const RUN_COLS: &str = "run_id, project_id, catalog_version, state, operations_hash, \
      approval_token, started_at, finished_at, error";
 const OP_COLS: &str = "id, run_id, operation_index, backend, resource_uri, operation_kind, \
-     status, rollback_json, error, applied_at";
+     status, payload_json, error, applied_at";
 
 fn row_to_run(row: &Json) -> SystemStoreResult<MigrationRunRow> {
     let run_id = ch_uuid(row, "run_id")?;
@@ -86,7 +86,7 @@ fn row_to_op(row: &Json) -> SystemStoreResult<MigrationOpRow> {
         resource_uri: ch_str(row, "resource_uri"),
         operation_kind: ch_str(row, "operation_kind"),
         status,
-        rollback_json: ch_json(row, "rollback_json", Json::Object(Default::default())),
+        payload_json: ch_json(row, "payload_json", Json::Object(Default::default())),
         error: ch_str(row, "error"),
         applied_at: ch_opt_dt(row, "applied_at"),
     })
@@ -104,6 +104,21 @@ impl ClickHouseCanonicalStore {
     fn op_seq_table(&self) -> SystemStoreResult<String> {
         self.qualified("udb_migration_op_seq")
             .map_err(|e| ch_err("op_seq_table", e))
+    }
+
+    async fn has_ledger_column(&self, column: &str) -> SystemStoreResult<bool> {
+        let sql = format!(
+            "SELECT count() AS n FROM system.columns \
+             WHERE database = {database} AND table = 'udb_migration_op_ledger' AND name = {column}",
+            database = sql_lit(&self.database),
+            column = sql_lit(column),
+        );
+        let rows = self
+            .executor()
+            .select_rows(&sql)
+            .await
+            .map_err(|e| ch_err("has_ledger_column", e))?;
+        Ok(rows.first().map(|r| ch_i64(r, "n")).unwrap_or(0) > 0)
     }
 
     /// Read one run's FINAL row + its version. `FINAL` collapses superseded
@@ -248,7 +263,7 @@ impl MigrationAuditStore for ClickHouseCanonicalStore {
              resource_uri String, \
              operation_kind String, \
              status String, \
-             rollback_json String, \
+             payload_json String, \
              error String, \
              applied_at Int64\
              ) ENGINE = MergeTree ORDER BY (run_id, operation_index, id)"
@@ -257,6 +272,23 @@ impl MigrationAuditStore for ClickHouseCanonicalStore {
             .execute_ddl(&ledger_ddl)
             .await
             .map_err(|e| ch_err("ensure_migration_audit_tables ledger", e))?;
+        let payload_col = format!(
+            "ALTER TABLE {ledger} ADD COLUMN IF NOT EXISTS payload_json String DEFAULT '{{}}'"
+        );
+        self.executor()
+            .execute_ddl(&payload_col)
+            .await
+            .map_err(|e| ch_err("ensure_migration_audit_tables payload_json", e))?;
+        if self.has_ledger_column("rollback_json").await? {
+            let backfill = format!(
+                "ALTER TABLE {ledger} UPDATE payload_json = rollback_json \
+                 WHERE payload_json = '{{}}' AND rollback_json != '{{}}'"
+            );
+            self.executor()
+                .execute_ddl(&backfill)
+                .await
+                .map_err(|e| ch_err("ensure_migration_audit_tables payload backfill", e))?;
+        }
         // Op-seq: ReplacingMergeTree counter (read-insert-reread CAS).
         let seq = self.op_seq_table()?;
         let seq_ddl = format!(
@@ -308,7 +340,7 @@ impl MigrationAuditStore for ClickHouseCanonicalStore {
         let sql = format!(
             "INSERT INTO {ledger} ({OP_COLS}) VALUES (\
              {id}, {run_id}, {op_index}, {backend}, {resource}, {kind}, {status}, \
-             {rollback}, {error}, {applied})",
+             {payload}, {error}, {applied})",
             id = id,
             run_id = sql_lit(&op.run_id.to_string()),
             op_index = op.operation_index,
@@ -316,7 +348,7 @@ impl MigrationAuditStore for ClickHouseCanonicalStore {
             resource = sql_lit(&op.resource_uri),
             kind = sql_lit(&op.operation_kind),
             status = sql_lit(op.status.as_str()),
-            rollback = sql_lit(&op.rollback_json.to_string()),
+            payload = sql_lit(&op.payload_json.to_string()),
             error = sql_lit(&op.error),
             applied = applied_at,
         );

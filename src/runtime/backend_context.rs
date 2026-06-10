@@ -283,11 +283,9 @@ pub fn render_sql_session_settings(ctx: &AppliedContext, dialect: SqlDialect) ->
                 // `SESSION_CONTEXT()`. Operator-installed RLS
                 // policies / views read that to filter rows. Keys
                 // are coerced to underscored form so they parse as
-                // sysname identifiers. `@read_only = 1` makes the
-                // value immutable for the rest of the connection
-                // — the broker is the sole writer, so this stops a
-                // misbehaving stored procedure from rewriting the
-                // tenant ID mid-request.
+                // sysname identifiers. Do not set `@read_only = 1`:
+                // pooled connections must be restamped for the next
+                // request's tenant/project context.
                 let key_id = key.replace('.', "_");
                 // T-SQL string literals: double the single quote to
                 // escape. Names go in N'...' (nvarchar literal).
@@ -295,7 +293,7 @@ pub fn render_sql_session_settings(ctx: &AppliedContext, dialect: SqlDialect) ->
                 let escaped_value = escape_sql_string(value, dialect);
                 out.push(format!(
                     "EXEC sp_set_session_context @key = N'{escaped_key}', \
-                     @value = N'{escaped_value}', @read_only = 1"
+                     @value = N'{escaped_value}'"
                 ));
             }
         }
@@ -417,6 +415,42 @@ mod tests {
         assert!(stmts[1].contains("SET LOCAL app.current_project_id = 'p1'"));
     }
 
+    // Phase 8 (final_task.md §9) pooling-safety guard / acceptance "Pooling mode
+    // cannot silently break session-scoped operations": every Postgres
+    // session-context setting (the RLS `app.current_*` vars) MUST be
+    // transaction-scoped (`SET LOCAL`), never connection/session-scoped
+    // (`SET SESSION` / bare `SET`). This is what makes UDB safe under a
+    // transaction-pooled connection (pgbouncer transaction mode): such a
+    // connection is handed to a different client after each transaction, so a
+    // session-scoped tenant var would leak one client's tenant into another's
+    // RLS. `SET LOCAL` is rolled back at transaction end, so it cannot leak.
+    #[test]
+    fn postgres_session_settings_are_transaction_scoped_for_pool_safety() {
+        let ctx = AppliedContext {
+            tenant_id: "acme".into(),
+            project_id: "p1".into(),
+            ..Default::default()
+        };
+        let stmts = render_sql_session_settings(&ctx, SqlDialect::Postgres);
+        assert!(
+            !stmts.is_empty(),
+            "a populated context must render session settings"
+        );
+        for stmt in &stmts {
+            let upper = stmt.to_ascii_uppercase();
+            assert!(
+                stmt.starts_with("SET LOCAL "),
+                "PG session setting must be transaction-scoped (SET LOCAL) for \
+                 transaction-pool safety, got: {stmt}"
+            );
+            assert!(
+                !upper.contains("SET SESSION"),
+                "PG session setting must never be session-scoped (would leak \
+                 across a transaction-pooled connection): {stmt}"
+            );
+        }
+    }
+
     #[test]
     fn mysql_munges_dots_to_underscores_and_uses_user_vars() {
         let ctx = AppliedContext {
@@ -455,14 +489,14 @@ mod tests {
         assert!(
             stmts[0].contains(
                 "EXEC sp_set_session_context @key = N'app_current_tenant_id', \
-                 @value = N'acme''corp', @read_only = 1"
+                 @value = N'acme''corp'"
             ),
             "got: {}",
             stmts[0]
         );
         assert!(stmts[1].contains("@key = N'app_current_project_id'"));
         assert!(stmts[1].contains("@value = N'p1'"));
-        assert!(stmts[1].contains("@read_only = 1"));
+        assert!(!stmts.iter().any(|stmt| stmt.contains("@read_only")));
     }
 
     #[test]

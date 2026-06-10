@@ -43,69 +43,75 @@ public final class PipelineMetricSnapshotProto extends com.google.protobuf.Gener
       "\n;udb/core/analytics/entity/v1/pipeline_" +
       "metric_snapshot.proto\022\034udb.core.analytic" +
       "s.entity.v1\032\037google/protobuf/timestamp.p" +
-      "roto\032\033udb/core/common/v1/db.proto\"\374\016\n\026Pi" +
-      "pelineMetricSnapshot\022O\n\013snapshot_id\030\001 \001(" +
-      "\tB.\202\267\030*\n\013snapshot_id\022\004UUID\030\001(\001:\021gen_rand" +
-      "om_uuid()R\nsnapshotId\022\250\001\n\rsnapshot_hour\030" +
-      "\002 \001(\0132\032.google.protobuf.TimestampBg\202\267\030c\n" +
-      "\rsnapshot_hour\022\013TIMESTAMPTZ\030\001RC\n!idx_pip" +
-      "eline_snapshots_hour_stage\022\005BTREE\030\001Z\nsta" +
-      "ge_nameZ\ttenant_idR\014snapshotHour\022\202\001\n\nsta" +
-      "ge_name\030\003 \001(\tBc\202\267\030_\n\nstage_name\022\013VARCHAR" +
-      "(80)\030\001ZBingest | validate | route | exec" +
-      "ute | reconcile | project | notifyR\tstag" +
-      "eName\022X\n\ttenant_id\030\004 \001(\tB;\202\267\0307\n\ttenant_i" +
-      "d\022\014VARCHAR(120)Z\034null = system-wide aggr" +
-      "egateR\010tenantId\022H\n\016total_requests\030\005 \001(\003B" +
-      "!\202\267\030\035\n\016total_requests\022\006BIGINT\030\001:\0010R\rtota" +
-      "lRequests\022=\n\nsuccessful\030\006 \001(\003B\035\202\267\030\031\n\nsuc" +
-      "cessful\022\006BIGINT\030\001:\0010R\nsuccessful\0221\n\006fail" +
-      "ed\030\007 \001(\003B\031\202\267\030\025\n\006failed\022\006BIGINT\030\001:\0010R\006fai" +
-      "led\022L\n\016p50_latency_ms\030\010 \001(\001B&\202\267\030\"\n\016p50_l" +
-      "atency_ms\022\020DOUBLE PRECISIONR\014p50LatencyM" +
-      "s\022L\n\016p95_latency_ms\030\t \001(\001B&\202\267\030\"\n\016p95_lat" +
-      "ency_ms\022\020DOUBLE PRECISIONR\014p95LatencyMs\022" +
-      "L\n\016p99_latency_ms\030\n \001(\001B&\202\267\030\"\n\016p99_laten" +
-      "cy_ms\022\020DOUBLE PRECISIONR\014p99LatencyMs\022L\n" +
-      "\016avg_latency_ms\030\013 \001(\001B&\202\267\030\"\n\016avg_latency" +
-      "_ms\022\020DOUBLE PRECISIONR\014avgLatencyMs\022Z\n\ne" +
-      "rror_rate\030\014 \001(\001B;\202\267\0307\n\nerror_rate\022\020DOUBL" +
-      "E PRECISIONZ\027failed / total_requestsR\ter" +
-      "rorRate\022q\n\016throughput_rps\030\r \001(\001BJ\202\267\030F\n\016t" +
-      "hroughput_rps\022\020DOUBLE PRECISIONZ\"Request" +
-      "s per second (total / 3600)R\rthroughputR" +
-      "ps\022t\n\013recorded_at\030\016 \001(\0132\032.google.protobu" +
-      "f.TimestampB7\202\267\0303\n\013recorded_at\022\013TIMESTAM" +
-      "PTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001R\nrecordedAt" +
-      ":\315\004\372\266\030\310\004\n\031pipeline_metric_snapshots\022\rudb" +
-      "_analytics\030\001 \001*CHourly aggregated pipeli" +
-      "ne stage metrics backing Grafana dashboa" +
-      "rdsH\003R\rsnapshot_hourX\355\002\212\0016\n\022idx_pms_stag" +
-      "e_hour\022\005BTREEZ\nstage_nameZ\rsnapshot_hour" +
-      "\232\001\023\n\tbtree_gin\022\006public\242\001\344\002\n\023mv_daily_thr" +
-      "oughput\022\rudb_analytics\032\273\002SELECT date_tru" +
-      "nc(\'day\', snapshot_hour) AS day, stage_n" +
-      "ame, tenant_id, SUM(total_requests) AS t" +
-      "otal_requests, SUM(successful) AS succes" +
-      "sful, SUM(failed) AS failed, AVG(through" +
-      "put_rps) AS avg_throughput_rps FROM udb_" +
-      "analytics.pipeline_metric_snapshots GROU" +
-      "P BY date_trunc(\'day\', snapshot_hour), s" +
-      "tage_name, tenant_id \001\352\001\007replicaB\236\002\n com" +
-      ".udb.core.analytics.entity.v1B\033PipelineM" +
-      "etricSnapshotProtoP\001ZHgithub.com/fahara0" +
-      "2/udb/sdk/go/gen/udb/core/analytics/enti" +
-      "ty/v1;entityv1\242\002\004UCAE\252\002\034udb.core.Analyti" +
-      "cs.Entity.V1\312\002\034Udb\\Core\\Analytics\\Entity" +
-      "\\V1\342\002(Udb\\GPBMetadata\\Core\\Analytics\\Ent" +
-      "ity\\V1\352\002 Udb::Core::Analytics::Entity::V" +
-      "1b\006proto3"
+      "roto\032\033udb/core/common/v1/db.proto\032!udb/c" +
+      "ore/common/v1/security.proto\"\234\020\n\026Pipelin" +
+      "eMetricSnapshot\022O\n\013snapshot_id\030\001 \001(\tB.\202\267" +
+      "\030*\n\013snapshot_id\022\004UUID\030\001(\001:\021gen_random_uu" +
+      "id()R\nsnapshotId\022\250\001\n\rsnapshot_hour\030\002 \001(\013" +
+      "2\032.google.protobuf.TimestampBg\202\267\030c\n\rsnap" +
+      "shot_hour\022\013TIMESTAMPTZ\030\001RC\n!idx_pipeline" +
+      "_snapshots_hour_stage\022\005BTREE\030\001Z\nstage_na" +
+      "meZ\ttenant_idR\014snapshotHour\022\202\001\n\nstage_na" +
+      "me\030\003 \001(\tBc\202\267\030_\n\nstage_name\022\013VARCHAR(80)\030" +
+      "\001ZBingest | validate | route | execute |" +
+      " reconcile | project | notifyR\tstageName" +
+      "\022X\n\ttenant_id\030\004 \001(\tB;\202\267\0307\n\ttenant_id\022\014VA" +
+      "RCHAR(120)Z\034null = system-wide aggregate" +
+      "R\010tenantId\022H\n\016total_requests\030\005 \001(\003B!\202\267\030\035" +
+      "\n\016total_requests\022\006BIGINT\030\001:\0010R\rtotalRequ" +
+      "ests\022=\n\nsuccessful\030\006 \001(\003B\035\202\267\030\031\n\nsuccessf" +
+      "ul\022\006BIGINT\030\001:\0010R\nsuccessful\0221\n\006failed\030\007 " +
+      "\001(\003B\031\202\267\030\025\n\006failed\022\006BIGINT\030\001:\0010R\006failed\022L" +
+      "\n\016p50_latency_ms\030\010 \001(\001B&\202\267\030\"\n\016p50_latenc" +
+      "y_ms\022\020DOUBLE PRECISIONR\014p50LatencyMs\022L\n\016" +
+      "p95_latency_ms\030\t \001(\001B&\202\267\030\"\n\016p95_latency_" +
+      "ms\022\020DOUBLE PRECISIONR\014p95LatencyMs\022L\n\016p9" +
+      "9_latency_ms\030\n \001(\001B&\202\267\030\"\n\016p99_latency_ms" +
+      "\022\020DOUBLE PRECISIONR\014p99LatencyMs\022L\n\016avg_" +
+      "latency_ms\030\013 \001(\001B&\202\267\030\"\n\016avg_latency_ms\022\020" +
+      "DOUBLE PRECISIONR\014avgLatencyMs\022Z\n\nerror_" +
+      "rate\030\014 \001(\001B;\202\267\0307\n\nerror_rate\022\020DOUBLE PRE" +
+      "CISIONZ\027failed / total_requestsR\terrorRa" +
+      "te\022q\n\016throughput_rps\030\r \001(\001BJ\202\267\030F\n\016throug" +
+      "hput_rps\022\020DOUBLE PRECISIONZ\"Requests per" +
+      " second (total / 3600)R\rthroughputRps\022t\n" +
+      "\013recorded_at\030\016 \001(\0132\032.google.protobuf.Tim" +
+      "estampB7\202\267\0303\n\013recorded_at\022\013TIMESTAMPTZ\030\001" +
+      ":\021CURRENT_TIMESTAMP`\001h\001R\nrecordedAt:\355\005\372\266" +
+      "\030\310\004\n\031pipeline_metric_snapshots\022\rudb_anal" +
+      "ytics\030\001 \001*CHourly aggregated pipeline st" +
+      "age metrics backing Grafana dashboardsH\003" +
+      "R\rsnapshot_hourX\355\002\212\0016\n\022idx_pms_stage_hou" +
+      "r\022\005BTREEZ\nstage_nameZ\rsnapshot_hour\232\001\023\n\t" +
+      "btree_gin\022\006public\242\001\344\002\n\023mv_daily_throughp" +
+      "ut\022\rudb_analytics\032\273\002SELECT date_trunc(\'d" +
+      "ay\', snapshot_hour) AS day, stage_name, " +
+      "tenant_id, SUM(total_requests) AS total_" +
+      "requests, SUM(successful) AS successful," +
+      " SUM(failed) AS failed, AVG(throughput_r" +
+      "ps) AS avg_throughput_rps FROM udb_analy" +
+      "tics.pipeline_metric_snapshots GROUP BY " +
+      "date_trunc(\'day\', snapshot_hour), stage_" +
+      "name, tenant_id \001\352\001\007replica\212\262\031\233\001\n\006tenant" +
+      "\032\ttenant_id*4tenant_id = current_setting" +
+      "(\'app.current_tenant_id\')2\013soft_delete:\025" +
+      "analytics.operational@\373\023H\002R\006tenantZ\010stan" +
+      "dardr\025tenant.data_residencyB\236\002\n com.udb." +
+      "core.analytics.entity.v1B\033PipelineMetric" +
+      "SnapshotProtoP\001ZHgithub.com/fahara02/udb" +
+      "/sdk/go/gen/udb/core/analytics/entity/v1" +
+      ";entityv1\242\002\004UCAE\252\002\034udb.core.Analytics.En" +
+      "tity.V1\312\002\034Udb\\Core\\Analytics\\Entity\\V1\342\002" +
+      "(Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V" +
+      "1\352\002 Udb::Core::Analytics::Entity::V1b\006pr" +
+      "oto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.TimestampProto.getDescriptor(),
           com.udb.core.common.v1.DbProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_analytics_entity_v1_PipelineMetricSnapshot_descriptor =
       getDescriptor().getMessageType(0);
@@ -116,8 +122,10 @@ public final class PipelineMetricSnapshotProto extends com.google.protobuf.Gener
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);
     registry.add(com.udb.core.common.v1.DbProto.pgTable);
     com.google.protobuf.Descriptors.FileDescriptor

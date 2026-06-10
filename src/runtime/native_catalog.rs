@@ -8,14 +8,15 @@
 //! `pg_column` annotations on the entity messages.
 
 use std::collections::BTreeMap;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 use include_dir::{Dir, include_dir};
 
 use crate::ast::ProtoSchema;
 use crate::generation::sql::{SqlGenerationConfig, generate_bootstrap_sql};
-use crate::generation::{CatalogManifest, ManifestTable};
+use crate::generation::{CatalogManifest, ManifestTable, ManifestTableSecurity};
 use crate::parser::{ParserConfig, parse_proto_source};
+use crate::runtime::config::NativeServicesSettings;
 use crate::runtime::executor_utils::qi_runtime;
 
 /// Embedded UDB native-service protos (`proto/udb/core/**`), compiled into the
@@ -41,22 +42,26 @@ static THIRD_PARTY_PROTO_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/third_
 /// Recursively parse every embedded `*.proto` into `ProtoSchema`s. Entity protos
 /// yield table schemas via their `pg_table` annotations; service/event protos
 /// simply yield none.
-fn collect(dir: &Dir<'_>, config: &ParserConfig, out: &mut Vec<ProtoSchema>) {
+fn collect(dir: &Dir<'_>, config: &ParserConfig, out: &mut Vec<ProtoSchema>) -> Result<(), String> {
     for file in dir.files() {
         let path = file.path();
         if path.extension().and_then(|ext| ext.to_str()) != Some("proto") {
             continue;
         }
-        match parse_proto_source(file.contents(), path.to_string_lossy().to_string(), config) {
-            Ok(report) => out.extend(report.schemas),
-            Err(err) => {
-                tracing::warn!(proto = %path.display(), error = %err, "skipped native proto");
-            }
-        }
+        let report =
+            parse_proto_source(file.contents(), path.to_string_lossy().to_string(), config)
+                .map_err(|err| {
+                    format!(
+                        "failed to parse embedded native proto {}: {err}",
+                        path.display()
+                    )
+                })?;
+        out.extend(report.schemas);
     }
     for sub in dir.dirs() {
-        collect(sub, config, out);
+        collect(sub, config, out)?;
     }
+    Ok(())
 }
 
 /// Every embedded UDB proto file as `(import_path, contents)`, where
@@ -153,17 +158,39 @@ pub(crate) fn native_schemas() -> &'static Vec<ProtoSchema> {
     SCHEMAS.get_or_init(|| {
         let config = ParserConfig::default();
         let mut schemas = Vec::new();
-        collect(&NATIVE_PROTO_DIR, &config, &mut schemas);
+        collect(&NATIVE_PROTO_DIR, &config, &mut schemas)
+            .expect("embedded native protos must parse");
         schemas
     })
 }
 
-/// Whether native services (auth, …) are enabled for this deployment. Default
-/// on; set `UDB_NATIVE_AUTH=0` to opt out of native-service migration/serving.
+static INSTALLED_NATIVE_SERVICES_SETTINGS: OnceLock<Mutex<NativeServicesSettings>> =
+    OnceLock::new();
+
+pub(crate) fn install_native_services_settings(settings: NativeServicesSettings) {
+    let cell = INSTALLED_NATIVE_SERVICES_SETTINGS
+        .get_or_init(|| Mutex::new(NativeServicesSettings::default()));
+    if let Ok(mut guard) = cell.lock() {
+        *guard = settings;
+    }
+}
+
+pub(crate) fn current_native_services_settings() -> NativeServicesSettings {
+    INSTALLED_NATIVE_SERVICES_SETTINGS
+        .get()
+        .and_then(|cell| cell.lock().ok().map(|guard| guard.clone()))
+        .unwrap_or_else(|| {
+            let mut settings = NativeServicesSettings::default();
+            settings.merge_env();
+            settings
+        })
+}
+
+/// Whether native services are enabled for this deployment. Default on.
+/// `UDB_NATIVE_SERVICES_ENABLED` is canonical; `UDB_NATIVE_AUTH` remains a
+/// compatibility fallback for older deployments.
 pub(crate) fn native_services_enabled() -> bool {
-    std::env::var("UDB_NATIVE_AUTH")
-        .map(|v| !matches!(v.as_str(), "0" | "false" | "no" | "off"))
-        .unwrap_or(true)
+    current_native_services_settings().enabled
 }
 
 /// Distinct schema names owned by native services, derived from the proto
@@ -171,9 +198,20 @@ pub(crate) fn native_services_enabled() -> bool {
 /// before the migration engine creates the tables — proto stays the source of
 /// truth for the schema set.
 pub(crate) fn native_schema_names() -> Vec<String> {
+    native_schema_names_for_settings(&current_native_services_settings())
+}
+
+pub(crate) fn native_schema_names_for_settings(settings: &NativeServicesSettings) -> Vec<String> {
+    let config = crate::runtime::config::UdbConfig {
+        native_services: settings.clone(),
+        ..crate::runtime::config::UdbConfig::default()
+    };
+    let enabled_ids =
+        crate::runtime::service::native_registry::migration_enabled_service_ids(&config);
     let mut names: Vec<String> = native_manifest()
         .tables
         .iter()
+        .filter(|table| native_table_migration_enabled(table, &enabled_ids))
         .map(|table| table.schema.clone())
         .filter(|schema| !schema.trim().is_empty())
         .collect();
@@ -190,15 +228,34 @@ pub(crate) fn merge_native(
     manifest: &CatalogManifest,
     schemas: &[ProtoSchema],
 ) -> (CatalogManifest, Vec<ProtoSchema>) {
-    if !native_services_enabled() {
+    merge_native_with_settings(manifest, schemas, &current_native_services_settings())
+}
+
+pub(crate) fn merge_native_with_settings(
+    manifest: &CatalogManifest,
+    schemas: &[ProtoSchema],
+    settings: &NativeServicesSettings,
+) -> (CatalogManifest, Vec<ProtoSchema>) {
+    if !settings.enabled || !settings.migrate_enabled {
         return (manifest.clone(), schemas.to_vec());
     }
+    let config = crate::runtime::config::UdbConfig {
+        native_services: settings.clone(),
+        ..crate::runtime::config::UdbConfig::default()
+    };
+    let enabled_ids =
+        crate::runtime::service::native_registry::migration_enabled_service_ids(&config);
     // Borrow the inputs and copy once: the user schemas are `to_vec`'d a single
     // time, then native ones appended (was a caller-side `to_vec()` plus an
     // internal `.clone()`); the manifest is only cloned on the fallback paths,
     // never on the success path where it is replaced by `merged` (#98).
     let mut all = schemas.to_vec();
-    all.extend(native_schemas().iter().cloned());
+    all.extend(
+        native_schemas()
+            .iter()
+            .filter(|schema| native_schema_migration_enabled(schema, &enabled_ids))
+            .cloned(),
+    );
     match CatalogManifest::from_schemas(&all) {
         Ok(merged) => (merged, all),
         Err(err) => {
@@ -208,10 +265,75 @@ pub(crate) fn merge_native(
     }
 }
 
+fn native_schema_migration_enabled(
+    schema: &ProtoSchema,
+    enabled_ids: &std::collections::BTreeSet<String>,
+) -> bool {
+    enabled_ids.contains(native_service_id_for_proto_schema(schema))
+}
+
+fn native_table_migration_enabled(
+    table: &ManifestTable,
+    enabled_ids: &std::collections::BTreeSet<String>,
+) -> bool {
+    enabled_ids.contains(native_service_id_for_manifest_table(table))
+}
+
+fn native_service_id_for_proto_schema(schema: &ProtoSchema) -> &str {
+    native_service_id_for_parts(
+        &schema.proto_package,
+        &schema.message_name,
+        &schema.schema_name,
+        &schema.table_name,
+    )
+}
+
+fn native_service_id_for_manifest_table(table: &ManifestTable) -> &str {
+    native_service_id_for_parts("", &table.message_name, &table.schema, &table.table)
+}
+
+fn native_service_id_for_parts(
+    proto_package: &str,
+    message_name: &str,
+    schema: &str,
+    table: &str,
+) -> &'static str {
+    if proto_package.contains(".apikey.")
+        || message_name.contains(".apikey.")
+        || table == "api_keys"
+        || table.starts_with("api_key")
+    {
+        return "apikey";
+    }
+    if proto_package.contains(".webrtc.") || message_name.contains(".webrtc.") {
+        return match table {
+            "peers" => "webrtc_peer",
+            "tracks" => "webrtc_track",
+            "turn_credentials" => "webrtc_turn",
+            "signaling_messages" => "webrtc_signaling",
+            _ => "webrtc_room",
+        };
+    }
+    match schema {
+        "udb_authn" => "authn",
+        "udb_authz" => "authz",
+        "udb_tenant" => "tenant",
+        "udb_notification" => "notification",
+        "udb_analytics" => "analytics",
+        "udb_storage" => "storage",
+        "udb_asset" => "asset",
+        "udb_webrtc" => "webrtc_room",
+        _ => "",
+    }
+}
+
 /// The native-service `CatalogManifest`, built once from the embedded protos.
 pub fn native_manifest() -> &'static CatalogManifest {
     static MANIFEST: OnceLock<CatalogManifest> = OnceLock::new();
-    MANIFEST.get_or_init(|| CatalogManifest::from_schemas(native_schemas()).unwrap_or_default())
+    MANIFEST.get_or_init(|| {
+        CatalogManifest::from_schemas(native_schemas())
+            .expect("embedded native manifest must build")
+    })
 }
 
 pub(crate) fn native_service_manifest() -> Result<&'static CatalogManifest, String> {
@@ -251,6 +373,10 @@ pub(crate) fn native_relation(message_type: &str) -> Option<(String, String)> {
 pub(crate) struct NativeModel {
     pub message_type: String,
     pub relation: String,
+    pub table_security: ManifestTableSecurity,
+    pub tenant_column: Option<String>,
+    pub project_column: Option<String>,
+    pub soft_delete_column: Option<String>,
     columns_by_field: BTreeMap<String, String>,
 }
 
@@ -264,6 +390,13 @@ impl NativeModel {
         Self {
             message_type: message_type.to_string(),
             relation: relation(&table.schema, &table.table),
+            table_security: table.table_security.clone(),
+            tenant_column: model_column(&table.table_security.tenant_column, table),
+            project_column: model_column(&table.table_security.project_column, table),
+            soft_delete_column: table
+                .soft_delete
+                .then(|| table.soft_delete_column.clone())
+                .filter(|column| !column.trim().is_empty()),
             columns_by_field,
         }
     }
@@ -275,6 +408,43 @@ impl NativeModel {
                 self.message_type, field_name
             )
         })
+    }
+
+    /// Manifest-declared table-security model for this entity (tenant isolation
+    /// mode, RLS policy template, soft-delete mode). Source of truth for the
+    /// security predicates below so call sites do not hand-maintain column names.
+    pub(crate) fn table_security(&self) -> &ManifestTableSecurity {
+        &self.table_security
+    }
+
+    /// `<soft_delete_column> IS NULL` predicate when the entity is soft-deletable,
+    /// else `None`. Lets active-row queries derive the soft-delete filter from the
+    /// manifest instead of hardcoding the `deleted_at` literal.
+    pub(crate) fn soft_delete_is_null(&self) -> Option<String> {
+        self.soft_delete_column
+            .as_deref()
+            .map(|column| format!("{} IS NULL", qi_runtime(column)))
+    }
+
+    /// Quoted tenant-isolation column from the manifest table-security model,
+    /// returned only when the table actually declares an active tenant-isolation
+    /// mode (so callers do not invent a filter on non-tenant tables).
+    pub(crate) fn tenant_column(&self) -> Option<String> {
+        if isolation_active(&self.table_security().tenant_isolation_mode) {
+            self.tenant_column.as_deref().map(qi_runtime)
+        } else {
+            None
+        }
+    }
+
+    /// Quoted project-isolation column from the manifest table-security model,
+    /// returned only when the table declares an active project-isolation mode.
+    pub(crate) fn project_column(&self) -> Option<String> {
+        if isolation_active(&self.table_security().project_isolation_mode) {
+            self.project_column.as_deref().map(qi_runtime)
+        } else {
+            None
+        }
     }
 
     pub(crate) fn q(&self, field_name: &str) -> String {
@@ -353,6 +523,25 @@ impl NativeModel {
     }
 }
 
+/// A manifest isolation mode is "active" when it is set to anything other than
+/// the empty/`none` sentinel, matching the control-plane sourcing convention.
+fn isolation_active(mode: &str) -> bool {
+    let mode = mode.trim();
+    !mode.is_empty() && mode != "none"
+}
+
+fn model_column(name: &str, table: &ManifestTable) -> Option<String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return None;
+    }
+    table
+        .columns
+        .iter()
+        .find(|column| column.column_name == name || column.field_name == name)
+        .map(|column| column.column_name.clone())
+}
+
 pub(crate) fn native_model(message_type: &str, required_fields: &[&str]) -> NativeModel {
     let table =
         crate::broker::table_for_message(native_manifest(), message_type).unwrap_or_else(|| {
@@ -374,6 +563,46 @@ fn sql_literal(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn native_services_global_switch_defaults_on() {
+        assert!(NativeServicesSettings::default().enabled);
+    }
+
+    #[test]
+    fn native_services_global_switch_accepts_false_tokens() {
+        for value in ["0", "false", "FALSE", "no", "off", " off "] {
+            let mut settings = NativeServicesSettings::default();
+            settings.merge_enabled_env_values(Some(value), None);
+            assert!(
+                !settings.enabled,
+                "expected {value:?} to disable native services"
+            );
+        }
+        for value in ["1", "true", "yes", "on", "enabled", "anything-else"] {
+            let mut settings = NativeServicesSettings::default();
+            settings.merge_enabled_env_values(Some(value), None);
+            assert!(
+                settings.enabled,
+                "expected {value:?} to enable native services"
+            );
+        }
+    }
+
+    #[test]
+    fn native_services_global_switch_prefers_canonical_over_legacy() {
+        let mut settings = NativeServicesSettings::default();
+        settings.merge_enabled_env_values(None, Some("0"));
+        assert!(!settings.enabled);
+
+        let mut settings = NativeServicesSettings::default();
+        settings.merge_enabled_env_values(Some("1"), Some("0"));
+        assert!(settings.enabled);
+
+        let mut settings = NativeServicesSettings::default();
+        settings.merge_enabled_env_values(Some("0"), Some("1"));
+        assert!(!settings.enabled);
+    }
 
     #[test]
     fn native_manifest_has_auth_tables_from_proto() {
@@ -417,6 +646,97 @@ mod tests {
             joined.contains("UDB:proto_manifest_checksum"),
             "native DDL must carry proto manifest metadata"
         );
+    }
+
+    #[test]
+    fn native_model_exposes_table_security_metadata_and_rls_ddl() {
+        let model = native_model(
+            "udb.core.authn.entity.v1.User",
+            &["user_id", "tenant_id", "project_id"],
+        );
+        assert_eq!(model.tenant_column.as_deref(), Some("tenant_id"));
+        assert!(
+            !model.table_security.tenant_isolation_mode.trim().is_empty(),
+            "native model must expose table_security from db_table_security"
+        );
+        assert!(
+            model
+                .table_security
+                .rls_policy_template
+                .contains("app.current_tenant_id"),
+            "native model must expose RLS policy template"
+        );
+
+        let joined = native_service_catalog_ddl().join("\n");
+        assert!(
+            joined.contains("ALTER TABLE \"udb_authn\".\"users\" ENABLE ROW LEVEL SECURITY"),
+            "native DDL must enable RLS for table-security protected users table"
+        );
+        assert!(
+            joined.contains("CREATE POLICY"),
+            "native DDL must render table-security RLS policies"
+        );
+    }
+
+    #[test]
+    fn native_ddl_includes_storage_asset_webrtc_tables_from_proto() {
+        let joined = native_service_catalog_ddl().join("\n");
+        for fragment in [
+            "CREATE TABLE IF NOT EXISTS \"udb_storage\".\"files\"",
+            "CREATE TABLE IF NOT EXISTS \"udb_asset\".\"assets\"",
+            "CREATE TABLE IF NOT EXISTS \"udb_asset\".\"pipeline_definitions\"",
+            "CREATE TABLE IF NOT EXISTS \"udb_asset\".\"pipeline_instances\"",
+            "CREATE TABLE IF NOT EXISTS \"udb_asset\".\"pipeline_steps\"",
+            "CREATE TABLE IF NOT EXISTS \"udb_webrtc\".\"rooms\"",
+            "CREATE TABLE IF NOT EXISTS \"udb_webrtc\".\"peers\"",
+            "CREATE TABLE IF NOT EXISTS \"udb_webrtc\".\"tracks\"",
+        ] {
+            assert!(
+                joined.contains(fragment),
+                "missing generated DDL fragment {fragment}"
+            );
+        }
+    }
+
+    #[test]
+    fn native_models_resolve_storage_asset_webrtc_columns() {
+        let cases = [
+            (
+                "udb.core.storage.entity.v1.File",
+                &["file_id", "tenant_id", "object_key", "status", "file_type"][..],
+            ),
+            (
+                "udb.core.asset.entity.v1.PipelineInstance",
+                &[
+                    "instance_id",
+                    "definition_id",
+                    "asset_id",
+                    "correlation_id",
+                    "status",
+                ][..],
+            ),
+            (
+                "udb.core.asset.entity.v1.PipelineStep",
+                &["step_id", "instance_id", "tenant_id", "step_type", "status"][..],
+            ),
+            (
+                "udb.core.webrtc.entity.v1.Room",
+                &["room_id", "tenant_id", "state", "participant_count"][..],
+            ),
+            (
+                "udb.core.webrtc.entity.v1.Track",
+                &["track_id", "room_id", "peer_id", "kind", "state"][..],
+            ),
+        ];
+        for (message_type, fields) in cases {
+            let model = native_model(message_type, fields);
+            for field in fields {
+                assert!(
+                    !model.column(field).trim().is_empty(),
+                    "missing native proto column for {message_type}.{field}"
+                );
+            }
+        }
     }
 
     #[test]

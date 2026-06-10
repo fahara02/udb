@@ -15,7 +15,8 @@ use udb::{
     build_transaction_plan, build_upsert_plan, build_vector_search_plan, build_vector_upsert_plan,
     evaluate_object_access, generate_bootstrap_sql, generate_unified_dsn_catalog, lint_catalog,
     migrate_manifest_to_current, parse_ast_source, parse_directory, parse_file, parse_file_report,
-    parse_unified_dsn, plan_repairs, redact_dsn, resolve_unified_dsn, schema_checksum,
+    parse_proto_source, parse_unified_dsn, plan_repairs, redact_dsn, resolve_unified_dsn,
+    schema_checksum,
 };
 
 const PROTO_FIXTURE: &str = r#"
@@ -257,7 +258,7 @@ message PaymentEvent {
 #[test]
 fn parses_arbitrary_project_example_without_project_specific_imports() {
     let example = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("examples/arbitrary_project/proto/acme_billing_v1.proto");
+        .join("examples/go_arbitary_project/proto/acme/billing/v1/acme_billing_v1.proto");
     let source = fs::read_to_string(&example).unwrap();
     assert!(!source.contains("legacyproject/"));
     assert!(!source.contains("example/"));
@@ -280,7 +281,7 @@ fn parses_arbitrary_project_example_without_project_specific_imports() {
 #[test]
 fn arbitrary_project_manifest_matches_golden_shape() {
     let example = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("examples/arbitrary_project/proto/acme_billing_v1.proto");
+        .join("examples/go_arbitary_project/proto/acme/billing/v1/acme_billing_v1.proto");
     let schemas = parse_file(&example, &ParserConfig::default()).unwrap();
     let manifest = CatalogManifest::from_schemas(&schemas).unwrap();
 
@@ -1956,6 +1957,50 @@ message LegacyRecord {
     );
 }
 
+#[test]
+fn malformed_numeric_annotation_values_warn_and_strict_fail_parse() {
+    let src = br#"
+syntax = "proto3";
+package acme.search.v1;
+
+option (udb.annotation_version) = "1";
+
+message SearchEmbedding {
+  option (udb.vector_store) = {
+    backend: VECTOR_BACKEND_QDRANT
+    collection_name: "search_embeddings"
+    dimension: "768x"
+  };
+
+  string id = 1;
+}
+"#;
+
+    let warn_config = ParserConfig::default().with_annotation_mode(AnnotationParserMode::Warn);
+    let warn = parse_proto_source(src, "acme/search/v1/search_embedding.proto", &warn_config)
+        .expect("warn mode should keep parsing");
+    let diagnostic = warn
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.code == "malformed_numeric_annotation_value")
+        .expect("malformed dimension diagnostic");
+    assert!(diagnostic.message.contains("dimension=\"768x\""));
+    assert_eq!(
+        warn.schemas
+            .first()
+            .and_then(|schema| schema.vector_store.as_ref())
+            .map(|store| store.dimension),
+        Some(0)
+    );
+
+    let strict_config = ParserConfig::default().with_annotation_mode(AnnotationParserMode::Strict);
+    let err = parse_proto_source(src, "acme/search/v1/search_embedding.proto", &strict_config)
+        .expect_err("strict mode should fail malformed numeric annotations");
+    let rendered = err.to_string();
+    assert!(rendered.contains("malformed_numeric_annotation_value"));
+    assert!(rendered.contains("dimension=\"768x\""));
+}
+
 fn tempfile_dir() -> std::path::PathBuf {
     let mut dir = std::env::temp_dir();
     dir.push(format!(
@@ -2069,6 +2114,53 @@ fn lint_warns_on_pii_not_masked_in_logs() {
                 && item.column == "email"
                 && item.severity == LintSeverity::Warning)
     );
+}
+
+#[test]
+fn parser_normalizes_scalar_and_structured_field_security_options() {
+    let src = br#"
+        syntax = "proto3";
+        package acme.authn.v1;
+        import "udb/core/common/v1/db.proto";
+        import "udb/core/common/v1/security.proto";
+
+        message UserSecret {
+          option (udb.core.common.v1.pg_table) = {
+            schema_name: "authn"
+            table_name: "user_secrets"
+          };
+
+          string id = 1 [(udb.core.common.v1.pg_column) = { column_name: "id" sql_type: "UUID" primary_key: true }];
+          string email = 2 [(udb.core.common.v1.pg_column) = { column_name: "email" sql_type: "TEXT" }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.data_purpose) = "login"];
+          string password_hash = 3 [(udb.core.common.v1.pg_column) = { column_name: "password_hash" sql_type: "TEXT" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_CREDENTIAL output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT hashing_algorithm: "argon2id" }];
+        }
+    "#;
+
+    let report = parse_proto_source(src, "authn/user_secret.proto", &ParserConfig::default())
+        .expect("parse");
+    assert!(
+        report.diagnostics.is_empty(),
+        "security annotations must not produce diagnostics: {:?}",
+        report.diagnostics
+    );
+    let schema = report.schemas.first().expect("schema");
+    let email = schema
+        .columns
+        .iter()
+        .find(|column| column.field_name == "email")
+        .expect("email column");
+    assert!(email.security.is_pii);
+    assert!(email.security.mask_in_logs);
+    assert_eq!(email.security.data_class, "PERSONAL");
+
+    let password = schema
+        .columns
+        .iter()
+        .find(|column| column.field_name == "password_hash")
+        .expect("password column");
+    assert!(password.security.mask_in_logs);
+    assert!(password.security.is_blind_index);
+    assert_eq!(password.security.data_class, "CREDENTIAL");
 }
 
 #[test]

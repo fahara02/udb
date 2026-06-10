@@ -4642,7 +4642,7 @@ var File_udb_core_authn_services_v1_core_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\n" +
-	"%udb/core/authn/services/v1/core.proto\x12\x1audb.core.authn.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\"\xda\x04\n" +
+	"%udb/core/authn/services/v1/core.proto\x12\x1audb.core.authn.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a!udb/core/common/v1/security.proto\"\xf8\x04\n" +
 	"\x11CreateUserRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +
@@ -4659,24 +4659,24 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x12profile_attributes\x18\v \x03(\v2D.udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntryR\x11profileAttributes\x1aD\n" +
 	"\x16ProfileAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"_\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"}\n" +
 	"\x12CreateUserResponse\x122\n" +
 	"\x04user\x18\x01 \x01(\v2\x1e.udb.core.authn.entity.v1.UserR\x04user\x12\x15\n" +
-	"\x06otp_id\x18\x02 \x01(\tR\x05otpId\"[\n" +
+	"\x06otp_id\x18\x02 \x01(\tR\x05otpId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"y\n" +
 	"\x0eGetUserRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x14\n" +
-	"\x05email\x18\x03 \x01(\tR\x05email\"E\n" +
+	"\x05email\x18\x03 \x01(\tR\x05email:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"c\n" +
 	"\x0fGetUserResponse\x122\n" +
-	"\x04user\x18\x01 \x01(\v2\x1e.udb.core.authn.entity.v1.UserR\x04user\"\xec\x01\n" +
+	"\x04user\x18\x01 \x01(\v2\x1e.udb.core.authn.entity.v1.UserR\x04user:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x8a\x02\n" +
 	"\x10ListUsersRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12H\n" +
 	"\faccount_kind\x18\x02 \x01(\x0e2%.udb.core.authn.entity.v1.AccountKindR\vaccountKind\x12<\n" +
 	"\x06status\x18\x03 \x01(\x0e2$.udb.core.authn.entity.v1.UserStatusR\x06status\x123\n" +
-	"\x04page\x18\x04 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page\"\x7f\n" +
+	"\x04page\x18\x04 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x9d\x01\n" +
 	"\x11ListUsersResponse\x124\n" +
 	"\x05users\x18\x01 \x03(\v2\x1e.udb.core.authn.entity.v1.UserR\x05users\x124\n" +
-	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page\"\xbb\x04\n" +
+	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xd9\x04\n" +
 	"\x11UpdateUserRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
 	"\tfull_name\x18\x02 \x01(\tR\bfullName\x12\x14\n" +
@@ -4692,46 +4692,46 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	" \x01(\tR\x0fexternalSubject\x1aD\n" +
 	"\x16ProfileAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"H\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"f\n" +
 	"\x12UpdateUserResponse\x122\n" +
-	"\x04user\x18\x01 \x01(\v2\x1e.udb.core.authn.entity.v1.UserR\x04user\"\xcd\x01\n" +
+	"\x04user\x18\x01 \x01(\v2\x1e.udb.core.authn.entity.v1.UserR\x04user:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xeb\x01\n" +
 	"\x17ChangeUserStatusRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12C\n" +
 	"\n" +
 	"new_status\x18\x02 \x01(\x0e2$.udb.core.authn.entity.v1.UserStatusR\tnewStatus\x12\x16\n" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\x12<\n" +
-	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"N\n" +
+	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"l\n" +
 	"\x18ChangeUserStatusResponse\x122\n" +
-	"\x04user\x18\x01 \x01(\v2\x1e.udb.core.authn.entity.v1.UserR\x04user\"r\n" +
+	"\x04user\x18\x01 \x01(\v2\x1e.udb.core.authn.entity.v1.UserR\x04user:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x90\x01\n" +
 	"\x19AdminResetPasswordRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12<\n" +
-	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"3\n" +
+	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"Q\n" +
 	"\x1aAdminResetPasswordResponse\x12\x15\n" +
-	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\"\xcc\x01\n" +
+	"\x06otp_id\x18\x01 \x01(\tR\x05otpId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xea\x01\n" +
 	"\x0eSendOTPRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12<\n" +
 	"\botp_type\x18\x02 \x01(\x0e2!.udb.core.authn.entity.v1.OTPTypeR\aotpType\x12%\n" +
 	"\x0ecorrelation_id\x18\x03 \x01(\tR\rcorrelationId\x12<\n" +
-	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"\x81\x01\n" +
+	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x9f\x01\n" +
 	"\x0fSendOTPResponse\x12\x15\n" +
 	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\x12,\n" +
 	"\x12expires_in_seconds\x18\x02 \x01(\x05R\x10expiresInSeconds\x12)\n" +
-	"\x10cooldown_seconds\x18\x03 \x01(\x05R\x0fcooldownSeconds\"=\n" +
+	"\x10cooldown_seconds\x18\x03 \x01(\x05R\x0fcooldownSeconds:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"[\n" +
 	"\x10VerifyOTPRequest\x12\x15\n" +
 	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\x12\x12\n" +
-	"\x04code\x18\x02 \x01(\tR\x04code\"\x86\x01\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xa4\x01\n" +
 	"\x11VerifyOTPResponse\x12\x1a\n" +
 	"\bverified\x18\x01 \x01(\bR\bverified\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12<\n" +
-	"\botp_type\x18\x03 \x01(\x0e2!.udb.core.authn.entity.v1.OTPTypeR\aotpType\"R\n" +
+	"\botp_type\x18\x03 \x01(\x0e2!.udb.core.authn.entity.v1.OTPTypeR\aotpType:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"p\n" +
 	"\x10ResendOTPRequest\x12&\n" +
 	"\x0foriginal_otp_id\x18\x01 \x01(\tR\roriginalOtpId\x12\x16\n" +
-	"\x06reason\x18\x02 \x01(\tR\x06reason\"\xb2\x01\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xd0\x01\n" +
 	"\x11ResendOTPResponse\x12\x15\n" +
 	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\x12,\n" +
 	"\x12expires_in_seconds\x18\x02 \x01(\x05R\x10expiresInSeconds\x12)\n" +
 	"\x10cooldown_seconds\x18\x03 \x01(\x05R\x0fcooldownSeconds\x12-\n" +
-	"\x12attempts_remaining\x18\x04 \x01(\x05R\x11attemptsRemaining\"\xd8\x04\n" +
+	"\x12attempts_remaining\x18\x04 \x01(\x05R\x11attemptsRemaining:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xf6\x04\n" +
 	"\tPrincipal\x12!\n" +
 	"\fprincipal_id\x18\x01 \x01(\tR\vprincipalId\x12\x18\n" +
 	"\asubject\x18\x02 \x01(\tR\asubject\x12\x17\n" +
@@ -4755,7 +4755,7 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"attributes\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xf2\x04\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x90\x05\n" +
 	"\fAuthnRequest\x12!\n" +
 	"\fbearer_token\x18\x01 \x01(\tR\vbearerToken\x12\x1d\n" +
 	"\n" +
@@ -4777,7 +4777,7 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x06issuer\x18\r \x01(\tR\x06issuer\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8d\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xab\x02\n" +
 	"\rAuthnResponse\x12C\n" +
 	"\tprincipal\x18\x01 \x01(\v2%.udb.core.authn.services.v1.PrincipalR\tprincipal\x12\x1d\n" +
 	"\n" +
@@ -4785,7 +4785,7 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\faccess_token\x18\x03 \x01(\tR\vaccessToken\x12&\n" +
 	"\x0fexpires_at_unix\x18\x04 \x01(\x03R\rexpiresAtUnix\x121\n" +
 	"\x14relationship_version\x18\x05 \x01(\tR\x13relationshipVersion\x12\x1a\n" +
-	"\bwarnings\x18\x06 \x03(\tR\bwarnings\"\xd4\x03\n" +
+	"\bwarnings\x18\x06 \x03(\tR\bwarnings:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xf2\x03\n" +
 	"\fLoginRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12E\n" +
@@ -4806,7 +4806,7 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"tenantHint\x12!\n" +
 	"\fproject_hint\x18\v \x01(\tR\vprojectHint\x12%\n" +
 	"\x0eaccess_surface\x18\f \x01(\tR\raccessSurface\x12#\n" +
-	"\rrecovery_code\x18\r \x01(\tR\frecoveryCode\"\xcb\x02\n" +
+	"\rrecovery_code\x18\r \x01(\tR\frecoveryCode:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xe9\x02\n" +
 	"\rLoginResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
 	"\n" +
@@ -4819,37 +4819,37 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"csrf_token\x18\a \x01(\tR\tcsrfToken\x12!\n" +
 	"\fmfa_required\x18\b \x01(\bR\vmfaRequired\x12\x1c\n" +
 	"\n" +
-	"mfa_otp_id\x18\t \x01(\tR\bmfaOtpId\"Y\n" +
+	"mfa_otp_id\x18\t \x01(\tR\bmfaOtpId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"w\n" +
 	"\x13RefreshTokenRequest\x12#\n" +
 	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x02 \x01(\tR\tsessionId\"p\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x8e\x01\n" +
 	"\x14RefreshTokenResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x125\n" +
-	"\x17access_token_expires_in\x18\x02 \x01(\x05R\x14accessTokenExpiresIn\"\xb4\x01\n" +
+	"\x17access_token_expires_in\x18\x02 \x01(\x05R\x14accessTokenExpiresIn:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xd2\x01\n" +
 	"\rLogoutRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12!\n" +
 	"\fall_sessions\x18\x02 \x01(\bR\vallSessions\x12#\n" +
 	"\rrevoke_reason\x18\x03 \x01(\tR\frevokeReason\x12<\n" +
-	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\";\n" +
+	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"Y\n" +
 	"\x0eLogoutResponse\x12)\n" +
-	"\x10sessions_revoked\x18\x01 \x01(\x05R\x0fsessionsRevoked\"\xd3\x01\n" +
+	"\x10sessions_revoked\x18\x01 \x01(\x05R\x0fsessionsRevoked:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xf1\x01\n" +
 	"\x15ChangePasswordRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12)\n" +
 	"\x10current_password\x18\x02 \x01(\tR\x0fcurrentPassword\x12!\n" +
 	"\fnew_password\x18\x03 \x01(\tR\vnewPassword\x12\x15\n" +
 	"\x06otp_id\x18\x04 \x01(\tR\x05otpId\x12<\n" +
-	"\acontext\x18\x05 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"\x8f\x01\n" +
+	"\acontext\x18\x05 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xad\x01\n" +
 	"\x16ChangePasswordResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x129\n" +
 	"\n" +
 	"changed_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tchangedAt\x12!\n" +
-	"\foperation_id\x18\x03 \x01(\tR\voperationId\"p\n" +
+	"\foperation_id\x18\x03 \x01(\tR\voperationId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x8e\x01\n" +
 	"\x14ValidateTokenRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12B\n" +
 	"\n" +
-	"token_type\x18\x02 \x01(\x0e2#.udb.core.authn.entity.v1.TokenTypeR\ttokenType\"\xe4\x05\n" +
+	"token_type\x18\x02 \x01(\x0e2#.udb.core.authn.entity.v1.TokenTypeR\ttokenType:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x82\x06\n" +
 	"\x15ValidateTokenResponse\x12\x14\n" +
 	"\x05valid\x18\x01 \x01(\bR\x05valid\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1d\n" +
@@ -4874,175 +4874,175 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"attributes\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xab\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xc9\x01\n" +
 	"\x14CreateSessionRequest\x12C\n" +
 	"\tprincipal\x18\x01 \x01(\v2%.udb.core.authn.services.v1.PrincipalR\tprincipal\x12\x1f\n" +
 	"\vttl_seconds\x18\x02 \x01(\x03R\n" +
 	"ttlSeconds\x12-\n" +
-	"\x12client_fingerprint\x18\x03 \x01(\tR\x11clientFingerprint\"^\n" +
+	"\x12client_fingerprint\x18\x03 \x01(\tR\x11clientFingerprint:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"|\n" +
 	"\x15CreateSessionResponse\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12&\n" +
-	"\x0fexpires_at_unix\x18\x02 \x01(\x03R\rexpiresAtUnix\"W\n" +
+	"\x0fexpires_at_unix\x18\x02 \x01(\x03R\rexpiresAtUnix:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"u\n" +
 	"\x15RefreshSessionRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1f\n" +
 	"\vttl_seconds\x18\x02 \x01(\x03R\n" +
-	"ttlSeconds\"X\n" +
+	"ttlSeconds:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"v\n" +
 	"\x16RefreshSessionResponse\x12&\n" +
 	"\x0fexpires_at_unix\x18\x01 \x01(\x03R\rexpiresAtUnix\x12\x16\n" +
-	"\x06active\x18\x02 \x01(\bR\x06active\"2\n" +
+	"\x06active\x18\x02 \x01(\bR\x06active:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"P\n" +
 	"\x11GetSessionRequest\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x01 \x01(\tR\tsessionId\"Q\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"o\n" +
 	"\x12GetSessionResponse\x12;\n" +
-	"\asession\x18\x01 \x01(\v2!.udb.core.authn.entity.v1.SessionR\asession\"\x84\x01\n" +
+	"\asession\x18\x01 \x01(\v2!.udb.core.authn.entity.v1.SessionR\asession:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xa2\x01\n" +
 	"\x13ListSessionsRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1f\n" +
 	"\vactive_only\x18\x02 \x01(\bR\n" +
 	"activeOnly\x123\n" +
-	"\x04page\x18\x03 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page\"\x8b\x01\n" +
+	"\x04page\x18\x03 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xa9\x01\n" +
 	"\x14ListSessionsResponse\x12=\n" +
 	"\bsessions\x18\x01 \x03(\v2!.udb.core.authn.entity.v1.SessionR\bsessions\x124\n" +
-	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page\"\xe7\x01\n" +
+	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x85\x02\n" +
 	"\x14RevokeSessionRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12#\n" +
 	"\rrevoke_reason\x18\x02 \x01(\tR\frevokeReason\x12<\n" +
 	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\x12!\n" +
 	"\fprincipal_id\x18\x04 \x01(\tR\vprincipalId\x12*\n" +
-	"\x11all_for_principal\x18\x05 \x01(\bR\x0fallForPrincipal\"\xb9\x01\n" +
+	"\x11all_for_principal\x18\x05 \x01(\bR\x0fallForPrincipal:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xd7\x01\n" +
 	"\x15RevokeSessionResponse\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x129\n" +
 	"\n" +
 	"revoked_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\trevokedAt\x12!\n" +
 	"\foperation_id\x18\x03 \x01(\tR\voperationId\x12#\n" +
-	"\rrevoked_count\x18\x04 \x01(\x05R\frevokedCount\"S\n" +
+	"\rrevoked_count\x18\x04 \x01(\x05R\frevokedCount:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"q\n" +
 	"\x13ValidateCSRFRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1d\n" +
 	"\n" +
-	"csrf_token\x18\x02 \x01(\tR\tcsrfToken\",\n" +
+	"csrf_token\x18\x02 \x01(\tR\tcsrfToken:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"J\n" +
 	"\x14ValidateCSRFResponse\x12\x14\n" +
-	"\x05valid\x18\x01 \x01(\bR\x05valid\"\xae\x01\n" +
+	"\x05valid\x18\x01 \x01(\bR\x05valid:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xcc\x01\n" +
 	"\x10EnrollMFARequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12C\n" +
 	"\bmfa_type\x18\x02 \x01(\x0e2(.udb.core.authn.entity.v1.AuthFactorKindR\amfaType\x12<\n" +
-	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"x\n" +
+	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x96\x01\n" +
 	"\x11EnrollMFAResponse\x12\x1f\n" +
 	"\vtotp_secret\x18\x01 \x01(\tR\n" +
 	"totpSecret\x12\x1e\n" +
 	"\vtotp_qr_uri\x18\x02 \x01(\tR\ttotpQrUri\x12\"\n" +
-	"\rverify_otp_id\x18\x03 \x01(\tR\vverifyOtpId\"\x9f\x01\n" +
+	"\rverify_otp_id\x18\x03 \x01(\tR\vverifyOtpId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xbd\x01\n" +
 	"\x1bConfirmMFAEnrollmentRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x15\n" +
 	"\x06otp_id\x18\x02 \x01(\tR\x05otpId\x12\x12\n" +
 	"\x04code\x18\x03 \x01(\tR\x04code\x12<\n" +
-	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\":\n" +
+	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"X\n" +
 	"\x1cConfirmMFAEnrollmentResponse\x12\x1a\n" +
-	"\benrolled\x18\x01 \x01(\bR\benrolled\"\x8b\x01\n" +
+	"\benrolled\x18\x01 \x01(\bR\benrolled:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xa9\x01\n" +
 	"\x1cGenerateRecoveryCodesRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\x05R\x05count\x12<\n" +
-	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"S\n" +
+	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"q\n" +
 	"\x1dGenerateRecoveryCodesResponse\x12\x14\n" +
 	"\x05codes\x18\x01 \x03(\tR\x05codes\x12\x1c\n" +
-	"\tgenerated\x18\x02 \x01(\x05R\tgenerated\"\x91\x01\n" +
+	"\tgenerated\x18\x02 \x01(\x05R\tgenerated:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xaf\x01\n" +
 	"\x13PutMfaPolicyRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
 	"\vrequire_mfa\x18\x02 \x01(\bR\n" +
 	"requireMfa\x12<\n" +
-	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"T\n" +
+	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"r\n" +
 	"\x14PutMfaPolicyResponse\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
 	"\vrequire_mfa\x18\x02 \x01(\bR\n" +
-	"requireMfa\"p\n" +
+	"requireMfa:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x8e\x01\n" +
 	"\x13GetMfaPolicyRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12<\n" +
-	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"T\n" +
+	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"r\n" +
 	"\x14GetMfaPolicyResponse\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
 	"\vrequire_mfa\x18\x02 \x01(\bR\n" +
-	"requireMfa\"u\n" +
+	"requireMfa:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x93\x01\n" +
 	"\x15ForgotPasswordRequest\x12\x1e\n" +
 	"\n" +
 	"identifier\x18\x01 \x01(\tR\n" +
 	"identifier\x12<\n" +
-	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"/\n" +
+	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"M\n" +
 	"\x16ForgotPasswordResponse\x12\x15\n" +
-	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\"\xa2\x01\n" +
+	"\x06otp_id\x18\x01 \x01(\tR\x05otpId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xc0\x01\n" +
 	"\x14ResetPasswordRequest\x12\x15\n" +
 	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12!\n" +
 	"\fnew_password\x18\x03 \x01(\tR\vnewPassword\x12<\n" +
-	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"X\n" +
+	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"v\n" +
 	"\x15ResetPasswordResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12&\n" +
-	"\x0fchanged_at_unix\x18\x02 \x01(\x03R\rchangedAtUnix\"l\n" +
+	"\x0fchanged_at_unix\x18\x02 \x01(\x03R\rchangedAtUnix:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x8a\x01\n" +
 	"\x16IntrospectTokenRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12<\n" +
-	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"\xd3\x01\n" +
+	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xf1\x01\n" +
 	"\x17IntrospectTokenResponse\x12\x16\n" +
 	"\x06active\x18\x01 \x01(\bR\x06active\x12\x18\n" +
 	"\asubject\x18\x02 \x01(\tR\asubject\x12\x1b\n" +
 	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12)\n" +
 	"\x10service_identity\x18\x04 \x01(\tR\x0fserviceIdentity\x12\x16\n" +
 	"\x06scopes\x18\x05 \x03(\tR\x06scopes\x12&\n" +
-	"\x0fexpires_at_unix\x18\x06 \x01(\x03R\rexpiresAtUnix\"N\n" +
+	"\x0fexpires_at_unix\x18\x06 \x01(\x03R\rexpiresAtUnix:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"l\n" +
 	"\x0eGetJwksRequest\x12<\n" +
-	"\acontext\x18\x01 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\".\n" +
+	"\acontext\x18\x01 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"L\n" +
 	"\x0fGetJwksResponse\x12\x1b\n" +
-	"\tjwks_json\x18\x01 \x01(\tR\bjwksJson\"\x8b\x01\n" +
+	"\tjwks_json\x18\x01 \x01(\tR\bjwksJson:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xa9\x01\n" +
 	"\x1cSendPhoneVerificationRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
 	"\x05phone\x18\x02 \x01(\tR\x05phone\x12<\n" +
-	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"6\n" +
+	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"T\n" +
 	"\x1dSendPhoneVerificationResponse\x12\x15\n" +
-	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\"\xcb\x01\n" +
+	"\x06otp_id\x18\x01 \x01(\tR\x05otpId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xe9\x01\n" +
 	" StartWebAuthnRegistrationRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x1b\n" +
 	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x04 \x01(\tR\tprojectId\x12<\n" +
-	"\acontext\x18\x05 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"\xcb\x01\n" +
+	"\acontext\x18\x05 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xe9\x01\n" +
 	"!StartWebAuthnRegistrationResponse\x12!\n" +
 	"\fchallenge_id\x18\x01 \x01(\tR\vchallengeId\x12[\n" +
 	"+public_key_credential_creation_options_json\x18\x02 \x01(\tR&publicKeyCredentialCreationOptionsJson\x12&\n" +
-	"\x0fexpires_at_unix\x18\x03 \x01(\x03R\rexpiresAtUnix\"\xd7\x01\n" +
+	"\x0fexpires_at_unix\x18\x03 \x01(\x03R\rexpiresAtUnix:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xf5\x01\n" +
 	"!FinishWebAuthnRegistrationRequest\x12!\n" +
 	"\fchallenge_id\x18\x01 \x01(\tR\vchallengeId\x12;\n" +
 	"\x1apublic_key_credential_json\x18\x02 \x01(\tR\x17publicKeyCredentialJson\x12\x14\n" +
 	"\x05label\x18\x03 \x01(\tR\x05label\x12<\n" +
-	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"\x82\x01\n" +
+	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xa0\x01\n" +
 	"\"FinishWebAuthnRegistrationResponse\x12\x1e\n" +
 	"\n" +
 	"registered\x18\x01 \x01(\bR\n" +
 	"registered\x12#\n" +
 	"\rcredential_id\x18\x02 \x01(\tR\fcredentialId\x12\x17\n" +
-	"\auser_id\x18\x03 \x01(\tR\x06userId\"\xb7\x01\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xd5\x01\n" +
 	"\"StartWebAuthnAuthenticationRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x03 \x01(\tR\tprojectId\x12<\n" +
-	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"\xcb\x01\n" +
+	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xe9\x01\n" +
 	"#StartWebAuthnAuthenticationResponse\x12!\n" +
 	"\fchallenge_id\x18\x01 \x01(\tR\vchallengeId\x12Y\n" +
 	"*public_key_credential_request_options_json\x18\x02 \x01(\tR%publicKeyCredentialRequestOptionsJson\x12&\n" +
-	"\x0fexpires_at_unix\x18\x03 \x01(\x03R\rexpiresAtUnix\"\xc3\x01\n" +
+	"\x0fexpires_at_unix\x18\x03 \x01(\x03R\rexpiresAtUnix:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xe1\x01\n" +
 	"#FinishWebAuthnAuthenticationRequest\x12!\n" +
 	"\fchallenge_id\x18\x01 \x01(\tR\vchallengeId\x12;\n" +
 	"\x1apublic_key_credential_json\x18\x02 \x01(\tR\x17publicKeyCredentialJson\x12<\n" +
-	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"\xfa\x01\n" +
+	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x98\x02\n" +
 	"$FinishWebAuthnAuthenticationResponse\x12C\n" +
 	"\tprincipal\x18\x01 \x01(\v2%.udb.core.authn.services.v1.PrincipalR\tprincipal\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x02 \x01(\tR\tsessionId\x12!\n" +
 	"\faccess_token\x18\x03 \x01(\tR\vaccessToken\x12&\n" +
 	"\x0fexpires_at_unix\x18\x04 \x01(\x03R\rexpiresAtUnix\x12#\n" +
-	"\rcredential_id\x18\x05 \x01(\tR\fcredentialIdB\x82\x02\n" +
+	"\rcredential_id\x18\x05 \x01(\tR\fcredentialId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01B\x82\x02\n" +
 	"\x1ecom.udb.core.authn.services.v1B\tCoreProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1audb.core.Authn.Services.V1\xca\x02\x1aUdb\\Core\\Authn\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Authn\\Services\\V1\xea\x02\x1eUdb::Core::Authn::Services::V1b\x06proto3"
 
 var (

@@ -50,9 +50,9 @@ use crate::broker::{
 };
 use crate::generation::{CatalogManifest, GeneratedArtifact, ManifestStore, ManifestTable};
 use crate::proto::{
-    CdcEnvelope, CdcSubscriptionRequest, Chunk, MultipartUploadRequest, MultipartUploadResponse,
-    Mutation, MutationResponse, RecordSet, Row as ProtoRow, SelectRequest, TxStatus, UpsertRequest,
-    UrlRequest, UrlResponse, VectorHybridSearchRequest, VectorSearchRequest, VectorSet,
+    Chunk, MultipartUploadRequest, MultipartUploadResponse, Mutation, MutationResponse, RecordSet,
+    Row as ProtoRow, SelectRequest, TxStatus, UpsertRequest, UrlRequest, UrlResponse,
+    VectorHybridSearchRequest, VectorPointMutation, VectorSearchRequest, VectorSet,
     VectorUpsertRequest, ViewDefinition,
 };
 use crate::security::{AbacPolicy, PolicyEffect};
@@ -319,19 +319,6 @@ impl DataBrokerRuntime {
             .unwrap_or_default()
     }
 
-    /// NW1-2: register a canonical store at runtime. Called during
-    /// startup once per discovered canonical-class backend
-    /// (today: Postgres). Idempotent — re-registering the same key
-    /// replaces the previous entry.
-    pub(crate) fn register_canonical_store(
-        &self,
-        store: Arc<dyn crate::runtime::canonical_store::CanonicalStore>,
-    ) {
-        if let Ok(mut guard) = self.canonical_stores.lock() {
-            guard.register(store);
-        }
-    }
-
     /// NW1-2: look up the default canonical store. Returns `None` if
     /// no canonical store is registered (slim deployments without
     /// Postgres / MySQL / SQLite).
@@ -339,6 +326,80 @@ impl DataBrokerRuntime {
         &self,
     ) -> Option<Arc<dyn crate::runtime::canonical_store::CanonicalStore>> {
         self.canonical_stores.lock().ok()?.default_store()
+    }
+
+    /// Encrypt a UDB-owned secret string for at-rest storage (Phase 5). Returns
+    /// the AES-256-GCM-SIV envelope when an encryption key is configured. When no
+    /// key is configured: plaintext in dev, but ERROR in `fail_closed_mode` (so
+    /// production cannot silently store secrets in the clear).
+    pub fn encrypt_secret_at_rest(&self, plaintext: &str) -> Result<String, String> {
+        match self.encryption.as_ref() {
+            Some(enc) => {
+                enc.encrypt_json_value(&serde_json::Value::String(plaintext.to_string()))
+            }
+            None if crate::runtime::security::fail_closed_mode() => Err(
+                "encryption-at-rest required for this secret but no UDB_ENCRYPTION_KEYS/Vault key is configured"
+                    .into(),
+            ),
+            None => Ok(plaintext.to_string()),
+        }
+    }
+
+    /// Reverse of [`Self::encrypt_secret_at_rest`]. Plaintext (legacy/dev) and
+    /// values lacking the `udb-aead:` envelope prefix pass through unchanged, so
+    /// mixed plaintext/ciphertext stores remain readable during rollout.
+    pub fn decrypt_secret_at_rest(&self, stored: &str) -> Result<String, String> {
+        match self.encryption.as_ref() {
+            Some(enc) => match enc.decrypt_json_value(stored)? {
+                serde_json::Value::String(s) => Ok(s),
+                other => Ok(other.to_string()),
+            },
+            None => Ok(stored.to_string()),
+        }
+    }
+
+    /// Encrypt a JSON payload for UDB-owned native/object state.
+    ///
+    /// The return value is JSON text suitable for binding into a `JSONB` column:
+    /// plaintext state remains an object/array JSON document in dev, while
+    /// encrypted state is stored as a JSON string containing the AEAD envelope.
+    pub fn encrypt_native_json_state_at_rest(&self, raw_json: &str) -> Result<String, String> {
+        let value = parse_native_state_json(raw_json)?;
+        match self.encryption.as_ref() {
+            Some(enc) => {
+                let envelope = enc.encrypt_json_value(&value)?;
+                serde_json::to_string(&envelope)
+                    .map_err(|err| format!("native-state envelope serialization failed: {err}"))
+            }
+            None if self.config.encryption.object_native_state_required
+                || crate::runtime::security::fail_closed_mode() =>
+            {
+                Err(
+                    "encryption-at-rest required for native/object state but no UDB_ENCRYPTION_KEY/Vault key is configured"
+                        .into(),
+                )
+            }
+            None => Ok(value.to_string()),
+        }
+    }
+
+    /// Decrypt JSON payloads produced by [`Self::encrypt_native_json_state_at_rest`].
+    /// Plain JSON objects/arrays and legacy plaintext pass through unchanged.
+    pub fn decrypt_native_json_state_at_rest(&self, stored_json: &str) -> Result<String, String> {
+        let value = parse_native_state_json(stored_json)?;
+        let serde_json::Value::String(ciphertext) = value else {
+            return Ok(value.to_string());
+        };
+        if !ciphertext.starts_with("udb-aead:") {
+            return serde_json::to_string(&ciphertext)
+                .map_err(|err| format!("native-state JSON string serialization failed: {err}"));
+        }
+        let Some(enc) = self.encryption.as_ref() else {
+            return Err(
+                "native/object state is encrypted but no UDB encryption key is configured".into(),
+            );
+        };
+        Ok(enc.decrypt_json_value(&ciphertext)?.to_string())
     }
 
     /// NW1-3: register a store that satisfies every system-store
@@ -362,6 +423,14 @@ impl DataBrokerRuntime {
     ) -> Option<Arc<dyn crate::runtime::canonical_store::SystemStores>> {
         self.canonical_stores.lock().ok()?.default_full_store()
     }
+}
+
+fn parse_native_state_json(raw_json: &str) -> Result<serde_json::Value, String> {
+    let trimmed = raw_json.trim();
+    if trimmed.is_empty() {
+        return Ok(serde_json::json!({}));
+    }
+    serde_json::from_str(trimmed).map_err(|err| format!("native-state JSON is invalid: {err}"))
 }
 
 #[derive(Debug, Clone, Default)]
@@ -669,6 +738,9 @@ fn prepare_outbox_envelope(
     for field in ["event_type", "correlation_id", "document_id"] {
         envelope_field(field)?;
     }
+    if crate::runtime::cdc::tenant_scoped_topic(topic) {
+        envelope_field("tenant_id")?;
+    }
     let document_id = envelope_field("document_id")?;
     if partition_key != document_id {
         return Err(tonic::Status::invalid_argument(
@@ -693,6 +765,15 @@ fn prepare_outbox_envelope(
     enriched_obj
         .entry("payload".to_string())
         .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()));
+    enriched_obj
+        .entry("redaction_mode".to_string())
+        .or_insert_with(|| serde_json::Value::String("none".to_string()));
+    enriched_obj
+        .entry("redaction_version".to_string())
+        .or_insert_with(|| serde_json::Value::Number(serde_json::Number::from(1)));
+    enriched_obj
+        .entry("redacted_fields".to_string())
+        .or_insert_with(|| serde_json::Value::Array(Vec::new()));
     Ok((
         event_id_uuid,
         event_id,
@@ -826,6 +907,27 @@ mod outbox_envelope_tests {
                 .contains('T')
         );
         assert!(payload["payload"].is_object());
+        assert_eq!(payload["redaction_mode"], "none");
+        assert_eq!(payload["redaction_version"], 1);
+        assert!(payload["redacted_fields"].as_array().is_some());
+    }
+
+    #[test]
+    fn prepare_outbox_envelope_requires_tenant_for_udb_topics() {
+        let err = prepare_outbox_envelope(
+            "udb.storage.file.finalized.v1",
+            "doc-1",
+            json!({
+                "event_id": "11111111-1111-4111-8111-111111111111",
+                "event_type": "udb.storage.file.finalized.v1",
+                "correlation_id": "corr-1",
+                "document_id": "doc-1"
+            }),
+            None,
+        )
+        .unwrap_err();
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert!(err.message().contains("tenant_id"));
     }
 
     #[test]
@@ -1487,6 +1589,145 @@ mod outbox_envelope_tests {
         assert_eq!(base64, b"hello");
         let text = object_bytes_from_json(&json!({"content_text": "plain"})).unwrap();
         assert_eq!(text, b"plain");
+    }
+
+    // ── Phase 5: encryption-at-rest secret helpers ───────────────────────────
+
+    /// With an encryption key configured, `encrypt_secret_at_rest` produces an
+    /// AEAD envelope that `decrypt_secret_at_rest` reverses to the original.
+    #[tokio::test]
+    async fn secret_at_rest_round_trips_with_key() {
+        use crate::runtime::config::EncryptionSettings;
+        use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
+        let mut settings = EncryptionSettings::default();
+        // 32-byte all-0x2a key, base64-encoded (decode path in encryption.rs).
+        settings.keys.insert(1, B64.encode([0x2au8; 32]));
+        let enc = EncryptionRuntime::from_settings(&settings)
+            .await
+            .expect("settings parse")
+            .expect("a key was configured");
+        let runtime = DataBrokerRuntime {
+            encryption: Some(enc),
+            ..DataBrokerRuntime::default()
+        };
+
+        let secret = "-----BEGIN PRIVATE KEY-----\nABC\n-----END PRIVATE KEY-----";
+        let sealed = runtime.encrypt_secret_at_rest(secret).unwrap();
+        assert!(
+            sealed.starts_with("udb-aead:v"),
+            "sealed value must be an AEAD envelope, got {sealed}"
+        );
+        assert_ne!(sealed, secret, "ciphertext must differ from plaintext");
+        assert_eq!(runtime.decrypt_secret_at_rest(&sealed).unwrap(), secret);
+        // Legacy/dev plaintext (no envelope prefix) passes through unchanged.
+        assert_eq!(
+            runtime.decrypt_secret_at_rest("legacy-plaintext").unwrap(),
+            "legacy-plaintext"
+        );
+    }
+
+    /// Without an encryption key configured, the dev path stores plaintext and
+    /// the round-trip is the identity (no envelope, no error).
+    #[test]
+    fn secret_at_rest_passthrough_without_key_in_dev() {
+        // SAFETY: single-threaded unit test; ensures we are not in fail_closed.
+        unsafe {
+            std::env::remove_var("UDB_FAIL_CLOSED");
+            std::env::remove_var("UDB_ENTERPRISE_AUDIT");
+        }
+        if crate::runtime::security::fail_closed_mode() {
+            // Production-like environment; the dev passthrough assertion does not
+            // apply. The fail-closed error path is asserted by the next branch.
+            return;
+        }
+        let runtime = DataBrokerRuntime::default();
+        let sealed = runtime.encrypt_secret_at_rest("plain-secret").unwrap();
+        assert_eq!(sealed, "plain-secret");
+        assert_eq!(
+            runtime.decrypt_secret_at_rest("plain-secret").unwrap(),
+            "plain-secret"
+        );
+    }
+
+    #[tokio::test]
+    async fn native_json_state_round_trips_with_key() {
+        use crate::runtime::config::{EncryptionSettings, UdbConfig};
+        use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
+        let mut settings = EncryptionSettings::default();
+        settings.object_native_state_required = true;
+        settings.keys.insert(1, B64.encode([0x33u8; 32]));
+        let enc = EncryptionRuntime::from_settings(&settings)
+            .await
+            .expect("settings parse")
+            .expect("a key was configured");
+        let runtime = DataBrokerRuntime {
+            encryption: Some(enc),
+            config: UdbConfig {
+                encryption: settings,
+                ..UdbConfig::default()
+            },
+            ..DataBrokerRuntime::default()
+        };
+
+        let plaintext = serde_json::json!({"pii":"a@example.com","nested":{"ok":true}}).to_string();
+        let stored = runtime
+            .encrypt_native_json_state_at_rest(&plaintext)
+            .expect("encrypt native state");
+        let envelope: serde_json::Value = serde_json::from_str(&stored).unwrap();
+        assert!(
+            envelope
+                .as_str()
+                .unwrap_or_default()
+                .starts_with("udb-aead:v"),
+            "encrypted native state should be stored as a JSON string envelope"
+        );
+        let restored = runtime
+            .decrypt_native_json_state_at_rest(&stored)
+            .expect("decrypt native state");
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&restored).unwrap(),
+            serde_json::from_str::<serde_json::Value>(&plaintext).unwrap()
+        );
+    }
+
+    #[test]
+    fn native_json_state_fails_closed_when_required_without_key() {
+        let runtime = DataBrokerRuntime {
+            config: crate::runtime::config::UdbConfig {
+                encryption: crate::runtime::config::EncryptionSettings {
+                    object_native_state_required: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ..DataBrokerRuntime::default()
+        };
+        let err = runtime
+            .encrypt_native_json_state_at_rest(r#"{"secret":"value"}"#)
+            .expect_err("required native-state encryption must fail without a key");
+        assert!(err.contains("native/object state"));
+    }
+
+    #[test]
+    fn native_json_state_plaintext_passes_through_in_dev() {
+        // SAFETY: single-threaded unit test; ensures we are not in fail_closed.
+        unsafe {
+            std::env::remove_var("UDB_FAIL_CLOSED");
+            std::env::remove_var("UDB_ENTERPRISE_AUDIT");
+        }
+        if crate::runtime::security::fail_closed_mode() {
+            return;
+        }
+        let runtime = DataBrokerRuntime::default();
+        let json = r#"{"public":"metadata"}"#;
+        assert_eq!(
+            runtime.encrypt_native_json_state_at_rest(json).unwrap(),
+            json
+        );
+        assert_eq!(
+            runtime.decrypt_native_json_state_at_rest(json).unwrap(),
+            json
+        );
     }
 }
 

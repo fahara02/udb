@@ -15,7 +15,6 @@
 //! every quote, placeholder, false-literal, and LIKE-escape idiom routes
 //! through a `SqlDialect` hook whose output matches the original.
 
-use crate::backend::BackendKind;
 use crate::generation::ManifestTable;
 use crate::ir::filter::{ComparisonOp, LogicalFilter};
 use crate::ir::operations::{AggregateExpr, AggregateFunc, LogicalAggregate};
@@ -29,9 +28,6 @@ use super::CompileError;
 /// on [`SqlCompiler`]. Implementors are zero-sized marker types
 /// (`Postgres`, `Mysql`, `Sqlite`, `Mssql`).
 pub(super) trait SqlDialect {
-    /// The backend this dialect targets (for typed error variants).
-    fn backend() -> BackendKind;
-
     /// Quote an identifier: `"x"` (Postgres/SQLite), `` `x` `` (MySQL),
     /// `[x]` (MSSQL). Returns the full quoted token including delimiters.
     fn quote(ident: &str) -> String;

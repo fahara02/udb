@@ -208,19 +208,23 @@ impl crate::runtime::backend_context::BackendContextEnforcer for ClickHouseExecu
         &self,
         ctx: &crate::runtime::backend_context::AppliedContext,
     ) -> crate::runtime::backend_context::ContextEffect {
-        // A2 (2026-05-30): the ClickHouse compiler now AND-injects
-        // `tenant_id = ?` / `project_id = ?` into every read,
-        // delete, search and aggregate when the manifest declares
-        // those columns (`tenant_id` or `_tenant_id`), and stamps
-        // them onto INSERTs. That is statement-layer enforcement:
-        // no compiled query can leak across tenant boundaries.
-        // Per-query SETTINGS are still rendered alongside for
-        // operator row-policy integration, but enforcement no
-        // longer depends on the operator wiring those policies.
-        crate::runtime::backend_context::enforce_with_mechanism(
-            ctx,
-            "compiler_tenant_predicate_injection + SETTINGS",
-        )
+        // HONEST POSTURE: this generic executor accepts raw SQL and ad-hoc
+        // table/filter specs. It can publish tenant context through ClickHouse
+        // SETTINGS for operator row policies to consume, but it does not prove
+        // that arbitrary SQL/filter dispatch was rewritten with tenant/project
+        // predicates. Treat the generic path as advisory unless a higher-level
+        // compiler path owns and verifies predicate injection.
+        if ctx.is_empty() {
+            crate::runtime::backend_context::ContextEffect::Advisory {
+                recorded_in: "no_context_to_apply".into(),
+            }
+        } else {
+            crate::runtime::backend_context::ContextEffect::Advisory {
+                recorded_in: "ClickHouse SETTINGS context for generic raw SQL/filter dispatch; \
+                              tenant/project predicate injection not verified here"
+                    .into(),
+            }
+        }
     }
 }
 
@@ -685,6 +689,7 @@ impl BackendExecutor for ClickHouseExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runtime::backend_context::{AppliedContext, BackendContextEnforcer, ContextEffect};
 
     #[test]
     fn clickhouse_executor_kind_and_name() {
@@ -700,6 +705,32 @@ mod tests {
         let exec = ClickHouseExecutor::new(cfg);
         assert_eq!(exec.kind(), BackendKind::Clickhouse);
         assert_eq!(exec.name(), "ClickHouse");
+    }
+
+    #[test]
+    fn clickhouse_generic_dispatch_context_is_advisory() {
+        let exec = ClickHouseExecutor::new(ClickHouseConfig {
+            http_base: "http://localhost:8123".to_string(),
+            username: "default".to_string(),
+            password: "".to_string(),
+            database: "default".to_string(),
+            is_cloud: false,
+            connect_timeout_secs: 10,
+            query_timeout_secs: 30,
+        });
+        let ctx = AppliedContext {
+            tenant_id: "tenant-a".into(),
+            project_id: "project-a".into(),
+            ..Default::default()
+        };
+
+        match BackendContextEnforcer::enforce(&exec, &ctx) {
+            ContextEffect::Advisory { recorded_in } => {
+                assert!(recorded_in.contains("generic raw SQL/filter dispatch"));
+                assert!(recorded_in.contains("not verified"));
+            }
+            other => panic!("expected Advisory, got {other:?}"),
+        }
     }
 
     #[tokio::test]

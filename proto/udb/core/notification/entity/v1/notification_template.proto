@@ -4,6 +4,7 @@ package udb.core.notification.entity.v1;
 
 import "google/protobuf/timestamp.proto";
 import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
 import "udb/core/notification/entity/v1/enums.proto";
 
 option csharp_namespace = "udb.core.Notification.Entity.V1";
@@ -14,6 +15,11 @@ option php_namespace = "Udb\\Core\\Notification\\Entity\\V1";
 
 // ---------------------------------------------------------------------------
 // NotificationTemplate — Message template with variable substitution.
+//
+// F4.3 decision (hybrid tenant model): NULL tenant_id = platform-global default
+// template; non-null tenant_id = per-tenant override. Resolution prefers the
+// per-tenant row over the global default for the same (event_type, channel).
+// RLS lets a tenant see its own rows plus the global defaults.
 // ---------------------------------------------------------------------------
 
 message NotificationTemplate {
@@ -25,7 +31,13 @@ message NotificationTemplate {
     comment: "Message templates for each notification type and channel"
     soft_delete: true
     audit_fields: true
-    enable_rls: false
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      command: "ALL"
+      using: "(tenant_id IS NULL OR tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
     sql_artifacts: {
       name: "touch_updated_at_function"
       backend: "postgres"
@@ -50,10 +62,29 @@ message NotificationTemplate {
     }
     required_scope: "notification:admin"
   };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id IS NULL OR tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "notification.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
 
   string template_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "template_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
 
   // Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+  // Hybrid uniqueness: (event_type, channel, tenant_id). A tenant override and the
+  // global default (tenant_id NULL) for the same (event_type, channel) coexist;
+  // resolution prefers the per-tenant row over the global default. The unique
+  // index stays on (event_type, channel) for now (global dedupe); when a
+  // per-tenant write path lands, split into partial unique indexes keyed on
+  // tenant_id IS NULL vs IS NOT NULL.
   string event_type = 2 [(udb.core.common.v1.pg_column) = { column_name: "event_type" sql_type: "VARCHAR(80)" not_null: true index: { index_name: "idx_notif_templates_event_channel" index_type: "BTREE" columns: "event_type" columns: "channel" unique: true } }];
 
   NotificationChannel channel = 3 [(udb.core.common.v1.pg_column) = { column_name: "channel" sql_type: "VARCHAR(20)" not_null: true }];
@@ -72,4 +103,7 @@ message NotificationTemplate {
 
   string created_by = 11 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "VARCHAR(120)" comment: "Identity that created this record." }];
   string deleted_by = 12 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" comment: "Soft delete actor" }];
+
+  // NULLABLE: NULL = platform-global default template; non-null = per-tenant override.
+  string tenant_id = 13 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" comment: "Owning tenant for per-tenant overrides; NULL = platform-global default template" index: { index_name: "idx_notif_templates_tenant_id" index_type: "BTREE" } }];
 }

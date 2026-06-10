@@ -35,7 +35,7 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 use uuid::Uuid;
 
-use super::dialect::apply_projection_summary_bucket;
+use super::dialect::{apply_projection_summary_bucket, projection_retry_delay_secs};
 use super::sqlite::SqliteCanonicalStore;
 use super::system_store::{
     DeadLetterGroup, PendingTaskMetric, ProjectionClaimFilter, ProjectionOperation,
@@ -68,13 +68,10 @@ fn parse_iso(s: &str) -> DateTime<Utc> {
         .unwrap_or_else(|_| Utc::now())
 }
 
-/// Required SQLite version for `RETURNING` (3.35).
+/// Required SQLite version for `RETURNING` (3.35). Surfaced in the claim
+/// error path so a too-old engine produces an actionable diagnostic rather
+/// than an opaque syntax error.
 const REQUIRED_SQLITE_VERSION: &str = "3.35";
-
-fn projection_retry_delay_secs(retry_count: i32) -> i64 {
-    let attempt = retry_count.max(1).min(12) as u32;
-    (1_i64 << (attempt - 1)).min(3600)
-}
 
 /// Parse the row sqlx returns from claim / status queries. The
 /// SELECT clause is constant so the column order is stable; we read
@@ -299,7 +296,25 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
             .bind(filter.project_id.as_deref().unwrap_or(""))
             .fetch_all(self.pool_ref())
             .await
-            .map_err(|e| SystemStoreError::query("sqlite", sql.clone(), e))?;
+            .map_err(|e| {
+                // The claim relies on the `RETURNING` clause, which SQLite only
+                // supports from REQUIRED_SQLITE_VERSION onward. A syntax error
+                // here almost always means the engine is too old; annotate the
+                // failure so the operator knows the minimum version to run.
+                let msg = e.to_string();
+                if msg.contains("RETURNING") || msg.contains("syntax error") {
+                    SystemStoreError::query(
+                        "sqlite",
+                        format!(
+                            "{sql}\n-- note: projection claim requires SQLite >= \
+                             {REQUIRED_SQLITE_VERSION} for RETURNING support"
+                        ),
+                        e,
+                    )
+                } else {
+                    SystemStoreError::query("sqlite", sql.clone(), e)
+                }
+            })?;
         let mut out = Vec::with_capacity(rows.len());
         for row in rows {
             out.push(row_to_projection_task(row)?);
@@ -345,12 +360,25 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
                 new_status.as_str()
             )));
         }
+        // FAILED tasks back off exponentially before becoming re-claimable
+        // (the claim query gates on `next_retry_at <= now`); DEAD_LETTER is
+        // terminal and keeps `next_retry_at = NULL`. We write next_retry_at in
+        // the same `%Y-%m-%dT%H:%M:%fZ` format the claim compares against. The
+        // `?` backoff parameter is referenced in both CASE branches so the
+        // positional bind count stays correct.
+        let backoff_secs: Option<i64> = match new_status {
+            ProjectionTaskStatus::Failed => Some(projection_retry_delay_secs(new_retry_count)),
+            _ => None,
+        };
         let sql = format!(
             "UPDATE {TABLE}
              SET status = ?,
                  retry_count = ?,
                  last_error = ?,
-                 next_retry_at = NULL,
+                 next_retry_at = CASE
+                     WHEN ? IS NULL THEN NULL
+                     ELSE strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ? || ' seconds')
+                 END,
                  updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
              WHERE task_id = ?"
         );
@@ -359,6 +387,8 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
             .bind(new_status.as_str())
             .bind(new_retry_count)
             .bind(error)
+            .bind(backoff_secs)
+            .bind(backoff_secs)
             .bind(&task_id_text)
             .execute(self.pool_ref())
             .await
@@ -685,7 +715,40 @@ mod tests {
         assert_eq!(summary.failed, 1);
         assert_eq!(summary.in_progress, 0);
 
-        // Re-claim — the FAILED row is back in the queue.
+        // mark_failed now applies an exponential backoff: the row carries a
+        // future next_retry_at, so it is NOT immediately re-claimable.
+        let too_soon = store
+            .claim_projection_tasks(&ProjectionClaimFilter::default())
+            .await
+            .unwrap();
+        assert!(
+            too_soon.is_empty(),
+            "FAILED row must stay out of the claim set until its backoff elapses"
+        );
+        // Confirm the backoff timestamp was actually written.
+        let nra: Option<String> = sqlx::query(&format!(
+            "SELECT next_retry_at FROM {TABLE} WHERE task_id = ?"
+        ))
+        .bind(id.to_string())
+        .fetch_one(store.pool_ref())
+        .await
+        .unwrap()
+        .try_get("next_retry_at")
+        .unwrap();
+        assert!(
+            nra.is_some(),
+            "FAILED task must have a next_retry_at backoff"
+        );
+
+        // Simulate elapsed backoff (the worker can't fast-forward the wall
+        // clock under SQLite), then re-claim — the FAILED row is back.
+        sqlx::query(&format!(
+            "UPDATE {TABLE} SET next_retry_at = NULL WHERE task_id = ?"
+        ))
+        .bind(id.to_string())
+        .execute(store.pool_ref())
+        .await
+        .unwrap();
         let second = store
             .claim_projection_tasks(&ProjectionClaimFilter::default())
             .await
@@ -730,6 +793,15 @@ mod tests {
             claimed.is_empty(),
             "row at retry_count = max_retries must not be claimed"
         );
+        // Clear the backoff so this test isolates the max_retries gate from
+        // the next_retry_at gate (mark_failed sets a future next_retry_at).
+        sqlx::query(&format!(
+            "UPDATE {TABLE} SET next_retry_at = NULL WHERE task_id = ?"
+        ))
+        .bind(id.to_string())
+        .execute(store.pool_ref())
+        .await
+        .unwrap();
         // But max_retries=4 picks it up.
         let claimed = store
             .claim_projection_tasks(&ProjectionClaimFilter {

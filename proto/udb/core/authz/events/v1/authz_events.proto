@@ -3,6 +3,7 @@ syntax = "proto3";
 package udb.core.authz.events.v1;
 
 import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/security.proto";
 
 option csharp_namespace = "udb.core.Authz.Events.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/events/v1;authzeventsv1";
@@ -17,6 +18,14 @@ option php_namespace = "Udb\\Core\\Authz\\Events\\V1";
 
 // Kafka topic: udb.authz.role.assigned.v1
 message RoleAssignedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authz.events.v1.RoleAssignedEvent"
+    outbox_topic: "udb.authz.role.assigned.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string user_role_id = 2;
   string user_id = 3;
@@ -32,6 +41,14 @@ message RoleAssignedEvent {
 
 // Kafka topic: udb.authz.role.revoked.v1
 message RoleRevokedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authz.events.v1.RoleRevokedEvent"
+    outbox_topic: "udb.authz.role.revoked.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string user_role_id = 2;
   string user_id = 3;
@@ -44,6 +61,14 @@ message RoleRevokedEvent {
 
 // Kafka topic: udb.authz.access.denied.v1
 message AccessDeniedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authz.events.v1.AccessDeniedEvent"
+    outbox_topic: "udb.authz.access.denied.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string user_id = 2;
   string tenant_id = 3;
@@ -55,6 +80,14 @@ message AccessDeniedEvent {
 
 // Kafka topic: udb.authz.role.created.v1
 message RoleCreatedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authz.events.v1.RoleCreatedEvent"
+    outbox_topic: "udb.authz.role.created.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string role_id = 2;
   string role_code = 3;
@@ -65,6 +98,14 @@ message RoleCreatedEvent {
 
 // Kafka topic: udb.authz.role.updated.v1
 message RoleUpdatedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authz.events.v1.RoleUpdatedEvent"
+    outbox_topic: "udb.authz.role.updated.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string role_id = 2;
   string role_code = 3;
@@ -77,6 +118,14 @@ message RoleUpdatedEvent {
 
 // RoleRemovedEvent mirrors RoleRevokedEvent for compatibility with consumer code.
 message RoleRemovedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authz.events.v1.RoleRemovedEvent"
+    outbox_topic: "udb.authz.role_removed_event.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string user_role_id = 2;
   string user_id = 3;
@@ -90,6 +139,14 @@ message RoleRemovedEvent {
 
 // Kafka topic: udb.authz.access.surface.updated.v1
 message AccessSurfaceUpdatedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authz.events.v1.AccessSurfaceUpdatedEvent"
+    outbox_topic: "udb.authz.access.surface.updated.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string principal_id = 2;
   string old_access_surface = 3;
@@ -99,4 +156,126 @@ message AccessSurfaceUpdatedEvent {
   string updated_by = 7;
   string correlation_id = 8;
   google.protobuf.Timestamp occurred_at = 9;
+}
+
+// ===========================================================================
+// Phase L (Compliance Audit) — authz mutation / decision events.
+// ===========================================================================
+
+// Kafka topic: udb.authz.relationship.tuple.changed.v1
+message RelationshipTupleChangedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authz.events.v1.RelationshipTupleChangedEvent"
+    outbox_topic: "udb.authz.relationship.tuple.changed.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string subject = 2;
+  string relation = 3;
+  string object = 4;
+  string tenant_id = 5;
+  string project_id = 6;
+  string verb = 7; // upsert, delete
+  string correlation_id = 8;
+  google.protobuf.Timestamp occurred_at = 9;
+}
+
+// Kafka topic: udb.authz.native.access.issued.v1
+message NativeAccessGrantIssuedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authz.events.v1.NativeAccessGrantIssuedEvent"
+    outbox_topic: "udb.authz.native.access.issued.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string principal_id = 2;
+  string tenant_id = 3;
+  string project_id = 4;
+  string policy_version = 5;
+  string relationship_version = 6;
+  string correlation_id = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+}
+
+// Kafka topic: udb.authz.native.access.denied.v1
+message NativeAccessGrantDeniedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authz.events.v1.NativeAccessGrantDeniedEvent"
+    outbox_topic: "udb.authz.native.access.denied.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string principal_id = 2;
+  string tenant_id = 3;
+  string project_id = 4;
+  string reason_code = 5;
+  string correlation_id = 6;
+  google.protobuf.Timestamp occurred_at = 7;
+}
+
+// Kafka topic: udb.authz.policy.bundle.issued.v1
+message PolicyBundleIssuedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authz.events.v1.PolicyBundleIssuedEvent"
+    outbox_topic: "udb.authz.policy.bundle.issued.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+  int64 policy_revision = 4;
+  int64 relationship_revision = 5;
+  string correlation_id = 6;
+  google.protobuf.Timestamp occurred_at = 7;
+}
+
+// Kafka topic: udb.authz.policy.bundle.revoked.v1
+message PolicyBundleRevokedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authz.events.v1.PolicyBundleRevokedEvent"
+    outbox_topic: "udb.authz.policy.bundle.revoked.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+  int64 below_policy_revision = 4;
+  string reason = 5;
+  string correlation_id = 6;
+  google.protobuf.Timestamp occurred_at = 7;
+}
+
+// Kafka topic: udb.authz.policy.simulated.v1
+message PolicySimulatedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authz.events.v1.PolicySimulatedEvent"
+    outbox_topic: "udb.authz.policy.simulated.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+  string policy_version_id = 4;
+  string simulated_by = 5;
+  int32 diff_count = 6;
+  string correlation_id = 7;
+  google.protobuf.Timestamp occurred_at = 8;
 }

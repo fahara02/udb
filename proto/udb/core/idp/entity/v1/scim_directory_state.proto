@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package udb.core.idp.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/idp/entity/v1/enums.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Idp.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/idp/entity/v1;idpv1";
+option java_package = "com.udb.core.idp.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Idp\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// ScimDirectoryState — Per-provider SCIM 2.0 sync cursor and health.
+//
+// One row per (tenant, provider). Tracks the directory cursor, last sync time,
+// consecutive failure count, and the deprovision policy applied when an upstream
+// entry disappears. RLS scopes rows to the current tenant.
+//
+// Migration order 12.
+// ---------------------------------------------------------------------------
+message ScimDirectoryState {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "scim_directory_state"
+    schema_name: "udb_idp"
+    migration_order: 12
+    is_table: true
+    comment: "SCIM 2.0 directory sync cursor, health, and deprovision policy per provider"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "uq_scim_directory_state_tenant_provider"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "provider_id"
+    }
+    cdc_topic: "udb.idp.scim_state.cdc"
+    required_scope: "idp:scim:read"
+    replica_hint: "primary"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "idp.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string scim_directory_state_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "scim_directory_state_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" not_null: true }];
+
+  string provider_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "provider_id" sql_type: "UUID" not_null: true comment: "FK to udb_idp.identity_providers.provider_id" foreign_key: { references_table: "identity_providers" references_column: "provider_id" references_schema: "udb_idp" on_delete: REFERENTIAL_ACTION_CASCADE } index: { index_name: "idx_scim_directory_state_provider" index_type: "BTREE" } }];
+
+  // Opaque provider cursor (SCIM does not standardize; we persist whatever the
+  // connector returns — e.g. a changeToken or a high-water timestamp).
+  string cursor = 4 [(udb.core.common.v1.pg_column) = { column_name: "cursor" sql_type: "VARCHAR(512)" comment: "Opaque SCIM sync cursor / change token" }];
+
+  google.protobuf.Timestamp last_sync_at = 5 [(udb.core.common.v1.pg_column) = { column_name: "last_sync_at" sql_type: "TIMESTAMPTZ" comment: "Timestamp of the last completed SCIM sync" }];
+
+  int32 failure_count = 6 [(udb.core.common.v1.pg_column) = { column_name: "failure_count" sql_type: "INTEGER" not_null: true default_value: "0" comment: "Consecutive SCIM sync failures" }];
+
+  string last_error = 7 [(udb.core.common.v1.pg_column) = { column_name: "last_error" sql_type: "TEXT" comment: "Last SCIM sync error message" }];
+
+  DeprovisionPolicy deprovision_policy = 8 [(udb.core.common.v1.pg_column) = { column_name: "deprovision_policy" sql_type: "VARCHAR(40)" not_null: true default_value: "'DEPROVISION_POLICY_DEACTIVATE'" }];
+
+  google.protobuf.Timestamp created_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  google.protobuf.Timestamp updated_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true }];
+}

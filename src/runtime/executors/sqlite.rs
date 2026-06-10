@@ -24,8 +24,7 @@ use sqlx::SqlitePool;
 
 use crate::broker::RequestContext;
 use crate::runtime::backend_context::{
-    AppliedContext, BackendContextEnforcer, ContextEffect, SqlDialect, enforce_with_mechanism,
-    render_sql_session_settings,
+    AppliedContext, BackendContextEnforcer, ContextEffect, SqlDialect, render_sql_session_settings,
 };
 use crate::runtime::core::{validate_mutation_sql, validate_read_sql};
 use crate::runtime::executor_utils::{
@@ -41,8 +40,11 @@ pub struct SqliteExecutor {
     pub(crate) pool: SqlitePool,
     /// Optional request context. When `Some`, `query`/`mutate` wrap the
     /// SQL in a transaction and populate a temporary `_udb_context`
-    /// table with the request's tenant/project/purpose. RLS-style
-    /// views can read from that table.
+    /// table with the request's tenant/project/purpose. Operator-installed
+    /// RLS-style views can read from that table. NOTE: this populates tenant
+    /// session context ONLY; SQLite has no native RLS, so it performs NO
+    /// in-engine row filtering — operator views / broker tenant-predicate
+    /// injection are REQUIRED for isolation. See `enforce` for the honest posture.
     pub(crate) context: Option<Arc<RequestContext>>,
 }
 
@@ -170,10 +172,29 @@ impl BackendContextEnforcer for SqliteExecutor {
     }
 
     fn enforce(&self, ctx: &AppliedContext) -> ContextEffect {
-        enforce_with_mechanism(
-            ctx,
-            "_udb_context temp table populated per request-scoped transaction",
-        )
+        // HONEST POSTURE (M1): SQLite has NO native row-level-security engine.
+        // Populating the `_udb_context` temp table publishes the tenant context,
+        // but performs NO in-engine row filtering by itself — rows are only scoped
+        // if the OPERATOR installs views that JOIN/filter on `_udb_context` (e.g.
+        // `WHERE tenant_id = (SELECT value FROM _udb_context WHERE key=...)`), or
+        // if the broker injects a tenant predicate at compile time. Therefore the
+        // temp-table population is `Advisory`, not `Enforced`: the broker records
+        // the context for operator-side policy to consume, but does not itself
+        // constrain row visibility. This matches `supports_rls: false` for SQLite.
+        // Without operator views OR broker predicate injection, tenant isolation
+        // on SQLite is application-trust.
+        if ctx.is_empty() {
+            ContextEffect::Advisory {
+                recorded_in: "no_context_to_apply".into(),
+            }
+        } else {
+            ContextEffect::Advisory {
+                recorded_in: "_udb_context temp table populated (no native SQLite RLS — \
+                              operator-installed views / broker tenant-predicate injection \
+                              REQUIRED for row isolation)"
+                    .into(),
+            }
+        }
     }
 }
 

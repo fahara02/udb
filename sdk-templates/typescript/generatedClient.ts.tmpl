@@ -8,7 +8,7 @@
 // method named after the RPC and adds:
 //   - configurable per-call deadline / timeout,
 //   - retry with exponential backoff + jitter on transient gRPC codes
-//     (UNAVAILABLE, DEADLINE_EXCEEDED, RESOURCE_EXHAUSTED) for retry-safe kinds,
+//     (UNAVAILABLE, RESOURCE_EXHAUSTED; plus DEADLINE_EXCEEDED only for read-only RPCs),
 //   - TLS / credentials wiring,
 //   - metadata (authorization / api-key / x-request-id / UdbMetadata headers),
 //   - typed error mapping that unpacks the `udb-error-detail-bin` trailer.
@@ -39,8 +39,8 @@ export const UDB_SDK_VERSION = "{{UDB_VERSION}}";
 // ── Configuration ─────────────────────────────────────────────────────────────
 
 /** Retry policy for transient failures. Defaults mirror the server's recommended
- *  client behavior. A non-idempotent RPC (any client-streaming / bidi call) is
- *  never retried regardless of this policy. */
+ *  client behavior. DEADLINE_EXCEEDED is gated separately to read-only RPCs, and
+ *  client-streaming / bidi calls are never retried regardless of this policy. */
 export interface RetryPolicy {
   maxAttempts: number;
   initialBackoffMs: number;
@@ -57,7 +57,6 @@ export const DEFAULT_RETRY_POLICY: RetryPolicy = {
   backoffMultiplier: 2.0,
   retryableCodes: [
     grpc.status.UNAVAILABLE,
-    grpc.status.DEADLINE_EXCEEDED,
     grpc.status.RESOURCE_EXHAUSTED,
   ],
 };
@@ -157,6 +156,32 @@ function decodeErrorDetail(err: grpc.ServiceError): UdbErrorDetail | undefined {
   const code = trailers.get("udb-error-code");
   if (code && code.length) detail.code = String(code[0]);
   return detail;
+}
+
+function isReadOnlyRpcName(name: string): boolean {
+  return [
+    "Get",
+    "List",
+    "Check",
+    "Validate",
+    "Introspect",
+    "Authorize",
+    "BatchCheck",
+    "Preview",
+    "Resolve",
+    "Explain",
+    "Diff",
+    "Lint",
+    "Test",
+    "Select",
+    "AnalyticalQuery",
+    "VectorSearch",
+    "GraphQuery",
+    "CacheGet",
+    "CacheScan",
+    "DocumentGet",
+    "DocumentFind",
+  ].some((prefix) => name.startsWith(prefix));
 }
 
 // ── Channel & service resolution ────────────────────────────────────────────────
@@ -264,7 +289,8 @@ export class UdbCore {
     return options;
   }
 
-  private isRetryable(err: grpc.ServiceError): boolean {
+  private isRetryable(err: grpc.ServiceError, readOnly: boolean): boolean {
+    if (err.code === grpc.status.DEADLINE_EXCEEDED) return readOnly;
     return this.retry.retryableCodes.includes(err.code);
   }
 
@@ -292,6 +318,7 @@ export class UdbCore {
     fullName: string,
     method: string,
     request: any,
+    readOnly: boolean,
     call?: CallOptions,
   ): Promise<TRes> {
     const stub = this.stub(fullName);
@@ -313,7 +340,7 @@ export class UdbCore {
         });
       } catch (e) {
         const err = e as grpc.ServiceError;
-        if (retryEnabled && attempt + 1 < this.retry.maxAttempts && this.isRetryable(err)) {
+        if (retryEnabled && attempt + 1 < this.retry.maxAttempts && this.isRetryable(err, readOnly)) {
           await this.delay(this.backoff(attempt), call?.signal);
           attempt += 1;
           continue;
@@ -457,7 +484,7 @@ const SERVICE_METHOD_INSTALLERS: Array<(core: UdbCore, api: any) => void> = [];
 SERVICE_METHOD_INSTALLERS.push((core, api) => {
   if (api.serviceFull !== "{{SERVICE_FULL}}") return;
   api.{{RPC_SNAKE}} = (request: any, call?: CallOptions) =>
-    core.unary("{{SERVICE_FULL}}", "{{RPC_NAME}}", request, call);
+    core.unary("{{SERVICE_FULL}}", "{{RPC_NAME}}", request, isReadOnlyRpcName("{{RPC_NAME}}"), call);
 });
 // @@UDB_RPC_END
 // @@UDB_RPC_BEGIN kind=server_streaming

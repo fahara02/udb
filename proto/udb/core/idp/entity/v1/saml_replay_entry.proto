@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package udb.core.idp.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Idp.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/idp/entity/v1;idpv1";
+option java_package = "com.udb.core.idp.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Idp\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// SamlReplayEntry — Durable single-use guard for SAML assertion IDs.
+//
+// A consumed assertion's ID is inserted here (unique per tenant+provider). A
+// duplicate insert means a replay and the second authentication is rejected.
+// Entries are pruned past not_on_or_after. RLS scopes rows to the current
+// tenant. Migration order 13.
+// ---------------------------------------------------------------------------
+message SamlReplayEntry {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "saml_replay_entries"
+    schema_name: "udb_idp"
+    migration_order: 13
+    is_table: true
+    comment: "Single-use guard for consumed SAML assertion IDs (replay protection)"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "uq_saml_replay_tenant_provider_assertion"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "provider_id"
+      columns: "assertion_id"
+    }
+    indexes: {
+      index_name: "idx_saml_replay_expiry"
+      index_type: "BTREE"
+      columns: "not_on_or_after"
+    }
+    replica_hint: "primary"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "idp.operational"
+    retention_days: 30
+    audit_mode: AUDIT_MODE_NONE
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string saml_replay_entry_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "saml_replay_entry_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" not_null: true }];
+
+  string provider_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "provider_id" sql_type: "UUID" not_null: true }];
+
+  string assertion_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "assertion_id" sql_type: "VARCHAR(255)" not_null: true comment: "SAML assertion ID (xs:ID), unique per tenant+provider" }];
+
+  google.protobuf.Timestamp not_on_or_after = 5 [(udb.core.common.v1.pg_column) = { column_name: "not_on_or_after" sql_type: "TIMESTAMPTZ" not_null: true comment: "Assertion validity bound; entries are prunable after this" }];
+
+  google.protobuf.Timestamp consumed_at = 6 [(udb.core.common.v1.pg_column) = { column_name: "consumed_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+}

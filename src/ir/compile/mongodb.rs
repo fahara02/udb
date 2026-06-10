@@ -908,18 +908,9 @@ fn and_with_context(user_filter: Json, table: &ManifestTable, ctx: &CompileConte
     json!({ "$and": [user_filter, ctx_json] })
 }
 
-fn record_to_json(record: &crate::ir::operations::LogicalRecord) -> Json {
-    let mut map = Map::new();
-    for (k, v) in record {
-        map.insert(k.clone(), value_to_json(v));
-    }
-    Json::Object(map)
-}
-
-/// Same as `record_to_json` but stamps the active context's tenant +
-/// project onto the document so future tenant-scoped reads can find
-/// it. C7/C8: write-side enforcement that pairs with the read-side
-/// `and_with_context` filter injection.
+/// Stamps the active context's tenant + project onto the document so future
+/// tenant-scoped reads can find it. C7/C8: write-side enforcement that pairs
+/// with the read-side `and_with_context` filter injection.
 fn record_to_json_with_context(
     record: &crate::ir::operations::LogicalRecord,
     table: &ManifestTable,

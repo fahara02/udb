@@ -47,12 +47,19 @@ from pyspark.sql.types import StringType, StructField, StructType, TimestampType
 AUTHN_TOPICS = [
     "udb.authn.user.registered.v1",
     "udb.authn.user.login.v1",
+    "udb.authn.user.login.failed.v1",
     "udb.authn.session.revoked.v1",
+    "udb.authn.session.refreshed.v1",
     "udb.authn.user.locked.v1",
     "udb.authn.user.password.changed.v1",
     "udb.authn.otp.sent.v1",
+    "udb.authn.otp.verified.v1",
+    "udb.authn.otp.failed.v1",
     "udb.authn.user.status.changed.v1",
     "udb.authn.user.email.verified.v1",
+    "udb.authn.token.reuse.detected.v1",
+    "udb.authn.token.revoked.v1",
+    "udb.authn.device.revoked.v1",
 ]
 AUTHZ_TOPICS = [
     "udb.authz.role.created.v1",
@@ -60,17 +67,55 @@ AUTHZ_TOPICS = [
     "udb.authz.role.revoked.v1",
     "udb.authz.role.updated.v1",
     "udb.authz.access.denied.v1",
+    "udb.authz.relationship.tuple.changed.v1",
+    "udb.authz.policy.bundle.invalidated.v1",
 ]
 APIKEY_TOPICS = [
     "udb.apikey.created.v1",
     "udb.apikey.revoked.v1",
     "udb.apikey.updated.v1",
+    "udb.apikey.validate.failed.v1",
 ]
-ALL_TOPICS = AUTHN_TOPICS + AUTHZ_TOPICS + APIKEY_TOPICS
+# Phase L: IdP plane + operations plane families.
+IDP_TOPICS = [
+    "udb.idp.provider.created.v1",
+    "udb.idp.provider.disabled.v1",
+    "udb.idp.provider.jwks.refreshed.v1",
+    "udb.idp.scim.user.provisioned.v1",
+    "udb.idp.scim.user.deactivated.v1",
+]
+OPS_TOPICS = [
+    "udb.ops.emergency.revoke.v1",
+    "udb.ops.emergency.denyall.v1",
+    "udb.ops.breakglass.grant.v1",
+]
+ALL_TOPICS = AUTHN_TOPICS + AUTHZ_TOPICS + APIKEY_TOPICS + IDP_TOPICS + OPS_TOPICS
 
 # Java regex matching every native auth topic — used with `subscribePattern` so
 # the job consumes existing topics without requiring all of them to be created.
-TOPIC_PATTERN = r"udb\.(authn|authz|apikey)\..*"
+# Phase L extends coverage to the IdP (`udb.idp.*`) and operations (`udb.ops.*`)
+# planes so their security events roll up alongside authn/authz/apikey.
+TOPIC_PATTERN = r"udb\.(authn|authz|apikey|idp|ops)\..*"
+
+# Event families the security dashboards alert on (Phase L3 task7). Each maps a
+# logical family to the set of topics that belong to it, so the rollup can window
+# them per tenant for spike detection.
+SECURITY_FAMILIES = {
+    "login_failure": ["udb.authn.user.login.failed.v1", "udb.authn.otp.failed.v1"],
+    "lockout": ["udb.authn.user.locked.v1"],
+    "authz_deny": ["udb.authz.access.denied.v1", "udb.authz.native.access.denied.v1"],
+    "revocation": [
+        "udb.authn.session.revoked.v1",
+        "udb.authn.token.revoked.v1",
+        "udb.authn.device.revoked.v1",
+        "udb.authn.token.reuse.detected.v1",
+        "udb.ops.emergency.revoke.v1",
+    ],
+    "idp_failure": [
+        "udb.idp.provider.jwks.refreshed.v1",
+        "udb.idp.saml.replay.rejected.v1",
+    ],
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -166,6 +211,41 @@ def windowed_metrics(events, window: str):
     )
 
 
+def security_family_metrics(events, window: str):
+    """Per-tenant, per-security-family counts over a tumbling window (Phase L3
+    task7). Classifies each event into a security family (login failure, lockout,
+    authz deny, revocation, IdP failure) and counts per tenant so dashboards can
+    alert on denial/anomaly spikes. Events outside any family are dropped.
+    """
+    # Build a CASE expression mapping event_type → family label.
+    family_col = None
+    for family, topics in SECURITY_FAMILIES.items():
+        cond = F.col("event_type").isin(topics)
+        family_col = (
+            F.when(cond, F.lit(family))
+            if family_col is None
+            else family_col.when(cond, F.lit(family))
+        )
+    classified = events.withColumn("security_family", family_col.otherwise(F.lit(None)))
+    return (
+        classified.where(F.col("security_family").isNotNull())
+        .withWatermark("event_time", "10 minutes")
+        .groupBy(
+            F.window("event_time", window).alias("window"),
+            F.col("tenant_id"),
+            F.col("security_family"),
+        )
+        .agg(F.count("*").alias("event_count"))
+        .select(
+            F.col("window.start").alias("window_start"),
+            F.col("window.end").alias("window_end"),
+            "tenant_id",
+            "security_family",
+            "event_count",
+        )
+    )
+
+
 def main() -> None:
     args = parse_args()
     spark = (
@@ -180,6 +260,12 @@ def main() -> None:
     starting = "earliest" if args.once else "latest"
     events = build_stream(spark, args.bootstrap, starting)
     metrics = windowed_metrics(events, args.window)
+    # Phase L3 task7: a second rollup keyed by security family for the
+    # denial/anomaly-spike dashboards. Written to a sibling `security/` path so
+    # the per-event-type and per-family feeds don't collide on schema/checkpoint.
+    security = security_family_metrics(events, args.window)
+    security_output = os.path.join(args.output, "security")
+    security_checkpoint = os.path.join(args.checkpoint, "security")
 
     writer = (
         metrics.writeStream.outputMode("append")
@@ -187,9 +273,16 @@ def main() -> None:
         .option("path", args.output)
         .option("checkpointLocation", args.checkpoint)
     )
+    security_writer = (
+        security.writeStream.outputMode("append")
+        .format("parquet")
+        .option("path", security_output)
+        .option("checkpointLocation", security_checkpoint)
+    )
     if args.once:
         # Trigger.AvailableNow: process everything currently in Kafka, then stop.
         query = writer.trigger(availableNow=True).start()
+        security_query = security_writer.trigger(availableNow=True).start()
         if args.console:
             (
                 events.writeStream.outputMode("append")
@@ -200,9 +293,11 @@ def main() -> None:
                 .awaitTermination()
             )
         query.awaitTermination()
+        security_query.awaitTermination()
         return
 
     query = writer.start()
+    security_query = security_writer.start()
     if args.console:
         (
             metrics.writeStream.outputMode("update")
@@ -211,6 +306,7 @@ def main() -> None:
             .start()
         )
     query.awaitTermination()
+    security_query.awaitTermination()
 
 
 if __name__ == "__main__":

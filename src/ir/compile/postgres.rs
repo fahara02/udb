@@ -13,8 +13,7 @@
 //! before any SQL is emitted.
 
 use crate::backend::BackendKind;
-use crate::generation::ManifestTable;
-use crate::ir::filter::{ComparisonOp, LogicalFilter};
+use crate::ir::filter::ComparisonOp;
 use crate::ir::operations::{
     ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead, LogicalResourceOp,
     LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
@@ -31,9 +30,6 @@ use super::{CompileContext, CompileError, CompiledRendering, Compiler};
 struct Postgres;
 
 impl SqlDialect for Postgres {
-    fn backend() -> BackendKind {
-        BackendKind::Postgres
-    }
     fn quote(ident: &str) -> String {
         format!("\"{ident}\"")
     }

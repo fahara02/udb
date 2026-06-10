@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package udb.core.control.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/control/entity/v1/enums.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Control.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/control/entity/v1;controlv1";
+option java_package = "com.udb.core.control.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Control\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Control\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// ControlPlaneNodeState — Per-node, per-resource-type ACK/NACK ledger for the
+// xDS-style distribution stream. One row per (node_id, resource_type).
+//
+// xDS ACK/NACK semantics, made durable:
+//   * `accepted_version`     — the version the node has APPLIED (ACK echoes it).
+//   * `last_good_version`    — the last version the node successfully applied;
+//                              on a NACK this is preserved so the node keeps
+//                              running known-good config instead of diverging.
+//   * `last_response_nonce`  — the nonce of the most recent DiscoveryResponse;
+//                              an ACK/NACK is only honored when its nonce matches
+//                              (stale acks are ignored), pairing request/response.
+//   * `nack_error_detail`    — the structured error from the last NACK (cleared
+//                              on the next ACK). On NACK `accepted_version` is NOT
+//                              advanced — "reject without silently diverging".
+//   * `nonce_counter`        — monotonic per (node, type) nonce generator.
+//
+// Not tenant-scoped (a node belongs to the fleet); admin-readable. RLS disabled.
+//
+// Migration order 61 — after control_plane_resources.
+// ---------------------------------------------------------------------------
+message ControlPlaneNodeState {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "control_plane_node_states"
+    schema_name: "udb_control"
+    migration_order: 61
+    is_table: true
+    comment: "Per-node ACK/NACK/last-good ledger for control-plane distribution"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: false
+    indexes: {
+      index_name: "uq_control_node_states_node_type"
+      index_type: "BTREE"
+      unique: true
+      columns: "node_id"
+      columns: "resource_type"
+    }
+    indexes: {
+      index_name: "idx_control_node_states_node"
+      index_type: "BTREE"
+      columns: "node_id"
+    }
+    cdc_topic: "udb.control.control_plane_node_states.cdc"
+    required_scope: "control:node-states:read"
+    replica_hint: "primary"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "global"
+    soft_delete_mode: "none"
+    retention_class: "control.operational"
+    retention_days: 365
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "none"
+    pii_profile: "none"
+    export_eligible: false
+  };
+
+  string node_state_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "node_state_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  // Stable node identity (the data-plane process / PEP subscribing to config).
+  string node_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "node_id" sql_type: "VARCHAR(200)" not_null: true }];
+
+  ResourceType resource_type = 3 [(udb.core.common.v1.pg_column) = { column_name: "resource_type" sql_type: "VARCHAR(48)" not_null: true }];
+
+  // Names the node has subscribed to (on-demand subscription set). Empty == the
+  // node accepts the full state-of-the-world for this type.
+  string subscribed_names = 4 [(udb.core.common.v1.pg_column) = { column_name: "subscribed_names" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" comment: "On-demand subscription name set ([] == all)" }];
+
+  // Version the node has applied (advanced ONLY on a matching-nonce ACK).
+  string accepted_version = 5 [(udb.core.common.v1.pg_column) = { column_name: "accepted_version" sql_type: "VARCHAR(96)" comment: "Version the node has applied (ACK)" }];
+
+  // Last good applied version, preserved across a NACK so the node never
+  // silently diverges to a rejected version.
+  string last_good_version = 6 [(udb.core.common.v1.pg_column) = { column_name: "last_good_version" sql_type: "VARCHAR(96)" comment: "Last successfully applied version (kept on NACK)" }];
+
+  // Nonce of the most recent response sent to the node (request/response pairing).
+  string last_response_nonce = 7 [(udb.core.common.v1.pg_column) = { column_name: "last_response_nonce" sql_type: "VARCHAR(96)" comment: "Nonce of the last DiscoveryResponse sent" }];
+
+  // Structured NACK error from the last rejection; cleared on the next ACK.
+  string nack_error_detail = 8 [(udb.core.common.v1.pg_column) = { column_name: "nack_error_detail" sql_type: "TEXT" comment: "Structured error detail from the last NACK (cleared on ACK)" }];
+
+  // Monotonic nonce generator for this (node, resource_type).
+  int64 nonce_counter = 9 [(udb.core.common.v1.pg_column) = { column_name: "nonce_counter" sql_type: "BIGINT" not_null: true default_value: "0" comment: "Monotonic per-(node,type) nonce counter" }];
+
+  google.protobuf.Timestamp created_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  google.protobuf.Timestamp updated_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" }];
+}

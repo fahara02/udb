@@ -1,14 +1,14 @@
 name: Release · binaries
 
-# Builds the `udb-proto-parser` broker/CLI binary for Windows, Linux, and macOS
+# Builds the `udb` broker/CLI binary for Windows, Linux, and macOS
 # and attaches each as a RAW binary to the GitHub Release for a SemVer tag.
 #
 # Asset names match the contract the example scripts download by
 # (examples/*/scripts/udb.ps1, run-udb-linux.sh, docker-compose.yml):
 #
-#   udb-proto-parser-linux-amd64
-#   udb-proto-parser-windows-amd64.exe
-#   udb-proto-parser-darwin-arm64
+#   udb-linux-amd64
+#   udb-windows-amd64.exe
+#   udb-darwin-arm64
 #
 # (os ∈ linux|windows|darwin, arch ∈ amd64|arm64; NOT archived, so the scripts'
 # `-notmatch "\.(zip|tar\.gz)$"` asset filter selects them.)
@@ -76,21 +76,21 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            asset: udb-proto-parser-linux-amd64
+            asset: udb-linux-amd64
             ext: ''
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            asset: udb-proto-parser-windows-amd64.exe
+            asset: udb-windows-amd64.exe
             ext: '.exe'
           - os: macos-14
             target: aarch64-apple-darwin
-            asset: udb-proto-parser-darwin-arm64
+            asset: udb-darwin-arm64
             ext: ''
           # Intel macOS (x86_64). macos-13 is retired; macos-15-intel is the
           # standard GitHub-hosted Intel label while x64 macOS remains available.
           - os: macos-15-intel
             target: x86_64-apple-darwin
-            asset: udb-proto-parser-darwin-amd64
+            asset: udb-darwin-amd64
             ext: ''
 
     steps:
@@ -138,7 +138,7 @@ jobs:
             export CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER="${msvc_bin}/link.exe"
           fi
           cargo build --release --locked --target ${{ matrix.target }} \
-            --bin udb-proto-parser \
+            --bin udb \
             --no-default-features --features "${PORTABLE_FEATURES}"
 
       - name: Stage asset + checksum
@@ -146,7 +146,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          cp "target/${{ matrix.target }}/release/udb-proto-parser${{ matrix.ext }}" "dist/${{ matrix.asset }}"
+          cp "target/${{ matrix.target }}/release/udb${{ matrix.ext }}" "dist/${{ matrix.asset }}"
           cd dist
           if command -v sha256sum >/dev/null 2>&1; then
             sha256sum "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256"

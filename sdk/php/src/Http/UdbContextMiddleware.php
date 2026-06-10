@@ -56,6 +56,9 @@ final class UdbContextMiddleware
             tenantId: $tenantId,
             userId: $userId,
             correlationId: $correlationId,
+        )->withCredentials(
+            bearerToken: $this->bearerToken((string) $request->header('Authorization', '')),
+            apiKey: $this->nonBlank((string) $request->header('X-Api-Key', '')),
         );
         $this->client->bindContext($metadata);
 
@@ -105,5 +108,19 @@ final class UdbContextMiddleware
         // PHP 8.1+ always has random_bytes; defensive fallback
         // for exotic ZTS builds.
         return sprintf('%08x-%04x-%04x-%04x-%012x', mt_rand(), mt_rand(0, 0xffff), mt_rand(0, 0x0fff) | 0x4000, mt_rand(0, 0x3fff) | 0x8000, mt_rand());
+    }
+
+    private function bearerToken(string $authorization): ?string
+    {
+        $authorization = trim($authorization);
+        return strncasecmp($authorization, 'Bearer ', 7) === 0
+            ? $this->nonBlank(substr($authorization, 7))
+            : null;
+    }
+
+    private function nonBlank(string $value): ?string
+    {
+        $value = trim($value);
+        return $value !== '' ? $value : null;
     }
 }

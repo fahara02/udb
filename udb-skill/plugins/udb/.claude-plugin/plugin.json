@@ -1,0 +1,14 @@
+{
+  "name": "udb",
+  "displayName": "Using UDB",
+  "version": "0.1.0",
+  "description": "Help developers use a running UDB broker: connect a language SDK (TS/Python/Go/Java/C#/PHP), authenticate with scopes/credentials, and CRUD proto-defined entities over the gRPC DataBroker API.",
+  "author": {
+    "name": "fahara02",
+    "url": "https://github.com/fahara02"
+  },
+  "homepage": "https://github.com/fahara02/udb",
+  "repository": "https://github.com/fahara02/udb",
+  "license": "MIT",
+  "keywords": ["udb", "grpc", "database", "protobuf", "sdk"]
+}

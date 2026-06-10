@@ -4,7 +4,7 @@
 //!
 //! - `run_id` is TEXT UUID, generated Rust-side.
 //! - `id` is `INTEGER PRIMARY KEY AUTOINCREMENT` (auto-incremented).
-//! - `rollback_json` is TEXT (parsed via `serde_json` on read).
+//! - `payload_json` is TEXT (parsed via `serde_json` on read).
 //! - `started_at` / `finished_at` / `applied_at` are RFC-3339 TEXT.
 //! - CHECK constraints on both `state` and `status` mirror PG.
 //! - Foreign key with `ON DELETE CASCADE` (requires `PRAGMA foreign_keys = ON`;
@@ -33,6 +33,20 @@ fn parse_iso(s: &str) -> DateTime<Utc> {
 
 fn parse_iso_opt(s: Option<String>) -> Option<DateTime<Utc>> {
     s.filter(|s| !s.is_empty()).map(|s| parse_iso(&s))
+}
+
+async fn ledger_has_column(
+    store: &SqliteCanonicalStore,
+    column_name: &str,
+) -> SystemStoreResult<bool> {
+    let sql = format!("PRAGMA table_info({LEDGER_TABLE})");
+    let rows = sqlx::query(&sql)
+        .fetch_all(store.pool_ref())
+        .await
+        .map_err(|e| SystemStoreError::query("sqlite", sql.clone(), e))?;
+    Ok(rows
+        .iter()
+        .any(|row| row.try_get::<String, _>("name").ok().as_deref() == Some(column_name)))
 }
 
 fn row_to_run(row: sqlx::sqlite::SqliteRow) -> SystemStoreResult<MigrationRunRow> {
@@ -85,13 +99,13 @@ fn row_to_op(row: sqlx::sqlite::SqliteRow) -> SystemStoreResult<MigrationOpRow> 
             "unknown op ledger status '{status_str}' in SQLite row"
         ))
     })?;
-    let rollback_text: String = row.try_get("rollback_json").unwrap_or_default();
-    let rollback_json = if rollback_text.is_empty() {
+    let payload_text: String = row.try_get("payload_json").unwrap_or_default();
+    let payload_json = if payload_text.is_empty() {
         serde_json::Value::Object(Default::default())
     } else {
-        serde_json::from_str(&rollback_text).map_err(|e| {
+        serde_json::from_str(&payload_text).map_err(|e| {
             SystemStoreError::InvalidInput(format!(
-                "rollback_json is not valid JSON: {e} (raw: '{rollback_text}')"
+                "payload_json is not valid JSON: {e} (raw: '{payload_text}')"
             ))
         })?
     };
@@ -103,7 +117,7 @@ fn row_to_op(row: sqlx::sqlite::SqliteRow) -> SystemStoreResult<MigrationOpRow> 
         resource_uri: row.try_get("resource_uri").unwrap_or_default(),
         operation_kind: row.try_get("operation_kind").unwrap_or_default(),
         status,
-        rollback_json,
+        payload_json: payload_json,
         error: row.try_get("error").unwrap_or_default(),
         applied_at: parse_iso_opt(
             row.try_get::<Option<String>, _>("applied_at")
@@ -138,6 +152,28 @@ impl MigrationAuditStore for SqliteCanonicalStore {
                 .await
                 .map_err(|e| SystemStoreError::query("sqlite", sql.clone(), e))?;
         }
+        let payload_col = format!(
+            "ALTER TABLE {LEDGER_TABLE} ADD COLUMN payload_json TEXT NOT NULL DEFAULT '{{}}'"
+        );
+        if let Err(e) = sqlx::query(&payload_col).execute(self.pool_ref()).await {
+            let msg = e.to_string();
+            if !msg.contains("duplicate column name") {
+                return Err(SystemStoreError::query("sqlite", payload_col.clone(), e));
+            }
+        }
+        if ledger_has_column(self, "rollback_json").await? {
+            let backfill = format!(
+                "UPDATE {LEDGER_TABLE}
+                 SET payload_json = rollback_json
+                 WHERE payload_json = '{{}}'
+                   AND rollback_json IS NOT NULL
+                   AND rollback_json <> '{{}}'"
+            );
+            sqlx::query(&backfill)
+                .execute(self.pool_ref())
+                .await
+                .map_err(|e| SystemStoreError::query("sqlite", backfill.clone(), e))?;
+        }
         Ok(())
     }
 
@@ -163,8 +199,8 @@ impl MigrationAuditStore for SqliteCanonicalStore {
     }
 
     async fn record_migration_op(&self, op: &MigrationOpInsert) -> SystemStoreResult<i64> {
-        let rollback_text = serde_json::to_string(&op.rollback_json)
-            .map_err(|e| SystemStoreError::InvalidInput(format!("rollback_json: {e}")))?;
+        let payload_text = serde_json::to_string(&op.payload_json)
+            .map_err(|e| SystemStoreError::InvalidInput(format!("payload_json: {e}")))?;
         // applied_at is set to now() when the new status is APPLIED;
         // NULL otherwise. This matches the existing PG behavior in
         // PostgresMigrationAuditSink::record_op.
@@ -176,7 +212,7 @@ impl MigrationAuditStore for SqliteCanonicalStore {
         let sql = format!(
             "INSERT INTO {LEDGER_TABLE} (
                 run_id, operation_index, backend, resource_uri,
-                operation_kind, status, rollback_json, error, applied_at
+                operation_kind, status, payload_json, error, applied_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, {applied_at_expr})"
         );
         let result = sqlx::query(&sql)
@@ -186,7 +222,7 @@ impl MigrationAuditStore for SqliteCanonicalStore {
             .bind(&op.resource_uri)
             .bind(&op.operation_kind)
             .bind(op.status.as_str())
-            .bind(&rollback_text)
+            .bind(&payload_text)
             .bind(&op.error)
             .execute(self.pool_ref())
             .await
@@ -242,7 +278,7 @@ impl MigrationAuditStore for SqliteCanonicalStore {
     async fn list_migration_ops(&self, run_id: Uuid) -> SystemStoreResult<Vec<MigrationOpRow>> {
         let sql = format!(
             "SELECT id, run_id, operation_index, backend, resource_uri,
-                    operation_kind, status, rollback_json, error, applied_at
+                    operation_kind, status, payload_json, error, applied_at
              FROM {LEDGER_TABLE}
              WHERE run_id = ?
              ORDER BY operation_index ASC"
@@ -343,7 +379,7 @@ mod tests {
             resource_uri: format!("udb://postgres/op-{idx}.sql"),
             operation_kind: "apply".to_string(),
             status,
-            rollback_json: serde_json::json!({"undo": format!("DROP TABLE op_{idx}")}),
+            payload_json: serde_json::json!({"undo": format!("DROP TABLE op_{idx}")}),
             error: String::new(),
         }
     }
@@ -390,7 +426,7 @@ mod tests {
             assert_eq!(op.backend, "postgres");
             assert!(op.applied_at.is_some(), "applied status sets applied_at");
             assert!(
-                op.rollback_json["undo"]
+                op.payload_json["undo"]
                     .as_str()
                     .map(|s| s.starts_with("DROP TABLE op_"))
                     .unwrap_or(false)

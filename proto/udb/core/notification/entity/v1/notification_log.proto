@@ -4,6 +4,7 @@ package udb.core.notification.entity.v1;
 
 import "google/protobuf/timestamp.proto";
 import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
 import "udb/core/notification/entity/v1/enums.proto";
 
 option csharp_namespace = "udb.core.Notification.Entity.V1";
@@ -47,6 +48,19 @@ message NotificationLog {
       columns: "sent_at"
     }
     cdc_topic: "notification.failed.v1"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "notification.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
   };
 
   string log_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "log_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];

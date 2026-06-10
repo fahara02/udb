@@ -37,12 +37,15 @@
 //!   same assertions against every store. Today it runs in-memory on
 //!   SQLite on every CI; PG/MySQL pick it up under env-gated tests.
 
-use std::time::Duration;
+use std::collections::BTreeMap;
+use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+use super::CanonicalStore;
 
 // ── Status enum ───────────────────────────────────────────────────────────────
 
@@ -360,6 +363,526 @@ impl SystemStoreError {
 
 /// Convenience alias.
 pub type SystemStoreResult<T> = Result<T, SystemStoreError>;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct AdvisoryLeaseRow {
+    pub owner_id: String,
+    pub expires_at_ms: i64,
+}
+
+pub(crate) fn advisory_lease_can_acquire(
+    current: Option<&AdvisoryLeaseRow>,
+    owner_id: &str,
+    now_ms: i64,
+) -> bool {
+    current.is_none_or(|lease| lease.expires_at_ms <= now_ms || lease.owner_id == owner_id)
+}
+
+pub(crate) fn new_advisory_lease_row(
+    owner_id: &str,
+    now_ms: i64,
+    ttl: Duration,
+) -> AdvisoryLeaseRow {
+    let ttl_ms = ttl.as_millis().max(1) as i64;
+    AdvisoryLeaseRow {
+        owner_id: owner_id.to_string(),
+        expires_at_ms: now_ms.saturating_add(ttl_ms),
+    }
+}
+
+pub(crate) fn advisory_lease_is_owned_by(
+    current: Option<&AdvisoryLeaseRow>,
+    owner_id: &str,
+) -> bool {
+    current.is_some_and(|lease| lease.owner_id == owner_id)
+}
+
+pub(crate) fn apply_saga_filter(row: &SagaRow, filter: &SagaListFilter) -> bool {
+    filter
+        .tenant_id
+        .as_ref()
+        .is_none_or(|value| row.tenant_id == *value)
+        && filter.status.is_none_or(|value| row.status == value)
+        && filter
+            .tx_id
+            .as_ref()
+            .is_none_or(|value| row.tx_id == *value)
+        && filter
+            .correlation_id
+            .as_ref()
+            .is_none_or(|value| row.correlation_id == *value)
+}
+
+pub(crate) fn apply_admin_audit_filter(row: &AdminAuditRow, filter: &AdminAuditListFilter) -> bool {
+    filter
+        .operation
+        .as_ref()
+        .is_none_or(|value| row.operation == *value)
+        && filter
+            .actor
+            .as_ref()
+            .is_none_or(|value| row.actor == *value)
+        && filter
+            .tenant_id
+            .as_ref()
+            .is_none_or(|value| row.tenant_id == *value)
+        && filter
+            .project_id
+            .as_ref()
+            .is_none_or(|value| row.project_id == *value)
+}
+
+pub(crate) fn apply_migration_run_filter(
+    row: &MigrationRunRow,
+    filter: &MigrationRunsFilter,
+) -> bool {
+    filter
+        .project_id
+        .as_ref()
+        .is_none_or(|value| row.project_id == *value)
+        && filter.state.is_none_or(|value| row.state == value)
+        && filter
+            .catalog_version
+            .as_ref()
+            .is_none_or(|value| row.catalog_version == *value)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ProjectionTaskFailurePolicy {
+    StrictFailedOrDeadLetter,
+    LegacyAllowAnyStatusRemoveCompleted,
+}
+
+#[async_trait]
+pub(crate) trait JsonProjectionTaskAdapter: Send + Sync {
+    fn projection_backend_label(&self) -> &'static str;
+    fn projection_idem_key(&self, idempotency_key: &str) -> String;
+    fn projection_all_key(&self) -> String;
+    fn projection_task_key(&self, task_id: Uuid) -> String;
+
+    async fn get_projection_idem(&self, key: &str) -> SystemStoreResult<Option<String>>;
+    async fn set_projection_idem(&self, key: &str, value: &String) -> SystemStoreResult<()>;
+    async fn get_projection_row(&self, key: &str) -> SystemStoreResult<Option<ProjectionTaskRow>>;
+    async fn set_projection_row(&self, key: &str, row: &ProjectionTaskRow)
+    -> SystemStoreResult<()>;
+    async fn load_projection_rows(
+        &self,
+        set_key: &str,
+    ) -> SystemStoreResult<Vec<ProjectionTaskRow>>;
+    async fn add_projection_row_key(
+        &self,
+        set_key: &str,
+        row_key: String,
+        max_items: usize,
+    ) -> SystemStoreResult<Vec<String>>;
+    async fn remove_projection_row_key(
+        &self,
+        set_key: &str,
+        row_key: &str,
+    ) -> SystemStoreResult<bool>;
+}
+
+pub(crate) fn projection_task_row_from_insert(
+    task_id: Uuid,
+    task: &ProjectionTaskInsert,
+    now: DateTime<Utc>,
+) -> ProjectionTaskRow {
+    ProjectionTaskRow {
+        task_id,
+        idempotency_key: task.idempotency_key.clone(),
+        project_id: task.project_id.clone(),
+        target_backend: task.target_backend.clone(),
+        target_instance: task.target_instance.clone(),
+        projection_kind: task.projection_kind.clone(),
+        resource_name: task.resource_name.clone(),
+        operation: task.operation,
+        source_row_key: task.source_row_key.clone(),
+        target_options: task.target_options.clone(),
+        source_payload: task.source_payload.clone(),
+        source_checksum: task.source_checksum.clone(),
+        status: ProjectionTaskStatus::Pending,
+        retry_count: 0,
+        last_error: String::new(),
+        created_at: now,
+        updated_at: now,
+        next_retry_at: None,
+        completed_at: None,
+    }
+}
+
+pub(crate) fn projection_task_matches_claim(
+    row: &ProjectionTaskRow,
+    filter: &ProjectionClaimFilter,
+    now: DateTime<Utc>,
+) -> bool {
+    row.status.is_claimable()
+        && row.retry_count < filter.max_retries
+        && !row
+            .next_retry_at
+            .is_some_and(|next_retry_at| next_retry_at > now)
+        && !filter
+            .target_backend
+            .as_ref()
+            .is_some_and(|value| row.target_backend != *value)
+        && !filter
+            .target_instance
+            .as_ref()
+            .is_some_and(|value| row.target_instance != *value)
+        && !filter
+            .project_id
+            .as_ref()
+            .is_some_and(|value| row.project_id != *value)
+}
+
+pub(crate) fn mark_projection_task_claimed(row: &mut ProjectionTaskRow, now: DateTime<Utc>) {
+    row.status = ProjectionTaskStatus::InProgress;
+    row.updated_at = now;
+    row.next_retry_at = None;
+}
+
+fn mark_projection_task_requeued(
+    row: &mut ProjectionTaskRow,
+    last_error: &str,
+    now: DateTime<Utc>,
+) {
+    row.status = ProjectionTaskStatus::Pending;
+    row.retry_count = 0;
+    row.last_error = last_error.to_string();
+    row.updated_at = now;
+    row.next_retry_at = None;
+}
+
+pub(crate) async fn enqueue_json_projection_task<A>(
+    adapter: &A,
+    task: &ProjectionTaskInsert,
+    max_items: usize,
+) -> SystemStoreResult<Uuid>
+where
+    A: JsonProjectionTaskAdapter + ?Sized,
+{
+    let idem_key = adapter.projection_idem_key(&task.idempotency_key);
+    if let Some(existing) = adapter.get_projection_idem(&idem_key).await? {
+        return Uuid::parse_str(&existing).map_err(|err| {
+            SystemStoreError::InvalidInput(format!(
+                "bad {} task id: {err}",
+                adapter.projection_backend_label()
+            ))
+        });
+    }
+
+    let now = Utc::now();
+    let task_id = Uuid::new_v4();
+    let row = projection_task_row_from_insert(task_id, task, now);
+    let row_key = adapter.projection_task_key(task_id);
+    adapter
+        .set_projection_idem(&idem_key, &task_id.to_string())
+        .await?;
+    adapter.set_projection_row(&row_key, &row).await?;
+    adapter
+        .add_projection_row_key(&adapter.projection_all_key(), row_key, max_items)
+        .await?;
+    Ok(task_id)
+}
+
+pub(crate) async fn claim_json_projection_tasks<A>(
+    adapter: &A,
+    filter: &ProjectionClaimFilter,
+) -> SystemStoreResult<Vec<ProjectionTaskRow>>
+where
+    A: JsonProjectionTaskAdapter + ?Sized,
+{
+    let mut rows = adapter
+        .load_projection_rows(&adapter.projection_all_key())
+        .await?;
+    rows.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+    let mut claimed = Vec::new();
+    for mut row in rows {
+        if claimed.len() >= filter.batch_size.max(1) as usize {
+            break;
+        }
+        if !projection_task_matches_claim(&row, filter, Utc::now()) {
+            continue;
+        }
+        mark_projection_task_claimed(&mut row, Utc::now());
+        adapter
+            .set_projection_row(&adapter.projection_task_key(row.task_id), &row)
+            .await?;
+        claimed.push(row);
+    }
+    Ok(claimed)
+}
+
+pub(crate) async fn mark_json_projection_task_completed<A>(
+    adapter: &A,
+    task_id: Uuid,
+) -> SystemStoreResult<()>
+where
+    A: JsonProjectionTaskAdapter + ?Sized,
+{
+    let row_key = adapter.projection_task_key(task_id);
+    let Some(mut row) = adapter.get_projection_row(&row_key).await? else {
+        return Ok(());
+    };
+    row.status = ProjectionTaskStatus::Completed;
+    row.updated_at = Utc::now();
+    row.completed_at = Some(row.updated_at);
+    row.next_retry_at = None;
+    adapter.set_projection_row(&row_key, &row).await?;
+    let _ = adapter
+        .remove_projection_row_key(&adapter.projection_all_key(), &row_key)
+        .await?;
+    Ok(())
+}
+
+pub(crate) async fn mark_json_projection_task_failed<A>(
+    adapter: &A,
+    task_id: Uuid,
+    new_retry_count: i32,
+    new_status: ProjectionTaskStatus,
+    error: &str,
+    policy: ProjectionTaskFailurePolicy,
+) -> SystemStoreResult<()>
+where
+    A: JsonProjectionTaskAdapter + ?Sized,
+{
+    if policy == ProjectionTaskFailurePolicy::StrictFailedOrDeadLetter
+        && !matches!(
+            new_status,
+            ProjectionTaskStatus::Failed | ProjectionTaskStatus::DeadLetter
+        )
+    {
+        return Err(SystemStoreError::InvalidInput(format!(
+            "mark_projection_task_failed: status must be FAILED or DEAD_LETTER, got {new_status:?}"
+        )));
+    }
+
+    let row_key = adapter.projection_task_key(task_id);
+    let Some(mut row) = adapter.get_projection_row(&row_key).await? else {
+        return Ok(());
+    };
+    row.status = new_status;
+    row.retry_count = new_retry_count;
+    row.last_error = error.to_string();
+    row.updated_at = Utc::now();
+    row.next_retry_at = (new_status == ProjectionTaskStatus::Failed).then_some(row.updated_at);
+    adapter.set_projection_row(&row_key, &row).await?;
+    if policy == ProjectionTaskFailurePolicy::LegacyAllowAnyStatusRemoveCompleted
+        && new_status == ProjectionTaskStatus::Completed
+    {
+        let _ = adapter
+            .remove_projection_row_key(&adapter.projection_all_key(), &row_key)
+            .await?;
+    }
+    Ok(())
+}
+
+pub(crate) async fn requeue_json_dead_letter_tasks<A>(
+    adapter: &A,
+    target_backend: Option<&str>,
+) -> SystemStoreResult<i64>
+where
+    A: JsonProjectionTaskAdapter + ?Sized,
+{
+    let rows = adapter
+        .load_projection_rows(&adapter.projection_all_key())
+        .await?;
+    let mut count = 0;
+    for mut row in rows {
+        if row.status != ProjectionTaskStatus::DeadLetter
+            || target_backend.is_some_and(|backend| row.target_backend != backend)
+        {
+            continue;
+        }
+        mark_projection_task_requeued(&mut row, "operator requeue", Utc::now());
+        adapter
+            .set_projection_row(&adapter.projection_task_key(row.task_id), &row)
+            .await?;
+        count += 1;
+    }
+    Ok(count)
+}
+
+pub(crate) async fn reset_stale_json_in_progress_tasks<A>(
+    adapter: &A,
+    stale_after: Duration,
+) -> SystemStoreResult<i64>
+where
+    A: JsonProjectionTaskAdapter + ?Sized,
+{
+    let rows = adapter
+        .load_projection_rows(&adapter.projection_all_key())
+        .await?;
+    let cutoff = Utc::now() - chrono::Duration::from_std(stale_after).unwrap_or_default();
+    let mut count = 0;
+    for mut row in rows {
+        if row.status != ProjectionTaskStatus::InProgress || row.updated_at > cutoff {
+            continue;
+        }
+        row.status = ProjectionTaskStatus::Pending;
+        row.last_error = "stale in-progress reconciliation".to_string();
+        row.updated_at = Utc::now();
+        row.next_retry_at = None;
+        adapter
+            .set_projection_row(&adapter.projection_task_key(row.task_id), &row)
+            .await?;
+        count += 1;
+    }
+    Ok(count)
+}
+
+pub(crate) fn summarize_projection_tasks(
+    rows: impl IntoIterator<Item = ProjectionTaskRow>,
+) -> ProjectionTaskSummary {
+    let mut summary = ProjectionTaskSummary::default();
+    for row in rows {
+        match row.status {
+            ProjectionTaskStatus::Pending => summary.pending += 1,
+            ProjectionTaskStatus::InProgress => summary.in_progress += 1,
+            ProjectionTaskStatus::Completed => summary.completed += 1,
+            ProjectionTaskStatus::Failed => summary.failed += 1,
+            ProjectionTaskStatus::DeadLetter => summary.dead_letter += 1,
+        }
+    }
+    summary
+}
+
+pub(crate) fn pending_projection_task_metrics(
+    rows: impl IntoIterator<Item = ProjectionTaskRow>,
+    limit: i64,
+    now: DateTime<Utc>,
+) -> Vec<PendingTaskMetric> {
+    let mut groups: BTreeMap<(String, String, String, String), (i64, f64)> = BTreeMap::new();
+    for row in rows.into_iter().filter(|row| {
+        matches!(
+            row.status,
+            ProjectionTaskStatus::Pending | ProjectionTaskStatus::Failed
+        )
+    }) {
+        let key = (
+            row.project_id,
+            row.target_backend,
+            row.target_instance,
+            row.projection_kind,
+        );
+        let age = (now - row.created_at).num_milliseconds().max(0) as f64 / 1000.0;
+        groups
+            .entry(key)
+            .and_modify(|entry| {
+                entry.0 += 1;
+                entry.1 = entry.1.max(age);
+            })
+            .or_insert((1, age));
+    }
+    groups
+        .into_iter()
+        .take(limit.max(0) as usize)
+        .map(
+            |(
+                (project_id, target_backend, target_instance, projection_kind),
+                (pending, oldest_age_seconds),
+            )| PendingTaskMetric {
+                project_id,
+                target_backend,
+                target_instance,
+                projection_kind,
+                pending,
+                oldest_age_seconds,
+            },
+        )
+        .collect()
+}
+
+pub(crate) fn projection_dead_letter_groups(
+    rows: impl IntoIterator<Item = ProjectionTaskRow>,
+    limit: i64,
+) -> Vec<DeadLetterGroup> {
+    let mut groups: BTreeMap<(String, String, String), i64> = BTreeMap::new();
+    for row in rows
+        .into_iter()
+        .filter(|row| row.status == ProjectionTaskStatus::DeadLetter)
+    {
+        *groups
+            .entry((row.resource_name, row.target_backend, row.target_instance))
+            .or_default() += 1;
+    }
+    groups
+        .into_iter()
+        .take(limit.max(0) as usize)
+        .map(
+            |((source_table, target_backend, target_instance), dead_count)| DeadLetterGroup {
+                source_table,
+                target_backend,
+                target_instance,
+                dead_count,
+            },
+        )
+        .collect()
+}
+
+pub(crate) async fn requeue_json_dead_letter_by_source<A>(
+    adapter: &A,
+    source_table: &str,
+    target_backend: &str,
+    target_instance: &str,
+) -> SystemStoreResult<i64>
+where
+    A: JsonProjectionTaskAdapter + ?Sized,
+{
+    let rows = adapter
+        .load_projection_rows(&adapter.projection_all_key())
+        .await?;
+    let mut count = 0;
+    for mut row in rows {
+        if row.status != ProjectionTaskStatus::DeadLetter
+            || row.resource_name != source_table
+            || row.target_backend != target_backend
+            || row.target_instance != target_instance
+        {
+            continue;
+        }
+        mark_projection_task_requeued(&mut row, "reconciliation repair", Utc::now());
+        adapter
+            .set_projection_row(&adapter.projection_task_key(row.task_id), &row)
+            .await?;
+        count += 1;
+    }
+    Ok(count)
+}
+
+pub(crate) async fn pending_json_projection_task_count<A>(
+    adapter: &A,
+    idempotency_keys: &[String],
+) -> SystemStoreResult<i64>
+where
+    A: JsonProjectionTaskAdapter + ?Sized,
+{
+    let mut count = 0;
+    for idem in idempotency_keys {
+        let idem_key = adapter.projection_idem_key(idem);
+        let Some(task_id) = adapter
+            .get_projection_idem(&idem_key)
+            .await?
+            .and_then(|id| Uuid::parse_str(&id).ok())
+        else {
+            continue;
+        };
+        let Some(row) = adapter
+            .get_projection_row(&adapter.projection_task_key(task_id))
+            .await?
+        else {
+            continue;
+        };
+        if !matches!(
+            row.status,
+            ProjectionTaskStatus::Completed
+                | ProjectionTaskStatus::DeadLetter
+                | ProjectionTaskStatus::Failed
+        ) {
+            count += 1;
+        }
+    }
+    Ok(count)
+}
 
 // ── ProjectionTaskStore trait ────────────────────────────────────────────────
 
@@ -914,9 +1437,9 @@ impl AdminAuditBreakReason {
     }
 }
 
-/// Canonical-JSON SHA-256 hash for one row. Same algorithm as
-/// `runtime/core/catalog_admin.rs::admin_audit_hash`; centralised
-/// here so PG/MySQL/SQLite impls compute byte-identical chains.
+/// Canonical-JSON SHA-256 hash for one row. The single source of
+/// truth for the admin-audit chain hash, centralised here so every
+/// backend impl (and the verify path) computes byte-identical chains.
 ///
 /// **DO NOT CHANGE THIS** without versioning the audit log. The
 /// hash is part of the durability contract — every existing row's
@@ -1085,6 +1608,7 @@ pub trait AdminAuditStore: Send + Sync {
 pub enum MigrationRunState {
     DryRun,
     Preflight,
+    Approved,
     Applying,
     Verifying,
     Completed,
@@ -1097,6 +1621,7 @@ impl MigrationRunState {
         match self {
             Self::DryRun => "DRY_RUN",
             Self::Preflight => "PREFLIGHT",
+            Self::Approved => "APPROVED",
             Self::Applying => "APPLYING",
             Self::Verifying => "VERIFYING",
             Self::Completed => "COMPLETED",
@@ -1109,6 +1634,7 @@ impl MigrationRunState {
         match token {
             "DRY_RUN" => Some(Self::DryRun),
             "PREFLIGHT" => Some(Self::Preflight),
+            "APPROVED" => Some(Self::Approved),
             "APPLYING" => Some(Self::Applying),
             "VERIFYING" => Some(Self::Verifying),
             "COMPLETED" => Some(Self::Completed),
@@ -1122,6 +1648,7 @@ impl MigrationRunState {
         &[
             Self::DryRun,
             Self::Preflight,
+            Self::Approved,
             Self::Applying,
             Self::Verifying,
             Self::Completed,
@@ -1194,7 +1721,7 @@ pub struct MigrationOpInsert {
     pub resource_uri: String,
     pub operation_kind: String,
     pub status: OpLedgerStatus,
-    pub rollback_json: serde_json::Value,
+    pub payload_json: serde_json::Value,
     pub error: String,
 }
 
@@ -1222,7 +1749,7 @@ pub struct MigrationOpRow {
     pub resource_uri: String,
     pub operation_kind: String,
     pub status: OpLedgerStatus,
-    pub rollback_json: serde_json::Value,
+    pub payload_json: serde_json::Value,
     pub error: String,
     pub applied_at: Option<DateTime<Utc>>,
 }
@@ -1283,6 +1810,452 @@ pub trait MigrationAuditStore: Send + Sync {
         &self,
         filter: &MigrationRunsFilter,
     ) -> SystemStoreResult<Vec<MigrationRunRow>>;
+}
+
+// ── Shared JSON-KV system-record logic (FIX-79) ──────────────────────────────
+//
+// The KV-style canonical stores (`QdrantCanonicalStore` in `qdrant.rs` and
+// `VectorSystemCanonicalStore` in `vector_system.rs`) persist Saga / AdminAudit
+// / MigrationAudit records as JSON values under deterministic keys. The logic
+// over that KV plane is identical in both backends, so — exactly like the
+// projection-task plane above (`JsonProjectionTaskAdapter` + the
+// `*_json_projection_*` functions) — the single copy lives here and each store
+// supplies only its raw typed get/set/list primitives.
+
+/// Advisory-lease name serializing admin-audit appends on JSON-KV canonical
+/// stores (which have no transactional hash-chain append like PG).
+pub(crate) const JSON_ADMIN_AUDIT_LOCK: &str = "admin-audit-chain";
+
+/// Raw typed KV primitives a JSON-KV canonical store exposes so the shared
+/// saga / admin-audit / migration-audit functions below can drive it. The key
+/// helpers delegate to the store's existing instance-scoped key scheme so the
+/// formatting stays defined once per store.
+#[async_trait]
+pub(crate) trait JsonSystemRecordAdapter: Send + Sync {
+    fn record_backend_label(&self) -> &'static str;
+    /// Instance-scoped record key (`"<instance>:<suffix>"`).
+    fn record_point_key(&self, suffix: &str) -> String;
+    fn saga_record_key(&self, saga_id: Uuid) -> String;
+    fn admin_audit_record_key(&self, audit_id: Uuid) -> String;
+    fn migration_run_record_key(&self, run_id: Uuid) -> String;
+
+    async fn get_saga_row(&self, key: &str) -> SystemStoreResult<Option<SagaRow>>;
+    async fn set_saga_row(&self, key: &str, row: &SagaRow) -> SystemStoreResult<()>;
+    async fn load_saga_rows(&self, set_key: &str) -> SystemStoreResult<Vec<SagaRow>>;
+
+    async fn get_admin_audit_row(&self, key: &str) -> SystemStoreResult<Option<AdminAuditRow>>;
+    async fn set_admin_audit_row(&self, key: &str, row: &AdminAuditRow) -> SystemStoreResult<()>;
+    async fn get_string_record(&self, key: &str) -> SystemStoreResult<Option<String>>;
+    async fn set_string_record(&self, key: &str, value: &String) -> SystemStoreResult<()>;
+
+    async fn get_migration_run_row(&self, key: &str)
+    -> SystemStoreResult<Option<MigrationRunRow>>;
+    async fn set_migration_run_row(
+        &self,
+        key: &str,
+        row: &MigrationRunRow,
+    ) -> SystemStoreResult<()>;
+    async fn load_migration_run_rows(
+        &self,
+        set_key: &str,
+    ) -> SystemStoreResult<Vec<MigrationRunRow>>;
+    async fn load_migration_op_rows(
+        &self,
+        set_key: &str,
+    ) -> SystemStoreResult<Vec<MigrationOpRow>>;
+
+    async fn list_record_set(&self, set_key: &str) -> SystemStoreResult<Vec<String>>;
+    async fn add_record_to_set(&self, set_key: &str, item: String) -> SystemStoreResult<()>;
+}
+
+pub(crate) async fn record_json_saga<A>(adapter: &A, saga: &SagaInsert) -> SystemStoreResult<Uuid>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    let now = Utc::now();
+    let saga_id = Uuid::new_v4();
+    let row = SagaRow {
+        saga_id,
+        tx_id: saga.tx_id.clone(),
+        tenant_id: saga.tenant_id.clone(),
+        correlation_id: saga.correlation_id.clone(),
+        status: saga.status,
+        backend_instance: saga.backend_instance.clone(),
+        operation: saga.operation.clone(),
+        current_step: 0,
+        retry_count: 0,
+        recovery_attempts: 0,
+        compensation_status: CompensationStatus::None,
+        steps: saga.steps.clone(),
+        compensations: saga.compensations.clone(),
+        last_error: String::new(),
+        created_at: now,
+        updated_at: now,
+    };
+    let key = adapter.saga_record_key(saga_id);
+    adapter.set_saga_row(&key, &row).await?;
+    adapter
+        .add_record_to_set(&adapter.record_point_key("saga_all"), key)
+        .await?;
+    Ok(saga_id)
+}
+
+pub(crate) async fn get_json_saga<A>(
+    adapter: &A,
+    saga_id: Uuid,
+) -> SystemStoreResult<Option<SagaRow>>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    adapter.get_saga_row(&adapter.saga_record_key(saga_id)).await
+}
+
+pub(crate) async fn list_json_sagas<A>(
+    adapter: &A,
+    filter: &SagaListFilter,
+) -> SystemStoreResult<Vec<SagaRow>>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    let mut rows = adapter
+        .load_saga_rows(&adapter.record_point_key("saga_all"))
+        .await?;
+    rows.retain(|row| apply_saga_filter(row, filter));
+    rows.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+    Ok(rows
+        .into_iter()
+        .skip(filter.offset.max(0) as usize)
+        .take(filter.limit.max(0) as usize)
+        .collect())
+}
+
+pub(crate) async fn update_json_saga_status<A>(
+    adapter: &A,
+    saga_id: Uuid,
+    status: SagaStatus,
+    compensation_status: CompensationStatus,
+) -> SystemStoreResult<()>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    let key = adapter.saga_record_key(saga_id);
+    let Some(mut row) = adapter.get_saga_row(&key).await? else {
+        return Ok(());
+    };
+    row.status = status;
+    row.compensation_status = compensation_status;
+    row.updated_at = Utc::now();
+    adapter.set_saga_row(&key, &row).await
+}
+
+pub(crate) async fn increment_json_saga_recovery_attempts<A>(
+    adapter: &A,
+    saga_id: Uuid,
+    error: &str,
+) -> SystemStoreResult<i64>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    let key = adapter.saga_record_key(saga_id);
+    let Some(mut row) = adapter.get_saga_row(&key).await? else {
+        return Ok(0);
+    };
+    row.recovery_attempts += 1;
+    row.last_error = error.to_string();
+    row.updated_at = Utc::now();
+    let attempts = i64::from(row.recovery_attempts);
+    adapter.set_saga_row(&key, &row).await?;
+    Ok(attempts)
+}
+
+pub(crate) async fn claim_json_recoverable_sagas<A>(
+    adapter: &A,
+    stale_after: Duration,
+    limit: i64,
+) -> SystemStoreResult<Vec<SagaRow>>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    let cutoff = Utc::now() - chrono::Duration::from_std(stale_after).unwrap_or_default();
+    let mut rows = adapter
+        .load_saga_rows(&adapter.record_point_key("saga_all"))
+        .await?;
+    rows.retain(|row| {
+        matches!(
+            row.status,
+            SagaStatus::Indeterminate | SagaStatus::InDoubt | SagaStatus::FailedCompensation
+        ) || (row.status == SagaStatus::InProgress && row.updated_at <= cutoff)
+    });
+    rows.sort_by(|a, b| a.updated_at.cmp(&b.updated_at));
+    Ok(rows.into_iter().take(limit.max(0) as usize).collect())
+}
+
+pub(crate) async fn mark_json_stale_sagas_indeterminate<A>(
+    adapter: &A,
+    stale_after: Duration,
+) -> SystemStoreResult<i64>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    let cutoff = Utc::now() - chrono::Duration::from_std(stale_after).unwrap_or_default();
+    let rows = adapter
+        .load_saga_rows(&adapter.record_point_key("saga_all"))
+        .await?;
+    let mut count = 0;
+    for mut row in rows {
+        if row.status == SagaStatus::InProgress && row.updated_at <= cutoff {
+            row.status = SagaStatus::Indeterminate;
+            row.updated_at = Utc::now();
+            adapter
+                .set_saga_row(&adapter.saga_record_key(row.saga_id), &row)
+                .await?;
+            count += 1;
+        }
+    }
+    Ok(count)
+}
+
+pub(crate) async fn summarize_json_sagas<A>(adapter: &A) -> SystemStoreResult<SagaSummary>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    let rows = adapter
+        .load_saga_rows(&adapter.record_point_key("saga_all"))
+        .await?;
+    let mut summary = SagaSummary::default();
+    for row in rows {
+        match row.status {
+            SagaStatus::Indeterminate => summary.indeterminate += 1,
+            SagaStatus::InProgress => summary.in_progress += 1,
+            SagaStatus::Pending => summary.pending += 1,
+            SagaStatus::Committed => summary.committed += 1,
+            SagaStatus::Compensated => summary.compensated += 1,
+            SagaStatus::Failed => summary.failed += 1,
+            SagaStatus::InDoubt => summary.in_doubt += 1,
+            SagaStatus::FailedCompensation => summary.failed_compensation += 1,
+            SagaStatus::ManualReview => summary.manual_review += 1,
+        }
+    }
+    Ok(summary)
+}
+
+pub(crate) async fn latest_json_admin_audit_hash<A>(adapter: &A) -> SystemStoreResult<String>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    Ok(adapter
+        .get_string_record(&adapter.record_point_key("admin_audit_latest_hash"))
+        .await?
+        .unwrap_or_default())
+}
+
+pub(crate) async fn append_json_admin_audit<A>(
+    adapter: &A,
+    entry: &AdminAuditInsert,
+) -> SystemStoreResult<Uuid>
+where
+    A: JsonSystemRecordAdapter + CanonicalStore + ?Sized,
+{
+    let backend = adapter.record_backend_label();
+    let owner = Uuid::new_v4().to_string();
+    let started = Instant::now();
+    while !adapter
+        .try_acquire_advisory_lease(JSON_ADMIN_AUDIT_LOCK, &owner, Duration::from_secs(10))
+        .await
+        .map_err(|err| SystemStoreError::io(backend, err))?
+    {
+        if started.elapsed() > Duration::from_secs(10) {
+            return Err(SystemStoreError::io(backend, "admin audit lock timeout"));
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+
+    let audit_id = Uuid::new_v4();
+    let previous_hash = latest_json_admin_audit_hash(adapter).await?;
+    let current_hash = compute_admin_audit_hash(
+        &previous_hash,
+        &entry.actor,
+        &entry.operation,
+        &entry.target,
+        &entry.request_json,
+        &entry.result,
+        &entry.tenant_id,
+        &entry.project_id,
+        &entry.correlation_id,
+        &entry.signer_key_id,
+        &entry.external_anchor,
+    );
+    let row = AdminAuditRow {
+        audit_id,
+        actor: entry.actor.clone(),
+        operation: entry.operation.clone(),
+        target: entry.target.clone(),
+        request_json: entry.request_json.clone(),
+        result: entry.result.clone(),
+        tenant_id: entry.tenant_id.clone(),
+        project_id: entry.project_id.clone(),
+        correlation_id: entry.correlation_id.clone(),
+        previous_hash,
+        current_hash: current_hash.clone(),
+        signer_key_id: entry.signer_key_id.clone(),
+        external_anchor: entry.external_anchor.clone(),
+        created_at: Utc::now(),
+    };
+    let key = adapter.admin_audit_record_key(audit_id);
+    let result = async {
+        adapter.set_admin_audit_row(&key, &row).await?;
+        adapter
+            .add_record_to_set(&adapter.record_point_key("admin_audit_order"), key)
+            .await?;
+        adapter
+            .set_string_record(
+                &adapter.record_point_key("admin_audit_latest_hash"),
+                &current_hash,
+            )
+            .await
+    }
+    .await;
+    let _ = adapter
+        .release_advisory_lease(JSON_ADMIN_AUDIT_LOCK, &owner)
+        .await;
+    result?;
+    Ok(audit_id)
+}
+
+pub(crate) async fn list_json_admin_audit<A>(
+    adapter: &A,
+    filter: &AdminAuditListFilter,
+) -> SystemStoreResult<Vec<AdminAuditRow>>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    let keys = adapter
+        .list_record_set(&adapter.record_point_key("admin_audit_order"))
+        .await?;
+    let mut rows = Vec::new();
+    for key in keys {
+        if let Some(mut row) = adapter.get_admin_audit_row(&key).await?
+            && apply_admin_audit_filter(&row, filter)
+        {
+            if filter.redact_request_json {
+                row.request_json = serde_json::json!({"redacted": true});
+            }
+            rows.push(row);
+        }
+    }
+    rows.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    Ok(rows
+        .into_iter()
+        .skip(filter.offset.max(0) as usize)
+        .take(filter.limit.max(0) as usize)
+        .collect())
+}
+
+pub(crate) async fn verify_json_admin_audit_chain<A>(
+    adapter: &A,
+    limit: Option<i64>,
+) -> SystemStoreResult<AdminAuditChainReport>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    let mut keys = adapter
+        .list_record_set(&adapter.record_point_key("admin_audit_order"))
+        .await?;
+    if let Some(limit) = limit
+        && limit >= 0
+    {
+        keys.truncate(limit as usize);
+    }
+    let mut checked = 0_i64;
+    let mut previous = String::new();
+    for key in keys {
+        let Some(row) = adapter.get_admin_audit_row(&key).await? else {
+            continue;
+        };
+        match verify_admin_audit_chain_step(&row, &previous, checked) {
+            Ok(next) => {
+                previous = next;
+                checked += 1;
+            }
+            Err(report) => return Ok(report),
+        }
+    }
+    Ok(AdminAuditChainReport::Passed {
+        checked_count: checked,
+        last_hash: previous,
+    })
+}
+
+pub(crate) async fn start_json_migration_run<A>(
+    adapter: &A,
+    run: &MigrationRunInsert,
+) -> SystemStoreResult<Uuid>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    let run_id = Uuid::new_v4();
+    let row = MigrationRunRow {
+        run_id,
+        project_id: run.project_id.clone(),
+        catalog_version: run.catalog_version.clone(),
+        state: run.state,
+        operations_hash: run.operations_hash.clone(),
+        approval_token: run.approval_token.clone(),
+        started_at: Utc::now(),
+        finished_at: None,
+        error: String::new(),
+    };
+    let key = adapter.migration_run_record_key(run_id);
+    adapter.set_migration_run_row(&key, &row).await?;
+    adapter
+        .add_record_to_set(&adapter.record_point_key("migration_runs"), key)
+        .await?;
+    Ok(run_id)
+}
+
+pub(crate) async fn get_json_migration_run<A>(
+    adapter: &A,
+    run_id: Uuid,
+) -> SystemStoreResult<Option<MigrationRunRow>>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    adapter
+        .get_migration_run_row(&adapter.migration_run_record_key(run_id))
+        .await
+}
+
+pub(crate) async fn list_json_migration_ops<A>(
+    adapter: &A,
+    run_id: Uuid,
+) -> SystemStoreResult<Vec<MigrationOpRow>>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    let mut rows = adapter
+        .load_migration_op_rows(&adapter.record_point_key(&format!("migration_ops:{run_id}")))
+        .await?;
+    rows.sort_by_key(|row| row.operation_index);
+    Ok(rows)
+}
+
+pub(crate) async fn list_json_migration_runs<A>(
+    adapter: &A,
+    filter: &MigrationRunsFilter,
+) -> SystemStoreResult<Vec<MigrationRunRow>>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    let mut rows = adapter
+        .load_migration_run_rows(&adapter.record_point_key("migration_runs"))
+        .await?;
+    rows.retain(|row| apply_migration_run_filter(row, filter));
+    rows.sort_by(|a, b| b.started_at.cmp(&a.started_at));
+    Ok(rows
+        .into_iter()
+        .skip(filter.offset.max(0) as usize)
+        .take(filter.limit.max(0) as usize)
+        .collect())
 }
 
 #[cfg(test)]
@@ -1615,6 +2588,7 @@ mod tests {
     fn migration_run_state_tokens_pinned() {
         assert_eq!(MigrationRunState::DryRun.as_str(), "DRY_RUN");
         assert_eq!(MigrationRunState::Preflight.as_str(), "PREFLIGHT");
+        assert_eq!(MigrationRunState::Approved.as_str(), "APPROVED");
         assert_eq!(MigrationRunState::Applying.as_str(), "APPLYING");
         assert_eq!(MigrationRunState::Verifying.as_str(), "VERIFYING");
         assert_eq!(MigrationRunState::Completed.as_str(), "COMPLETED");
@@ -1625,12 +2599,13 @@ mod tests {
             assert_eq!(MigrationRunState::parse(s.as_str()), Some(*s));
         }
         assert_eq!(MigrationRunState::parse("garbage"), None);
-        assert_eq!(MigrationRunState::all().len(), 7);
+        assert_eq!(MigrationRunState::all().len(), 8);
 
         // Terminal set: COMPLETED / ERROR / DEAD_LETTER.
         assert!(MigrationRunState::Completed.is_terminal());
         assert!(MigrationRunState::Error.is_terminal());
         assert!(MigrationRunState::DeadLetter.is_terminal());
+        assert!(!MigrationRunState::Approved.is_terminal());
         assert!(!MigrationRunState::Applying.is_terminal());
         assert!(!MigrationRunState::DryRun.is_terminal());
     }

@@ -49,6 +49,39 @@ pub(crate) fn run_auth_command(command: AuthCommand) -> i32 {
 
 async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Value, String> {
     match command {
+        AuthCommand::Bootstrap {
+            username,
+            email,
+            password,
+            tenant,
+            project,
+        } => {
+            // urgent_fix #20: OFFLINE — connect straight to Postgres and create the
+            // first verified admin user via the in-process authn service (no running
+            // broker / no pre-existing credential needed). This is the root bootstrap
+            // that breaks the otherwise-circular credential dependency on the
+            // PEP-fronted listener.
+            if password.trim().len() < 8 {
+                return Err("--password is required (>= 8 chars)".to_string());
+            }
+            let dsn = std::env::var("UDB_PG_DSN")
+                .or_else(|_| std::env::var("DATABASE_URL"))
+                .map_err(|_| {
+                    "set UDB_PG_DSN (or DATABASE_URL) to the target Postgres".to_string()
+                })?;
+            let user_id = udb::runtime::service::bootstrap_admin_user(
+                &dsn, &username, &email, &password, &tenant, &project,
+            )
+            .await?;
+            Ok(json!({
+                "bootstrapped": true,
+                "user_id": user_id,
+                "username": username,
+                "tenant": tenant,
+                "project": project,
+                "note": "user is ACTIVE; clients can now Authenticate with these credentials",
+            }))
+        }
         AuthCommand::PrincipalList { tenant_id } => {
             let mut client = authn_client().await?;
             let response = client

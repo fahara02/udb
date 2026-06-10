@@ -4,7 +4,7 @@
 //!
 //! - `run_id` is `CHAR(36)` UUID, generated Rust-side.
 //! - `id` is `BIGINT AUTO_INCREMENT`.
-//! - `rollback_json` is native `JSON`.
+//! - `payload_json` is native `JSON`.
 //! - Timestamps use `TIMESTAMP(6)` microsecond precision.
 //! - CHECK constraints on `state` and `status` (MySQL 8.0.16+).
 //! - FK with `ON DELETE CASCADE` referencing
@@ -85,8 +85,8 @@ fn row_to_op(row: sqlx::mysql::MySqlRow) -> SystemStoreResult<MigrationOpRow> {
         resource_uri: row.try_get("resource_uri").unwrap_or_default(),
         operation_kind: row.try_get("operation_kind").unwrap_or_default(),
         status,
-        rollback_json: row
-            .try_get("rollback_json")
+        payload_json: row
+            .try_get("payload_json")
             .unwrap_or(serde_json::Value::Object(Default::default())),
         error: row.try_get("error").unwrap_or_default(),
         applied_at: row
@@ -133,6 +133,35 @@ impl MigrationAuditStore for MysqlCanonicalStore {
                 return Err(SystemStoreError::query("mysql", ledger_idx.clone(), e));
             }
         }
+        let has_payload_col: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*)
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = ?
+               AND COLUMN_NAME = 'payload_json'",
+        )
+        .bind(LEDGER_TABLE)
+        .fetch_one(self.mysql_pool())
+        .await
+        .map_err(|e| SystemStoreError::query("mysql", "check payload_json column", e))?;
+        if has_payload_col == 0 {
+            let payload_col =
+                format!("ALTER TABLE {LEDGER_TABLE} ADD COLUMN payload_json JSON NULL");
+            sqlx::query(&payload_col)
+                .execute(self.mysql_pool())
+                .await
+                .map_err(|e| SystemStoreError::query("mysql", payload_col.clone(), e))?;
+        }
+        let backfill = format!(
+            "UPDATE {LEDGER_TABLE}
+             SET payload_json = rollback_json
+             WHERE payload_json IS NULL
+               AND rollback_json IS NOT NULL"
+        );
+        sqlx::query(&backfill)
+            .execute(self.mysql_pool())
+            .await
+            .map_err(|e| SystemStoreError::query("mysql", backfill.clone(), e))?;
         Ok(())
     }
 
@@ -158,8 +187,8 @@ impl MigrationAuditStore for MysqlCanonicalStore {
     }
 
     async fn record_migration_op(&self, op: &MigrationOpInsert) -> SystemStoreResult<i64> {
-        let rollback_text = serde_json::to_string(&op.rollback_json)
-            .map_err(|e| SystemStoreError::InvalidInput(format!("rollback_json: {e}")))?;
+        let payload_text = serde_json::to_string(&op.payload_json)
+            .map_err(|e| SystemStoreError::InvalidInput(format!("payload_json: {e}")))?;
         // applied_at: set to NOW(6) when status is APPLIED. MySQL
         // doesn't allow conditional expressions in DEFAULT, so we
         // branch the SQL.
@@ -171,7 +200,7 @@ impl MigrationAuditStore for MysqlCanonicalStore {
         let sql = format!(
             "INSERT INTO {LEDGER_TABLE} (
                 run_id, operation_index, backend, resource_uri,
-                operation_kind, status, rollback_json, error, applied_at
+                operation_kind, status, payload_json, error, applied_at
             ) VALUES (?, ?, ?, ?, ?, ?, CAST(? AS JSON), ?, {applied_at_expr})"
         );
         let result = sqlx::query(&sql)
@@ -181,7 +210,7 @@ impl MigrationAuditStore for MysqlCanonicalStore {
             .bind(&op.resource_uri)
             .bind(&op.operation_kind)
             .bind(op.status.as_str())
-            .bind(&rollback_text)
+            .bind(&payload_text)
             .bind(&op.error)
             .execute(self.mysql_pool())
             .await
@@ -237,7 +266,7 @@ impl MigrationAuditStore for MysqlCanonicalStore {
     async fn list_migration_ops(&self, run_id: Uuid) -> SystemStoreResult<Vec<MigrationOpRow>> {
         let sql = format!(
             "SELECT id, run_id, operation_index, backend, resource_uri,
-                    operation_kind, status, rollback_json, error, applied_at
+                    operation_kind, status, payload_json, error, applied_at
              FROM {LEDGER_TABLE}
              WHERE run_id = ?
              ORDER BY operation_index ASC"

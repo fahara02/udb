@@ -1,119 +1,227 @@
 # Native Control Plane
 
-Beyond the data-plane `DataBroker`, UDB serves a UDB-owned **auth/admin control
-plane** defined under `proto/udb/core/**`. These services let UDB act as the
-authentication + authorization authority in front of the databases it brokers,
-rather than delegating identity and access decisions to each calling service.
+
+```text
+┌────────────────────────────────────────────────────────────────────────────┐
+│                                                                            │
+│    ██    ██  ██████   ██████                                               │
+│    ██    ██  ██   ██  ██   ██                                              │
+│    ██    ██  ██   ██  ██████                                               │
+│    ██    ██  ██   ██  ██   ██                                              │
+│     ██████   ██████   ██████                                               │
+│                                                                            │
+│    UNIVERSAL DATA BROKER                                                   │
+│    gRPC data plane | native control plane | tenant/project scope guard     │
+│                                                                            │
+│    crate v0.3.2 | protocol v1.0.0                                          │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+UDB includes a native control plane for identity, access, storage metadata,
+asset workflows, realtime coordination, tenancy, notifications, analytics, and
+policy distribution.
 
 <p align="center">
-  <img src="assets/control-plane.svg" alt="UDB topology: apps reach the public DataBroker listener (76 RPCs); a trusted PEP reaches the isolated internal control-plane listener (Authn, Authz, ApiKey, Tenant, Notification, Analytics, 77 RPCs); the internal plane serves the public plane via Authorize/GetNativeAccess; both reach the 18 backends and emit events to Kafka." width="940">
+  <img src="assets/control-plane.svg" alt="UDB public data-plane listener and separate native control-plane listener" width="940">
 </p>
 
-## Network isolation
+The native control plane is separate from the public `DataBroker` listener. Bind
+it to an internal network or place it behind a trusted gateway.
 
-The control-plane services are **mounted on a separate gRPC listener** from the
-public `DataBroker`, controlled by `UDB_AUTH_GRPC_ADDR` (default: loopback on the
-DataBroker port + 10). Every service on that listener is wrapped by a tonic
-interceptor that requires a verified bearer token with `udb:admin`,
-`udb:auth:admin`, `udb:*`, or `*`; when `x-tenant-id` is present, it must match
-the token tenant. The services are still a policy decision point that *accepts
-the subject principal as input*, so exposing them on the public port would let a
-misconfigured upstream boundary assert arbitrary identity, roles, or scopes. Put
-them behind a trusted PEP / gateway, or bind them to an internal interface for
-cross-host PEPs. Wiring: `src/runtime/service/mod.rs::serve()`.
+## Service Table
 
-All control-plane CRUD is **proto-driven** — table and column shape is resolved
-from the embedded `proto/udb/core/**` manifest through `NativeModel`, and the
-tables are created by the normal proto→migration path. Persistence is
-**Postgres-backed and fails closed** when no PG pool is configured; there are no
-in-memory stores.
+UDB 0.3.2 exposes 15 native services with 186 native RPCs.
 
-## Services
+| Service | RPCs | Purpose |
+|---|---:|---|
+| `AuthnService` | 50 | Login, sessions, JWT/JWKS, refresh tokens, MFA, OTP, devices, WebAuthn, user admin |
+| `AuthzService` | 41 | RBAC, ABAC, ReBAC, access checks, policy bundles, native access, governance |
+| `ApiKeyService` | 9 | API key creation, validation, rotation, revocation, usage stats |
+| `IdentityProviderService` | 27 | OIDC, SAML, SCIM, JIT, external identity links |
+| `ControlPlaneService` | 5 | Versioned policy/resource distribution with ACK/NACK |
+| `TenantService` | 6 | Tenant and tenant config CRUD |
+| `NotificationService` | 11 | Notifications, templates, preferences, delivery stats |
+| `AnalyticsService` | 7 | Pipeline, executor, reconciliation, throughput, and SLA metrics |
+| `StorageService` | 7 | Upload registration, finalize, download URLs, file metadata and lifecycle |
+| `AssetService` | 8 | Asset records, pipeline definitions, pipeline runs, step completion |
+| `RoomService` | 5 | WebRTC room lifecycle |
+| `PeerService` | 4 | WebRTC peer lifecycle |
+| `TrackService` | 4 | WebRTC track lifecycle |
+| `TurnService` | 1 | TURN credential issuance |
+| `SignalingService` | 1 | Bidirectional WebRTC signaling bridge |
 
-| Service | Proto package | RPCs | Summary |
-|---|---|---:|---|
-| `AuthnService` | `udb.core.authn.services.v1` | 23 | Authenticate, login/logout, sessions, JWT signing + refresh, TOTP MFA, CSRF, OTP, user admin |
-| `AuthzService` | `udb.core.authz.services.v1` | 23 | Authorize/CheckAccess/batch, role/policy/relationship CRUD, audits, `GetNativeAccess`, `GetPolicyBundle` |
-| `ApiKeyService` | `udb.core.apikey.services.v1` | 7 | Create/get/list/update/revoke/validate API keys + usage stats |
-| `TenantService` | `udb.core.tenant.services.v1` | 6 | Tenant + tenant-config CRUD |
-| `NotificationService` | `udb.core.notification.services.v1` | 11 | Notifications, templates, preferences, delivery stats |
-| `AnalyticsService` | `udb.core.analytics.services.v1` | 7 | Pipeline metrics, executor performance, reconciliation, throughput, SLA |
+Generated table: [generated/native-services.md](generated/native-services.md).
 
-### AuthnService
+## Authn And Authz
 
-`Authenticate` (native JWT / server-side session / API key / verified external
-claims), `Login`/`Logout`, `RefreshToken`, `CreateSession`/`GetSession`/
-`ListSessions`/`RefreshSession`/`RevokeSession`, `ValidateToken`, `ValidateCSRF`,
-`EnrollMFA`/`ConfirmMFAEnrollment`, `SendOTP`/`VerifyOTP`/`ResendOTP`,
-`ChangePassword`, and user admin (`CreateUser`/`GetUser`/`ListUsers`/`UpdateUser`/
-`ChangeUserStatus`/`AdminResetPassword`).
+Authn covers login, logout, server-side sessions, refresh tokens, JWT validation,
+UDB-issued JWTs, JWKS, password login, MFA, OTP, recovery codes, devices,
+WebAuthn/passkeys, and user lifecycle APIs.
 
-Identity features:
+Authz covers RBAC, ABAC, simple ReBAC, role and relationship management, access
+decision audits, policy bundles, native access grants, policy drafts, approvals,
+activation, rollback, canaries, simulation, explanation, revisions, and bundle
+invalidation.
 
-- **Native JWT** validation — static PEM (`UDB_JWT_PUBLIC_KEY`) or JWKS URL
-  (`UDB_JWT_JWKS_URL`) with `kid` lookup/cache/rotation, `iss`/`aud`/`exp`/`nbf`
-  + clock-skew checks.
-- **UDB-issued JWTs** — RS256 access-token signing (`UDB_JWT_PRIVATE_KEY`,
-  `UDB_JWT_ACCESS_TTL_SECONDS`) + refresh-token issuance/rotation.
-- **Passwords** — Argon2id, peppered with the server hash secret; legacy
-  keyed-HMAC hashes still verify and are transparently re-hashed on next login.
-- **MFA** — RFC 6238 TOTP (authenticator-app compatible), secret encrypted at rest.
-- **Sessions** — hashed ids, idle + absolute TTL, immediate revocation, CSRF
-  (signed double-submit bound to the session).
-- **Hybrid external identity** — external auth now requires a signed JWT verified
-  by UDB before claims are mapped; raw JSON claims are rejected. UDB authz still
-  decides *what* the mapped principal may do.
+`GetNativeAccess` lets a trusted server-side caller request short-lived,
+restricted database access after an authz decision. SDKs expose this as a native
+access helper; applications should keep it server-side.
 
-### AuthzService
+Authn capabilities include:
 
-`Authorize`, `CheckAccess`, `BatchCheckPermissions`; role/policy/relationship
-management (`CreateRole`/`AssignRole`/`RevokeRole`/`ListUserRoles`/…,
-`CreatePolicyRule`/`GetPolicyRule`/`ListPolicyRules`/`DeletePolicyRule`,
-`PutRoleBinding`/`PutRelationship`/`PutAuthzPolicy`, `LintAuthzPolicies`);
-`ListUserPermissions`, `ListAccessDecisionAudits`.
+- static public-key or JWKS-based JWT validation;
+- UDB-issued access tokens and refresh tokens;
+- server-side session lifecycle;
+- password login with MFA-ready account state;
+- OTP and recovery-code workflows;
+- device inventory and WebAuthn/passkey state;
+- user lifecycle administration.
 
-- One engine for **RBAC** (roles + bindings), **ABAC** (attribute conditions), and
-  simple **ReBAC** (relationship tuples), over a Casbin enforcer, with
-  tenant/project domains, explicit-deny-wins, priority, deterministic
-  `decision_id`, and audit records. Broker enforcement routes through it when
-  `UDB_AUTHZ_V2` is enabled (default on).
-- **`GetNativeAccess`** — authorizes a request and, on allow, mints a short-lived
-  restricted-role DSN plus the exact `app.current_*` session variables to
-  `SET LOCAL`, so an SDK can talk to Postgres directly while the broker-generated
-  RLS still applies. Configured by `UDB_NATIVE_BASE_DSN`,
-  `UDB_NATIVE_ROLE_PREFIX`, `UDB_NATIVE_DATABASE`, `UDB_NATIVE_ACCESS_TTL_SECS`.
-- **`GetPolicyBundle`** — returns an HMAC-signed, time-boxed snapshot of the
-  policy set that an SDK caches to answer `can()` locally
-  (`UDB_POLICY_BUNDLE_SECRET`, `UDB_POLICY_BUNDLE_TTL_SECS`).
+Authz capabilities include:
 
-### ApiKeyService / TenantService / NotificationService / AnalyticsService
+- role and role-binding management;
+- attribute and relationship-aware checks;
+- batch access decisions;
+- access decision audit records;
+- signed policy bundles for SDK-side caching;
+- policy draft, approval, activation, rollback, simulation, and explanation
+  workflows;
+- native access grants after a successful decision.
 
-- **ApiKey** — hashed key material, prefix lookup, scopes, expiry, rotation,
-  revocation, last-used, and `GetApiKeyUsageStats` (daily aggregation over
-  `udb_authn.api_key_usages`).
-- **Tenant** — `CreateTenant`/`GetTenant`/`ListTenants`/`UpdateTenant` and
-  `GetTenantConfig`/`UpdateTenantConfig` over `udb_tenant.*`.
-- **Notification** — `SendNotification` (records a `NotificationLog` and emits
-  `udb.notification.sent.v1` to the outbox→Kafka relay), templates, preferences,
-  and `GetDeliveryStats` (per-channel). Outbound delivery (email/SMS/push) is a
-  separate adapter concern.
-- **Analytics** — `RecordPipelineMetric` (online hourly aggregation),
-  `GetPipelineSummary`/`GetExecutorPerformance`/`GetReconciliationAnalytics`/
-  `GetThroughput`/`GetSlaCompliance`, `TriggerSnapshot`, over `udb_analytics.*`.
+Native access is for trusted server-side use. Browser or mobile clients should
+call application APIs or the broker rather than receiving direct backend access.
 
-## SDK usage
+## API Keys, Tenants, Notifications, And Analytics
 
-Each wrapper SDK exposes an auth client with `Authenticate*` + `Authorize`/`can`,
-and most expose the native fast-path helper and a local authz cache:
+`ApiKeyService` manages hashed API keys, scopes, validation, rotation,
+revocation, and usage statistics.
 
-- Go (`sdk/go/udbclient/auth.go`, `auth_native.go`, `auth_cache.go`)
-- Python (`sdk/python/udb_client/auth.py`)
-- TypeScript (`sdk/typescript/auth.ts`)
-- PHP (`sdk/php/src/UdbAuthClient.php`)
-- C# (`sdk/csharp/Udb.Client/UdbAuthClient.cs`)
-- Java (`sdk/java/.../UdbAuthClient.java`)
+`TenantService` manages tenant records and tenant configuration. Tenant status
+and configuration are part of runtime admission and native-service checks.
 
-See the [Quickstart Per Language](../README.md#-quickstart-per-language) in the
-root README. Source: `src/runtime/authn/`, `src/runtime/authz/`,
-`src/runtime/service/auth_service/` (+ `tenant_service`, `notification_service`,
-`analytics_service`).
+`NotificationService` manages notification records, templates, preferences, and
+delivery statistics. Notification events can flow through the same event/outbox
+path as other UDB events.
+
+`AnalyticsService` exposes operational summaries for pipelines, executors,
+reconciliation, throughput, and SLA-style views. It is intended for control
+plane and operator-facing views rather than application-domain analytics.
+
+## Identity Providers And SCIM
+
+`IdentityProviderService` covers:
+
+- OIDC provider registry and discovery;
+- SAML metadata, login, and ACS flows;
+- SCIM users and groups;
+- JIT provisioning;
+- external identity linking;
+- group-to-role mapping previews.
+
+Typical SCIM flow:
+
+1. Create an IdP provider for the tenant.
+2. Configure SCIM credentials and mapping rules.
+3. Provision users and groups.
+4. Map external groups to UDB roles through configured mappings.
+5. Verify decisions with `CheckAccess` or SDK `can()`.
+
+## Storage And Asset Workflows
+
+`StorageService` manages object metadata and presigned access:
+
+- register upload;
+- finalize upload;
+- get download URL;
+- get/update/delete/list file metadata;
+- enforce tenant scope and optional quotas.
+
+`AssetService` builds on storage metadata:
+
+- asset registration;
+- reusable pipeline definitions;
+- pipeline instances;
+- step completion;
+- asset listing and fetch;
+- embedding/vector-ready asset workflows.
+
+## WebRTC And Signalling
+
+WebRTC services cover rooms, peers, tracks, TURN credentials, and bidirectional
+signaling. Durable room/peer/track data is stored through the native control
+plane; signaling fan-out is transient.
+
+Optional WebSocket signalling is available for clients that cannot use gRPC
+signaling directly.
+
+| Setting | Purpose |
+|---|---|
+| `UDB_WEBRTC_GRPC_ADDR` | Optional peer-facing WebRTC listener |
+| `UDB_TURN_URLS` | TURN servers advertised to clients |
+| `UDB_TURN_SECRET` | TURN credential secret |
+| `UDB_WS_SIGNALLING_ADDR` | Enables the WebSocket bridge |
+| `UDB_WS_SIGNALLING_PROTOCOL` | `pixelstreaming` or `json-relay` |
+| `UDB_WS_SIGNALLING_TOKEN` | Optional shared handshake token |
+
+TLS for `wss://` is normally terminated by a gateway such as nginx or Envoy.
+
+## Control Distribution
+
+`ControlPlaneService` provides a versioned distribution API for policy and
+resource state. It supports state-of-the-world and delta-style resource delivery
+with ACK/NACK status.
+
+This service is useful when gateways, SDK caches, or sidecars need to receive a
+known policy/resource version and report whether they accepted or rejected it.
+
+## Event Model
+
+Native services emit descriptor-declared events for lifecycle, audit, and
+operational workflows. Event envelopes preserve tenant id, project id,
+correlation id, actor/service identity, operation, resource, schema version, and
+redaction context.
+
+Use the generated contract for machine-readable inspection:
+
+```bash
+udb native manifest
+```
+
+## Configuration
+
+| Setting | Purpose |
+|---|---|
+| `UDB_AUTH_GRPC_ADDR` | Native control-plane listener |
+| `UDB_WEBRTC_GRPC_ADDR` | Optional peer-facing WebRTC listener |
+| `UDB_JWT_PUBLIC_KEY` / `UDB_JWT_JWKS_URL` | JWT validation |
+| `UDB_JWT_PRIVATE_KEY` | UDB-issued token signing |
+| `UDB_POLICY_BUNDLE_SECRET` | Signed SDK policy bundles |
+| `UDB_STORAGE_OBJECT_BACKEND` | Object backend used by storage service |
+| `UDB_TURN_URLS` / `UDB_TURN_SECRET` | TURN credential configuration |
+
+## SDK Facades
+
+SDKs provide generated clients plus ergonomic facades.
+
+| Facade | Examples |
+|---|---|
+| Auth | login, refresh, token validation |
+| Authz | `can`, `require`, batch checks, native access |
+| API keys | create, rotate, revoke |
+| Tenant | tenant and config helpers |
+| Notification | send, templates, preferences |
+| Analytics | pipeline and SLA views |
+| Storage | upload registration, finalize, download URLs, metadata |
+| Asset | pipeline definitions, runs, step completion |
+| WebRTC | rooms, peers, tracks, TURN, signaling |
+
+Framework adapters are available for common server frameworks, including
+Express, Fastify, Next.js, FastAPI, Starlette, Go HTTP/gRPC middleware, Spring,
+ASP.NET Core, and Laravel.
+
+## Inspect The Contract
+
+```bash
+udb native list --json
+udb native manifest
+udb native docs
+```

@@ -6,12 +6,13 @@
 //! reusing the executor's `select_rows` (JSONCompact decode) and `execute_ddl`
 //! (DDL / INSERT) helpers.
 //!
-//! This is the **base** canonical-store surface only: durability token, outbox,
-//! advisory leases, and `ensure_system_tables`. The four system-store traits
+//! This module implements the base canonical-store surface: durability token,
+//! outbox, advisory leases, and `ensure_system_tables`. The companion
+//! `clickhouse_*` modules implement the `SystemStores` traits
 //! (`ProjectionTaskStore` / `SagaStore` / `AdminAuditStore` /
-//! `MigrationAuditStore`) are PHASE 2 and are NOT implemented here, so this
-//! store is not yet registered into the runtime `CanonicalStoreRegistry` (that
-//! happens only after the full `SystemStores` conformance passes).
+//! `MigrationAuditStore`). Runtime registration is still intentionally gated by
+//! `UDB_ALLOW_PROJECTION_SYSTEM_STORE=1` because the sequence and lease paths
+//! below rely on the single-writer assumption documented here.
 //!
 //! ## Why ClickHouse is the hardest canonical target
 //!
@@ -126,11 +127,6 @@ impl ClickHouseCanonicalStore {
     /// Executor accessor for the phase-2 system-store impls in sibling modules.
     pub(super) fn executor(&self) -> &ClickHouseExecutor {
         &self.executor
-    }
-
-    /// Operator-supplied database accessor for the phase-2 system-store impls.
-    pub(super) fn database(&self) -> &str {
-        &self.database
     }
 
     /// Fully-qualified, back-quoted `` `db`.`table` `` for one of our fixed

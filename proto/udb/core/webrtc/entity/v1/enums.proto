@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package udb.core.webrtc.entity.v1;
+
+option csharp_namespace = "udb.core.Webrtc.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/webrtc/entity/v1;webrtcv1";
+option java_package = "com.udb.core.webrtc.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Webrtc\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Webrtc\\Entity\\V1";
+
+enum RoomState {
+  ROOM_STATE_UNSPECIFIED = 0;
+  ROOM_STATE_ACTIVE = 1;
+  ROOM_STATE_IDLE = 2;
+  ROOM_STATE_CLOSED = 3;
+}
+
+enum PeerState {
+  PEER_STATE_UNSPECIFIED = 0;
+  PEER_STATE_NEW = 1;
+  PEER_STATE_CONNECTING = 2;
+  PEER_STATE_CONNECTED = 3;
+  PEER_STATE_DISCONNECTED = 4;
+  PEER_STATE_FAILED = 5;
+  PEER_STATE_CLOSED = 6;
+}
+
+enum TrackKind {
+  TRACK_KIND_UNSPECIFIED = 0;
+  TRACK_KIND_AUDIO = 1;
+  TRACK_KIND_VIDEO = 2;
+  TRACK_KIND_SCREEN = 3;
+  TRACK_KIND_DATA = 4;
+}
+
+enum TrackState {
+  TRACK_STATE_UNSPECIFIED = 0;
+  TRACK_STATE_ACTIVE = 1;
+  TRACK_STATE_MUTED = 2;
+  TRACK_STATE_ENDED = 3;
+}

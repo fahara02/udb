@@ -45,6 +45,12 @@ use uuid::Uuid;
 
 use crate::backend::BackendCapabilityMatrixEntry;
 
+/// Reason stamped on the write-ahead (pre-PHASE-2) ledger row. MUST NOT
+/// contain any of the prepare-failure phrases
+/// `xa_recovery::InDoubtLedgerRow::target_intent` matches on, so the
+/// recovery worker resolves the row towards COMMIT.
+pub const XA_COMMIT_INTENT_REASON: &str = "commit decided; phase 2 in flight";
+
 /// Which transaction strategy the caller wants for a cross-backend
 /// mutation. The runtime picks based on this + the participant set;
 /// the strategy is the **upper bound** on commitment guarantees.
@@ -155,6 +161,11 @@ pub enum XaDecision {
     /// drives it to `Committed` (re-issuing COMMIT PREPARED) or
     /// `RolledBack` based on the per-participant outcome ledger.
     InDoubt,
+    /// The recovery worker failed `RecoveryConfig::max_attempts` times
+    /// to drive this xid terminal. Parked: no automatic retries, an
+    /// operator must resolve it manually (the backend's prepared xact —
+    /// if any — is intentionally left untouched so no decision is lost).
+    ManualReview,
 }
 
 impl XaDecision {
@@ -163,6 +174,7 @@ impl XaDecision {
             Self::Committed => "committed",
             Self::RolledBack => "rolled_back",
             Self::InDoubt => "in_doubt",
+            Self::ManualReview => "manual_review",
         }
     }
 
@@ -371,6 +383,31 @@ impl XaCoordinator {
         participants: Vec<Box<dyn XaParticipant>>,
         capability_matrix: &[BackendCapabilityMatrixEntry],
     ) -> Result<XaOutcome, XaError> {
+        Self::execute_with_write_ahead(request, participants, capability_matrix, |_| async {
+            Ok(())
+        })
+        .await
+    }
+
+    /// Like [`Self::execute`] but invokes `write_ahead` with a
+    /// commit-intent `XaLedgerEntry` (decision `InDoubt`, reason
+    /// signalling commit) after every participant voted Prepared and
+    /// BEFORE the first `commit_prepared` is issued. This is the
+    /// write-ahead decision record: a crash mid-PHASE-2 leaves a durable
+    /// commit-intent row, so the presumed-abort sweep can never roll
+    /// back a commit-decided transaction. If `write_ahead` fails, the
+    /// coordinator fails CLOSED — every prepared participant is rolled
+    /// back and the request aborts without committing anything.
+    pub async fn execute_with_write_ahead<F, Fut>(
+        request: XaRequest,
+        participants: Vec<Box<dyn XaParticipant>>,
+        capability_matrix: &[BackendCapabilityMatrixEntry],
+        write_ahead: F,
+    ) -> Result<XaOutcome, XaError>
+    where
+        F: FnOnce(XaLedgerEntry) -> Fut + Send,
+        Fut: std::future::Future<Output = Result<(), String>> + Send,
+    {
         let handles: Vec<XaParticipantHandle> =
             participants.iter().map(|p| p.handle().clone()).collect();
         let labels: Vec<String> = handles.iter().map(|h| h.label.clone()).collect();
@@ -430,6 +467,52 @@ impl XaCoordinator {
             });
         }
 
+        // Write-ahead decision record (item 5): persist the COMMIT
+        // intent BEFORE the first commit_prepared so a mid-PHASE-2
+        // crash leaves a commit-intent ledger row instead of nothing.
+        // The reason string deliberately avoids the prepare-failure
+        // phrases `InDoubtLedgerRow::target_intent` recognises, so
+        // recovery drives this xid towards COMMIT.
+        let write_ahead_entry = XaLedgerEntry::new(
+            xid.clone(),
+            request.tenant_id.clone(),
+            request.project_id.clone(),
+            request.origin_rpc.clone(),
+            request.correlation_id.clone(),
+            labels.clone(),
+            XaDecision::InDoubt,
+        )
+        .with_reason(XA_COMMIT_INTENT_REASON);
+        if let Err(err) = write_ahead(write_ahead_entry).await {
+            // Fail closed: without a durable decision record we must not
+            // commit (a crash mid-PHASE-2 would be unrecoverable). Every
+            // prepared participant rolls back.
+            for (i, p) in participants.iter().enumerate() {
+                if let Err(rb_err) = p.rollback_prepared(&xid).await {
+                    tracing::warn!(
+                        xid = %xid,
+                        participant = %outcomes[i].label,
+                        error = %rb_err,
+                        "ROLLBACK PREPARED failed during write-ahead-ledger abort",
+                    );
+                }
+            }
+            let ledger = XaLedgerEntry::new(
+                xid,
+                request.tenant_id,
+                request.project_id,
+                request.origin_rpc,
+                request.correlation_id,
+                labels,
+                XaDecision::RolledBack,
+            )
+            .with_reason(format!("write-ahead XA ledger insert failed: {err}"));
+            return Err(XaError::PrepareFailed {
+                ledger,
+                failures: outcomes,
+            });
+        }
+
         // PHASE 2: COMMIT PREPARED. If any participant fails commit,
         // the transaction enters in-doubt state — durably record and
         // surface to the operator. Recovery worker drives stragglers.
@@ -475,6 +558,118 @@ impl XaCoordinator {
 }
 
 // ── Concrete XA participants ─────────────────────────────────────────────────
+
+/// Translate one Postgres-dialect `SqlOperationPlan` statement (the
+/// machine-generated shape from `build_upsert_plan` / `build_delete_plan`:
+/// `$N` placeholders in ascending order, double-quoted identifiers,
+/// `ON CONFLICT (…) DO …`) into MySQL dialect for replay inside an XA
+/// transaction (`XaMysqlParticipant::prepared_statements`). Plan SQL never
+/// embeds literal values — everything is parameterized — so the
+/// identifier-quote and placeholder rewrites are purely structural. Fails
+/// CLOSED on any shape it cannot prove a faithful translation for.
+pub fn translate_pg_plan_sql_to_mysql(sql: &str) -> Result<String, String> {
+    if sql.to_ascii_uppercase().contains("RETURNING") {
+        return Err("RETURNING is not supported by the MySQL XA participant".to_string());
+    }
+    if sql.contains("\"\"") {
+        return Err(
+            "identifiers containing embedded double quotes cannot be translated to MySQL"
+                .to_string(),
+        );
+    }
+    if sql.contains('`') {
+        return Err("plan SQL already contains backticks; refusing ambiguous translation".into());
+    }
+    // Plan identifiers use PG double-quote quoting; MySQL (without
+    // ANSI_QUOTES) treats `"x"` as a string literal, so rewrite to
+    // backticks. `ILIKE` maps to `LIKE`, which is case-insensitive under
+    // MySQL's default *_ci collations.
+    let quoted = sql.replace('"', "`").replace(" ILIKE ", " LIKE ");
+    let mut out = String::with_capacity(quoted.len());
+    let mut expected = 1usize;
+    let mut chars = quoted.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '$' {
+            out.push(c);
+            continue;
+        }
+        let mut digits = String::new();
+        while let Some(d) = chars.peek().copied() {
+            if d.is_ascii_digit() {
+                digits.push(d);
+                chars.next();
+            } else {
+                break;
+            }
+        }
+        if digits.is_empty() {
+            return Err("unexpected '$' without parameter number in plan SQL".to_string());
+        }
+        let n: usize = digits
+            .parse()
+            .map_err(|e| format!("invalid placeholder ${digits}: {e}"))?;
+        if n != expected {
+            return Err(format!(
+                "placeholder ${n} out of order (expected ${expected}); MySQL binds positionally"
+            ));
+        }
+        expected += 1;
+        out.push('?');
+    }
+    rewrite_on_conflict_for_mysql(&out)
+}
+
+/// Rewrite the PG `ON CONFLICT` tail into MySQL `ON DUPLICATE KEY UPDATE`.
+/// Caveat (documented, accepted): MySQL's clause fires on ANY unique-key
+/// conflict, not only the columns PG's plan named — same rows-or-fewer
+/// semantics for the no-op form, and the standard MySQL upsert idiom for
+/// the update form.
+fn rewrite_on_conflict_for_mysql(sql: &str) -> Result<String, String> {
+    const MARKER: &str = " ON CONFLICT (";
+    let Some(pos) = sql.find(MARKER) else {
+        return Ok(sql.to_string());
+    };
+    let head = &sql[..pos];
+    let rest = &sql[pos + MARKER.len()..];
+    let close = rest
+        .find(')')
+        .ok_or_else(|| "malformed ON CONFLICT clause".to_string())?;
+    let conflict_columns = &rest[..close];
+    let tail = rest[close + 1..].trim();
+    if tail == "DO NOTHING" {
+        // MySQL no-op idiom: assign the first conflict column to itself.
+        // Unlike INSERT IGNORE this only suppresses duplicate-key rows.
+        let first = conflict_columns
+            .split(',')
+            .next()
+            .map(str::trim)
+            .filter(|c| !c.is_empty())
+            .ok_or_else(|| "ON CONFLICT clause without columns".to_string())?;
+        return Ok(format!("{head} ON DUPLICATE KEY UPDATE {first} = {first}"));
+    }
+    let Some(assignments) = tail.strip_prefix("DO UPDATE SET ") else {
+        return Err(format!("unsupported ON CONFLICT action '{tail}'"));
+    };
+    let mut rewritten = Vec::new();
+    for assignment in assignments.split(", ") {
+        let (lhs, rhs) = assignment
+            .split_once(" = ")
+            .ok_or_else(|| format!("unsupported ON CONFLICT assignment '{assignment}'"))?;
+        let column = rhs
+            .strip_prefix("EXCLUDED.")
+            .ok_or_else(|| format!("unsupported ON CONFLICT assignment source '{rhs}'"))?;
+        if column != lhs {
+            return Err(format!(
+                "unsupported cross-column ON CONFLICT assignment '{assignment}'"
+            ));
+        }
+        rewritten.push(format!("{lhs} = VALUES({column})"));
+    }
+    Ok(format!(
+        "{head} ON DUPLICATE KEY UPDATE {}",
+        rewritten.join(", ")
+    ))
+}
 
 /// MySQL XA participant (NW-deep).
 ///
@@ -705,12 +900,16 @@ mod tests {
             max_payload_bytes: 0,
             supports_xa: supports,
             supports_two_phase_commit: supports,
+            transport_label: "test".to_string(),
+            live_probe: false,
+            configured: false,
             role: crate::backend::BackendRole::Canonical,
             // Struct's documented defaults (this test helper predates the B.12
             // canonical-promotion fields added to the matrix entry).
             canonical_candidate: crate::backend::CanonicalCandidateProfile::ExplicitlyNotSupported,
             canonical_goal: String::new(),
             canonical_feasibility: None,
+            control_plane_ha_level: crate::backend::ControlPlaneHaLevel::ProjectionOnly,
         }
     }
 
@@ -871,9 +1070,191 @@ mod tests {
         assert_eq!(XaDecision::Committed.as_str(), "committed");
         assert_eq!(XaDecision::RolledBack.as_str(), "rolled_back");
         assert_eq!(XaDecision::InDoubt.as_str(), "in_doubt");
+        assert_eq!(XaDecision::ManualReview.as_str(), "manual_review");
         assert!(XaDecision::Committed.is_terminal());
         assert!(XaDecision::RolledBack.is_terminal());
         assert!(!XaDecision::InDoubt.is_terminal());
+        assert!(!XaDecision::ManualReview.is_terminal());
+    }
+
+    /// Stub that records events into a SHARED log so cross-participant /
+    /// hook ordering can be asserted.
+    struct SharedLogParticipant {
+        handle: XaParticipantHandle,
+        log: std::sync::Arc<Mutex<Vec<String>>>,
+    }
+
+    #[async_trait::async_trait]
+    impl XaParticipant for SharedLogParticipant {
+        fn handle(&self) -> &XaParticipantHandle {
+            &self.handle
+        }
+        async fn prepare(&self, _xid: &str) -> PrepareVote {
+            self.log
+                .lock()
+                .unwrap()
+                .push(format!("prepare:{}", self.handle.label));
+            PrepareVote::Prepared
+        }
+        async fn commit_prepared(&self, _xid: &str) -> Result<(), String> {
+            self.log
+                .lock()
+                .unwrap()
+                .push(format!("commit:{}", self.handle.label));
+            Ok(())
+        }
+        async fn rollback_prepared(&self, _xid: &str) -> Result<(), String> {
+            self.log
+                .lock()
+                .unwrap()
+                .push(format!("rollback:{}", self.handle.label));
+            Ok(())
+        }
+    }
+
+    /// Item 5 acceptance: the write-ahead ledger record is durably issued
+    /// BEFORE any participant's PHASE 2 commit.
+    #[tokio::test]
+    async fn write_ahead_record_precedes_every_phase_2_commit() {
+        let log = std::sync::Arc::new(Mutex::new(Vec::<String>::new()));
+        let p1 = SharedLogParticipant {
+            handle: XaParticipantHandle::new("postgres", "p1"),
+            log: log.clone(),
+        };
+        let p2 = SharedLogParticipant {
+            handle: XaParticipantHandle::new("postgres", "p2"),
+            log: log.clone(),
+        };
+        let matrix = vec![matrix_with_two_phase("postgres", true)];
+        let hook_log = log.clone();
+        let outcome = XaCoordinator::execute_with_write_ahead(
+            request(),
+            vec![Box::new(p1), Box::new(p2)],
+            &matrix,
+            |entry| async move {
+                assert_eq!(entry.decision, XaDecision::InDoubt);
+                assert_eq!(entry.reason, XA_COMMIT_INTENT_REASON);
+                hook_log.lock().unwrap().push("write_ahead".to_string());
+                Ok(())
+            },
+        )
+        .await
+        .expect("happy path");
+        assert_eq!(outcome.ledger.decision, XaDecision::Committed);
+        let events = log.lock().unwrap().clone();
+        let write_ahead_idx = events
+            .iter()
+            .position(|e| e == "write_ahead")
+            .expect("write-ahead hook ran");
+        for (idx, event) in events.iter().enumerate() {
+            if event.starts_with("commit:") {
+                assert!(
+                    write_ahead_idx < idx,
+                    "write-ahead must precede phase-2 commit {event}; got {events:?}"
+                );
+            }
+            if event.starts_with("prepare:") {
+                assert!(
+                    idx < write_ahead_idx,
+                    "write-ahead must follow all prepares; got {events:?}"
+                );
+            }
+        }
+    }
+
+    /// Item 5 fail-closed: when the write-ahead record can't be written,
+    /// nothing commits — every prepared participant rolls back.
+    #[tokio::test]
+    async fn write_ahead_failure_rolls_back_and_never_commits() {
+        let log = std::sync::Arc::new(Mutex::new(Vec::<String>::new()));
+        let p1 = SharedLogParticipant {
+            handle: XaParticipantHandle::new("postgres", "p1"),
+            log: log.clone(),
+        };
+        let matrix = vec![matrix_with_two_phase("postgres", true)];
+        let err = XaCoordinator::execute_with_write_ahead(
+            request(),
+            vec![Box::new(p1)],
+            &matrix,
+            |_entry| async move { Err("ledger down".to_string()) },
+        )
+        .await
+        .unwrap_err();
+        match err {
+            XaError::PrepareFailed { ledger, .. } => {
+                assert_eq!(ledger.decision, XaDecision::RolledBack);
+                assert!(ledger.reason.contains("ledger down"));
+            }
+            other => panic!("expected PrepareFailed, got {other:?}"),
+        }
+        let events = log.lock().unwrap().clone();
+        assert!(events.iter().any(|e| e.starts_with("rollback:")));
+        assert!(events.iter().all(|e| !e.starts_with("commit:")));
+    }
+
+    #[test]
+    fn commit_intent_reason_is_not_misread_as_prepare_failure() {
+        let lc = XA_COMMIT_INTENT_REASON.to_ascii_lowercase();
+        for phrase in ["prepare failed", "xa prepare", "aborted vote", "aborted: "] {
+            assert!(
+                !lc.contains(phrase),
+                "commit-intent reason must not contain '{phrase}'"
+            );
+        }
+    }
+
+    #[test]
+    fn translate_upsert_plan_to_mysql_dialect() {
+        let pg = "INSERT INTO \"public\".\"users\" (\"id\", \"name\") VALUES ($1, $2) \
+                  ON CONFLICT (\"id\") DO UPDATE SET \"name\" = EXCLUDED.\"name\"";
+        let mysql = translate_pg_plan_sql_to_mysql(pg).expect("translates");
+        assert_eq!(
+            mysql,
+            "INSERT INTO `public`.`users` (`id`, `name`) VALUES (?, ?) \
+             ON DUPLICATE KEY UPDATE `name` = VALUES(`name`)"
+        );
+    }
+
+    #[test]
+    fn translate_do_nothing_upsert_to_mysql_noop_update() {
+        let pg = "INSERT INTO \"s\".\"t\" (\"id\") VALUES ($1) ON CONFLICT (\"id\") DO NOTHING";
+        let mysql = translate_pg_plan_sql_to_mysql(pg).expect("translates");
+        assert_eq!(
+            mysql,
+            "INSERT INTO `s`.`t` (`id`) VALUES (?) ON DUPLICATE KEY UPDATE `id` = `id`"
+        );
+    }
+
+    #[test]
+    fn translate_delete_plan_to_mysql_dialect() {
+        let pg = "DELETE FROM \"s\".\"t\" WHERE \"tenant_id\" = $1 AND \"id\" IN ($2, $3)";
+        let mysql = translate_pg_plan_sql_to_mysql(pg).expect("translates");
+        assert_eq!(
+            mysql,
+            "DELETE FROM `s`.`t` WHERE `tenant_id` = ? AND `id` IN (?, ?)"
+        );
+    }
+
+    #[test]
+    fn translate_fails_closed_on_untranslatable_shapes() {
+        // RETURNING has no MySQL equivalent on this path.
+        assert!(
+            translate_pg_plan_sql_to_mysql(
+                "INSERT INTO \"s\".\"t\" (\"id\") VALUES ($1) ON CONFLICT (\"id\") DO NOTHING RETURNING *"
+            )
+            .is_err()
+        );
+        // Out-of-order placeholders would bind the wrong values positionally.
+        assert!(
+            translate_pg_plan_sql_to_mysql("DELETE FROM \"s\".\"t\" WHERE \"a\" = $2").is_err()
+        );
+        // Embedded identifier quotes can't round-trip the quote rewrite.
+        assert!(
+            translate_pg_plan_sql_to_mysql("DELETE FROM \"s\".\"t\"\"x\" WHERE \"a\" = $1")
+                .is_err()
+        );
+        // Pre-existing backticks make the quote rewrite ambiguous.
+        assert!(translate_pg_plan_sql_to_mysql("DELETE FROM `t` WHERE \"a\" = $1").is_err());
     }
 
     #[test]

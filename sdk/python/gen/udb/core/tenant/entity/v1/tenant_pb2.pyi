@@ -2,6 +2,7 @@ import datetime
 
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from udb.core.common.v1 import db_pb2 as _db_pb2
+from udb.core.common.v1 import security_pb2 as _security_pb2
 from udb.core.common.v1 import types_pb2 as _types_pb2
 from udb.core.common.v1 import domain_types_pb2 as _domain_types_pb2
 from udb.core.tenant.entity.v1 import enums_pb2 as _enums_pb2

@@ -347,9 +347,9 @@ pub async fn apply_artifacts_audited(
 ///
 /// Phase mapping:
 ///
-/// - `Prepare`   — pre-flight: verify each artifact's `verify_applied`
-///                 and refuse the run if every artifact is already
-///                 applied (nothing to do).
+/// - `Prepare`   — pre-flight: verify artifact reachability. Artifacts that
+///                 already verify are allowed through so crash-resume and
+///                 verify-only plans can advance to `Validate`.
 /// - `Backfill`  — the real `apply_artifacts_audited` call. This is
 ///                 where the SQL/DDL is executed and audit ledger
 ///                 rows are written.
@@ -403,18 +403,13 @@ pub async fn apply_artifacts_phased(
         async fn run(&self, phase: MigrationPhase) -> Result<(), String> {
             match phase {
                 MigrationPhase::Prepare => {
-                    // Pre-flight: refuse the run when nothing to do.
-                    let mut already = 0usize;
                     for art in self.artifacts {
-                        if matches!(self.target.verify_applied(art).await, Ok(true)) {
-                            already += 1;
+                        if let Err(err) = self.target.verify_applied(art).await {
+                            return Err(format!(
+                                "prepare: verify_applied('{}') failed: {err}",
+                                art.rel_path
+                            ));
                         }
-                    }
-                    if !self.artifacts.is_empty() && already == self.artifacts.len() {
-                        return Err(format!(
-                            "every artifact ({already}) is already applied; nothing to do — \
-                             mark the run abandoned or supply new artifacts"
-                        ));
                     }
                     Ok(())
                 }
@@ -641,6 +636,54 @@ mod tests {
             }
             other => panic!("expected Paused at Validate, got {other:?}"),
         }
+    }
+
+    #[tokio::test]
+    async fn c_phased_apply_all_already_applied_completes_as_skipped() {
+        use crate::migration::phase_runner::{MemoryPhaseLedger, RunnerOutcome};
+
+        struct AlreadyAppliedTarget;
+        impl ApplyTarget for AlreadyAppliedTarget {
+            fn backend_name(&self) -> &'static str {
+                "already_applied"
+            }
+
+            fn apply_artifact<'a>(
+                &'a self,
+                _artifact: &'a GeneratedArtifact,
+            ) -> ApplyFuture<'a, ()> {
+                Box::pin(async { Ok(()) })
+            }
+
+            fn verify_applied<'a>(
+                &'a self,
+                _artifact: &'a GeneratedArtifact,
+            ) -> ApplyFuture<'a, bool> {
+                Box::pin(async { Ok(true) })
+            }
+        }
+
+        let target = AlreadyAppliedTarget;
+        let sink = NoopMigrationAuditSink;
+        let ledger = MemoryPhaseLedger::default();
+        let artifacts = vec![dummy_artifact("test/already.sql")];
+        let (outcome, results) = apply_artifacts_phased(
+            "run-c-already",
+            &target,
+            &artifacts,
+            &sink,
+            &ledger,
+            "v1.0",
+            "hash-already",
+        )
+        .await
+        .expect("phased apply failed");
+
+        assert!(matches!(outcome, RunnerOutcome::Completed { .. }));
+        assert_eq!(results.len(), 1);
+        assert!(results[0].skipped);
+        assert!(!results[0].applied);
+        assert!(results[0].error.is_none());
     }
 
     #[tokio::test]

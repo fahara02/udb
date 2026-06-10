@@ -627,8 +627,13 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
                 id BIGSERIAL PRIMARY KEY,
                 lock_key BIGINT NOT NULL,
                 holder_host TEXT NOT NULL,
-                acquired_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                acquired_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                fencing_token BIGINT NOT NULL DEFAULT 0
             )",
+            config.cdc.lock_log_relation()
+        ),
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS fencing_token BIGINT NOT NULL DEFAULT 0",
             config.cdc.lock_log_relation()
         ),
         format!(
@@ -831,7 +836,7 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
                 project_id TEXT NOT NULL DEFAULT '',
                 catalog_version TEXT NOT NULL DEFAULT '',
                 state TEXT NOT NULL DEFAULT 'DRY_RUN'
-                    CHECK (state IN ('DRY_RUN','PREFLIGHT','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')),
+                    CHECK (state IN ('DRY_RUN','PREFLIGHT','APPROVED','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')),
                 operations_hash TEXT NOT NULL DEFAULT '',
                 approval_token TEXT NOT NULL DEFAULT '',
                 started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -855,7 +860,7 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
                 operation_kind TEXT NOT NULL DEFAULT '',
                 status TEXT NOT NULL DEFAULT 'PENDING'
                     CHECK (status IN ('PENDING','APPLIED','VERIFIED','SKIPPED','FAILED','ROLLED_BACK')),
-                rollback_json JSONB NOT NULL DEFAULT '{{}}'::JSONB,
+                payload_json JSONB NOT NULL DEFAULT '{{}}'::JSONB,
                 error TEXT NOT NULL DEFAULT '',
                 applied_at TIMESTAMPTZ
             )",
@@ -1297,6 +1302,11 @@ mod tests {
                 || relation.display_relation.starts_with("udb_tenant.")
                 || relation.display_relation.starts_with("udb_notification.")
                 || relation.display_relation.starts_with("udb_analytics.")
+                || relation.display_relation.starts_with("udb_idp.")
+                || relation.display_relation.starts_with("udb_storage.")
+                || relation.display_relation.starts_with("udb_asset.")
+                || relation.display_relation.starts_with("udb_webrtc.")
+                || relation.display_relation.starts_with("udb_control.")
         }));
     }
 }

@@ -4,6 +4,7 @@ package udb.core.tenant.entity.v1;
 
 import "google/protobuf/timestamp.proto";
 import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
 import "udb/core/common/v1/types.proto";
 import "udb/core/tenant/entity/v1/enums.proto";
 
@@ -60,6 +61,19 @@ message Tenant {
       function_name: "udb_tenant.touch_updated_at()"
       for_each: "ROW"
     }
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "tenant.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
   };
 
   string tenant_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];

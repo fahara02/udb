@@ -25,7 +25,7 @@ use chrono::{DateTime, Utc};
 use sqlx::Row;
 use uuid::Uuid;
 
-use super::dialect::apply_projection_summary_bucket;
+use super::dialect::{apply_projection_summary_bucket, projection_retry_delay_secs};
 use super::postgres::PostgresCanonicalStore;
 use super::system_store::{
     DeadLetterGroup, PendingTaskMetric, ProjectionClaimFilter, ProjectionOperation,
@@ -37,11 +37,6 @@ use super::system_store::{
 /// `SystemCatalogConfig::projection_tasks_relation()` for the canonical
 /// `udb_system.udb_projection_tasks` table.
 const DEFAULT_REL: &str = r#""udb_system"."udb_projection_tasks""#;
-
-fn projection_retry_delay_secs(retry_count: i32) -> i64 {
-    let attempt = retry_count.max(1).min(12) as u32;
-    (1_i64 << (attempt - 1)).min(3600)
-}
 
 impl PostgresCanonicalStore {
     /// PG pool getter for the projection impl below.
@@ -226,23 +221,13 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
         };
         let target_filter = match (&filter.target_backend, &filter.target_instance) {
             (Some(_), Some(_)) => {
-                let clause = format!(
+                format!(
                     "AND target_backend = ${next_param} AND target_instance = ${}",
                     next_param + 1
-                );
-                next_param += 2;
-                clause
+                )
             }
-            (Some(_), None) => {
-                let clause = format!("AND target_backend = ${next_param}");
-                next_param += 1;
-                clause
-            }
-            (None, Some(_)) => {
-                let clause = format!("AND target_instance = ${next_param}");
-                next_param += 1;
-                clause
-            }
+            (Some(_), None) => format!("AND target_backend = ${next_param}"),
+            (None, Some(_)) => format!("AND target_instance = ${next_param}"),
             (None, None) => String::new(),
         };
         let sql = format!(
@@ -348,11 +333,25 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
                 new_status.as_str()
             )));
         }
+        // FAILED tasks become re-claimable after an exponential backoff so a
+        // persistently-failing projection doesn't hot-loop the worker; the
+        // claim query gates on `next_retry_at <= NOW()`. DEAD_LETTER is
+        // terminal, so it keeps `next_retry_at = NULL` and is never reclaimed.
+        // `NULL` backoff (DEAD_LETTER) yields `next_retry_at = NULL`; the
+        // `$5` parameter is still referenced in both branches so PG doesn't
+        // complain about an unused bind parameter.
+        let backoff_secs = match new_status {
+            ProjectionTaskStatus::Failed => Some(projection_retry_delay_secs(new_retry_count)),
+            _ => None,
+        };
         let rel = self.projection_relation_ref();
         let sql = format!(
             r#"UPDATE {rel}
                SET status = $1, retry_count = $2, last_error = $3,
-                   next_retry_at = NULL,
+                   next_retry_at = CASE
+                       WHEN $5::bigint IS NULL THEN NULL
+                       ELSE NOW() + ($5::bigint * INTERVAL '1 second')
+                   END,
                    updated_at = NOW()
                WHERE task_id = $4"#
         );
@@ -361,6 +360,7 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
             .bind(new_retry_count)
             .bind(error)
             .bind(task_id)
+            .bind(backoff_secs)
             .execute(self.pg_pool())
             .await
             .map_err(|e| SystemStoreError::query("postgres", sql.clone(), e))?;

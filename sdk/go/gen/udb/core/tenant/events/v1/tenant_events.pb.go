@@ -7,6 +7,7 @@
 package eventsv1
 
 import (
+	_ "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -204,7 +205,7 @@ var File_udb_core_tenant_events_v1_tenant_events_proto protoreflect.FileDescript
 
 const file_udb_core_tenant_events_v1_tenant_events_proto_rawDesc = "" +
 	"\n" +
-	"-udb/core/tenant/events/v1/tenant_events.proto\x12\x19udb.core.tenant.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x83\x02\n" +
+	"-udb/core/tenant/events/v1/tenant_events.proto\x12\x19udb.core.tenant.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!udb/core/common/v1/security.proto\"\x88\x03\n" +
 	"\x12TenantCreatedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1f\n" +
@@ -214,7 +215,8 @@ const file_udb_core_tenant_events_v1_tenant_events_proto_rawDesc = "" +
 	"tenantName\x12\x12\n" +
 	"\x04type\x18\x05 \x01(\tR\x04type\x12%\n" +
 	"\x0ecorrelation_id\x18\x06 \x01(\tR\rcorrelationId\x128\n" +
-	"\ttimestamp\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\xf1\x01\n" +
+	"\ttimestamp\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp:\x82\x01\x92\xb2\x19~\n" +
+	",udb.core.tenant.events.v1.TenantCreatedEvent\x12\"udb.tenant.tenant_created_event.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\x84\x03\n" +
 	"\x18TenantStatusChangedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1d\n" +
@@ -223,7 +225,8 @@ const file_udb_core_tenant_events_v1_tenant_events_proto_rawDesc = "" +
 	"\n" +
 	"new_status\x18\x04 \x01(\tR\tnewStatus\x12%\n" +
 	"\x0ecorrelation_id\x18\x05 \x01(\tR\rcorrelationId\x128\n" +
-	"\ttimestamp\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestampB\x82\x02\n" +
+	"\ttimestamp\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp:\x90\x01\x92\xb2\x19\x8b\x01\n" +
+	"2udb.core.tenant.events.v1.TenantStatusChangedEvent\x12)udb.tenant.tenant_status_changed_event.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\x82\x02\n" +
 	"\x1dcom.udb.core.tenant.events.v1B\x11TenantEventsProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/tenant/events/v1;eventsv1\xa2\x02\x04UCTE\xaa\x02\x19udb.core.Tenant.Events.V1\xca\x02\x19Udb\\Core\\Tenant\\Events\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Tenant\\Events\\V1\xea\x02\x1dUdb::Core::Tenant::Events::V1b\x06proto3"
 
 var (

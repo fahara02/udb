@@ -1,107 +1,144 @@
 # Security
 
-UDB security is request-context based. A request is authorized from service
-identity, tenant, project, purpose, scopes, catalog version, and backend route.
 
-## Production Defaults
-
-Set:
-
-```env
-UDB_ENV=production
-UDB_SERVICE_IDENTITY_REQUIRED=true
-UDB_MTLS_REQUIRED=true
-UDB_TLS_REQUIRED=true
-UDB_PG_TLS_REQUIRED=true
-UDB_REDIS_TLS_REQUIRED=true
-UDB_KAFKA_TLS_REQUIRED=true
-UDB_ALLOW_HEADER_SCOPES=false
-UDB_PII_SAFE_LOGGING=true
+```text
+┌────────────────────────────────────────────────────────────────────────────┐
+│                                                                            │
+│    ██    ██  ██████   ██████                                               │
+│    ██    ██  ██   ██  ██   ██                                              │
+│    ██    ██  ██   ██  ██████                                               │
+│    ██    ██  ██   ██  ██   ██                                              │
+│     ██████   ██████   ██████                                               │
+│                                                                            │
+│    UNIVERSAL DATA BROKER                                                   │
+│    gRPC data plane | native control plane | tenant/project scope guard     │
+│                                                                            │
+│    crate v0.3.2 | protocol v1.0.0                                          │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
+UDB security is based on explicit request context, descriptor-declared endpoint
+security, native auth/authz services, backend-aware enforcement, and redaction
+metadata generated from protobuf descriptors.
 
-`UDB_ENV=production` enables stricter security defaults in
-[../src/runtime/security.rs](../src/runtime/security.rs). `APP_ENV` only selects
-dotenv files; it is not the production security switch.
+## Request Context
 
-## TLS And mTLS
+Every non-health request should include:
 
-Use file paths or inline PEM env values:
+- `x-tenant-id`
+- `x-udb-project-id`
+- `x-purpose`
+- `x-correlation-id`
+- `x-scopes`
+- `x-service-identity`
+- `x-user-id` when an end user exists
+- `x-udb-client-catalog-version`
 
-```env
-UDB_TLS_CERT_PATH=/etc/udb/tls/server.crt
-UDB_TLS_KEY_PATH=/etc/udb/tls/server.key
-UDB_MTLS_CLIENT_CA_PATH=/etc/udb/tls/client-ca.crt
-```
+SDKs attach these values from language-native metadata objects.
 
-The server also accepts `UDB_TLS_CERT_PEM`, `UDB_TLS_KEY_PEM`, and
-`UDB_MTLS_CLIENT_CA_PEM`.
+Project id chooses the active application catalog. Tenant id remains the
+security and isolation boundary inside that catalog.
 
-## ABAC
+## Identity And Authentication
 
-ABAC policies can be supplied from JSON env, file, or the system table:
+The native authn service supports JWT validation, UDB-issued JWTs, refresh
+tokens, server-side sessions, API keys, password login, MFA, OTP, devices,
+WebAuthn/passkeys, and external identity mapping.
 
-```env
-UDB_ABAC_POLICY_FILE=docs/abac_seed.json
-UDB_ABAC_SCHEMA=udb_system
-UDB_ABAC_TABLE=udb_abac_policies
-UDB_ABAC_DEFAULT_ALLOW=false
-```
+Production identity configuration should include:
 
-Use `policy-lint` before loading policy changes.
+| Setting | Purpose |
+|---|---|
+| `UDB_JWT_ISSUER` | Expected token issuer |
+| `UDB_JWT_AUDIENCE` | Expected audience |
+| `UDB_JWT_PUBLIC_KEY` / `UDB_JWT_JWKS_URL` | JWT validation keys |
+| `UDB_JWT_PRIVATE_KEY` | UDB-issued token signing |
+| `UDB_AUTH_GRPC_ADDR` | Native auth/control listener |
 
-## Native Auth Lifetimes
+Use short token TTLs for privileged workflows, rotate keys through JWKS where
+possible, and store private keys in a secret manager.
 
-Native authn defaults are intentionally conservative but usable:
+## Authorization
 
-```env
-UDB_SESSION_TTL_SECONDS=86400
-UDB_SESSION_IDLE_TTL_SECONDS=3600
-UDB_OTP_TTL_SECONDS=600
-UDB_OTP_COOLDOWN_SECONDS=60
-UDB_NATIVE_ACCESS_TTL_SECS=900
-```
+The native authz service supports RBAC, ABAC, and simple ReBAC decisions with
+tenant/project domains. Broker and native service requests are evaluated against
+the request context and descriptor-declared security requirements.
 
-Sessions last up to one day with a one-hour idle window. OTPs last ten minutes
-with a sixty-second resend cooldown. Native direct-DB access grants last fifteen
-minutes so clients re-authorize regularly while avoiding per-request DSN churn.
+Authorization inputs can include:
 
-## Audit
+- service identity;
+- user id;
+- scopes;
+- tenant and project ids;
+- resource type and id;
+- relationship tuples;
+- policy bundles;
+- endpoint and field annotations.
 
-Admin and security-sensitive operations should emit audit records. Supported
-sink settings include:
+`GetNativeAccess` can issue short-lived, restricted backend access after a
+successful authorization decision. Keep this server-side.
 
-```env
-UDB_AUDIT_SINK=postgres
-UDB_AUDIT_PG_TABLE=udb_system.udb_admin_audit_log
-UDB_AUDIT_MIN_SEVERITY=info
-```
+## Identity Providers And Provisioning
 
-Other sink modes include `none`, `stdout`, `file`, and `kafka`.
+UDB supports OIDC, SAML, SCIM, JIT provisioning, external identity links, and
+group-to-role mapping previews through the native identity provider service.
 
-## Encryption And Key Management
+Typical enterprise flow:
 
-Static keys are available for local/dev use. Vault transit settings are present
-for production integration:
+1. Register the tenant IdP.
+2. Configure JWT, OIDC, or SAML validation.
+3. Enable SCIM provisioning for users and groups.
+4. Map external groups to UDB roles.
+5. Validate decisions with `CheckAccess` or an SDK `can()` helper.
 
-```env
-UDB_ENCRYPTION_KEY_V1=
-UDB_ENCRYPTION_ACTIVE_VERSION=1
-UDB_VAULT_ADDR=https://vault.example.com
-UDB_VAULT_TRANSIT_MOUNT=transit
-UDB_VAULT_TRANSIT_KEY_NAME=udb
-```
+## Transport
 
-Do not send Vault tokens over plain HTTP unless `UDB_DEV_MODE=true` is an
-intentional local-only override.
+Use TLS for client traffic and keep the native control-plane listener on an
+internal interface. Use mTLS for internal service-to-service traffic where
+required by the deployment profile.
+
+## Sensitive Data
+
+Use proto field-security annotations for sensitive and storage-only fields.
+Generated output views and runtime redaction paths use descriptor metadata to
+avoid returning stored secrets in public responses.
+
+Recommended handling:
+
+| Data class | Handling |
+|---|---|
+| Passwords and credentials | Hash or store in a dedicated secret store; never expose in output DTOs |
+| API keys and recovery codes | Store only verifier material; return cleartext only at creation time |
+| Session and refresh token material | Store verifier state and expiration metadata |
+| MFA and WebAuthn state | Treat as account-security material with restricted admin access |
+| Audit payloads | Preserve identifiers and redaction context without leaking secrets |
+
+## Audit And Events
+
+Auth, policy, native-service, and CDC events preserve tenant/project,
+correlation, actor, operation, resource, and redaction context. Configure event
+sinks and retention before production use.
+
+## Compliance Profiles
+
+Compliance-oriented deployments commonly enable:
+
+| Profile | Typical settings |
+|---|---|
+| Baseline SaaS | TLS, JWT validation, audit events, tenant/project metadata, secret manager |
+| Regulated auth | MFA, short token TTLs, strict transport, audit retention, policy approvals |
+| Enterprise SSO | OIDC or SAML, SCIM, group-to-role mappings, signed policy bundles |
+| High isolation | Separate backend credentials, internal native listener, mTLS, per-tenant limits |
+
+Profiles are deployment choices. UDB exposes the controls; operators decide the
+required policy for their environment.
 
 ## Supply Chain
 
-Run:
+Recommended local check:
 
-```powershell
+```bash
 cargo deny check advisories bans licenses sources
 ```
 
-The publishable package should resolve from crates.io only. The repository keeps
-vendored logical-replication decoder provenance in source comments and notices,
-but does not rely on Cargo git patches for release builds.
+Also keep generated SDKs and descriptor manifests tied to the release version in
+`versions.json`.

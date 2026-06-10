@@ -6,12 +6,15 @@ pub mod channels;
 pub mod config;
 pub mod connection_manager;
 pub mod core;
+pub mod descriptor_diff; // F6: native-service contract version + descriptor-diff classifier
+pub mod descriptor_manifest;
 mod encryption;
 pub(crate) mod executor_utils;
 pub mod executors;
 pub mod metrics;
 pub mod migration_audit;
 pub mod observability;
+pub mod otel; // Phase 10: W3C trace-context extract/scope/inject + feature-gated OTLP export
 pub mod pipeline;
 pub mod pipeline_coverage; // U7: per-RPC pipeline-adoption tracker
 pub(crate) mod postgres_helpers;
@@ -42,7 +45,12 @@ pub mod sdk_manifest; // Embedded descriptor set → RPC manifest for `udb sdk g
 pub mod security;
 pub mod service;
 pub mod signal;
+#[cfg(feature = "ws-signalling")]
+pub mod signalling; // Pluggable ws:// signalling bridge (Pixel Streaming first protocol)
+pub mod singleton;
+pub mod slo; // Phase 10: SLO/error-budget catalog + unified readiness contract
 pub mod system;
+pub mod tenant_movement;
 pub mod xa;
 pub mod xa_postgres;
 pub mod xa_recovery; // C6: in-doubt 2PC recovery worker (PG + MySQL participants)

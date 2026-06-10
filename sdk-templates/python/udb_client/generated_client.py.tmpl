@@ -14,8 +14,8 @@ same name while adding:
 
   * a configurable per-call deadline / timeout,
   * retry with exponential backoff + jitter on transient gRPC codes
-    (UNAVAILABLE, DEADLINE_EXCEEDED, RESOURCE_EXHAUSTED) — never for
-    client-streaming RPCs, which are not safely replayable,
+    (UNAVAILABLE, RESOURCE_EXHAUSTED; plus DEADLINE_EXCEEDED only for
+    read-only RPCs) — never for client-streaming RPCs, which are not safely replayable,
   * TLS / credential and channel wiring,
   * request metadata (authorization / api-key / x-request-id and the full
     :class:`udb_client.metadata.Metadata` header set),
@@ -53,11 +53,11 @@ __all__ = [
     # @@UDB_SERVICE_END
 ]
 
-# Default set of gRPC status codes that are safe to retry for idempotent RPCs.
+# Default set of gRPC status codes that are safe to retry for mutating RPCs.
+# DEADLINE_EXCEEDED is gated separately to read-only RPCs.
 _RETRYABLE_CODES: frozenset[grpc.StatusCode] = frozenset(
     {
         grpc.StatusCode.UNAVAILABLE,
-        grpc.StatusCode.DEADLINE_EXCEEDED,
         grpc.StatusCode.RESOURCE_EXHAUSTED,
     }
 )
@@ -78,8 +78,12 @@ class RetryPolicy:
     jitter: float = 0.2
     retryable_codes: frozenset[grpc.StatusCode] = field(default_factory=lambda: _RETRYABLE_CODES)
 
-    def should_retry(self, code: grpc.StatusCode, attempt: int) -> bool:
-        return attempt < self.max_attempts and code in self.retryable_codes
+    def should_retry(self, code: grpc.StatusCode, attempt: int, *, read_only: bool) -> bool:
+        if attempt >= self.max_attempts:
+            return False
+        if code == grpc.StatusCode.DEADLINE_EXCEEDED:
+            return read_only
+        return code in self.retryable_codes
 
     def backoff_for(self, attempt: int) -> float:
         base = min(self.initial_backoff * (self.multiplier ** (attempt - 1)), self.max_backoff)
@@ -127,6 +131,34 @@ def _map_error(rpc_name: str, error: grpc.RpcError) -> UdbRpcError:
     if detail is not None:
         return UdbDetailedRpcError(rpc_name, error, detail)
     return UdbRpcError(rpc_name, error)
+
+
+def _is_read_only_rpc_name(name: str) -> bool:
+    return name.startswith(
+        (
+            "Get",
+            "List",
+            "Check",
+            "Validate",
+            "Introspect",
+            "Authorize",
+            "BatchCheck",
+            "Preview",
+            "Resolve",
+            "Explain",
+            "Diff",
+            "Lint",
+            "Test",
+            "Select",
+            "AnalyticalQuery",
+            "VectorSearch",
+            "GraphQuery",
+            "CacheGet",
+            "CacheScan",
+            "DocumentGet",
+            "DocumentFind",
+        )
+    )
 
 
 def _discover_stub_class(service_pkg: str, service_name: str) -> type:
@@ -243,7 +275,7 @@ class _ServiceClientBase:
         if self._bearer_token:
             headers.append(("authorization", f"Bearer {self._bearer_token}"))
         if self._api_key:
-            headers.append(("x-udb-api-key", self._api_key))
+            headers.append(("x-api-key", self._api_key))
         headers.append(("x-request-id", request_id or uuid.uuid4().hex))
         return tuple(headers)
 
@@ -257,6 +289,7 @@ class _ServiceClientBase:
         metadata: Metadata | None,
         timeout: float | None,
         retryable: bool,
+        read_only: bool,
     ) -> Any:
         attempt = 0
         while True:
@@ -270,7 +303,7 @@ class _ServiceClientBase:
                 )
             except grpc.RpcError as error:
                 code = error.code()
-                if retryable and self._retry.should_retry(code, attempt):
+                if retryable and self._retry.should_retry(code, attempt, read_only=read_only):
                     time.sleep(self._retry.backoff_for(attempt))
                     continue
                 raise _map_error(rpc_name, error) from error
@@ -284,6 +317,7 @@ class _ServiceClientBase:
         metadata: Metadata | None,
         timeout: float | None,
         retryable: bool,
+        read_only: bool,
     ) -> Iterator[Any]:
         # Retry only applies before the first item is yielded; once streaming has
         # begun a partial replay is not safe, so we surface errors as they occur.
@@ -303,7 +337,7 @@ class _ServiceClientBase:
                 return iter(())
             except grpc.RpcError as error:
                 code = error.code()
-                if retryable and self._retry.should_retry(code, attempt):
+                if retryable and self._retry.should_retry(code, attempt, read_only=read_only):
                     time.sleep(self._retry.backoff_for(attempt))
                     continue
                 raise _map_error(rpc_name, error) from error
@@ -375,6 +409,7 @@ class {{SERVICE_NAME}}Client(_ServiceClientBase):
             metadata=metadata,
             timeout=timeout,
             retryable=retry,
+            read_only=_is_read_only_rpc_name("{{RPC_NAME}}"),
         )
 
     # @@UDB_RPC_END
@@ -403,6 +438,7 @@ class {{SERVICE_NAME}}Client(_ServiceClientBase):
             metadata=metadata,
             timeout=timeout,
             retryable=retry,
+            read_only=_is_read_only_rpc_name("{{RPC_NAME}}"),
         )
 
     # @@UDB_RPC_END

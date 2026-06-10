@@ -1,0 +1,165 @@
+syntax = "proto3";
+
+package udb.core.control.services.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/control/entity/v1/enums.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/types.proto";
+
+option csharp_namespace = "udb.core.Control.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/control/services/v1;controlservicev1";
+option java_package = "com.udb.core.control.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Control\\Services\\V1";
+option php_namespace = "Udb\\Core\\Control\\Services\\V1";
+
+// ============================================================
+// Shared xDS-style wire shapes.
+// ============================================================
+
+// One versioned resource on the wire (a single ControlPlaneResource projection).
+message Resource {
+  string name = 1;
+  string version = 2;
+  string payload_json = 3;
+  udb.core.control.entity.v1.ResourceType resource_type = 4;
+}
+
+// Structured NACK detail (envoy-style {code, message}).
+message ErrorDetail {
+  int32 code = 1;
+  string message = 2;
+}
+
+// ============================================================
+// State-of-the-World (ADS) discovery — StreamResources.
+// ============================================================
+
+// A request in the aggregated discovery stream. Doubles as ACK/NACK:
+//   * ACK  — `version_info` echoes the last accepted version + `response_nonce`
+//            matches the last response's nonce, `error_detail` absent.
+//   * NACK — `error_detail` is set; the node keeps its last-good version.
+// `resource_names` carries the on-demand subscription set for `resource_type`.
+message DiscoveryRequest {
+  string node_id = 1;
+  udb.core.control.entity.v1.ResourceType resource_type = 2;
+  // The version the node is acknowledging (echo of a prior response version).
+  string version_info = 3;
+  // The nonce being acknowledged (echo of a prior response nonce).
+  string response_nonce = 4;
+  // On-demand subscription: explicit resource names the node wants. Empty == all.
+  repeated string resource_names = 5;
+  // Present iff this is a NACK.
+  ErrorDetail error_detail = 6;
+  udb.core.common.v1.RequestContext context = 7;
+}
+
+// A pushed state-of-the-world response for one resource_type.
+message DiscoveryResponse {
+  udb.core.control.entity.v1.ResourceType resource_type = 1;
+  // The version-of-the-world for this resource_type (aggregate content version).
+  string version_info = 2;
+  // Fresh nonce; the node echoes it in its ACK/NACK.
+  string nonce = 3;
+  repeated Resource resources = 4;
+  // Names removed since the node's accepted version (delta hint for SotW too).
+  repeated string removed_resources = 5;
+}
+
+// ============================================================
+// Incremental / delta discovery — DeltaResources.
+// ============================================================
+
+message DeltaDiscoveryRequest {
+  string node_id = 1;
+  udb.core.control.entity.v1.ResourceType resource_type = 2;
+  // Nonce being acknowledged for delta responses.
+  string response_nonce = 3;
+  // Names the node wants to additionally subscribe to.
+  repeated string resource_names_subscribe = 4;
+  // Names the node no longer cares about.
+  repeated string resource_names_unsubscribe = 5;
+  // Per-resource versions the node already holds {name: version}, used to
+  // compute the minimal delta. Present iff this is an ACK with known state.
+  map<string, string> initial_resource_versions = 6;
+  // Present iff this is a NACK.
+  ErrorDetail error_detail = 7;
+  udb.core.common.v1.RequestContext context = 8;
+}
+
+message DeltaDiscoveryResponse {
+  udb.core.control.entity.v1.ResourceType resource_type = 1;
+  string nonce = 2;
+  // Resources added or changed since the node's known versions.
+  repeated Resource resources = 3;
+  // Names removed since the node's known versions.
+  repeated string removed_resources = 4;
+  // The aggregate system version this delta brings the node to.
+  string system_version_info = 5;
+}
+
+// ============================================================
+// Unary helpers (on-demand fetch + admin visibility).
+// ============================================================
+
+message GetResourcesRequest {
+  udb.core.control.entity.v1.ResourceType resource_type = 1;
+  // Optional tenant filter for on-demand tenant-policy fetch. Empty == fleet-wide
+  // resources only (NULL tenant rows); set == fleet-wide + that tenant's rows.
+  string tenant_id = 2;
+  // Optional explicit name filter. Empty == all matching the type/tenant.
+  repeated string resource_names = 3;
+  udb.core.common.v1.PageRequest page = 4;
+  udb.core.common.v1.RequestContext context = 5;
+}
+
+message GetResourcesResponse {
+  repeated Resource resources = 1;
+  // Aggregate content version for the returned set (the version-of-the-world).
+  string version_info = 2;
+  udb.core.common.v1.PageResponse page = 3;
+}
+
+message ListNodeStatesRequest {
+  // Optional node filter. Empty == all nodes.
+  string node_id = 1;
+  // Optional resource-type filter (UNSPECIFIED == all types).
+  udb.core.control.entity.v1.ResourceType resource_type = 2;
+  udb.core.common.v1.PageRequest page = 3;
+  udb.core.common.v1.RequestContext context = 4;
+}
+
+// Admin-visible projection of one ControlPlaneNodeState row.
+message NodeAckState {
+  string node_id = 1;
+  udb.core.control.entity.v1.ResourceType resource_type = 2;
+  repeated string subscribed_names = 3;
+  string accepted_version = 4;
+  string last_good_version = 5;
+  string last_response_nonce = 6;
+  string nack_error_detail = 7;
+  // True when the node's accepted_version matches the current version-of-world.
+  bool in_sync = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message ListNodeStatesResponse {
+  repeated NodeAckState node_states = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+message AckStatusRequest {
+  string node_id = 1;
+  udb.core.control.entity.v1.ResourceType resource_type = 2;
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message AckStatusResponse {
+  NodeAckState node_state = 1;
+  // The current version-of-the-world for this resource_type.
+  string current_version = 2;
+  // True iff the node has applied the current version with no outstanding NACK.
+  bool acknowledged = 3;
+  // True iff the node's last response was rejected (NACK) and not yet recovered.
+  bool nacked = 4;
+}

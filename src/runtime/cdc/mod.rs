@@ -72,6 +72,11 @@ pub struct CdcConfig {
     pub kafka_tx_timeout_secs: u64,
     pub redaction_mode: CdcRedactionMode,
     pub redaction_version: u32,
+    /// Field names redacted from **external CDC source** events before publish.
+    /// The outbox path derives sensitive fields from the UDB manifest, but
+    /// external-source tables have no manifest, so the operator declares them via
+    /// `UDB_CDC_SOURCE_SENSITIVE_FIELDS` (comma-separated). Empty = no source redaction.
+    pub source_sensitive_fields: Vec<String>,
     pub idempotency_ttl_secs: u64,
     pub broadcast_capacity: usize,
     pub poll_interval_ms: u64,
@@ -204,6 +209,7 @@ impl Default for CdcConfig {
             kafka_tx_timeout_secs: 30,
             redaction_mode: CdcRedactionMode::default(),
             redaction_version: 1,
+            source_sensitive_fields: Vec::new(),
             idempotency_ttl_secs: DEFAULT_CDC_IDEMPOTENCY_TTL_SECS,
             broadcast_capacity: DEFAULT_CDC_BROADCAST_CAPACITY,
             poll_interval_ms: DEFAULT_CDC_POLL_INTERVAL_MS,
@@ -310,6 +316,16 @@ impl CdcConfig {
                 .ok()
                 .and_then(|value| value.parse::<u32>().ok())
                 .unwrap_or(defaults.redaction_version),
+            source_sensitive_fields: std::env::var("UDB_CDC_SOURCE_SENSITIVE_FIELDS")
+                .ok()
+                .map(|value| {
+                    value
+                        .split(',')
+                        .map(|field| field.trim().to_string())
+                        .filter(|field| !field.is_empty())
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or(defaults.source_sensitive_fields),
             idempotency_ttl_secs: std::env::var("UDB_CDC_IDEMPOTENCY_TTL_SECS")
                 .ok()
                 .and_then(|value| value.parse::<u64>().ok())
@@ -497,6 +513,22 @@ impl CdcConfig {
         if self.idempotency_key_prefix.trim().is_empty() {
             self.idempotency_key_prefix = Self::default().idempotency_key_prefix;
         }
+        // Auth security/audit events must ALWAYS be relayed: when an operator
+        // tightens the CDC topic allowlist (`UDB_CDC_VALID_TOPICS`) to a custom
+        // set, a restrictive allowlist would otherwise silently DROP the native
+        // auth/authz/apikey/idp/ops outbox rows that carry login/revocation/
+        // policy/break-glass audit events. The shared `AUTH_TOPIC_PATTERNS`
+        // wildcard set exists precisely to guarantee those topics survive any
+        // operator allowlist. An empty `valid_topics` is the "open" posture
+        // (everything relayed), so we only force-insert when an allowlist is set.
+        if !self.valid_topics.is_empty() {
+            for pattern in crate::runtime::service::AUTH_TOPIC_PATTERNS {
+                let pattern = (*pattern).to_string();
+                if !self.valid_topics.iter().any(|t| t == &pattern) {
+                    self.valid_topics.push(pattern);
+                }
+            }
+        }
     }
 
     pub fn outbox_relation(&self) -> String {
@@ -588,6 +620,10 @@ pub struct EventEnvelope {
     pub source_agent: Option<String>,
     #[serde(default)]
     pub payload: serde_json::Value,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub tenant_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub project_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub schema_uri: Option<String>,
     #[serde(default, skip_serializing_if = "is_zero_u32")]
@@ -596,6 +632,32 @@ pub struct EventEnvelope {
     pub redacted_fields: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub redaction_mode: String,
+    // Phase 10: compliance/audit lineage, converged from the auth + native
+    // `ComplianceEnvelope`. CDC deserializes the outbox payload into this envelope;
+    // before, it DROPPED these fields as unknown keys, so a CDC-delivered event lost
+    // the actor/operation/decision/trace it was emitted with. Declaring them here
+    // (all default-empty, so raw non-UDB application events deserialize unchanged)
+    // makes CDC carry the same audit field set end-to-end — closing the "CDC
+    // delivery on the unified compliance envelope" item. Field names match the keys
+    // written by `build_native_compliance_envelope` / the auth event sink.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub actor: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub operation: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub outcome: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub decision_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub policy_version: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub auth_method: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub trace_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub span_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub target_resource: String,
 }
 
 #[derive(Debug, Clone)]
@@ -608,6 +670,37 @@ pub struct CdcRedactionPreview {
 
 fn is_zero_u32(value: &u32) -> bool {
     *value == 0
+}
+
+/// W3C `traceparent` for the current request, if any, to stamp on the egress
+/// Kafka record so the distributed trace continues into downstream consumers
+/// (Phase 10). Derived from the ambient trace context populated by the inbound
+/// `TraceExtractLayer`; `None` when no trace is in scope (then no header is
+/// attached and behaviour is unchanged). Pure string helper — no kafka dep — so
+/// it compiles on the slim build.
+pub(crate) fn current_egress_traceparent() -> Option<String> {
+    crate::runtime::otel::current_trace_context().to_traceparent()
+}
+
+/// Conservative Phase-2 tenant-scope classifier for CDC topics. UDB-native
+/// domain topics are tenant-scoped by contract; non-UDB application topics can
+/// opt into tenant/project policy via `udb_topic_policy`.
+pub fn tenant_scoped_topic(topic: &str) -> bool {
+    topic
+        .trim()
+        .to_ascii_lowercase()
+        .strip_prefix("udb.")
+        .is_some()
+}
+
+pub fn validate_topic_tenant_scope(topic: &str, envelope: &EventEnvelope) -> Result<(), String> {
+    if tenant_scoped_topic(topic) && envelope.tenant_id.trim().is_empty() {
+        return Err(format!(
+            "tenant-scoped topic '{}' is missing envelope tenant_id",
+            topic
+        ));
+    }
+    Ok(())
 }
 
 pub fn cdc_sensitive_fields_for_manifest(
@@ -1048,6 +1141,10 @@ pub mod kafka_tx;
 pub mod indoubt_recovery;
 // U22: reversible CDC field encryption (AES-GCM-SIV + scope-gated decrypt).
 pub mod encryption;
+// Env-gated live-Postgres tests for the CDC delivery state machine
+// (in-doubt reset, DLQ failure path, journal retention sweep).
+#[cfg(test)]
+mod live_tests;
 
 // `env_identifier`, `is_identifier`, and `qi` are imported from
 // `runtime::executor_utils` (single-sourced).
@@ -1072,6 +1169,89 @@ mod tests {
         assert!(envelope.document_id.is_none());
         assert!(envelope.page_number.is_none());
         assert!(envelope.source_agent.is_none());
+    }
+
+    #[test]
+    fn event_envelope_decodes_enriched_compliance_envelope() {
+        // Phase 10 telemetry coherence: the native/auth lanes attach the full
+        // compliance envelope (CloudEvents + actor/operation/trace). CDC now
+        // RETAINS the audit lineage (actor/operation/outcome/decision/trace) on the
+        // `EventEnvelope` instead of dropping it on deserialize, so a CDC-delivered
+        // event carries the same compliance field set it was emitted with. Purely
+        // CloudEvents-transport fields (specversion/source/...) remain ignored.
+        let event_id = Uuid::new_v4().to_string();
+        let envelope: EventEnvelope = serde_json::from_value(json!({
+            "event_id": event_id,
+            "event_type": "udb.storage.upload.registered.v1",
+            "correlation_id": "corr-9",
+            "document_id": "object-1",
+            "payload": {"object_key": "k1"},
+            "tenant_id": "acme",
+            "project_id": "proj-1",
+            "redaction_mode": "none",
+            "redaction_version": 1,
+            "redacted_fields": [],
+            // Additive Phase-10 compliance fields the CDC envelope ignores:
+            "specversion": "1.0",
+            "source": "udb.native/acme",
+            "subject": "object/abc",
+            "datacontenttype": "application/json",
+            "time": "2026-06-09T00:00:00Z",
+            "actor": "svc-storage",
+            "operation": "register_upload",
+            "outcome": "success",
+            "trace_id": "0af7651916cd43dd8448eb211c80319c",
+            "span_id": "b7ad6b7169203331",
+            "decision_id": "dec-1",
+            "redaction_profile": "v1"
+        }))
+        .expect("enriched envelope must still decode");
+        assert_eq!(envelope.event_type, "udb.storage.upload.registered.v1");
+        assert_eq!(envelope.tenant_id, "acme");
+        assert_eq!(envelope.project_id, "proj-1");
+        assert_eq!(envelope.redaction_mode, "none");
+        assert_eq!(envelope.document_id.as_deref(), Some("object-1"));
+        assert_eq!(envelope.payload["object_key"], "k1");
+        // Phase 10 convergence: the compliance lineage is now RETAINED, not dropped.
+        assert_eq!(envelope.actor, "svc-storage");
+        assert_eq!(envelope.operation, "register_upload");
+        assert_eq!(envelope.outcome, "success");
+        assert_eq!(envelope.decision_id, "dec-1");
+        assert_eq!(envelope.trace_id, "0af7651916cd43dd8448eb211c80319c");
+        assert_eq!(envelope.span_id, "b7ad6b7169203331");
+    }
+
+    #[test]
+    fn tenant_scoped_cdc_topic_rejects_missing_tenant() {
+        let event_id = Uuid::new_v4().to_string();
+        let envelope: EventEnvelope = serde_json::from_value(json!({
+            "event_id": event_id,
+            "event_type": "udb.storage.upload.registered.v1",
+            "correlation_id": "corr-tenant-missing",
+            "payload": {"object_key": "k1"},
+            "redaction_mode": "none",
+            "redaction_version": 1
+        }))
+        .expect("envelope should decode before scope validation");
+
+        let err = validate_topic_tenant_scope("udb.storage.upload.registered.v1", &envelope)
+            .expect_err("tenant-scoped UDB topics must fail closed without tenant_id");
+        assert!(err.contains("missing envelope tenant_id"));
+    }
+
+    #[test]
+    fn non_udb_cdc_topic_can_remain_unscoped() {
+        let event_id = Uuid::new_v4().to_string();
+        let envelope: EventEnvelope = serde_json::from_value(json!({
+            "event_id": event_id,
+            "event_type": "billing.invoice.created",
+            "correlation_id": "corr-neutral",
+            "payload": {"invoice_id": "inv-1"}
+        }))
+        .expect("neutral envelope should decode");
+
+        validate_topic_tenant_scope("billing.invoice.created", &envelope)
+            .expect("non-UDB topics use explicit topic policy, not implicit tenant scope");
     }
 
     #[test]
@@ -1143,6 +1323,57 @@ mod tests {
     }
 
     #[test]
+    fn cdc_encrypt_mode_masks_when_no_key_is_configured() {
+        let prior_key = std::env::var("UDB_CDC_ENCRYPTION_KEY_B64").ok();
+        let prior_key_id = std::env::var("UDB_CDC_ENCRYPTION_KEY_ID").ok();
+        let prior_key_version = std::env::var("UDB_CDC_ENCRYPTION_KEY_VERSION").ok();
+
+        // Tests mutate process-wide env before constructing the config under test.
+        unsafe {
+            std::env::remove_var("UDB_CDC_ENCRYPTION_KEY_B64");
+            std::env::remove_var("UDB_CDC_ENCRYPTION_KEY_ID");
+            std::env::remove_var("UDB_CDC_ENCRYPTION_KEY_VERSION");
+        }
+
+        let manifest = CatalogManifest {
+            tables: vec![crate::generation::ManifestTable {
+                message_name: "Patient".to_string(),
+                cdc_topic: "patient.updated.v1".to_string(),
+                columns: vec![crate::generation::ManifestColumn {
+                    field_name: "email".to_string(),
+                    column_name: "email".to_string(),
+                    security: crate::generation::manifest::ManifestColumnSecurity {
+                        is_pii: true,
+                        is_encrypted: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+
+        let redacted = apply_manifest_cdc_redaction(
+            &manifest,
+            "Patient",
+            "patient.updated.v1",
+            None,
+            json!({"payload": {"email": "a@example.com"}}),
+            CdcRedactionMode::Encrypt,
+            1,
+        );
+
+        assert_eq!(redacted["payload"]["email"], "***MASKED***");
+        assert_eq!(redacted["redaction_mode"], "encrypt");
+        assert_eq!(redacted["redacted_fields"], json!(["email"]));
+
+        restore_env("UDB_CDC_ENCRYPTION_KEY_B64", prior_key);
+        restore_env("UDB_CDC_ENCRYPTION_KEY_ID", prior_key_id);
+        restore_env("UDB_CDC_ENCRYPTION_KEY_VERSION", prior_key_version);
+    }
+
+    #[test]
     fn cdc_redaction_can_hash_or_drop_fields() {
         let hashed = redact_cdc_payload_fields(
             json!({"payload": {"email": "a@example.com", "age": 42}}),
@@ -1163,5 +1394,15 @@ mod tests {
         );
         assert!(dropped["payload"].get("email").is_none());
         assert_eq!(dropped["payload"]["age"], 42);
+    }
+
+    fn restore_env(key: &str, value: Option<String>) {
+        // Tests restore process-wide env to the captured pre-test values.
+        unsafe {
+            match value {
+                Some(value) => std::env::set_var(key, value),
+                None => std::env::remove_var(key),
+            }
+        }
     }
 }

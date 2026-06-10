@@ -22,7 +22,7 @@ impl AuthnServiceImpl {
             )
             .await
             .map_err(Status::internal)?
-            .ok_or_else(|| Status::unauthenticated("invalid or expired api key"))?;
+            .ok_or_else(|| Status::unauthenticated("invalid credential"))?;
             let principal = principal_from_api_key(&rec);
             return Ok(Response::new(authn_pb::AuthnResponse {
                 principal: Some(authn_principal_to_pb(
@@ -48,14 +48,14 @@ impl AuthnServiceImpl {
             )
             .await
             .map_err(Status::internal)?
-            .ok_or_else(|| Status::unauthenticated("invalid or expired session"))?;
+            .ok_or_else(|| Status::unauthenticated("invalid credential"))?;
             let principal = principal_from_session(&rec);
             return Ok(Response::new(authn_pb::AuthnResponse {
                 principal: Some(authn_principal_to_pb(
                     &principal,
                     rec.expires_at_unix as i64,
                 )),
-                session_id: req.session_id,
+                session_id: String::new(),
                 access_token: String::new(),
                 expires_at_unix: rec.expires_at_unix as i64,
                 relationship_version: rec.relationship_version,
@@ -91,23 +91,19 @@ impl AuthnServiceImpl {
         // here; trusted PEPs must pass a bearer token validated by UDB.
         if !req.external_provider_id.trim().is_empty() {
             if req.external_token.matches('.').count() != 2 {
-                return Err(Status::unauthenticated(
-                    "external_token must be a signed JWT, not raw claims JSON",
-                ));
+                return Err(Status::unauthenticated("invalid credential"));
             }
             let claims = validate_bearer_token(&self.security, &req.external_token)
-                .map_err(Status::unauthenticated)?;
+                .map_err(|_| Status::unauthenticated("invalid credential"))?;
             if !req.issuer.trim().is_empty()
                 && claims.iss.as_deref().unwrap_or_default() != req.issuer
             {
-                return Err(Status::unauthenticated("external token issuer mismatch"));
+                return Err(Status::unauthenticated("invalid credential"));
             }
             if !req.audience.trim().is_empty()
                 && self.security.jwt_audience.as_deref() != Some(req.audience.as_str())
             {
-                return Err(Status::unauthenticated(
-                    "external token audience is not configured for validation",
-                ));
+                return Err(Status::unauthenticated("invalid credential"));
             }
             let subject = claims.sub.clone().unwrap_or_default();
             let verified_claims = serde_json::json!({
@@ -123,7 +119,7 @@ impl AuthnServiceImpl {
             });
             let principal = provider
                 .map_identity(&subject, &verified_claims.to_string())
-                .map_err(Status::unauthenticated)?;
+                .map_err(|_| Status::unauthenticated("invalid credential"))?;
             return Ok(Response::new(authn_pb::AuthnResponse {
                 principal: Some(authn_principal_to_pb(&principal, 0)),
                 session_id: String::new(),
@@ -140,6 +136,12 @@ impl AuthnServiceImpl {
         if !req.bearer_token.trim().is_empty() {
             let claims = validate_bearer_token(&self.security, &req.bearer_token)
                 .map_err(Status::unauthenticated)?;
+            // Phase 3: a UDB-issued JWT must still be backed by live persisted
+            // state — reject it here too if the subject user was suspended or the
+            // issuing session revoked (same rule as ValidateToken).
+            if !self.jwt_persisted_state_valid(&claims, now_unix()).await? {
+                return Err(Status::unauthenticated("token subject is no longer active"));
+            }
             let subject = claims.sub.clone().unwrap_or_default();
             let principal = Principal {
                 principal_id: subject.clone(),
@@ -203,6 +205,7 @@ impl AuthnServiceImpl {
         const MAX_FAILED_LOGINS: i32 = 5;
         const LOCKOUT_SECONDS: u64 = 15 * 60;
         if user.locked_until_unix > now {
+            self.metrics.record_auth_login(false);
             return Err(Status::unauthenticated("invalid username or password"));
         }
         // First factor: the password is ALWAYS verified, before any account
@@ -227,26 +230,70 @@ impl AuthnServiceImpl {
             let event_user_id = user.user_id.clone();
             let event_tenant = user.tenant_id.clone();
             let event_ip = req.ip_address.clone();
+            let event_ua = req.user_agent.clone();
             self.users.put_user(user).await.map_err(Status::internal)?;
-            if now_locked {
-                self.emit_event(AuthEvent::new(
-                    topics::USER_LOCKED,
+            // Audit the failed credential attempt (security-sensitive).
+            self.emit_event(
+                AuthEvent::new(
+                    topics::LOGIN_FAILED,
                     event_user_id.clone(),
-                    event_tenant,
+                    event_tenant.clone(),
                     serde_json::json!({
-                        "user_id": event_user_id,
+                        "user_id": event_user_id.clone(),
                         "attempt_count": attempt_count,
-                        "ip_address": event_ip,
-                        "locked_until_unix": locked_until_unix,
+                        "ip_address": event_ip.clone(),
+                        "locked": now_locked,
                     }),
-                ))
+                )
+                .with_correlation(format!("login_failed:{event_user_id}"))
+                .with_compliance(ComplianceEnvelope {
+                    actor: event_user_id.clone(),
+                    target_resource: event_user_id.clone(),
+                    operation: "login".to_string(),
+                    outcome: "failure".to_string(),
+                    reason_code: "invalid_password".to_string(),
+                    auth_method: "password".to_string(),
+                    source_ip: event_ip.clone(),
+                    user_agent: event_ua.clone(),
+                    ..ComplianceEnvelope::default()
+                }),
+            )
+            .await;
+            if now_locked {
+                self.metrics.record_auth_lockout();
+                self.emit_event(
+                    AuthEvent::new(
+                        topics::USER_LOCKED,
+                        event_user_id.clone(),
+                        event_tenant.clone(),
+                        serde_json::json!({
+                            "user_id": event_user_id.clone(),
+                            "attempt_count": attempt_count,
+                            "ip_address": event_ip.clone(),
+                            "locked_until_unix": locked_until_unix,
+                        }),
+                    )
+                    .with_correlation(format!("user_locked:{event_user_id}"))
+                    .with_compliance(ComplianceEnvelope {
+                        actor: event_user_id.clone(),
+                        target_resource: event_user_id.clone(),
+                        operation: "lock".to_string(),
+                        outcome: "success".to_string(),
+                        reason_code: "max_failed_logins".to_string(),
+                        auth_method: "password".to_string(),
+                        source_ip: event_ip.clone(),
+                        user_agent: event_ua.clone(),
+                        ..ComplianceEnvelope::default()
+                    }),
+                )
                 .await;
             }
+            self.metrics.record_auth_login(false);
             return Err(Status::unauthenticated("invalid username or password"));
         }
         // Password proven — now it is safe to surface account status.
-        if user.status != authn_entity_pb::UserStatus::Active as i32
-            && user.status != authn_entity_pb::UserStatus::PendingVerification as i32
+        if user.status != crate::runtime::authn::AccountStatus::Active
+            && user.status != crate::runtime::authn::AccountStatus::PendingVerification
         {
             return Err(Status::permission_denied("user is not active"));
         }
@@ -321,8 +368,63 @@ impl AuthnServiceImpl {
                     .map(|secret| authn::totp::verify(&secret, &req.totp_code, now))
                     .unwrap_or(false)
             };
+            // A single-use recovery/backup code was consumed to satisfy MFA
+            // (security-sensitive — the raw code never enters the body).
+            if has_recovery && verified {
+                self.emit_event(
+                    AuthEvent::new(
+                        topics::RECOVERY_CODE_USED,
+                        user.user_id.clone(),
+                        user.tenant_id.clone(),
+                        serde_json::json!({
+                            "user_id": user.user_id.clone(),
+                            "ip_address": req.ip_address.clone(),
+                        }),
+                    )
+                    .with_correlation(format!("recovery_code_used:{}", user.user_id))
+                    .with_compliance(ComplianceEnvelope {
+                        actor: user.user_id.clone(),
+                        target_resource: user.user_id.clone(),
+                        operation: "recovery_code_use".to_string(),
+                        outcome: "success".to_string(),
+                        reason_code: "recovery_code_consumed".to_string(),
+                        auth_method: "recovery_code".to_string(),
+                        source_ip: req.ip_address.clone(),
+                        user_agent: req.user_agent.clone(),
+                        ..ComplianceEnvelope::default()
+                    }),
+                )
+                .await;
+            }
             if !verified {
-                return Err(Status::unauthenticated("invalid MFA code"));
+                self.metrics.record_auth_mfa_failure();
+                self.metrics.record_auth_login(false);
+                self.emit_event(
+                    AuthEvent::new(
+                        topics::LOGIN_FAILED,
+                        user.user_id.clone(),
+                        user.tenant_id.clone(),
+                        serde_json::json!({
+                            "user_id": user.user_id.clone(),
+                            "ip_address": req.ip_address.clone(),
+                            "stage": "second_factor",
+                        }),
+                    )
+                    .with_correlation(format!("login_failed:{}", user.user_id))
+                    .with_compliance(ComplianceEnvelope {
+                        actor: user.user_id.clone(),
+                        target_resource: user.user_id.clone(),
+                        operation: "login".to_string(),
+                        outcome: "failure".to_string(),
+                        reason_code: "invalid_second_factor".to_string(),
+                        auth_method: "mfa".to_string(),
+                        source_ip: req.ip_address.clone(),
+                        user_agent: req.user_agent.clone(),
+                        ..ComplianceEnvelope::default()
+                    }),
+                )
+                .await;
+                return Err(Status::unauthenticated("invalid second factor"));
             }
         }
         let (session_id, _expires) = self
@@ -332,6 +434,7 @@ impl AuthnServiceImpl {
                 now,
             )
             .await?;
+        self.metrics.record_auth_login(true);
         self.emit_event(
             AuthEvent::new(
                 topics::USER_LOGGED_IN,
@@ -339,14 +442,26 @@ impl AuthnServiceImpl {
                 user.tenant_id.clone(),
                 serde_json::json!({
                     "user_id": user.user_id.clone(),
-                    "session_id": session_id.clone(),
+                    "session_public_id": public_session_handle_from_hash(&authn::hash_secret(&session_id, &self.hash_key())),
                     "tenant_id": user.tenant_id.clone(),
                     "project_id": user.project_id.clone(),
                     "device_name": req.device_name.clone(),
                     "ip_address": req.ip_address.clone(),
                 }),
             )
-            .with_correlation(format!("login:{}", user.user_id)),
+            .with_correlation(format!("login:{}", user.user_id))
+            .with_compliance(ComplianceEnvelope {
+                actor: user.user_id.clone(),
+                actor_project: user.project_id.clone(),
+                target_resource: user.user_id.clone(),
+                operation: "login".to_string(),
+                outcome: "success".to_string(),
+                reason_code: "credentials_verified".to_string(),
+                auth_method: if user.mfa_enabled { "mfa" } else { "password" }.to_string(),
+                source_ip: req.ip_address.clone(),
+                user_agent: req.user_agent.clone(),
+                ..ComplianceEnvelope::default()
+            }),
         )
         .await;
         // Issue a short-lived signed access token when JWT signing is configured;
@@ -359,6 +474,7 @@ impl AuthnServiceImpl {
             &[],
             "",
             &session_id,
+            "pwd",
             now,
         );
         let access_token_expires_in = if access_exp > 0 {
@@ -366,10 +482,26 @@ impl AuthnServiceImpl {
         } else {
             self.config.session_ttl_secs as i32
         };
-        let refresh_token = if access_exp > 0 {
-            session_id.clone()
+        // Phase 3 (I2.2): the refresh credential is a token-family token
+        // (rt_<family>.<jti>), NOT the server-side session id. It is rotated on
+        // every RefreshToken call and reuse of a superseded value revokes the
+        // family. Falls back to empty when no Postgres pool backs the registry.
+        let refresh_token = self
+            .mint_refresh_family(
+                &user.user_id,
+                &user.user_id,
+                &user.tenant_id,
+                &user.project_id,
+                "",
+                &session_id,
+                now,
+            )
+            .await
+            .unwrap_or_default();
+        let refresh_token_expires_in = if refresh_token.is_empty() {
+            0
         } else {
-            String::new()
+            self.config.session_ttl_secs as i32
         };
         // CSRF token for the double-submit cookie pattern (WEB flows); bound to
         // the session and validated by `ValidateCSRF`.
@@ -382,6 +514,7 @@ impl AuthnServiceImpl {
             refresh_token,
             csrf_token,
             access_token_expires_in,
+            refresh_token_expires_in,
             ..Default::default()
         }))
     }
@@ -433,16 +566,28 @@ impl AuthnServiceImpl {
         user.password_hash = authn::hash_password(&req.new_password, &self.password_hash_key());
         user.updated_at_unix = now;
         self.users.put_user(user).await.map_err(Status::internal)?;
-        self.emit_event(AuthEvent::new(
-            topics::PASSWORD_CHANGED,
-            req.user_id.clone(),
-            event_tenant,
-            serde_json::json!({
-                "user_id": req.user_id.clone(),
-                "is_reset": false,
-                "changed_by": req.user_id.clone(),
+        self.emit_event(
+            AuthEvent::new(
+                topics::PASSWORD_CHANGED,
+                req.user_id.clone(),
+                event_tenant,
+                serde_json::json!({
+                    "user_id": req.user_id.clone(),
+                    "is_reset": false,
+                    "changed_by": req.user_id.clone(),
+                }),
+            )
+            .with_correlation(format!("password_change:{}", req.user_id))
+            .with_compliance(ComplianceEnvelope {
+                actor: req.user_id.clone(),
+                target_resource: req.user_id.clone(),
+                operation: "password_change".to_string(),
+                outcome: "success".to_string(),
+                reason_code: "self_service_change".to_string(),
+                auth_method: "password".to_string(),
+                ..ComplianceEnvelope::default()
             }),
-        ))
+        )
         .await;
         Ok(Response::new(authn_pb::ChangePasswordResponse {
             user_id: req.user_id,
@@ -481,9 +626,34 @@ impl AuthnServiceImpl {
                     now_unix(),
                 )
                 .await?;
+            // Audit the reset request (only for a real account — emitting on a
+            // miss would both leak account existence and lack a tenant/actor for
+            // the compliance envelope).
+            self.emit_event(
+                AuthEvent::new(
+                    topics::PASSWORD_RESET_REQUESTED,
+                    user.user_id.clone(),
+                    user.tenant_id.clone(),
+                    serde_json::json!({
+                        "user_id": user.user_id.clone(),
+                        "otp_id": otp_id.clone(),
+                    }),
+                )
+                .with_correlation(format!("password_reset:{}", user.user_id))
+                .with_compliance(ComplianceEnvelope {
+                    actor: user.user_id.clone(),
+                    target_resource: user.user_id.clone(),
+                    operation: "password_reset_request".to_string(),
+                    outcome: "success".to_string(),
+                    reason_code: "reset_otp_issued".to_string(),
+                    auth_method: "otp".to_string(),
+                    ..ComplianceEnvelope::default()
+                }),
+            )
+            .await;
             otp_id
         } else {
-            String::new()
+            Uuid::new_v4().to_string()
         };
         Ok(Response::new(authn_pb::ForgotPasswordResponse { otp_id }))
     }
@@ -506,7 +676,7 @@ impl AuthnServiceImpl {
                 now,
             )
             .await?
-            .ok_or_else(|| Status::permission_denied("invalid or expired reset code"))?;
+            .ok_or_else(|| Status::permission_denied("invalid reset request"))?;
         let mut user = self
             .users
             .get_user_by_id(&rec.user_id)
@@ -522,16 +692,52 @@ impl AuthnServiceImpl {
         self.users.put_user(user).await.map_err(Status::internal)?;
         // Invalidate every existing session after a reset.
         let _ = self.sessions.revoke_all_for_principal(&user_id, now).await;
-        self.emit_event(AuthEvent::new(
-            topics::PASSWORD_CHANGED,
-            user_id.clone(),
-            tenant,
-            serde_json::json!({
-                "user_id": user_id.clone(),
-                "is_reset": true,
-                "changed_by": user_id.clone(),
+        self.emit_event(
+            AuthEvent::new(
+                topics::PASSWORD_CHANGED,
+                user_id.clone(),
+                tenant.clone(),
+                serde_json::json!({
+                    "user_id": user_id.clone(),
+                    "is_reset": true,
+                    "changed_by": user_id.clone(),
+                }),
+            )
+            .with_correlation(format!("password_reset:{user_id}"))
+            .with_compliance(ComplianceEnvelope {
+                actor: user_id.clone(),
+                target_resource: user_id.clone(),
+                operation: "password_change".to_string(),
+                outcome: "success".to_string(),
+                reason_code: "password_reset".to_string(),
+                auth_method: "otp".to_string(),
+                ..ComplianceEnvelope::default()
             }),
-        ))
+        )
+        .await;
+        // Distinct reset-completed audit event (the reset flow proved control via
+        // the PASSWORD_RESET OTP rather than the current password).
+        self.emit_event(
+            AuthEvent::new(
+                topics::PASSWORD_RESET_COMPLETED,
+                user_id.clone(),
+                tenant,
+                serde_json::json!({
+                    "user_id": user_id.clone(),
+                    "otp_id": req.otp_id.clone(),
+                }),
+            )
+            .with_correlation(format!("password_reset:{user_id}"))
+            .with_compliance(ComplianceEnvelope {
+                actor: user_id.clone(),
+                target_resource: user_id.clone(),
+                operation: "password_reset_complete".to_string(),
+                outcome: "success".to_string(),
+                reason_code: "reset_otp_verified".to_string(),
+                auth_method: "otp".to_string(),
+                ..ComplianceEnvelope::default()
+            }),
+        )
         .await;
         Ok(Response::new(authn_pb::ResetPasswordResponse {
             user_id,

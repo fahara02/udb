@@ -1,8 +1,9 @@
 #![allow(clippy::result_large_err)]
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Mutex, OnceLock, RwLock};
 use tonic::{Request, Status};
 use x509_parser::prelude::parse_x509_certificate;
 
@@ -344,6 +345,165 @@ impl SecurityConfig {
             Err(errors)
         }
     }
+
+    pub fn validate_compliance_profile(
+        &self,
+        profile: ComplianceProfile,
+        facts: &ComplianceProfileFacts,
+    ) -> Result<(), Vec<String>> {
+        let mut errors = self.validate_production().err().unwrap_or_default();
+        match profile {
+            ComplianceProfile::Soc2Type2 => {}
+            ComplianceProfile::Iso27001And27017 => {
+                if !facts.encryption_key_source_configured {
+                    errors.push(
+                        "ISO 27001/27017 profile requires encryption-at-rest key source"
+                            .to_string(),
+                    );
+                }
+                if !self.encryption_key_rotation_enabled {
+                    errors.push(
+                        "ISO 27001/27017 profile requires encryption key rotation".to_string(),
+                    );
+                }
+            }
+            ComplianceProfile::PciHipaa => {
+                if !facts.encryption_key_source_configured {
+                    errors.push(
+                        "PCI/HIPAA profile requires encryption-at-rest key source".to_string(),
+                    );
+                }
+                if !self.encryption_key_rotation_enabled {
+                    errors.push("PCI/HIPAA profile requires encryption key rotation".to_string());
+                }
+                if !self.mtls_required {
+                    errors.push("PCI/HIPAA profile requires mTLS".to_string());
+                }
+                if !facts.fail_closed_enabled {
+                    errors.push("PCI/HIPAA profile requires fail-closed mode".to_string());
+                }
+                if !facts.durable_audit_sink_configured {
+                    errors.push("PCI/HIPAA profile requires a durable audit sink".to_string());
+                }
+            }
+        }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+
+    /// Derive the runtime [`ComplianceProfileFacts`] from this config so the
+    /// startup compliance gate (`serve()`) can validate the selected profile
+    /// against actual deployment state rather than test fixtures.
+    pub fn compliance_profile_facts(&self) -> ComplianceProfileFacts {
+        ComplianceProfileFacts {
+            encryption_key_source_configured: !self.current_encryption_key_id.trim().is_empty(),
+            fail_closed_enabled: fail_closed_mode(),
+            durable_audit_sink_configured: !self.audit_sink_url.trim().is_empty(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ComplianceProfile {
+    Soc2Type2,
+    Iso27001And27017,
+    PciHipaa,
+}
+
+impl ComplianceProfile {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Soc2Type2 => "soc2_type2",
+            Self::Iso27001And27017 => "iso27001_27017",
+            Self::PciHipaa => "pci_hipaa",
+        }
+    }
+}
+
+/// The compliance profile the operator selected via `UDB_COMPLIANCE_PROFILE`
+/// (`soc2` / `iso27001` / `pci_hipaa`), or `None` when unset/`none`. The startup
+/// path validates the selected profile and refuses to serve on violation, so a
+/// declared profile is an ENFORCED runtime posture, not just documentation.
+pub fn selected_compliance_profile() -> Option<ComplianceProfile> {
+    let raw = std::env::var("UDB_COMPLIANCE_PROFILE").ok()?;
+    match raw
+        .trim()
+        .to_ascii_lowercase()
+        .replace([' ', '/', '-'], "_")
+        .as_str()
+    {
+        "" | "none" => None,
+        "soc2" | "soc2_type2" | "soc2type2" => Some(ComplianceProfile::Soc2Type2),
+        "iso27001" | "iso_27001" | "iso27001_27017" | "iso27017" | "iso" => {
+            Some(ComplianceProfile::Iso27001And27017)
+        }
+        "pci" | "hipaa" | "pci_hipaa" | "pcihipaa" | "pci_dss" => Some(ComplianceProfile::PciHipaa),
+        // Unknown value: caller logs a warning. Returning None keeps an obvious
+        // typo from silently passing as a stricter profile.
+        _ => None,
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ComplianceProfileFacts {
+    pub encryption_key_source_configured: bool,
+    pub fail_closed_enabled: bool,
+    pub durable_audit_sink_configured: bool,
+}
+
+/// Single source of truth for whether security-sensitive paths must FAIL CLOSED
+/// (deny on dependency/store error) rather than fail open (degrade to allow).
+///
+/// Phase 5 ("Security Depth"): in a hardened/enterprise deployment a revocation
+/// lookup error, signing-key/JWKS store error, or rate-limit store error must
+/// DENY, never silently allow. This is true when the process is in a production
+/// security posture (`is_production()`) OR enterprise audit mode is on
+/// (`UDB_ENTERPRISE_AUDIT`) OR it is explicitly requested (`UDB_FAIL_CLOSED`).
+/// Dev/test default is fail-open so a missing local dependency does not block work.
+pub fn fail_closed_mode() -> bool {
+    if SecurityConfig::current().is_production() {
+        return true;
+    }
+    for key in ["UDB_FAIL_CLOSED", "UDB_ENTERPRISE_AUDIT"] {
+        if let Ok(value) = std::env::var(key) {
+            if matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            ) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Startup posture gate for Phase 5 ("Enterprise mode refuses insecure transport
+/// unless explicitly configured for development").
+///
+/// Returns the combined list of production/secure-transport violations that must
+/// ABORT startup when the process is hardened — i.e. in a production security
+/// posture ([`SecurityConfig::is_production`]) or [`fail_closed_mode`] is on.
+/// In a dev posture (not production, not fail-closed) it returns an empty list so
+/// a plaintext, no-TLS local deployment is still permitted; the caller logs those
+/// same advisory findings instead of aborting.
+///
+/// `transport_violations` is supplied by the caller (the service layer owns the
+/// `validate_secure_transport` check over `ServiceSettings`/`TlsSettings`); this
+/// keeps `security.rs` free of a dependency on the service config types while
+/// still centralizing the hardened-vs-dev decision.
+pub fn hardened_startup_violations(transport_violations: &[String]) -> Vec<String> {
+    if !(SecurityConfig::current().is_production() || fail_closed_mode()) {
+        return Vec::new();
+    }
+    let mut violations = SecurityConfig::current()
+        .validate_production()
+        .err()
+        .unwrap_or_default();
+    violations.extend(transport_violations.iter().cloned());
+    violations
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -456,6 +616,15 @@ pub struct SecurityClaims {
     /// ReBAC snapshot version for relationship-cache invalidation (later phase).
     #[serde(default)]
     pub relationships_version: Option<String>,
+    /// Authentication method that minted this token ("pwd", "mfa", "oidc",
+    /// "refresh", "service", …). Lets resource servers make step-up / assurance
+    /// decisions from the token alone (zero-trust).
+    #[serde(default)]
+    pub auth_method: Option<String>,
+    /// Authentication Context Class Reference — the assurance level ("aal1" for
+    /// single-factor, "aal2" for MFA/WebAuthn), derived from `auth_method`.
+    #[serde(default)]
+    pub acr: Option<String>,
 }
 
 impl SecurityClaims {
@@ -593,7 +762,78 @@ fn jwks_decoding_key(
 /// [`SecurityClaims`] so the token validates through the same
 /// [`validate_bearer_token`] path. Returns `Ok(None)` when no signing key is
 /// configured (the caller then falls back to server-side sessions only); `Err`
-/// only on a real key/signing failure. `iss`/`aud` are stamped when configured.
+/// Key id (`kid`) for the default UDB-issued RS256 signing key. Stamped into
+/// both the JWT header (`sign_access_token`) and the published JWK
+/// (`rsa_jwk_from_pem`) so JWKS consumers can select the verification key by
+/// `kid`. One named const keeps header and JWKS provably consistent. When the
+/// DB-backed signing-key registry has an ACTIVE key, that key's `kid` supersedes
+/// this static id for newly-issued tokens; this remains the env/dev fallback kid.
+pub const UDB_RS256_KID: &str = "udb-rs256-1";
+
+/// Process-global snapshot of the DB-backed JWT signing-key registry, kept in
+/// sync by the async auth control plane (`signing_keys::refresh_signing_key_cache`).
+///
+/// The signing path ([`sign_access_token`]) and the validation path
+/// ([`validate_bearer_token`]) are synchronous and have no DB/runtime handle, so
+/// the async registry reads + at-rest decryption happen out of band (at startup
+/// seed and on rotation) and the resolved material is published here:
+///   - `active` — the ACTIVE key's decrypted private PEM + its `kid`, used to
+///     SIGN new tokens (so a rotated key actually signs, not just publishes).
+///   - `public_by_kid` — ACTIVE + VERIFYING public PEMs keyed by `kid`, used to
+///     VERIFY tokens during the rotation overlap window without a JWKS URL.
+///
+/// Empty by default (no registry / dev-unseeded): callers fall back to the env
+/// `jwt_private_key` + [`UDB_RS256_KID`] for signing and `jwt_public_key` for
+/// validation, so single-key deployments keep working unchanged.
+#[derive(Default, Clone)]
+pub struct SigningKeyRegistrySnapshot {
+    /// ACTIVE key: (kid, decrypted private PEM). `None` when the registry is
+    /// empty/unseeded — signing then uses the env key.
+    pub active: Option<(String, String)>,
+    /// ACTIVE + VERIFYING public PEMs keyed by `kid` for verification.
+    pub public_by_kid: HashMap<String, String>,
+}
+
+static SIGNING_KEY_REGISTRY_CACHE: OnceLock<RwLock<SigningKeyRegistrySnapshot>> = OnceLock::new();
+
+fn signing_key_registry_cache() -> &'static RwLock<SigningKeyRegistrySnapshot> {
+    SIGNING_KEY_REGISTRY_CACHE.get_or_init(|| RwLock::new(SigningKeyRegistrySnapshot::default()))
+}
+
+/// Publish a fresh registry snapshot (called by the async auth control plane at
+/// startup seed and on key rotation). Overwrites the previous snapshot wholesale.
+pub fn install_signing_key_registry_snapshot(snapshot: SigningKeyRegistrySnapshot) {
+    if let Ok(mut guard) = signing_key_registry_cache().write() {
+        *guard = snapshot;
+    }
+}
+
+/// The ACTIVE signing key (decrypted private PEM, kid) when the registry has one.
+/// `None` falls the signing path back to the env key + [`UDB_RS256_KID`].
+pub fn active_signing_key() -> Option<(String, String)> {
+    signing_key_registry_cache()
+        .read()
+        .ok()
+        .and_then(|g| g.active.clone())
+}
+
+/// The registry public PEM for `kid` (ACTIVE or VERIFYING), if published. Used by
+/// [`validate_bearer_token`] to resolve a decoding key by the token header `kid`
+/// across multiple live keys during a rotation overlap window.
+fn registry_public_pem_for_kid(kid: &str) -> Option<String> {
+    signing_key_registry_cache()
+        .read()
+        .ok()
+        .and_then(|g| g.public_by_kid.get(kid).cloned())
+}
+
+/// Sign a UDB-issued access token (RS256) from the configured env private key
+/// (`UDB_JWT_PRIVATE_KEY`, inline PEM or path), stamping [`UDB_RS256_KID`]. This
+/// is the single-key fallback used when the signing-key registry has no ACTIVE
+/// key; the registry path calls [`sign_access_token_with_key`] directly. Returns
+/// `Ok(None)` when no env key is configured (caller falls back to server-side
+/// sessions only); `Err` only on a real key/signing failure. `iss`/`aud` are
+/// stamped when configured.
 #[allow(clippy::too_many_arguments)]
 pub fn sign_access_token(
     config: &SecurityConfig,
@@ -604,20 +844,66 @@ pub fn sign_access_token(
     roles: &[String],
     service_identity: &str,
     jti: &str,
+    auth_method: &str,
     now_unix: u64,
 ) -> Result<Option<(String, i64)>, String> {
-    use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
-    use serde_json::json;
-
+    // Default/fallback signer: env private key (inline PEM or path) stamped with
+    // the static [`UDB_RS256_KID`]. The registry-key path delegates here only when
+    // the registry has no ACTIVE key (dev/unseeded), so single-key deployments are
+    // unchanged. `Ok(None)` when no env key is configured (sessions-only).
     let Some(key_src) = config.jwt_private_key.clone() else {
         return Ok(None);
     };
-    let key_bytes = if key_src.contains("-----BEGIN") {
-        key_src.into_bytes()
+    let private_pem = if key_src.contains("-----BEGIN") {
+        key_src
     } else {
-        std::fs::read(&key_src).map_err(|e| format!("failed to read JWT private key: {e}"))?
+        std::fs::read_to_string(&key_src)
+            .map_err(|e| format!("failed to read JWT private key: {e}"))?
     };
-    let encoding_key = EncodingKey::from_rsa_pem(&key_bytes)
+    sign_access_token_with_key(
+        config,
+        subject,
+        tenant_id,
+        project_id,
+        scopes,
+        roles,
+        service_identity,
+        jti,
+        auth_method,
+        now_unix,
+        &private_pem,
+        UDB_RS256_KID,
+    )
+    .map(Some)
+}
+
+/// Sign a UDB-issued RS256 access token with an *explicit* private PEM + `kid`.
+///
+/// This is the registry-aware signer: the auth control plane resolves the ACTIVE
+/// signing key's decrypted PEM + `kid` (via the signing-key registry) and calls
+/// this so the token is signed by — and its header `kid` names — the key that is
+/// actually live. [`sign_access_token`] delegates here with the env key +
+/// [`UDB_RS256_KID`] as the single-key fallback. Returns `(token, exp_unix)`;
+/// `Err` only on a real key-parse/sign failure.
+#[allow(clippy::too_many_arguments)]
+pub fn sign_access_token_with_key(
+    config: &SecurityConfig,
+    subject: &str,
+    tenant_id: &str,
+    project_id: &str,
+    scopes: &[String],
+    roles: &[String],
+    service_identity: &str,
+    jti: &str,
+    auth_method: &str,
+    now_unix: u64,
+    private_pem: &str,
+    kid: &str,
+) -> Result<(String, i64), String> {
+    use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
+    use serde_json::json;
+
+    let encoding_key = EncodingKey::from_rsa_pem(private_pem.as_bytes())
         .map_err(|e| format!("invalid JWT private key: {e}"))?;
     let ttl = config.jwt_access_ttl_secs.max(1);
     let exp = now_unix.saturating_add(ttl) as i64;
@@ -641,19 +927,31 @@ pub fn sign_access_token(
     if !service_identity.is_empty() {
         claims.insert("service_identity".into(), json!(service_identity));
     }
+    if !auth_method.is_empty() {
+        claims.insert("auth_method".into(), json!(auth_method));
+        // Assurance level (ACR): multi-factor / phishing-resistant methods are
+        // AAL2; everything else is AAL1. Resource servers gate step-up on this.
+        let acr = if matches!(auth_method, "mfa" | "webauthn" | "passkey" | "totp") {
+            "aal2"
+        } else {
+            "aal1"
+        };
+        claims.insert("acr".into(), json!(acr));
+    }
     if let Some(iss) = &config.jwt_issuer {
         claims.insert("iss".into(), json!(iss));
     }
     if let Some(aud) = &config.jwt_audience {
         claims.insert("aud".into(), json!(aud));
     }
-    let token = encode(
-        &Header::new(Algorithm::RS256),
-        &serde_json::Value::Object(claims),
-        &encoding_key,
-    )
-    .map_err(|e| format!("failed to sign access token: {e}"))?;
-    Ok(Some((token, exp)))
+    let mut header = Header::new(Algorithm::RS256);
+    // Stamp the signing key's `kid` so JWKS consumers can select the verification
+    // key by `kid`. For the env fallback this is `UDB_RS256_KID`; for a registry
+    // ACTIVE key it is that key's id (matching the JWK published in JWKS).
+    header.kid = Some(kid.to_string());
+    let token = encode(&header, &serde_json::Value::Object(claims), &encoding_key)
+        .map_err(|e| format!("failed to sign access token: {e}"))?;
+    Ok((token, exp))
 }
 
 /// Decode and validate a raw bearer JWT against the configured public key and
@@ -671,8 +969,34 @@ pub fn validate_bearer_token(
     // then surfaces as a confusing `InvalidAlgorithm` at verification time.
     let header =
         jsonwebtoken::decode_header(token).map_err(|e| format!("invalid JWT header: {e}"))?;
+    // Registry-by-kid resolution (rotation overlap window): when the DB-backed
+    // signing-key registry has published an ACTIVE/VERIFYING public key matching
+    // the token's `kid`, verify against THAT key. This lets tokens signed by a
+    // just-rotated ACTIVE key (or an about-to-retire VERIFYING key) validate even
+    // without a JWKS URL — covering the whole overlap window, not just the env
+    // key's single kid. Registry keys are RS256; non-RSA tokens skip this and use
+    // the env path. Falls through to the env public key when the kid is unknown.
+    let registry_key = header
+        .kid
+        .as_deref()
+        .filter(|kid| !kid.trim().is_empty())
+        .and_then(registry_public_pem_for_kid)
+        .filter(|_| {
+            matches!(
+                header.alg,
+                Algorithm::RS256
+                    | Algorithm::RS384
+                    | Algorithm::RS512
+                    | Algorithm::PS256
+                    | Algorithm::PS384
+                    | Algorithm::PS512
+            )
+        });
     let decoding_key = if config.jwt_jwks_url.is_some() {
         jwks_decoding_key(config, &header)?
+    } else if let Some(pem) = registry_key {
+        DecodingKey::from_rsa_pem(pem.as_bytes())
+            .map_err(|e| format!("invalid registry JWT public key format: {e}"))?
     } else {
         let Some(jwt_key_env) = config.jwt_public_key.clone() else {
             return Err(
@@ -1468,6 +1792,60 @@ pub fn hmac_sha1(key: &[u8], msg: &[u8]) -> [u8; 20] {
     hmac::<sha1::Sha1>(key, msg).into()
 }
 
+/// Mint a coturn long-term-secret REST credential (RFC 5766-bis / coturn
+/// `use-auth-secret`): `username = "<expiry-unix>:<principal>"`,
+/// `credential = base64(HMAC-SHA1(secret, username))`. Shared by the native
+/// WebRTC `TurnService` and the ws:// signalling bridge so one TURN secret and
+/// one formula drive both.
+pub fn turn_rest_credential(secret: &[u8], principal: &str, expiry_unix: i64) -> (String, String) {
+    use base64::Engine as _;
+    let username = format!("{expiry_unix}:{principal}");
+    let mac = hmac_sha1(secret, username.as_bytes());
+    let credential = base64::engine::general_purpose::STANDARD.encode(mac);
+    (username, credential)
+}
+
+/// Resolve the shared coturn secret used to mint TURN REST credentials, in order:
+/// `UDB_TURN_SECRET`, then `UDB_ENCRYPTION_KEY`. **Fails closed in production**
+/// (`UDB_ENV=prod`/`production`): a missing secret returns `None`, so callers
+/// advertise STUN only / reject credential minting rather than leaking a
+/// well-known dev secret. Outside production a fixed dev secret is used (with a
+/// warning) so local flows work without configuration. Shared by the native
+/// WebRTC `TurnService` and the ws:// signalling bridge.
+pub fn resolve_turn_secret() -> Option<Vec<u8>> {
+    if let Some(s) = std::env::var("UDB_TURN_SECRET")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+    {
+        return Some(s.into_bytes());
+    }
+    if let Some(s) = std::env::var("UDB_ENCRYPTION_KEY")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+    {
+        return Some(s.into_bytes());
+    }
+    let is_production = std::env::var("UDB_ENV")
+        .map(|v| {
+            let v = v.to_ascii_lowercase();
+            v == "production" || v == "prod"
+        })
+        .unwrap_or(false);
+    if is_production {
+        tracing::warn!(
+            "no TURN secret configured (set UDB_TURN_SECRET); TURN credential minting \
+             is disabled in production (failing closed)"
+        );
+        None
+    } else {
+        tracing::warn!(
+            "no TURN secret configured; using a non-production dev fallback secret \
+             (set UDB_TURN_SECRET, or UDB_ENV=production to fail closed)"
+        );
+        Some(b"udb-dev-turn-secret".to_vec())
+    }
+}
+
 // ── Policy linting ────────────────────────────────────────────────────────────
 
 /// A single finding from `lint_policies`.
@@ -1586,6 +1964,33 @@ pub fn lint_policies(policies: &[AbacPolicy]) -> Vec<PolicyLintFinding> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sign_access_token_stamps_kid_header() {
+        let config = SecurityConfig {
+            jwt_private_key: Some(include_str!("testdata/jwt_rs256_private.pem").to_string()),
+            ..SecurityConfig::default()
+        };
+        let (token, _exp) = sign_access_token(
+            &config,
+            "user-1",
+            "acme",
+            "billing",
+            &[],
+            &[],
+            "",
+            "jti-1",
+            "pwd",
+            1_700_000_000,
+        )
+        .expect("signing should not error")
+        .expect("a private key is configured, so a token is issued");
+        let header = jsonwebtoken::decode_header(&token).expect("valid JWT header");
+        // The header kid must equal the published JWKS kid so consumers can
+        // select the verification key.
+        assert_eq!(header.kid.as_deref(), Some(UDB_RS256_KID));
+        assert_eq!(header.alg, jsonwebtoken::Algorithm::RS256);
+    }
 
     fn make_allow_policy(service: &str, purpose: &str, operation: &str, scope: &str) -> AbacPolicy {
         AbacPolicy {
@@ -1937,6 +2342,140 @@ mod tests {
         assert!(
             errors.iter().any(|e| e.contains("Header-based scopes")),
             "production validation must reject UDB_ALLOW_HEADER_SCOPES, got: {errors:?}"
+        );
+    }
+
+    /// Phase 5 acceptance: a hardened compliance posture must PASS
+    /// `validate_production`, and an insecure/dev posture must FAIL it — proving
+    /// the posture is enforced in code, not merely documented in a profile.
+    #[test]
+    fn compliance_hardened_posture_passes_dev_posture_fails() {
+        // Mirrors the keys set by `configs/compliance-hardened.yaml`: TLS + service
+        // identity + mTLS required, header scopes off, audit sink configured,
+        // PII-safe logging on.
+        let hardened = SecurityConfig {
+            tls_required: true,
+            service_identity_required: true,
+            mtls_required: true,
+            allow_header_scopes: false,
+            audit_sink_url: "https://audit.internal.example/api/events".to_string(),
+            pii_safe_logging: true,
+            ..SecurityConfig::default()
+        };
+        assert!(
+            hardened.validate_production().is_ok(),
+            "hardened compliance posture must pass validate_production, got: {:?}",
+            hardened.validate_production()
+        );
+        assert!(
+            hardened.is_production(),
+            "hardened posture must report is_production() so the startup gate is fatal"
+        );
+
+        // The insecure/dev posture mirrored from `configs/services.yaml`
+        // (plaintext, header scopes on, no audit sink) must be rejected.
+        let dev = SecurityConfig {
+            tls_required: false,
+            service_identity_required: false,
+            mtls_required: false,
+            allow_header_scopes: true,
+            audit_sink_url: String::new(),
+            pii_safe_logging: true,
+            ..SecurityConfig::default()
+        };
+        let errors = dev
+            .validate_production()
+            .expect_err("dev posture must fail validate_production");
+        assert!(
+            errors.iter().any(|e| e.contains("TLS must be required")),
+            "dev posture must be rejected for missing TLS, got: {errors:?}"
+        );
+        assert!(
+            !dev.is_production(),
+            "dev posture must NOT report is_production() so plaintext stays allowed"
+        );
+    }
+
+    fn hardened_compliance_config() -> SecurityConfig {
+        SecurityConfig {
+            tls_required: true,
+            service_identity_required: true,
+            mtls_required: true,
+            allow_header_scopes: false,
+            audit_sink_url: "https://audit.internal.example/api/events".to_string(),
+            pii_safe_logging: true,
+            encryption_key_rotation_enabled: true,
+            ..SecurityConfig::default()
+        }
+    }
+
+    #[test]
+    fn soc2_profile_accepts_hardened_production_posture() {
+        let cfg = hardened_compliance_config();
+        assert_eq!(
+            cfg.validate_compliance_profile(
+                ComplianceProfile::Soc2Type2,
+                &ComplianceProfileFacts::default()
+            ),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn iso_profile_requires_encryption_key_source_and_rotation() {
+        let mut cfg = hardened_compliance_config();
+        cfg.encryption_key_rotation_enabled = false;
+        let errors = cfg
+            .validate_compliance_profile(
+                ComplianceProfile::Iso27001And27017,
+                &ComplianceProfileFacts::default(),
+            )
+            .expect_err("ISO profile must require encryption source and rotation");
+        assert!(errors.iter().any(|e| e.contains("key source")));
+        assert!(errors.iter().any(|e| e.contains("key rotation")));
+
+        cfg.encryption_key_rotation_enabled = true;
+        assert_eq!(
+            cfg.validate_compliance_profile(
+                ComplianceProfile::Iso27001And27017,
+                &ComplianceProfileFacts {
+                    encryption_key_source_configured: true,
+                    ..ComplianceProfileFacts::default()
+                },
+            ),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn pci_hipaa_profile_requires_fail_closed_mtls_audit_and_encryption() {
+        let mut cfg = hardened_compliance_config();
+        cfg.mtls_required = false;
+        cfg.encryption_key_rotation_enabled = false;
+        let errors = cfg
+            .validate_compliance_profile(
+                ComplianceProfile::PciHipaa,
+                &ComplianceProfileFacts::default(),
+            )
+            .expect_err("PCI/HIPAA profile must reject missing hardening facts");
+        assert!(errors.iter().any(|e| e.contains("key source")));
+        assert!(errors.iter().any(|e| e.contains("key rotation")));
+        assert!(errors.iter().any(|e| e.contains("mTLS")));
+        assert!(errors.iter().any(|e| e.contains("fail-closed")));
+        assert!(errors.iter().any(|e| e.contains("durable audit sink")));
+
+        cfg.mtls_required = true;
+        cfg.encryption_key_rotation_enabled = true;
+        assert_eq!(
+            cfg.validate_compliance_profile(
+                ComplianceProfile::PciHipaa,
+                &ComplianceProfileFacts {
+                    encryption_key_source_configured: true,
+                    fail_closed_enabled: true,
+                    durable_audit_sink_configured: true,
+                },
+            ),
+            Ok(())
         );
     }
 

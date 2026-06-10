@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package udb.core.authn.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/authn/entity/v1/enums.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authn.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";
+option java_package = "com.udb.core.authn.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// Device — a user's registered device for session/refresh binding (I1, I2.4).
+//
+// Sessions and token families bind to a device; revoking a device blocks future
+// refresh + session validation for that device. The fingerprint is a keyed-HMAC
+// digest (STORAGE_ONLY); IP is stored masked and the user agent only as a hash.
+//
+// Migration order 23.
+// ---------------------------------------------------------------------------
+message Device {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "devices"
+    schema_name: "udb_authn"
+    migration_order: 23
+    is_table: true
+    comment: "Registered user devices for session/refresh binding and revocation"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_devices_user"
+      index_type: "BTREE"
+      columns: "user_id"
+    }
+    indexes: {
+      index_name: "idx_devices_fingerprint"
+      index_type: "HASH"
+      columns: "fingerprint_hash"
+    }
+    replica_hint: "primary"
+    required_scope: "authn:devices:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "authn.operational"
+    retention_days: 365
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+  };
+
+  string device_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "device_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string user_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "user_id" sql_type: "VARCHAR(160)" not_null: true }];
+
+  string tenant_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true }];
+
+  string project_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" }];
+
+  string device_name = 5 [(udb.core.common.v1.pg_column) = { column_name: "device_name" sql_type: "VARCHAR(150)" comment: "Human-readable device label" }];
+
+  DeviceType device_type = 6 [(udb.core.common.v1.pg_column) = { column_name: "device_type" sql_type: "VARCHAR(20)" not_null: true default_value: "'WEB'" }];
+
+  // Keyed-HMAC digest of the device fingerprint. STORAGE_ONLY.
+  string fingerprint_hash = 7 [(udb.core.common.v1.pg_column) = { column_name: "fingerprint_hash" sql_type: "VARCHAR(128)" comment: "Keyed digest of the device fingerprint" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT hashing_algorithm: "hmac-sha256" }];
+
+  // Source IP truncated to a network prefix (e.g. /24 or /48) — never the full
+  // client IP.
+  string last_ip_masked = 8 [(udb.core.common.v1.pg_column) = { column_name: "last_ip_masked" sql_type: "VARCHAR(64)" comment: "Masked source IP prefix" }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true];
+
+  string last_user_agent_hash = 9 [(udb.core.common.v1.pg_column) = { column_name: "last_user_agent_hash" sql_type: "VARCHAR(128)" comment: "Digest of last user-agent string" }];
+
+  google.protobuf.Timestamp last_seen_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "last_seen_at" sql_type: "TIMESTAMPTZ" }];
+
+  google.protobuf.Timestamp created_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  google.protobuf.Timestamp revoked_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "revoked_at" sql_type: "TIMESTAMPTZ" }];
+
+  string revoked_by = 13 [(udb.core.common.v1.pg_column) = { column_name: "revoked_by" sql_type: "VARCHAR(160)" }];
+}

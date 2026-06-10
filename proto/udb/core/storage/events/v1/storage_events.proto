@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package udb.core.storage.events.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Storage.Events.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/storage/events/v1;storageeventsv1";
+option java_package = "com.udb.core.storage.events.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Storage\\Events\\V1";
+option php_namespace = "Udb\\Core\\Storage\\Events\\V1";
+
+// Emitted when a pre-signed upload URL is issued for a registered file.
+message FileUploadUrlIssued {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.storage.events.v1.FileUploadUrlIssued"
+    outbox_topic: "udb.storage.file_upload_url_issued.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string file_id = 2;
+  string tenant_id = 3;
+  string object_key = 4;
+  string upload_url = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  google.protobuf.Timestamp timestamp = 7;
+}
+
+// Emitted when the underlying object has been written to the store.
+message FileUploaded {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.storage.events.v1.FileUploaded"
+    outbox_topic: "udb.storage.file_uploaded.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string file_id = 2;
+  string tenant_id = 3;
+  string object_key = 4;
+  int64 size_bytes = 5;
+  string uploaded_by = 6;
+  google.protobuf.Timestamp timestamp = 7;
+}
+
+// Emitted when an upload is finalized and the file becomes active.
+message FileFinalized {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.storage.events.v1.FileFinalized"
+    outbox_topic: "udb.storage.file_finalized.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string file_id = 2;
+  string tenant_id = 3;
+  string content_type = 4;
+  string file_type = 5;
+  google.protobuf.Timestamp timestamp = 6;
+}
+
+// Emitted when file metadata is updated.
+message FileMetadataUpdated {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.storage.events.v1.FileMetadataUpdated"
+    outbox_topic: "udb.storage.file_metadata_updated.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string file_id = 2;
+  string tenant_id = 3;
+  string filename = 4;
+  bool is_public = 5;
+  google.protobuf.Timestamp timestamp = 6;
+}
+
+// Emitted when a file is (soft) deleted.
+message FileDeleted {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.storage.events.v1.FileDeleted"
+    outbox_topic: "udb.storage.file_deleted.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string file_id = 2;
+  string tenant_id = 3;
+  string deleted_by = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}

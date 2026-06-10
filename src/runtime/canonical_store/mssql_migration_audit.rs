@@ -59,7 +59,7 @@ const RUN_SELECT_COLS: &str = "\
 
 const OP_SELECT_COLS: &str = "\
     id, CONVERT(NVARCHAR(36), run_id) AS run_id, operation_index, backend, resource_uri, \
-    operation_kind, status, rollback_json, error, \
+    operation_kind, status, payload_json, error, \
     CONVERT(NVARCHAR(33), applied_at, 127) AS applied_at";
 
 fn i32_col(row: &Row, name: &str) -> i32 {
@@ -99,7 +99,7 @@ fn row_to_op(row: &Row) -> SystemStoreResult<MigrationOpRow> {
             "unknown op ledger status '{status_str}' in mssql row"
         ))
     })?;
-    let rollback_json = match opt_str_col(row, "rollback_json") {
+    let payload_json = match opt_str_col(row, "payload_json") {
         Some(text) => {
             serde_json::from_str(&text).unwrap_or(serde_json::Value::Object(Default::default()))
         }
@@ -113,7 +113,7 @@ fn row_to_op(row: &Row) -> SystemStoreResult<MigrationOpRow> {
         resource_uri: str_col(row, "resource_uri"),
         operation_kind: str_col(row, "operation_kind"),
         status,
-        rollback_json,
+        payload_json: payload_json,
         error: str_col(row, "error"),
         applied_at: parse_opt_ts_cell(opt_str_col(row, "applied_at").as_deref()),
     })
@@ -141,6 +141,23 @@ impl MigrationAuditStore for MssqlCanonicalStore {
             .simple_batch(&ledger_ddl)
             .await
             .map_err(|e| SystemStoreError::query("mssql", ledger_ddl.clone(), e))?;
+        let payload_col = format!(
+            "IF COL_LENGTH('{ledger_rel}', 'payload_json') IS NULL \
+             ALTER TABLE {ledger_rel} ADD payload_json NVARCHAR(MAX) NULL"
+        );
+        self.client()
+            .simple_batch(&payload_col)
+            .await
+            .map_err(|e| SystemStoreError::query("mssql", payload_col.clone(), e))?;
+        let backfill = format!(
+            "UPDATE {ledger_rel} \
+             SET payload_json = rollback_json \
+             WHERE payload_json IS NULL AND rollback_json IS NOT NULL"
+        );
+        self.client()
+            .simple_batch(&backfill)
+            .await
+            .map_err(|e| SystemStoreError::query("mssql", backfill.clone(), e))?;
         Ok(())
     }
 
@@ -180,7 +197,7 @@ impl MigrationAuditStore for MssqlCanonicalStore {
         let sql = format!(
             "INSERT INTO {rel} ( \
                 run_id, operation_index, backend, resource_uri, \
-                operation_kind, status, rollback_json, error, applied_at \
+                operation_kind, status, payload_json, error, applied_at \
              ) \
              OUTPUT inserted.id AS id \
              VALUES ( \
@@ -195,7 +212,7 @@ impl MigrationAuditStore for MssqlCanonicalStore {
             SqlParam::Str(op.resource_uri.clone()),
             SqlParam::Str(op.operation_kind.clone()),
             SqlParam::Str(op.status.as_str().to_string()),
-            SqlParam::Str(op.rollback_json.to_string()),
+            SqlParam::Str(op.payload_json.to_string()),
             SqlParam::Str(op.error.clone()),
         ];
         let rows = self

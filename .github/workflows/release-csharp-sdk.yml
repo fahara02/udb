@@ -1,0 +1,155 @@
+name: Release · C# SDK (NuGet)
+
+# Publishes two NuGet packages on a SemVer tag push:
+#
+#   Udb.Client  — gRPC client library  (dotnet add package Udb.Client)
+#   Udb.Cli     — dotnet tool launcher (dotnet tool install --global Udb.Cli)
+#
+# Both packages follow the main UDB release version tracked in versions.json.
+# The release flow mirrors the Python/TypeScript SDKs: version consistency is
+# verified, tests pass, then nuget push fires. Already-published versions are
+# skipped gracefully (NuGet returns 409 Conflict which we detect and ignore).
+#
+# Required `production` environment secret:
+#   NUGET_API_TOKEN   https://www.nuget.org/account/apikeys
+#
+# Trigger: a pushed `v*.*.*` tag, or manual dispatch with an expected version.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Expected UDB release version, for example 0.3.2"
+        required: true
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build and publish Udb.Client + Udb.Cli
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://www.nuget.org/packages/Udb.Client
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Set up Node (version guard)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # ── Version guards ────────────────────────────────────────────────────
+      - name: Versions consistent with versions.json
+        run: node scripts/check-versions.mjs
+
+      - name: Tag matches sdk-csharp version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          want="$(node -p "require('./versions.json').components['sdk-csharp'].version")"
+          tag="${GITHUB_REF_NAME#v}"
+          if [[ "${tag}" != "${want}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match versions.json sdk-csharp ${want}" >&2
+            exit 1
+          fi
+
+      - name: Input version matches sdk-csharp version
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          set -euo pipefail
+          want="$(node -p "require('./versions.json').components['sdk-csharp'].version")"
+          if [[ "${INPUT_VERSION}" != "${want}" ]]; then
+            echo "Input version ${INPUT_VERSION} does not match versions.json sdk-csharp ${want}" >&2
+            exit 1
+          fi
+
+      # ── Restore + test ────────────────────────────────────────────────────
+      - name: Restore dependencies
+        working-directory: sdk/csharp
+        run: dotnet restore
+
+      - name: Build (Release)
+        working-directory: sdk/csharp
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Run tests
+        working-directory: sdk/csharp/Udb.Client.Tests
+        run: dotnet test --configuration Release --no-build --verbosity normal
+
+      # ── Check NuGet availability ──────────────────────────────────────────
+      - name: Check Udb.Client availability on NuGet
+        id: nuget_client
+        shell: bash
+        run: |
+          version="$(node -p "require('./versions.json').components['sdk-csharp'].version")"
+          if curl -fsS "https://api.nuget.org/v3-flatcontainer/udb.client/${version}/udb.client.nuspec" >/dev/null 2>&1; then
+            echo "Udb.Client ${version} already published; publish step will be skipped."
+            echo "exists=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Check Udb.Cli availability on NuGet
+        id: nuget_cli
+        shell: bash
+        run: |
+          version="$(node -p "require('./versions.json').components['sdk-csharp'].version")"
+          if curl -fsS "https://api.nuget.org/v3-flatcontainer/udb.cli/${version}/udb.cli.nuspec" >/dev/null 2>&1; then
+            echo "Udb.Cli ${version} already published; publish step will be skipped."
+            echo "exists=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      # ── Pack ─────────────────────────────────────────────────────────────
+      - name: Pack Udb.Client
+        if: steps.nuget_client.outputs.exists != 'true'
+        working-directory: sdk/csharp/Udb.Client
+        run: dotnet pack --configuration Release --no-build --output ./nupkg
+
+      - name: Pack Udb.Cli
+        if: steps.nuget_cli.outputs.exists != 'true'
+        working-directory: sdk/csharp/Udb.Cli
+        run: dotnet pack --configuration Release --no-build --output ./nupkg
+
+      # ── Publish ───────────────────────────────────────────────────────────
+      - name: Publish Udb.Client to NuGet
+        if: steps.nuget_client.outputs.exists != 'true'
+        working-directory: sdk/csharp/Udb.Client
+        env:
+          NUGET_API_TOKEN: ${{ secrets.NUGET_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          dotnet nuget push ./nupkg/*.nupkg \
+            --api-key "${NUGET_API_TOKEN}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+      - name: Publish Udb.Cli to NuGet
+        if: steps.nuget_cli.outputs.exists != 'true'
+        working-directory: sdk/csharp/Udb.Cli
+        env:
+          NUGET_API_TOKEN: ${{ secrets.NUGET_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          dotnet nuget push ./nupkg/*.nupkg \
+            --api-key "${NUGET_API_TOKEN}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate

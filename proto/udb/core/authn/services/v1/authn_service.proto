@@ -23,11 +23,92 @@ option php_namespace = "Udb\\Core\\Authn\\Services\\V1";
 // for service integrations, and external OIDC/SAML/JWT proofs for hybrid auth.
 // ---------------------------------------------------------------------------
 service AuthnService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "authn"
+    logical_service_id: "authn"
+    proto_service_id: "authn"
+    display_name: "Authentication"
+    category: "auth"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "auth"
+    cli_scaffold_group: "auth"
+    health_check_ref: "authn"
+    capability_ref: "native.authn"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "auth"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "auth"
+    import_path: "udb/native/auth"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.authn.config"
+    required_native_services: "authn"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "authn"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
   // ── User management (admin-only) ─────────────────────────────────────────
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:create-user"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.CreateUser"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "create_user"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.create_user.boilerplate"
+      route_name: "create_user"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.CreateUser"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -42,7 +123,48 @@ service AuthnService {
   rpc GetUser(GetUserRequest) returns (GetUserResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:get-user"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.GetUser"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_user"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.get_user.boilerplate"
+      route_name: "get_user"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.GetUser"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -54,7 +176,48 @@ service AuthnService {
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:list-users"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.ListUsers"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_users"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.list_users.boilerplate"
+      route_name: "list_users"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.ListUsers"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -66,7 +229,48 @@ service AuthnService {
   rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:update-user"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.UpdateUser"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "update_user"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.update_user.boilerplate"
+      route_name: "update_user"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.UpdateUser"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -81,7 +285,48 @@ service AuthnService {
   rpc ChangeUserStatus(ChangeUserStatusRequest) returns (ChangeUserStatusResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:change-user-status"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.ChangeUserStatus"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "change_user_status"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.change_user_status.boilerplate"
+      route_name: "change_user_status"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.ChangeUserStatus"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -97,7 +342,48 @@ service AuthnService {
   rpc AdminResetPassword(AdminResetPasswordRequest) returns (AdminResetPasswordResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:admin-reset-password"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.AdminResetPassword"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "admin_reset_password"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.admin_reset_password.boilerplate"
+      route_name: "admin_reset_password"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.AdminResetPassword"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -114,7 +400,48 @@ service AuthnService {
   rpc SendOTP(SendOTPRequest) returns (SendOTPResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:send-otp"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.SendOTP"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "send_otp"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.send_otp.boilerplate"
+      route_name: "send_otp"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.SendOTP"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -129,7 +456,48 @@ service AuthnService {
   rpc VerifyOTP(VerifyOTPRequest) returns (VerifyOTPResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:verify-otp"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.VerifyOTP"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "verify_otp"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.verify_otp.boilerplate"
+      route_name: "verify_otp"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.VerifyOTP"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -144,7 +512,48 @@ service AuthnService {
   rpc ResendOTP(ResendOTPRequest) returns (ResendOTPResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:resend-otp"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.ResendOTP"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "resend_otp"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.resend_otp.boilerplate"
+      route_name: "resend_otp"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.ResendOTP"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -162,6 +571,46 @@ service AuthnService {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_PUBLIC
       tenant_required: false
+      rate_limit_policy_ref: "authn.authenticate.public"
+      abuse_policy_ref: "authn.authenticate.abuse"
+      audit_event_type: "authn.authenticate"
+      request_context_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "authenticate"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.authenticate.boilerplate"
+      route_name: "authenticate"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.Authenticate"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -177,7 +626,48 @@ service AuthnService {
   rpc Login(LoginRequest) returns (LoginResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:login"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.Login"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "login"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.login.boilerplate"
+      route_name: "login"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.Login"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -192,7 +682,48 @@ service AuthnService {
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:refresh-token"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.RefreshToken"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "refresh_token"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.refresh_token.boilerplate"
+      route_name: "refresh_token"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.RefreshToken"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -207,7 +738,48 @@ service AuthnService {
   rpc Logout(LogoutRequest) returns (LogoutResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:logout"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.Logout"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "logout"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.logout.boilerplate"
+      route_name: "logout"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.Logout"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -222,7 +794,48 @@ service AuthnService {
   rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:change-password"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.ChangePassword"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "change_password"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.change_password.boilerplate"
+      route_name: "change_password"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.ChangePassword"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -239,7 +852,48 @@ service AuthnService {
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:validate-token"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.ValidateToken"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "validate_token"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.validate_token.boilerplate"
+      route_name: "validate_token"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.ValidateToken"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -256,7 +910,48 @@ service AuthnService {
   rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:create-session"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.CreateSession"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "create_session"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.create_session.boilerplate"
+      route_name: "create_session"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.CreateSession"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -272,7 +967,48 @@ service AuthnService {
   rpc RefreshSession(RefreshSessionRequest) returns (RefreshSessionResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:refresh-session"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.RefreshSession"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "refresh_session"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.refresh_session.boilerplate"
+      route_name: "refresh_session"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.RefreshSession"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -288,7 +1024,48 @@ service AuthnService {
   rpc GetSession(GetSessionRequest) returns (GetSessionResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:get-session"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.GetSession"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_session"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.get_session.boilerplate"
+      route_name: "get_session"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.GetSession"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -300,7 +1077,48 @@ service AuthnService {
   rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:list-sessions"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.ListSessions"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_sessions"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.list_sessions.boilerplate"
+      route_name: "list_sessions"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.ListSessions"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -312,7 +1130,48 @@ service AuthnService {
   rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:revoke-session"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.RevokeSession"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "revoke_session"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.revoke_session.boilerplate"
+      route_name: "revoke_session"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.RevokeSession"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -326,7 +1185,48 @@ service AuthnService {
   rpc ValidateCSRF(ValidateCSRFRequest) returns (ValidateCSRFResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:validate-csrf"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.ValidateCSRF"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "validate_csrf"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.validate_csrf.boilerplate"
+      route_name: "validate_csrf"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.ValidateCSRF"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -344,7 +1244,48 @@ service AuthnService {
   rpc EnrollMFA(EnrollMFARequest) returns (EnrollMFAResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:enroll-mfa"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.EnrollMFA"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "enroll_mfa"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.enroll_mfa.boilerplate"
+      route_name: "enroll_mfa"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.EnrollMFA"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -360,7 +1301,48 @@ service AuthnService {
   rpc ConfirmMFAEnrollment(ConfirmMFAEnrollmentRequest) returns (ConfirmMFAEnrollmentResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:confirm-mfa-enrollment"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.ConfirmMFAEnrollment"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "confirm_mfaenrollment"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.confirm_mfaenrollment.boilerplate"
+      route_name: "confirm_mfaenrollment"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.ConfirmMFAEnrollment"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -378,7 +1360,48 @@ service AuthnService {
   rpc GenerateRecoveryCodes(GenerateRecoveryCodesRequest) returns (GenerateRecoveryCodesResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:generate-recovery-codes"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.GenerateRecoveryCodes"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "generate_recovery_codes"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.generate_recovery_codes.boilerplate"
+      route_name: "generate_recovery_codes"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.GenerateRecoveryCodes"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -395,7 +1418,48 @@ service AuthnService {
   rpc PutMfaPolicy(PutMfaPolicyRequest) returns (PutMfaPolicyResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:put-mfa-policy"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.PutMfaPolicy"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "put_mfa_policy"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.put_mfa_policy.boilerplate"
+      route_name: "put_mfa_policy"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.PutMfaPolicy"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -412,7 +1476,48 @@ service AuthnService {
   rpc GetMfaPolicy(GetMfaPolicyRequest) returns (GetMfaPolicyResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:get-mfa-policy"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.GetMfaPolicy"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_mfa_policy"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.get_mfa_policy.boilerplate"
+      route_name: "get_mfa_policy"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.GetMfaPolicy"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -429,6 +1534,46 @@ service AuthnService {
   rpc ForgotPassword(ForgotPasswordRequest) returns (ForgotPasswordResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_PUBLIC
+      rate_limit_policy_ref: "authn.password.forgot.public"
+      abuse_policy_ref: "authn.password_reset.abuse"
+      audit_event_type: "authn.password_reset_requested"
+      request_context_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "forgot_password"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.forgot_password.boilerplate"
+      route_name: "forgot_password"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.ForgotPassword"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -446,6 +1591,46 @@ service AuthnService {
   rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_PUBLIC
+      rate_limit_policy_ref: "authn.password.reset.public"
+      abuse_policy_ref: "authn.password_reset.abuse"
+      audit_event_type: "authn.password_reset_completed"
+      request_context_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "reset_password"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.reset_password.boilerplate"
+      route_name: "reset_password"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.ResetPassword"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -462,6 +1647,47 @@ service AuthnService {
   rpc IntrospectToken(IntrospectTokenRequest) returns (IntrospectTokenResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:introspect-token"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.IntrospectToken"
+      request_context_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "introspect_token"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.introspect_token.boilerplate"
+      route_name: "introspect_token"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.IntrospectToken"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -479,7 +1705,48 @@ service AuthnService {
   rpc SendPhoneVerification(SendPhoneVerificationRequest) returns (SendPhoneVerificationResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:send-phone-verification"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.SendPhoneVerification"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "send_phone_verification"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.send_phone_verification.boilerplate"
+      route_name: "send_phone_verification"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.SendPhoneVerification"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -496,6 +1763,44 @@ service AuthnService {
   rpc GetJwks(GetJwksRequest) returns (GetJwksResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_PUBLIC
+      rate_limit_policy_ref: "authn.jwks.public"
+      abuse_policy_ref: "authn.discovery.abuse"
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_jwks"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.get_jwks.boilerplate"
+      route_name: "get_jwks"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.GetJwks"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: false
@@ -510,7 +1815,48 @@ service AuthnService {
   rpc StartWebAuthnRegistration(StartWebAuthnRegistrationRequest) returns (StartWebAuthnRegistrationResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:start-web-authn-registration"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.StartWebAuthnRegistration"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "start_web_authn_registration"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.start_web_authn_registration.boilerplate"
+      route_name: "start_web_authn_registration"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.StartWebAuthnRegistration"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (google.api.http) = {
       post: "/v1/auth/users/{user_id}/webauthn/registration:start"
@@ -520,7 +1866,48 @@ service AuthnService {
   rpc FinishWebAuthnRegistration(FinishWebAuthnRegistrationRequest) returns (FinishWebAuthnRegistrationResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:finish-web-authn-registration"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.FinishWebAuthnRegistration"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "finish_web_authn_registration"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.finish_web_authn_registration.boilerplate"
+      route_name: "finish_web_authn_registration"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.FinishWebAuthnRegistration"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (google.api.http) = {
       post: "/v1/auth/webauthn/registration:finish"
@@ -531,6 +1918,46 @@ service AuthnService {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_PUBLIC
       tenant_required: false
+      rate_limit_policy_ref: "authn.webauthn.start.public"
+      abuse_policy_ref: "authn.webauthn.abuse"
+      audit_event_type: "authn.webauthn_authentication_started"
+      request_context_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "start_web_authn_authentication"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.start_web_authn_authentication.boilerplate"
+      route_name: "start_web_authn_authentication"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.StartWebAuthnAuthentication"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (google.api.http) = {
       post: "/v1/auth/webauthn/authentication:start"
@@ -541,10 +1968,275 @@ service AuthnService {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_PUBLIC
       tenant_required: false
+      rate_limit_policy_ref: "authn.webauthn.finish.public"
+      abuse_policy_ref: "authn.webauthn.abuse"
+      audit_event_type: "authn.webauthn_authentication_finished"
+      request_context_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "finish_web_authn_authentication"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.finish_web_authn_authentication.boilerplate"
+      route_name: "finish_web_authn_authentication"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.FinishWebAuthnAuthentication"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (google.api.http) = {
       post: "/v1/auth/webauthn/authentication:finish"
       body: "*"
     };
+  }
+
+  // ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+  rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:list-devices"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.ListDevices"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_devices" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = {get: "/v1/auth/users/{user_id}/devices"};
+  }
+  rpc RevokeDevice(RevokeDeviceRequest) returns (RevokeDeviceResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:revoke-device"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.RevokeDevice"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "revoke_device" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.method_event_contract) = { event_type: "authn.RevokeDevice" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = {delete: "/v1/auth/devices/{device_id}"};
+  }
+  rpc AdminRevokeSession(AdminRevokeSessionRequest) returns (AdminRevokeSessionResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:admin-revoke-session"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.AdminRevokeSession"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "admin_revoke_session" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.method_event_contract) = { event_type: "authn.AdminRevokeSession" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = { post: "/v1/auth/admin/users/{user_id}/sessions:revoke" body: "*" };
+  }
+  rpc AdminRevokeAllUserSessions(AdminRevokeAllUserSessionsRequest) returns (AdminRevokeAllUserSessionsResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:admin-revoke-all-user-sessions"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.AdminRevokeAllUserSessions"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "admin_revoke_all_user_sessions" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.method_event_contract) = { event_type: "authn.AdminRevokeAllUserSessions" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = { post: "/v1/auth/admin/users/{user_id}/sessions:revoke-all" body: "*" };
+  }
+  rpc AdminRevokeAllTenantSessions(AdminRevokeAllTenantSessionsRequest) returns (AdminRevokeAllTenantSessionsResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:admin-revoke-all-tenant-sessions"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.AdminRevokeAllTenantSessions"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "admin_revoke_all_tenant_sessions" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.method_event_contract) = { event_type: "authn.AdminRevokeAllTenantSessions" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = { post: "/v1/auth/admin/tenants/{tenant_id}/sessions:revoke-all" body: "*" };
+  }
+  rpc EmergencyRevoke(EmergencyRevokeRequest) returns (EmergencyRevokeResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:emergency-revoke"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.EmergencyRevoke"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "emergency_revoke" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.method_event_contract) = { event_type: "authn.EmergencyRevoke" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = { post: "/v1/auth/admin:emergency-revoke" body: "*" };
+  }
+
+  // ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+  rpc IssueMfaChallenge(IssueMfaChallengeRequest) returns (IssueMfaChallengeResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:issue-mfa-challenge"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.IssueMfaChallenge"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "issue_mfa_challenge" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = { post: "/v1/auth/mfa/challenges:issue" body: "*" };
+  }
+  rpc VerifyMfaChallenge(VerifyMfaChallengeRequest) returns (VerifyMfaChallengeResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:verify-mfa-challenge"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.VerifyMfaChallenge"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "verify_mfa_challenge" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = { post: "/v1/auth/mfa/challenges:verify" body: "*" };
+  }
+  rpc ListMfaFactors(ListMfaFactorsRequest) returns (ListMfaFactorsResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:list-mfa-factors"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.ListMfaFactors"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_mfa_factors" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = {get: "/v1/auth/users/{user_id}/mfa/factors"};
+  }
+  rpc DisableMfaFactor(DisableMfaFactorRequest) returns (DisableMfaFactorResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:disable-mfa-factor"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.DisableMfaFactor"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "disable_mfa_factor" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.method_event_contract) = { event_type: "authn.DisableMfaFactor" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = { post: "/v1/auth/users/{user_id}/mfa/factors:disable" body: "*" };
+  }
+  rpc RenamePasskey(RenamePasskeyRequest) returns (RenamePasskeyResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:rename-passkey"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.RenamePasskey"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "rename_passkey" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = { post: "/v1/auth/users/{user_id}/webauthn/credentials:rename" body: "*" };
+  }
+  rpc RevokeRecoveryCodes(RevokeRecoveryCodesRequest) returns (RevokeRecoveryCodesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:revoke-recovery-codes"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.RevokeRecoveryCodes"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "revoke_recovery_codes" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.method_event_contract) = { event_type: "authn.RevokeRecoveryCodes" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = { post: "/v1/auth/users/{user_id}/recovery-codes:revoke" body: "*" };
+  }
+  rpc AdminResetMfa(AdminResetMfaRequest) returns (AdminResetMfaResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:admin-reset-mfa"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.AdminResetMfa"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "admin_reset_mfa" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.method_event_contract) = { event_type: "authn.AdminResetMfa" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = { post: "/v1/auth/admin/users/{user_id}/mfa:reset" body: "*" };
+  }
+
+  // ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+  rpc ListWebAuthnCredentials(ListWebAuthnCredentialsRequest) returns (ListWebAuthnCredentialsResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:list-web-authn-credentials"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.ListWebAuthnCredentials"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_web_authn_credentials" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = {get: "/v1/auth/users/{user_id}/webauthn/credentials"};
+  }
+  rpc DeleteWebAuthnCredential(DeleteWebAuthnCredentialRequest) returns (DeleteWebAuthnCredentialResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:delete-web-authn-credential"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.DeleteWebAuthnCredential"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "delete_web_authn_credential" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "auth" generate_minimal_example: true };
+    option (udb.core.common.v1.method_event_contract) = { event_type: "authn.DeleteWebAuthnCredential" outbox_topic: "authn.events" partition_key_field: "tenant_id" payload_redaction_profile: "standard" delivery_guarantee: "at_least_once" replay_compatibility: "stable" };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = {delete: "/v1/auth/users/{user_id}/webauthn/credentials/{credential_id}"};
   }
 }

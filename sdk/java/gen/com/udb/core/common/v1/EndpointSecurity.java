@@ -34,6 +34,14 @@ private static final long serialVersionUID = 0L;
     scopes_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
     policyRef_ = "";
+    allowedCredentialTypes_ = emptyIntList();
+    rateLimitPolicyRef_ = "";
+    abusePolicyRef_ = "";
+    auditEventType_ = "";
+    decisionResource_ = "";
+    ownerField_ = "";
+    tenantField_ = "";
+    projectField_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -218,6 +226,371 @@ private static final long serialVersionUID = 0L;
     return internalGrpcOnly_;
   }
 
+  public static final int REQUIRED_ASSURANCE_LEVEL_FIELD_NUMBER = 8;
+  private int requiredAssuranceLevel_ = 0;
+  /**
+   * <code>int32 required_assurance_level = 8 [json_name = "requiredAssuranceLevel"];</code>
+   * @return The requiredAssuranceLevel.
+   */
+  @java.lang.Override
+  public int getRequiredAssuranceLevel() {
+    return requiredAssuranceLevel_;
+  }
+
+  public static final int ALLOWED_CREDENTIAL_TYPES_FIELD_NUMBER = 9;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.Internal.IntList allowedCredentialTypes_ =
+      emptyIntList();
+  private static final     com.google.protobuf.Internal.IntListAdapter.IntConverter<
+      com.udb.core.common.v1.CredentialType> allowedCredentialTypes_converter_ =
+          new com.google.protobuf.Internal.IntListAdapter.IntConverter<
+              com.udb.core.common.v1.CredentialType>() {
+            public com.udb.core.common.v1.CredentialType convert(int from) {
+              com.udb.core.common.v1.CredentialType result = com.udb.core.common.v1.CredentialType.forNumber(from);
+              return result == null ? com.udb.core.common.v1.CredentialType.UNRECOGNIZED : result;
+            }
+          };
+  /**
+   * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+   * @return A list containing the allowedCredentialTypes.
+   */
+  @java.lang.Override
+  public java.util.List<com.udb.core.common.v1.CredentialType> getAllowedCredentialTypesList() {
+    return new com.google.protobuf.Internal.IntListAdapter<
+        com.udb.core.common.v1.CredentialType>(allowedCredentialTypes_, allowedCredentialTypes_converter_);
+  }
+  /**
+   * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+   * @return The count of allowedCredentialTypes.
+   */
+  @java.lang.Override
+  public int getAllowedCredentialTypesCount() {
+    return allowedCredentialTypes_.size();
+  }
+  /**
+   * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+   * @param index The index of the element to return.
+   * @return The allowedCredentialTypes at the given index.
+   */
+  @java.lang.Override
+  public com.udb.core.common.v1.CredentialType getAllowedCredentialTypes(int index) {
+    return allowedCredentialTypes_converter_.convert(allowedCredentialTypes_.getInt(index));
+  }
+  /**
+   * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+   * @return A list containing the enum numeric values on the wire for allowedCredentialTypes.
+   */
+  @java.lang.Override
+  public java.util.List<java.lang.Integer>
+  getAllowedCredentialTypesValueList() {
+    return allowedCredentialTypes_;
+  }
+  /**
+   * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+   * @param index The index of the value to return.
+   * @return The enum numeric value on the wire of allowedCredentialTypes at the given index.
+   */
+  @java.lang.Override
+  public int getAllowedCredentialTypesValue(int index) {
+    return allowedCredentialTypes_.getInt(index);
+  }
+  private int allowedCredentialTypesMemoizedSerializedSize;
+
+  public static final int RATE_LIMIT_POLICY_REF_FIELD_NUMBER = 10;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object rateLimitPolicyRef_ = "";
+  /**
+   * <code>string rate_limit_policy_ref = 10 [json_name = "rateLimitPolicyRef"];</code>
+   * @return The rateLimitPolicyRef.
+   */
+  @java.lang.Override
+  public java.lang.String getRateLimitPolicyRef() {
+    java.lang.Object ref = rateLimitPolicyRef_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      rateLimitPolicyRef_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string rate_limit_policy_ref = 10 [json_name = "rateLimitPolicyRef"];</code>
+   * @return The bytes for rateLimitPolicyRef.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRateLimitPolicyRefBytes() {
+    java.lang.Object ref = rateLimitPolicyRef_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      rateLimitPolicyRef_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int ABUSE_POLICY_REF_FIELD_NUMBER = 11;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object abusePolicyRef_ = "";
+  /**
+   * <code>string abuse_policy_ref = 11 [json_name = "abusePolicyRef"];</code>
+   * @return The abusePolicyRef.
+   */
+  @java.lang.Override
+  public java.lang.String getAbusePolicyRef() {
+    java.lang.Object ref = abusePolicyRef_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      abusePolicyRef_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string abuse_policy_ref = 11 [json_name = "abusePolicyRef"];</code>
+   * @return The bytes for abusePolicyRef.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getAbusePolicyRefBytes() {
+    java.lang.Object ref = abusePolicyRef_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      abusePolicyRef_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int AUDIT_EVENT_TYPE_FIELD_NUMBER = 12;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object auditEventType_ = "";
+  /**
+   * <code>string audit_event_type = 12 [json_name = "auditEventType"];</code>
+   * @return The auditEventType.
+   */
+  @java.lang.Override
+  public java.lang.String getAuditEventType() {
+    java.lang.Object ref = auditEventType_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      auditEventType_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string audit_event_type = 12 [json_name = "auditEventType"];</code>
+   * @return The bytes for auditEventType.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getAuditEventTypeBytes() {
+    java.lang.Object ref = auditEventType_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      auditEventType_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int DECISION_RESOURCE_FIELD_NUMBER = 13;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object decisionResource_ = "";
+  /**
+   * <code>string decision_resource = 13 [json_name = "decisionResource"];</code>
+   * @return The decisionResource.
+   */
+  @java.lang.Override
+  public java.lang.String getDecisionResource() {
+    java.lang.Object ref = decisionResource_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      decisionResource_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string decision_resource = 13 [json_name = "decisionResource"];</code>
+   * @return The bytes for decisionResource.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDecisionResourceBytes() {
+    java.lang.Object ref = decisionResource_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      decisionResource_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int OWNER_FIELD_FIELD_NUMBER = 14;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object ownerField_ = "";
+  /**
+   * <code>string owner_field = 14 [json_name = "ownerField"];</code>
+   * @return The ownerField.
+   */
+  @java.lang.Override
+  public java.lang.String getOwnerField() {
+    java.lang.Object ref = ownerField_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      ownerField_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string owner_field = 14 [json_name = "ownerField"];</code>
+   * @return The bytes for ownerField.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getOwnerFieldBytes() {
+    java.lang.Object ref = ownerField_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      ownerField_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int TENANT_FIELD_FIELD_NUMBER = 15;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object tenantField_ = "";
+  /**
+   * <code>string tenant_field = 15 [json_name = "tenantField"];</code>
+   * @return The tenantField.
+   */
+  @java.lang.Override
+  public java.lang.String getTenantField() {
+    java.lang.Object ref = tenantField_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      tenantField_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string tenant_field = 15 [json_name = "tenantField"];</code>
+   * @return The bytes for tenantField.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getTenantFieldBytes() {
+    java.lang.Object ref = tenantField_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      tenantField_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int PROJECT_FIELD_FIELD_NUMBER = 16;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object projectField_ = "";
+  /**
+   * <code>string project_field = 16 [json_name = "projectField"];</code>
+   * @return The projectField.
+   */
+  @java.lang.Override
+  public java.lang.String getProjectField() {
+    java.lang.Object ref = projectField_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      projectField_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string project_field = 16 [json_name = "projectField"];</code>
+   * @return The bytes for projectField.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getProjectFieldBytes() {
+    java.lang.Object ref = projectField_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      projectField_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int IDEMPOTENCY_REQUIRED_FIELD_NUMBER = 17;
+  private boolean idempotencyRequired_ = false;
+  /**
+   * <code>bool idempotency_required = 17 [json_name = "idempotencyRequired"];</code>
+   * @return The idempotencyRequired.
+   */
+  @java.lang.Override
+  public boolean getIdempotencyRequired() {
+    return idempotencyRequired_;
+  }
+
+  public static final int REQUEST_CONTEXT_REQUIRED_FIELD_NUMBER = 18;
+  private boolean requestContextRequired_ = false;
+  /**
+   * <code>bool request_context_required = 18 [json_name = "requestContextRequired"];</code>
+   * @return The requestContextRequired.
+   */
+  @java.lang.Override
+  public boolean getRequestContextRequired() {
+    return requestContextRequired_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -232,6 +605,7 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
+    getSerializedSize();
     if (mode_ != com.udb.core.common.v1.AuthMode.AUTH_MODE_UNSPECIFIED.getNumber()) {
       output.writeEnum(1, mode_);
     }
@@ -252,6 +626,43 @@ private static final long serialVersionUID = 0L;
     }
     if (internalGrpcOnly_ != false) {
       output.writeBool(7, internalGrpcOnly_);
+    }
+    if (requiredAssuranceLevel_ != 0) {
+      output.writeInt32(8, requiredAssuranceLevel_);
+    }
+    if (getAllowedCredentialTypesList().size() > 0) {
+      output.writeUInt32NoTag(74);
+      output.writeUInt32NoTag(allowedCredentialTypesMemoizedSerializedSize);
+    }
+    for (int i = 0; i < allowedCredentialTypes_.size(); i++) {
+      output.writeEnumNoTag(allowedCredentialTypes_.getInt(i));
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(rateLimitPolicyRef_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 10, rateLimitPolicyRef_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(abusePolicyRef_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 11, abusePolicyRef_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(auditEventType_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 12, auditEventType_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(decisionResource_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 13, decisionResource_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(ownerField_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 14, ownerField_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tenantField_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 15, tenantField_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectField_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 16, projectField_);
+    }
+    if (idempotencyRequired_ != false) {
+      output.writeBool(17, idempotencyRequired_);
+    }
+    if (requestContextRequired_ != false) {
+      output.writeBool(18, requestContextRequired_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -292,6 +703,51 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(7, internalGrpcOnly_);
     }
+    if (requiredAssuranceLevel_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(8, requiredAssuranceLevel_);
+    }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < allowedCredentialTypes_.size(); i++) {
+        dataSize += com.google.protobuf.CodedOutputStream
+          .computeEnumSizeNoTag(allowedCredentialTypes_.getInt(i));
+      }
+      size += dataSize;
+      if (!getAllowedCredentialTypesList().isEmpty()) {  size += 1;
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32SizeNoTag(dataSize);
+      }allowedCredentialTypesMemoizedSerializedSize = dataSize;
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(rateLimitPolicyRef_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(10, rateLimitPolicyRef_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(abusePolicyRef_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(11, abusePolicyRef_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(auditEventType_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(12, auditEventType_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(decisionResource_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(13, decisionResource_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(ownerField_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(14, ownerField_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tenantField_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(15, tenantField_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(projectField_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(16, projectField_);
+    }
+    if (idempotencyRequired_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(17, idempotencyRequired_);
+    }
+    if (requestContextRequired_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(18, requestContextRequired_);
+    }
     return size;
   }
   @java.lang.Override
@@ -329,6 +785,27 @@ private static final long serialVersionUID = 0L;
         .equals(other.getPolicyRef())) return false;
     if (getInternalGrpcOnly()
         != other.getInternalGrpcOnly()) return false;
+    if (getRequiredAssuranceLevel()
+        != other.getRequiredAssuranceLevel()) return false;
+    if (!allowedCredentialTypes_.equals(other.allowedCredentialTypes_)) return false;
+    if (!getRateLimitPolicyRef()
+        .equals(other.getRateLimitPolicyRef())) return false;
+    if (!getAbusePolicyRef()
+        .equals(other.getAbusePolicyRef())) return false;
+    if (!getAuditEventType()
+        .equals(other.getAuditEventType())) return false;
+    if (!getDecisionResource()
+        .equals(other.getDecisionResource())) return false;
+    if (!getOwnerField()
+        .equals(other.getOwnerField())) return false;
+    if (!getTenantField()
+        .equals(other.getTenantField())) return false;
+    if (!getProjectField()
+        .equals(other.getProjectField())) return false;
+    if (getIdempotencyRequired()
+        != other.getIdempotencyRequired()) return false;
+    if (getRequestContextRequired()
+        != other.getRequestContextRequired()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -361,6 +838,32 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + INTERNAL_GRPC_ONLY_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getInternalGrpcOnly());
+    hash = (37 * hash) + REQUIRED_ASSURANCE_LEVEL_FIELD_NUMBER;
+    hash = (53 * hash) + getRequiredAssuranceLevel();
+    if (getAllowedCredentialTypesCount() > 0) {
+      hash = (37 * hash) + ALLOWED_CREDENTIAL_TYPES_FIELD_NUMBER;
+      hash = (53 * hash) + allowedCredentialTypes_.hashCode();
+    }
+    hash = (37 * hash) + RATE_LIMIT_POLICY_REF_FIELD_NUMBER;
+    hash = (53 * hash) + getRateLimitPolicyRef().hashCode();
+    hash = (37 * hash) + ABUSE_POLICY_REF_FIELD_NUMBER;
+    hash = (53 * hash) + getAbusePolicyRef().hashCode();
+    hash = (37 * hash) + AUDIT_EVENT_TYPE_FIELD_NUMBER;
+    hash = (53 * hash) + getAuditEventType().hashCode();
+    hash = (37 * hash) + DECISION_RESOURCE_FIELD_NUMBER;
+    hash = (53 * hash) + getDecisionResource().hashCode();
+    hash = (37 * hash) + OWNER_FIELD_FIELD_NUMBER;
+    hash = (53 * hash) + getOwnerField().hashCode();
+    hash = (37 * hash) + TENANT_FIELD_FIELD_NUMBER;
+    hash = (53 * hash) + getTenantField().hashCode();
+    hash = (37 * hash) + PROJECT_FIELD_FIELD_NUMBER;
+    hash = (53 * hash) + getProjectField().hashCode();
+    hash = (37 * hash) + IDEMPOTENCY_REQUIRED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getIdempotencyRequired());
+    hash = (37 * hash) + REQUEST_CONTEXT_REQUIRED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getRequestContextRequired());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -501,6 +1004,17 @@ private static final long serialVersionUID = 0L;
       csrfRequired_ = false;
       policyRef_ = "";
       internalGrpcOnly_ = false;
+      requiredAssuranceLevel_ = 0;
+      allowedCredentialTypes_ = emptyIntList();
+      rateLimitPolicyRef_ = "";
+      abusePolicyRef_ = "";
+      auditEventType_ = "";
+      decisionResource_ = "";
+      ownerField_ = "";
+      tenantField_ = "";
+      projectField_ = "";
+      idempotencyRequired_ = false;
+      requestContextRequired_ = false;
       return this;
     }
 
@@ -557,6 +1071,40 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000040) != 0)) {
         result.internalGrpcOnly_ = internalGrpcOnly_;
       }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.requiredAssuranceLevel_ = requiredAssuranceLevel_;
+      }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        allowedCredentialTypes_.makeImmutable();
+        result.allowedCredentialTypes_ = allowedCredentialTypes_;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.rateLimitPolicyRef_ = rateLimitPolicyRef_;
+      }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.abusePolicyRef_ = abusePolicyRef_;
+      }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.auditEventType_ = auditEventType_;
+      }
+      if (((from_bitField0_ & 0x00001000) != 0)) {
+        result.decisionResource_ = decisionResource_;
+      }
+      if (((from_bitField0_ & 0x00002000) != 0)) {
+        result.ownerField_ = ownerField_;
+      }
+      if (((from_bitField0_ & 0x00004000) != 0)) {
+        result.tenantField_ = tenantField_;
+      }
+      if (((from_bitField0_ & 0x00008000) != 0)) {
+        result.projectField_ = projectField_;
+      }
+      if (((from_bitField0_ & 0x00010000) != 0)) {
+        result.idempotencyRequired_ = idempotencyRequired_;
+      }
+      if (((from_bitField0_ & 0x00020000) != 0)) {
+        result.requestContextRequired_ = requestContextRequired_;
+      }
     }
 
     @java.lang.Override
@@ -607,6 +1155,61 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getInternalGrpcOnly() != false) {
         setInternalGrpcOnly(other.getInternalGrpcOnly());
+      }
+      if (other.getRequiredAssuranceLevel() != 0) {
+        setRequiredAssuranceLevel(other.getRequiredAssuranceLevel());
+      }
+      if (!other.allowedCredentialTypes_.isEmpty()) {
+        if (allowedCredentialTypes_.isEmpty()) {
+          allowedCredentialTypes_ = other.allowedCredentialTypes_;
+          allowedCredentialTypes_.makeImmutable();
+          bitField0_ |= 0x00000100;
+        } else {
+          ensureAllowedCredentialTypesIsMutable();
+          allowedCredentialTypes_.addAll(other.allowedCredentialTypes_);
+        }
+        onChanged();
+      }
+      if (!other.getRateLimitPolicyRef().isEmpty()) {
+        rateLimitPolicyRef_ = other.rateLimitPolicyRef_;
+        bitField0_ |= 0x00000200;
+        onChanged();
+      }
+      if (!other.getAbusePolicyRef().isEmpty()) {
+        abusePolicyRef_ = other.abusePolicyRef_;
+        bitField0_ |= 0x00000400;
+        onChanged();
+      }
+      if (!other.getAuditEventType().isEmpty()) {
+        auditEventType_ = other.auditEventType_;
+        bitField0_ |= 0x00000800;
+        onChanged();
+      }
+      if (!other.getDecisionResource().isEmpty()) {
+        decisionResource_ = other.decisionResource_;
+        bitField0_ |= 0x00001000;
+        onChanged();
+      }
+      if (!other.getOwnerField().isEmpty()) {
+        ownerField_ = other.ownerField_;
+        bitField0_ |= 0x00002000;
+        onChanged();
+      }
+      if (!other.getTenantField().isEmpty()) {
+        tenantField_ = other.tenantField_;
+        bitField0_ |= 0x00004000;
+        onChanged();
+      }
+      if (!other.getProjectField().isEmpty()) {
+        projectField_ = other.projectField_;
+        bitField0_ |= 0x00008000;
+        onChanged();
+      }
+      if (other.getIdempotencyRequired() != false) {
+        setIdempotencyRequired(other.getIdempotencyRequired());
+      }
+      if (other.getRequestContextRequired() != false) {
+        setRequestContextRequired(other.getRequestContextRequired());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -669,6 +1272,72 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000040;
               break;
             } // case 56
+            case 64: {
+              requiredAssuranceLevel_ = input.readInt32();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 64
+            case 72: {
+              int tmpRaw = input.readEnum();
+              ensureAllowedCredentialTypesIsMutable();
+              allowedCredentialTypes_.addInt(tmpRaw);
+              break;
+            } // case 72
+            case 74: {
+              int length = input.readRawVarint32();
+              int limit = input.pushLimit(length);
+              ensureAllowedCredentialTypesIsMutable();
+              while (input.getBytesUntilLimit() > 0) {
+                allowedCredentialTypes_.addInt(input.readEnum());
+              }
+              input.popLimit(limit);
+              break;
+            } // case 74
+            case 82: {
+              rateLimitPolicyRef_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 82
+            case 90: {
+              abusePolicyRef_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 90
+            case 98: {
+              auditEventType_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 98
+            case 106: {
+              decisionResource_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00001000;
+              break;
+            } // case 106
+            case 114: {
+              ownerField_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00002000;
+              break;
+            } // case 114
+            case 122: {
+              tenantField_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00004000;
+              break;
+            } // case 122
+            case 130: {
+              projectField_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00008000;
+              break;
+            } // case 130
+            case 136: {
+              idempotencyRequired_ = input.readBool();
+              bitField0_ |= 0x00010000;
+              break;
+            } // case 136
+            case 144: {
+              requestContextRequired_ = input.readBool();
+              bitField0_ |= 0x00020000;
+              break;
+            } // case 144
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1124,6 +1793,744 @@ private static final long serialVersionUID = 0L;
     public Builder clearInternalGrpcOnly() {
       bitField0_ = (bitField0_ & ~0x00000040);
       internalGrpcOnly_ = false;
+      onChanged();
+      return this;
+    }
+
+    private int requiredAssuranceLevel_ ;
+    /**
+     * <code>int32 required_assurance_level = 8 [json_name = "requiredAssuranceLevel"];</code>
+     * @return The requiredAssuranceLevel.
+     */
+    @java.lang.Override
+    public int getRequiredAssuranceLevel() {
+      return requiredAssuranceLevel_;
+    }
+    /**
+     * <code>int32 required_assurance_level = 8 [json_name = "requiredAssuranceLevel"];</code>
+     * @param value The requiredAssuranceLevel to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRequiredAssuranceLevel(int value) {
+
+      requiredAssuranceLevel_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 required_assurance_level = 8 [json_name = "requiredAssuranceLevel"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRequiredAssuranceLevel() {
+      bitField0_ = (bitField0_ & ~0x00000080);
+      requiredAssuranceLevel_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.Internal.IntList allowedCredentialTypes_ = emptyIntList();
+    private void ensureAllowedCredentialTypesIsMutable() {
+      if (!allowedCredentialTypes_.isModifiable()) {
+        allowedCredentialTypes_ = makeMutableCopy(allowedCredentialTypes_);
+      }
+      bitField0_ |= 0x00000100;
+    }
+    /**
+     * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+     * @return A list containing the allowedCredentialTypes.
+     */
+    public java.util.List<com.udb.core.common.v1.CredentialType> getAllowedCredentialTypesList() {
+      return new com.google.protobuf.Internal.IntListAdapter<
+          com.udb.core.common.v1.CredentialType>(allowedCredentialTypes_, allowedCredentialTypes_converter_);
+    }
+    /**
+     * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+     * @return The count of allowedCredentialTypes.
+     */
+    public int getAllowedCredentialTypesCount() {
+      return allowedCredentialTypes_.size();
+    }
+    /**
+     * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+     * @param index The index of the element to return.
+     * @return The allowedCredentialTypes at the given index.
+     */
+    public com.udb.core.common.v1.CredentialType getAllowedCredentialTypes(int index) {
+      return allowedCredentialTypes_converter_.convert(allowedCredentialTypes_.getInt(index));
+    }
+    /**
+     * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+     * @param index The index to set the value at.
+     * @param value The allowedCredentialTypes to set.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder setAllowedCredentialTypes(
+        int index, com.udb.core.common.v1.CredentialType value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureAllowedCredentialTypesIsMutable();
+      allowedCredentialTypes_.setInt(index, value.getNumber());
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+     * @param value The allowedCredentialTypes to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllowedCredentialTypes(com.udb.core.common.v1.CredentialType value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureAllowedCredentialTypesIsMutable();
+      allowedCredentialTypes_.addInt(value.getNumber());
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+     * @param values The allowedCredentialTypes to add.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder addAllAllowedCredentialTypes(
+        java.lang.Iterable<? extends com.udb.core.common.v1.CredentialType> values) {
+      ensureAllowedCredentialTypesIsMutable();
+      for (com.udb.core.common.v1.CredentialType value : values) {
+        allowedCredentialTypes_.addInt(value.getNumber());
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAllowedCredentialTypes() {
+      allowedCredentialTypes_ = emptyIntList();
+      bitField0_ = (bitField0_ & ~0x00000100);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+     * @return A list containing the enum numeric values on the wire for allowedCredentialTypes.
+     */
+    public java.util.List<java.lang.Integer>
+    getAllowedCredentialTypesValueList() {
+      allowedCredentialTypes_.makeImmutable();
+      return allowedCredentialTypes_;
+    }
+    /**
+     * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+     * @param index The index of the value to return.
+     * @return The enum numeric value on the wire of allowedCredentialTypes at the given index.
+     */
+    public int getAllowedCredentialTypesValue(int index) {
+      return allowedCredentialTypes_.getInt(index);
+    }
+    /**
+     * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+     * @param index The index to set the value at.
+     * @param value The enum numeric value on the wire for allowedCredentialTypes to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAllowedCredentialTypesValue(
+        int index, int value) {
+      ensureAllowedCredentialTypesIsMutable();
+      allowedCredentialTypes_.setInt(index, value);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+     * @param value The enum numeric value on the wire for allowedCredentialTypes to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllowedCredentialTypesValue(int value) {
+      ensureAllowedCredentialTypesIsMutable();
+      allowedCredentialTypes_.addInt(value);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+     * @param values The enum numeric values on the wire for allowedCredentialTypes to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllAllowedCredentialTypesValue(
+        java.lang.Iterable<java.lang.Integer> values) {
+      ensureAllowedCredentialTypesIsMutable();
+      for (int value : values) {
+        allowedCredentialTypes_.addInt(value);
+      }
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object rateLimitPolicyRef_ = "";
+    /**
+     * <code>string rate_limit_policy_ref = 10 [json_name = "rateLimitPolicyRef"];</code>
+     * @return The rateLimitPolicyRef.
+     */
+    public java.lang.String getRateLimitPolicyRef() {
+      java.lang.Object ref = rateLimitPolicyRef_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        rateLimitPolicyRef_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string rate_limit_policy_ref = 10 [json_name = "rateLimitPolicyRef"];</code>
+     * @return The bytes for rateLimitPolicyRef.
+     */
+    public com.google.protobuf.ByteString
+        getRateLimitPolicyRefBytes() {
+      java.lang.Object ref = rateLimitPolicyRef_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        rateLimitPolicyRef_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string rate_limit_policy_ref = 10 [json_name = "rateLimitPolicyRef"];</code>
+     * @param value The rateLimitPolicyRef to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRateLimitPolicyRef(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      rateLimitPolicyRef_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string rate_limit_policy_ref = 10 [json_name = "rateLimitPolicyRef"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRateLimitPolicyRef() {
+      rateLimitPolicyRef_ = getDefaultInstance().getRateLimitPolicyRef();
+      bitField0_ = (bitField0_ & ~0x00000200);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string rate_limit_policy_ref = 10 [json_name = "rateLimitPolicyRef"];</code>
+     * @param value The bytes for rateLimitPolicyRef to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRateLimitPolicyRefBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      rateLimitPolicyRef_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object abusePolicyRef_ = "";
+    /**
+     * <code>string abuse_policy_ref = 11 [json_name = "abusePolicyRef"];</code>
+     * @return The abusePolicyRef.
+     */
+    public java.lang.String getAbusePolicyRef() {
+      java.lang.Object ref = abusePolicyRef_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        abusePolicyRef_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string abuse_policy_ref = 11 [json_name = "abusePolicyRef"];</code>
+     * @return The bytes for abusePolicyRef.
+     */
+    public com.google.protobuf.ByteString
+        getAbusePolicyRefBytes() {
+      java.lang.Object ref = abusePolicyRef_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        abusePolicyRef_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string abuse_policy_ref = 11 [json_name = "abusePolicyRef"];</code>
+     * @param value The abusePolicyRef to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAbusePolicyRef(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      abusePolicyRef_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string abuse_policy_ref = 11 [json_name = "abusePolicyRef"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAbusePolicyRef() {
+      abusePolicyRef_ = getDefaultInstance().getAbusePolicyRef();
+      bitField0_ = (bitField0_ & ~0x00000400);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string abuse_policy_ref = 11 [json_name = "abusePolicyRef"];</code>
+     * @param value The bytes for abusePolicyRef to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAbusePolicyRefBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      abusePolicyRef_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object auditEventType_ = "";
+    /**
+     * <code>string audit_event_type = 12 [json_name = "auditEventType"];</code>
+     * @return The auditEventType.
+     */
+    public java.lang.String getAuditEventType() {
+      java.lang.Object ref = auditEventType_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        auditEventType_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string audit_event_type = 12 [json_name = "auditEventType"];</code>
+     * @return The bytes for auditEventType.
+     */
+    public com.google.protobuf.ByteString
+        getAuditEventTypeBytes() {
+      java.lang.Object ref = auditEventType_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        auditEventType_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string audit_event_type = 12 [json_name = "auditEventType"];</code>
+     * @param value The auditEventType to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAuditEventType(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      auditEventType_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string audit_event_type = 12 [json_name = "auditEventType"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAuditEventType() {
+      auditEventType_ = getDefaultInstance().getAuditEventType();
+      bitField0_ = (bitField0_ & ~0x00000800);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string audit_event_type = 12 [json_name = "auditEventType"];</code>
+     * @param value The bytes for auditEventType to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAuditEventTypeBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      auditEventType_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object decisionResource_ = "";
+    /**
+     * <code>string decision_resource = 13 [json_name = "decisionResource"];</code>
+     * @return The decisionResource.
+     */
+    public java.lang.String getDecisionResource() {
+      java.lang.Object ref = decisionResource_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        decisionResource_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string decision_resource = 13 [json_name = "decisionResource"];</code>
+     * @return The bytes for decisionResource.
+     */
+    public com.google.protobuf.ByteString
+        getDecisionResourceBytes() {
+      java.lang.Object ref = decisionResource_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        decisionResource_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string decision_resource = 13 [json_name = "decisionResource"];</code>
+     * @param value The decisionResource to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDecisionResource(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      decisionResource_ = value;
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string decision_resource = 13 [json_name = "decisionResource"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDecisionResource() {
+      decisionResource_ = getDefaultInstance().getDecisionResource();
+      bitField0_ = (bitField0_ & ~0x00001000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string decision_resource = 13 [json_name = "decisionResource"];</code>
+     * @param value The bytes for decisionResource to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDecisionResourceBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      decisionResource_ = value;
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object ownerField_ = "";
+    /**
+     * <code>string owner_field = 14 [json_name = "ownerField"];</code>
+     * @return The ownerField.
+     */
+    public java.lang.String getOwnerField() {
+      java.lang.Object ref = ownerField_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        ownerField_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string owner_field = 14 [json_name = "ownerField"];</code>
+     * @return The bytes for ownerField.
+     */
+    public com.google.protobuf.ByteString
+        getOwnerFieldBytes() {
+      java.lang.Object ref = ownerField_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        ownerField_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string owner_field = 14 [json_name = "ownerField"];</code>
+     * @param value The ownerField to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOwnerField(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ownerField_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string owner_field = 14 [json_name = "ownerField"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearOwnerField() {
+      ownerField_ = getDefaultInstance().getOwnerField();
+      bitField0_ = (bitField0_ & ~0x00002000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string owner_field = 14 [json_name = "ownerField"];</code>
+     * @param value The bytes for ownerField to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOwnerFieldBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ownerField_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object tenantField_ = "";
+    /**
+     * <code>string tenant_field = 15 [json_name = "tenantField"];</code>
+     * @return The tenantField.
+     */
+    public java.lang.String getTenantField() {
+      java.lang.Object ref = tenantField_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        tenantField_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string tenant_field = 15 [json_name = "tenantField"];</code>
+     * @return The bytes for tenantField.
+     */
+    public com.google.protobuf.ByteString
+        getTenantFieldBytes() {
+      java.lang.Object ref = tenantField_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        tenantField_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string tenant_field = 15 [json_name = "tenantField"];</code>
+     * @param value The tenantField to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTenantField(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      tenantField_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string tenant_field = 15 [json_name = "tenantField"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTenantField() {
+      tenantField_ = getDefaultInstance().getTenantField();
+      bitField0_ = (bitField0_ & ~0x00004000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string tenant_field = 15 [json_name = "tenantField"];</code>
+     * @param value The bytes for tenantField to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTenantFieldBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      tenantField_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object projectField_ = "";
+    /**
+     * <code>string project_field = 16 [json_name = "projectField"];</code>
+     * @return The projectField.
+     */
+    public java.lang.String getProjectField() {
+      java.lang.Object ref = projectField_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        projectField_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string project_field = 16 [json_name = "projectField"];</code>
+     * @return The bytes for projectField.
+     */
+    public com.google.protobuf.ByteString
+        getProjectFieldBytes() {
+      java.lang.Object ref = projectField_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        projectField_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string project_field = 16 [json_name = "projectField"];</code>
+     * @param value The projectField to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProjectField(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      projectField_ = value;
+      bitField0_ |= 0x00008000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string project_field = 16 [json_name = "projectField"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearProjectField() {
+      projectField_ = getDefaultInstance().getProjectField();
+      bitField0_ = (bitField0_ & ~0x00008000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string project_field = 16 [json_name = "projectField"];</code>
+     * @param value The bytes for projectField to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProjectFieldBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      projectField_ = value;
+      bitField0_ |= 0x00008000;
+      onChanged();
+      return this;
+    }
+
+    private boolean idempotencyRequired_ ;
+    /**
+     * <code>bool idempotency_required = 17 [json_name = "idempotencyRequired"];</code>
+     * @return The idempotencyRequired.
+     */
+    @java.lang.Override
+    public boolean getIdempotencyRequired() {
+      return idempotencyRequired_;
+    }
+    /**
+     * <code>bool idempotency_required = 17 [json_name = "idempotencyRequired"];</code>
+     * @param value The idempotencyRequired to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIdempotencyRequired(boolean value) {
+
+      idempotencyRequired_ = value;
+      bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool idempotency_required = 17 [json_name = "idempotencyRequired"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIdempotencyRequired() {
+      bitField0_ = (bitField0_ & ~0x00010000);
+      idempotencyRequired_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean requestContextRequired_ ;
+    /**
+     * <code>bool request_context_required = 18 [json_name = "requestContextRequired"];</code>
+     * @return The requestContextRequired.
+     */
+    @java.lang.Override
+    public boolean getRequestContextRequired() {
+      return requestContextRequired_;
+    }
+    /**
+     * <code>bool request_context_required = 18 [json_name = "requestContextRequired"];</code>
+     * @param value The requestContextRequired to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRequestContextRequired(boolean value) {
+
+      requestContextRequired_ = value;
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool request_context_required = 18 [json_name = "requestContextRequired"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRequestContextRequired() {
+      bitField0_ = (bitField0_ & ~0x00020000);
+      requestContextRequired_ = false;
       onChanged();
       return this;
     }

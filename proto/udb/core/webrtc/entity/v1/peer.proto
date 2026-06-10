@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package udb.core.webrtc.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/common/v1/types.proto";
+import "udb/core/webrtc/entity/v1/enums.proto";
+
+option csharp_namespace = "udb.core.Webrtc.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/webrtc/entity/v1;webrtcv1";
+option java_package = "com.udb.core.webrtc.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Webrtc\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Webrtc\\Entity\\V1";
+
+// Peer: a participant connection within a room.
+message Peer {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "peers"
+    schema_name: "udb_webrtc"
+    migration_order: 2
+    is_table: true
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "peers_tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_peers_room"
+      index_type: "BTREE"
+      columns: "room_id"
+    }
+    indexes: {
+      index_name: "idx_peers_tenant"
+      index_type: "BTREE"
+      columns: "tenant_id"
+    }
+    cdc_topic: "udb.webrtc.peers.cdc"
+    required_scope: "webrtc:read"
+    comment: "WebRTC peer connections (room participants)"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "webrtc.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string peer_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "peer_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  // @inject_tag: gorm:"primaryKey;column:peer_id;not null"
+
+  string room_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "room_id" sql_type: "UUID" not_null: true }];
+  // @inject_tag: gorm:"column:room_id;not null"
+
+  string tenant_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "UUID" not_null: true }];
+  // @inject_tag: gorm:"column:tenant_id;not null"
+
+  string display_name = 4 [(udb.core.common.v1.pg_column) = { column_name: "display_name" sql_type: "VARCHAR(255)" }];
+  // @inject_tag: gorm:"column:display_name"
+
+  PeerState state = 5 [(udb.core.common.v1.pg_column) = { column_name: "state" sql_type: "VARCHAR(20)" not_null: true default_value: "'NEW'" }];
+  // @inject_tag: gorm:"column:state;not null;serializer:proto_enum"
+
+  string metadata = 6 [(udb.core.common.v1.pg_column) = { column_name: "metadata" sql_type: "JSONB" is_json: true comment: "Peer-specific metadata" }];
+  // @inject_tag: gorm:"column:metadata"
+
+  string user_agent = 7 [(udb.core.common.v1.pg_column) = { column_name: "user_agent" sql_type: "TEXT" comment: "Client user agent" }];
+  // @inject_tag: gorm:"column:user_agent"
+
+  google.protobuf.Timestamp joined_at = 8 [(udb.core.common.v1.pg_column) = { column_name: "joined_at" sql_type: "TIMESTAMPTZ" comment: "When the peer joined the room" }];
+  google.protobuf.Timestamp left_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "left_at" sql_type: "TIMESTAMPTZ" comment: "When the peer left the room" }];
+
+  udb.core.common.v1.AuditInfo audit_info = 10 [(udb.core.common.v1.pg_column) = { column_name: "audit_info" sql_type: "JSONB" not_null: true default_value: "'{}'::jsonb" is_json: true comment: "Audit trail stored as JSON" }];
+  // @inject_tag: gorm:"column:audit_info;not null"
+
+  google.protobuf.Timestamp deleted_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" comment: "Soft delete timestamp" }];
+  string deleted_by = 12 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" comment: "Soft delete actor" }];
+}

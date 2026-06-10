@@ -391,4 +391,28 @@ public interface CapabilitiesResponseOrBuilder extends
    */
   com.udb.entity.v1.BackendProtocolSupportOrBuilder getBackendProtocolSupportOrBuilder(
       int index);
+
+  /**
+   * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+   */
+  java.util.List<com.udb.entity.v1.NativeServiceStatus> 
+      getNativeServicesList();
+  /**
+   * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+   */
+  com.udb.entity.v1.NativeServiceStatus getNativeServices(int index);
+  /**
+   * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+   */
+  int getNativeServicesCount();
+  /**
+   * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+   */
+  java.util.List<? extends com.udb.entity.v1.NativeServiceStatusOrBuilder> 
+      getNativeServicesOrBuilderList();
+  /**
+   * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+   */
+  com.udb.entity.v1.NativeServiceStatusOrBuilder getNativeServicesOrBuilder(
+      int index);
 }

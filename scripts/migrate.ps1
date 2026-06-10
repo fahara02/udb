@@ -78,7 +78,7 @@ if ($Database -eq "backup") {
 }
 
 # ── cargo command ─────────────────────────────────────────────────────────────
-$cargoArgs = "run --bin udb-proto-parser -- $Command"
+$cargoArgs = "run --bin udb -- $Command"
 
 Write-Host ""
 Write-Host "  UDB migration helper" -ForegroundColor Cyan

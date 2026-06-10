@@ -76,7 +76,11 @@ fn node_to_op(node: &Json) -> SystemStoreResult<MigrationOpRow> {
         resource_uri: prop_str(node, "resource_uri"),
         operation_kind: prop_str(node, "operation_kind"),
         status,
-        rollback_json: prop_json(node, "rollback_json", Json::Object(Default::default())),
+        payload_json: prop_json(
+            node,
+            "payload_json",
+            prop_json(node, "rollback_json", Json::Object(Default::default())),
+        ),
         error: prop_str(node, "error"),
         applied_at: prop_opt_dt(node, "applied_at"),
     })
@@ -186,7 +190,7 @@ impl MigrationAuditStore for Neo4jCanonicalStore {
             "resource_uri": op.resource_uri,
             "operation_kind": op.operation_kind,
             "status": op.status.as_str(),
-            "rollback_json": op.rollback_json.to_string(),
+            "payload_json": op.payload_json.to_string(),
             "error": op.error,
         });
         // applied_at only when APPLIED — the SET clause is conditional so the
@@ -203,7 +207,7 @@ impl MigrationAuditStore for Neo4jCanonicalStore {
         let cypher = format!(
             "CREATE (o:{LABEL_MIGRATION_OP} {{run_tag:$tag, id:$id, run_id:$run_id, \
                  operation_index:$operation_index, backend:$backend, resource_uri:$resource_uri, \
-                 operation_kind:$operation_kind, status:$status, rollback_json:$rollback_json, \
+                 operation_kind:$operation_kind, status:$status, payload_json:$payload_json, \
                  error:$error{applied_set}}})"
         );
         self.executor()

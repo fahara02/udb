@@ -1,5 +1,16 @@
 # UDB Laravel SDK
 
+<!-- UDB_BRAND_HEADER_START -->
+<p align="center">
+  <img src="../../docs/assets/udb_logo.svg" alt="UDB logo" width="96">
+</p>
+
+<p align="center">
+  <strong>UDB :: Universal Data Broker</strong><br>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.2 | protocol v1.0.0</sub>
+</p>
+<!-- UDB_BRAND_HEADER_END -->
+
 [![Packagist](https://img.shields.io/packagist/v/fahara02/udb-laravel.svg)](https://packagist.org/packages/fahara02/udb-laravel)
 [![PHP Version](https://img.shields.io/badge/php-%5E8.1-blue.svg)](https://www.php.net/)
 [![Laravel](https://img.shields.io/badge/laravel-10%20%7C%2011%20%7C%2012-red.svg)](https://laravel.com/)
@@ -22,7 +33,7 @@ That means the Laravel app does not need to know whether the data is in Postgres
 
 This package makes UDB feel natural inside Laravel:
 
-- `composer require fahara02/udb-laravel:^0.3.1`
+- `composer require fahara02/udb-laravel:^0.3.2`
 - set `UDB_ENDPOINT` in `.env`
 - call `Udb::select()`, `Udb::upsert()`, or `Udb::delete()`
 - use typed generated PHP classes for requests and responses
@@ -43,7 +54,7 @@ This package makes UDB feel natural inside Laravel:
 ## Installation
 
 ```bash
-composer require fahara02/udb-laravel:^0.3.1
+composer require fahara02/udb-laravel:^0.3.2
 ```
 
 The service provider is auto-discovered by Laravel. The `Udb` facade is registered automatically. By default, the package also adds middleware to the `web` and `api` route groups so each request can carry tenant and user context into UDB.
@@ -52,7 +63,7 @@ The package also installs a version-matched CLI launcher at `vendor/bin/udb`.
 Use it from your Laravel project when you need UDB's shared annotation protos:
 
 ```bash
-vendor/bin/udb proto export
+vendor/bin/udb proto export --fmt
 ```
 
 After that, your app-owned `.proto` files can import:
@@ -60,6 +71,9 @@ After that, your app-owned `.proto` files can import:
 ```proto
 import "udb/core/common/v1/db.proto";
 ```
+
+Run `vendor/bin/udb proto fmt` after export or schema edits to keep long UDB
+field annotations on one line for easier review.
 
 Publish the config file when you need to override defaults:
 
@@ -90,8 +104,8 @@ UDB_TLS_ROOT_CERTS=/etc/ssl/certs/udb-ca.pem
 UDB_TLS_TARGET=udb.prod.svc.cluster.local
 
 # Static metadata (per-request values come from middleware)
-UDB_SERVICE_IDENTITY=lifeplus.api
-UDB_PROJECT_ID=lifeplus
+UDB_SERVICE_IDENTITY=acme.api
+UDB_PROJECT_ID=acme
 UDB_DEFAULT_PURPOSE=web.request
 UDB_DEFAULT_SCOPES=udb:read,udb:write
 UDB_CLIENT_CATALOG_VERSION=1.0.0
@@ -118,7 +132,7 @@ use Udb\Entity\V1\SelectRequest;
 use Fahara02\UdbLaravel\Facades\Udb;
 
 $req = (new SelectRequest())
-    ->setMessageType('lifeplus.healthcare.v1.Patient')
+    ->setMessageType('acme.healthcare.v1.Patient')
     ->setLimit(50);
 
 $records = Udb::select($req);

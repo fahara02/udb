@@ -24,6 +24,9 @@ pub trait MetricsRecorder: Send + Sync + std::fmt::Debug {
     fn observe_pg_query(&self, _op: &str, _table: &str, _seconds: f64) {}
     fn inc_cache_op(&self, _op: &str, _hit: bool) {}
     fn inc_vector_op(&self, _collection: &str, _op: &str) {}
+    /// Scatter-gather fan-out width: `_count` backend targets were resolved for a
+    /// single data-plane request to `_backend`.
+    fn inc_backend_fanout(&self, _backend: &str, _count: u64) {}
     fn inc_object_op(&self, _bucket: &str, _method: &str) {}
     fn inc_channel_inflight(&self, _channel: &str) {}
     fn dec_channel_inflight(&self, _channel: &str) {}
@@ -148,6 +151,96 @@ pub trait MetricsRecorder: Send + Sync + std::fmt::Debug {
         kind: &str,
         age_seconds: f64,
     );
+
+    // ── Auth-plane Metrics (Phase 5) ──────────────────────────────────────────
+
+    /// Increment the login-attempt counter, labelled by outcome.
+    ///
+    /// `success == true` counts a successful authentication; `false` counts a
+    /// rejected credential / failed login.
+    fn record_auth_login(&self, _success: bool) {}
+    /// Increment the account-lockout counter (a principal locked out after too
+    /// many failed attempts).
+    fn record_auth_lockout(&self) {}
+    /// Increment the MFA-verification-failure counter (a second-factor check that
+    /// did not pass).
+    fn record_auth_mfa_failure(&self) {}
+    /// Increment the token-validation-failure counter (an access/refresh token
+    /// that failed signature, expiry, or claim verification).
+    fn record_auth_token_validation_failure(&self) {}
+    /// Increment the authorization-deny counter (a Casbin / policy decision that
+    /// denied access).
+    fn record_authz_deny(&self) {}
+
+    // ── Phase L (Compliance Audit / Monitoring) auth metrics ──────────────────
+    /// Increment the refresh-token-family reuse-detection counter (a replayed or
+    /// stolen refresh token was detected and the family revoked).
+    fn record_refresh_reuse_detected(&self) {}
+    /// Observe the wall-clock latency of an authz policy snapshot reload, in
+    /// seconds.
+    fn observe_policy_reload_seconds(&self, _seconds: f64) {}
+    /// Observe the lag (seconds) between a policy-bundle invalidation being
+    /// emitted and a node applying it.
+    fn observe_policy_invalidation_lag_seconds(&self, _seconds: f64) {}
+    /// Observe the lag (seconds) between a revocation (token/session/device) and
+    /// its propagation taking effect cluster-wide.
+    fn observe_revocation_propagation_seconds(&self, _seconds: f64) {}
+    /// Increment the IdP discovery/JWKS refresh-failure counter, labelled by
+    /// `kind` (`"discovery"` or `"jwks"`).
+    fn record_idp_refresh_failure(&self, _kind: &str) {}
+    /// Increment the SCIM provisioning-failure counter, labelled by `op`
+    /// (`"provision"`, `"update"`, `"deactivate"`).
+    fn record_scim_failure(&self, _op: &str) {}
+    /// Increment the audit-export-sink failure counter, labelled by `sink`.
+    fn record_audit_sink_failure(&self, _sink: &str) {}
+    /// Set the current auth event outbox lag (oldest un-relayed auth event age),
+    /// in seconds.
+    fn set_auth_outbox_lag_seconds(&self, _seconds: f64) {}
+
+    // ── Phase 10 (Audit / Observability / SLOs) metrics ───────────────────────
+    /// Increment the per-RPC method-security denial counter, labelled by `reason`
+    /// (e.g. `"missing_bearer"`, `"scope"`, `"role"`, `"csrf"`, `"tenant"`,
+    /// `"disabled"`). Driven by the `method_security` tower layer.
+    fn inc_method_security_denial(&self, _reason: &str) {}
+    /// Increment the tenant-mismatch counter (a request whose tenant metadata did
+    /// not match the bearer-token tenant). Driven by `method_security`.
+    fn inc_tenant_mismatch(&self) {}
+    /// Increment the revocation-lookup-failure counter (a token/session/device
+    /// revocation check that could not complete — fail-closed lookups in the auth
+    /// lifecycle path). Call site lives in `auth_service::lifecycle` (other lane).
+    fn inc_revocation_lookup_failure(&self) {}
+    /// Increment the outbox-enqueue-failure counter, labelled by `path`
+    /// (`"native"`, `"auth"`, or `"native_compliance"`). Records when a durable
+    /// audit/event row could not be enqueued (or was rejected pre-enqueue).
+    fn inc_outbox_enqueue_failures_total(&self, _path: &str) {}
+    /// Set the native-service degraded gauge for `service` (1 = degraded /
+    /// fail-closed, 0 = healthy). Driven by readiness/doctor (other lane).
+    fn set_native_service_degraded(&self, _service: &str, _degraded: bool) {}
+    /// Increment the compensation-failure counter (a saga/native compensation
+    /// step that failed to undo its forward action). Distinct from
+    /// `inc_saga_failed_compensations_total` so non-saga native compensations
+    /// (e.g. vector-point rollback) are countable on the same SLO surface.
+    fn inc_compensation_failures_total(&self) {}
+    /// A CDC delivery-journal write failed (the durable publish-evidence row could
+    /// not be updated). In strict modes this is the signal that ack/delete must
+    /// not proceed — losing the journal write loses delivery proof.
+    fn inc_cdc_journal_failures_total(&self) {}
+    // ── Phase 9: control-plane policy distribution + canary ──────────────────
+    /// A control-plane in-process reload was applied for `resource_type` (the
+    /// subscriber detected a registry/world change and refreshed it).
+    fn inc_control_reload_applied(&self, _resource_type: &str) {}
+    /// Current depth of the control-plane node-push queue (in-flight pushes).
+    fn set_control_push_queue_depth(&self, _depth: u64) {}
+    /// A control-plane push was throttled by the concurrent-push semaphore.
+    fn inc_control_push_throttled(&self) {}
+    /// A burst of registry version bumps was coalesced into one push (debounce).
+    fn inc_control_debounce_coalesced(&self) {}
+    /// A canary policy version auto-rolled back, labelled by `reason`.
+    fn inc_canary_auto_rollback(&self, _reason: &str) {}
+    /// One canary evaluation cycle observed a metric `breached`(=true) result.
+    fn record_canary_evaluation(&self, _breached: bool) {}
+    /// Set whether any canary is currently ACTIVE (1) or none (0).
+    fn set_canary_active(&self, _active: bool) {}
 }
 
 use prometheus::Encoder;
@@ -299,6 +392,7 @@ pub struct PrometheusMetrics {
     pg_duration: prometheus::HistogramVec,
     cache_ops: prometheus::IntCounterVec,
     vector_ops: prometheus::IntCounterVec,
+    backend_fanout: prometheus::IntCounterVec,
     object_ops: prometheus::IntCounterVec,
     cdc_events: prometheus::IntCounterVec,
     cdc_errors: prometheus::IntCounterVec,
@@ -334,6 +428,37 @@ pub struct PrometheusMetrics {
     projection_lag: prometheus::HistogramVec,
     projection_reconciliation_repairs: prometheus::IntCounterVec,
     projection_oldest_pending_age: prometheus::GaugeVec,
+    // Auth-plane metrics (Phase 5)
+    auth_login: prometheus::IntCounterVec,
+    auth_lockouts: prometheus::IntCounter,
+    auth_mfa_failures: prometheus::IntCounter,
+    auth_token_validation_failures: prometheus::IntCounter,
+    authz_denies: prometheus::IntCounter,
+    // Phase L (compliance audit / monitoring) auth-plane metrics
+    auth_refresh_reuse: prometheus::IntCounter,
+    authz_policy_reload: prometheus::Histogram,
+    authz_policy_invalidation_lag: prometheus::Histogram,
+    auth_revocation_propagation: prometheus::Histogram,
+    idp_refresh_failures: prometheus::IntCounterVec,
+    scim_failures: prometheus::IntCounterVec,
+    audit_sink_failures: prometheus::IntCounterVec,
+    auth_outbox_lag: prometheus::Gauge,
+    // Phase 10 (audit / observability / SLOs) collectors
+    method_security_denials: prometheus::IntCounterVec,
+    tenant_mismatch: prometheus::IntCounter,
+    revocation_lookup_failures: prometheus::IntCounter,
+    outbox_enqueue_failures: prometheus::IntCounterVec,
+    native_service_degraded: prometheus::IntGaugeVec,
+    compensation_failures: prometheus::IntCounter,
+    cdc_journal_failures: prometheus::IntCounter,
+    // Phase 9 (control-plane policy distribution + canary) collectors
+    control_reload_applied: prometheus::IntCounterVec,
+    control_push_queue_depth: prometheus::IntGauge,
+    control_push_throttled: prometheus::IntCounter,
+    control_debounce_coalesced: prometheus::IntCounter,
+    canary_auto_rollback: prometheus::IntCounterVec,
+    canary_evaluations: prometheus::IntCounterVec,
+    canary_active: prometheus::IntGauge,
 }
 
 impl std::fmt::Debug for PrometheusMetrics {
@@ -373,6 +498,13 @@ impl PrometheusMetrics {
         let vector_ops = prometheus::IntCounterVec::new(
             prometheus::Opts::new("udb_vector_ops_total", "Vector backend operations"),
             &["collection", "op"],
+        )?;
+        let backend_fanout = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_backend_fanout_total",
+                "Scatter-gather data-plane fan-out: count of backend targets resolved, by backend kind",
+            ),
+            &["backend"],
         )?;
         let object_ops = prometheus::IntCounterVec::new(
             prometheus::Opts::new("udb_object_ops_total", "Object backend operations"),
@@ -553,6 +685,157 @@ impl PrometheusMetrics {
             ),
             &["project", "backend", "instance", "kind"],
         )?;
+        // Auth-plane collectors (Phase 5)
+        let auth_login = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_auth_login_total",
+                "Authentication login attempts by outcome",
+            ),
+            &["outcome"],
+        )?;
+        let auth_lockouts = prometheus::IntCounter::new(
+            "udb_auth_lockouts_total",
+            "Total account lockouts triggered by failed-attempt thresholds",
+        )?;
+        let auth_mfa_failures = prometheus::IntCounter::new(
+            "udb_auth_mfa_failures_total",
+            "Total MFA second-factor verification failures",
+        )?;
+        let auth_token_validation_failures = prometheus::IntCounter::new(
+            "udb_auth_token_validation_failures_total",
+            "Total access/refresh token validation failures",
+        )?;
+        let authz_denies = prometheus::IntCounter::new(
+            "udb_authz_denies_total",
+            "Total authorization decisions that denied access",
+        )?;
+        // Phase L collectors
+        let auth_refresh_reuse = prometheus::IntCounter::new(
+            "udb_auth_refresh_reuse_detected_total",
+            "Total refresh-token-family reuse detections (replayed/stolen tokens)",
+        )?;
+        let authz_policy_reload = prometheus::Histogram::with_opts(
+            prometheus::HistogramOpts::new(
+                "udb_authz_policy_reload_seconds",
+                "Wall-clock latency of an authz policy snapshot reload",
+            )
+            .buckets(vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0]),
+        )?;
+        let authz_policy_invalidation_lag = prometheus::Histogram::with_opts(
+            prometheus::HistogramOpts::new(
+                "udb_authz_policy_invalidation_lag_seconds",
+                "Lag between a policy-bundle invalidation emit and a node applying it",
+            )
+            .buckets(vec![0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 30.0]),
+        )?;
+        let auth_revocation_propagation = prometheus::Histogram::with_opts(
+            prometheus::HistogramOpts::new(
+                "udb_auth_revocation_propagation_seconds",
+                "Lag between a token/session/device revocation and cluster-wide effect",
+            )
+            .buckets(vec![0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 30.0]),
+        )?;
+        let idp_refresh_failures = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_idp_refresh_failures_total",
+                "IdP discovery/JWKS refresh failures by kind",
+            ),
+            &["kind"],
+        )?;
+        let scim_failures = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_scim_failures_total",
+                "SCIM provisioning failures by operation",
+            ),
+            &["op"],
+        )?;
+        let audit_sink_failures = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_audit_sink_failures_total",
+                "Immutable audit-export sink failures by sink",
+            ),
+            &["sink"],
+        )?;
+        let auth_outbox_lag = prometheus::Gauge::new(
+            "udb_auth_outbox_lag_seconds",
+            "Age of the oldest un-relayed auth event in the outbox",
+        )?;
+        // Phase 10 collectors
+        let method_security_denials = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_method_security_denials_total",
+                "Per-RPC method-security denials by reason",
+            ),
+            &["reason"],
+        )?;
+        let tenant_mismatch = prometheus::IntCounter::new(
+            "udb_tenant_mismatch_total",
+            "Requests rejected because tenant metadata did not match the bearer token",
+        )?;
+        let revocation_lookup_failures = prometheus::IntCounter::new(
+            "udb_revocation_lookup_failures_total",
+            "Token/session/device revocation checks that could not complete (fail-closed)",
+        )?;
+        let outbox_enqueue_failures = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_outbox_enqueue_failures_total",
+                "Outbox enqueue failures by path (native / auth / native_compliance)",
+            ),
+            &["path"],
+        )?;
+        let native_service_degraded = prometheus::IntGaugeVec::new(
+            prometheus::Opts::new(
+                "udb_native_service_degraded",
+                "Native service degraded/fail-closed state (1 = degraded) by service",
+            ),
+            &["service"],
+        )?;
+        let compensation_failures = prometheus::IntCounter::new(
+            "udb_compensation_failures_total",
+            "Saga/native compensation steps that failed to undo their forward action",
+        )?;
+        let cdc_journal_failures = prometheus::IntCounter::new(
+            "udb_cdc_journal_failures_total",
+            "CDC delivery-journal write failures (lost publish evidence)",
+        )?;
+        // ── Phase 9: control-plane policy distribution + canary ──────────────
+        let control_reload_applied = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_control_reload_applied_total",
+                "Control-plane in-process reloads applied by resource_type",
+            ),
+            &["resource_type"],
+        )?;
+        let control_push_queue_depth = prometheus::IntGauge::new(
+            "udb_control_push_queue_depth",
+            "Control-plane node-push queue depth (in-flight pushes)",
+        )?;
+        let control_push_throttled = prometheus::IntCounter::new(
+            "udb_control_push_throttled_total",
+            "Control-plane pushes throttled by the concurrent-push semaphore",
+        )?;
+        let control_debounce_coalesced = prometheus::IntCounter::new(
+            "udb_control_debounce_coalesced_total",
+            "Control-plane registry version-bump bursts coalesced into one push",
+        )?;
+        let canary_auto_rollback = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_canary_auto_rollback_total",
+                "Canary policy versions auto-rolled-back by reason",
+            ),
+            &["reason"],
+        )?;
+        let canary_evaluations = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_canary_evaluations_total",
+                "Canary evaluation cycles by outcome (breached / ok)",
+            ),
+            &["outcome"],
+        )?;
+        let canary_active = prometheus::IntGauge::new(
+            "udb_canary_active",
+            "Whether any canary policy version is currently ACTIVE (1) or none (0)",
+        )?;
 
         for collector in [
             Box::new(grpc_requests.clone()) as Box<dyn prometheus::core::Collector>,
@@ -560,6 +843,7 @@ impl PrometheusMetrics {
             Box::new(pg_duration.clone()),
             Box::new(cache_ops.clone()),
             Box::new(vector_ops.clone()),
+            Box::new(backend_fanout.clone()),
             Box::new(object_ops.clone()),
             Box::new(cdc_events.clone()),
             Box::new(cdc_errors.clone()),
@@ -592,6 +876,33 @@ impl PrometheusMetrics {
             Box::new(projection_lag.clone()),
             Box::new(projection_reconciliation_repairs.clone()),
             Box::new(projection_oldest_pending_age.clone()),
+            Box::new(auth_login.clone()),
+            Box::new(auth_lockouts.clone()),
+            Box::new(auth_mfa_failures.clone()),
+            Box::new(auth_token_validation_failures.clone()),
+            Box::new(authz_denies.clone()),
+            Box::new(auth_refresh_reuse.clone()),
+            Box::new(authz_policy_reload.clone()),
+            Box::new(authz_policy_invalidation_lag.clone()),
+            Box::new(auth_revocation_propagation.clone()),
+            Box::new(idp_refresh_failures.clone()),
+            Box::new(scim_failures.clone()),
+            Box::new(audit_sink_failures.clone()),
+            Box::new(auth_outbox_lag.clone()),
+            Box::new(method_security_denials.clone()),
+            Box::new(tenant_mismatch.clone()),
+            Box::new(revocation_lookup_failures.clone()),
+            Box::new(outbox_enqueue_failures.clone()),
+            Box::new(native_service_degraded.clone()),
+            Box::new(compensation_failures.clone()),
+            Box::new(cdc_journal_failures.clone()),
+            Box::new(control_reload_applied.clone()),
+            Box::new(control_push_queue_depth.clone()),
+            Box::new(control_push_throttled.clone()),
+            Box::new(control_debounce_coalesced.clone()),
+            Box::new(canary_auto_rollback.clone()),
+            Box::new(canary_evaluations.clone()),
+            Box::new(canary_active.clone()),
         ] {
             registry.register(collector)?;
         }
@@ -603,6 +914,7 @@ impl PrometheusMetrics {
             pg_duration,
             cache_ops,
             vector_ops,
+            backend_fanout,
             object_ops,
             cdc_events,
             cdc_errors,
@@ -635,6 +947,33 @@ impl PrometheusMetrics {
             projection_lag,
             projection_reconciliation_repairs,
             projection_oldest_pending_age,
+            auth_login,
+            auth_lockouts,
+            auth_mfa_failures,
+            auth_token_validation_failures,
+            authz_denies,
+            auth_refresh_reuse,
+            authz_policy_reload,
+            authz_policy_invalidation_lag,
+            auth_revocation_propagation,
+            idp_refresh_failures,
+            scim_failures,
+            audit_sink_failures,
+            auth_outbox_lag,
+            method_security_denials,
+            tenant_mismatch,
+            revocation_lookup_failures,
+            outbox_enqueue_failures,
+            native_service_degraded,
+            compensation_failures,
+            cdc_journal_failures,
+            control_reload_applied,
+            control_push_queue_depth,
+            control_push_throttled,
+            control_debounce_coalesced,
+            canary_auto_rollback,
+            canary_evaluations,
+            canary_active,
         })
     }
 
@@ -665,6 +1004,14 @@ impl PrometheusMetrics {
         self.vector_ops
             .with_label_values(&[bounded_label(collection).as_ref(), op])
             .inc();
+    }
+
+    pub fn inc_backend_fanout(&self, backend: &str, count: u64) {
+        // `backend` is a fixed backend-kind token (qdrant/s3/…), but bound it for
+        // safety like the other backend labels.
+        self.backend_fanout
+            .with_label_values(&[bounded_label(backend).as_ref()])
+            .inc_by(count);
     }
 
     pub fn inc_object_op(&self, bucket: &str, method: &str) {
@@ -716,8 +1063,18 @@ impl PrometheusMetrics {
         operation: &str,
         result: &str,
     ) {
+        // project/instance/tenant_hash are request-derived (D.4): bound them so a
+        // caller cannot mint unbounded Prometheus series. backend/operation/result
+        // are server-controlled enums and stay raw.
         self.fair_admission
-            .with_label_values(&[project, tenant_hash, backend, instance, operation, result])
+            .with_label_values(&[
+                bounded_label(project).as_ref(),
+                bounded_label(tenant_hash).as_ref(),
+                backend,
+                bounded_label(instance).as_ref(),
+                operation,
+                result,
+            ])
             .inc();
     }
 
@@ -731,7 +1088,13 @@ impl PrometheusMetrics {
         cost: f64,
     ) {
         self.fair_cost
-            .with_label_values(&[project, tenant_hash, backend, instance, operation])
+            .with_label_values(&[
+                bounded_label(project).as_ref(),
+                bounded_label(tenant_hash).as_ref(),
+                backend,
+                bounded_label(instance).as_ref(),
+                operation,
+            ])
             .inc_by(cost.max(0.0));
     }
 }
@@ -843,6 +1206,9 @@ impl MetricsRecorder for PrometheusMetrics {
     }
     fn inc_vector_op(&self, collection: &str, op: &str) {
         PrometheusMetrics::inc_vector_op(self, collection, op);
+    }
+    fn inc_backend_fanout(&self, backend: &str, count: u64) {
+        PrometheusMetrics::inc_backend_fanout(self, backend, count);
     }
     fn inc_object_op(&self, bucket: &str, method: &str) {
         PrometheusMetrics::inc_object_op(self, bucket, method);
@@ -1011,6 +1377,105 @@ impl MetricsRecorder for PrometheusMetrics {
             .with_label_values(&[project, backend, instance, kind])
             .set(age_seconds);
     }
+    fn record_auth_login(&self, success: bool) {
+        self.auth_login
+            .with_label_values(&[if success { "success" } else { "failure" }])
+            .inc();
+    }
+    fn record_auth_lockout(&self) {
+        self.auth_lockouts.inc();
+    }
+    fn record_auth_mfa_failure(&self) {
+        self.auth_mfa_failures.inc();
+    }
+    fn record_auth_token_validation_failure(&self) {
+        self.auth_token_validation_failures.inc();
+    }
+    fn record_authz_deny(&self) {
+        self.authz_denies.inc();
+    }
+    fn record_refresh_reuse_detected(&self) {
+        self.auth_refresh_reuse.inc();
+    }
+    fn observe_policy_reload_seconds(&self, seconds: f64) {
+        self.authz_policy_reload.observe(seconds.max(0.0));
+    }
+    fn observe_policy_invalidation_lag_seconds(&self, seconds: f64) {
+        self.authz_policy_invalidation_lag.observe(seconds.max(0.0));
+    }
+    fn observe_revocation_propagation_seconds(&self, seconds: f64) {
+        self.auth_revocation_propagation.observe(seconds.max(0.0));
+    }
+    fn record_idp_refresh_failure(&self, kind: &str) {
+        self.idp_refresh_failures
+            .with_label_values(&[bounded_label(kind).as_ref()])
+            .inc();
+    }
+    fn record_scim_failure(&self, op: &str) {
+        self.scim_failures
+            .with_label_values(&[bounded_label(op).as_ref()])
+            .inc();
+    }
+    fn record_audit_sink_failure(&self, sink: &str) {
+        self.audit_sink_failures
+            .with_label_values(&[bounded_label(sink).as_ref()])
+            .inc();
+    }
+    fn set_auth_outbox_lag_seconds(&self, seconds: f64) {
+        self.auth_outbox_lag.set(seconds);
+    }
+    fn inc_method_security_denial(&self, reason: &str) {
+        self.method_security_denials
+            .with_label_values(&[reason])
+            .inc();
+    }
+    fn inc_tenant_mismatch(&self) {
+        self.tenant_mismatch.inc();
+    }
+    fn inc_revocation_lookup_failure(&self) {
+        self.revocation_lookup_failures.inc();
+    }
+    fn inc_outbox_enqueue_failures_total(&self, path: &str) {
+        self.outbox_enqueue_failures
+            .with_label_values(&[bounded_label(path).as_ref()])
+            .inc();
+    }
+    fn set_native_service_degraded(&self, service: &str, degraded: bool) {
+        self.native_service_degraded
+            .with_label_values(&[bounded_label(service).as_ref()])
+            .set(i64::from(degraded));
+    }
+    fn inc_compensation_failures_total(&self) {
+        self.compensation_failures.inc();
+    }
+    fn inc_cdc_journal_failures_total(&self) {
+        self.cdc_journal_failures.inc();
+    }
+    fn inc_control_reload_applied(&self, resource_type: &str) {
+        self.control_reload_applied
+            .with_label_values(&[resource_type])
+            .inc();
+    }
+    fn set_control_push_queue_depth(&self, depth: u64) {
+        self.control_push_queue_depth.set(depth as i64);
+    }
+    fn inc_control_push_throttled(&self) {
+        self.control_push_throttled.inc();
+    }
+    fn inc_control_debounce_coalesced(&self) {
+        self.control_debounce_coalesced.inc();
+    }
+    fn inc_canary_auto_rollback(&self, reason: &str) {
+        self.canary_auto_rollback.with_label_values(&[reason]).inc();
+    }
+    fn record_canary_evaluation(&self, breached: bool) {
+        self.canary_evaluations
+            .with_label_values(&[if breached { "breached" } else { "ok" }])
+            .inc();
+    }
+    fn set_canary_active(&self, active: bool) {
+        self.canary_active.set(if active { 1 } else { 0 });
+    }
 }
 
 #[cfg(test)]
@@ -1054,6 +1519,67 @@ mod tests {
     }
 
     #[test]
+    fn fair_admission_labels_are_cardinality_bounded() {
+        // Item 12: project/instance/tenant_hash are request-controlled. Feeding 2×
+        // the distinct-label bound of projects must NOT mint 2× the series — the
+        // bounded_label interner caps distinct admitted values process-wide (the
+        // remainder collapses into "overflow"), so the series count stays ≤ cap+1.
+        let m = PrometheusMetrics::new().expect("build PrometheusMetrics");
+        let cap = max_distinct_labels();
+        for i in 0..(cap * 2) {
+            m.record_fair_admission(
+                &format!("attacker-project-{i}"),
+                "tenant-hash",
+                "postgres",
+                "primary",
+                "query",
+                "admit",
+            );
+            m.add_fair_cost(
+                &format!("attacker-project-{i}"),
+                "tenant-hash",
+                "postgres",
+                "primary",
+                "query",
+                1.0,
+            );
+        }
+        let text = m.gather_text("");
+        let admission_series = text
+            .lines()
+            .filter(|line| line.starts_with("udb_fair_admission_total{"))
+            .count();
+        let cost_series = text
+            .lines()
+            .filter(|line| line.starts_with("udb_fair_cost_units_total{"))
+            .count();
+        // The SEEN interner is process-global (shared with other label dimensions
+        // and tests), so the bound here is the global cap + the overflow bucket.
+        assert!(
+            admission_series <= cap + 1,
+            "fair_admission series must cap at {} (+overflow), got {admission_series}",
+            cap
+        );
+        assert!(
+            cost_series <= cap + 1,
+            "fair_cost series must cap at {} (+overflow), got {cost_series}",
+            cap
+        );
+        assert!(
+            text.lines().any(|line| {
+                line.starts_with("udb_fair_admission_total{")
+                    && line.contains("project=\"overflow\"")
+            }),
+            "past the cap, projects must collapse into the overflow bucket:\n{}",
+            text.lines()
+                .filter(|line| line.starts_with("udb_fair_admission_total"))
+                .take(5)
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+    }
+
+    #[test]
     fn noop_metrics_is_callable() {
         let m = NoopMetrics;
         // All calls must compile and not panic.
@@ -1077,5 +1603,121 @@ mod tests {
         assert_eq!(safety_label("SafeAuto"), "auto");
         assert_eq!(safety_label("RequiresReview"), "requires_review");
         assert_eq!(safety_label("Blocked"), "blocked");
+    }
+
+    #[test]
+    fn auth_metrics_register_and_increment() {
+        let m = PrometheusMetrics::new().expect("build PrometheusMetrics");
+        // Drive each auth-plane recorder method.
+        m.record_auth_login(true);
+        m.record_auth_login(false);
+        m.record_auth_lockout();
+        m.record_auth_mfa_failure();
+        m.record_auth_token_validation_failure();
+        m.record_authz_deny();
+
+        let text = m.gather_text("");
+        // Counters must be registered and surfaced with their incremented values.
+        assert!(
+            text.contains("udb_auth_login_total{outcome=\"success\"} 1"),
+            "missing success login counter:\n{text}"
+        );
+        assert!(
+            text.contains("udb_auth_login_total{outcome=\"failure\"} 1"),
+            "missing failure login counter:\n{text}"
+        );
+        assert!(
+            text.contains("udb_auth_lockouts_total 1"),
+            "missing lockout counter:\n{text}"
+        );
+        assert!(
+            text.contains("udb_auth_mfa_failures_total 1"),
+            "missing mfa-failure counter:\n{text}"
+        );
+        assert!(
+            text.contains("udb_auth_token_validation_failures_total 1"),
+            "missing token-validation-failure counter:\n{text}"
+        );
+        assert!(
+            text.contains("udb_authz_denies_total 1"),
+            "missing authz-deny counter:\n{text}"
+        );
+    }
+
+    #[test]
+    fn phase_l_metrics_register_and_increment() {
+        let m = PrometheusMetrics::new().expect("build PrometheusMetrics");
+        m.record_refresh_reuse_detected();
+        m.observe_policy_reload_seconds(0.01);
+        m.observe_policy_invalidation_lag_seconds(0.2);
+        m.observe_revocation_propagation_seconds(0.3);
+        m.record_idp_refresh_failure("jwks");
+        m.record_scim_failure("provision");
+        m.record_audit_sink_failure("siem_webhook");
+        m.set_auth_outbox_lag_seconds(4.0);
+
+        let text = m.gather_text("");
+        assert!(
+            text.contains("udb_auth_refresh_reuse_detected_total 1"),
+            "missing refresh-reuse counter:\n{text}"
+        );
+        assert!(
+            text.contains("udb_idp_refresh_failures_total{kind=\"jwks\"} 1"),
+            "missing idp-refresh-failure counter:\n{text}"
+        );
+        assert!(
+            text.contains("udb_scim_failures_total{op=\"provision\"} 1"),
+            "missing scim-failure counter:\n{text}"
+        );
+        assert!(
+            text.contains("udb_audit_sink_failures_total{sink=\"siem_webhook\"} 1"),
+            "missing audit-sink-failure counter:\n{text}"
+        );
+        assert!(
+            text.contains("udb_auth_outbox_lag_seconds 4"),
+            "missing outbox-lag gauge:\n{text}"
+        );
+        // Histograms surface their _count suffix once observed.
+        assert!(
+            text.contains("udb_authz_policy_reload_seconds_count 1"),
+            "missing policy-reload histogram:\n{text}"
+        );
+    }
+
+    #[test]
+    fn phase_10_metrics_register_and_increment() {
+        let m = PrometheusMetrics::new().expect("build PrometheusMetrics");
+        m.inc_method_security_denial("scope");
+        m.inc_tenant_mismatch();
+        m.inc_revocation_lookup_failure();
+        m.inc_outbox_enqueue_failures_total("native");
+        m.set_native_service_degraded("storage", true);
+        m.inc_compensation_failures_total();
+
+        let text = m.gather_text("");
+        assert!(
+            text.contains("udb_method_security_denials_total{reason=\"scope\"} 1"),
+            "missing method-security-denial counter:\n{text}"
+        );
+        assert!(
+            text.contains("udb_tenant_mismatch_total 1"),
+            "missing tenant-mismatch counter:\n{text}"
+        );
+        assert!(
+            text.contains("udb_revocation_lookup_failures_total 1"),
+            "missing revocation-lookup-failure counter:\n{text}"
+        );
+        assert!(
+            text.contains("udb_outbox_enqueue_failures_total{path=\"native\"} 1"),
+            "missing outbox-enqueue-failure counter:\n{text}"
+        );
+        assert!(
+            text.contains("udb_native_service_degraded{service=\"storage\"} 1"),
+            "missing native-service-degraded gauge:\n{text}"
+        );
+        assert!(
+            text.contains("udb_compensation_failures_total 1"),
+            "missing compensation-failures counter:\n{text}"
+        );
     }
 }

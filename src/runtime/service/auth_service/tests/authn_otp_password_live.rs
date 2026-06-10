@@ -214,7 +214,11 @@ async fn live_postgres_forgot_and_reset_password() {
         .into_inner();
     assert_eq!(new.user_id, user.user_id);
 
-    // An unknown identifier returns a uniform empty otp_id (no enumeration).
+    // Enumeration safety: an unknown identifier returns a response with the SAME
+    // shape as a known one — a non-empty otp_id (a throwaway handle that maps to
+    // no real OTP). Returning an *empty* otp_id for unknown accounts while known
+    // accounts get a non-empty one would itself be an enumeration oracle, so the
+    // handler emits a uniform non-empty otp_id either way.
     let unknown = authn
         .forgot_password(Request::new(authn_pb::ForgotPasswordRequest {
             identifier: "does-not-exist@example.com".to_string(),
@@ -223,7 +227,10 @@ async fn live_postgres_forgot_and_reset_password() {
         .await
         .expect("forgot password for unknown account")
         .into_inner();
-    assert!(unknown.otp_id.is_empty());
+    assert!(
+        !unknown.otp_id.is_empty(),
+        "unknown-account forgot_password must return a uniform non-empty otp_id (no enumeration)"
+    );
 
     cleanup_native_auth_db(&pool).await;
 }

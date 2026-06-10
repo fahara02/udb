@@ -13,9 +13,11 @@ use Google\Protobuf\RepeatedField;
  * ---------------------------------------------------------------------------
  * Session — Authenticated session for a user, service account, workload, or
  * external identity mapped into UDB.
+ *
  * Hybrid model:
  *   SERVER_SIDE: cookie-based; session_token_lookup (keyed HMAC) → hash verify
  *   JWT:         access_token_jti + refresh_token_jti tracked for revocation
+ *
  * Migration order 2. RLS scopes rows to the current tenant.
  * ---------------------------------------------------------------------------
  *
@@ -43,7 +45,7 @@ class Session extends \Google\Protobuf\Internal\Message
      */
     protected $session_token_lookup = '';
     /**
-     * bcrypt hash of the session token (for secure verify after lookup).
+     * Keyed HMAC digest of the session token (for secure verify after lookup).
      *
      * Generated from protobuf field <code>string session_token_hash = 5 [json_name = "sessionTokenHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = {</code>
      */
@@ -149,7 +151,7 @@ class Session extends \Google\Protobuf\Internal\Message
      *           ── SERVER-SIDE fields ──────────────────────────────────────────────────
      *           Keyed lookup digest of the opaque session token (for fast index lookup).
      *     @type string $session_token_hash
-     *           bcrypt hash of the session token (for secure verify after lookup).
+     *           Keyed HMAC digest of the session token (for secure verify after lookup).
      *     @type string $csrf_token_hash
      *           CSRF token hash (double-submit cookie pattern).
      *     @type string $access_token_jti
@@ -276,7 +278,7 @@ class Session extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * bcrypt hash of the session token (for secure verify after lookup).
+     * Keyed HMAC digest of the session token (for secure verify after lookup).
      *
      * Generated from protobuf field <code>string session_token_hash = 5 [json_name = "sessionTokenHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = {</code>
      * @return string
@@ -287,7 +289,7 @@ class Session extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * bcrypt hash of the session token (for secure verify after lookup).
+     * Keyed HMAC digest of the session token (for secure verify after lookup).
      *
      * Generated from protobuf field <code>string session_token_hash = 5 [json_name = "sessionTokenHash", (.udb.core.common.v1.log_redacted) = true, (.udb.core.common.v1.sensitive) = true, (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var

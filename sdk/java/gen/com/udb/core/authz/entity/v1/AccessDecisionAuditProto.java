@@ -44,46 +44,51 @@ public final class AccessDecisionAuditProto extends com.google.protobuf.Generate
       "on_audit.proto\022\030udb.core.authz.entity.v1" +
       "\032\037google/protobuf/timestamp.proto\032$udb/c" +
       "ore/authz/entity/v1/enums.proto\032\033udb/cor" +
-      "e/common/v1/db.proto\"\233\n\n\023AccessDecisionA" +
-      "udit\022`\n\021decision_audit_id\030\001 \001(\tB4\202\267\0300\n\021d" +
-      "ecision_audit_id\022\004UUID\030\001(\001:\021gen_random_u" +
-      "uid()R\017decisionAuditId\022[\n\007user_id\030\002 \001(\tB" +
-      "B\202\267\030>\n\007user_id\022\004UUID\030\001R+\n\"idx_access_dec" +
-      "ision_audits_user_id\022\005BTREER\006userId\0224\n\006d" +
-      "omain\030\003 \001(\tB\034\202\267\030\030\n\006domain\022\014VARCHAR(200)\030" +
-      "\001R\006domain\0224\n\006object\030\004 \001(\tB\034\202\267\030\030\n\006object\022" +
-      "\014VARCHAR(200)\030\001R\006object\0223\n\006action\030\005 \001(\tB" +
-      "\033\202\267\030\027\n\006action\022\013VARCHAR(80)\030\001R\006action\022[\n\006" +
-      "effect\030\006 \001(\0162&.udb.core.authz.entity.v1." +
-      "PolicyEffectB\033\202\267\030\027\n\006effect\022\013VARCHAR(20)\030" +
-      "\001R\006effect\022w\n\017decision_source\030\007 \001(\0162(.udb" +
-      ".core.authz.entity.v1.DecisionSourceB$\202\267" +
-      "\030 \n\017decision_source\022\013VARCHAR(30)\030\001R\016deci" +
-      "sionSource\022;\n\014matched_rule\030\010 \001(\tB\030\202\267\030\024\n\014" +
-      "matched_rule\022\004TEXTR\013matchedRule\022*\n\006reaso" +
-      "n\030\t \001(\tB\022\202\267\030\016\n\006reason\022\004TEXTR\006reason\022<\n\ni" +
-      "p_address\030\n \001(\tB\035\202\267\030\031\n\nip_address\022\013VARCH" +
-      "AR(64)R\tipAddress\022}\n\016correlation_id\030\013 \001(" +
-      "\tBV\202\267\030R\n\016correlation_id\022\014VARCHAR(120)R2\n" +
-      ")idx_access_decision_audits_correlation_" +
-      "id\022\005BTREER\rcorrelationId\022m\n\ndecided_at\030\014" +
-      " \001(\0132\032.google.protobuf.TimestampB2\202\267\030.\n\n" +
-      "decided_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMES" +
-      "TAMPR\tdecidedAt\022d\n\ttenant_id\030\r \001(\tBG\202\267\030C" +
-      "\n\ttenant_id\022\013VARCHAR(64)\030\001R\'\n\036idx_access" +
-      "decisionaudit_tenant\022\005BTREER\010tenantId:\322\001" +
-      "\372\266\030\315\001\n\026access_decision_audits\022\tudb_authz" +
-      "\030\005 \001*1Decision trail for sensitive autho" +
-      "rization checks@\001H\003R\ndecided_atX\373\023b^\n\020te" +
-      "nant_isolation\032H(tenant_id::text = curre" +
-      "nt_setting(\'app.current_tenant_id\', true" +
-      ")::text)(\001B\203\002\n\034com.udb.core.authz.entity" +
-      ".v1B\030AccessDecisionAuditProtoP\001ZDgithub." +
-      "com/fahara02/udb/sdk/go/gen/udb/core/aut" +
-      "hz/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.core." +
-      "Authz.Entity.V1\312\002\030Udb\\Core\\Authz\\Entity\\" +
-      "V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V" +
-      "1\352\002\034Udb::Core::Authz::Entity::V1b\006proto3"
+      "e/common/v1/db.proto\032!udb/core/common/v1" +
+      "/security.proto\"\267\013\n\023AccessDecisionAudit\022" +
+      "`\n\021decision_audit_id\030\001 \001(\tB4\202\267\0300\n\021decisi" +
+      "on_audit_id\022\004UUID\030\001(\001:\021gen_random_uuid()" +
+      "R\017decisionAuditId\022[\n\007user_id\030\002 \001(\tBB\202\267\030>" +
+      "\n\007user_id\022\004UUID\030\001R+\n\"idx_access_decision" +
+      "_audits_user_id\022\005BTREER\006userId\0224\n\006domain" +
+      "\030\003 \001(\tB\034\202\267\030\030\n\006domain\022\014VARCHAR(200)\030\001R\006do" +
+      "main\0224\n\006object\030\004 \001(\tB\034\202\267\030\030\n\006object\022\014VARC" +
+      "HAR(200)\030\001R\006object\0223\n\006action\030\005 \001(\tB\033\202\267\030\027" +
+      "\n\006action\022\013VARCHAR(80)\030\001R\006action\022[\n\006effec" +
+      "t\030\006 \001(\0162&.udb.core.authz.entity.v1.Polic" +
+      "yEffectB\033\202\267\030\027\n\006effect\022\013VARCHAR(20)\030\001R\006ef" +
+      "fect\022w\n\017decision_source\030\007 \001(\0162(.udb.core" +
+      ".authz.entity.v1.DecisionSourceB$\202\267\030 \n\017d" +
+      "ecision_source\022\013VARCHAR(30)\030\001R\016decisionS" +
+      "ource\022;\n\014matched_rule\030\010 \001(\tB\030\202\267\030\024\n\014match" +
+      "ed_rule\022\004TEXTR\013matchedRule\022*\n\006reason\030\t \001" +
+      "(\tB\022\202\267\030\016\n\006reason\022\004TEXTR\006reason\022<\n\nip_add" +
+      "ress\030\n \001(\tB\035\202\267\030\031\n\nip_address\022\013VARCHAR(64" +
+      ")R\tipAddress\022}\n\016correlation_id\030\013 \001(\tBV\202\267" +
+      "\030R\n\016correlation_id\022\014VARCHAR(120)R2\n)idx_" +
+      "access_decision_audits_correlation_id\022\005B" +
+      "TREER\rcorrelationId\022m\n\ndecided_at\030\014 \001(\0132" +
+      "\032.google.protobuf.TimestampB2\202\267\030.\n\ndecid" +
+      "ed_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMPR" +
+      "\tdecidedAt\022d\n\ttenant_id\030\r \001(\tBG\202\267\030C\n\tten" +
+      "ant_id\022\013VARCHAR(64)\030\001R\'\n\036idx_accessdecis" +
+      "ionaudit_tenant\022\005BTREER\010tenantId:\356\002\372\266\030\315\001" +
+      "\n\026access_decision_audits\022\tudb_authz\030\005 \001*" +
+      "1Decision trail for sensitive authorizat" +
+      "ion checks@\001H\003R\ndecided_atX\373\023b^\n\020tenant_" +
+      "isolation\032H(tenant_id::text = current_se" +
+      "tting(\'app.current_tenant_id\', true)::te" +
+      "xt)(\001\212\262\031\227\001\n\006tenant\032\ttenant_id*4tenant_id" +
+      " = current_setting(\'app.current_tenant_i" +
+      "d\')2\013soft_delete:\021authz.operational@\373\023H\002" +
+      "R\006tenantZ\010standardr\025tenant.data_residenc" +
+      "yB\203\002\n\034com.udb.core.authz.entity.v1B\030Acce" +
+      "ssDecisionAuditProtoP\001ZDgithub.com/fahar" +
+      "a02/udb/sdk/go/gen/udb/core/authz/entity" +
+      "/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Authz.Ent" +
+      "ity.V1\312\002\030Udb\\Core\\Authz\\Entity\\V1\342\002$Udb\\" +
+      "GPBMetadata\\Core\\Authz\\Entity\\V1\352\002\034Udb::" +
+      "Core::Authz::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -91,6 +96,7 @@ public final class AccessDecisionAuditProto extends com.google.protobuf.Generate
           com.google.protobuf.TimestampProto.getDescriptor(),
           com.udb.core.authz.entity.v1.EnumsProto.getDescriptor(),
           com.udb.core.common.v1.DbProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_authz_entity_v1_AccessDecisionAudit_descriptor =
       getDescriptor().getMessageType(0);
@@ -102,8 +108,10 @@ public final class AccessDecisionAuditProto extends com.google.protobuf.Generate
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.authz.entity.v1.EnumsProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);
     registry.add(com.udb.core.common.v1.DbProto.pgTable);
     com.google.protobuf.Descriptors.FileDescriptor

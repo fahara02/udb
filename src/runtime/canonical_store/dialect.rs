@@ -218,6 +218,20 @@ pub fn apply_projection_summary_bucket(
     Ok(())
 }
 
+/// Exponential backoff (in seconds) before a FAILED projection task becomes
+/// re-claimable. `retry_count` is the attempt number being recorded by the
+/// worker; the delay doubles each attempt — 1s, 2s, 4s, 8s … — clamped to the
+/// 1..=12 attempt range and capped at one hour. The claim queries gate on
+/// `next_retry_at <= NOW()`, so writing `now + delay` into `next_retry_at`
+/// keeps a failing task out of the claim set until its backoff elapses.
+///
+/// Shared by all three SQL projection backends (PG / MySQL / SQLite) so the
+/// retry schedule is identical regardless of canonical store.
+pub(super) fn projection_retry_delay_secs(retry_count: i32) -> i64 {
+    let attempt = retry_count.clamp(1, 12) as u32;
+    (1_i64 << (attempt - 1)).min(3600)
+}
+
 /// Page size for streaming admin-audit chain verification (#212). The verify
 /// loop pulls the chain one page at a time; this bounds the rows (incl. JSONB
 /// payloads) buffered per `fetch_all`. Override via

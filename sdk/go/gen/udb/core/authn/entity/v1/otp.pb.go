@@ -177,7 +177,7 @@ var File_udb_core_authn_entity_v1_otp_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_otp_proto_rawDesc = "" +
 	"\n" +
-	"\"udb/core/authn/entity/v1/otp.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\"\xf5\r\n" +
+	"\"udb/core/authn/entity/v1/otp.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xd0\x0e\n" +
 	"\x03OTP\x12@\n" +
 	"\x06otp_id\x18\x01 \x01(\tB)\x82\xb7\x18%\n" +
 	"\x06otp_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x05otpId\x12\xaa\x01\n" +
@@ -216,8 +216,9 @@ const file_udb_core_authn_entity_v1_otp_proto_rawDesc = "" +
 	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt\x12\xa4\x01\n" +
 	"\x0ecorrelation_id\x18\r \x01(\tB}\x82\xb7\x18y\n" +
 	"\x0ecorrelation_id\x12\fVARCHAR(120)R \n" +
-	"\x17idx_otps_correlation_id\x12\x05BTREEZ7Request or workflow correlation id that issued this OTPR\rcorrelationId:v\xfa\xb6\x18r\n" +
-	"\x04otps\x12\tudb_authn\x18\x03 \x01*QEmail OTP records for 2FA, verification, password reset, and sensitive operations\xea\x01\aprimaryB\xf3\x01\n" +
+	"\x17idx_otps_correlation_id\x12\x05BTREEZ7Request or workflow correlation id that issued this OTPR\rcorrelationId:\xd0\x01\xfa\xb6\x18r\n" +
+	"\x04otps\x12\tudb_authn\x18\x03 \x01*QEmail OTP records for 2FA, verification, password reset, and sensitive operations\xea\x01\aprimary\x8a\xb2\x19V\n" +
+	"\x06global2\vsoft_delete:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf3\x01\n" +
 	"\x1ccom.udb.core.authn.entity.v1B\bOtpProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (

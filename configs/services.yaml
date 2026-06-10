@@ -17,6 +17,42 @@ service:
   rate_limit_window_secs: 60
   rate_limit_max_per_window: 1000
 
+native_services:
+  enabled: true
+  migrate_enabled: true
+  control_plane_enabled: true
+  control_plane_addr: 127.0.0.1:50062
+  webrtc_peer_enabled: true
+  webrtc_peer_addr: 127.0.0.1:50063
+  default_enabled: true
+  services:
+    authn:
+      enabled: true
+      migrate: true
+      required_backends:
+        - postgres
+    authz:
+      enabled: true
+      migrate: true
+      required_backends:
+        - postgres
+    idp:
+      enabled: true
+      migrate: true
+      required_backends:
+        - postgres
+    control:
+      enabled: true
+      migrate: true
+      required_backends:
+        - postgres
+    storage:
+      enabled: false
+      migrate: false
+      required_backends:
+        - postgres
+        - object_storage
+
 channels:
   read_max_concurrent: 300
   write_max_concurrent: 100

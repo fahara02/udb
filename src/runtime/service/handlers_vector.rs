@@ -196,48 +196,18 @@ impl DataBrokerService {
                 )?;
                 let item_context =
                     security_for_stream.request_context_with_decision(&item_decision_id);
-                let op = crate::runtime::channels::OperationChannel::Vector;
-                let project = non_empty(&metadata_context.project_id).unwrap_or("default");
-                let tenant_hash = tenant_hash_label(&metadata_context.tenant_id);
-                let instance = non_empty(&metadata_context.target_instance).unwrap_or("default");
-                let _permit = match channels.acquire_fair_with_backpressure(
-                    op,
-                    Some(&metadata_context.tenant_id),
-                    Some(&metadata_context.project_id),
-                    Some("qdrant"),
-                    Some(&metadata_context.target_instance),
-                    op.default_cost(),
-                ).await {
-                    Ok(permit) => {
-                        metrics.record_fair_admission(project, &tenant_hash, "qdrant", instance, op.as_str(), "accepted");
-                        metrics.add_fair_cost(project, &tenant_hash, "qdrant", instance, op.as_str(), f64::from(op.default_cost()));
-                        permit
-                    },
-                    Err(err) => {
-                        metrics.inc_channel_rejected("vector");
-                        metrics.record_fair_admission(project, &tenant_hash, "qdrant", instance, op.as_str(), "rejected");
-                        Err(err)?
-                    }
-                };
-                metrics.inc_channel_inflight("vector");
-                let start = Instant::now();
-
-                let res = tokio::time::timeout(
-                    Duration::from_secs(channels.deadline_secs(crate::runtime::channels::OperationChannel::Vector, Some("qdrant"))),
-                    runtime.vector_upsert(&manifest, item, item_context)
-                ).await;
-
-                metrics.dec_channel_inflight("vector");
-                metrics.observe_channel_latency("vector", start.elapsed().as_secs_f64());
-
-                match res {
-                    Ok(Ok(val)) => yield val,
-                    Ok(Err(e)) => Err(e)?,
-                    Err(_) => {
-                        metrics.inc_channel_timeout("vector");
-                        Err(Status::deadline_exceeded("vector channel timeout"))?
-                    }
-                }
+                // FIX-77: admission + inflight gauge + per-item deadline +
+                // latency + timeout mapping all live in the shared helper.
+                let val = super::native_helpers::execute_stream_batch_item(
+                    &channels,
+                    &metrics,
+                    &metadata_context,
+                    crate::runtime::channels::OperationChannel::Vector,
+                    "qdrant",
+                    runtime.vector_upsert(&manifest, item, item_context),
+                )
+                .await?;
+                yield val;
             }
         };
         self.record_grpc(

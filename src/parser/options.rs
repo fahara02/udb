@@ -26,12 +26,605 @@ pub(super) enum OptionKind {
     Cache,
     Storage,
     Security,
+    TableSecurity,
+    FieldSecurityScalar,
+    ColumnSecurity,
     ModelRegistry,
     ColumnStore,
     SqlStore,
     NoSqlStore,
     GenericStore,
     ObjectStore,
+}
+
+impl OptionKind {
+    pub(super) fn as_str(&self) -> &'static str {
+        match self {
+            Self::Table => "table",
+            Self::Column => "column",
+            Self::VectorStore => "vector_store",
+            Self::GraphStore => "graph_store",
+            Self::DocumentStore => "document_store",
+            Self::TimeSeriesStore => "timeseries_store",
+            Self::Cache => "cache",
+            Self::Storage => "storage",
+            Self::Security => "security",
+            Self::TableSecurity => "db_table_security",
+            Self::FieldSecurityScalar => "field_security_scalar",
+            Self::ColumnSecurity => "db_column_security",
+            Self::ModelRegistry => "model_registry",
+            Self::ColumnStore => "column_store",
+            Self::SqlStore => "sql_store",
+            Self::NoSqlStore => "nosql_store",
+            Self::GenericStore => "data_store",
+            Self::ObjectStore => "object_store",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ParserOptionMetadata {
+    pub option_name: &'static str,
+    pub kind: &'static str,
+    pub option_type: &'static str,
+    pub target: &'static str,
+    pub required: bool,
+    pub since_version: &'static str,
+    pub description: &'static str,
+    pub example: &'static str,
+    pub accepted_keys: &'static [&'static str],
+}
+
+const TABLE_KEYS: &[&str] = &[
+    "table_name",
+    "schema_name",
+    "migration_order",
+    "is_table",
+    "comment",
+    "soft_delete",
+    "soft_delete_column",
+    "audit_fields",
+    "enable_rls",
+    "force_rls",
+    "unlogged",
+    "tablespace",
+    "partition_strategy",
+    "partition_by",
+    "partition_column",
+    "retention_days",
+    "partition_interval",
+    "partition_premake",
+    "partition_default",
+    "partition_retention_months",
+    "replica_hint",
+    "cdc_topic",
+    "required_scope",
+    "previous_table_name",
+    "allow_drop",
+    "indexes",
+    "foreign_keys",
+    "rls_policies",
+    "extensions",
+    "materialized_views",
+    "triggers",
+    "sql_artifacts",
+    "vector_store",
+];
+const COLUMN_KEYS: &[&str] = &[
+    "column_name",
+    "sql_type",
+    "not_null",
+    "nullable",
+    "unique",
+    "primary_key",
+    "is_primary_key",
+    "auto_increment",
+    "default_value",
+    "check_constraint",
+    "collation",
+    "enum_values",
+    "enum_value",
+    "comment",
+    "exclude_from_insert",
+    "exclude_from_update",
+    "encrypted",
+    "encrypt",
+    "is_json",
+    "is_jsonb",
+    "json_path_ops",
+    "is_tsvector",
+    "tsvector_language",
+    "tsvector_source_columns",
+    "tsvector_source_column",
+    "trigram_index",
+    "references",
+    "foreign_key",
+    "tenant_column",
+    "project_column",
+    "on_delete",
+    "on_update",
+    "previous_column_name",
+    "backfill_sql",
+    "using_expression",
+    "allow_drop",
+    "generated",
+    "generated_expr",
+    "identity",
+    "is_identity",
+    "index",
+];
+const VECTOR_KEYS: &[&str] = &[
+    "backend",
+    "collection_name",
+    "dimension",
+    "distance",
+    "shard_count",
+    "replica_count",
+    "on_disk",
+    "payload_schema_json",
+    "hnsw_m",
+    "hnsw_ef_construction",
+];
+const GRAPH_KEYS: &[&str] = &[
+    "backend",
+    "graph_name",
+    "node_label",
+    "id_field",
+    "tenant_field",
+    "edge_source_field",
+    "edge_target_field",
+    "payload_schema_json",
+];
+const DOCUMENT_KEYS: &[&str] = &[
+    "backend",
+    "database_name",
+    "collection_name",
+    "partition_key",
+    "id_field",
+    "tenant_field",
+    "ttl_seconds",
+    "payload_schema_json",
+];
+const TIMESERIES_KEYS: &[&str] = &[
+    "backend",
+    "database_name",
+    "measurement_name",
+    "time_field",
+    "tenant_field",
+    "tag_fields",
+    "value_fields",
+    "retention_days",
+    "downsample_policy",
+];
+const COLUMN_STORE_KEYS: &[&str] = &[
+    "backend",
+    "database_name",
+    "table_name",
+    "partition_key",
+    "sort_key",
+    "compression",
+    "ttl_seconds",
+    "payload_schema_json",
+];
+const CACHE_KEYS: &[&str] = &[
+    "backend",
+    "key_pattern",
+    "ttl_seconds",
+    "write_through",
+    "read_through",
+    "eviction_policy",
+    "cluster_env_key",
+    "namespace",
+];
+const STORAGE_KEYS: &[&str] = &[
+    "backend",
+    "bucket_env_key",
+    "key_prefix",
+    "presigned_read",
+    "presigned_write",
+    "presigned_ttl_seconds",
+    "server_side_encryption",
+    "kms_key_id",
+    "acl",
+];
+const MODEL_REGISTRY_KEYS: &[&str] = &[
+    "backend",
+    "experiment_name",
+    "artifact_path",
+    "auto_register",
+    "stage",
+    "metric_keys",
+    "param_keys",
+    "storage_uri_env",
+];
+const SECURITY_KEYS: &[&str] = &[
+    "classification_level",
+    "audit_writes",
+    "audit_reads",
+    "retention_days",
+    "encryption_required",
+];
+const TABLE_SECURITY_KEYS: &[&str] = &[
+    "tenant_isolation_mode",
+    "project_isolation_mode",
+    "tenant_column",
+    "project_column",
+    "rls_policy_template",
+    "soft_delete_mode",
+    "retention_class",
+    "retention_days",
+    "audit_mode",
+    "encryption_profile",
+    "pii_profile",
+    "break_glass_visible",
+    "export_eligible",
+    "data_residency_policy_ref",
+];
+const DB_COLUMN_SECURITY_KEYS: &[&str] = &[
+    "secret_classification",
+    "output_view",
+    "redaction_strategy",
+    "tokenization_strategy",
+    "hashing_strategy",
+    "hashing_algorithm",
+    "encryption_key_class",
+    "searchable_encrypted",
+];
+const FIELD_SECURITY_SCALAR_KEYS: &[&str] = &["<scalar value>"];
+const GENERIC_STORE_KEYS: &[&str] = &[
+    "store_kind",
+    "kind",
+    "backend",
+    "driver",
+    "logical_name",
+    "name",
+    "database_name",
+    "database",
+    "namespace",
+    "schema_name",
+    "resource_name",
+    "table_name",
+    "collection_name",
+    "graph_name",
+    "measurement_name",
+    "bucket",
+    "dsn_env_key",
+    "env_key",
+    "dsn",
+    "uri",
+    "payload_schema_json",
+    "options_json",
+    "<backend-specific option>",
+];
+
+const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.pg_table",
+        kind: "table",
+        option_type: "MessageOptions",
+        target: "PostgreSQL",
+        required: true,
+        since_version: "0.1.0",
+        description: "Marks a proto message as a mapped relational table.",
+        example: r#"option (udb.core.common.v1.pg_table) = { table_name: "users" schema_name: "app" is_table: true };"#,
+        accepted_keys: TABLE_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.pg_column",
+        kind: "column",
+        option_type: "FieldOptions",
+        target: "PostgreSQL",
+        required: false,
+        since_version: "0.1.0",
+        description: "Maps a proto field to a SQL column.",
+        example: r#"string email = 2 [(udb.core.common.v1.pg_column) = { column_name: "email" sql_type: "TEXT" }];"#,
+        accepted_keys: COLUMN_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.vector_store",
+        kind: "vector_store",
+        option_type: "MessageOptions",
+        target: "Qdrant / Milvus / Weaviate / pgvector / Pinecone / OpenSearch",
+        required: false,
+        since_version: "0.2.0",
+        description: "Projects a message into a vector store.",
+        example: r#"option (udb.core.common.v1.vector_store) = { backend: VECTOR_BACKEND_QDRANT collection_name: "users" dimension: 1536 };"#,
+        accepted_keys: VECTOR_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.graph_store",
+        kind: "graph_store",
+        option_type: "MessageOptions",
+        target: "Neo4j / Memgraph / ArangoDB",
+        required: false,
+        since_version: "0.2.0",
+        description: "Projects a message into a graph store.",
+        example: r#"option (udb.core.common.v1.graph_store) = { backend: GRAPH_BACKEND_NEO4J node_label: "User" id_field: "id" };"#,
+        accepted_keys: GRAPH_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.document_store",
+        kind: "document_store",
+        option_type: "MessageOptions",
+        target: "MongoDB / DynamoDB / Cosmos DB",
+        required: false,
+        since_version: "0.2.0",
+        description: "Projects a message into a document store.",
+        example: r#"option (udb.core.common.v1.document_store) = { backend: NOSQL_BACKEND_MONGODB collection_name: "users" id_field: "id" };"#,
+        accepted_keys: DOCUMENT_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.nosql_store",
+        kind: "nosql_store",
+        option_type: "MessageOptions",
+        target: "Generic NoSQL backends",
+        required: false,
+        since_version: "0.2.0",
+        description: "Declares a generic NoSQL store binding.",
+        example: r#"option (udb.core.common.v1.nosql_store) = { backend: "mongodb" collection_name: "users" };"#,
+        accepted_keys: GENERIC_STORE_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.sql_store",
+        kind: "sql_store",
+        option_type: "MessageOptions",
+        target: "Generic SQL backends",
+        required: false,
+        since_version: "0.2.0",
+        description: "Declares a generic SQL store binding.",
+        example: r#"option (udb.core.common.v1.sql_store) = { backend: "postgres" table_name: "users" };"#,
+        accepted_keys: GENERIC_STORE_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.timeseries_store",
+        kind: "timeseries_store",
+        option_type: "MessageOptions",
+        target: "TimescaleDB / InfluxDB / ClickHouse",
+        required: false,
+        since_version: "0.2.0",
+        description: "Projects a message into a time-series store.",
+        example: r#"option (udb.core.common.v1.timeseries_store) = { backend: TIMESERIES_BACKEND_TIMESCALEDB measurement_name: "usage" time_field: "created_at" };"#,
+        accepted_keys: TIMESERIES_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.column_store",
+        kind: "column_store",
+        option_type: "MessageOptions",
+        target: "ClickHouse / Cassandra / Bigtable",
+        required: false,
+        since_version: "0.2.0",
+        description: "Projects a message into a column-oriented store.",
+        example: r#"option (udb.core.common.v1.column_store) = { backend: COLUMN_BACKEND_CLICKHOUSE table_name: "events" partition_key: "tenant_id" };"#,
+        accepted_keys: COLUMN_STORE_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.cache",
+        kind: "cache",
+        option_type: "MessageOptions",
+        target: "Redis / Memcached / Dragonfly / in-process",
+        required: false,
+        since_version: "0.3.0",
+        description: "Declares cache projection metadata for a message.",
+        example: r#"option (udb.core.common.v1.cache) = { backend: CACHE_BACKEND_REDIS key_pattern: "user:{id}" ttl_seconds: 300 };"#,
+        accepted_keys: CACHE_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.storage",
+        kind: "storage",
+        option_type: "FieldOptions",
+        target: "S3 / MinIO / GCS / Azure Blob / local",
+        required: false,
+        since_version: "0.2.0",
+        description: "Marks a field as an object-storage key or URI.",
+        example: r#"string object_key = 5 [(udb.core.common.v1.storage) = { backend: STORAGE_BACKEND_S3 bucket_env_key: "UDB_BUCKET" }];"#,
+        accepted_keys: STORAGE_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.object_store",
+        kind: "object_store",
+        option_type: "MessageOptions",
+        target: "Generic object stores",
+        required: false,
+        since_version: "0.2.0",
+        description: "Declares a generic object-store binding.",
+        example: r#"option (udb.core.common.v1.object_store) = { backend: "s3" bucket: "artifacts" };"#,
+        accepted_keys: GENERIC_STORE_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.model_registry",
+        kind: "model_registry",
+        option_type: "MessageOptions",
+        target: "MLflow / DVC / Hugging Face / BentoML / Triton / custom",
+        required: false,
+        since_version: "0.3.0",
+        description: "Declares model registry or artifact repository metadata.",
+        example: r#"option (udb.core.common.v1.model_registry) = { backend: MODEL_BACKEND_MLFLOW experiment_name: "ranking" };"#,
+        accepted_keys: MODEL_REGISTRY_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.security",
+        kind: "security",
+        option_type: "MessageOptions",
+        target: "UDB security layer",
+        required: false,
+        since_version: "0.3.0",
+        description: "Attaches message-level security metadata.",
+        example: r#"option (udb.core.common.v1.security) = { classification_level: "internal" audit_reads: true };"#,
+        accepted_keys: SECURITY_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.column_security",
+        kind: "db_column_security",
+        option_type: "FieldOptions",
+        target: "UDB security layer",
+        required: false,
+        since_version: "0.3.0",
+        description: "Attaches structured field redaction and secret handling metadata.",
+        example: r#"string password_hash = 3 [(udb.core.common.v1.column_security) = { secret_classification: SECRET_CLASSIFICATION_CREDENTIAL output_view: OUTPUT_VIEW_STORAGE_ONLY }];"#,
+        accepted_keys: DB_COLUMN_SECURITY_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.db_table_security",
+        kind: "db_table_security",
+        option_type: "MessageOptions",
+        target: "UDB security layer",
+        required: false,
+        since_version: "0.4.0",
+        description: "Attaches enterprise table isolation and retention metadata.",
+        example: r#"option (udb.core.common.v1.db_table_security) = { tenant_column: "tenant_id" tenant_isolation_mode: "tenant" };"#,
+        accepted_keys: TABLE_SECURITY_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.db_column_security",
+        kind: "db_column_security",
+        option_type: "FieldOptions",
+        target: "UDB security layer",
+        required: false,
+        since_version: "0.4.0",
+        description: "Attaches enterprise column redaction and secret handling metadata.",
+        example: r#"string password_hash = 3 [(udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_CREDENTIAL output_view: OUTPUT_VIEW_STORAGE_ONLY }];"#,
+        accepted_keys: DB_COLUMN_SECURITY_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.pii",
+        kind: "field_security_scalar",
+        option_type: "FieldOptions",
+        target: "UDB security layer",
+        required: false,
+        since_version: "0.4.0",
+        description: "Marks a field as personally identifiable information.",
+        example: r#"string email = 2 [(udb.core.common.v1.pii) = true];"#,
+        accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.encrypted_security",
+        kind: "field_security_scalar",
+        option_type: "FieldOptions",
+        target: "UDB security layer",
+        required: false,
+        since_version: "0.4.0",
+        description: "Marks a field as encrypted for security metadata.",
+        example: r#"string token = 3 [(udb.core.common.v1.encrypted_security) = true];"#,
+        accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.log_masked",
+        kind: "field_security_scalar",
+        option_type: "FieldOptions",
+        target: "UDB security layer",
+        required: false,
+        since_version: "0.4.0",
+        description: "Masks a field in log output.",
+        example: r#"string email = 2 [(udb.core.common.v1.log_masked) = true];"#,
+        accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.log_redacted",
+        kind: "field_security_scalar",
+        option_type: "FieldOptions",
+        target: "UDB security layer",
+        required: false,
+        since_version: "0.4.0",
+        description: "Redacts a field in log output.",
+        example: r#"string token = 3 [(udb.core.common.v1.log_redacted) = true];"#,
+        accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.sensitive",
+        kind: "field_security_scalar",
+        option_type: "FieldOptions",
+        target: "UDB security layer",
+        required: false,
+        since_version: "0.4.0",
+        description: "Marks a field as sensitive and log-masked.",
+        example: r#"string token = 3 [(udb.core.common.v1.sensitive) = true];"#,
+        accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.requires_consent",
+        kind: "field_security_scalar",
+        option_type: "FieldOptions",
+        target: "UDB security layer",
+        required: false,
+        since_version: "0.4.0",
+        description: "Marks a field as requiring consent.",
+        example: r#"string email = 2 [(udb.core.common.v1.requires_consent) = true];"#,
+        accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.data_purpose",
+        kind: "field_security_scalar",
+        option_type: "FieldOptions",
+        target: "UDB security layer",
+        required: false,
+        since_version: "0.4.0",
+        description: "Records the purpose attached to a field.",
+        example: r#"string email = 2 [(udb.core.common.v1.data_purpose) = "login"];"#,
+        accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.retention_days",
+        kind: "field_security_scalar",
+        option_type: "FieldOptions",
+        target: "UDB security layer",
+        required: false,
+        since_version: "0.4.0",
+        description: "Sets field-level retention metadata in days.",
+        example: r#"string email = 2 [(udb.core.common.v1.retention_days) = 30];"#,
+        accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.tokenized",
+        kind: "field_security_scalar",
+        option_type: "FieldOptions",
+        target: "UDB security layer",
+        required: false,
+        since_version: "0.4.0",
+        description: "Marks a field as tokenized or blind-indexed.",
+        example: r#"string account_number = 4 [(udb.core.common.v1.tokenized) = true];"#,
+        accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.security_classification",
+        kind: "field_security_scalar",
+        option_type: "FieldOptions",
+        target: "UDB security layer",
+        required: false,
+        since_version: "0.4.0",
+        description: "Sets field-level security classification metadata.",
+        example: r#"string token = 3 [(udb.core.common.v1.security_classification) = SECRET_CLASSIFICATION_TOKEN];"#,
+        accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.data_category",
+        kind: "field_security_scalar",
+        option_type: "FieldOptions",
+        target: "UDB security layer",
+        required: false,
+        since_version: "0.4.0",
+        description: "Sets field-level data category metadata.",
+        example: r#"string email = 2 [(udb.core.common.v1.data_category) = DATA_CATEGORY_CONTACT];"#,
+        accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+    },
+    ParserOptionMetadata {
+        option_name: "udb.core.common.v1.data_store",
+        kind: "data_store",
+        option_type: "MessageOptions",
+        target: "Generic external stores",
+        required: false,
+        since_version: "0.4.0",
+        description: "Declares a generic external data-store binding.",
+        example: r#"option (udb.core.common.v1.data_store) = { store_kind: "search" backend: "opensearch" resource_name: "users" };"#,
+        accepted_keys: GENERIC_STORE_KEYS,
+    },
+];
+
+pub fn documented_option_metadata() -> &'static [ParserOptionMetadata] {
+    DOCUMENTED_OPTION_METADATA
+}
+
+pub fn parser_option_kind_name(option_name: &str, namespace: &str) -> Option<&'static str> {
+    option_kind(option_name, namespace).map(|kind| kind.as_str())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,12 +637,17 @@ pub(super) fn option_kind(option_name: &str, namespace: &str) -> Option<OptionKi
     let option_name = normalize_option_name(option_name);
     let namespace = namespace.trim().trim_matches('.');
     let needle = |name: &str| {
+        let suffix = format!(".{name}");
+        let namespaced_match = option_name.ends_with(&suffix)
+            && !option_name.starts_with("buf.validate.")
+            && !option_name.starts_with("validate.");
         if namespace.is_empty() {
-            // Match the bare name or a UDB-namespaced fully-qualified extension
-            // (`udb.core.common.v1.pg_table`). Do NOT match foreign annotations
-            // that merely end in `.table`/`.column` (e.g. `buf.validate.table`).
-            option_name == name
-                || (option_name.starts_with("udb.") && option_name.ends_with(&format!(".{name}")))
+            // Match the bare name and UDB-style project-owned extension
+            // namespaces (`udb.core.common.v1.pg_table`,
+            // `acme.platform.udb.v9.table`, legacy `db.table`, etc.). Keep
+            // known validation namespaces out so unrelated `.table`/`.column`
+            // annotations are not promoted to database metadata.
+            option_name == name || namespaced_match
         } else {
             option_name == format!("{namespace}.{name}")
         }
@@ -74,6 +672,42 @@ pub(super) fn option_kind(option_name: &str, namespace: &str) -> Option<OptionKi
         Some(OptionKind::Storage)
     } else if needle("object_store") || needle("blob_store") {
         Some(OptionKind::ObjectStore)
+    } else if matches!(
+        option_name.as_str(),
+        "pii"
+            | "encrypted_security"
+            | "log_masked"
+            | "log_redacted"
+            | "sensitive"
+            | "requires_consent"
+            | "data_purpose"
+            | "retention_days"
+            | "tokenized"
+            | "security_classification"
+            | "data_category"
+    ) || (option_name.starts_with("udb.core.common.v1.")
+        && matches!(
+            option_name
+                .strip_prefix("udb.core.common.v1.")
+                .unwrap_or_default(),
+            "pii"
+                | "encrypted_security"
+                | "log_masked"
+                | "log_redacted"
+                | "sensitive"
+                | "requires_consent"
+                | "data_purpose"
+                | "retention_days"
+                | "tokenized"
+                | "security_classification"
+                | "data_category"
+        ))
+    {
+        Some(OptionKind::FieldSecurityScalar)
+    } else if needle("db_table_security") || needle("table_security") {
+        Some(OptionKind::TableSecurity)
+    } else if needle("db_column_security") || needle("column_security") {
+        Some(OptionKind::ColumnSecurity)
     } else if needle("security") {
         Some(OptionKind::Security)
     } else if needle("model_registry") {
@@ -96,6 +730,24 @@ fn normalize_option_name(option_name: &str) -> String {
         .trim_end_matches(')')
         .trim_start_matches('.')
         .to_string()
+}
+
+pub(super) fn is_numeric_annotation_key(key: &str) -> bool {
+    let key = key.trim().to_ascii_lowercase();
+    matches!(
+        key.as_str(),
+        "dimension"
+            | "hnsw_ef_construction"
+            | "hnsw_m"
+            | "migration_order"
+            | "partition_premake"
+            | "partition_retention_months"
+            | "presigned_ttl_seconds"
+            | "replica_count"
+            | "retention_days"
+            | "shard_count"
+            | "ttl_seconds"
+    )
 }
 
 /// Declarative scalar-option applier.
@@ -121,6 +773,28 @@ macro_rules! apply_scalar_options {
             }
         }
     };
+}
+
+pub(super) fn apply_table_security_values(
+    schema: &mut ProtoSchema,
+    values: &HashMap<String, Vec<OptionValue>>,
+) {
+    apply_scalar_options!(schema, values, value => {
+        "tenant_isolation_mode" => schema.table_security.tenant_isolation_mode = normalize_enum(&value).to_ascii_lowercase(),
+        "project_isolation_mode" => schema.table_security.project_isolation_mode = normalize_enum(&value).to_ascii_lowercase(),
+        "tenant_column" => schema.table_security.tenant_column = to_snake_case(&value),
+        "project_column" => schema.table_security.project_column = to_snake_case(&value),
+        "rls_policy_template" => schema.table_security.rls_policy_template = value.trim().to_string(),
+        "soft_delete_mode" => schema.table_security.soft_delete_mode = normalize_enum(&value).to_ascii_lowercase(),
+        "retention_class" => schema.table_security.retention_class = normalize_enum(&value).to_ascii_lowercase(),
+        "retention_days" => schema.table_security.retention_days = parse_i32(&value),
+        "audit_mode" => schema.table_security.audit_mode = normalize_enum(&value).to_ascii_lowercase(),
+        "encryption_profile" => schema.table_security.encryption_profile = value.trim().to_string(),
+        "pii_profile" => schema.table_security.pii_profile = value.trim().to_string(),
+        "break_glass_visible" => schema.table_security.break_glass_visible = parse_bool(&value),
+        "export_eligible" => schema.table_security.export_eligible = parse_bool(&value),
+        "data_residency_policy_ref" => schema.table_security.data_residency_policy_ref = value.trim().to_string(),
+    });
 }
 
 pub(super) fn apply_table_values(
@@ -419,6 +1093,99 @@ pub(super) fn apply_column_security_values(
         "data_class" => security.data_class = normalize_enum(&value),
         "consent_required" => security.consent_required = parse_bool(&value),
         "retention_days" => security.retention_days = parse_i32(&value),
+    });
+}
+
+pub(super) fn apply_column_security_scalar_option(
+    security: &mut ProtoColumnSecurity,
+    option_name: &str,
+    value: &str,
+) {
+    let option_name = normalize_option_name(option_name);
+    let key = option_name
+        .strip_prefix("udb.core.common.v1.")
+        .unwrap_or(option_name.as_str());
+    match key {
+        "pii" => {
+            security.is_pii = parse_bool(value);
+            if security.is_pii && security.data_class.trim().is_empty() {
+                security.data_class = "PERSONAL".to_string();
+            }
+        }
+        "encrypted_security" => security.is_encrypted = parse_bool(value),
+        "log_masked" | "log_redacted" => security.mask_in_logs = parse_bool(value),
+        "sensitive" => {
+            if parse_bool(value) {
+                security.mask_in_logs = true;
+                if security.data_class.trim().is_empty() {
+                    security.data_class = "SENSITIVE".to_string();
+                }
+            }
+        }
+        "requires_consent" => security.consent_required = parse_bool(value),
+        "retention_days" => security.retention_days = parse_i32(value),
+        "tokenized" => security.is_blind_index = parse_bool(value),
+        "security_classification" | "data_category" => security.data_class = normalize_enum(value),
+        "data_purpose" => {
+            if security.data_class.trim().is_empty() && !value.trim().is_empty() {
+                security.data_class = "PURPOSE_LIMITED".to_string();
+            }
+        }
+        _ => {}
+    }
+}
+
+pub(super) fn apply_db_column_security_values(
+    security: &mut ProtoColumnSecurity,
+    values: &HashMap<String, Vec<OptionValue>>,
+) {
+    apply_scalar_options!(security, values, value => {
+        "secret_classification" => {
+            let normalized = normalize_enum(&value)
+                .trim_start_matches("SECRET_CLASSIFICATION_")
+                .to_string();
+            if !normalized.is_empty() && normalized != "UNSPECIFIED" {
+                security.data_class = normalized;
+            }
+        },
+        "output_view" => {
+            let normalized = normalize_enum(&value);
+            if matches!(
+                normalized.as_str(),
+                "OUTPUT_VIEW_STORAGE_ONLY" | "OUTPUT_VIEW_NEVER"
+            ) {
+                security.mask_in_logs = true;
+            }
+        },
+        "redaction_strategy" => {
+            let normalized = normalize_enum(&value);
+            if !matches!(
+                normalized.as_str(),
+                "" | "REDACTION_STRATEGY_UNSPECIFIED" | "REDACTION_STRATEGY_NONE"
+            ) {
+                security.mask_in_logs = true;
+            }
+        },
+        "tokenization_strategy" => {
+            if !value.trim().is_empty() {
+                security.is_blind_index = true;
+            }
+        },
+        "hashing_strategy" | "hashing_algorithm" => {
+            if !value.trim().is_empty() {
+                security.is_blind_index = true;
+            }
+        },
+        "encryption_key_class" => {
+            if !value.trim().is_empty() {
+                security.is_encrypted = true;
+            }
+        },
+        "searchable_encrypted" => {
+            let enabled = parse_bool(&value);
+            security.is_encrypted |= enabled;
+            security.is_blind_index |= enabled;
+        },
     });
 }
 

@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package udb.core.authz.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/authz/entity/v1/governance_enums.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authz.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
+option java_package = "com.udb.core.authz.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Entity\\V1";
+
+// An immutable, numbered version of a policy set. A `PolicyDraft` that passes
+// review is promoted into a `PolicyVersion` whose frozen `payload_json`
+// (policies + role bindings + relationship tuples) is what
+// `ActivatePolicyVersion` loads into the live authorization snapshot. Drafts
+// remain editable; versions never change once created — they only transition
+// state (draft -> pending_review -> approved -> active -> superseded /
+// rejected / rolled_back). `revision` provides optimistic concurrency over the
+// version's state transitions; `content_hash` detects no-op promotions.
+message PolicyVersion {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "policy_versions"
+    schema_name: "udb_authz"
+    migration_order: 43
+    is_table: true
+    comment: "Immutable, numbered, reviewable policy documents promoted from drafts"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    indexes: {
+      index_name: "uq_policy_versions_set_number"
+      index_type: "BTREE"
+      unique: true
+      columns: "policy_set_id"
+      columns: "version_number"
+    }
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "authz.governance"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string policy_version_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "policy_version_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  string policy_set_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "policy_set_id" sql_type: "UUID" not_null: true comment: "FK to policy_sets.policy_set_id" foreign_key: { references_table: "policy_sets" references_column: "policy_set_id" references_schema: "udb_authz" on_delete: REFERENTIAL_ACTION_CASCADE constraint_name: "fk_policy_versions_set" } index: { index_name: "idx_policy_versions_set" index_type: "BTREE" } }];
+  int64 version_number = 3 [(udb.core.common.v1.pg_column) = { column_name: "version_number" sql_type: "BIGINT" not_null: true default_value: "1" comment: "Monotonic per policy set" }];
+  PolicyVersionState state = 4 [(udb.core.common.v1.pg_column) = { column_name: "state" sql_type: "VARCHAR(40)" not_null: true default_value: "'POLICY_VERSION_STATE_DRAFT'" index: { index_name: "idx_policy_versions_state" index_type: "BTREE" } }];
+  string snapshot_hash = 5 [(udb.core.common.v1.pg_column) = { column_name: "snapshot_hash" sql_type: "VARCHAR(80)" comment: "Authz snapshot version this version was branched from" }];
+  string created_by = 6 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "VARCHAR(160)" not_null: true default_value: "''" }];
+  google.protobuf.Timestamp created_at = 7 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  string activated_by = 8 [(udb.core.common.v1.pg_column) = { column_name: "activated_by" sql_type: "VARCHAR(160)" comment: "Actor that activated this version" }];
+  google.protobuf.Timestamp activated_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "activated_at" sql_type: "TIMESTAMPTZ" }];
+  string rollback_of = 10 [(udb.core.common.v1.pg_column) = { column_name: "rollback_of" sql_type: "UUID" comment: "When this version was produced by a rollback, the version it restored" }];
+  string change_reason = 11 [(udb.core.common.v1.pg_column) = { column_name: "change_reason" sql_type: "TEXT" }];
+  int64 revision = 12 [(udb.core.common.v1.pg_column) = { column_name: "revision" sql_type: "BIGINT" not_null: true default_value: "1" comment: "Optimistic-concurrency token for state transitions" }];
+  string content_hash = 13 [(udb.core.common.v1.pg_column) = { column_name: "content_hash" sql_type: "VARCHAR(80)" not_null: true default_value: "''" comment: "Content hash of payload_json for no-op detection" }];
+  string tenant_id = 14 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policy_versions_tenant" index_type: "BTREE" } }];
+  string project_id = 15 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" not_null: true default_value: "''" }];
+  // Frozen candidate document: { "policies": [...], "role_bindings": [...], "relationship_tuples": [...] }.
+  string payload_json = 16 [(udb.core.common.v1.pg_column) = { column_name: "payload_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Frozen candidate policy document for this version" }];
+  bool high_risk = 17 [(udb.core.common.v1.pg_column) = { column_name: "high_risk" sql_type: "BOOLEAN" not_null: true default_value: "false" comment: "Marks changes that require separation-of-duties approval" }];
+  string submitted_by = 18 [(udb.core.common.v1.pg_column) = { column_name: "submitted_by" sql_type: "VARCHAR(160)" comment: "Actor that submitted the version for review" }];
+  // The PolicyDraft this version was promoted from, if any.
+  string source_draft_id = 19 [(udb.core.common.v1.pg_column) = { column_name: "source_draft_id" sql_type: "UUID" comment: "PolicyDraft promoted into this version" index: { index_name: "idx_policy_versions_source_draft" index_type: "BTREE" } }];
+}

@@ -45,6 +45,33 @@ async fn insert_outbox_envelope(
     .expect("insert live CDC outbox event");
 }
 
+async fn insert_cdc_journal_envelope(
+    pool: &sqlx::PgPool,
+    event_id: Uuid,
+    topic: &str,
+    partition_key: &str,
+    payload: serde_json::Value,
+) {
+    sqlx::query(
+        "INSERT INTO udb_system.udb_cdc_event_journal \
+         (event_id, topic, partition_key, payload, published_at, delivery_state) \
+         VALUES ($1, $2, $3, $4::JSONB, NOW(), 'published') \
+         ON CONFLICT (event_id) DO UPDATE SET \
+           topic = EXCLUDED.topic, \
+           partition_key = EXCLUDED.partition_key, \
+           payload = EXCLUDED.payload, \
+           published_at = EXCLUDED.published_at, \
+           delivery_state = EXCLUDED.delivery_state",
+    )
+    .bind(event_id)
+    .bind(topic)
+    .bind(partition_key)
+    .bind(payload)
+    .execute(pool)
+    .await
+    .expect("insert live CDC journal event");
+}
+
 async fn dlq_record(pool: &sqlx::PgPool, event_id: Uuid) -> (String, String, serde_json::Value) {
     sqlx::query_as(
         "SELECT error_type, error_message, payload FROM udb_system.udb_cdc_dlq_events \
@@ -254,7 +281,7 @@ async fn live_cdc_stream_replay_filters_by_scope_topic_and_anchor() {
     .expect("build CDC engine");
 
     let denied = match engine
-        .stream_cdc(Vec::new(), "udb.authn.*".to_string(), None)
+        .stream_cdc(Vec::new(), "udb.authn.*".to_string(), None, None, None)
         .await
     {
         Ok(_) => panic!("missing CDC scope should be denied"),
@@ -265,7 +292,7 @@ async fn live_cdc_stream_replay_filters_by_scope_topic_and_anchor() {
     let anchor_id = Uuid::new_v4();
     let replay_id = Uuid::new_v4();
     let skipped_id = Uuid::new_v4();
-    insert_outbox_envelope(
+    insert_cdc_journal_envelope(
         &pool,
         anchor_id,
         "udb.authn.anchor.v1",
@@ -273,6 +300,7 @@ async fn live_cdc_stream_replay_filters_by_scope_topic_and_anchor() {
         serde_json::json!({
             "event_id": anchor_id.to_string(),
             "event_type": "udb.authn.anchor.v1",
+            "tenant_id": "tenant-a",
             "correlation_id": "cdc-replay-anchor",
             "timestamp": chrono::Utc::now().to_rfc3339(),
             "payload": {}
@@ -280,7 +308,7 @@ async fn live_cdc_stream_replay_filters_by_scope_topic_and_anchor() {
     )
     .await;
     tokio::time::sleep(Duration::from_millis(5)).await;
-    insert_outbox_envelope(
+    insert_cdc_journal_envelope(
         &pool,
         skipped_id,
         "udb.notification.sent.v1",
@@ -288,13 +316,14 @@ async fn live_cdc_stream_replay_filters_by_scope_topic_and_anchor() {
         serde_json::json!({
             "event_id": skipped_id.to_string(),
             "event_type": "udb.notification.sent.v1",
+            "tenant_id": "tenant-b",
             "correlation_id": "cdc-replay-skip",
             "timestamp": chrono::Utc::now().to_rfc3339(),
             "payload": {}
         }),
     )
     .await;
-    insert_outbox_envelope(
+    insert_cdc_journal_envelope(
         &pool,
         replay_id,
         "udb.authn.user.registered.v1",
@@ -302,6 +331,7 @@ async fn live_cdc_stream_replay_filters_by_scope_topic_and_anchor() {
         serde_json::json!({
             "event_id": replay_id.to_string(),
             "event_type": "udb.authn.user.registered.v1",
+            "tenant_id": "tenant-a",
             "correlation_id": "cdc-replay-hit",
             "timestamp": chrono::Utc::now().to_rfc3339(),
             "payload": {"user_id": "replay"}
@@ -314,6 +344,8 @@ async fn live_cdc_stream_replay_filters_by_scope_topic_and_anchor() {
             vec!["udb:cdc:read".to_string()],
             "udb.authn.*".to_string(),
             Some(anchor_id.to_string()),
+            Some("tenant-a".to_string()),
+            None,
         )
         .await
         .expect("authorized CDC replay stream");

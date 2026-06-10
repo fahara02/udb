@@ -19,8 +19,7 @@
 //! with `field_name` / `column_name` either-or matching.
 
 use crate::backend::BackendKind;
-use crate::generation::ManifestTable;
-use crate::ir::filter::{ComparisonOp, LogicalFilter};
+use crate::ir::filter::ComparisonOp;
 use crate::ir::operations::{
     ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead, LogicalResourceOp,
     LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
@@ -36,9 +35,6 @@ use super::{CompileContext, CompileError, CompiledRendering, Compiler};
 struct Mysql;
 
 impl SqlDialect for Mysql {
-    fn backend() -> BackendKind {
-        BackendKind::Mysql
-    }
     fn quote(ident: &str) -> String {
         format!("`{ident}`")
     }

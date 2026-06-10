@@ -35,6 +35,7 @@ private static final long serialVersionUID = 0L;
     privilegesJson_ = com.google.protobuf.ByteString.EMPTY;
     probesJson_ = com.google.protobuf.ByteString.EMPTY;
     backendInstances_ = java.util.Collections.emptyList();
+    nativeServices_ = java.util.Collections.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -255,6 +256,47 @@ private static final long serialVersionUID = 0L;
     return backendInstances_.get(index);
   }
 
+  public static final int NATIVE_SERVICES_FIELD_NUMBER = 11;
+  @SuppressWarnings("serial")
+  private java.util.List<com.udb.entity.v1.NativeServiceStatus> nativeServices_;
+  /**
+   * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<com.udb.entity.v1.NativeServiceStatus> getNativeServicesList() {
+    return nativeServices_;
+  }
+  /**
+   * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends com.udb.entity.v1.NativeServiceStatusOrBuilder> 
+      getNativeServicesOrBuilderList() {
+    return nativeServices_;
+  }
+  /**
+   * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+   */
+  @java.lang.Override
+  public int getNativeServicesCount() {
+    return nativeServices_.size();
+  }
+  /**
+   * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.NativeServiceStatus getNativeServices(int index) {
+    return nativeServices_.get(index);
+  }
+  /**
+   * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.NativeServiceStatusOrBuilder getNativeServicesOrBuilder(
+      int index) {
+    return nativeServices_.get(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -298,6 +340,9 @@ private static final long serialVersionUID = 0L;
     }
     for (int i = 0; i < backendInstances_.size(); i++) {
       output.writeMessage(10, backendInstances_.get(i));
+    }
+    for (int i = 0; i < nativeServices_.size(); i++) {
+      output.writeMessage(11, nativeServices_.get(i));
     }
     getUnknownFields().writeTo(output);
   }
@@ -356,6 +401,15 @@ private static final long serialVersionUID = 0L;
           }
           size += 1 * count;
         }
+
+        {
+          final int count = nativeServices_.size();
+          for (int i = 0; i < count; i++) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeMessageSizeNoTag(nativeServices_.get(i));
+          }
+          size += 1 * count;
+        }
     return size;
   }
   @java.lang.Override
@@ -400,6 +454,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getProbesJson())) return false;
     if (!getBackendInstancesList()
         .equals(other.getBackendInstancesList())) return false;
+    if (!getNativeServicesList()
+        .equals(other.getNativeServicesList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -441,6 +497,10 @@ private static final long serialVersionUID = 0L;
     if (getBackendInstancesCount() > 0) {
       hash = (37 * hash) + BACKEND_INSTANCES_FIELD_NUMBER;
       hash = (53 * hash) + getBackendInstancesList().hashCode();
+    }
+    if (getNativeServicesCount() > 0) {
+      hash = (37 * hash) + NATIVE_SERVICES_FIELD_NUMBER;
+      hash = (53 * hash) + getNativeServicesList().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -591,6 +651,13 @@ private static final long serialVersionUID = 0L;
         backendInstancesBuilder_.clear();
       }
       bitField0_ = (bitField0_ & ~0x00000200);
+      if (nativeServicesBuilder_ == null) {
+        nativeServices_ = java.util.Collections.emptyList();
+      } else {
+        nativeServices_ = null;
+        nativeServicesBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00000400);
       return this;
     }
 
@@ -632,6 +699,15 @@ private static final long serialVersionUID = 0L;
         result.backendInstances_ = backendInstances_;
       } else {
         result.backendInstances_ = backendInstancesBuilder_.build();
+      }
+      if (nativeServicesBuilder_ == null) {
+        if (((bitField0_ & 0x00000400) != 0)) {
+          nativeServices_ = java.util.Collections.unmodifiableList(nativeServices_);
+          bitField0_ = (bitField0_ & ~0x00000400);
+        }
+        result.nativeServices_ = nativeServices_;
+      } else {
+        result.nativeServices_ = nativeServicesBuilder_.build();
       }
     }
 
@@ -747,6 +823,32 @@ private static final long serialVersionUID = 0L;
           }
         }
       }
+      if (nativeServicesBuilder_ == null) {
+        if (!other.nativeServices_.isEmpty()) {
+          if (nativeServices_.isEmpty()) {
+            nativeServices_ = other.nativeServices_;
+            bitField0_ = (bitField0_ & ~0x00000400);
+          } else {
+            ensureNativeServicesIsMutable();
+            nativeServices_.addAll(other.nativeServices_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.nativeServices_.isEmpty()) {
+          if (nativeServicesBuilder_.isEmpty()) {
+            nativeServicesBuilder_.dispose();
+            nativeServicesBuilder_ = null;
+            nativeServices_ = other.nativeServices_;
+            bitField0_ = (bitField0_ & ~0x00000400);
+            nativeServicesBuilder_ = 
+              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                 internalGetNativeServicesFieldBuilder() : null;
+          } else {
+            nativeServicesBuilder_.addAllMessages(other.nativeServices_);
+          }
+        }
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -831,6 +933,19 @@ private static final long serialVersionUID = 0L;
               }
               break;
             } // case 82
+            case 90: {
+              com.udb.entity.v1.NativeServiceStatus m =
+                  input.readMessage(
+                      com.udb.entity.v1.NativeServiceStatus.parser(),
+                      extensionRegistry);
+              if (nativeServicesBuilder_ == null) {
+                ensureNativeServicesIsMutable();
+                nativeServices_.add(m);
+              } else {
+                nativeServicesBuilder_.addMessage(m);
+              }
+              break;
+            } // case 90
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1556,6 +1671,246 @@ private static final long serialVersionUID = 0L;
         backendInstances_ = null;
       }
       return backendInstancesBuilder_;
+    }
+
+    private java.util.List<com.udb.entity.v1.NativeServiceStatus> nativeServices_ =
+      java.util.Collections.emptyList();
+    private void ensureNativeServicesIsMutable() {
+      if (!((bitField0_ & 0x00000400) != 0)) {
+        nativeServices_ = new java.util.ArrayList<com.udb.entity.v1.NativeServiceStatus>(nativeServices_);
+        bitField0_ |= 0x00000400;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.entity.v1.NativeServiceStatus, com.udb.entity.v1.NativeServiceStatus.Builder, com.udb.entity.v1.NativeServiceStatusOrBuilder> nativeServicesBuilder_;
+
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public java.util.List<com.udb.entity.v1.NativeServiceStatus> getNativeServicesList() {
+      if (nativeServicesBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(nativeServices_);
+      } else {
+        return nativeServicesBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public int getNativeServicesCount() {
+      if (nativeServicesBuilder_ == null) {
+        return nativeServices_.size();
+      } else {
+        return nativeServicesBuilder_.getCount();
+      }
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public com.udb.entity.v1.NativeServiceStatus getNativeServices(int index) {
+      if (nativeServicesBuilder_ == null) {
+        return nativeServices_.get(index);
+      } else {
+        return nativeServicesBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public Builder setNativeServices(
+        int index, com.udb.entity.v1.NativeServiceStatus value) {
+      if (nativeServicesBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureNativeServicesIsMutable();
+        nativeServices_.set(index, value);
+        onChanged();
+      } else {
+        nativeServicesBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public Builder setNativeServices(
+        int index, com.udb.entity.v1.NativeServiceStatus.Builder builderForValue) {
+      if (nativeServicesBuilder_ == null) {
+        ensureNativeServicesIsMutable();
+        nativeServices_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        nativeServicesBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public Builder addNativeServices(com.udb.entity.v1.NativeServiceStatus value) {
+      if (nativeServicesBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureNativeServicesIsMutable();
+        nativeServices_.add(value);
+        onChanged();
+      } else {
+        nativeServicesBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public Builder addNativeServices(
+        int index, com.udb.entity.v1.NativeServiceStatus value) {
+      if (nativeServicesBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureNativeServicesIsMutable();
+        nativeServices_.add(index, value);
+        onChanged();
+      } else {
+        nativeServicesBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public Builder addNativeServices(
+        com.udb.entity.v1.NativeServiceStatus.Builder builderForValue) {
+      if (nativeServicesBuilder_ == null) {
+        ensureNativeServicesIsMutable();
+        nativeServices_.add(builderForValue.build());
+        onChanged();
+      } else {
+        nativeServicesBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public Builder addNativeServices(
+        int index, com.udb.entity.v1.NativeServiceStatus.Builder builderForValue) {
+      if (nativeServicesBuilder_ == null) {
+        ensureNativeServicesIsMutable();
+        nativeServices_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        nativeServicesBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public Builder addAllNativeServices(
+        java.lang.Iterable<? extends com.udb.entity.v1.NativeServiceStatus> values) {
+      if (nativeServicesBuilder_ == null) {
+        ensureNativeServicesIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, nativeServices_);
+        onChanged();
+      } else {
+        nativeServicesBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public Builder clearNativeServices() {
+      if (nativeServicesBuilder_ == null) {
+        nativeServices_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000400);
+        onChanged();
+      } else {
+        nativeServicesBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public Builder removeNativeServices(int index) {
+      if (nativeServicesBuilder_ == null) {
+        ensureNativeServicesIsMutable();
+        nativeServices_.remove(index);
+        onChanged();
+      } else {
+        nativeServicesBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public com.udb.entity.v1.NativeServiceStatus.Builder getNativeServicesBuilder(
+        int index) {
+      return internalGetNativeServicesFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public com.udb.entity.v1.NativeServiceStatusOrBuilder getNativeServicesOrBuilder(
+        int index) {
+      if (nativeServicesBuilder_ == null) {
+        return nativeServices_.get(index);  } else {
+        return nativeServicesBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public java.util.List<? extends com.udb.entity.v1.NativeServiceStatusOrBuilder> 
+         getNativeServicesOrBuilderList() {
+      if (nativeServicesBuilder_ != null) {
+        return nativeServicesBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(nativeServices_);
+      }
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public com.udb.entity.v1.NativeServiceStatus.Builder addNativeServicesBuilder() {
+      return internalGetNativeServicesFieldBuilder().addBuilder(
+          com.udb.entity.v1.NativeServiceStatus.getDefaultInstance());
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public com.udb.entity.v1.NativeServiceStatus.Builder addNativeServicesBuilder(
+        int index) {
+      return internalGetNativeServicesFieldBuilder().addBuilder(
+          index, com.udb.entity.v1.NativeServiceStatus.getDefaultInstance());
+    }
+    /**
+     * <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    public java.util.List<com.udb.entity.v1.NativeServiceStatus.Builder> 
+         getNativeServicesBuilderList() {
+      return internalGetNativeServicesFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.entity.v1.NativeServiceStatus, com.udb.entity.v1.NativeServiceStatus.Builder, com.udb.entity.v1.NativeServiceStatusOrBuilder> 
+        internalGetNativeServicesFieldBuilder() {
+      if (nativeServicesBuilder_ == null) {
+        nativeServicesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+            com.udb.entity.v1.NativeServiceStatus, com.udb.entity.v1.NativeServiceStatus.Builder, com.udb.entity.v1.NativeServiceStatusOrBuilder>(
+                nativeServices_,
+                ((bitField0_ & 0x00000400) != 0),
+                getParentForChildren(),
+                isClean());
+        nativeServices_ = null;
+      }
+      return nativeServicesBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.HealthReportResponse)

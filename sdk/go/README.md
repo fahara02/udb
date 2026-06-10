@@ -1,5 +1,16 @@
 # UDB Go SDK
 
+<!-- UDB_BRAND_HEADER_START -->
+<p align="center">
+  <img src="../../docs/assets/udb_logo.svg" alt="UDB logo" width="96">
+</p>
+
+<p align="center">
+  <strong>UDB :: Universal Data Broker</strong><br>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.2 | protocol v1.0.0</sub>
+</p>
+<!-- UDB_BRAND_HEADER_END -->
+
 The Go SDK gives Go services a small client for a running UDB broker. It attaches
 UDB metadata for you, exposes DataBroker and auth helpers, and includes a
 version-matched CLI launcher.
@@ -7,13 +18,13 @@ version-matched CLI launcher.
 ## Install
 
 ```bash
-go get github.com/fahara02/udb/sdk/go@v0.3.1
+go get github.com/fahara02/udb/sdk/go@v0.3.2
 ```
 
 Install the `udb` CLI launcher:
 
 ```bash
-go install github.com/fahara02/udb/sdk/go/cmd/udb@v0.3.1
+go install github.com/fahara02/udb/sdk/go/cmd/udb@v0.3.2
 ```
 
 The launcher finds or downloads the matching UDB release binary, then forwards
@@ -24,7 +35,7 @@ all arguments to it.
 From your application repo:
 
 ```bash
-udb proto export
+udb proto export --fmt
 ```
 
 Now your app protos can import UDB annotations:
@@ -32,6 +43,9 @@ Now your app protos can import UDB annotations:
 ```proto
 import "udb/core/common/v1/db.proto";
 ```
+
+Run `udb proto fmt` after export or edits to keep long UDB field annotations on
+one line for easier review.
 
 ## Connect And Query
 

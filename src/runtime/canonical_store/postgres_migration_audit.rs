@@ -2,7 +2,7 @@
 //!
 //! Schema mirrors the existing `runtime/system.rs` DDL: UUID PK on
 //! `udb_migration_runs`, BIGSERIAL on `udb_migration_op_ledger`,
-//! JSONB rollback, ON DELETE CASCADE FK, plus the existing indexes
+//! JSONB payload, ON DELETE CASCADE FK, plus the existing indexes
 //! `(project_id, state, started_at DESC)` and `(run_id, operation_index)`.
 //!
 //! SQL is byte-equivalent to what `PostgresMigrationAuditSink`
@@ -95,8 +95,8 @@ fn row_to_op(row: sqlx::postgres::PgRow) -> SystemStoreResult<MigrationOpRow> {
         resource_uri: row.try_get("resource_uri").unwrap_or_default(),
         operation_kind: row.try_get("operation_kind").unwrap_or_default(),
         status,
-        rollback_json: row
-            .try_get("rollback_json")
+        payload_json: row
+            .try_get("payload_json")
             .unwrap_or(serde_json::Value::Object(Default::default())),
         error: row.try_get("error").unwrap_or_default(),
         applied_at: row
@@ -125,6 +125,25 @@ impl MigrationAuditStore for PostgresCanonicalStore {
                 .await
                 .map_err(|e| SystemStoreError::query("postgres", sql.clone(), e))?;
         }
+        let payload_col = format!(
+            "ALTER TABLE {ledger_rel}
+             ADD COLUMN IF NOT EXISTS payload_json JSONB NOT NULL DEFAULT '{{}}'::JSONB"
+        );
+        sqlx::query(&payload_col)
+            .execute(self.pg_pool())
+            .await
+            .map_err(|e| SystemStoreError::query("postgres", payload_col.clone(), e))?;
+        let backfill = format!(
+            "UPDATE {ledger_rel}
+             SET payload_json = rollback_json
+             WHERE payload_json = '{{}}'::JSONB
+               AND rollback_json IS NOT NULL
+               AND rollback_json <> '{{}}'::JSONB"
+        );
+        sqlx::query(&backfill)
+            .execute(self.pg_pool())
+            .await
+            .map_err(|e| SystemStoreError::query("postgres", backfill.clone(), e))?;
         Ok(())
     }
 
@@ -156,7 +175,7 @@ impl MigrationAuditStore for PostgresCanonicalStore {
         let sql = format!(
             r#"INSERT INTO {rel} (
                 run_id, operation_index, backend, resource_uri,
-                operation_kind, status, rollback_json, error, applied_at
+                operation_kind, status, payload_json, error, applied_at
             ) VALUES (
                 $1::UUID, $2, $3, $4, $5, $6, $7::jsonb, $8,
                 CASE WHEN $6 = 'APPLIED' THEN NOW() ELSE NULL END
@@ -170,7 +189,7 @@ impl MigrationAuditStore for PostgresCanonicalStore {
             .bind(&op.resource_uri)
             .bind(&op.operation_kind)
             .bind(op.status.as_str())
-            .bind(op.rollback_json.to_string())
+            .bind(op.payload_json.to_string())
             .bind(&op.error)
             .fetch_one(self.pg_pool())
             .await
@@ -229,7 +248,7 @@ impl MigrationAuditStore for PostgresCanonicalStore {
         let rel = self.ledger_rel();
         let sql = format!(
             r#"SELECT id, run_id, operation_index, backend, resource_uri,
-                      operation_kind, status, rollback_json, error, applied_at
+                      operation_kind, status, payload_json, error, applied_at
                FROM {rel}
                WHERE run_id = $1
                ORDER BY operation_index ASC"#

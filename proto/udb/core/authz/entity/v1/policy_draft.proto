@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package udb.core.authz.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authz.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
+option java_package = "com.udb.core.authz.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Entity\\V1";
+
+// An editable, in-progress policy change set under review (Phase K draft/approval
+// workflow). Holds the proposed policies/tuples as JSON; when approved it is
+// promoted into an immutable numbered PolicyVersion. Drafts never affect live
+// decisions.
+//
+// ⚠️ CROSS-SESSION: field set reconstructed to EXACTLY match the governance
+// session's `governance_store.rs::load_draft` struct literal (the source of
+// truth). The governance-session owner should still confirm this is their
+// intended schema / restore their canonical file.
+message PolicyDraft {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "policy_drafts"
+    schema_name: "udb_authz"
+    migration_order: 31
+    is_table: true
+    comment: "Editable draft policy change sets pending review/approval"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    indexes: {
+      index_name: "idx_policy_drafts_tenant_status"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "status"
+    }
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "authz.governance"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string draft_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "draft_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policy_drafts_tenant" index_type: "BTREE" } }];
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" comment: "Optional project boundary" }];
+  string title = 4 [(udb.core.common.v1.pg_column) = { column_name: "title" sql_type: "VARCHAR(200)" not_null: true default_value: "''" }];
+  string description = 5 [(udb.core.common.v1.pg_column) = { column_name: "description" sql_type: "VARCHAR(1000)" comment: "Human description of the proposed change" }];
+  string proposed_policies_json = 6 [(udb.core.common.v1.pg_column) = { column_name: "proposed_policies_json" sql_type: "TEXT" not_null: true default_value: "'[]'" comment: "Candidate policy rules for this draft" }];
+  string proposed_tuples_json = 7 [(udb.core.common.v1.pg_column) = { column_name: "proposed_tuples_json" sql_type: "TEXT" comment: "Candidate relationship tuples (optional)" }];
+  string base_version_id = 8 [(udb.core.common.v1.pg_column) = { column_name: "base_version_id" sql_type: "UUID" comment: "Active PolicyVersion this draft is diffed against" }];
+  string status = 9 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'OPEN'" comment: "OPEN/IN_REVIEW/APPROVED/REJECTED/MERGED/ABANDONED" }];
+  string author = 10 [(udb.core.common.v1.pg_column) = { column_name: "author" sql_type: "VARCHAR(160)" not_null: true default_value: "''" comment: "Draft creator (separation-of-duties vs approver)" }];
+  bool high_risk = 11 [(udb.core.common.v1.pg_column) = { column_name: "high_risk" sql_type: "BOOLEAN" not_null: true default_value: "false" comment: "Triggers separation-of-duties approval" }];
+  google.protobuf.Timestamp created_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  google.protobuf.Timestamp updated_at = 13 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" }];
+}

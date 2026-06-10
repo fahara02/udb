@@ -441,15 +441,10 @@ impl DataBrokerService {
 
         // ── Backend summary ───────────────────────────────────────────────────
         let init = self.runtime_snapshot().init_report().clone();
-        let transport_for_backend = |backend: &str| match backend {
-            "postgres" => "sqlx",
-            "redis" => "async-redis",
-            "qdrant" => "http",
-            "s3" | "minio" => "aws-sdk-s3",
-            "mongodb" => "atlas_data_api",
-            "neo4j" => "http",
-            "clickhouse" => "http",
-            _ => "unknown",
+        let transport_for_backend = |backend: &str| {
+            crate::backend::BackendKind::from_token(backend)
+                .map(|kind| self.runtime_snapshot().backend_transport_label(kind))
+                .unwrap_or("unknown")
         };
         let mut configured: Vec<BackendSummaryRow> = self
             .runtime_snapshot()
@@ -483,7 +478,7 @@ impl DataBrokerService {
                     "postgres".to_string(),
                     "postgres".to_string(),
                     init.postgres_configured,
-                    "sqlx".to_string(),
+                    transport_for_backend("postgres").to_string(),
                     "primary".to_string(),
                     "read_write".to_string(),
                     std::collections::HashMap::new(),
@@ -498,7 +493,7 @@ impl DataBrokerService {
                     "redis".to_string(),
                     "redis".to_string(),
                     init.redis_configured,
-                    "async-redis".to_string(),
+                    transport_for_backend("redis").to_string(),
                     "default".to_string(),
                     "read_write".to_string(),
                     std::collections::HashMap::new(),
@@ -513,7 +508,7 @@ impl DataBrokerService {
                     "qdrant".to_string(),
                     "qdrant".to_string(),
                     init.qdrant_configured,
-                    "http".to_string(),
+                    transport_for_backend("qdrant").to_string(),
                     "default".to_string(),
                     "read_write".to_string(),
                     std::collections::HashMap::new(),
@@ -528,7 +523,7 @@ impl DataBrokerService {
                     "s3".to_string(),
                     "s3".to_string(),
                     init.s3_configured,
-                    "aws-sdk-s3".to_string(),
+                    transport_for_backend("s3").to_string(),
                     "default".to_string(),
                     "read_write".to_string(),
                     std::collections::HashMap::new(),
@@ -543,7 +538,7 @@ impl DataBrokerService {
                     "mongodb".to_string(),
                     "mongodb".to_string(),
                     init.mongodb_configured,
-                    "atlas_data_api".to_string(),
+                    transport_for_backend("mongodb").to_string(),
                     "default".to_string(),
                     "read_write".to_string(),
                     std::collections::HashMap::new(),
@@ -558,7 +553,7 @@ impl DataBrokerService {
                     "neo4j".to_string(),
                     "neo4j".to_string(),
                     init.neo4j_configured,
-                    "http".to_string(),
+                    transport_for_backend("neo4j").to_string(),
                     "default".to_string(),
                     "read_write".to_string(),
                     std::collections::HashMap::new(),
@@ -573,7 +568,7 @@ impl DataBrokerService {
                     "clickhouse".to_string(),
                     "clickhouse".to_string(),
                     init.clickhouse_configured,
-                    "http".to_string(),
+                    transport_for_backend("clickhouse").to_string(),
                     "default".to_string(),
                     "read".to_string(),
                     std::collections::HashMap::new(),
@@ -603,19 +598,13 @@ impl DataBrokerService {
                 continue;
             }
             let kind = crate::planning::backend::BackendKind::from_store_kind("", &backend_name);
-            let cap = kind.map(|k| k.capabilities()).unwrap_or_default();
+            let cap = kind.as_ref().map(|k| k.capabilities()).unwrap_or_default();
 
             let (probe_ok, probe_latency_ms) = if req.with_probes {
-                let result: crate::runtime::core::BackendProbeResult = match backend_name.as_str() {
-                    "postgres" => self.runtime_snapshot().probe_postgres().await,
-                    #[cfg(feature = "redis")]
-                    "redis" => self.runtime_snapshot().probe_redis_ping().await,
-                    "qdrant" => self.runtime_snapshot().probe_qdrant_collections().await,
-                    #[cfg(feature = "s3")]
-                    "s3" | "minio" => self.runtime_snapshot().probe_s3_access().await,
-                    "mongodb" => self.runtime_snapshot().probe_mongodb_ping().await,
-                    "neo4j" => self.runtime_snapshot().probe_neo4j_ping().await,
-                    "clickhouse" => self.runtime_snapshot().probe_clickhouse_ping().await,
+                let result = match kind.as_ref() {
+                    Some(kind) if kind.has_runtime_probe() => {
+                        self.runtime_snapshot().probe_backend(kind.clone()).await
+                    }
                     _ => crate::runtime::core::BackendProbeResult {
                         backend: backend_name.to_string(),
                         ok: true,

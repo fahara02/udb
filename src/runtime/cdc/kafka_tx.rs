@@ -150,7 +150,18 @@ pub async fn run_in_transaction(
     payload: &str,
 ) -> Result<KafkaTxPublishOutcome, KafkaError> {
     producer.begin_transaction()?;
-    let record = FutureRecord::to(topic).key(partition_key).payload(payload);
+    // Phase 10: propagate the current trace into the transactional Kafka publish
+    // via a `traceparent` header (additive; omitted when no trace is in scope).
+    let traceparent = super::current_egress_traceparent();
+    let mut record = FutureRecord::to(topic).key(partition_key).payload(payload);
+    if let Some(tp) = traceparent.as_deref() {
+        record = record.headers(rdkafka::message::OwnedHeaders::new().insert(
+            rdkafka::message::Header {
+                key: "traceparent",
+                value: Some(tp),
+            },
+        ));
+    }
     // Await delivery before commit so the caller receives the partition/offset
     // that the outbox journal records after the transaction commits.
     let (partition, offset) = match producer.send(record, timeout).await {

@@ -3,20 +3,51 @@ use aes_gcm_siv::{Aes256GcmSiv, Nonce};
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use serde_json::Value as JsonValue;
+use std::fmt;
 use uuid::Uuid;
 
 use crate::runtime::config::EncryptionSettings;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(super) struct EncryptionRuntime {
     keys: Vec<EncryptionKey>,
     active_version: u8,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 struct EncryptionKey {
     version: u8,
     key: [u8; 32],
+}
+
+impl fmt::Debug for EncryptionRuntime {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("EncryptionRuntime")
+            .field("active_version", &self.active_version)
+            .field("keys", &RedactedKeyVersions(&self.keys))
+            .finish()
+    }
+}
+
+impl fmt::Debug for EncryptionKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("EncryptionKey")
+            .field("version", &self.version)
+            .field("key", &"[redacted]")
+            .finish()
+    }
+}
+
+struct RedactedKeyVersions<'a>(&'a [EncryptionKey]);
+
+impl fmt::Debug for RedactedKeyVersions<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let versions = self.0.iter().map(|key| key.version).collect::<Vec<_>>();
+        f.debug_struct("RedactedKeyVersions")
+            .field("versions", &versions)
+            .field("material", &"[redacted]")
+            .finish()
+    }
 }
 
 impl EncryptionRuntime {
@@ -313,5 +344,26 @@ mod tests {
             rotated_runtime.decrypt_json_value(&ciphertext).unwrap(),
             value
         );
+    }
+
+    #[test]
+    fn encryption_debug_redacts_key_material() {
+        let runtime = EncryptionRuntime {
+            active_version: 7,
+            keys: vec![EncryptionKey {
+                version: 7,
+                key: [7; 32],
+            }],
+        };
+
+        let runtime_debug = format!("{runtime:?}");
+        let key_debug = format!("{:?}", runtime.keys[0]);
+
+        assert!(runtime_debug.contains("active_version"));
+        assert!(runtime_debug.contains("7"));
+        assert!(runtime_debug.contains("[redacted]"));
+        assert!(key_debug.contains("[redacted]"));
+        assert!(!runtime_debug.contains("[7, 7"));
+        assert!(!key_debug.contains("[7, 7"));
     }
 }

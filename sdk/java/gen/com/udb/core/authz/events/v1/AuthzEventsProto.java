@@ -72,72 +72,96 @@ public final class AuthzEventsProto extends com.google.protobuf.GeneratedFile {
     java.lang.String[] descriptorData = {
       "\n+udb/core/authz/events/v1/authz_events." +
       "proto\022\030udb.core.authz.events.v1\032\037google/" +
-      "protobuf/timestamp.proto\"\370\002\n\021RoleAssigne" +
-      "dEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022 \n\014use" +
-      "r_role_id\030\002 \001(\tR\nuserRoleId\022\027\n\007user_id\030\003" +
-      " \001(\tR\006userId\022\027\n\007role_id\030\004 \001(\tR\006roleId\022\033\n" +
-      "\trole_code\030\005 \001(\tR\010roleCode\022\033\n\ttenant_id\030" +
-      "\006 \001(\tR\010tenantId\022\037\n\013assigned_by\030\007 \001(\tR\nas" +
-      "signedBy\022;\n\013occurred_at\030\010 \001(\0132\032.google.p" +
-      "rotobuf.TimestampR\noccurredAt\022\026\n\006domain\030" +
-      "\t \001(\tR\006domain\022\035\n\nproject_id\030\n \001(\tR\tproje" +
-      "ctId\022%\n\016access_surface\030\013 \001(\tR\raccessSurf" +
-      "ace\"\226\002\n\020RoleRevokedEvent\022\031\n\010event_id\030\001 \001" +
-      "(\tR\007eventId\022 \n\014user_role_id\030\002 \001(\tR\nuserR" +
-      "oleId\022\027\n\007user_id\030\003 \001(\tR\006userId\022\033\n\trole_c" +
-      "ode\030\004 \001(\tR\010roleCode\022\033\n\ttenant_id\030\005 \001(\tR\010" +
-      "tenantId\022\035\n\nrevoked_by\030\006 \001(\tR\trevokedBy\022" +
-      "\026\n\006reason\030\007 \001(\tR\006reason\022;\n\013occurred_at\030\010" +
-      " \001(\0132\032.google.protobuf.TimestampR\noccurr" +
-      "edAt\"\366\001\n\021AccessDeniedEvent\022\031\n\010event_id\030\001" +
-      " \001(\tR\007eventId\022\027\n\007user_id\030\002 \001(\tR\006userId\022\033" +
-      "\n\ttenant_id\030\003 \001(\tR\010tenantId\022\032\n\010resource\030" +
-      "\004 \001(\tR\010resource\022\026\n\006action\030\005 \001(\tR\006action\022" +
-      "\037\n\013deny_reason\030\006 \001(\tR\ndenyReason\022;\n\013occu" +
-      "rred_at\030\007 \001(\0132\032.google.protobuf.Timestam" +
-      "pR\noccurredAt\"\334\001\n\020RoleCreatedEvent\022\031\n\010ev" +
-      "ent_id\030\001 \001(\tR\007eventId\022\027\n\007role_id\030\002 \001(\tR\006" +
-      "roleId\022\033\n\trole_code\030\003 \001(\tR\010roleCode\022\033\n\tt" +
-      "enant_id\030\004 \001(\tR\010tenantId\022\035\n\ncreated_by\030\005" +
-      " \001(\tR\tcreatedBy\022;\n\013occurred_at\030\006 \001(\0132\032.g" +
-      "oogle.protobuf.TimestampR\noccurredAt\"\272\002\n" +
-      "\020RoleUpdatedEvent\022\031\n\010event_id\030\001 \001(\tR\007eve" +
-      "ntId\022\027\n\007role_id\030\002 \001(\tR\006roleId\022\033\n\trole_co" +
-      "de\030\003 \001(\tR\010roleCode\022\033\n\ttenant_id\030\004 \001(\tR\010t" +
-      "enantId\022\035\n\nupdated_by\030\005 \001(\tR\tupdatedBy\022+" +
-      "\n\021added_permissions\030\006 \003(\tR\020addedPermissi" +
-      "ons\022/\n\023removed_permissions\030\007 \003(\tR\022remove" +
-      "dPermissions\022;\n\013occurred_at\030\010 \001(\0132\032.goog" +
-      "le.protobuf.TimestampR\noccurredAt\"\257\002\n\020Ro" +
-      "leRemovedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventI" +
-      "d\022 \n\014user_role_id\030\002 \001(\tR\nuserRoleId\022\027\n\007u" +
-      "ser_id\030\003 \001(\tR\006userId\022\027\n\007role_id\030\004 \001(\tR\006r" +
-      "oleId\022\033\n\trole_code\030\005 \001(\tR\010roleCode\022\033\n\tte" +
-      "nant_id\030\006 \001(\tR\010tenantId\022\035\n\nremoved_by\030\007 " +
-      "\001(\tR\tremovedBy\022\026\n\006reason\030\010 \001(\tR\006reason\022;" +
-      "\n\013occurred_at\030\t \001(\0132\032.google.protobuf.Ti" +
-      "mestampR\noccurredAt\"\364\002\n\031AccessSurfaceUpd" +
-      "atedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022!\n\014" +
-      "principal_id\030\002 \001(\tR\013principalId\022,\n\022old_a" +
-      "ccess_surface\030\003 \001(\tR\020oldAccessSurface\022,\n" +
-      "\022new_access_surface\030\004 \001(\tR\020newAccessSurf" +
-      "ace\022\033\n\ttenant_id\030\005 \001(\tR\010tenantId\022\035\n\nproj" +
-      "ect_id\030\006 \001(\tR\tprojectId\022\035\n\nupdated_by\030\007 " +
-      "\001(\tR\tupdatedBy\022%\n\016correlation_id\030\010 \001(\tR\r" +
-      "correlationId\022;\n\013occurred_at\030\t \001(\0132\032.goo" +
-      "gle.protobuf.TimestampR\noccurredAtB\373\001\n\034c" +
-      "om.udb.core.authz.events.v1B\020AuthzEvents" +
-      "ProtoP\001ZDgithub.com/fahara02/udb/sdk/go/" +
-      "gen/udb/core/authz/events/v1;eventsv1\242\002\004" +
-      "UCAE\252\002\030udb.core.Authz.Events.V1\312\002\030Udb\\Co" +
-      "re\\Authz\\Events\\V1\342\002$Udb\\GPBMetadata\\Cor" +
-      "e\\Authz\\Events\\V1\352\002\034Udb::Core::Authz::Ev" +
-      "ents::V1b\006proto3"
+      "protobuf/timestamp.proto\032!udb/core/commo" +
+      "n/v1/security.proto\"\362\003\n\021RoleAssignedEven" +
+      "t\022\031\n\010event_id\030\001 \001(\tR\007eventId\022 \n\014user_rol" +
+      "e_id\030\002 \001(\tR\nuserRoleId\022\027\n\007user_id\030\003 \001(\tR" +
+      "\006userId\022\027\n\007role_id\030\004 \001(\tR\006roleId\022\033\n\trole" +
+      "_code\030\005 \001(\tR\010roleCode\022\033\n\ttenant_id\030\006 \001(\t" +
+      "R\010tenantId\022\037\n\013assigned_by\030\007 \001(\tR\nassigne" +
+      "dBy\022;\n\013occurred_at\030\010 \001(\0132\032.google.protob" +
+      "uf.TimestampR\noccurredAt\022\026\n\006domain\030\t \001(\t" +
+      "R\006domain\022\035\n\nproject_id\030\n \001(\tR\tprojectId\022" +
+      "%\n\016access_surface\030\013 \001(\tR\raccessSurface:x" +
+      "\222\262\031t\n*udb.core.authz.events.v1.RoleAssig" +
+      "nedEvent\022\032udb.authz.role.assigned.v1\032\tte" +
+      "nant_id\"\010standard*\rat_least_once2\006stable" +
+      "\"\216\003\n\020RoleRevokedEvent\022\031\n\010event_id\030\001 \001(\tR" +
+      "\007eventId\022 \n\014user_role_id\030\002 \001(\tR\nuserRole" +
+      "Id\022\027\n\007user_id\030\003 \001(\tR\006userId\022\033\n\trole_code" +
+      "\030\004 \001(\tR\010roleCode\022\033\n\ttenant_id\030\005 \001(\tR\010ten" +
+      "antId\022\035\n\nrevoked_by\030\006 \001(\tR\trevokedBy\022\026\n\006" +
+      "reason\030\007 \001(\tR\006reason\022;\n\013occurred_at\030\010 \001(" +
+      "\0132\032.google.protobuf.TimestampR\noccurredA" +
+      "t:v\222\262\031r\n)udb.core.authz.events.v1.RoleRe" +
+      "vokedEvent\022\031udb.authz.role.revoked.v1\032\tt" +
+      "enant_id\"\010standard*\rat_least_once2\006stabl" +
+      "e\"\360\002\n\021AccessDeniedEvent\022\031\n\010event_id\030\001 \001(" +
+      "\tR\007eventId\022\027\n\007user_id\030\002 \001(\tR\006userId\022\033\n\tt" +
+      "enant_id\030\003 \001(\tR\010tenantId\022\032\n\010resource\030\004 \001" +
+      "(\tR\010resource\022\026\n\006action\030\005 \001(\tR\006action\022\037\n\013" +
+      "deny_reason\030\006 \001(\tR\ndenyReason\022;\n\013occurre" +
+      "d_at\030\007 \001(\0132\032.google.protobuf.TimestampR\n" +
+      "occurredAt:x\222\262\031t\n*udb.core.authz.events." +
+      "v1.AccessDeniedEvent\022\032udb.authz.access.d" +
+      "enied.v1\032\ttenant_id\"\010standard*\rat_least_" +
+      "once2\006stable\"\324\002\n\020RoleCreatedEvent\022\031\n\010eve" +
+      "nt_id\030\001 \001(\tR\007eventId\022\027\n\007role_id\030\002 \001(\tR\006r" +
+      "oleId\022\033\n\trole_code\030\003 \001(\tR\010roleCode\022\033\n\tte" +
+      "nant_id\030\004 \001(\tR\010tenantId\022\035\n\ncreated_by\030\005 " +
+      "\001(\tR\tcreatedBy\022;\n\013occurred_at\030\006 \001(\0132\032.go" +
+      "ogle.protobuf.TimestampR\noccurredAt:v\222\262\031" +
+      "r\n)udb.core.authz.events.v1.RoleCreatedE" +
+      "vent\022\031udb.authz.role.created.v1\032\ttenant_" +
+      "id\"\010standard*\rat_least_once2\006stable\"\262\003\n\020" +
+      "RoleUpdatedEvent\022\031\n\010event_id\030\001 \001(\tR\007even" +
+      "tId\022\027\n\007role_id\030\002 \001(\tR\006roleId\022\033\n\trole_cod" +
+      "e\030\003 \001(\tR\010roleCode\022\033\n\ttenant_id\030\004 \001(\tR\010te" +
+      "nantId\022\035\n\nupdated_by\030\005 \001(\tR\tupdatedBy\022+\n" +
+      "\021added_permissions\030\006 \003(\tR\020addedPermissio" +
+      "ns\022/\n\023removed_permissions\030\007 \003(\tR\022removed" +
+      "Permissions\022;\n\013occurred_at\030\010 \001(\0132\032.googl" +
+      "e.protobuf.TimestampR\noccurredAt:v\222\262\031r\n)" +
+      "udb.core.authz.events.v1.RoleUpdatedEven" +
+      "t\022\031udb.authz.role.updated.v1\032\ttenant_id\"" +
+      "\010standard*\rat_least_once2\006stable\"\255\003\n\020Rol" +
+      "eRemovedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId" +
+      "\022 \n\014user_role_id\030\002 \001(\tR\nuserRoleId\022\027\n\007us" +
+      "er_id\030\003 \001(\tR\006userId\022\027\n\007role_id\030\004 \001(\tR\006ro" +
+      "leId\022\033\n\trole_code\030\005 \001(\tR\010roleCode\022\033\n\tten" +
+      "ant_id\030\006 \001(\tR\010tenantId\022\035\n\nremoved_by\030\007 \001" +
+      "(\tR\tremovedBy\022\026\n\006reason\030\010 \001(\tR\006reason\022;\n" +
+      "\013occurred_at\030\t \001(\0132\032.google.protobuf.Tim" +
+      "estampR\noccurredAt:|\222\262\031x\n)udb.core.authz" +
+      ".events.v1.RoleRemovedEvent\022\037udb.authz.r" +
+      "ole_removed_event.v1\032\ttenant_id\"\010standar" +
+      "d*\rat_least_once2\006stable\"\201\004\n\031AccessSurfa" +
+      "ceUpdatedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventI" +
+      "d\022!\n\014principal_id\030\002 \001(\tR\013principalId\022,\n\022" +
+      "old_access_surface\030\003 \001(\tR\020oldAccessSurfa" +
+      "ce\022,\n\022new_access_surface\030\004 \001(\tR\020newAcces" +
+      "sSurface\022\033\n\ttenant_id\030\005 \001(\tR\010tenantId\022\035\n" +
+      "\nproject_id\030\006 \001(\tR\tprojectId\022\035\n\nupdated_" +
+      "by\030\007 \001(\tR\tupdatedBy\022%\n\016correlation_id\030\010 " +
+      "\001(\tR\rcorrelationId\022;\n\013occurred_at\030\t \001(\0132" +
+      "\032.google.protobuf.TimestampR\noccurredAt:" +
+      "\212\001\222\262\031\205\001\n2udb.core.authz.events.v1.Access" +
+      "SurfaceUpdatedEvent\022#udb.authz.access.su" +
+      "rface.updated.v1\032\ttenant_id\"\010standard*\ra" +
+      "t_least_once2\006stableB\373\001\n\034com.udb.core.au" +
+      "thz.events.v1B\020AuthzEventsProtoP\001ZDgithu" +
+      "b.com/fahara02/udb/sdk/go/gen/udb/core/a" +
+      "uthz/events/v1;eventsv1\242\002\004UCAE\252\002\030udb.cor" +
+      "e.Authz.Events.V1\312\002\030Udb\\Core\\Authz\\Event" +
+      "s\\V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\Events" +
+      "\\V1\352\002\034Udb::Core::Authz::Events::V1b\006prot" +
+      "o3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.TimestampProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_authz_events_v1_RoleAssignedEvent_descriptor =
       getDescriptor().getMessageType(0);
@@ -183,6 +207,12 @@ public final class AuthzEventsProto extends com.google.protobuf.GeneratedFile {
         new java.lang.String[] { "EventId", "PrincipalId", "OldAccessSurface", "NewAccessSurface", "TenantId", "ProjectId", "UpdatedBy", "CorrelationId", "OccurredAt", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
+    com.google.protobuf.ExtensionRegistry registry =
+        com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.messageEventContract);
+    com.google.protobuf.Descriptors.FileDescriptor
+        .internalUpdateFileDescriptor(descriptor, registry);
   }
 
   // @@protoc_insertion_point(outer_class_scope)

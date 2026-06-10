@@ -27,7 +27,6 @@
 //! (matchers, effect, functions) is free. [`validate_casbin_model`] parse-checks
 //! the configured model at startup so a malformed override fails fast.
 
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
@@ -66,17 +65,16 @@ fn slot(value: &str) -> String {
     }
 }
 
-/// Resolve the active Casbin model text: an operator-supplied file
+/// Resolve precedence once: an operator-supplied file
 /// (`UDB_AUTHZ_CASBIN_MODEL_PATH`) wins, then inline text
 /// (`UDB_AUTHZ_CASBIN_MODEL`), else the embedded [`CASBIN_MODEL`] default. An
-/// unreadable path is logged and falls through to the next source (startup
-/// [`validate_casbin_model`] is the place that hard-fails a misconfig).
-fn resolve_casbin_model_text() -> Cow<'static, str> {
+/// unreadable path is logged and falls through to the next source.
+fn resolve_casbin_model_text_once() -> Arc<str> {
     if let Ok(path) = std::env::var("UDB_AUTHZ_CASBIN_MODEL_PATH") {
         let path = path.trim();
         if !path.is_empty() {
             match std::fs::read_to_string(path) {
-                Ok(text) => return Cow::Owned(text),
+                Ok(text) => return Arc::from(text.as_str()),
                 Err(err) => tracing::error!(
                     %err,
                     path,
@@ -86,9 +84,17 @@ fn resolve_casbin_model_text() -> Cow<'static, str> {
         }
     }
     match std::env::var("UDB_AUTHZ_CASBIN_MODEL") {
-        Ok(text) if !text.trim().is_empty() => Cow::Owned(text),
-        _ => Cow::Borrowed(CASBIN_MODEL),
+        Ok(text) if !text.trim().is_empty() => Arc::from(text.as_str()),
+        _ => Arc::from(CASBIN_MODEL),
     }
+}
+
+/// Process-wide model-text cache (item 17): the env vars are consulted once and
+/// the selected model file, if any, is read once. The hot decision path only
+/// clones the cached `Arc<str>`; it performs no env or filesystem access.
+fn cached_casbin_model_text() -> Arc<str> {
+    static CACHE: OnceLock<Arc<str>> = OnceLock::new();
+    CACHE.get_or_init(resolve_casbin_model_text_once).clone()
 }
 
 /// Parsed-model cache keyed by model-text content hash. Parsing a `DefaultModel`
@@ -119,7 +125,7 @@ async fn load_model(model_text: &str) -> Result<DefaultModel, String> {
 /// fails at startup instead of denying every request at runtime. Call this from
 /// the service startup lifecycle.
 pub(crate) async fn validate_casbin_model() -> Result<(), String> {
-    let text = resolve_casbin_model_text();
+    let text = cached_casbin_model_text();
     DefaultModel::from_str(&text)
         .await
         .map(|_| ())
@@ -130,11 +136,20 @@ impl AuthzSnapshot {
     /// Authorize `req` through a real Casbin enforcer built from this snapshot.
     /// This is the production decision path for the native `AuthzService`.
     pub(crate) async fn casbin_authorize(&self, req: &AuthzQuery<'_>) -> Decision {
-        // The Casbin model is operator-configurable; resolve it per call (parsed
-        // models are cached by content hash, so a swap takes effect without a
-        // restart and steady-state cost is a hashmap lookup).
-        let model_text = resolve_casbin_model_text();
-        self.casbin_authorize_with_model(&model_text, req).await
+        use tracing::Instrument as _;
+        // The Casbin model is operator-configurable but env/file resolution is
+        // NOT per-decision (item 17): the text comes from a process-wide cache
+        // (env read once; file read once), and parsed models are cached by
+        // content hash.
+        let model_text = cached_casbin_model_text();
+        // Phase 10: a light span at the authz decision boundary. Joins the inbound
+        // trace (extracted by `TraceExtractLayer`); the `trace_id` field carries
+        // the current trace so the decision is greppable in the trace backend.
+        let trace_id = crate::runtime::otel::current_trace_context().trace_id;
+        let span = tracing::info_span!("authz.casbin_authorize", trace_id = %trace_id);
+        self.casbin_authorize_with_model(&model_text, req)
+            .instrument(span)
+            .await
     }
 
     /// Decision core shared by the configurable [`casbin_authorize`] entry point
@@ -217,22 +232,28 @@ impl AuthzSnapshot {
         } else {
             principal.subject.clone()
         };
-        let identities: Vec<String> = principal
-            .identities()
-            .into_iter()
-            .filter(|id| !id.trim().is_empty() && *id != subject)
-            .map(ToString::to_string)
-            .collect();
-        let enforcer = match cached_enforcer(
-            model,
-            model_text,
-            &applicable,
-            &roles,
-            &subject,
-            &identities,
-        )
-        .await
-        {
+        // Candidate request subjects (item 16): the cached enforcer is shared
+        // across principals, so the per-principal `subject → role` /
+        // `subject → identity` grouping links are no longer baked into it.
+        // Enforcing each candidate token as `r.sub` is equivalent under the
+        // fixed `g = _, _` token contract: the prior loader only ever added
+        // one-level links from the subject, and Casbin's role manager resolves
+        // `g(a, b)` to `a == b` when no links are loaded.
+        let identities = principal.identities();
+        let mut request_subjects: Vec<String> = vec![subject.clone()];
+        for id in &identities {
+            let id = id.trim();
+            if !id.is_empty() && !request_subjects.iter().any(|s| s == id) {
+                request_subjects.push(id.to_string());
+            }
+        }
+        for role in &roles {
+            let role = role.trim();
+            if !role.is_empty() && !request_subjects.iter().any(|s| s == role) {
+                request_subjects.push(role.to_string());
+            }
+        }
+        let enforcer = match cached_enforcer(model, model_text, &applicable).await {
             Ok(enforcer) => enforcer,
             Err(err) => return self.casbin_error(decision_id, &err),
         };
@@ -257,15 +278,17 @@ impl AuthzSnapshot {
         if selectors.is_empty() {
             selectors.push("*".to_string());
         }
-        let allowed = selectors.iter().any(|obj| {
-            enforcer
-                .enforce((
-                    subject.clone(),
-                    dom.clone(),
-                    obj.clone(),
-                    req.action.to_string(),
-                ))
-                .unwrap_or(false)
+        let allowed = request_subjects.iter().any(|sub| {
+            selectors.iter().any(|obj| {
+                enforcer
+                    .enforce((
+                        sub.clone(),
+                        dom.clone(),
+                        obj.clone(),
+                        req.action.to_string(),
+                    ))
+                    .unwrap_or(false)
+            })
         });
 
         // Resolve the actual granting policy once: the highest-priority
@@ -320,23 +343,88 @@ impl AuthzSnapshot {
     }
 }
 
-fn enforcer_cache() -> &'static tokio::sync::Mutex<HashMap<String, Arc<Enforcer>>> {
-    static CACHE: OnceLock<tokio::sync::Mutex<HashMap<String, Arc<Enforcer>>>> = OnceLock::new();
-    CACHE.get_or_init(|| tokio::sync::Mutex::new(HashMap::new()))
+/// Upper bound on cached enforcers (item 16). Eviction past the cap removes
+/// ONLY the least-recently-used entry — never the whole cache — so a burst of
+/// distinct policy sets cannot evict every hot enforcer at once.
+const ENFORCER_CACHE_CAP: usize = 256;
+
+/// Minimal bounded LRU. `tick` is a monotonic use counter: lookups and inserts
+/// stamp the entry, and a capacity-exceeding insert evicts the smallest stamp.
+/// Eviction is O(cap) but cap is small (256) and inserts are cache misses only.
+/// Generic over the value so the eviction logic is unit-testable without
+/// constructing real `Enforcer`s.
+struct LruCache<V> {
+    map: HashMap<String, (V, u64)>,
+    tick: u64,
+    cap: usize,
 }
+
+impl<V: Clone> LruCache<V> {
+    fn new(cap: usize) -> Self {
+        Self {
+            map: HashMap::new(),
+            tick: 0,
+            cap: cap.max(1),
+        }
+    }
+
+    fn get(&mut self, key: &str) -> Option<V> {
+        self.tick += 1;
+        let tick = self.tick;
+        self.map.get_mut(key).map(|entry| {
+            entry.1 = tick;
+            entry.0.clone()
+        })
+    }
+
+    fn insert(&mut self, key: String, value: V) {
+        self.tick += 1;
+        let tick = self.tick;
+        if !self.map.contains_key(&key) && self.map.len() >= self.cap {
+            if let Some(oldest) = self
+                .map
+                .iter()
+                .min_by_key(|(_, (_, used))| *used)
+                .map(|(k, _)| k.clone())
+            {
+                self.map.remove(&oldest);
+            }
+        }
+        let entry = self.map.entry(key).or_insert((value.clone(), tick));
+        *entry = (value, tick);
+    }
+
+    #[cfg(test)]
+    fn len(&self) -> usize {
+        self.map.len()
+    }
+}
+
+fn enforcer_cache() -> &'static tokio::sync::Mutex<LruCache<Arc<Enforcer>>> {
+    static CACHE: OnceLock<tokio::sync::Mutex<LruCache<Arc<Enforcer>>>> = OnceLock::new();
+    CACHE.get_or_init(|| tokio::sync::Mutex::new(LruCache::new(ENFORCER_CACHE_CAP)))
+}
+
+/// Test-only visibility into cache effectiveness: monotonic hit counter, so a
+/// test can assert a delta without being perturbed by concurrent tests (they
+/// only ever increase it).
+#[cfg(test)]
+static ENFORCER_CACHE_HITS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 async fn cached_enforcer(
     model: DefaultModel,
     model_text: &str,
     applicable: &[&AuthzPolicy],
-    roles: &[String],
-    subject: &str,
-    identities: &[String],
 ) -> Result<Arc<Enforcer>, String> {
-    // The cache key includes the model hash: a model swap must not return an
-    // enforcer built under the previous model.
-    let key = casbin_policy_set_hash(model_text, applicable, roles, subject, identities);
-    if let Some(enforcer) = enforcer_cache().lock().await.get(&key).cloned() {
+    // Key = (model hash, Allow-policy set) ONLY (item 16): no principal
+    // subject/role/identity input, so one enforcer serves every principal
+    // whose ABAC pre-filter yields the same applicable set. The per-principal
+    // grouping is supplied at enforce time as candidate `r.sub` tokens. The
+    // model hash keeps a model swap from reusing a stale enforcer.
+    let key = casbin_policy_set_hash(model_text, applicable);
+    if let Some(enforcer) = enforcer_cache().lock().await.get(&key) {
+        #[cfg(test)]
+        ENFORCER_CACHE_HITS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         return Ok(enforcer);
     }
 
@@ -361,36 +449,19 @@ async fn cached_enforcer(
             .await
             .map_err(|err| format!("policy load: {err}"))?;
     }
-    for role in roles {
-        if !role.trim().is_empty() {
-            enforcer
-                .add_grouping_policy(vec![subject.to_string(), role.clone()])
-                .await
-                .map_err(|err| format!("role link load: {err}"))?;
-        }
-    }
-    for id in identities {
-        enforcer
-            .add_grouping_policy(vec![subject.to_string(), id.clone()])
-            .await
-            .map_err(|err| format!("identity link load: {err}"))?;
-    }
 
     let enforcer = Arc::new(enforcer);
     let mut cache = enforcer_cache().lock().await;
-    if cache.len() > 256 {
-        cache.clear();
+    // A racing builder may have inserted while we built: serve theirs so all
+    // callers share one instance.
+    if let Some(existing) = cache.get(&key) {
+        return Ok(existing);
     }
-    Ok(cache.entry(key).or_insert_with(|| enforcer.clone()).clone())
+    cache.insert(key, enforcer.clone());
+    Ok(enforcer)
 }
 
-fn casbin_policy_set_hash(
-    model_text: &str,
-    applicable: &[&AuthzPolicy],
-    roles: &[String],
-    subject: &str,
-    identities: &[String],
-) -> String {
+fn casbin_policy_set_hash(model_text: &str, applicable: &[&AuthzPolicy]) -> String {
     let mut parts = vec![format!("m|{}", model_text_hash(model_text))];
     for p in applicable.iter().filter(|p| p.effect == Effect::Allow) {
         parts.push(format!(
@@ -406,14 +477,6 @@ fn casbin_policy_set_hash(
             slot(&p.resource),
             slot(&p.action)
         ));
-    }
-    for role in roles {
-        if !role.trim().is_empty() {
-            parts.push(format!("g|{subject}|{role}"));
-        }
-    }
-    for id in identities {
-        parts.push(format!("g|{subject}|{id}"));
     }
     parts.sort();
 
@@ -600,6 +663,102 @@ m = (p.dom == "*" || r.dom == p.dom)
         assert!(
             custom_decision.allowed,
             "operator-supplied model must override the default matcher"
+        );
+    }
+
+    /// Item 16: the enforcer cache key excludes the principal, so >256 distinct
+    /// principals under one policy set share ONE cached enforcer (cache hits),
+    /// instead of 256+ per-principal entries triggering a clear-all.
+    #[tokio::test]
+    async fn enforcer_cache_shared_across_many_principals() {
+        let mut snap = AuthzSnapshot::default();
+        snap.version = "v1".to_string();
+        snap.policies.push(AuthzPolicy {
+            id: "shared".to_string(),
+            effect: Effect::Allow,
+            tenant: "acme".to_string(),
+            role: "reader".to_string(),
+            action: "data.select".to_string(),
+            resource: "invoice".to_string(),
+            ..Default::default()
+        });
+        let attrs = BTreeMap::new();
+        let resource = ResourceRef::message("invoice");
+
+        // The cache key is principal-free: identical for any two principals
+        // with the same applicable policy set.
+        let key = casbin_policy_set_hash(CASBIN_MODEL, &[&snap.policies[0]]);
+        assert_eq!(
+            key,
+            casbin_policy_set_hash(CASBIN_MODEL, &[&snap.policies[0]]),
+            "policy-set hash must be deterministic and principal-free"
+        );
+
+        let hits_before = ENFORCER_CACHE_HITS.load(std::sync::atomic::Ordering::Relaxed);
+        for i in 0..300 {
+            let principal = Principal {
+                subject: format!("user-{i}"),
+                tenant_id: "acme".to_string(),
+                roles: vec!["reader".to_string()],
+                ..Default::default()
+            };
+            let decision = snap
+                .casbin_authorize(&query(&principal, &resource, "data.select", &attrs))
+                .await;
+            assert!(decision.allowed, "principal user-{i} must be allowed");
+        }
+        let hits_after = ENFORCER_CACHE_HITS.load(std::sync::atomic::Ordering::Relaxed);
+        // 300 distinct principals share one enforcer: at most the first call
+        // builds it, every later call is a hit. (The counter is monotonic, so
+        // concurrent tests can only increase the delta.)
+        assert!(
+            hits_after - hits_before >= 299,
+            "expected >=299 enforcer cache hits for 300 principals, got {}",
+            hits_after - hits_before
+        );
+    }
+
+    /// Item 16: capacity overflow evicts ONLY the least-recently-used entry —
+    /// recently used keys survive; no code path clears the whole cache.
+    #[test]
+    fn lru_eviction_is_bounded_and_oldest_only() {
+        let mut lru: LruCache<u32> = LruCache::new(4);
+        for i in 0..4u32 {
+            lru.insert(format!("k{i}"), i);
+        }
+        // Touch k0 so k1 becomes the least-recently-used entry.
+        assert_eq!(lru.get("k0"), Some(0));
+        lru.insert("k4".to_string(), 4);
+        assert_eq!(lru.len(), 4, "insert past cap must stay bounded");
+        assert!(lru.get("k1").is_none(), "only the LRU entry is evicted");
+        for key in ["k0", "k2", "k3", "k4"] {
+            assert!(lru.get(key).is_some(), "{key} must survive eviction");
+        }
+
+        // Many distinct keys never clear the cache wholesale: the most recent
+        // `cap` keys are always present.
+        let mut lru: LruCache<u32> = LruCache::new(256);
+        for i in 0..300u32 {
+            lru.insert(format!("p{i}"), i);
+        }
+        assert_eq!(lru.len(), 256);
+        for i in 44..300u32 {
+            assert!(
+                lru.get(&format!("p{i}")).is_some(),
+                "recent key p{i} must not be dropped by older inserts"
+            );
+        }
+    }
+
+    /// Item 17: the steady-state decision path serves the SAME cached model
+    /// text allocation — no per-decision env read or file re-read.
+    #[tokio::test]
+    async fn model_text_resolved_once_per_process() {
+        let first = cached_casbin_model_text();
+        let second = cached_casbin_model_text();
+        assert!(
+            Arc::ptr_eq(&first, &second),
+            "cached model text must be the same allocation across decisions"
         );
     }
 }

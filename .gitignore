@@ -26,6 +26,8 @@ temp/
 *.trace
 *.timestamp
 *.profraw
+.udb-outbox-ha-*.db
+bootstrap_build*.txt
 coverage/
 coverage-final.json
 lcov.info
@@ -96,7 +98,14 @@ sdk/php/build/
 sdk/csharp/Generated/
 
 # ── Docs ─────────────────────────────────────────────────────────────────────
-docs/generated/
+# Ignore generated docs EXCEPT the committed, CI-drift-checked Phase 0A artifacts.
+docs/generated/*
+!docs/generated/udb-native-contract.json
+!docs/generated/authn-authz-rpc-inventory.md
+!docs/generated/authn-authz-sensitive-fields.md
+# Phase 3: committed contract baseline (breaking-change gate) + descriptor-generated native-service docs.
+!docs/generated/contract-baseline.bin
+!docs/generated/native-services.md
 docs/upgrade_todo.md
 
 # ── Environment & secrets ────────────────────────────────────────────────────
@@ -171,3 +180,13 @@ __pycache__/
 # ── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+# ── Private plans (local only) ───────────────────────────────────────────────
+/private/
+
+# ── Claude AI ────────────────────────────────────────────────────────────────
+/.claude/
+
+# Brand images are synced into the published site from docs/assets by CI;
+# the canonical source stays in docs/assets (not duplicated in git).
+/docs/site/assets/

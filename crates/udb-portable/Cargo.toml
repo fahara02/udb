@@ -42,6 +42,50 @@ path = "src/lib.rs"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
+# `tracing` is a wasm-clean facade (no runtime). The manifest builder +
+# DDL renderers call `tracing::warn!` at a few unsafe-input drop sites;
+# including the dep keeps the `#[path]`-shared source byte-identical to
+# the server build (no cfg-gating of the shared files needed).
+tracing = "0.1"
+# IR → backend query compiler deps (both wasm32-unknown-unknown clean):
+#   base64 — cache_key fingerprints (URL_SAFE_NO_PAD) + the JSON compilers'
+#            `$binary` rendering (STANDARD) in ir::compile::util.
+#   chrono — ir::value::LogicalValue::Timestamp carries DateTime<Utc>. The IR
+#            never calls Utc::now (timestamps are passed in), so the system-clock
+#            `wasmbind` feature is NOT required — only serde.
+base64 = "0.22"
+chrono = { version = "0.4", features = ["serde"] }
+# Descriptor / RPC-contract decode (`descriptor_manifest.rs`): hand-decodes the
+# embedded `FileDescriptorSet` bytes (prost only — NOT prost-types, which drops
+# the unknown UDB option extensions). wasm32-unknown-unknown clean.
+prost = "0.13"
 
 [features]
-default = []
+# Every IR backend compiler is a pure string renderer (no native deps), so the
+# default enables them all — a browser/edge target gets the FULL multi-backend
+# query compiler. `ir/compile/mod.rs` gates each backend module on a feature of
+# the same name (mirroring the parent `udb` crate's backend feature flags); here
+# they are no-op switches that just turn the pure modules on. `postgres` is
+# always compiled (ungated upstream).
+default = ["all-compilers"]
+all-compilers = [
+    "mysql", "sqlite", "mssql", "mongodb", "neo4j", "clickhouse", "qdrant",
+    "elasticsearch", "memcached", "weaviate", "pinecone", "cassandra",
+    "azureblob", "gcs", "redis", "s3",
+]
+mysql = []
+sqlite = []
+mssql = []
+mongodb = []
+neo4j = []
+clickhouse = []
+qdrant = []
+elasticsearch = []
+memcached = []
+weaviate = []
+pinecone = []
+cassandra = []
+azureblob = []
+gcs = []
+redis = []
+s3 = []

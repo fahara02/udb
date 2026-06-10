@@ -1,5 +1,7 @@
 //! main.rs split — output (Phase H).
 use super::*;
+use std::collections::HashSet;
+use std::sync::OnceLock;
 
 pub(crate) fn output_json<T: Serialize>(value: &T, label: &str) {
     use std::io::Write;
@@ -55,8 +57,12 @@ pub(crate) fn redact_sensitive_json(value: &mut serde_json::Value) {
 }
 
 fn is_sensitive_output_key(key: &str) -> bool {
+    let normalized = key.to_ascii_lowercase();
+    if descriptor_sensitive_output_keys().contains(normalized.as_str()) {
+        return true;
+    }
     matches!(
-        key.to_ascii_lowercase().as_str(),
+        normalized.as_str(),
         "token"
             | "access_token"
             | "refresh_token"
@@ -79,6 +85,30 @@ fn is_sensitive_output_key(key: &str) -> bool {
             | "mfa_otp_id"
             | "operation_id"
     )
+}
+
+fn descriptor_sensitive_output_keys() -> &'static HashSet<String> {
+    static KEYS: OnceLock<HashSet<String>> = OnceLock::new();
+    KEYS.get_or_init(|| {
+        let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest();
+        manifest
+            .messages
+            .iter()
+            .flat_map(|message| &message.fields)
+            .filter(|field| {
+                let scalar = &field.scalar_security;
+                let column = field.db_column_security.as_ref();
+                scalar.sensitive
+                    || scalar.encrypted_security
+                    || scalar.log_redacted
+                    || column.is_some_and(|security| {
+                        matches!(security.output_view, 1 | 6)
+                            || matches!(security.redaction_strategy, 3 | 4)
+                    })
+            })
+            .map(|field| field.name.to_ascii_lowercase())
+            .collect()
+    })
 }
 
 /// Keys whose value is a one-time secret that the user explicitly asked to
@@ -231,31 +261,25 @@ pub(crate) fn load_prior_manifest_from_args(args: &[String]) -> Option<CatalogMa
 }
 
 /// Load ABAC policies from `UDB_ABAC_POLICY_FILE`.
-/// Returns an empty Vec if the env-var is unset or the file cannot be read.
-pub(crate) fn load_abac_policies_for_lint() -> Vec<AbacPolicy> {
+/// Returns an empty Vec only when the env-var is unset.
+pub(crate) fn load_abac_policies_for_lint() -> Result<Vec<AbacPolicy>, String> {
     let path = match env::var("UDB_ABAC_POLICY_FILE") {
         Ok(p) if !p.is_empty() => p,
         _ => {
             eprintln!("UDB_ABAC_POLICY_FILE is not set; linting against empty policy set");
-            return Vec::new();
+            return Ok(Vec::new());
         }
     };
-    match fs::read_to_string(&path) {
-        Ok(content) => match serde_json::from_str::<Vec<AbacPolicy>>(&content) {
-            Ok(policies) => {
-                eprintln!("loaded {} policies from {path}", policies.len());
-                policies
-            }
-            Err(err) => {
-                eprintln!("failed to parse ABAC policy file '{path}': {err}");
-                Vec::new()
-            }
-        },
-        Err(err) => {
-            eprintln!("failed to read ABAC policy file '{path}': {err}");
-            Vec::new()
-        }
-    }
+    load_abac_policies_from_file(&path)
+}
+
+pub(crate) fn load_abac_policies_from_file(path: &str) -> Result<Vec<AbacPolicy>, String> {
+    let content = fs::read_to_string(path)
+        .map_err(|err| format!("failed to read ABAC policy file '{path}': {err}"))?;
+    let policies = serde_json::from_str::<Vec<AbacPolicy>>(&content)
+        .map_err(|err| format!("failed to parse ABAC policy file '{path}': {err}"))?;
+    eprintln!("loaded {} policies from {path}", policies.len());
+    Ok(policies)
 }
 
 /// Escape and quote a string as a PostgreSQL string literal (single-quoted, escaping `'`).

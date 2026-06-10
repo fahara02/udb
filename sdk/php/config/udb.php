@@ -67,6 +67,8 @@ return [
         'default_purpose'         => env('UDB_DEFAULT_PURPOSE', 'web.request'),
         'default_scopes'          => array_filter(explode(',', (string) env('UDB_DEFAULT_SCOPES', ''))),
         'client_catalog_version'  => env('UDB_CLIENT_CATALOG_VERSION', '1.0.0'),
+        'bearer_token'            => env('UDB_BEARER_TOKEN', ''),
+        'api_key'                 => env('UDB_API_KEY', ''),
     ],
 
     /*

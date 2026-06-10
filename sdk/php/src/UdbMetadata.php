@@ -39,6 +39,8 @@ final class UdbMetadata
         public readonly string $serviceIdentity,
         public readonly string $projectId,
         public readonly string $clientCatalogVersion,
+        public readonly string $bearerToken = '',
+        public readonly string $apiKey = '',
     ) {
     }
 
@@ -70,6 +72,8 @@ final class UdbMetadata
             serviceIdentity: (string) ($meta['service_identity'] ?? 'laravel.app'),
             projectId: $projectId ?? (string) ($meta['default_project_id'] ?? 'default'),
             clientCatalogVersion: (string) ($meta['client_catalog_version'] ?? '1.0.0'),
+            bearerToken: (string) ($meta['bearer_token'] ?? ''),
+            apiKey: (string) ($meta['api_key'] ?? ''),
         );
     }
 
@@ -83,7 +87,7 @@ final class UdbMetadata
      */
     public function toGrpcMetadata(): array
     {
-        return [
+        $metadata = [
             'x-tenant-id'                   => [$this->tenantId],
             'x-user-id'                     => [$this->userId],
             'x-purpose'                     => [$this->purpose],
@@ -93,6 +97,14 @@ final class UdbMetadata
             'x-udb-project-id'              => [$this->projectId],
             'x-udb-client-catalog-version'  => [$this->clientCatalogVersion],
         ];
+        if ($this->bearerToken !== '') {
+            $metadata['authorization'] = ['Bearer '.$this->bearerToken];
+        }
+        if ($this->apiKey !== '') {
+            $metadata['x-api-key'] = [$this->apiKey];
+        }
+
+        return $metadata;
     }
 
     /**
@@ -111,6 +123,8 @@ final class UdbMetadata
             serviceIdentity: $this->serviceIdentity,
             projectId: $this->projectId,
             clientCatalogVersion: $this->clientCatalogVersion,
+            bearerToken: $this->bearerToken,
+            apiKey: $this->apiKey,
         );
     }
 
@@ -128,6 +142,8 @@ final class UdbMetadata
             serviceIdentity: $this->serviceIdentity,
             projectId: $this->projectId,
             clientCatalogVersion: $this->clientCatalogVersion,
+            bearerToken: $this->bearerToken,
+            apiKey: $this->apiKey,
         );
     }
 
@@ -142,6 +158,24 @@ final class UdbMetadata
             serviceIdentity: $this->serviceIdentity,
             projectId: $projectId,
             clientCatalogVersion: $this->clientCatalogVersion,
+            bearerToken: $this->bearerToken,
+            apiKey: $this->apiKey,
+        );
+    }
+
+    public function withCredentials(?string $bearerToken = null, ?string $apiKey = null): self
+    {
+        return new self(
+            tenantId: $this->tenantId,
+            userId: $this->userId,
+            purpose: $this->purpose,
+            correlationId: $this->correlationId,
+            scopes: $this->scopes,
+            serviceIdentity: $this->serviceIdentity,
+            projectId: $this->projectId,
+            clientCatalogVersion: $this->clientCatalogVersion,
+            bearerToken: $bearerToken ?? $this->bearerToken,
+            apiKey: $apiKey ?? $this->apiKey,
         );
     }
 }

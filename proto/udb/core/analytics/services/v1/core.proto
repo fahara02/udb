@@ -7,6 +7,7 @@ import "udb/core/analytics/entity/v1/pipeline_metric_snapshot.proto";
 import "udb/core/analytics/entity/v1/reconciliation_analytics_summary.proto";
 import "udb/core/common/v1/dto.proto";
 import "udb/core/common/v1/types.proto";
+import "udb/core/common/v1/security.proto";
 
 option csharp_namespace = "udb.core.Analytics.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/analytics/services/v1;analyticsservicev1";
@@ -19,6 +20,15 @@ option php_namespace = "Udb\\Core\\Analytics\\Services\\V1";
 // ============================================================
 
 message RecordPipelineMetricRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "analytics"
+    generate_minimal_example: true
+  };
   string stage_name = 1;
   string tenant_id = 2;
   // Raw observation for a single request (will be aggregated hourly).
@@ -28,6 +38,15 @@ message RecordPipelineMetricRequest {
 }
 
 message RecordPipelineMetricResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "analytics"
+    generate_minimal_example: true
+  };
   bool accepted = 1;
 }
 
@@ -36,6 +55,15 @@ message RecordPipelineMetricResponse {
 // ============================================================
 
 message GetPipelineSummaryRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "analytics"
+    generate_minimal_example: true
+  };
   string stage_name = 1; // Empty = all stages
   string tenant_id = 2;
   string hour_from = 3; // ISO 8601 hour string
@@ -44,6 +72,15 @@ message GetPipelineSummaryRequest {
 }
 
 message GetPipelineSummaryResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "analytics"
+    generate_minimal_example: true
+  };
   repeated udb.core.analytics.entity.v1.PipelineMetricSnapshot snapshots = 1;
   udb.core.common.v1.PageResponse page = 2;
 }
@@ -53,6 +90,15 @@ message GetPipelineSummaryResponse {
 // ============================================================
 
 message GetExecutorPerformanceRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "analytics"
+    generate_minimal_example: true
+  };
   string executor_identity = 1; // Empty = all executors
   string workload_kind = 2;
   string date_from = 3;
@@ -60,6 +106,15 @@ message GetExecutorPerformanceRequest {
 }
 
 message GetExecutorPerformanceResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "analytics"
+    generate_minimal_example: true
+  };
   repeated udb.core.analytics.entity.v1.ExecutorPerformanceSummary summaries = 1;
 }
 
@@ -68,11 +123,29 @@ message GetExecutorPerformanceResponse {
 // ============================================================
 
 message GetReconciliationAnalyticsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "analytics"
+    generate_minimal_example: true
+  };
   string date_from = 1;
   string date_to = 2;
 }
 
 message GetReconciliationAnalyticsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "analytics"
+    generate_minimal_example: true
+  };
   repeated udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary summaries = 1;
   double overall_resolution_rate = 2;
   double avg_reconciliation_ms = 3;
@@ -83,12 +156,30 @@ message GetReconciliationAnalyticsResponse {
 // ============================================================
 
 message GetThroughputRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "analytics"
+    generate_minimal_example: true
+  };
   string tenant_id = 1;
   string hour_from = 2;
   string hour_to = 3;
 }
 
 message GetThroughputResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "analytics"
+    generate_minimal_example: true
+  };
   double avg_rps = 1;
   double peak_rps = 2;
   int64 total_requests = 3;
@@ -96,6 +187,15 @@ message GetThroughputResponse {
 }
 
 message GetSlaComplianceRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "analytics"
+    generate_minimal_example: true
+  };
   string stage_name = 1;
   string date_from = 2;
   string date_to = 3;
@@ -104,6 +204,15 @@ message GetSlaComplianceRequest {
 }
 
 message SlaComplianceEntry {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "analytics"
+    generate_minimal_example: true
+  };
   string stage_name = 1;
   string period = 2;
   double p99_latency_ms = 3;
@@ -113,6 +222,15 @@ message SlaComplianceEntry {
 }
 
 message GetSlaComplianceResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "analytics"
+    generate_minimal_example: true
+  };
   repeated SlaComplianceEntry entries = 1;
   double overall_p99_compliance_rate = 2;
   double overall_error_rate_compliance_rate = 3;
@@ -123,11 +241,29 @@ message GetSlaComplianceResponse {
 // ============================================================
 
 message TriggerSnapshotRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "analytics"
+    generate_minimal_example: true
+  };
   string stage_name = 1; // Empty = all stages
   string hour = 2; // ISO 8601 hour; empty = previous complete hour
   udb.core.common.v1.RequestContext context = 3;
 }
 
 message TriggerSnapshotResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "analytics"
+    generate_minimal_example: true
+  };
   int32 snapshots_written = 1;
 }

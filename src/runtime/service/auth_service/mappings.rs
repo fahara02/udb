@@ -3,6 +3,7 @@
 
 use std::collections::BTreeMap;
 
+use sha2::{Digest, Sha256};
 use sqlx::Row;
 use tonic::Status;
 
@@ -12,6 +13,7 @@ use crate::proto::udb::core::authz::entity::v1 as authz_entity_pb;
 use crate::proto::udb::core::authz::services::v1 as authz_pb;
 use crate::proto::udb::core::common::v1 as common_pb;
 
+use super::super::native_helpers::{native_page_response, native_page_window};
 use crate::runtime::authn::{self, SessionRecord};
 use crate::runtime::authz::{AuthzPolicy, Decision, Effect, Principal, ResourceRef};
 pub(super) fn authn_principal_to_pb(p: &Principal, expires_at_unix: i64) -> authn_pb::Principal {
@@ -128,66 +130,19 @@ pub(super) fn page_response(
     total_items: usize,
     page: Option<&common_pb::PageRequest>,
 ) -> common_pb::PageResponse {
-    let page_number = page.map(|p| p.page).filter(|p| *p > 0).unwrap_or(1);
-    let page_size = page
-        .map(|p| p.page_size)
-        .filter(|s| *s > 0)
-        .unwrap_or(total_items.max(1) as i32);
-    let total_pages = if total_items == 0 {
-        0
-    } else {
-        ((total_items as i32) + page_size - 1) / page_size
-    };
-    common_pb::PageResponse {
-        page: page_number,
-        page_size,
-        total_items: total_items as i64,
-        total_pages,
-        next_page_token: String::new(),
-        total_count: total_items as i64,
-        has_next: page_number < total_pages,
-        has_previous: page_number > 1 && total_pages > 0,
-    }
+    native_page_response(page, total_items as i64, total_items.max(1) as i32)
 }
 
-pub(super) const DEFAULT_LIST_PAGE_SIZE: i32 = 100;
-pub(super) const MAX_LIST_PAGE_SIZE: i32 = 500;
-
 pub(super) fn bounded_page_window(page: Option<&common_pb::PageRequest>) -> (usize, usize, i32) {
-    let page_number = page.map(|p| p.page).filter(|p| *p > 0).unwrap_or(1);
-    let page_size = page
-        .map(|p| p.page_size)
-        .filter(|s| *s > 0)
-        .unwrap_or(DEFAULT_LIST_PAGE_SIZE)
-        .min(MAX_LIST_PAGE_SIZE);
-    let limit = page_size as usize;
-    let offset = (page_number as usize)
-        .saturating_sub(1)
-        .saturating_mul(limit);
-    (limit, offset, page_size)
+    let window = native_page_window(page, 100);
+    (window.limit, window.offset, window.page_size)
 }
 
 pub(super) fn bounded_page_response(
     total_items: usize,
     page: Option<&common_pb::PageRequest>,
 ) -> common_pb::PageResponse {
-    let (_, _, page_size) = bounded_page_window(page);
-    let page_number = page.map(|p| p.page).filter(|p| *p > 0).unwrap_or(1);
-    let total_pages = if total_items == 0 {
-        0
-    } else {
-        ((total_items as i32) + page_size - 1) / page_size
-    };
-    common_pb::PageResponse {
-        page: page_number,
-        page_size,
-        total_items: total_items as i64,
-        total_pages,
-        next_page_token: String::new(),
-        total_count: total_items as i64,
-        has_next: page_number < total_pages,
-        has_previous: page_number > 1 && total_pages > 0,
-    }
+    native_page_response(page, total_items as i64, 100)
 }
 
 pub(super) fn timestamp_from_unix(seconds: u64) -> Option<prost_types::Timestamp> {
@@ -201,13 +156,31 @@ pub(super) fn timestamp_from_unix(seconds: u64) -> Option<prost_types::Timestamp
     }
 }
 
+pub(super) fn public_session_handle_from_hash(session_id_hash: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(b"udb.public-session-handle.v1:");
+    hasher.update(session_id_hash.as_bytes());
+    let digest = hasher.finalize();
+    let mut out = String::with_capacity("sesspub_".len() + 32);
+    out.push_str("sesspub_");
+    for b in digest.iter().take(16) {
+        out.push_str(&format!("{b:02x}"));
+    }
+    out
+}
+
 pub(super) fn session_record_to_pb(rec: &SessionRecord, now_unix: u64) -> authn_entity_pb::Session {
-    authn_entity_pb::Session {
-        session_id: rec.session_id_hash.clone(),
+    let mut dto = authn_entity_pb::Session {
+        session_id: public_session_handle_from_hash(&rec.session_id_hash),
         user_id: rec.user_id.clone(),
         session_type: authn_entity_pb::SessionType::ServerSide as i32,
-        session_token_lookup: rec.session_id_hash.clone(),
-        session_token_hash: rec.session_id_hash.clone(),
+        // Phase 0 (seal sensitive surfaces): the keyed session-token digests are
+        // credential-equivalent (a leaked digest + the global hash secret enables
+        // session hijack), so they are never surfaced through Get/ListSessions.
+        // `session_id` above is a deterministic public handle, not the raw
+        // session id and not the stored lookup hash.
+        session_token_lookup: String::new(),
+        session_token_hash: String::new(),
         csrf_token_hash: String::new(),
         access_token_jti: String::new(),
         refresh_token_jti: String::new(),
@@ -233,7 +206,11 @@ pub(super) fn session_record_to_pb(rec: &SessionRecord, now_unix: u64) -> authn_
             "client_fingerprint": rec.client_fingerprint.clone(),
         })
         .to_string(),
-    }
+    };
+    // §7: structurally blank OUTPUT_VIEW_STORAGE_ONLY fields (session token
+    // hash/lookup + CSRF hash) via descriptor-driven codegen.
+    crate::proto_redaction::RedactStorageOnly::redact_storage_only(&mut dto);
+    dto
 }
 
 pub(super) fn scopes_to_db(scopes: &[String]) -> String {
@@ -341,5 +318,111 @@ pub(super) fn principal_from_api_key(rec: &authn::ApiKeyRecord) -> Principal {
         roles: Vec::new(),
         provider_id: String::new(),
         auth_method: authn::AuthnMethod::ApiKey.as_str().to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeSet;
+
+    fn storage_only_field_names(message_full_name: &str) -> BTreeSet<String> {
+        const OUTPUT_VIEW_STORAGE_ONLY: i32 = 1;
+        let manifest = crate::runtime::descriptor_manifest::descriptor_contract_manifest();
+        let message = manifest
+            .messages
+            .iter()
+            .find(|message| message.full_name == message_full_name)
+            .unwrap_or_else(|| panic!("descriptor message {message_full_name} must exist"));
+
+        message
+            .fields
+            .iter()
+            .filter(|field| {
+                field
+                    .db_column_security
+                    .as_ref()
+                    .is_some_and(|security| security.output_view == OUTPUT_VIEW_STORAGE_ONLY)
+            })
+            .map(|field| field.name.clone())
+            .collect()
+    }
+
+    fn session_pb_string_field<'a>(pb: &'a authn_entity_pb::Session, field: &str) -> &'a str {
+        match field {
+            "csrf_token_hash" => &pb.csrf_token_hash,
+            "session_token_hash" => &pb.session_token_hash,
+            "session_token_lookup" => &pb.session_token_lookup,
+            other => panic!("Session mapper has no storage-only assertion for {other}"),
+        }
+    }
+
+    fn session_record() -> SessionRecord {
+        SessionRecord {
+            session_id_hash: "hmac-sha256:0123456789abcdef".to_string(),
+            principal_id: "user-1".to_string(),
+            user_id: "user-1".to_string(),
+            service_identity: String::new(),
+            tenant_id: "acme".to_string(),
+            project_id: "billing".to_string(),
+            scopes: vec!["data:read".to_string()],
+            roles: vec!["reader".to_string()],
+            relationship_version: "rv1".to_string(),
+            created_at_unix: 10,
+            updated_at_unix: 20,
+            expires_at_unix: 30,
+            revoked_at_unix: 0,
+            client_fingerprint: "device".to_string(),
+        }
+    }
+
+    #[test]
+    fn session_mapper_uses_public_handle_and_blanks_hash_material() {
+        let rec = session_record();
+        let pb = session_record_to_pb(&rec, 20);
+
+        assert!(pb.session_id.starts_with("sesspub_"));
+        assert_ne!(pb.session_id, rec.session_id_hash);
+        assert!(pb.session_token_lookup.is_empty());
+        assert!(pb.session_token_hash.is_empty());
+        assert!(pb.csrf_token_hash.is_empty());
+        assert!(pb.access_token_jti.is_empty());
+        assert!(pb.refresh_token_jti.is_empty());
+    }
+
+    #[test]
+    fn session_mapper_blanks_descriptor_storage_only_fields() {
+        let storage_only = storage_only_field_names("udb.core.authn.entity.v1.Session");
+        assert_eq!(
+            storage_only,
+            [
+                "csrf_token_hash",
+                "session_token_hash",
+                "session_token_lookup"
+            ]
+            .into_iter()
+            .map(str::to_string)
+            .collect()
+        );
+
+        let pb = session_record_to_pb(&session_record(), 20);
+        for field in storage_only {
+            assert!(
+                session_pb_string_field(&pb, &field).is_empty(),
+                "descriptor storage-only Session field {field} must be blanked by the mapper"
+            );
+        }
+    }
+
+    #[test]
+    fn public_session_handle_is_stable_and_not_a_lookup_hash() {
+        let hash = "hmac-sha256:abcdef";
+        let one = public_session_handle_from_hash(hash);
+        let two = public_session_handle_from_hash(hash);
+
+        assert_eq!(one, two);
+        assert!(one.starts_with("sesspub_"));
+        assert!(!one.contains("hmac-sha256"));
+        assert_ne!(one, hash);
     }
 }

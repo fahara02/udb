@@ -59,7 +59,7 @@ services:
     working_dir: /workspace
     entrypoint: ["/bin/sh", "/workspace/scripts/run-udb-linux.sh"]
     environment:
-      UDB_CLI_URL: ${UDB_CLI_URL:-https://github.com/fahara02/udb/releases/latest/download/udb-proto-parser-linux-amd64}
+      UDB_CLI_URL: ${UDB_CLI_URL:-https://github.com/fahara02/udb/releases/latest/download/udb-linux-amd64}
       UDB_DB_OPS_ROOT: /workspace/db_ops
       UDB_PG_DSN: postgres://udb:udb@postgres:5432/udb
       UDB_CACHE_DSN: redis://redis:6379
@@ -82,7 +82,7 @@ services:
     entrypoint: ["/bin/sh", "/workspace/scripts/run-udb-linux.sh"]
     command: ["serve", "/workspace/proto", "", "0.0.0.0:50051"]
     environment:
-      UDB_CLI_URL: ${UDB_CLI_URL:-https://github.com/fahara02/udb/releases/latest/download/udb-proto-parser-linux-amd64}
+      UDB_CLI_URL: ${UDB_CLI_URL:-https://github.com/fahara02/udb/releases/latest/download/udb-linux-amd64}
       UDB_PG_DSN: postgres://udb:udb@postgres:5432/udb
       UDB_CACHE_DSN: redis://redis:6379
       UDB_REDIS_DSN: redis://redis:6379

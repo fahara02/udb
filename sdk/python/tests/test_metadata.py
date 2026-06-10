@@ -26,6 +26,21 @@ def test_metadata_headers_include_required_and_routing_values() -> None:
     assert headers["x-udb-primary-read"] == "true"
 
 
+def test_metadata_headers_include_credentials() -> None:
+    headers = dict(
+        Metadata(
+            tenant_id="tenant-1",
+            purpose="billing.test",
+            correlation_id="corr-1",
+            bearer_token="bearer-1",
+            api_key="api-key-1",
+        ).to_grpc_metadata()
+    )
+
+    assert headers["authorization"] == "Bearer bearer-1"
+    assert headers["x-api-key"] == "api-key-1"
+
+
 def test_metadata_builds_request_context() -> None:
     meta = Metadata(
         tenant_id="tenant-1",

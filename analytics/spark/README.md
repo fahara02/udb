@@ -19,7 +19,7 @@ Apache Spark Structured Streaming   (auth_events_streaming.py)
 metrics sink (parquet / Delta / dashboard)
 ```
 
-## Producer side (already wired)
+## Producer side
 
 The native auth services publish events through an outbox sink
 (`src/runtime/service/auth_service/events.rs`). Each mutation enqueues a row into
@@ -32,15 +32,12 @@ Topics produced today (see `events.rs::topics`):
 | --- | --- | --- |
 | authn | `udb.authn.user.registered.v1` | `create_user` |
 | authn | `udb.authn.user.login.v1` | `login` |
-| authn | `udb.authn.session.revoked.v1` | `revoke_session` *(pending)* |
-| authz | `udb.authz.role.created.v1` | `create_role` *(pending)* |
-| authz | `udb.authz.role.assigned.v1` | `assign_role` *(pending)* |
-| authz | `udb.authz.access.denied.v1` | `authorize` deny *(pending)* |
+| authn | `udb.authn.session.revoked.v1` | `revoke_session` |
+| authz | `udb.authz.role.created.v1` | `create_role` |
+| authz | `udb.authz.role.assigned.v1` | `assign_role` |
+| authz | `udb.authz.access.denied.v1` | `authorize` deny |
 | apikey | `udb.apikey.created.v1` | `create_api_key` |
 | apikey | `udb.apikey.revoked.v1` | `revoke_api_key` |
-
-*(pending)* = event proto + topic defined and the sink is wired; the per-handler
-`emit_event` call is being added incrementally.
 
 ## Wire contract: `EventEnvelope`
 

@@ -34,7 +34,11 @@ if (-not $env:RUST_LOG) { $env:RUST_LOG = "info" }
 
 Push-Location $ProjectRoot
 try {
-    Invoke-Udb serve proto "" $Address
+    # Serve only the domain protos (proto/shop). The broker embeds its own
+    # contract, so proto/udb/** is needed for buf codegen — NOT for serving;
+    # pointing the broker at the whole exported tree makes it try to re-lint the
+    # UDB contract protos. The empty "" arg is the (unused) namespace slot.
+    Invoke-Udb serve proto/shop "" $Address
 }
 finally {
     Pop-Location

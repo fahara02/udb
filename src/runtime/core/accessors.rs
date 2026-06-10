@@ -80,7 +80,7 @@ macro_rules! impl_instance_resolver {
             }
             self.ensure_unlabeled_default_allowed_for_project($unlabeled, project_id)?;
             None
-                $(.or_else(|| self.choose_instance_name($choose, false)))+
+                $(.or_else(|| self.choose_instance_name_for_project($choose, false, project_id)))+
                 .and_then(|name| self.$instances.get(name))
                 .or(self.$single.as_ref())
                 .or_else(|| self.$instances.values().next())
@@ -199,14 +199,20 @@ impl DataBrokerRuntime {
                 tonic::Status::failed_precondition(format!(
                     "backend executor '{}:{}' is not registered",
                     resolved.backend,
-                    resolved.instance.as_deref().unwrap_or("default")
+                    resolved
+                        .instance
+                        .as_deref()
+                        .unwrap_or(crate::runtime::catalog::DEFAULT_PROJECT_ID)
                 ))
             })?;
         if !registration.connected {
             return Err(tonic::Status::failed_precondition(format!(
                 "backend executor '{}:{}' is registered but not connected",
                 registration.backend,
-                registration.instance.as_deref().unwrap_or("default")
+                registration
+                    .instance
+                    .as_deref()
+                    .unwrap_or(crate::runtime::catalog::DEFAULT_PROJECT_ID)
             )));
         }
         let target_instance = registration.instance.clone().or(resolved.instance);
@@ -688,7 +694,12 @@ impl DataBrokerRuntime {
                 let (backend, instance) = key
                     .split_once(':')
                     .map(|(backend, instance)| (backend.to_string(), instance.to_string()))
-                    .unwrap_or_else(|| (key.clone(), "default".to_string()));
+                    .unwrap_or_else(|| {
+                        (
+                            key.clone(),
+                            crate::runtime::catalog::DEFAULT_PROJECT_ID.to_string(),
+                        )
+                    });
                 let open = state
                     .opened_until
                     .map(|deadline| Instant::now() < deadline)
@@ -1179,6 +1190,15 @@ impl DataBrokerRuntime {
         None
     }
 
+    pub fn backend_transport_label(&self, kind: crate::backend::BackendKind) -> &'static str {
+        match kind {
+            crate::backend::BackendKind::Mongodb => self
+                .mongodb_transport_kind()
+                .unwrap_or_else(|| kind.transport_label()),
+            _ => kind.transport_label(),
+        }
+    }
+
     fn project_routing_mode(&self) -> crate::runtime::project_backend_router::ProjectRoutingMode {
         crate::runtime::project_backend_router::ProjectRoutingMode::parse(
             &self.config.project_routing_mode,
@@ -1204,7 +1224,8 @@ impl DataBrokerRuntime {
                 "backend instance '{}:{}' is not configured for project '{}': {}",
                 instance.backend,
                 instance.name,
-                normalized_project_id(project_id).unwrap_or("default"),
+                normalized_project_id(project_id)
+                    .unwrap_or(crate::runtime::catalog::DEFAULT_PROJECT_ID),
                 reason
             ))),
         }
@@ -1238,7 +1259,8 @@ impl DataBrokerRuntime {
                 "backend instance '{}:{}' is not configured for project '{}': {}",
                 backend,
                 instance,
-                normalized_project_id(project_id).unwrap_or("default"),
+                normalized_project_id(project_id)
+                    .unwrap_or(crate::runtime::catalog::DEFAULT_PROJECT_ID),
                 reason
             ))),
         }
@@ -1252,7 +1274,11 @@ impl DataBrokerRuntime {
         if project_id.trim().is_empty() {
             return Ok(());
         }
-        self.allow_unlabeled_fallback_instance_for_project(backend, "default", project_id)
+        self.allow_unlabeled_fallback_instance_for_project(
+            backend,
+            crate::runtime::catalog::DEFAULT_PROJECT_ID,
+            project_id,
+        )
     }
 
     fn ensure_backend_instance_name_allowed_for_project(

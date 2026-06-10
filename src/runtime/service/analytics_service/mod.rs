@@ -21,12 +21,12 @@ use tonic::{Request, Response, Status};
 use crate::proto::udb::core::analytics::entity::v1 as ana_entity_pb;
 use crate::proto::udb::core::analytics::services::v1 as ana_pb;
 use crate::proto::udb::core::analytics::services::v1::analytics_service_server::AnalyticsService;
-use crate::proto::udb::core::common::v1 as common_pb;
 use crate::runtime::native_catalog::{NativeModel, native_model};
 
 pub use crate::proto::udb::core::analytics::services::v1::analytics_service_server::AnalyticsServiceServer;
 
 use super::DataBrokerService;
+use super::native_helpers::{native_page_response, native_page_window};
 
 const PMS_MSG: &str = "udb.core.analytics.entity.v1.PipelineMetricSnapshot";
 const EPS_MSG: &str = "udb.core.analytics.entity.v1.ExecutorPerformanceSummary";
@@ -129,45 +129,6 @@ fn ts(seconds: i64) -> Option<prost_types::Timestamp> {
         None
     } else {
         Some(prost_types::Timestamp { seconds, nanos: 0 })
-    }
-}
-
-fn page_size_of(page: &Option<common_pb::PageRequest>) -> (i64, i64) {
-    let p = page.as_ref();
-    let size = p
-        .map(|x| x.page_size)
-        .filter(|&n| n > 0)
-        .unwrap_or(50)
-        .min(500) as i64;
-    let num = p.map(|x| x.page).filter(|&n| n > 0).unwrap_or(1) as i64;
-    (size, (num - 1).max(0) * size)
-}
-
-fn page_response_of(page: &Option<common_pb::PageRequest>, total: i64) -> common_pb::PageResponse {
-    let page_number = page
-        .as_ref()
-        .map(|p| p.page)
-        .filter(|&n| n > 0)
-        .unwrap_or(1);
-    let page_size = page
-        .as_ref()
-        .map(|p| p.page_size)
-        .filter(|&n| n > 0)
-        .unwrap_or(50);
-    let total_pages = if total <= 0 {
-        0
-    } else {
-        ((total as i32) + page_size - 1) / page_size
-    };
-    common_pb::PageResponse {
-        page: page_number,
-        page_size,
-        total_items: total,
-        total_pages,
-        next_page_token: String::new(),
-        total_count: total,
-        has_next: page_number < total_pages,
-        has_previous: page_number > 1 && total_pages > 0,
     }
 }
 
@@ -328,7 +289,7 @@ impl AnalyticsService for AnalyticsServiceImpl {
         let m = pms_model();
         let rel = m.relation.clone();
         let projection = pms_projection(&m);
-        let (limit, offset) = page_size_of(&req.page);
+        let page = native_page_window(req.page.as_ref(), 50);
         let rows = sqlx::query(&format!(
             "SELECT {projection}, COUNT(*) OVER() AS total_count FROM {rel} \
              WHERE ($1 = '' OR {stage} = $1) \
@@ -344,8 +305,8 @@ impl AnalyticsService for AnalyticsServiceImpl {
         .bind(&req.tenant_id)
         .bind(&req.hour_from)
         .bind(&req.hour_to)
-        .bind(limit)
-        .bind(offset)
+        .bind(page.limit_i64())
+        .bind(page.offset_i64())
         .fetch_all(pool)
         .await
         .map_err(|err| Status::internal(format!("get pipeline summary failed: {err}")))?;
@@ -356,7 +317,7 @@ impl AnalyticsService for AnalyticsServiceImpl {
         let snapshots = rows.iter().map(pms_from_row).collect();
         Ok(Response::new(ana_pb::GetPipelineSummaryResponse {
             snapshots,
-            page: Some(page_response_of(&req.page, total)),
+            page: Some(native_page_response(req.page.as_ref(), total, 50)),
         }))
     }
 

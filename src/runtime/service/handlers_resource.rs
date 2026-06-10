@@ -39,6 +39,9 @@ impl DataBrokerService {
             Ok(resolved) => resolved,
             Err(err) => return self.record_grpc("EnsureResource", started, Err(err)),
         };
+        // Phase 8 (§9): observe scatter-gather fan-out width per backend kind.
+        self.metrics
+            .inc_backend_fanout(&req.backend, targets.len() as u64);
         let resource_name = req.resource_name.clone();
         let spec_json = req.spec_json.clone();
         let result = self
@@ -123,6 +126,9 @@ impl DataBrokerService {
                 })),
             );
         }
+        if let Err(err) = guard_rls_bypass_operation("drop_resource", &req.spec_json) {
+            return self.record_grpc("DropResource", started, Err(err));
+        }
         // Capability guard.
         if let Err(err) = check_backend_capability(&req.backend, "drop_resource", |c| {
             c.supports_resource_lifecycle
@@ -138,6 +144,8 @@ impl DataBrokerService {
             Ok(resolved) => resolved,
             Err(err) => return self.record_grpc("DropResource", started, Err(err)),
         };
+        self.metrics
+            .inc_backend_fanout(&req.backend, targets.len() as u64);
         let resource_name = req.resource_name.clone();
         let result = self
             .execute_with_channel_scoped(
@@ -217,6 +225,8 @@ impl DataBrokerService {
             Ok(resolved) => resolved,
             Err(err) => return self.record_grpc("ListResources", started, Err(err)),
         };
+        self.metrics
+            .inc_backend_fanout(&req.backend, targets.len() as u64);
         let result = self
             .execute_with_channel_scoped(
                 crate::runtime::channels::OperationChannel::GenericDispatch,

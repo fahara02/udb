@@ -42,6 +42,50 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>bool internal_grpc_only = 7 [json_name = "internalGrpcOnly"];</code>
      */
     protected $internal_grpc_only = false;
+    /**
+     * Generated from protobuf field <code>int32 required_assurance_level = 8 [json_name = "requiredAssuranceLevel"];</code>
+     */
+    protected $required_assurance_level = 0;
+    /**
+     * Generated from protobuf field <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+     */
+    private $allowed_credential_types;
+    /**
+     * Generated from protobuf field <code>string rate_limit_policy_ref = 10 [json_name = "rateLimitPolicyRef"];</code>
+     */
+    protected $rate_limit_policy_ref = '';
+    /**
+     * Generated from protobuf field <code>string abuse_policy_ref = 11 [json_name = "abusePolicyRef"];</code>
+     */
+    protected $abuse_policy_ref = '';
+    /**
+     * Generated from protobuf field <code>string audit_event_type = 12 [json_name = "auditEventType"];</code>
+     */
+    protected $audit_event_type = '';
+    /**
+     * Generated from protobuf field <code>string decision_resource = 13 [json_name = "decisionResource"];</code>
+     */
+    protected $decision_resource = '';
+    /**
+     * Generated from protobuf field <code>string owner_field = 14 [json_name = "ownerField"];</code>
+     */
+    protected $owner_field = '';
+    /**
+     * Generated from protobuf field <code>string tenant_field = 15 [json_name = "tenantField"];</code>
+     */
+    protected $tenant_field = '';
+    /**
+     * Generated from protobuf field <code>string project_field = 16 [json_name = "projectField"];</code>
+     */
+    protected $project_field = '';
+    /**
+     * Generated from protobuf field <code>bool idempotency_required = 17 [json_name = "idempotencyRequired"];</code>
+     */
+    protected $idempotency_required = false;
+    /**
+     * Generated from protobuf field <code>bool request_context_required = 18 [json_name = "requestContextRequired"];</code>
+     */
+    protected $request_context_required = false;
 
     /**
      * Constructor.
@@ -56,6 +100,17 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      *     @type bool $csrf_required
      *     @type string $policy_ref
      *     @type bool $internal_grpc_only
+     *     @type int $required_assurance_level
+     *     @type int[] $allowed_credential_types
+     *     @type string $rate_limit_policy_ref
+     *     @type string $abuse_policy_ref
+     *     @type string $audit_event_type
+     *     @type string $decision_resource
+     *     @type string $owner_field
+     *     @type string $tenant_field
+     *     @type string $project_field
+     *     @type bool $idempotency_required
+     *     @type bool $request_context_required
      * }
      */
     public function __construct($data = NULL) {
@@ -210,6 +265,246 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
     public function setInternalGrpcOnly(bool $var)
     {
         $this->internal_grpc_only = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>int32 required_assurance_level = 8 [json_name = "requiredAssuranceLevel"];</code>
+     * @return int
+     */
+    public function getRequiredAssuranceLevel()
+    {
+        return $this->required_assurance_level;
+    }
+
+    /**
+     * Generated from protobuf field <code>int32 required_assurance_level = 8 [json_name = "requiredAssuranceLevel"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setRequiredAssuranceLevel(int $var)
+    {
+        GPBUtil::checkInt32($var);
+        $this->required_assurance_level = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+     * @return RepeatedField<int> one of the values in {@see \Udb\Core\Common\V1\CredentialType}
+     */
+    public function getAllowedCredentialTypes()
+    {
+        return $this->allowed_credential_types;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+     * @param int[] $var one of the values in {@see \Udb\Core\Common\V1\CredentialType}
+     * @return $this
+     */
+    public function setAllowedCredentialTypes(array|RepeatedField $var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::ENUM, \Udb\Core\Common\V1\CredentialType::class);
+        $this->allowed_credential_types = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string rate_limit_policy_ref = 10 [json_name = "rateLimitPolicyRef"];</code>
+     * @return string
+     */
+    public function getRateLimitPolicyRef()
+    {
+        return $this->rate_limit_policy_ref;
+    }
+
+    /**
+     * Generated from protobuf field <code>string rate_limit_policy_ref = 10 [json_name = "rateLimitPolicyRef"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRateLimitPolicyRef(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->rate_limit_policy_ref = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string abuse_policy_ref = 11 [json_name = "abusePolicyRef"];</code>
+     * @return string
+     */
+    public function getAbusePolicyRef()
+    {
+        return $this->abuse_policy_ref;
+    }
+
+    /**
+     * Generated from protobuf field <code>string abuse_policy_ref = 11 [json_name = "abusePolicyRef"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setAbusePolicyRef(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->abuse_policy_ref = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string audit_event_type = 12 [json_name = "auditEventType"];</code>
+     * @return string
+     */
+    public function getAuditEventType()
+    {
+        return $this->audit_event_type;
+    }
+
+    /**
+     * Generated from protobuf field <code>string audit_event_type = 12 [json_name = "auditEventType"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setAuditEventType(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->audit_event_type = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string decision_resource = 13 [json_name = "decisionResource"];</code>
+     * @return string
+     */
+    public function getDecisionResource()
+    {
+        return $this->decision_resource;
+    }
+
+    /**
+     * Generated from protobuf field <code>string decision_resource = 13 [json_name = "decisionResource"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setDecisionResource(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->decision_resource = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string owner_field = 14 [json_name = "ownerField"];</code>
+     * @return string
+     */
+    public function getOwnerField()
+    {
+        return $this->owner_field;
+    }
+
+    /**
+     * Generated from protobuf field <code>string owner_field = 14 [json_name = "ownerField"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setOwnerField(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->owner_field = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string tenant_field = 15 [json_name = "tenantField"];</code>
+     * @return string
+     */
+    public function getTenantField()
+    {
+        return $this->tenant_field;
+    }
+
+    /**
+     * Generated from protobuf field <code>string tenant_field = 15 [json_name = "tenantField"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setTenantField(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->tenant_field = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string project_field = 16 [json_name = "projectField"];</code>
+     * @return string
+     */
+    public function getProjectField()
+    {
+        return $this->project_field;
+    }
+
+    /**
+     * Generated from protobuf field <code>string project_field = 16 [json_name = "projectField"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setProjectField(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->project_field = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool idempotency_required = 17 [json_name = "idempotencyRequired"];</code>
+     * @return bool
+     */
+    public function getIdempotencyRequired()
+    {
+        return $this->idempotency_required;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool idempotency_required = 17 [json_name = "idempotencyRequired"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setIdempotencyRequired(bool $var)
+    {
+        $this->idempotency_required = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool request_context_required = 18 [json_name = "requestContextRequired"];</code>
+     * @return bool
+     */
+    public function getRequestContextRequired()
+    {
+        return $this->request_context_required;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool request_context_required = 18 [json_name = "requestContextRequired"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setRequestContextRequired(bool $var)
+    {
+        $this->request_context_required = $var;
 
         return $this;
     }

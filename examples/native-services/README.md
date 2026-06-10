@@ -1,4 +1,4 @@
-# UDB native services — examples (Go · PHP · TypeScript · Python)
+# UDB native services — examples (Go · PHP · TypeScript · Python · C# · Java)
 
 Simplest→advanced examples of using UDB's **native control-plane services** —
 authentication (users, sessions, API keys), authorization (RBAC/ABAC/ReBAC roles,
@@ -15,6 +15,8 @@ symmetric with Go:
 | [`python/`](python) | `admin.py` | `main.py` | ✅ `py_compile`, imports resolve |
 | [`php/`](php) | `admin.php` | `main.php` | ✅ `php -l` (runtime needs `ext-grpc`) |
 | [`typescript/`](typescript) | `admin.ts` | `main.ts` | ✅ `npm install` (39 pkgs) |
+| [`csharp/`](csharp) | `Program.cs admin` | `Program.cs consumer` | ✅ `dotnet build` (net8.0) |
+| [`java/`](java) | `Main.java` — register → role/assign/policy → check → mint key → authenticate → native-access | (same program) | ✅ `javac` against SDK + gen stubs (mvn N/A in env) |
 
 - **Admin flow** drives the raw Authn/Authz/ApiKey service stubs (provisioning is
   an admin concern) and prints `export UDB_API_KEY=…` at the end.

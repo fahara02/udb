@@ -52,46 +52,59 @@ public final class AnalyticsEventsProto extends com.google.protobuf.GeneratedFil
     java.lang.String[] descriptorData = {
       "\n3udb/core/analytics/events/v1/analytics" +
       "_events.proto\022\034udb.core.analytics.events" +
-      ".v1\032\037google/protobuf/timestamp.proto\"\354\002\n" +
-      "\036PipelineSnapshotCommittedEvent\022\031\n\010event" +
-      "_id\030\001 \001(\tR\007eventId\022\035\n\nstage_name\030\002 \001(\tR\t" +
-      "stageName\022#\n\rsnapshot_hour\030\003 \001(\tR\014snapsh" +
-      "otHour\022%\n\016total_requests\030\004 \001(\003R\rtotalReq" +
-      "uests\022\035\n\nerror_rate\030\005 \001(\001R\terrorRate\022$\n\016" +
-      "p99_latency_ms\030\006 \001(\001R\014p99LatencyMs\022%\n\016co" +
-      "rrelation_id\030\007 \001(\tR\rcorrelationId\022;\n\013occ" +
-      "urred_at\030\010 \001(\0132\032.google.protobuf.Timesta" +
-      "mpR\noccurredAt\022\033\n\ttenant_id\030\t \001(\tR\010tenan" +
-      "tId\"\325\002\n\026SlaBreachDetectedEvent\022\031\n\010event_" +
-      "id\030\001 \001(\tR\007eventId\022\035\n\nstage_name\030\002 \001(\tR\ts" +
-      "tageName\022\037\n\013breach_type\030\003 \001(\tR\nbreachTyp" +
-      "e\022%\n\016observed_value\030\004 \001(\001R\robservedValue" +
-      "\022\034\n\tthreshold\030\005 \001(\001R\tthreshold\022\032\n\010severi" +
-      "ty\030\006 \001(\tR\010severity\022%\n\016correlation_id\030\007 \001" +
-      "(\tR\rcorrelationId\022;\n\013occurred_at\030\010 \001(\0132\032" +
-      ".google.protobuf.TimestampR\noccurredAt\022\033" +
-      "\n\ttenant_id\030\t \001(\tR\010tenantId\"\327\002\n\032DailySum" +
-      "maryGeneratedEvent\022\031\n\010event_id\030\001 \001(\tR\007ev" +
-      "entId\022!\n\014summary_date\030\002 \001(\tR\013summaryDate" +
-      "\0228\n\030executor_summaries_count\030\003 \001(\005R\026exec" +
-      "utorSummariesCount\022@\n\034reconciliation_sum" +
-      "mary_ready\030\004 \001(\010R\032reconciliationSummaryR" +
-      "eady\022%\n\016correlation_id\030\005 \001(\tR\rcorrelatio" +
-      "nId\022;\n\013occurred_at\030\006 \001(\0132\032.google.protob" +
-      "uf.TimestampR\noccurredAt\022\033\n\ttenant_id\030\007 " +
-      "\001(\tR\010tenantIdB\227\002\n com.udb.core.analytics" +
-      ".events.v1B\024AnalyticsEventsProtoP\001ZHgith" +
-      "ub.com/fahara02/udb/sdk/go/gen/udb/core/" +
-      "analytics/events/v1;eventsv1\242\002\004UCAE\252\002\034ud" +
-      "b.core.Analytics.Events.V1\312\002\034Udb\\Core\\An" +
-      "alytics\\Events\\V1\342\002(Udb\\GPBMetadata\\Core" +
-      "\\Analytics\\Events\\V1\352\002 Udb::Core::Analyt" +
-      "ics::Events::V1b\006proto3"
+      ".v1\032\037google/protobuf/timestamp.proto\032!ud" +
+      "b/core/common/v1/security.proto\"\201\004\n\036Pipe" +
+      "lineSnapshotCommittedEvent\022\031\n\010event_id\030\001" +
+      " \001(\tR\007eventId\022\035\n\nstage_name\030\002 \001(\tR\tstage" +
+      "Name\022#\n\rsnapshot_hour\030\003 \001(\tR\014snapshotHou" +
+      "r\022%\n\016total_requests\030\004 \001(\003R\rtotalRequests" +
+      "\022\035\n\nerror_rate\030\005 \001(\001R\terrorRate\022$\n\016p99_l" +
+      "atency_ms\030\006 \001(\001R\014p99LatencyMs\022%\n\016correla" +
+      "tion_id\030\007 \001(\tR\rcorrelationId\022;\n\013occurred" +
+      "_at\030\010 \001(\0132\032.google.protobuf.TimestampR\no" +
+      "ccurredAt\022\033\n\ttenant_id\030\t \001(\tR\010tenantId:\222" +
+      "\001\222\262\031\215\001\n;udb.core.analytics.events.v1.Pip" +
+      "elineSnapshotCommittedEvent\022\"udb.analyti" +
+      "cs.pipeline.snapshot.v1\032\ttenant_id\"\010stan" +
+      "dard*\rat_least_once2\006stable\"\332\003\n\026SlaBreac" +
+      "hDetectedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventI" +
+      "d\022\035\n\nstage_name\030\002 \001(\tR\tstageName\022\037\n\013brea" +
+      "ch_type\030\003 \001(\tR\nbreachType\022%\n\016observed_va" +
+      "lue\030\004 \001(\001R\robservedValue\022\034\n\tthreshold\030\005 " +
+      "\001(\001R\tthreshold\022\032\n\010severity\030\006 \001(\tR\010severi" +
+      "ty\022%\n\016correlation_id\030\007 \001(\tR\rcorrelationI" +
+      "d\022;\n\013occurred_at\030\010 \001(\0132\032.google.protobuf" +
+      ".TimestampR\noccurredAt\022\033\n\ttenant_id\030\t \001(" +
+      "\tR\010tenantId:\202\001\222\262\031~\n3udb.core.analytics.e" +
+      "vents.v1.SlaBreachDetectedEvent\022\033udb.ana" +
+      "lytics.sla.breach.v1\032\ttenant_id\"\010standar" +
+      "d*\rat_least_once2\006stable\"\344\003\n\032DailySummar" +
+      "yGeneratedEvent\022\031\n\010event_id\030\001 \001(\tR\007event" +
+      "Id\022!\n\014summary_date\030\002 \001(\tR\013summaryDate\0228\n" +
+      "\030executor_summaries_count\030\003 \001(\005R\026executo" +
+      "rSummariesCount\022@\n\034reconciliation_summar" +
+      "y_ready\030\004 \001(\010R\032reconciliationSummaryRead" +
+      "y\022%\n\016correlation_id\030\005 \001(\tR\rcorrelationId" +
+      "\022;\n\013occurred_at\030\006 \001(\0132\032.google.protobuf." +
+      "TimestampR\noccurredAt\022\033\n\ttenant_id\030\007 \001(\t" +
+      "R\010tenantId:\212\001\222\262\031\205\001\n7udb.core.analytics.e" +
+      "vents.v1.DailySummaryGeneratedEvent\022\036udb" +
+      ".analytics.daily.summary.v1\032\ttenant_id\"\010" +
+      "standard*\rat_least_once2\006stableB\227\002\n com." +
+      "udb.core.analytics.events.v1B\024AnalyticsE" +
+      "ventsProtoP\001ZHgithub.com/fahara02/udb/sd" +
+      "k/go/gen/udb/core/analytics/events/v1;ev" +
+      "entsv1\242\002\004UCAE\252\002\034udb.core.Analytics.Event" +
+      "s.V1\312\002\034Udb\\Core\\Analytics\\Events\\V1\342\002(Ud" +
+      "b\\GPBMetadata\\Core\\Analytics\\Events\\V1\352\002" +
+      " Udb::Core::Analytics::Events::V1b\006proto" +
+      "3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.TimestampProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_analytics_events_v1_PipelineSnapshotCommittedEvent_descriptor =
       getDescriptor().getMessageType(0);
@@ -113,6 +126,12 @@ public final class AnalyticsEventsProto extends com.google.protobuf.GeneratedFil
         new java.lang.String[] { "EventId", "SummaryDate", "ExecutorSummariesCount", "ReconciliationSummaryReady", "CorrelationId", "OccurredAt", "TenantId", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
+    com.google.protobuf.ExtensionRegistry registry =
+        com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.messageEventContract);
+    com.google.protobuf.Descriptors.FileDescriptor
+        .internalUpdateFileDescriptor(descriptor, registry);
   }
 
   // @@protoc_insertion_point(outer_class_scope)

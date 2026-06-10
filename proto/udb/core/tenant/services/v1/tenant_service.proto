@@ -15,11 +15,92 @@ option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Tenant\\Services\\V1";
 option php_namespace = "Udb\\Core\\Tenant\\Services\\V1";
 
 service TenantService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "tenant"
+    logical_service_id: "tenant"
+    proto_service_id: "tenant"
+    display_name: "Tenants"
+    category: "tenant"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "tenant"
+    cli_scaffold_group: "tenant"
+    health_check_ref: "tenant"
+    capability_ref: "native.tenant"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "tenant"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "tenant"
+    import_path: "udb/native/tenant"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.tenant.config"
+    required_native_services: "tenant"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "tenant"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
   // Create tenant
   rpc CreateTenant(CreateTenantRequest) returns (CreateTenantResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:tenant:create-tenant"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "tenant.CreateTenant"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "create_tenant"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "tenant"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "tenant"
+      import_path: "udb/native/tenant"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.tenant.create_tenant.boilerplate"
+      route_name: "create_tenant"
+      middleware_name: "udb_tenant"
+      required_native_services: "tenant"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "tenant"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "tenant.CreateTenant"
+      outbox_topic: "tenant.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -36,7 +117,48 @@ service TenantService {
   rpc GetTenant(GetTenantRequest) returns (GetTenantResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:tenant:get-tenant"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "tenant.GetTenant"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_tenant"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "tenant"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "tenant"
+      import_path: "udb/native/tenant"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.tenant.get_tenant.boilerplate"
+      route_name: "get_tenant"
+      middleware_name: "udb_tenant"
+      required_native_services: "tenant"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "tenant"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "tenant.GetTenant"
+      outbox_topic: "tenant.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -50,7 +172,48 @@ service TenantService {
   rpc ListTenants(ListTenantsRequest) returns (ListTenantsResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:tenant:list-tenants"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "tenant.ListTenants"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_tenants"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "tenant"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "tenant"
+      import_path: "udb/native/tenant"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.tenant.list_tenants.boilerplate"
+      route_name: "list_tenants"
+      middleware_name: "udb_tenant"
+      required_native_services: "tenant"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "tenant"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "tenant.ListTenants"
+      outbox_topic: "tenant.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -64,7 +227,48 @@ service TenantService {
   rpc UpdateTenant(UpdateTenantRequest) returns (UpdateTenantResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:tenant:update-tenant"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "tenant.UpdateTenant"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "update_tenant"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "tenant"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "tenant"
+      import_path: "udb/native/tenant"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.tenant.update_tenant.boilerplate"
+      route_name: "update_tenant"
+      middleware_name: "udb_tenant"
+      required_native_services: "tenant"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "tenant"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "tenant.UpdateTenant"
+      outbox_topic: "tenant.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -81,7 +285,48 @@ service TenantService {
   rpc GetTenantConfig(GetTenantConfigRequest) returns (GetTenantConfigResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:tenant:get-tenant-config"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "tenant.GetTenantConfig"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_tenant_config"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "tenant"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "tenant"
+      import_path: "udb/native/tenant"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.tenant.get_tenant_config.boilerplate"
+      route_name: "get_tenant_config"
+      middleware_name: "udb_tenant"
+      required_native_services: "tenant"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "tenant"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "tenant.GetTenantConfig"
+      outbox_topic: "tenant.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -95,7 +340,48 @@ service TenantService {
   rpc UpdateTenantConfig(UpdateTenantConfigRequest) returns (UpdateTenantConfigResponse) {
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
+      scopes: "udb:tenant:update-tenant-config"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "tenant.UpdateTenantConfig"
+      request_context_required: true
       tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "update_tenant_config"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "tenant"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "tenant"
+      import_path: "udb/native/tenant"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.tenant.update_tenant_config.boilerplate"
+      route_name: "update_tenant_config"
+      middleware_name: "udb_tenant"
+      required_native_services: "tenant"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "tenant"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "tenant.UpdateTenantConfig"
+      outbox_topic: "tenant.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
     };
     option (udb.core.common.v1.rest_contract) = {
       response_envelope: true
@@ -110,6 +396,15 @@ service TenantService {
 }
 
 message CreateTenantRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "tenant"
+    generate_minimal_example: true
+  };
   string code = 1;
   string name = 2;
   string type = 3;
@@ -119,6 +414,15 @@ message CreateTenantRequest {
 }
 
 message CreateTenantResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "tenant"
+    generate_minimal_example: true
+  };
   string tenant_id = 1;
   string message = 2;
   // Error information if operation failed
@@ -126,16 +430,43 @@ message CreateTenantResponse {
 }
 
 message GetTenantRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "tenant"
+    generate_minimal_example: true
+  };
   string tenant_id = 1;
 }
 
 message GetTenantResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "tenant"
+    generate_minimal_example: true
+  };
   entity.v1.Tenant tenant = 1;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 2;
 }
 
 message ListTenantsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "tenant"
+    generate_minimal_example: true
+  };
   string type = 1;
   string status = 2;
   int32 page = 3;
@@ -143,6 +474,15 @@ message ListTenantsRequest {
 }
 
 message ListTenantsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "tenant"
+    generate_minimal_example: true
+  };
   repeated entity.v1.Tenant tenants = 1;
   int32 total_count = 2;
   // Error information if operation failed
@@ -150,6 +490,15 @@ message ListTenantsResponse {
 }
 
 message UpdateTenantRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "tenant"
+    generate_minimal_example: true
+  };
   string tenant_id = 1;
   string name = 2;
   string status = 3;
@@ -158,22 +507,58 @@ message UpdateTenantRequest {
 }
 
 message UpdateTenantResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "tenant"
+    generate_minimal_example: true
+  };
   string message = 1;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 2;
 }
 
 message GetTenantConfigRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "tenant"
+    generate_minimal_example: true
+  };
   string tenant_id = 1;
 }
 
 message GetTenantConfigResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "tenant"
+    generate_minimal_example: true
+  };
   repeated entity.v1.TenantConfig configs = 1;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 2;
 }
 
 message UpdateTenantConfigRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "tenant"
+    generate_minimal_example: true
+  };
   string tenant_id = 1;
   string config_key = 2;
   string config_value = 3;
@@ -181,6 +566,15 @@ message UpdateTenantConfigRequest {
 }
 
 message UpdateTenantConfigResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "tenant"
+    generate_minimal_example: true
+  };
   string message = 1;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 2;

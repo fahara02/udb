@@ -12,7 +12,7 @@ package com.udb.core.authn.entity.v1;
  * authenticated by UDB and authorized by the UDB policy engine.
  *
  * Migration order 1 in schema udb_authn.
- * The password_hash uses bcrypt (cost ≥ 12).
+ * The password_hash uses Argon2id PHC strings; legacy keyed-HMAC values are upgraded on login.
  * All PII fields are masked in application logs via (pii) + (log_masked).
  * ---------------------------------------------------------------------------
  * </pre>
@@ -1476,7 +1476,7 @@ private static final long serialVersionUID = 0L;
    * authenticated by UDB and authorized by the UDB policy engine.
    *
    * Migration order 1 in schema udb_authn.
-   * The password_hash uses bcrypt (cost ≥ 12).
+   * The password_hash uses Argon2id PHC strings; legacy keyed-HMAC values are upgraded on login.
    * All PII fields are masked in application logs via (pii) + (log_masked).
    * ---------------------------------------------------------------------------
    * </pre>

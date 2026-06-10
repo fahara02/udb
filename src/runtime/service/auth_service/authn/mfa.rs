@@ -3,23 +3,6 @@
 
 use super::*;
 
-fn generated_code(_seed: &str, _now: u64) -> String {
-    // Draw the 6-digit code from the CSPRNG-backed UUID generator rather than a
-    // deterministic time+seed HMAC fold. The `u128 % 1_000_000` modulo bias is
-    // negligible (2^128 ≫ 10^6). The code is hashed before storage, so it never
-    // needs to be recomputable.
-    let n = (Uuid::new_v4().as_u128() % 1_000_000) as u32;
-    format!("{n:06}")
-}
-
-/// A CSPRNG-backed, human-transcribable single-use recovery code (three groups
-/// of four lowercase-hex chars, e.g. `a1b2-c3d4-e5f6`; ~48 bits of entropy).
-/// Only its keyed hash is stored, so it need not be recomputable.
-fn generate_recovery_code() -> String {
-    let raw = Uuid::new_v4().simple().to_string();
-    format!("{}-{}-{}", &raw[0..4], &raw[4..8], &raw[8..12])
-}
-
 impl AuthnServiceImpl {
     pub(super) async fn issue_otp(
         &self,
@@ -43,10 +26,36 @@ impl AuthnServiceImpl {
         correlation_id: String,
         now: u64,
     ) -> Result<(String, String), Status> {
+        let (rec, code) =
+            self.prepare_otp_record(user, otp_type, channel, address, correlation_id, now);
+        let otp_id = rec.otp_id.clone();
+        self.users.put_otp(rec).await.map_err(Status::internal)?;
+        // Best-effort outbound delivery to the operator's channel gateway. A
+        // delivery failure (or no configured webhook) never fails issuance — the
+        // OTP is persisted and the caller holds the otp_id.
+        self.deliver_otp_code(channel, address, &code, otp_type, &user.user_id, &otp_id)
+            .await;
+        Ok((otp_id, code))
+    }
+
+    /// Build a fresh PENDING OTP record (and its plaintext code) WITHOUT touching
+    /// the store or sending a notification. Splitting issuance into prepare →
+    /// persist → deliver lets a caller persist the row INSIDE its own transaction
+    /// (so the OTP commits atomically with its sibling mutation, §7) and run the
+    /// best-effort, non-rollback-able delivery only AFTER the tx commits.
+    pub(super) fn prepare_otp_record(
+        &self,
+        user: &UserRecord,
+        otp_type: i32,
+        channel: &str,
+        address: &str,
+        correlation_id: String,
+        now: u64,
+    ) -> (OtpRecord, String) {
         let otp_id = Uuid::new_v4().to_string();
-        let code = generated_code(&format!("{otp_id}:{}", user.user_id), now);
+        let code = authn::mfa_challenge::generate_otp_code();
         let rec = OtpRecord {
-            otp_id: otp_id.clone(),
+            otp_id,
             user_id: user.user_id.clone(),
             otp_type,
             code_hash: authn::hash_otp_code(&code, &self.otp_hash_key()),
@@ -59,17 +68,33 @@ impl AuthnServiceImpl {
             used_at_unix: 0,
             created_at_unix: now,
             correlation_id,
+            // Denormalize the owning user's tenant so the OTP row is tenant-scoped
+            // (RLS tolerates NULL, so an empty tenant simply stores NULL).
+            tenant_id: user.tenant_id.clone(),
         };
-        self.users.put_otp(rec).await.map_err(Status::internal)?;
-        // Best-effort outbound delivery to the operator's channel gateway. A
-        // delivery failure (or no configured webhook) never fails issuance — the
-        // OTP is persisted and the caller holds the otp_id.
-        authn::deliver_otp(channel, address, &code, otp_type, &user.user_id).await;
+        (rec, code)
+    }
+
+    /// Best-effort post-persistence OTP delivery (operator channel gateway + the
+    /// test-only code capture). Never fails the caller: the OTP is already durable
+    /// and the caller holds the otp_id. Safe to call AFTER a committing tx so the
+    /// notification side-effect is post-commit (it cannot be rolled back).
+    pub(super) async fn deliver_otp_code(
+        &self,
+        channel: &str,
+        address: &str,
+        code: &str,
+        otp_type: i32,
+        user_id: &str,
+        otp_id: &str,
+    ) {
+        authn::deliver_otp(channel, address, code, otp_type, user_id).await;
         #[cfg(test)]
         if let Ok(mut codes) = test_otp_codes().lock() {
-            codes.insert(otp_id.clone(), code.clone());
+            codes.insert(otp_id.to_string(), code.to_string());
         }
-        Ok((otp_id, code))
+        #[cfg(not(test))]
+        let _ = otp_id;
     }
 
     /// Enforce the configured per-(user, OTP type) cooldown to throttle OTP
@@ -122,7 +147,7 @@ impl AuthnServiceImpl {
         }
         if !authn::verify_otp_code(code, &self.otp_hash_key(), &rec.code_hash) {
             rec.attempt_count += 1;
-            if rec.attempt_count >= 5 {
+            if authn::mfa_challenge::should_expire_after_failed_attempt(rec.attempt_count) {
                 rec.status = authn_entity_pb::OtpStatus::Expired as i32;
             }
             self.users.update_otp(rec).await.map_err(Status::internal)?;
@@ -165,17 +190,29 @@ impl AuthnServiceImpl {
         let (otp_id, _code) = self
             .issue_otp(&user, otp_type, req.correlation_id, now_unix())
             .await?;
-        self.emit_event(AuthEvent::new(
-            topics::OTP_SENT,
-            otp_id.clone(),
-            user.tenant_id.clone(),
-            serde_json::json!({
-                "otp_id": otp_id.clone(),
-                "user_id": user.user_id.clone(),
-                "otp_type": otp_type,
-                "tenant_id": user.tenant_id.clone(),
+        self.emit_event(
+            AuthEvent::new(
+                topics::OTP_SENT,
+                otp_id.clone(),
+                user.tenant_id.clone(),
+                serde_json::json!({
+                    "otp_id": otp_id.clone(),
+                    "user_id": user.user_id.clone(),
+                    "otp_type": otp_type,
+                    "tenant_id": user.tenant_id.clone(),
+                }),
+            )
+            .with_correlation(format!("otp_sent:{otp_id}"))
+            .with_compliance(ComplianceEnvelope {
+                actor: user.user_id.clone(),
+                target_resource: user.user_id.clone(),
+                operation: "otp_send".to_string(),
+                outcome: "success".to_string(),
+                reason_code: "otp_issued".to_string(),
+                auth_method: "otp".to_string(),
+                ..ComplianceEnvelope::default()
             }),
-        ))
+        )
         .await;
         Ok(Response::new(authn_pb::SendOtpResponse {
             otp_id,
@@ -193,6 +230,7 @@ impl AuthnServiceImpl {
             .verify_otp_record(&req.otp_id, &req.code, None, now_unix())
             .await?;
         if let Some(rec) = verified {
+            let mut event_tenant_for_otp = String::new();
             if rec.otp_type == authn_entity_pb::OtpType::EmailVerification as i32 {
                 if let Some(mut user) = self
                     .users
@@ -200,21 +238,34 @@ impl AuthnServiceImpl {
                     .await
                     .map_err(Status::internal)?
                 {
-                    user.status = authn_entity_pb::UserStatus::Active as i32;
+                    user.status = crate::runtime::authn::AccountStatus::Active;
                     user.email_verified_at_unix = now_unix();
                     user.updated_at_unix = now_unix();
                     let event_email = user.email.clone();
                     let event_tenant = user.tenant_id.clone();
+                    event_tenant_for_otp = event_tenant.clone();
                     self.users.put_user(user).await.map_err(Status::internal)?;
-                    self.emit_event(AuthEvent::new(
-                        topics::EMAIL_VERIFIED,
-                        rec.user_id.clone(),
-                        event_tenant,
-                        serde_json::json!({
-                            "user_id": rec.user_id.clone(),
-                            "email": event_email,
+                    self.emit_event(
+                        AuthEvent::new(
+                            topics::EMAIL_VERIFIED,
+                            rec.user_id.clone(),
+                            event_tenant,
+                            serde_json::json!({
+                                "user_id": rec.user_id.clone(),
+                                "email": event_email,
+                            }),
+                        )
+                        .with_correlation(format!("email_verified:{}", rec.user_id))
+                        .with_compliance(ComplianceEnvelope {
+                            actor: rec.user_id.clone(),
+                            target_resource: rec.user_id.clone(),
+                            operation: "email_verify".to_string(),
+                            outcome: "success".to_string(),
+                            reason_code: "email_otp_verified".to_string(),
+                            auth_method: "otp".to_string(),
+                            ..ComplianceEnvelope::default()
                         }),
-                    ))
+                    )
                     .await;
                 }
             }
@@ -223,13 +274,97 @@ impl AuthnServiceImpl {
                     .mark_phone_verified(&rec.user_id, now_unix())
                     .await
                     .map_err(Status::internal)?;
+                self.emit_event(
+                    AuthEvent::new(
+                        topics::PHONE_VERIFIED,
+                        rec.user_id.clone(),
+                        rec.tenant_id.clone(),
+                        serde_json::json!({
+                            "user_id": rec.user_id.clone(),
+                        }),
+                    )
+                    .with_correlation(format!("phone_verified:{}", rec.user_id))
+                    .with_compliance(ComplianceEnvelope {
+                        actor: rec.user_id.clone(),
+                        target_resource: rec.user_id.clone(),
+                        operation: "phone_verify".to_string(),
+                        outcome: "success".to_string(),
+                        reason_code: "phone_otp_verified".to_string(),
+                        auth_method: "otp".to_string(),
+                        ..ComplianceEnvelope::default()
+                    }),
+                )
+                .await;
             }
+            // OTP successfully verified (security-sensitive). `rec.tenant_id` is the
+            // OTP owner's denormalized tenant; fall back to the email-branch tenant.
+            let otp_tenant = if rec.tenant_id.trim().is_empty() {
+                event_tenant_for_otp.clone()
+            } else {
+                rec.tenant_id.clone()
+            };
+            self.emit_event(
+                AuthEvent::new(
+                    topics::OTP_VERIFIED,
+                    rec.user_id.clone(),
+                    otp_tenant,
+                    serde_json::json!({
+                        "user_id": rec.user_id.clone(),
+                        "otp_id": rec.otp_id.clone(),
+                        "otp_type": rec.otp_type,
+                    }),
+                )
+                .with_correlation(format!("otp_verify:{}", rec.otp_id))
+                .with_compliance(ComplianceEnvelope {
+                    actor: rec.user_id.clone(),
+                    target_resource: rec.user_id.clone(),
+                    operation: "otp_verify".to_string(),
+                    outcome: "success".to_string(),
+                    reason_code: "otp_verified".to_string(),
+                    auth_method: "otp".to_string(),
+                    ..ComplianceEnvelope::default()
+                }),
+            )
+            .await;
             Ok(Response::new(authn_pb::VerifyOtpResponse {
                 verified: true,
                 user_id: rec.user_id,
                 otp_type: rec.otp_type,
             }))
         } else {
+            // Failed/expired/replayed OTP verification. Resolve the owning user +
+            // tenant from the OTP id so the audit row is attributable; skip the
+            // event only when the OTP id is unknown (no subject to attribute to).
+            if let Some(otp) = self
+                .users
+                .get_otp(&req.otp_id)
+                .await
+                .map_err(Status::internal)?
+            {
+                self.emit_event(
+                    AuthEvent::new(
+                        topics::OTP_FAILED,
+                        otp.user_id.clone(),
+                        otp.tenant_id.clone(),
+                        serde_json::json!({
+                            "user_id": otp.user_id.clone(),
+                            "otp_id": req.otp_id.clone(),
+                            "otp_type": otp.otp_type,
+                        }),
+                    )
+                    .with_correlation(format!("otp_verify:{}", req.otp_id))
+                    .with_compliance(ComplianceEnvelope {
+                        actor: otp.user_id.clone(),
+                        target_resource: otp.user_id.clone(),
+                        operation: "otp_verify".to_string(),
+                        outcome: "failure".to_string(),
+                        reason_code: "otp_invalid_or_expired".to_string(),
+                        auth_method: "otp".to_string(),
+                        ..ComplianceEnvelope::default()
+                    }),
+                )
+                .await;
+            }
             Ok(Response::new(authn_pb::VerifyOtpResponse {
                 verified: false,
                 user_id: String::new(),
@@ -271,7 +406,7 @@ impl AuthnServiceImpl {
             otp_id,
             expires_in_seconds: self.config.otp_ttl_secs as i32,
             cooldown_seconds: self.config.otp_cooldown_secs as i32,
-            attempts_remaining: (5 - original.attempt_count).max(0),
+            attempts_remaining: authn::mfa_challenge::attempts_remaining(original.attempt_count),
         }))
     }
 
@@ -302,7 +437,34 @@ impl AuthnServiceImpl {
         let uri = authn::totp::provisioning_uri("UDB", &user.username, &secret);
         user.totp_secret_hash = enc;
         user.updated_at_unix = now;
+        let event_user_id = user.user_id.clone();
+        let event_tenant = user.tenant_id.clone();
         self.users.put_user(user).await.map_err(Status::internal)?;
+        // Pending TOTP enrollment started (security-sensitive; MFA is not yet
+        // active until ConfirmMfaEnrollment proves possession of a code).
+        self.emit_event(
+            AuthEvent::new(
+                topics::MFA_ENROLLED,
+                event_user_id.clone(),
+                event_tenant,
+                serde_json::json!({
+                    "user_id": event_user_id.clone(),
+                    "factor_kind": req.mfa_type,
+                    "state": "pending",
+                }),
+            )
+            .with_correlation(format!("mfa_enroll:{event_user_id}"))
+            .with_compliance(ComplianceEnvelope {
+                actor: event_user_id.clone(),
+                target_resource: event_user_id.clone(),
+                operation: "mfa_enroll".to_string(),
+                outcome: "success".to_string(),
+                reason_code: "totp_enrollment_started".to_string(),
+                auth_method: "mfa_totp".to_string(),
+                ..ComplianceEnvelope::default()
+            }),
+        )
+        .await;
         Ok(Response::new(authn_pb::EnrollMfaResponse {
             totp_secret: secret,
             totp_qr_uri: uri,
@@ -336,7 +498,33 @@ impl AuthnServiceImpl {
         }
         user.mfa_enabled = true;
         user.updated_at_unix = now;
+        let event_user_id = user.user_id.clone();
+        let event_tenant = user.tenant_id.clone();
         self.users.put_user(user).await.map_err(Status::internal)?;
+        // MFA second factor activated (the user proved possession of a TOTP code).
+        self.emit_event(
+            AuthEvent::new(
+                topics::MFA_CHANGED,
+                event_user_id.clone(),
+                event_tenant,
+                serde_json::json!({
+                    "user_id": event_user_id.clone(),
+                    "factor_kind": authn_entity_pb::AuthFactorKind::Totp as i32,
+                    "state": "enabled",
+                }),
+            )
+            .with_correlation(format!("mfa_confirm:{event_user_id}"))
+            .with_compliance(ComplianceEnvelope {
+                actor: event_user_id.clone(),
+                target_resource: event_user_id.clone(),
+                operation: "mfa_enable".to_string(),
+                outcome: "success".to_string(),
+                reason_code: "totp_enrollment_confirmed".to_string(),
+                auth_method: "mfa_totp".to_string(),
+                ..ComplianceEnvelope::default()
+            }),
+        )
+        .await;
         Ok(Response::new(authn_pb::ConfirmMfaEnrollmentResponse {
             enrolled: true,
         }))
@@ -348,7 +536,8 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::GenerateRecoveryCodesResponse>, Status> {
         let req = request.into_inner();
         // The user must exist; recovery codes are an alternative MFA second factor.
-        self.users
+        let user = self
+            .users
             .get_user_by_id(&req.user_id)
             .await
             .map_err(Status::internal)?
@@ -361,15 +550,40 @@ impl AuthnServiceImpl {
         let mut codes = Vec::with_capacity(count);
         let mut hashes = Vec::with_capacity(count);
         for _ in 0..count {
-            let code = generate_recovery_code();
+            let code = authn::mfa_challenge::generate_recovery_code();
             hashes.push(authn::hash_recovery_code(&code, &self.otp_hash_key()));
             codes.push(code);
         }
-        // Replacing the set invalidates any previously-issued codes.
+        // Replacing the set invalidates any previously-issued codes. Denormalize
+        // the owning user's tenant so the rows are tenant-scoped under RLS.
         self.users
-            .replace_recovery_codes(&req.user_id, &hashes)
+            .replace_recovery_codes(&req.user_id, &user.tenant_id, &hashes)
             .await
             .map_err(Status::internal)?;
+        // Audit the regeneration (the plaintext codes NEVER enter the body — only
+        // the count). Replacing the set invalidates any prior codes.
+        self.emit_event(
+            AuthEvent::new(
+                topics::RECOVERY_CODES_GENERATED,
+                req.user_id.clone(),
+                user.tenant_id.clone(),
+                serde_json::json!({
+                    "user_id": req.user_id.clone(),
+                    "generated_count": codes.len(),
+                }),
+            )
+            .with_correlation(format!("recovery_codes:{}", req.user_id))
+            .with_compliance(ComplianceEnvelope {
+                actor: req.user_id.clone(),
+                target_resource: req.user_id.clone(),
+                operation: "recovery_codes_generate".to_string(),
+                outcome: "success".to_string(),
+                reason_code: "recovery_codes_regenerated".to_string(),
+                auth_method: "mfa".to_string(),
+                ..ComplianceEnvelope::default()
+            }),
+        )
+        .await;
         Ok(Response::new(authn_pb::GenerateRecoveryCodesResponse {
             generated: codes.len() as i32,
             codes,

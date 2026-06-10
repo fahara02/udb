@@ -18,7 +18,21 @@ type AuthClient struct {
 	Authn authnv1.AuthnServiceClient
 	Authz authzv1.AuthzServiceClient
 	Meta  Metadata
+
+	// authzCache, when attached via AttachAuthzCache, makes Require/Explain
+	// reuse server-blessed Decision.cache_ttl_seconds windows. nil = no cache.
+	authzCache *AuthzCache
+
+	// policyBundleSecret, when set via SetPolicyBundleSecret, makes
+	// GetPolicyBundle verify the HMAC signature on each fetched bundle and
+	// reject a tampered or mis-signed bundle. Empty = no verification.
+	policyBundleSecret []byte
 }
+
+// SetPolicyBundleSecret configures the shared HMAC secret used to verify signed
+// policy bundles. When set, GetPolicyBundle verifies every fetched bundle and
+// returns an *PolicyBundleSignatureError on mismatch. Pass nil/empty to disable.
+func (c *AuthClient) SetPolicyBundleSecret(secret []byte) { c.policyBundleSecret = secret }
 
 // NewAuthClient builds an AuthClient from an existing gRPC connection.
 func NewAuthClient(conn grpc.ClientConnInterface, meta Metadata) *AuthClient {

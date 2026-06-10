@@ -47,32 +47,40 @@ public final class TenantEventsProto extends com.google.protobuf.GeneratedFile {
     java.lang.String[] descriptorData = {
       "\n-udb/core/tenant/events/v1/tenant_event" +
       "s.proto\022\031udb.core.tenant.events.v1\032\037goog" +
-      "le/protobuf/timestamp.proto\"\203\002\n\022TenantCr" +
-      "eatedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\033\n" +
-      "\ttenant_id\030\002 \001(\tR\010tenantId\022\037\n\013tenant_cod" +
-      "e\030\003 \001(\tR\ntenantCode\022\037\n\013tenant_name\030\004 \001(\t" +
-      "R\ntenantName\022\022\n\004type\030\005 \001(\tR\004type\022%\n\016corr" +
-      "elation_id\030\006 \001(\tR\rcorrelationId\0228\n\ttimes" +
-      "tamp\030\007 \001(\0132\032.google.protobuf.TimestampR\t" +
-      "timestamp\"\361\001\n\030TenantStatusChangedEvent\022\031" +
-      "\n\010event_id\030\001 \001(\tR\007eventId\022\033\n\ttenant_id\030\002" +
-      " \001(\tR\010tenantId\022\035\n\nold_status\030\003 \001(\tR\toldS" +
-      "tatus\022\035\n\nnew_status\030\004 \001(\tR\tnewStatus\022%\n\016" +
-      "correlation_id\030\005 \001(\tR\rcorrelationId\0228\n\tt" +
-      "imestamp\030\006 \001(\0132\032.google.protobuf.Timesta" +
-      "mpR\ttimestampB\202\002\n\035com.udb.core.tenant.ev" +
-      "ents.v1B\021TenantEventsProtoP\001ZEgithub.com" +
-      "/fahara02/udb/sdk/go/gen/udb/core/tenant" +
-      "/events/v1;eventsv1\242\002\004UCTE\252\002\031udb.core.Te" +
-      "nant.Events.V1\312\002\031Udb\\Core\\Tenant\\Events\\" +
-      "V1\342\002%Udb\\GPBMetadata\\Core\\Tenant\\Events\\" +
-      "V1\352\002\035Udb::Core::Tenant::Events::V1b\006prot" +
-      "o3"
+      "le/protobuf/timestamp.proto\032!udb/core/co" +
+      "mmon/v1/security.proto\"\210\003\n\022TenantCreated" +
+      "Event\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\033\n\ttena" +
+      "nt_id\030\002 \001(\tR\010tenantId\022\037\n\013tenant_code\030\003 \001" +
+      "(\tR\ntenantCode\022\037\n\013tenant_name\030\004 \001(\tR\nten" +
+      "antName\022\022\n\004type\030\005 \001(\tR\004type\022%\n\016correlati" +
+      "on_id\030\006 \001(\tR\rcorrelationId\0228\n\ttimestamp\030" +
+      "\007 \001(\0132\032.google.protobuf.TimestampR\ttimes" +
+      "tamp:\202\001\222\262\031~\n,udb.core.tenant.events.v1.T" +
+      "enantCreatedEvent\022\"udb.tenant.tenant_cre" +
+      "ated_event.v1\032\ttenant_id\"\010standard*\rat_l" +
+      "east_once2\006stable\"\204\003\n\030TenantStatusChange" +
+      "dEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\033\n\tten" +
+      "ant_id\030\002 \001(\tR\010tenantId\022\035\n\nold_status\030\003 \001" +
+      "(\tR\toldStatus\022\035\n\nnew_status\030\004 \001(\tR\tnewSt" +
+      "atus\022%\n\016correlation_id\030\005 \001(\tR\rcorrelatio" +
+      "nId\0228\n\ttimestamp\030\006 \001(\0132\032.google.protobuf" +
+      ".TimestampR\ttimestamp:\220\001\222\262\031\213\001\n2udb.core." +
+      "tenant.events.v1.TenantStatusChangedEven" +
+      "t\022)udb.tenant.tenant_status_changed_even" +
+      "t.v1\032\ttenant_id\"\010standard*\rat_least_once" +
+      "2\006stableB\202\002\n\035com.udb.core.tenant.events." +
+      "v1B\021TenantEventsProtoP\001ZEgithub.com/faha" +
+      "ra02/udb/sdk/go/gen/udb/core/tenant/even" +
+      "ts/v1;eventsv1\242\002\004UCTE\252\002\031udb.core.Tenant." +
+      "Events.V1\312\002\031Udb\\Core\\Tenant\\Events\\V1\342\002%" +
+      "Udb\\GPBMetadata\\Core\\Tenant\\Events\\V1\352\002\035" +
+      "Udb::Core::Tenant::Events::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.TimestampProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_tenant_events_v1_TenantCreatedEvent_descriptor =
       getDescriptor().getMessageType(0);
@@ -88,6 +96,12 @@ public final class TenantEventsProto extends com.google.protobuf.GeneratedFile {
         new java.lang.String[] { "EventId", "TenantId", "OldStatus", "NewStatus", "CorrelationId", "Timestamp", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
+    com.google.protobuf.ExtensionRegistry registry =
+        com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.messageEventContract);
+    com.google.protobuf.Descriptors.FileDescriptor
+        .internalUpdateFileDescriptor(descriptor, registry);
   }
 
   // @@protoc_insertion_point(outer_class_scope)

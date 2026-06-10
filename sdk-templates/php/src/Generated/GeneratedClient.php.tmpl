@@ -32,8 +32,9 @@ use Grpc\ChannelCredentials;
  *
  * Each unary wrapper forwards to the underlying stub method of the same name
  * and adds: per-call deadline, retry with exponential backoff + jitter on
- * transient gRPC codes, TLS/credentials wiring, metadata injection, and typed
- * error mapping (it unpacks the `udb-error-detail-bin` trailer into an
+ * transient gRPC codes (DEADLINE_EXCEEDED only for read-only RPCs),
+ * TLS/credentials wiring, metadata injection, and typed error mapping (it
+ * unpacks the `udb-error-detail-bin` trailer into an
  * {@see \Udb\Entity\V1\ErrorDetail} when the broker attaches one).
  *
  * Streaming RPCs are exposed as accessors returning the live gRPC call object
@@ -46,10 +47,9 @@ use Grpc\ChannelCredentials;
  */
 final class GeneratedClient
 {
-    /** gRPC status codes that are safe to retry for idempotent calls. */
+    /** gRPC status codes that are safe to retry for mutating calls. */
     private const RETRYABLE_CODES = [
         14, // UNAVAILABLE
-        4,  // DEADLINE_EXCEEDED
         8,  // RESOURCE_EXHAUSTED
     ];
 
@@ -133,6 +133,7 @@ final class GeneratedClient
             '{{SERVICE_PKG}}',
             fn (BaseStub $stub, array $md, array $opts) => $stub->{{RPC_NAME}}($request, $md, $opts),
             $metadata,
+            $this->isReadOnlyRpcName('{{RPC_NAME}}'),
         );
     }
     // @@UDB_RPC_END
@@ -321,6 +322,7 @@ final class GeneratedClient
         string $servicePkg,
         callable $invoker,
         ?UdbMetadata $metadata,
+        bool $readOnly,
     ) {
         $stub = $this->stubFor($serviceName, $servicePkg);
         $md = $this->headers($metadata);
@@ -353,7 +355,7 @@ final class GeneratedClient
             }
 
             $lastStatus = $status;
-            if ($attempt < $maxAttempts && $this->isRetryable($code)) {
+            if ($attempt < $maxAttempts && $this->isRetryable($code, $readOnly)) {
                 $this->sleepBackoff($attempt, $baseDelayMs, $maxDelayMs);
                 continue;
             }
@@ -368,9 +370,27 @@ final class GeneratedClient
         return is_object($status) ? (int) ($status->code ?? -1) : (int) ($status['code'] ?? -1);
     }
 
-    private function isRetryable(int $code): bool
+    private function isRetryable(int $code, bool $readOnly): bool
     {
+        if ($code === 4) { // DEADLINE_EXCEEDED
+            return $readOnly;
+        }
         return in_array($code, self::RETRYABLE_CODES, true);
+    }
+
+    private function isReadOnlyRpcName(string $name): bool
+    {
+        foreach ([
+            'Get', 'List', 'Check', 'Validate', 'Introspect', 'Authorize',
+            'BatchCheck', 'Preview', 'Resolve', 'Explain', 'Diff', 'Lint',
+            'Test', 'Select', 'AnalyticalQuery', 'VectorSearch', 'GraphQuery',
+            'CacheGet', 'CacheScan', 'DocumentGet', 'DocumentFind',
+        ] as $prefix) {
+            if (str_starts_with($name, $prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

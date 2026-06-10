@@ -1,14 +1,14 @@
 <?php
 
 /**
- * UDB PHP quickstart — example 1: basic CRUD.
+ * UDB PHP quickstart — Example 1: basic CRUD.
  *
  * One table ("shop"."customers", from proto/shop/v1/customer.proto), four
- * operations: create, read, update, delete. No auth, no vectors, no objects —
- * just the smallest thing that talks to the broker and back.
+ * operations: create, read, update, delete. This is the smallest thing that
+ * talks to the broker and back.
  *
- *   docker compose up -d                       # Postgres + Redis
- *   ./scripts/serve-broker.ps1                 # broker (separate terminal)
+ *   docker compose up -d                         # Postgres + Redis
+ *   ./scripts/serve-broker.ps1                   # broker (separate terminal)
  *   $env:UDB_TARGET = "127.0.0.1:50051"; php 01_crud.php
  */
 
@@ -24,21 +24,20 @@ use Udb\Entity\V1\DeleteRequest;
 use Udb\Entity\V1\SelectRequest;
 use Udb\Entity\V1\UpsertRequest;
 
-// The fully-qualified proto name == the broker's catalog key for the table.
+// The fully-qualified proto name is the broker's catalog key for the table.
 const MESSAGE_TYPE = 'shop.v1.Customer';
 
 $target = getenv('UDB_TARGET') ?: '127.0.0.1:50051';
 
-// One long-lived client per process. The gRPC channel multiplexes every call.
+// One long-lived client per process; the gRPC channel multiplexes every call.
 $client = new UdbClient([
-    'endpoint'   => $target,
-    'tls'        => ['enabled' => false],
+    'endpoint'    => $target,
+    'tls'         => ['enabled' => false],
     'deadline_ms' => 30_000,
 ]);
 
-// Per-request context the broker requires on every call (tenant, who, why,
-// scopes). For the quickstart these are static; in a web app they come from the
-// authenticated request.
+// Per-request context the broker requires on every call. `udb:read` + `udb:write`
+// are the operation scopes — Example 2 shows what happens without them.
 $metadata = new UdbMetadata(
     tenantId: 'quickstart',
     userId: 'php-quickstart',
@@ -50,49 +49,49 @@ $metadata = new UdbMetadata(
     clientCatalogVersion: '1.0.0',
 );
 
-// A natural key so each run is idempotent (email is UNIQUE in the schema).
-$email = 'ada@example.com';
+// We own the primary key so every operation targets the same row and re-runs
+// are idempotent. (Omit customer_id and the DB fills it with gen_random_uuid(),
+// but then you'd need a different stable key to read/update/delete by.)
+$customerId = uuidV4();
 
 // ── CREATE ───────────────────────────────────────────────────────────────────
-// Build the row with the generated, type-safe Customer model (from buf generate).
-// customer_id (UUID) and created_at are filled by the database defaults, so we
-// only set what we own.
 $customer = (new Customer())
-    ->setEmail($email)
+    ->setCustomerId($customerId)
+    ->setEmail('ada@example.com')
     ->setFullName('Ada Lovelace')
     ->setLoyaltyPoints(100);
 
 $created = $client->upsert(new UpsertRequest([
     'message_type'    => MESSAGE_TYPE,
     'record_json'     => customerToJson($customer),
-    'conflict_fields' => ['email'],   // ON CONFLICT (email) DO UPDATE …
+    'conflict_fields' => ['customer_id'],   // ON CONFLICT (customer_id) DO UPDATE …
     'return_record'   => true,
-    'idempotency_key' => "create-{$email}",
+    'idempotency_key' => "create-{$customerId}",
 ]), $metadata);
 printf("created   affected_rows=%d\n", $created->getAffectedRows());
 
 // ── READ ─────────────────────────────────────────────────────────────────────
 $rows = $client->select(new SelectRequest([
     'message_type' => MESSAGE_TYPE,
-    'filter'       => filterByEmail($email),
+    'filter'       => filterById($customerId),
     'limit'        => 10,
 ]), $metadata);
 printf("read      rows=%d  %s\n", recordCount($rows), firstRecord($rows));
 
 // ── UPDATE ───────────────────────────────────────────────────────────────────
-// Same upsert, new values — the conflict on email turns it into an UPDATE.
+// Same PK, new values — the conflict on customer_id turns it into an UPDATE.
 $customer->setFullName('Augusta Ada King')->setLoyaltyPoints(250);
 $client->upsert(new UpsertRequest([
     'message_type'    => MESSAGE_TYPE,
     'record_json'     => customerToJson($customer),
-    'conflict_fields' => ['email'],
+    'conflict_fields' => ['customer_id'],
     'return_record'   => true,
-    'idempotency_key' => "update-{$email}",
+    'idempotency_key' => "update-{$customerId}",
 ]), $metadata);
 
 $rows = $client->select(new SelectRequest([
     'message_type' => MESSAGE_TYPE,
-    'filter'       => filterByEmail($email),
+    'filter'       => filterById($customerId),
     'limit'        => 10,
 ]), $metadata);
 if (! recordsContain($rows, 'Augusta Ada King')) {
@@ -103,13 +102,13 @@ printf("updated   rows=%d  %s\n", recordCount($rows), firstRecord($rows));
 // ── DELETE ───────────────────────────────────────────────────────────────────
 $client->delete(new DeleteRequest([
     'message_type'    => MESSAGE_TYPE,
-    'filter'          => filterByEmail($email),
-    'idempotency_key' => "delete-{$email}",
+    'filter'          => filterById($customerId),
+    'idempotency_key' => "delete-{$customerId}",
 ]), $metadata);
 
 $rows = $client->select(new SelectRequest([
     'message_type' => MESSAGE_TYPE,
-    'filter'       => filterByEmail($email),
+    'filter'       => filterById($customerId),
     'limit'        => 10,
 ]), $metadata);
 if (recordCount($rows) !== 0) {
@@ -121,24 +120,21 @@ echo "\nCRUD OK\n";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-/**
- * Map the typed model to the column-shaped JSON the broker stores. We send only
- * the fields we own; server-defaulted columns (customer_id, created_at) are
- * omitted so the database fills them.
- */
+/** Map the typed model to the column-shaped JSON the broker stores. */
 function customerToJson(Customer $c): string
 {
     return json_encode([
+        'customer_id'    => $c->getCustomerId(),
         'email'          => $c->getEmail(),
         'full_name'      => $c->getFullName(),
         'loyalty_points' => $c->getLoyaltyPoints(),
     ], JSON_THROW_ON_ERROR);
 }
 
-function filterByEmail(string $email): Struct
+function filterById(string $customerId): Struct
 {
     $filter = new Struct();
-    $filter->mergeFromJsonString(json_encode(['email' => $email], JSON_THROW_ON_ERROR));
+    $filter->mergeFromJsonString(json_encode(['customer_id' => $customerId], JSON_THROW_ON_ERROR));
     return $filter;
 }
 
@@ -164,4 +160,13 @@ function firstRecord(object $rows): string
         return (string) $record;
     }
     return '(none)';
+}
+
+/** RFC 4122 v4 UUID — the broker stores customer_id as a UUID column. */
+function uuidV4(): string
+{
+    $bytes = random_bytes(16);
+    $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
+    $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($bytes), 4));
 }

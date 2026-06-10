@@ -11,6 +11,38 @@ fn cdc_retry_delay_secs(delays: &[u64], retry_count: i32) -> i64 {
         .min(86_400) as i64
 }
 
+fn durable_dlq_insert_sql(dlq_rel: &str) -> String {
+    format!(
+        "INSERT INTO {dlq_rel} \
+         (event_id, topic, tenant_id, project_id, error_type, error_message, payload, status, next_retry_at, created_at) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7::JSONB, 'RETRYING', NOW() + ($8::TEXT || ' seconds')::INTERVAL, NOW()) \
+         ON CONFLICT (event_id) DO NOTHING"
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn durable_dlq_insert_is_idempotent_and_retryable() {
+        let sql = durable_dlq_insert_sql("udb_system.udb_cdc_dlq_events");
+        assert!(sql.starts_with("INSERT INTO udb_system.udb_cdc_dlq_events"));
+        assert!(sql.contains("status, next_retry_at, created_at"));
+        assert!(sql.contains("'RETRYING'"));
+        assert!(sql.contains("ON CONFLICT (event_id) DO NOTHING"));
+    }
+
+    #[test]
+    fn cdc_retry_delay_uses_config_then_caps() {
+        assert_eq!(cdc_retry_delay_secs(&[5, 30, 90], 0), 5);
+        assert_eq!(cdc_retry_delay_secs(&[5, 30, 90], 2), 90);
+        assert_eq!(cdc_retry_delay_secs(&[5, 30, 90], 9), 90);
+        assert_eq!(cdc_retry_delay_secs(&[100_000], 0), 86_400);
+        assert_eq!(cdc_retry_delay_secs(&[], 0), 60);
+    }
+}
+
 impl CdcEngine {
     #[cfg(feature = "kafka")]
     pub(crate) async fn ack_event(&self, event_id: Uuid, lsn: i64) -> bool {
@@ -132,7 +164,38 @@ impl CdcEngine {
             },
         };
 
+        // Persist to Postgres DLQ table. This is part of the CDC contract:
+        // operators need a durable queryable DLQ record in addition to the Kafka
+        // DLQ topic. If the DB write fails, keep the outbox row unacked so the
+        // event can be retried after the catalog/schema issue is fixed.
         let payload_string = serde_json::to_string(&dlq_env).unwrap_or_default();
+        {
+            use crate::runtime::system::SystemCatalogConfig;
+            let sys = SystemCatalogConfig::default();
+            let dlq_rel = sys.dlq_relation();
+            let retry_delay = cdc_retry_delay_secs(&self.config.retry_delay_secs, 0);
+            if let Err(e) = sqlx::query(&durable_dlq_insert_sql(&dlq_rel))
+                .bind(event_id)
+                .bind(&topic)
+                .bind(&tenant_id)
+                .bind(&project_id)
+                .bind(error_type)
+                .bind(error_message)
+                .bind(&payload_string)
+                .bind(retry_delay)
+                .execute(&self.pool)
+                .await
+            {
+                error!(
+                    "[cdc] dlq postgres insert failed for event {}: {}",
+                    event_id, e
+                );
+                self.mark_cdc_delivery_state(event_id, "pending", None, None, Some(error_message))
+                    .await;
+                return false;
+            }
+        }
+
         let event_key = event_id.to_string();
         let record = FutureRecord::to(&self.config.dlq_topic)
             .key(&event_key)
@@ -140,48 +203,20 @@ impl CdcEngine {
 
         if let Err((e, _)) = self
             .kafka_producer
-            .send(record, Duration::from_secs(30))
+            .send(
+                record,
+                crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
+            )
             .await
         {
             error!("[cdc] critical: failed to route to DLQ: {:?}", e);
+            self.mark_cdc_delivery_state(event_id, "pending", None, None, Some(error_message))
+                .await;
             return false;
         }
+
         self.mark_cdc_delivery_state(event_id, "dlq", None, None, Some(error_message))
             .await;
-
-        // Persist to Postgres DLQ table. This is part of the CDC contract:
-        // operators need a durable queryable DLQ record in addition to the Kafka
-        // DLQ topic. If the DB write fails, keep the outbox row unacked so the
-        // event can be retried after the catalog/schema issue is fixed.
-        {
-            use crate::runtime::system::SystemCatalogConfig;
-            let sys = SystemCatalogConfig::default();
-            let dlq_rel = sys.dlq_relation();
-            let retry_delay = cdc_retry_delay_secs(&self.config.retry_delay_secs, 0);
-            if let Err(e) = sqlx::query(&format!(
-                "INSERT INTO {dlq_rel} \
-                 (event_id, topic, tenant_id, project_id, error_type, error_message, payload, status, next_retry_at, created_at) \
-                 VALUES ($1, $2, $3, $4, $5, $6, $7::JSONB, 'RETRYING', NOW() + ($8::TEXT || ' seconds')::INTERVAL, NOW()) \
-                 ON CONFLICT (event_id) DO NOTHING"
-            ))
-            .bind(event_id)
-            .bind(&topic)
-            .bind(&tenant_id)
-            .bind(&project_id)
-            .bind(error_type)
-            .bind(error_message)
-            .bind(payload_string)
-            .bind(retry_delay)
-            .execute(&self.pool)
-            .await
-            {
-                error!(
-                    "[cdc] dlq postgres insert failed for event {}: {}",
-                    event_id, e
-                );
-                return false;
-            }
-        }
 
         true
     }
@@ -422,7 +457,10 @@ impl CdcEngine {
             .payload(&payload_string);
 
         self.kafka_producer
-            .send(record, Duration::from_secs(30))
+            .send(
+                record,
+                crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
+            )
             .await
             .map_err(|(e, _)| format!("failed to republish event: {:?}", e))?;
 

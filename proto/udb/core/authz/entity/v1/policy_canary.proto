@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package udb.core.authz.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authz.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
+option java_package = "com.udb.core.authz.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Entity\\V1";
+
+// How a canary's exposure is scoped before fleet-wide promotion. A canary
+// version is only served to in-scope nodes/tenants (or a percentage slice)
+// while it bakes; the metric evaluator then either promotes it fleet-wide or
+// auto-rolls it back.
+enum CanaryScopeKind {
+  CANARY_SCOPE_KIND_UNSPECIFIED = 0;
+  // scope_values is an explicit list of control-plane node ids.
+  CANARY_SCOPE_KIND_NODE = 1;
+  // scope_values is an explicit list of tenant ids.
+  CANARY_SCOPE_KIND_TENANT = 2;
+  // scope_values[0] is an integer 1..=100 percentage; membership is a stable
+  // hash bucket of the node/tenant id.
+  CANARY_SCOPE_KIND_PERCENT = 3;
+}
+
+// Lifecycle state of a progressive-rollout canary.
+enum CanaryState {
+  CANARY_STATE_UNSPECIFIED = 0;
+  // Baking: the version is live for the in-scope subset and the evaluator is
+  // watching the success metric over the success window.
+  CANARY_STATE_ACTIVE = 1;
+  // The success window passed within threshold and the canary was promoted
+  // fleet-wide (the version is now the active version of its policy set).
+  CANARY_STATE_PROMOTED = 2;
+  // A metric breach inside the window triggered an automatic rollback to the
+  // policy set's prior (rollback) version.
+  CANARY_STATE_ROLLED_BACK = 3;
+  // The signal was inconclusive (insufficient samples): the canary is held —
+  // neither promoted nor rolled back — pending more data / operator action.
+  CANARY_STATE_PAUSED = 4;
+}
+
+// A progressive-rollout canary: a `PolicyVersion` exposed to a SUBSET of the
+// fleet (by node id, tenant id, or percentage) and watched by a metric-based
+// evaluator before fleet-wide promotion. If the success metric breaches
+// `metric_threshold` within `success_window_secs`, the canary auto-rolls back
+// to the policy set's prior version BEFORE fleet-wide impact; if the window
+// passes within threshold it becomes promote-eligible; if samples are
+// insufficient it pauses. Every state transition is audited.
+message PolicyCanary {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "policy_canaries"
+    schema_name: "udb_authz"
+    migration_order: 44
+    is_table: true
+    comment: "Progressive-rollout canaries: subset-scoped policy versions with metric-based auto-rollback"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    indexes: {
+      index_name: "idx_policy_canaries_set"
+      index_type: "BTREE"
+      columns: "policy_set_id"
+    }
+    indexes: {
+      index_name: "idx_policy_canaries_state"
+      index_type: "BTREE"
+      columns: "state"
+    }
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "authz.governance"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string canary_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "canary_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  string policy_set_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "policy_set_id" sql_type: "UUID" not_null: true comment: "FK to policy_sets.policy_set_id" foreign_key: { references_table: "policy_sets" references_column: "policy_set_id" references_schema: "udb_authz" on_delete: REFERENTIAL_ACTION_CASCADE constraint_name: "fk_policy_canaries_set" } }];
+  string policy_version_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "policy_version_id" sql_type: "UUID" not_null: true comment: "The candidate version being canaried" foreign_key: { references_table: "policy_versions" references_column: "policy_version_id" references_schema: "udb_authz" on_delete: REFERENTIAL_ACTION_CASCADE constraint_name: "fk_policy_canaries_version" } }];
+  CanaryScopeKind scope_kind = 4 [(udb.core.common.v1.pg_column) = { column_name: "scope_kind" sql_type: "VARCHAR(40)" not_null: true default_value: "'CANARY_SCOPE_KIND_UNSPECIFIED'" }];
+  // For NODE/TENANT: the list of in-scope ids. For PERCENT: a single-element
+  // list whose value is the integer percentage (1..=100).
+  string scope_values_json = 5 [(udb.core.common.v1.pg_column) = { column_name: "scope_values" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" comment: "NODE/TENANT id list, or [percentage] for PERCENT" }];
+  CanaryState state = 6 [(udb.core.common.v1.pg_column) = { column_name: "state" sql_type: "VARCHAR(40)" not_null: true default_value: "'CANARY_STATE_ACTIVE'" }];
+  google.protobuf.Timestamp started_at = 7 [(udb.core.common.v1.pg_column) = { column_name: "started_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  // The evaluator waits at least this long before declaring success.
+  int64 success_window_secs = 8 [(udb.core.common.v1.pg_column) = { column_name: "success_window_secs" sql_type: "BIGINT" not_null: true default_value: "300" }];
+  // The success metric breach threshold (e.g. fractional authz deny/error rate).
+  // A measured value strictly greater than this inside the window auto-rolls back.
+  double metric_threshold = 9 [(udb.core.common.v1.pg_column) = { column_name: "metric_threshold" sql_type: "DOUBLE PRECISION" not_null: true default_value: "0.05" }];
+  string created_by = 10 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "VARCHAR(160)" not_null: true default_value: "''" }];
+  string tenant_id = 11 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policy_canaries_tenant" index_type: "BTREE" } }];
+  string project_id = 12 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" not_null: true default_value: "''" }];
+  // Minimum sample count required for a conclusive evaluation. Below this the
+  // canary PAUSES instead of promoting or rolling back.
+  int64 min_samples = 13 [(udb.core.common.v1.pg_column) = { column_name: "min_samples" sql_type: "BIGINT" not_null: true default_value: "1" }];
+  // The version a rollback restores to (the policy set's active version at
+  // canary-creation time). Recorded so auto-rollback is deterministic.
+  string rollback_version_id = 14 [(udb.core.common.v1.pg_column) = { column_name: "rollback_version_id" sql_type: "UUID" comment: "Version restored on auto-rollback (prior active)" }];
+  // Why the canary left ACTIVE (breach reason, 'promoted', 'inconclusive').
+  string outcome_reason = 15 [(udb.core.common.v1.pg_column) = { column_name: "outcome_reason" sql_type: "TEXT" not_null: true default_value: "''" }];
+  int64 revision = 16 [(udb.core.common.v1.pg_column) = { column_name: "revision" sql_type: "BIGINT" not_null: true default_value: "1" comment: "Optimistic-concurrency token for state transitions" }];
+}

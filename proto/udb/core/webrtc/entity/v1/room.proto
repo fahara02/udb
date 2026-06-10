@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package udb.core.webrtc.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/common/v1/types.proto";
+import "udb/core/webrtc/entity/v1/enums.proto";
+
+option csharp_namespace = "udb.core.Webrtc.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/webrtc/entity/v1;webrtcv1";
+option java_package = "com.udb.core.webrtc.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Webrtc\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Webrtc\\Entity\\V1";
+
+// Room: a WebRTC conferencing room.
+message Room {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "rooms"
+    schema_name: "udb_webrtc"
+    migration_order: 1
+    is_table: true
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "rooms_tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_rooms_tenant"
+      index_type: "BTREE"
+      columns: "tenant_id"
+    }
+    cdc_topic: "udb.webrtc.rooms.cdc"
+    required_scope: "webrtc:read"
+    comment: "WebRTC conferencing rooms"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "webrtc.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string room_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "room_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  // @inject_tag: gorm:"primaryKey;column:room_id;not null"
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "UUID" not_null: true }];
+  // @inject_tag: gorm:"column:tenant_id;not null"
+
+  string name = 3 [(udb.core.common.v1.pg_column) = { column_name: "name" sql_type: "VARCHAR(255)" not_null: true }];
+  // @inject_tag: gorm:"column:name;not null"
+
+  RoomState state = 4 [(udb.core.common.v1.pg_column) = { column_name: "state" sql_type: "VARCHAR(20)" not_null: true default_value: "'ACTIVE'" index: { index_name: "idx_rooms_state" index_type: "BTREE" } }];
+  // @inject_tag: gorm:"column:state;not null;serializer:proto_enum"
+
+  int32 max_participants = 5 [(udb.core.common.v1.pg_column) = { column_name: "max_participants" sql_type: "INTEGER" not_null: true default_value: "0" }];
+  // @inject_tag: gorm:"column:max_participants;not null"
+
+  int32 participant_count = 6 [(udb.core.common.v1.pg_column) = { column_name: "participant_count" sql_type: "INTEGER" not_null: true default_value: "0" }];
+  // @inject_tag: gorm:"column:participant_count;not null"
+
+  string config = 7 [(udb.core.common.v1.pg_column) = { column_name: "config" sql_type: "JSONB" is_json: true comment: "Room-specific configuration" }];
+  // @inject_tag: gorm:"column:config"
+
+  string created_by = 8 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "UUID" comment: "Actor that created the room" }];
+  // @inject_tag: gorm:"column:created_by"
+
+  udb.core.common.v1.AuditInfo audit_info = 9 [(udb.core.common.v1.pg_column) = { column_name: "audit_info" sql_type: "JSONB" not_null: true default_value: "'{}'::jsonb" is_json: true comment: "Audit trail stored as JSON" }];
+  // @inject_tag: gorm:"column:audit_info;not null"
+
+  google.protobuf.Timestamp deleted_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" comment: "Soft delete timestamp" }];
+  string deleted_by = 11 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" comment: "Soft delete actor" }];
+}

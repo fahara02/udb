@@ -106,3 +106,43 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # ── Prune stale GHCR versions after every tagged release ────────────────────
+  # Two passes:
+  #   1. Untagged versions — build-cache ghosts and failed-push leftovers.
+  #   2. sha-<short-sha> digest tags — accumulate on every release; keep the
+  #      five newest so recent history is recoverable, delete the rest.
+  # Semver tags (v0.x.x, 0.x, 0, latest) are protected by ignore-versions and
+  # are NEVER touched by this job.
+  cleanup:
+    name: Prune stale GHCR image versions
+    needs: publish
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      packages: write
+
+    steps:
+      # Pass 1 – delete versions with no tags at all (build-cache ghosts,
+      # interrupted pushes, multi-arch index fragments that lost their manifest).
+      - name: Delete untagged versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: udb
+          package-type: container
+          min-versions-to-keep: 0
+          delete-only-untagged-versions: 'true'
+        continue-on-error: true   # graceful when there is nothing to delete
+
+      # Pass 2 – prune old sha-* digest tags; keep the 5 most recent so recent
+      # SHAs are still recoverable. Semver / latest / major / major.minor tags
+      # are protected by the ignore-versions regex and are never deleted.
+      - name: Prune old sha-* digest tags (keep newest 5)
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: udb
+          package-type: container
+          min-versions-to-keep: 5
+          ignore-versions: '^(v?\d+\.\d+(\.\d+)?(-[a-zA-Z0-9._]+)?|latest|\d+\.\d+|\d+)$'
+        continue-on-error: true

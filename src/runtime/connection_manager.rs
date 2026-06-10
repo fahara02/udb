@@ -952,15 +952,25 @@ mod tests {
             // on/off) at startup — same startup-config category as `authn/`.
             "src/runtime/native_catalog.rs",
             "src/runtime/observability.rs",
+            // OTel init reads `UDB_OTEL_ENABLED` / `OTEL_EXPORTER_OTLP_ENDPOINT`
+            // at startup to decide whether to install the OTLP exporter — same
+            // startup-config category as `observability.rs`.
+            "src/runtime/otel.rs",
             "src/runtime/projection/mod.rs",
             "src/runtime/replica.rs",
             "src/runtime/security.rs",
+            "src/runtime/signalling/",
+            "src/runtime/singleton.rs",
             "src/runtime/service/mod.rs",
+            "src/runtime/service/asset_service/",
             // Auth service handlers construct config via `AuthnConfig::from_env`
             // (in their inline tests) — same startup-config category as
             // `service/mod.rs` and `security.rs`. Folder-module prefix so it
             // covers `auth_service/mod.rs` and submodules.
             "src/runtime/service/auth_service/",
+            "src/runtime/service/method_security.rs",
+            "src/runtime/service/storage_service/",
+            "src/runtime/service/webrtc_service/",
         ];
         let mut stack = vec![runtime_dir];
         let mut violations = Vec::new();

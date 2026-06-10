@@ -35,9 +35,9 @@ namespace and never redefines `UdbClient` / `UdbMetadata` / `UdbAuthClient`:
 - `GeneratedClientRuntime.cs` (verbatim) — the stable robustness core:
   `UdbCallOptions`, `UdbRpcException` (decodes the `udb-error-detail-bin`
   trailer), and `GeneratedServiceBase` (per-call deadline, retry with
-  exponential backoff + jitter on `Unavailable` / `DeadlineExceeded` /
-  `ResourceExhausted`, metadata propagation, typed error mapping). Streaming
-  calls are opened once and never retried mid-stream.
+  exponential backoff + jitter on `Unavailable` / `ResourceExhausted`, plus
+  `DeadlineExceeded` only for read-only RPCs, metadata propagation, typed error
+  mapping). Streaming calls are opened once and never retried mid-stream.
 - `GeneratedClient.cs` (rendered) — one `Generated<Service>Client` per gRPC
   service, with one forwarding method per RPC.
 

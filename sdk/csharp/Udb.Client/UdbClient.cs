@@ -13,7 +13,9 @@ public sealed record UdbMetadata(
     string ServiceIdentity,
     string UserId = "",
     string ProjectId = "default",
-    string ClientCatalogVersion = UdbClient.ProtocolVersion);
+    string ClientCatalogVersion = UdbClient.ProtocolVersion,
+    string BearerToken = "",
+    string ApiKey = "");
 
 public sealed class UdbClient : IAsyncDisposable
 {
@@ -33,7 +35,7 @@ public sealed class UdbClient : IAsyncDisposable
 
     public Metadata Headers()
     {
-        return new Metadata
+        var headers = new Metadata
         {
             { "x-tenant-id", _metadata.TenantId },
             { "x-user-id", _metadata.UserId },
@@ -44,6 +46,15 @@ public sealed class UdbClient : IAsyncDisposable
             { "x-udb-project-id", _metadata.ProjectId },
             { "x-udb-client-catalog-version", _metadata.ClientCatalogVersion }
         };
+        if (!string.IsNullOrWhiteSpace(_metadata.BearerToken))
+        {
+            headers.Add("authorization", $"Bearer {_metadata.BearerToken}");
+        }
+        if (!string.IsNullOrWhiteSpace(_metadata.ApiKey))
+        {
+            headers.Add("x-api-key", _metadata.ApiKey);
+        }
+        return headers;
     }
 
     public Task<RecordSet> SelectAsync(SelectRequest request, CancellationToken cancellationToken = default)

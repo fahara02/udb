@@ -89,8 +89,8 @@ async fn seed_live_user(pool: &sqlx::PgPool, label: &str) -> String {
             username: format!("{label}_{suffix}"),
             email: format!("{label}_{suffix}@example.com"),
             password_hash: hash_secret("password", KEY),
-            account_kind: authn_entity_pb::AccountKind::Person as i32,
-            status: authn_entity_pb::UserStatus::Active as i32,
+            account_kind: AccountKind::Person,
+            status: AccountStatus::Active,
             tenant_id: "acme".into(),
             full_name: label.to_string(),
             created_at_unix: now,
@@ -115,6 +115,43 @@ fn hash_secret_is_deterministic_and_keyed() {
     assert_ne!(a, hash_secret("session-xyz", KEY));
     // The raw secret never appears in the stored form.
     assert!(!a.contains("session-abc"));
+}
+
+#[test]
+fn password_hash_runtime_and_proto_contract_agree_on_argon2id() {
+    let hashed = hash_password("CorrectHorse1!", KEY);
+    assert!(hashed.starts_with("$argon2"));
+    assert!(!password_hash_needs_upgrade(&hashed));
+    assert!(password_hash_needs_upgrade(&hash_secret(
+        "password:legacy",
+        KEY
+    )));
+
+    let proto = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("proto/udb/core/authn/entity/v1/user.proto"),
+    )
+    .expect("read user proto");
+    assert!(proto.contains("Argon2id PHC hash"));
+    assert!(proto.contains("hashing_algorithm: \"argon2id\""));
+    assert!(!proto.to_ascii_lowercase().contains("bcrypt"));
+}
+
+#[test]
+fn session_hash_runtime_and_proto_contract_agree_on_hmac_sha256_storage_only() {
+    let hashed = hash_secret("sess_raw", KEY);
+    assert!(hashed.starts_with("hmac-sha256:"));
+    assert!(!hashed.contains("sess_raw"));
+
+    let proto = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("proto/udb/core/authn/entity/v1/session.proto"),
+    )
+    .expect("read session proto");
+    assert!(proto.contains("hashing_algorithm: \"hmac-sha256\""));
+    assert!(proto.contains("output_view: OUTPUT_VIEW_STORAGE_ONLY"));
+    assert!(proto.contains("Keyed HMAC digest of the session token"));
+    assert!(!proto.to_ascii_lowercase().contains("bcrypt"));
 }
 
 #[tokio::test]

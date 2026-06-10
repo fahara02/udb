@@ -2,6 +2,7 @@ import datetime
 
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from udb.core.common.v1 import db_pb2 as _db_pb2
+from udb.core.common.v1 import security_pb2 as _security_pb2
 from udb.core.notification.entity.v1 import enums_pb2 as _enums_pb2
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message

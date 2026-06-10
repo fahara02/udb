@@ -1,5 +1,16 @@
 # UDB C# SDK
 
+<!-- UDB_BRAND_HEADER_START -->
+<p align="center">
+  <img src="../../docs/assets/udb_logo.svg" alt="UDB logo" width="96">
+</p>
+
+<p align="center">
+  <strong>UDB :: Universal Data Broker</strong><br>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.2 | protocol v1.0.0</sub>
+</p>
+<!-- UDB_BRAND_HEADER_END -->
+
 `Udb.Client` is the .NET client for UDB. Use it from .NET services that need to
 read/write through the broker or call UDB auth/authz with the right request
 metadata.
@@ -7,7 +18,7 @@ metadata.
 ## Install
 
 ```powershell
-dotnet add package Udb.Client --version 0.3.1
+dotnet add package Udb.Client --version 0.3.2
 ```
 
 Runtime: .NET 8
@@ -15,7 +26,7 @@ Runtime: .NET 8
 The companion CLI tool is `Udb.Cli`:
 
 ```powershell
-dotnet tool install --global Udb.Cli --version 0.3.1
+dotnet tool install --global Udb.Cli --version 0.3.2
 ```
 
 The tool exposes `udb` and resolves the version-matched UDB binary.
@@ -25,7 +36,7 @@ The tool exposes `udb` and resolves the version-matched UDB binary.
 From your application repo:
 
 ```powershell
-udb proto export
+udb proto export --fmt
 ```
 
 Then your app protos can import:
@@ -33,6 +44,9 @@ Then your app protos can import:
 ```proto
 import "udb/core/common/v1/db.proto";
 ```
+
+Run `udb proto fmt` after export or edits to keep long UDB field annotations on
+one line for easier review.
 
 ## Connect And Query
 

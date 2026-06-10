@@ -1,0 +1,705 @@
+syntax = "proto3";
+
+package udb.core.storage.services.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/storage/entity/v1/file.proto";
+
+option csharp_namespace = "udb.core.Storage.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/storage/services/v1;storageservicev1";
+option java_package = "com.udb.core.storage.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Storage\\Services\\V1";
+option php_namespace = "Udb\\Core\\Storage\\Services\\V1";
+
+service StorageService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "storage"
+    logical_service_id: "storage"
+    proto_service_id: "storage"
+    display_name: "Storage"
+    category: "storage"
+    default_enabled: true
+    requires_postgres: true
+    requires_object_store: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "storage"
+    cli_scaffold_group: "storage"
+    health_check_ref: "storage"
+    capability_ref: "native.storage"
+    owns_background_workers: true
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "storage"
+    import_path: "udb/native/storage"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.storage.config.json"
+    required_native_services: "storage"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "storage"
+    required_backends: "postgres"
+    required_backends: "object_store"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    degraded_when_missing: "object_store"
+  };
+
+  // Register a new upload and obtain a pre-signed upload URL
+  rpc RegisterUpload(RegisterUploadRequest) returns (RegisterUploadResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:storage:register-upload"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "storage.RegisterUpload"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "register_upload"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "storage"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "storage"
+      import_path: "udb/native/storage"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.storage.register_upload.boilerplate"
+      route_name: "register_upload"
+      middleware_name: "udb_storage"
+      required_native_services: "storage"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "storage"
+      required_backends: "postgres"
+      required_backends: "object_store"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "storage.RegisterUpload"
+      outbox_topic: "storage.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+      emits: { topic: "udb.storage.file.upload_url_issued.v1" partition_key_field: "file_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: false }
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/storage/uploads"
+      body: "*"
+    };
+  }
+
+  // Finalize an upload after the object has been written to the store
+  rpc FinalizeUpload(FinalizeUploadRequest) returns (FinalizeUploadResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:storage:finalize-upload"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "storage.FinalizeUpload"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "finalize_upload"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "storage"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "storage"
+      import_path: "udb/native/storage"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.storage.finalize_upload.boilerplate"
+      route_name: "finalize_upload"
+      middleware_name: "udb_storage"
+      required_native_services: "storage"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "storage"
+      required_backends: "postgres"
+      required_backends: "object_store"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "storage.FinalizeUpload"
+      outbox_topic: "storage.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+      emits: { topic: "udb.storage.file.finalized.v1" partition_key_field: "file_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: true }
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/storage/uploads/{file_id}/finalize"
+      body: "*"
+    };
+  }
+
+  // Get a pre-signed download URL for a file
+  rpc GetDownloadUrl(GetDownloadUrlRequest) returns (GetDownloadUrlResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:storage:get-download-url"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "storage.GetDownloadUrl"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_download_url"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "storage"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "storage"
+      import_path: "udb/native/storage"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.storage.get_download_url.boilerplate"
+      route_name: "get_download_url"
+      middleware_name: "udb_storage"
+      required_native_services: "storage"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "storage"
+      required_backends: "postgres"
+      required_backends: "object_store"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "storage.GetDownloadUrl"
+      outbox_topic: "storage.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/storage/files/{file_id}/download-url"};
+  }
+
+  // Get file metadata
+  rpc GetFile(GetFileRequest) returns (GetFileResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:storage:get-file"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "storage.GetFile"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_file"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "storage"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "storage"
+      import_path: "udb/native/storage"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.storage.get_file.boilerplate"
+      route_name: "get_file"
+      middleware_name: "udb_storage"
+      required_native_services: "storage"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "storage"
+      required_backends: "postgres"
+      required_backends: "object_store"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "storage.GetFile"
+      outbox_topic: "storage.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/storage/files/{file_id}"};
+  }
+
+  // Update file metadata
+  rpc UpdateFile(UpdateFileRequest) returns (UpdateFileResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:storage:update-file"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "storage.UpdateFile"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "update_file"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "storage"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "storage"
+      import_path: "udb/native/storage"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.storage.update_file.boilerplate"
+      route_name: "update_file"
+      middleware_name: "udb_storage"
+      required_native_services: "storage"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "storage"
+      required_backends: "postgres"
+      required_backends: "object_store"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "storage.UpdateFile"
+      outbox_topic: "storage.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+      emits: { topic: "udb.storage.file.metadata_updated.v1" partition_key_field: "file_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: false }
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      patch: "/v1/storage/files/{file_id}"
+      body: "*"
+    };
+  }
+
+  // Delete a file (soft delete)
+  rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:storage:delete-file"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "storage.DeleteFile"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "delete_file"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "storage"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "storage"
+      import_path: "udb/native/storage"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.storage.delete_file.boilerplate"
+      route_name: "delete_file"
+      middleware_name: "udb_storage"
+      required_native_services: "storage"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "storage"
+      required_backends: "postgres"
+      required_backends: "object_store"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "storage.DeleteFile"
+      outbox_topic: "storage.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+      emits: { topic: "udb.storage.file.deleted.v1" partition_key_field: "file_id" delivery_guarantee: "at_least_once" payload_redaction_profile: "standard" conditional: false }
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {delete: "/v1/storage/files/{file_id}"};
+  }
+
+  // List files
+  rpc ListFiles(ListFilesRequest) returns (ListFilesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:storage:list-files"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "storage.ListFiles"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_files"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "storage"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "storage"
+      import_path: "udb/native/storage"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.storage.list_files.boilerplate"
+      route_name: "list_files"
+      middleware_name: "udb_storage"
+      required_native_services: "storage"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "storage"
+      required_backends: "postgres"
+      required_backends: "object_store"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "storage.ListFiles"
+      outbox_topic: "storage.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/storage/files"};
+  }
+}
+
+message RegisterUploadRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string project_id = 2;
+  string filename = 3;
+  string content_type = 4;
+  string file_type = 5;
+  string reference_id = 6;
+  string reference_type = 7;
+  // Optional initial visibility; absent defaults to private (false).
+  optional bool is_public = 8;
+  int32 expires_in_minutes = 9;
+  // Declared upload size in bytes, used for the pre-upload tenant quota check.
+  int64 size_bytes = 10;
+}
+
+message RegisterUploadResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  string file_id = 1;
+  string upload_url = 2;
+  string object_key = 3;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message FinalizeUploadRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string file_id = 2;
+  string content_type = 3;
+  string file_type = 4;
+  string reference_id = 5;
+  string reference_type = 6;
+  // Proto3 explicit presence: absent leaves the stored visibility unchanged.
+  optional bool is_public = 7;
+  // Actual uploaded size in bytes, persisted on finalize.
+  int64 size_bytes = 8;
+}
+
+message FinalizeUploadResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  entity.v1.File file = 1;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message GetDownloadUrlRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string file_id = 2;
+  int32 expires_in_minutes = 3;
+}
+
+message GetDownloadUrlResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  string download_url = 1;
+  google.protobuf.Timestamp expires_at = 2;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 3;
+}
+
+message GetFileRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string file_id = 2;
+}
+
+message GetFileResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  entity.v1.File file = 1;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message UpdateFileRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string file_id = 2;
+  string filename = 3;
+  string content_type = 4;
+  string file_type = 5;
+  string reference_id = 6;
+  string reference_type = 7;
+  // Proto3 explicit presence: absent leaves the stored visibility unchanged —
+  // a partial update can never silently flip a file public/private.
+  optional bool is_public = 8;
+}
+
+message UpdateFileResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  string message = 1;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message DeleteFileRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string file_id = 2;
+}
+
+message DeleteFileResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  bool success = 1;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message ListFilesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string file_type = 2;
+  string reference_id = 3;
+  string reference_type = 4;
+  string uploaded_by = 5;
+  int32 page = 6;
+  int32 page_size = 7;
+}
+
+message ListFilesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  repeated entity.v1.File files = 1;
+  int32 total_count = 2;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 3;
+}

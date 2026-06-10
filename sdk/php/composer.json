@@ -36,14 +36,23 @@
         "pestphp/pest": "^2.0|^3.0",
         "pestphp/pest-plugin-laravel": "^2.0|^3.0",
         "phpstan/phpstan": "^1.10",
-        "friendsofphp/php-cs-fixer": "^3.50"
+        "friendsofphp/php-cs-fixer": "^3.50",
+        "symfony/event-dispatcher": "^6.0|^7.0",
+        "symfony/http-kernel": "^6.0|^7.0"
+    },
+    "suggest": {
+        "symfony/http-kernel": "To use the Symfony adapter (Fahara02\\UdbLaravel\\Symfony\\UdbContextSubscriber) for request-scoped UDB context.",
+        "symfony/event-dispatcher": "Required by the Symfony UdbContextSubscriber (kernel.event_subscriber)."
     },
     "autoload": {
         "psr-4": {
             "Fahara02\\UdbLaravel\\": "src/",
             "Udb\\": "gen/Udb/",
             "GPBMetadata\\Udb\\": "gen/GPBMetadata/Udb/"
-        }
+        },
+        "files": [
+            "src/functions.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {

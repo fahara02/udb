@@ -16,8 +16,10 @@ use udb::{
     parse_directory_report,
 };
 
+const PHASE10_TENANT_ID: &str = "org-1";
+
 fn acme_manifest() -> CatalogManifest {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/arbitrary_project/proto");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/go_arbitary_project/proto");
     let report = parse_directory_report(&root, &udb::ParserConfig::default())
         .expect("arbitrary project proto should parse");
     CatalogManifest::from_schemas(&report.schemas).expect("manifest should build")
@@ -42,7 +44,7 @@ fn open_service(manifest: CatalogManifest) -> DataBrokerService {
 fn authed<T>(message: T) -> Request<T> {
     let mut request = Request::new(message);
     let metadata = request.metadata_mut();
-    metadata.insert("x-tenant-id", "phase10-tenant".parse().unwrap());
+    metadata.insert("x-tenant-id", PHASE10_TENANT_ID.parse().unwrap());
     metadata.insert("x-purpose", "phase10-test".parse().unwrap());
     metadata.insert("x-correlation-id", "phase10-correlation".parse().unwrap());
     metadata.insert("x-service-identity", "phase10.test".parse().unwrap());
@@ -57,7 +59,7 @@ fn authed<T>(message: T) -> Request<T> {
 
 fn request_context() -> RequestContext {
     RequestContext {
-        tenant_id: "phase10-tenant".to_string(),
+        tenant_id: PHASE10_TENANT_ID.to_string(),
         purpose: "phase10-test".to_string(),
         correlation_id: "phase10-correlation".to_string(),
         service_identity: "phase10.test".to_string(),

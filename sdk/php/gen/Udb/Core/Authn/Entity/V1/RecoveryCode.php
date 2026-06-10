@@ -12,6 +12,7 @@ use Google\Protobuf\RepeatedField;
 /**
  * ---------------------------------------------------------------------------
  * RecoveryCode — single-use MFA recovery/backup code.
+ *
  * Migration order 6. A set of codes is generated at MFA enrollment (or
  * regeneration); each is stored only as a keyed hash and consumed at most once
  * as an alternative MFA second factor when the user has lost their authenticator.

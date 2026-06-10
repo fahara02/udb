@@ -176,7 +176,7 @@ var File_udb_core_analytics_entity_v1_pipeline_metric_snapshot_proto protoreflec
 
 const file_udb_core_analytics_entity_v1_pipeline_metric_snapshot_proto_rawDesc = "" +
 	"\n" +
-	";udb/core/analytics/entity/v1/pipeline_metric_snapshot.proto\x12\x1cudb.core.analytics.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\"\xfc\x0e\n" +
+	";udb/core/analytics/entity/v1/pipeline_metric_snapshot.proto\x12\x1cudb.core.analytics.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x9c\x10\n" +
 	"\x16PipelineMetricSnapshot\x12O\n" +
 	"\vsnapshot_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vsnapshot_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
@@ -217,12 +217,13 @@ const file_udb_core_analytics_entity_v1_pipeline_metric_snapshot_proto_rawDesc =
 	"\x0ethroughput_rps\x12\x10DOUBLE PRECISIONZ\"Requests per second (total / 3600)R\rthroughputRps\x12t\n" +
 	"\vrecorded_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampB7\x82\xb7\x183\n" +
 	"\vrecorded_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\n" +
-	"recordedAt:\xcd\x04\xfa\xb6\x18\xc8\x04\n" +
+	"recordedAt:\xed\x05\xfa\xb6\x18\xc8\x04\n" +
 	"\x19pipeline_metric_snapshots\x12\rudb_analytics\x18\x01 \x01*CHourly aggregated pipeline stage metrics backing Grafana dashboardsH\x03R\rsnapshot_hourX\xed\x02\x8a\x016\n" +
 	"\x12idx_pms_stage_hour\x12\x05BTREEZ\n" +
 	"stage_nameZ\rsnapshot_hour\x9a\x01\x13\n" +
 	"\tbtree_gin\x12\x06public\xa2\x01\xe4\x02\n" +
-	"\x13mv_daily_throughput\x12\rudb_analytics\x1a\xbb\x02SELECT date_trunc('day', snapshot_hour) AS day, stage_name, tenant_id, SUM(total_requests) AS total_requests, SUM(successful) AS successful, SUM(failed) AS failed, AVG(throughput_rps) AS avg_throughput_rps FROM udb_analytics.pipeline_metric_snapshots GROUP BY date_trunc('day', snapshot_hour), stage_name, tenant_id \x01\xea\x01\areplicaB\x9e\x02\n" +
+	"\x13mv_daily_throughput\x12\rudb_analytics\x1a\xbb\x02SELECT date_trunc('day', snapshot_hour) AS day, stage_name, tenant_id, SUM(total_requests) AS total_requests, SUM(successful) AS successful, SUM(failed) AS failed, AVG(throughput_rps) AS avg_throughput_rps FROM udb_analytics.pipeline_metric_snapshots GROUP BY date_trunc('day', snapshot_hour), stage_name, tenant_id \x01\xea\x01\areplica\x8a\xb2\x19\x9b\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x15analytics.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x9e\x02\n" +
 	" com.udb.core.analytics.entity.v1B\x1bPipelineMetricSnapshotProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x1cudb.core.Analytics.Entity.V1\xca\x02\x1cUdb\\Core\\Analytics\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V1\xea\x02 Udb::Core::Analytics::Entity::V1b\x06proto3"
 
 var (

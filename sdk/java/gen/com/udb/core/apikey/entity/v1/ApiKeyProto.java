@@ -45,107 +45,111 @@ public final class ApiKeyProto extends com.google.protobuf.GeneratedFile {
       "tobuf/timestamp.proto\032%udb/core/apikey/e" +
       "ntity/v1/enums.proto\032\033udb/core/common/v1" +
       "/db.proto\032!udb/core/common/v1/security.p" +
-      "roto\"\235\035\n\006ApiKey\022@\n\006key_id\030\001 \001(\tB)\202\267\030%\n\006k" +
+      "roto\"\332\036\n\006ApiKey\022@\n\006key_id\030\001 \001(\tB)\202\267\030%\n\006k" +
       "ey_id\022\004UUID\030\001(\001:\021gen_random_uuid()R\005keyI" +
       "d\022\204\001\n\nkey_prefix\030\002 \001(\tBe\202\267\030a\n\nkey_prefix" +
       "\022\013VARCHAR(20)\030\001ZAFirst 8 chars of plain " +
       "key: prefix_XXXXXXXX \342\200\224 shown in admin " +
-      "UI\250\001\001R\tkeyPrefix\022l\n\010key_hash\030\003 \001(\tBQ\330\265\030\001" +
-      "\340\265\030\001\350\265\030\001\360\265\030\001\202\267\030=\n\010key_hash\022\014VARCHAR(128)" +
-      "\030\001 \001R\037\n\025idx_api_keys_key_hash\022\004HASH\030\001R\007k" +
-      "eyHash\022G\n\004name\030\004 \001(\tB3\202\267\030/\n\004name\022\014VARCHA" +
-      "R(150)\030\001Z\027Human-readable key nameR\004name\022" +
-      "9\n\013description\030\005 \001(\tB\027\202\267\030\023\n\013description\022" +
-      "\004TEXTR\013description\022\221\001\n\nowner_type\030\006 \001(\0162" +
-      "*.udb.core.apikey.entity.v1.ApiKeyOwnerT" +
-      "ypeBF\202\267\030B\n\nowner_type\022\013VARCHAR(20)\030\001R%\n\022" +
-      "idx_api_keys_owner\022\005BTREEZ\010owner_idR\town" +
-      "erType\0229\n\010owner_id\030\007 \001(\tB\036\202\267\030\032\n\010owner_id" +
-      "\022\014VARCHAR(160)\030\001R\007ownerId\022c\n\013scopes_json" +
-      "\030\010 \001(\tBB\202\267\030>\n\013scopes_json\022\005JSONB\030\001:\004\'[]\'" +
-      "Z\036Array of granted scope stringsx\001R\nscop" +
-      "esJson\022\204\001\n\006status\030\t \001(\0162\'.udb.core.apike" +
-      "y.entity.v1.ApiKeyStatusBC\202\267\030?\n\006status\022\013" +
-      "VARCHAR(15)\030\001:\010\'ACTIVE\'R\034\n\023idx_api_keys_" +
-      "status\022\005BTREER\006status\022\211\001\n\021ip_allowlist_j" +
-      "son\030\n \001(\tB]\202\267\030Y\n\021ip_allowlist_json\022\005JSON" +
-      "B:\004\'[]\'Z5Allowed source CIDRs: [\"10.0.0." +
-      "0/8\"]. Empty = any IP.x\001R\017ipAllowlistJso" +
-      "n\022]\n\025rate_limit_per_minute\030\013 \001(\005B*\202\267\030&\n\025" +
-      "rate_limit_per_minute\022\007INTEGER\030\001:\00260R\022ra" +
-      "teLimitPerMinute\022V\n\022rate_limit_per_day\030\014" +
-      " \001(\003B)\202\267\030%\n\022rate_limit_per_day\022\006BIGINT\030\001" +
-      ":\00510000R\017rateLimitPerDay\022\202\001\n\ncreated_by\030" +
-      "\r \001(\tBc\202\267\030_\n\ncreated_by\022\014VARCHAR(160)\030\001R" +
-      " \n\027idx_api_keys_created_by\022\005BTREEZ\037Princ" +
-      "ipal that created this keyR\tcreatedBy\022\200\001" +
-      "\n\nrevoked_by\030\016 \001(\tBa\202\267\030]\n\nrevoked_by\022\014VA" +
-      "RCHAR(160)R \n\027idx_api_keys_revoked_by\022\005B" +
-      "TREEZ\037Principal that revoked this keyR\tr" +
-      "evokedBy\022F\n\rrevoke_reason\030\017 \001(\tB!\202\267\030\035\n\rr" +
-      "evoke_reason\022\014VARCHAR(255)R\014revokeReason" +
-      "\022n\n\nexpires_at\030\020 \001(\0132\032.google.protobuf.T" +
-      "imestampB3\202\267\030/\n\nexpires_at\022\013TIMESTAMPTZZ" +
-      "\024NULL = never expiresR\texpiresAt\022]\n\014last" +
-      "_used_at\030\021 \001(\0132\032.google.protobuf.Timesta" +
-      "mpB\037\202\267\030\033\n\014last_used_at\022\013TIMESTAMPTZR\nlas" +
-      "tUsedAt\022q\n\ncreated_at\030\022 \001(\0132\032.google.pro" +
-      "tobuf.TimestampB6\202\267\0302\n\ncreated_at\022\013TIMES" +
-      "TAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001R\tcreated" +
-      "At\022o\n\nupdated_at\030\023 \001(\0132\032.google.protobuf" +
-      ".TimestampB4\202\267\0300\n\nupdated_at\022\013TIMESTAMPT" +
-      "Z\030\001:\021CURRENT_TIMESTAMP`\001R\tupdatedAt\022\240\001\n\n" +
-      "deleted_at\030\024 \001(\0132\032.google.protobuf.Times" +
-      "tampBe\202\267\030a\n\ndeleted_at\022\013TIMESTAMPTZRF\n\023i" +
-      "dx_api_keys_active\022\005BTREE:(deleted_at IS" +
-      " NULL AND status = \'ACTIVE\'R\tdeletedAt\022P" +
-      "\n\ndeleted_by\030\025 \001(\tB1\202\267\030-\n\ndeleted_by\022\014VA" +
-      "RCHAR(160)Z\021Soft delete actorR\tdeletedBy" +
-      "\022\202\001\n\ttenant_id\030\026 \001(\tBe\202\267\030a\n\ttenant_id\022\014V" +
-      "ARCHAR(120)R\037\n\026idx_api_keys_tenant_id\022\005B" +
-      "TREEZ%Optional tenant boundary for this " +
-      "keyR\010tenantId\022\224\001\n\nproject_id\030\027 \001(\tBu\202\267\030q" +
-      "\n\nproject_id\022\014VARCHAR(120)R \n\027idx_api_ke" +
-      "ys_project_id\022\005BTREEZ3Optional project/a" +
-      "pplication namespace for this keyR\tproje" +
-      "ctId\022\256\001\n\026allowed_resources_json\030\030 \001(\tBx\202" +
-      "\267\030t\n\026allowed_resources_json\022\005JSONB\030\001:\013\'[" +
-      "]\'::jsonbZBOptional resource allowlist; " +
-      "empty delegates to policy engine onlyx\001R" +
-      "\024allowedResourcesJson\022i\n\rmetadata_json\030\031" +
-      " \001(\tBD\202\267\030@\n\rmetadata_json\022\005JSONB\030\001:\013\'{}\'" +
-      "::jsonbZ\027Non-secret key metadatax\001R\014meta" +
-      "dataJson:\251\007\372\266\030\244\007\n\010api_keys\022\tudb_authn\030\004 " +
-      "\001*4Machine-to-machine API keys for integ" +
-      "ration accounts0\0018\001\212\0016\n\017idx_apikey_hash\022" +
-      "\005BTREE:\022deleted_at IS NULLZ\010key_hash\232\001\021\n" +
-      "\007pg_trgm\022\006public\252\001R\n\035trg_api_keys_touch_" +
-      "updated_at\022\006BEFORE\032\006UPDATE\"\034udb_authn.to" +
-      "uch_updated_at()*\003ROW\252\001P\n\030trg_apikey_has" +
-      "h_required\022\006BEFORE\032\006INSERT\"\037udb_authn.as" +
-      "sert_api_key_hash()*\003ROW\302\001\332\001\n\031touch_upda" +
-      "ted_at_function\022\010postgres\032\017before_trigge" +
-      "rs\"\241\001CREATE OR REPLACE FUNCTION udb_auth" +
-      "n.touch_updated_at()\nRETURNS trigger\nLAN" +
-      "GUAGE plpgsql\nAS $$\nBEGIN\n  NEW.updated_" +
-      "at = CURRENT_TIMESTAMP;\n  RETURN NEW;\nEN" +
-      "D;\n$$;\302\001\340\002\n\035apikey_hash_required_functio" +
-      "n\022\010postgres\032\017before_triggers\"\243\002CREATE OR" +
-      " REPLACE FUNCTION udb_authn.assert_api_k" +
-      "ey_hash()\nRETURNS trigger\nLANGUAGE plpgs" +
-      "ql\nAS $$\nBEGIN\n  IF NEW.key_hash IS NULL" +
-      " OR length(NEW.key_hash) > 128 THEN\n    " +
-      "RAISE EXCEPTION \'api_keys.key_hash must " +
-      "be a keyed digest no longer than 128 cha" +
-      "racters\';\n  END IF;\n  RETURN NEW;\nEND;\n$" +
-      "$;\352\001\007primary\372\001\rapikey:revokeB\374\001\n\035com.udb" +
-      ".core.apikey.entity.v1B\013ApiKeyProtoP\001ZEg" +
-      "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
-      "re/apikey/entity/v1;entityv1\242\002\004UCAE\252\002\031ud" +
-      "b.core.Apikey.Entity.V1\312\002\031Udb\\Core\\Apike" +
-      "y\\Entity\\V1\342\002%Udb\\GPBMetadata\\Core\\Apike" +
-      "y\\Entity\\V1\352\002\035Udb::Core::Apikey::Entity:" +
-      ":V1b\006proto3"
+      "UI\250\001\001R\tkeyPrefix\022\213\001\n\010key_hash\030\003 \001(\tBp\330\265\030" +
+      "\001\340\265\030\001\350\265\030\001\360\265\030\001\202\267\030=\n\010key_hash\022\014VARCHAR(128" +
+      ")\030\001 \001R\037\n\025idx_api_keys_key_hash\022\004HASH\030\001\212\267" +
+      "\030\033\010\004\020\001\030\0032\013hmac-sha256J\006tenantR\007keyHash\022G" +
+      "\n\004name\030\004 \001(\tB3\202\267\030/\n\004name\022\014VARCHAR(150)\030\001" +
+      "Z\027Human-readable key nameR\004name\0229\n\013descr" +
+      "iption\030\005 \001(\tB\027\202\267\030\023\n\013description\022\004TEXTR\013d" +
+      "escription\022\221\001\n\nowner_type\030\006 \001(\0162*.udb.co" +
+      "re.apikey.entity.v1.ApiKeyOwnerTypeBF\202\267\030" +
+      "B\n\nowner_type\022\013VARCHAR(20)\030\001R%\n\022idx_api_" +
+      "keys_owner\022\005BTREEZ\010owner_idR\townerType\0229" +
+      "\n\010owner_id\030\007 \001(\tB\036\202\267\030\032\n\010owner_id\022\014VARCHA" +
+      "R(160)\030\001R\007ownerId\022c\n\013scopes_json\030\010 \001(\tBB" +
+      "\202\267\030>\n\013scopes_json\022\005JSONB\030\001:\004\'[]\'Z\036Array " +
+      "of granted scope stringsx\001R\nscopesJson\022\204" +
+      "\001\n\006status\030\t \001(\0162\'.udb.core.apikey.entity" +
+      ".v1.ApiKeyStatusBC\202\267\030?\n\006status\022\013VARCHAR(" +
+      "15)\030\001:\010\'ACTIVE\'R\034\n\023idx_api_keys_status\022\005" +
+      "BTREER\006status\022\211\001\n\021ip_allowlist_json\030\n \001(" +
+      "\tB]\202\267\030Y\n\021ip_allowlist_json\022\005JSONB:\004\'[]\'Z" +
+      "5Allowed source CIDRs: [\"10.0.0.0/8\"]. E" +
+      "mpty = any IP.x\001R\017ipAllowlistJson\022]\n\025rat" +
+      "e_limit_per_minute\030\013 \001(\005B*\202\267\030&\n\025rate_lim" +
+      "it_per_minute\022\007INTEGER\030\001:\00260R\022rateLimitP" +
+      "erMinute\022V\n\022rate_limit_per_day\030\014 \001(\003B)\202\267" +
+      "\030%\n\022rate_limit_per_day\022\006BIGINT\030\001:\00510000R" +
+      "\017rateLimitPerDay\022\202\001\n\ncreated_by\030\r \001(\tBc\202" +
+      "\267\030_\n\ncreated_by\022\014VARCHAR(160)\030\001R \n\027idx_a" +
+      "pi_keys_created_by\022\005BTREEZ\037Principal tha" +
+      "t created this keyR\tcreatedBy\022\200\001\n\nrevoke" +
+      "d_by\030\016 \001(\tBa\202\267\030]\n\nrevoked_by\022\014VARCHAR(16" +
+      "0)R \n\027idx_api_keys_revoked_by\022\005BTREEZ\037Pr" +
+      "incipal that revoked this keyR\trevokedBy" +
+      "\022F\n\rrevoke_reason\030\017 \001(\tB!\202\267\030\035\n\rrevoke_re" +
+      "ason\022\014VARCHAR(255)R\014revokeReason\022n\n\nexpi" +
+      "res_at\030\020 \001(\0132\032.google.protobuf.Timestamp" +
+      "B3\202\267\030/\n\nexpires_at\022\013TIMESTAMPTZZ\024NULL = " +
+      "never expiresR\texpiresAt\022]\n\014last_used_at" +
+      "\030\021 \001(\0132\032.google.protobuf.TimestampB\037\202\267\030\033" +
+      "\n\014last_used_at\022\013TIMESTAMPTZR\nlastUsedAt\022" +
+      "q\n\ncreated_at\030\022 \001(\0132\032.google.protobuf.Ti" +
+      "mestampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001" +
+      ":\021CURRENT_TIMESTAMP`\001h\001R\tcreatedAt\022o\n\nup" +
+      "dated_at\030\023 \001(\0132\032.google.protobuf.Timesta" +
+      "mpB4\202\267\0300\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021CUR" +
+      "RENT_TIMESTAMP`\001R\tupdatedAt\022\240\001\n\ndeleted_" +
+      "at\030\024 \001(\0132\032.google.protobuf.TimestampBe\202\267" +
+      "\030a\n\ndeleted_at\022\013TIMESTAMPTZRF\n\023idx_api_k" +
+      "eys_active\022\005BTREE:(deleted_at IS NULL AN" +
+      "D status = \'ACTIVE\'R\tdeletedAt\022P\n\ndelete" +
+      "d_by\030\025 \001(\tB1\202\267\030-\n\ndeleted_by\022\014VARCHAR(16" +
+      "0)Z\021Soft delete actorR\tdeletedBy\022\202\001\n\tten" +
+      "ant_id\030\026 \001(\tBe\202\267\030a\n\ttenant_id\022\014VARCHAR(1" +
+      "20)R\037\n\026idx_api_keys_tenant_id\022\005BTREEZ%Op" +
+      "tional tenant boundary for this keyR\010ten" +
+      "antId\022\224\001\n\nproject_id\030\027 \001(\tBu\202\267\030q\n\nprojec" +
+      "t_id\022\014VARCHAR(120)R \n\027idx_api_keys_proje" +
+      "ct_id\022\005BTREEZ3Optional project/applicati" +
+      "on namespace for this keyR\tprojectId\022\256\001\n" +
+      "\026allowed_resources_json\030\030 \001(\tBx\202\267\030t\n\026all" +
+      "owed_resources_json\022\005JSONB\030\001:\013\'[]\'::json" +
+      "bZBOptional resource allowlist; empty de" +
+      "legates to policy engine onlyx\001R\024allowed" +
+      "ResourcesJson\022i\n\rmetadata_json\030\031 \001(\tBD\202\267" +
+      "\030@\n\rmetadata_json\022\005JSONB\030\001:\013\'{}\'::jsonbZ" +
+      "\027Non-secret key metadatax\001R\014metadataJson" +
+      ":\306\010\372\266\030\244\007\n\010api_keys\022\tudb_authn\030\004 \001*4Machi" +
+      "ne-to-machine API keys for integration a" +
+      "ccounts0\0018\001\212\0016\n\017idx_apikey_hash\022\005BTREE:\022" +
+      "deleted_at IS NULLZ\010key_hash\232\001\021\n\007pg_trgm" +
+      "\022\006public\252\001R\n\035trg_api_keys_touch_updated_" +
+      "at\022\006BEFORE\032\006UPDATE\"\034udb_authn.touch_upda" +
+      "ted_at()*\003ROW\252\001P\n\030trg_apikey_hash_requir" +
+      "ed\022\006BEFORE\032\006INSERT\"\037udb_authn.assert_api" +
+      "_key_hash()*\003ROW\302\001\332\001\n\031touch_updated_at_f" +
+      "unction\022\010postgres\032\017before_triggers\"\241\001CRE" +
+      "ATE OR REPLACE FUNCTION udb_authn.touch_" +
+      "updated_at()\nRETURNS trigger\nLANGUAGE pl" +
+      "pgsql\nAS $$\nBEGIN\n  NEW.updated_at = CUR" +
+      "RENT_TIMESTAMP;\n  RETURN NEW;\nEND;\n$$;\302\001" +
+      "\340\002\n\035apikey_hash_required_function\022\010postg" +
+      "res\032\017before_triggers\"\243\002CREATE OR REPLACE" +
+      " FUNCTION udb_authn.assert_api_key_hash(" +
+      ")\nRETURNS trigger\nLANGUAGE plpgsql\nAS $$" +
+      "\nBEGIN\n  IF NEW.key_hash IS NULL OR leng" +
+      "th(NEW.key_hash) > 128 THEN\n    RAISE EX" +
+      "CEPTION \'api_keys.key_hash must be a key" +
+      "ed digest no longer than 128 characters\'" +
+      ";\n  END IF;\n  RETURN NEW;\nEND;\n$$;\352\001\007pri" +
+      "mary\372\001\rapikey:revoke\212\262\031\230\001\n\006tenant\032\ttenan" +
+      "t_id*4tenant_id = current_setting(\'app.c" +
+      "urrent_tenant_id\')2\013soft_delete:\022apikey." +
+      "operational@\373\023H\002R\006tenantZ\010standardr\025tena" +
+      "nt.data_residencyB\374\001\n\035com.udb.core.apike" +
+      "y.entity.v1B\013ApiKeyProtoP\001ZEgithub.com/f" +
+      "ahara02/udb/sdk/go/gen/udb/core/apikey/e" +
+      "ntity/v1;entityv1\242\002\004UCAE\252\002\031udb.core.Apik" +
+      "ey.Entity.V1\312\002\031Udb\\Core\\Apikey\\Entity\\V1" +
+      "\342\002%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1" +
+      "\352\002\035Udb::Core::Apikey::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -168,6 +172,8 @@ public final class ApiKeyProto extends com.google.protobuf.GeneratedFile {
     com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.dbColumnSecurity);
+    registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
     registry.add(com.udb.core.common.v1.SecurityProto.encryptedSecurity);
     registry.add(com.udb.core.common.v1.SecurityProto.logMasked);
     registry.add(com.udb.core.common.v1.SecurityProto.logRedacted);

@@ -43,7 +43,8 @@ stub method (`Select`, `Upsert`, …) and adds:
 
 - per-call deadline (`deadline_ms`, microseconds),
 - retry with exponential backoff + full jitter on transient gRPC codes
-  (`UNAVAILABLE`, `DEADLINE_EXCEEDED`, `RESOURCE_EXHAUSTED`),
+  (`UNAVAILABLE`, `RESOURCE_EXHAUSTED`, and `DEADLINE_EXCEEDED` only for
+  read-only RPCs),
 - TLS / credentials wiring and a shared channel across every service stub,
 - metadata injection from the bound `UdbMetadata`,
 - typed error mapping — it unpacks the `udb-error-detail-bin` trailer into a

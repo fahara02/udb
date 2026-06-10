@@ -58,6 +58,10 @@ class HealthReportResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>repeated .udb.entity.v1.BackendInstanceStatus backend_instances = 10 [json_name = "backendInstances"];</code>
      */
     private $backend_instances;
+    /**
+     * Generated from protobuf field <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    private $native_services;
 
     /**
      * Constructor.
@@ -77,6 +81,7 @@ class HealthReportResponse extends \Google\Protobuf\Internal\Message
      *     @type string $probes_json
      *           JSON-encoded list of BackendProbeResult objects (populated only when with_probes=true).
      *     @type \Udb\Entity\V1\BackendInstanceStatus[] $backend_instances
+     *     @type \Udb\Entity\V1\NativeServiceStatus[] $native_services
      * }
      */
     public function __construct($data = NULL) {
@@ -303,6 +308,28 @@ class HealthReportResponse extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\BackendInstanceStatus::class);
         $this->backend_instances = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     * @return RepeatedField<\Udb\Entity\V1\NativeServiceStatus>
+     */
+    public function getNativeServices()
+    {
+        return $this->native_services;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     * @param \Udb\Entity\V1\NativeServiceStatus[] $var
+     * @return $this
+     */
+    public function setNativeServices(array|RepeatedField $var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\NativeServiceStatus::class);
+        $this->native_services = $arr;
 
         return $this;
     }

@@ -260,11 +260,18 @@ pub(crate) fn load_udb_config_overlay(args: &[String]) {
     if let Some(addr) = yaml_string(&yaml, &["server", "grpc_addr"]) {
         set_env_if_absent("UDB_GRPC_BIND_ADDR", &addr);
         set_env_if_absent("UDB_GRPC_ADDR", &addr);
-    } else if let Some(port) = yaml_string(&yaml, &["server", "port"]) {
-        let host = yaml_string(&yaml, &["server", "host"])
-            .unwrap_or_else(|| DEFAULT_GRPC_BIND_HOST.to_string());
-        set_env_if_absent("UDB_GRPC_BIND_ADDR", &format!("{host}:{port}"));
-        set_env_if_absent("UDB_GRPC_ADDR", &format!("{host}:{port}"));
+    } else {
+        // A bare `server.host` (no `grpc_addr`, no `port`) was previously
+        // ignored; fall back to the documented default port so a host-only
+        // overlay still binds (`host:50051`).
+        let port = yaml_string(&yaml, &["server", "port"]);
+        let host = yaml_string(&yaml, &["server", "host"]);
+        if port.is_some() || host.is_some() {
+            let port = port.unwrap_or_else(|| DEFAULT_GRPC_PORT.to_string());
+            let host = host.unwrap_or_else(|| DEFAULT_GRPC_BIND_HOST.to_string());
+            set_env_if_absent("UDB_GRPC_BIND_ADDR", &format!("{host}:{port}"));
+            set_env_if_absent("UDB_GRPC_ADDR", &format!("{host}:{port}"));
+        }
     }
     if let Some(addr) = yaml_string(&yaml, &["server", "metrics_addr"]) {
         set_env_if_absent("UDB_METRICS_ADDR", &addr);

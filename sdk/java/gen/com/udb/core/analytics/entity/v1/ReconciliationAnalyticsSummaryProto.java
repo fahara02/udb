@@ -44,51 +44,55 @@ public final class ReconciliationAnalyticsSummaryProto extends com.google.protob
       "ation_analytics_summary.proto\022\034udb.core." +
       "analytics.entity.v1\032\037google/protobuf/tim" +
       "estamp.proto\032\033udb/core/common/v1/db.prot" +
-      "o\"\305\t\n\036ReconciliationAnalyticsSummary\022L\n\n" +
-      "summary_id\030\001 \001(\tB-\202\267\030)\n\nsummary_id\022\004UUID" +
-      "\030\001(\001:\021gen_random_uuid()R\tsummaryId\022[\n\014su" +
-      "mmary_date\030\002 \001(\0132\032.google.protobuf.Times" +
-      "tampB\034\202\267\030\030\n\014summary_date\022\004DATE\030\001 \001R\013summ" +
-      "aryDate\022]\n\025total_reconciliations\030\003 \001(\003B(" +
-      "\202\267\030$\n\025total_reconciliations\022\006BIGINT\030\001:\0010" +
-      "R\024totalReconciliations\022E\n\rexact_matches\030" +
-      "\004 \001(\003B \202\267\030\034\n\rexact_matches\022\006BIGINT\030\001:\0010R" +
-      "\014exactMatches\022Q\n\021partial_conflicts\030\005 \001(\003" +
-      "B$\202\267\030 \n\021partial_conflicts\022\006BIGINT\030\001:\0010R\020" +
-      "partialConflicts\022H\n\016hard_conflicts\030\006 \001(\003" +
-      "B!\202\267\030\035\n\016hard_conflicts\022\006BIGINT\030\001:\0010R\rhar" +
-      "dConflicts\022_\n\026low_confidence_flagged\030\007 \001" +
-      "(\003B)\202\267\030%\n\026low_confidence_flagged\022\006BIGINT" +
-      "\030\001:\0010R\024lowConfidenceFlagged\022a\n\025avg_recon" +
-      "ciliation_ms\030\010 \001(\001B-\202\267\030)\n\025avg_reconcilia" +
-      "tion_ms\022\020DOUBLE PRECISIONR\023avgReconcilia" +
-      "tionMs\022w\n\017resolution_rate\030\t \001(\001BN\202\267\030J\n\017r" +
-      "esolution_rate\022\020DOUBLE PRECISIONZ%exact_" +
-      "matches / total_reconciliationsR\016resolut" +
-      "ionRate\022a\n\025avg_record_confidence\030\n \001(\001B-" +
-      "\202\267\030)\n\025avg_record_confidence\022\020DOUBLE PREC" +
-      "ISIONR\023avgRecordConfidence\022t\n\013recorded_a" +
-      "t\030\013 \001(\0132\032.google.protobuf.TimestampB7\202\267\030" +
-      "3\n\013recorded_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_T" +
-      "IMESTAMP`\001h\001R\nrecordedAt:\236\001\372\266\030\231\001\n\"reconc" +
-      "iliation_analytics_summaries\022\rudb_analyt" +
-      "ics\030\003 \001*CDaily reconciliation and confli" +
-      "ct roll-up for UDB-managed workflowsH\003R\014" +
-      "summary_dateX\355\002\352\001\007replicaB\246\002\n com.udb.co" +
-      "re.analytics.entity.v1B#ReconciliationAn" +
-      "alyticsSummaryProtoP\001ZHgithub.com/fahara" +
-      "02/udb/sdk/go/gen/udb/core/analytics/ent" +
-      "ity/v1;entityv1\242\002\004UCAE\252\002\034udb.core.Analyt" +
-      "ics.Entity.V1\312\002\034Udb\\Core\\Analytics\\Entit" +
-      "y\\V1\342\002(Udb\\GPBMetadata\\Core\\Analytics\\En" +
-      "tity\\V1\352\002 Udb::Core::Analytics::Entity::" +
-      "V1b\006proto3"
+      "o\032!udb/core/common/v1/security.proto\"\243\n\n" +
+      "\036ReconciliationAnalyticsSummary\022L\n\nsumma" +
+      "ry_id\030\001 \001(\tB-\202\267\030)\n\nsummary_id\022\004UUID\030\001(\001:" +
+      "\021gen_random_uuid()R\tsummaryId\022[\n\014summary" +
+      "_date\030\002 \001(\0132\032.google.protobuf.TimestampB" +
+      "\034\202\267\030\030\n\014summary_date\022\004DATE\030\001 \001R\013summaryDa" +
+      "te\022]\n\025total_reconciliations\030\003 \001(\003B(\202\267\030$\n" +
+      "\025total_reconciliations\022\006BIGINT\030\001:\0010R\024tot" +
+      "alReconciliations\022E\n\rexact_matches\030\004 \001(\003" +
+      "B \202\267\030\034\n\rexact_matches\022\006BIGINT\030\001:\0010R\014exac" +
+      "tMatches\022Q\n\021partial_conflicts\030\005 \001(\003B$\202\267\030" +
+      " \n\021partial_conflicts\022\006BIGINT\030\001:\0010R\020parti" +
+      "alConflicts\022H\n\016hard_conflicts\030\006 \001(\003B!\202\267\030" +
+      "\035\n\016hard_conflicts\022\006BIGINT\030\001:\0010R\rhardConf" +
+      "licts\022_\n\026low_confidence_flagged\030\007 \001(\003B)\202" +
+      "\267\030%\n\026low_confidence_flagged\022\006BIGINT\030\001:\0010" +
+      "R\024lowConfidenceFlagged\022a\n\025avg_reconcilia" +
+      "tion_ms\030\010 \001(\001B-\202\267\030)\n\025avg_reconciliation_" +
+      "ms\022\020DOUBLE PRECISIONR\023avgReconciliationM" +
+      "s\022w\n\017resolution_rate\030\t \001(\001BN\202\267\030J\n\017resolu" +
+      "tion_rate\022\020DOUBLE PRECISIONZ%exact_match" +
+      "es / total_reconciliationsR\016resolutionRa" +
+      "te\022a\n\025avg_record_confidence\030\n \001(\001B-\202\267\030)\n" +
+      "\025avg_record_confidence\022\020DOUBLE PRECISION" +
+      "R\023avgRecordConfidence\022t\n\013recorded_at\030\013 \001" +
+      "(\0132\032.google.protobuf.TimestampB7\202\267\0303\n\013re" +
+      "corded_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMEST" +
+      "AMP`\001h\001R\nrecordedAt:\374\001\372\266\030\231\001\n\"reconciliat" +
+      "ion_analytics_summaries\022\rudb_analytics\030\003" +
+      " \001*CDaily reconciliation and conflict ro" +
+      "ll-up for UDB-managed workflowsH\003R\014summa" +
+      "ry_dateX\355\002\352\001\007replica\212\262\031Z\n\006global2\013soft_d" +
+      "elete:\025analytics.operational@\373\023H\002R\006tenan" +
+      "tZ\010standardr\025tenant.data_residencyB\246\002\n c" +
+      "om.udb.core.analytics.entity.v1B#Reconci" +
+      "liationAnalyticsSummaryProtoP\001ZHgithub.c" +
+      "om/fahara02/udb/sdk/go/gen/udb/core/anal" +
+      "ytics/entity/v1;entityv1\242\002\004UCAE\252\002\034udb.co" +
+      "re.Analytics.Entity.V1\312\002\034Udb\\Core\\Analyt" +
+      "ics\\Entity\\V1\342\002(Udb\\GPBMetadata\\Core\\Ana" +
+      "lytics\\Entity\\V1\352\002 Udb::Core::Analytics:" +
+      ":Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.TimestampProto.getDescriptor(),
           com.udb.core.common.v1.DbProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_analytics_entity_v1_ReconciliationAnalyticsSummary_descriptor =
       getDescriptor().getMessageType(0);
@@ -99,8 +103,10 @@ public final class ReconciliationAnalyticsSummaryProto extends com.google.protob
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);
     registry.add(com.udb.core.common.v1.DbProto.pgTable);
     com.google.protobuf.Descriptors.FileDescriptor

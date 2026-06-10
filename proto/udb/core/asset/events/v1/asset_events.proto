@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package udb.core.asset.events.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Asset.Events.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/asset/events/v1;asseteventsv1";
+option java_package = "com.udb.core.asset.events.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Asset\\Events\\V1";
+option php_namespace = "Udb\\Core\\Asset\\Events\\V1";
+
+// Emitted when a new asset is registered.
+message AssetRegistered {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.asset.events.v1.AssetRegistered"
+    outbox_topic: "udb.asset.asset_registered.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string asset_id = 2;
+  string tenant_id = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+// Emitted when a pipeline instance is started for an asset.
+message PipelineStarted {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.asset.events.v1.PipelineStarted"
+    outbox_topic: "udb.asset.pipeline_started.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string instance_id = 2;
+  string asset_id = 3;
+  string tenant_id = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+// Emitted when a pipeline step completes.
+message StepCompleted {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.asset.events.v1.StepCompleted"
+    outbox_topic: "udb.asset.step_completed.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string step_id = 2;
+  string instance_id = 3;
+  string tenant_id = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+// Emitted when a pipeline instance completes successfully.
+message PipelineCompleted {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.asset.events.v1.PipelineCompleted"
+    outbox_topic: "udb.asset.pipeline_completed.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string instance_id = 2;
+  string asset_id = 3;
+  string tenant_id = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+// Emitted when a pipeline instance fails.
+message PipelineFailed {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.asset.events.v1.PipelineFailed"
+    outbox_topic: "udb.asset.pipeline_failed.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string instance_id = 2;
+  string asset_id = 3;
+  string tenant_id = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}

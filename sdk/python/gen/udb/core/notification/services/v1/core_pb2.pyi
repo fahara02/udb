@@ -5,6 +5,7 @@ from udb.core.notification.entity.v1 import enums_pb2 as _enums_pb2
 from udb.core.notification.entity.v1 import notification_log_pb2 as _notification_log_pb2
 from udb.core.notification.entity.v1 import notification_preference_pb2 as _notification_preference_pb2
 from udb.core.notification.entity.v1 import notification_template_pb2 as _notification_template_pb2
+from udb.core.common.v1 import security_pb2 as _security_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message

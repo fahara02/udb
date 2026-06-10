@@ -1,12 +1,23 @@
 # UDB Java SDK
 
+<!-- UDB_BRAND_HEADER_START -->
+<p align="center">
+  <img src="../../docs/assets/udb_logo.svg" alt="UDB logo" width="96">
+</p>
+
+<p align="center">
+  <strong>UDB :: Universal Data Broker</strong><br>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.2 | protocol v1.0.0</sub>
+</p>
+<!-- UDB_BRAND_HEADER_END -->
+
 `dev.udb:udb-java-client` is the Java client for UDB. It wraps the DataBroker
 gRPC client, attaches UDB metadata, and includes generated request/response
 types for the broker and native control-plane services.
 
-Current manifest version: `0.3.1-SNAPSHOT`
+Current manifest version: `0.3.2-SNAPSHOT`
 
-Release target: `0.3.1`
+Release target: `0.3.2`
 
 Runtime: Java 17+
 
@@ -23,7 +34,7 @@ The Java build also packages a version-matched `udb` CLI wrapper. Once installed
 or built, use it from your application repo to export UDB's shared protos:
 
 ```bash
-udb proto export
+udb proto export --fmt
 ```
 
 Then your app protos can import:
@@ -31,6 +42,9 @@ Then your app protos can import:
 ```proto
 import "udb/core/common/v1/db.proto";
 ```
+
+Run `udb proto fmt` after export or edits to keep long UDB field annotations on
+one line for easier review.
 
 ## Connect And Query
 

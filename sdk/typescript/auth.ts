@@ -6,23 +6,143 @@
 // `third_party/googleapis` include dir.
 import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
+import * as crypto from "crypto";
 import path from "path";
 
 import { UdbMetadata, metadata } from "./client";
+import type { TlsOptions } from "./generatedClient";
 import { defaultProtoRoot } from "./protoRoot";
 
-function loadAuth(target: string, protoRoot: string) {
+export interface UdbAuthClientOptions {
+  secure?: boolean;
+  tls?: TlsOptions;
+  channelOptions?: grpc.ChannelOptions;
+}
+
+function buildCredentials(opts: UdbAuthClientOptions): grpc.ChannelCredentials {
+  if (opts.tls) {
+    return grpc.credentials.createSsl(
+      opts.tls.rootCerts,
+      opts.tls.privateKey,
+      opts.tls.certChain,
+    );
+  }
+  if (opts.secure) {
+    return grpc.credentials.createSsl();
+  }
+  return grpc.credentials.createInsecure();
+}
+
+function loadAuth(target: string, protoRoot: string, opts: UdbAuthClientOptions = {}) {
   const includeDirs = [protoRoot, path.resolve(protoRoot, "../third_party/googleapis")];
-  const opts = { keepCase: true, longs: String, enums: String, defaults: true, oneofs: true, includeDirs };
-  const authnDef = protoLoader.loadSync("udb/core/authn/services/v1/authn_service.proto", opts);
-  const authzDef = protoLoader.loadSync("udb/core/authz/services/v1/authz_service.proto", opts);
+  const loaderOptions = {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true,
+    includeDirs,
+  };
+  const authnDef = protoLoader.loadSync(
+    "udb/core/authn/services/v1/authn_service.proto",
+    loaderOptions,
+  );
+  const authzDef = protoLoader.loadSync(
+    "udb/core/authz/services/v1/authz_service.proto",
+    loaderOptions,
+  );
   const authn = grpc.loadPackageDefinition(authnDef) as any;
   const authz = grpc.loadPackageDefinition(authzDef) as any;
-  const creds = grpc.credentials.createInsecure();
+  const creds = buildCredentials(opts);
+  const channelOptions = opts.channelOptions ?? {};
   return {
-    authn: new authn.udb.core.authn.services.v1.AuthnService(target, creds),
-    authz: new authz.udb.core.authz.services.v1.AuthzService(target, creds),
+    authn: new authn.udb.core.authn.services.v1.AuthnService(target, creds, channelOptions),
+    authz: new authz.udb.core.authz.services.v1.AuthzService(target, creds, channelOptions),
   };
+}
+
+/** A single permission to check in a `batchCan` call. Mirrors the authz
+ *  `PermissionCheck` message ({ object, action }). */
+export interface PermissionCheck {
+  /** The object/resource identifier the policy engine keys on (authz `object`). */
+  object: string;
+  /** The action being attempted (authz `action`). */
+  action: string;
+}
+
+/** Thrown by `require()` when the bound principal is NOT allowed to perform the
+ *  action. Carries the full server `Decision` so callers can inspect the
+ *  `decision_id`, `deny_reason`, and `required_scopes`. */
+export class UdbAuthzDenied extends Error {
+  readonly resource: any;
+  readonly action: string;
+  readonly purpose: string;
+  /** The server `Decision` message (decision_id / allowed / deny_reason / …). */
+  readonly decision: any;
+
+  constructor(resource: any, action: string, purpose: string, decision: any) {
+    const reason = decision?.deny_reason || "not allowed";
+    const id = decision?.decision_id ? ` [decision ${decision.decision_id}]` : "";
+    super(`udb: authorization denied for action '${action}': ${reason}${id}`);
+    this.name = "UdbAuthzDenied";
+    this.resource = resource;
+    this.action = action;
+    this.purpose = purpose;
+    this.decision = decision;
+  }
+}
+
+/** A server-issued, time-boxed `SignedPolicyBundle` (authz `core.proto`). The
+ *  `bundle` is the canonical-JSON snapshot payload (delivered as a `Buffer`
+ *  over the wire); `signature` is a lowercase-hex HMAC-SHA256 over those bytes. */
+export interface SignedPolicyBundle {
+  /** The canonical-JSON snapshot payload the signature covers. */
+  bundle: Buffer | Uint8Array | string;
+  /** Lowercase-hex HMAC-SHA256 over `bundle`. (The proto comment says Base64;
+   *  the server actually emits lowercase hex — this SDK matches the server.) */
+  signature: string;
+  /** Identifier of the signing key, for rotation/verification. */
+  key_id?: string;
+  algorithm?: string;
+  expires_at_unix?: number | string;
+}
+
+/** Thrown by {@link verifyPolicyBundle} / {@link UdbAuthClient.getPolicyBundle}
+ *  when a signed policy bundle fails HMAC verification. */
+export class UdbPolicyBundleError extends Error {
+  constructor(message: string) {
+    super(`udb: policy bundle verification failed: ${message}`);
+    this.name = "UdbPolicyBundleError";
+  }
+}
+
+function bundleBytes(bundle: Buffer | Uint8Array | string): Buffer {
+  if (typeof bundle === "string") return Buffer.from(bundle, "utf8");
+  return Buffer.isBuffer(bundle) ? bundle : Buffer.from(bundle);
+}
+
+/**
+ * Recompute the HMAC-SHA256 (lowercase hex) of `signed.bundle` keyed by `secret`
+ * and compare it constant-time against `signed.signature`. Returns `true` on a
+ * match, `false` otherwise (including a missing/empty signature). Never throws on
+ * a mismatch — callers that want a throw should use {@link UdbAuthClient.getPolicyBundle}
+ * with a configured `policyBundleSecret`.
+ *
+ * The server emits the signature as lowercase hex (the proto comment that says
+ * Base64 is wrong); this verifier matches the server.
+ */
+export function verifyPolicyBundle(signed: SignedPolicyBundle, secret: string): boolean {
+  if (!signed || !secret) return false;
+  const provided = signed.signature ?? "";
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(bundleBytes(signed.bundle))
+    .digest("hex");
+  // Constant-time compare; the lengths must match for timingSafeEqual.
+  const a = Buffer.from(expected, "utf8");
+  const b = Buffer.from(provided, "utf8");
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 /** Convenience wrapper over AuthnService + AuthzService. The same `UdbMetadata`
@@ -31,12 +151,20 @@ export class UdbAuthClient {
   private authn: any;
   private authz: any;
   private meta: UdbMetadata;
+  private policyBundleSecret?: string;
 
-  constructor(target: string, meta: UdbMetadata, protoRoot = defaultProtoRoot()) {
-    const clients = loadAuth(target, protoRoot);
+  constructor(
+    target: string,
+    meta: UdbMetadata,
+    protoRoot = defaultProtoRoot(),
+    policyBundleSecret?: string,
+    options: UdbAuthClientOptions = {},
+  ) {
+    const clients = loadAuth(target, protoRoot, options);
     this.authn = clients.authn;
     this.authz = clients.authz;
     this.meta = meta;
+    this.policyBundleSecret = policyBundleSecret;
   }
 
   private call<T>(client: any, method: string, request: any): Promise<T> {
@@ -46,6 +174,15 @@ export class UdbAuthClient {
         else resolve(resp);
       });
     });
+  }
+
+  setCredentials(credentials: { bearerToken?: string; apiKey?: string }): void {
+    if ("bearerToken" in credentials) {
+      this.meta.bearerToken = credentials.bearerToken;
+    }
+    if ("apiKey" in credentials) {
+      this.meta.apiKey = credentials.apiKey;
+    }
   }
 
   // ── Authentication ──────────────────────────────────────────────────────
@@ -77,6 +214,14 @@ export class UdbAuthClient {
       tenant_hint: this.meta.tenantId,
       project_hint: this.meta.projectId ?? "",
     });
+  }
+
+  login(request: any): Promise<any> {
+    return this.call(this.authn, "Login", request);
+  }
+
+  refreshToken(request: any): Promise<any> {
+    return this.call(this.authn, "RefreshToken", request);
   }
 
   /** Better Auth bridge: forward a Better Auth session/JWT (already verified by
@@ -117,6 +262,42 @@ export class UdbAuthClient {
     return [Boolean(decision?.allowed), decision];
   }
 
+  /** Like `can`, but throws {@link UdbAuthzDenied} (carrying the full decision)
+   *  when the principal is not allowed. Returns the allowing `Decision`. */
+  async require(resource: any, action: string, purpose = ""): Promise<any> {
+    const p = purpose || this.meta.purpose;
+    const [allowed, decision] = await this.can(resource, action, p);
+    if (!allowed) throw new UdbAuthzDenied(resource, action, p, decision);
+    return decision;
+  }
+
+  /** Returns the full `Decision` (decision_id, allowed, deny_reason, …) without
+   *  throwing, for callers that want to inspect the verdict rather than branch
+   *  on a boolean. */
+  async explain(resource: any, action: string, purpose = ""): Promise<any> {
+    const [, decision] = await this.can(resource, action, purpose || this.meta.purpose);
+    return decision;
+  }
+
+  /** Check many (object, action) pairs in a single round-trip via the authz
+   *  `BatchCheckPermissions` RPC. Returns the server's `results` map keyed by
+   *  `"object:action"` → allowed, plus a `lookup(object, action)` helper. */
+  async batchCan(
+    checks: PermissionCheck[],
+  ): Promise<{ results: Record<string, boolean>; lookup: (object: string, action: string) => boolean }> {
+    const resp: any = await this.call(this.authz, "BatchCheckPermissions", {
+      user_id: this.meta.userId ?? "",
+      domain: this.meta.tenantId,
+      checks: checks.map((c) => ({ object: c.object, action: c.action })),
+      context: {},
+    });
+    const results: Record<string, boolean> = resp?.results ?? {};
+    return {
+      results,
+      lookup: (object: string, action: string) => Boolean(results[`${object}:${action}`]),
+    };
+  }
+
   // ── Stage 2: native database fast-path access (item 138) ──────────────────
   /** Authorize and, when allowed, return the native-access grant (restricted
    *  role + scoped DSN + RLS session variables). Resolves to `null` when access
@@ -144,12 +325,24 @@ export class UdbAuthClient {
   }
 
   // ── Stage 2: signed policy bundle (item 140) ──────────────────────────────
-  async getPolicyBundle(): Promise<any> {
+  /** Fetch the server's `SignedPolicyBundle`. When a `policyBundleSecret` is
+   *  configured the bundle's HMAC-SHA256 (lowercase hex) signature is verified
+   *  before the bundle is returned, and {@link UdbPolicyBundleError} is thrown
+   *  on mismatch. With no secret configured the bundle is returned unverified. */
+  async getPolicyBundle(): Promise<SignedPolicyBundle | undefined> {
     const resp: any = await this.call(this.authz, "GetPolicyBundle", {
       tenant_id: this.meta.tenantId,
       project_id: this.meta.projectId ?? "",
     });
-    return resp?.bundle;
+    const bundle: SignedPolicyBundle | undefined = resp?.bundle;
+    if (this.policyBundleSecret && bundle) {
+      if (!verifyPolicyBundle(bundle, this.policyBundleSecret)) {
+        throw new UdbPolicyBundleError(
+          `signature mismatch${bundle.key_id ? ` (key ${bundle.key_id})` : ""}`,
+        );
+      }
+    }
+    return bundle;
   }
 }
 
@@ -207,6 +400,23 @@ export class AuthzCache {
       this.cache.set(key, { expires: this.now() + ttl * 1000, decision });
     }
     return [allowed, decision];
+  }
+
+  /** Cache-routed {@link UdbAuthClient.require}: throws {@link UdbAuthzDenied}
+   *  on a denied (cached or fresh) decision; returns the allowing decision. */
+  async require(resource: any, action: string, purpose = ""): Promise<any> {
+    const meta = (this.client as any).meta as UdbMetadata;
+    const p = purpose || meta.purpose;
+    const [allowed, decision] = await this.can(resource, action, p);
+    if (!allowed) throw new UdbAuthzDenied(resource, action, p, decision);
+    return decision;
+  }
+
+  /** Cache-routed {@link UdbAuthClient.explain}: returns the full decision
+   *  (cached or fresh) without throwing. */
+  async explain(resource: any, action: string, purpose = ""): Promise<any> {
+    const [, decision] = await this.can(resource, action, purpose);
+    return decision;
   }
 
   invalidate(): void {

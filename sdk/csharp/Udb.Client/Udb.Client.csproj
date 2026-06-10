@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- Package version — single source of truth is /versions.json.
          Every SDK follows the main UDB release version; CI enforces the match. -->
-    <Version>0.3.1</Version>
+    <Version>0.3.2</Version>
     <PackageId>Udb.Client</PackageId>
     <Authors>fahara02</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -19,6 +19,10 @@
     <PackageReference Include="Grpc.Net.Client" Version="2.66.0" />
     <PackageReference Include="Grpc.Core.Api" Version="2.66.0" />
     <PackageReference Include="Google.Protobuf" Version="3.27.3" />
+    <!-- Optional ASP.NET Core adapter (AspNetCore/UdbContextMiddleware.cs). This
+         is the lightweight HTTP abstractions package (netstandard2.0), NOT the
+         full ASP.NET hosting stack, so the core SDK stays a thin gRPC client. -->
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
   </ItemGroup>
 
   <!-- Compile the full committed buf-generated surface: the DataBroker, the
@@ -26,6 +30,11 @@
        (authn / authz / apikey / tenant / notification / analytics), and the
        vendored google/api annotation types those service stubs import. This
        is what makes the native services callable from the published package. -->
+  <!-- Expose internal test constructors to the unit-test assembly. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Udb.Client.Tests" />
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Include="..\gen\**\*.cs" />
   </ItemGroup>

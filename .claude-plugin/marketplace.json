@@ -1,0 +1,20 @@
+{
+  "name": "udb-skills",
+  "owner": {
+    "name": "fahara02",
+    "url": "https://github.com/fahara02"
+  },
+  "description": "Agent skills for using the UDB proto-driven multi-database broker.",
+  "version": "0.1.0",
+  "plugins": [
+    {
+      "name": "udb",
+      "source": "./udb-skill/plugins/udb",
+      "description": "Use a running UDB broker: connect a language SDK, authenticate with scopes/credentials, and CRUD proto-defined entities over the gRPC DataBroker API.",
+      "version": "0.1.0",
+      "license": "MIT",
+      "category": "developer-tools",
+      "keywords": ["udb", "grpc", "database", "protobuf", "sdk", "multi-database"]
+    }
+  ]
+}

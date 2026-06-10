@@ -30,6 +30,8 @@ class Metadata:
     eventual_consistency_allowed: bool = False
     read_fence_json: str = ""
     trace_id: str = ""
+    bearer_token: str = ""
+    api_key: str = ""
 
     @classmethod
     def from_env(
@@ -72,6 +74,8 @@ class Metadata:
             ),
             read_fence_json=env("READ_FENCE_JSON"),
             trace_id=env("TRACE_ID"),
+            bearer_token=env("BEARER_TOKEN"),
+            api_key=env("API_KEY"),
         )
 
     def to_grpc_metadata(self) -> tuple[tuple[str, str], ...]:
@@ -85,6 +89,13 @@ class Metadata:
             ("x-udb-project-id", self.project_id),
             ("x-udb-client-catalog-version", self.client_catalog_version),
         ]
+        if self.bearer_token:
+            bearer = self.bearer_token.strip()
+            if not bearer.lower().startswith("bearer "):
+                bearer = f"Bearer {bearer}"
+            headers.append(("authorization", bearer))
+        if self.api_key:
+            headers.append(("x-api-key", self.api_key))
         optional = {
             "x-udb-consistency": self.consistency,
             "x-udb-target-backend": self.target_backend,

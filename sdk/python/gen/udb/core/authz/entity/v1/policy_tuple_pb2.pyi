@@ -1,4 +1,5 @@
 from udb.core.common.v1 import db_pb2 as _db_pb2
+from udb.core.common.v1 import security_pb2 as _security_pb2
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from typing import ClassVar as _ClassVar, Optional as _Optional

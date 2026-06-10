@@ -130,12 +130,16 @@ async fn live_postgres_notification_service_crud_roundtrip() {
         .await
         .expect("upsert template");
     }
+    let mut get_template_req = Request::new(notif_pb::GetTemplateRequest {
+        event_type: event_type.to_string(),
+        channel: notif_entity_pb::NotificationChannel::Email as i32,
+        locale: "en".to_string(),
+    });
+    get_template_req
+        .metadata_mut()
+        .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
     let template = svc
-        .get_template(Request::new(notif_pb::GetTemplateRequest {
-            event_type: event_type.to_string(),
-            channel: notif_entity_pb::NotificationChannel::Email as i32,
-            locale: "en".to_string(),
-        }))
+        .get_template(get_template_req)
         .await
         .expect("get template")
         .into_inner()
@@ -159,10 +163,14 @@ async fn live_postgres_notification_service_crud_roundtrip() {
     assert_eq!(sent.logs.len(), 1);
     let log_id = sent.logs[0].log_id.clone();
 
+    let mut get_req = Request::new(notif_pb::GetNotificationRequest {
+        log_id: log_id.clone(),
+    });
+    get_req
+        .metadata_mut()
+        .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
     let got = svc
-        .get_notification(Request::new(notif_pb::GetNotificationRequest {
-            log_id: log_id.clone(),
-        }))
+        .get_notification(get_req)
         .await
         .expect("get notification")
         .into_inner()
@@ -184,11 +192,15 @@ async fn live_postgres_notification_service_crud_roundtrip() {
         .into_inner();
     assert!(listed.logs.iter().any(|l| l.log_id == log_id));
 
+    let mut pending_retry_req = Request::new(notif_pb::RetryNotificationRequest {
+        log_id: log_id.clone(),
+        ..Default::default()
+    });
+    pending_retry_req
+        .metadata_mut()
+        .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
     let pending_retry = svc
-        .retry_notification(Request::new(notif_pb::RetryNotificationRequest {
-            log_id: log_id.clone(),
-            ..Default::default()
-        }))
+        .retry_notification(pending_retry_req)
         .await
         .expect_err("pending notification should not be retried");
     assert_eq!(pending_retry.code(), tonic::Code::FailedPrecondition);
@@ -214,11 +226,15 @@ async fn live_postgres_notification_service_crud_roundtrip() {
     .expect("mark notification failed through native model");
 
     // Retry bumps retry_count and re-queues a failed notification.
+    let mut retry_req = Request::new(notif_pb::RetryNotificationRequest {
+        log_id: log_id.clone(),
+        ..Default::default()
+    });
+    retry_req
+        .metadata_mut()
+        .insert("x-tenant-id", tenant_id.parse().expect("tenant metadata"));
     let retried = svc
-        .retry_notification(Request::new(notif_pb::RetryNotificationRequest {
-            log_id: log_id.clone(),
-            ..Default::default()
-        }))
+        .retry_notification(retry_req)
         .await
         .expect("retry notification")
         .into_inner()

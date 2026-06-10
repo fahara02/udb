@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package udb.core.idp.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/idp/entity/v1/enums.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Idp.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/idp/entity/v1;idpv1";
+option java_package = "com.udb.core.idp.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Idp\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// IdentityProvider — Tenant-scoped SSO/identity provider configuration.
+//
+// One row per (tenant, provider). The kind determines which fields are
+// meaningful: OIDC uses issuer/jwks_url/client_ids/audiences; SAML uses
+// entity_id/saml_metadata_url. claim/group/jit mappings are JSON-encoded
+// policies consumed by the IdP runtime. RLS scopes rows to the current tenant.
+//
+// Migration order 10 — after the authn tables so external identities can FK to
+// users; before SCIM directory state.
+// ---------------------------------------------------------------------------
+message IdentityProvider {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "identity_providers"
+    schema_name: "udb_idp"
+    migration_order: 10
+    is_table: true
+    comment: "Tenant-scoped enterprise identity providers (OIDC/SAML/LDAP/custom JWT)"
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "uq_identity_providers_tenant_name"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "display_name"
+      where_clause: "deleted_at IS NULL"
+    }
+    cdc_topic: "udb.idp.providers.cdc"
+    required_scope: "idp:providers:read"
+    replica_hint: "primary"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "idp.configuration"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string provider_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "provider_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" not_null: true index: { index_name: "idx_identity_providers_tenant_id" index_type: "BTREE" } }];
+
+  IdpKind kind = 3 [(udb.core.common.v1.pg_column) = { column_name: "kind" sql_type: "VARCHAR(24)" not_null: true index: { index_name: "idx_identity_providers_kind" index_type: "BTREE" } }];
+
+  string display_name = 4 [(udb.core.common.v1.pg_column) = { column_name: "display_name" sql_type: "VARCHAR(150)" not_null: true comment: "Operator-facing provider name (unique per tenant)" }];
+
+  // OIDC issuer URL.
+  string issuer = 5 [(udb.core.common.v1.pg_column) = { column_name: "issuer" sql_type: "VARCHAR(512)" comment: "OIDC issuer URL (kind=OIDC/CUSTOM_JWT)" }];
+
+  // SAML entity id (a.k.a. IdP entityID).
+  string entity_id = 6 [(udb.core.common.v1.pg_column) = { column_name: "entity_id" sql_type: "VARCHAR(512)" comment: "SAML IdP entityID (kind=SAML)" }];
+
+  string jwks_url = 7 [(udb.core.common.v1.pg_column) = { column_name: "jwks_url" sql_type: "VARCHAR(512)" comment: "JWKS endpoint for OIDC/custom-JWT key discovery" }];
+
+  string saml_metadata_url = 8 [(udb.core.common.v1.pg_column) = { column_name: "saml_metadata_url" sql_type: "VARCHAR(512)" comment: "SAML IdP metadata URL (kind=SAML)" }];
+
+  // JSON array of accepted OIDC client_ids for this provider.
+  string client_ids_json = 9 [(udb.core.common.v1.pg_column) = { column_name: "client_ids_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" comment: "Accepted OIDC client_ids" }];
+
+  // JSON array of accepted token audiences.
+  string audiences_json = 10 [(udb.core.common.v1.pg_column) = { column_name: "audiences_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" comment: "Accepted token audiences (aud claim)" }];
+
+  // claim_mapping: maps IdP claims → UDB principal fields (subject, email, ...).
+  string claim_mapping_json = 11 [(udb.core.common.v1.pg_column) = { column_name: "claim_mapping_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "IdP claim → UDB principal field mapping" }];
+
+  // group_mapping: maps IdP groups → UDB roles (the ONLY way groups grant roles).
+  string group_mapping_json = 12 [(udb.core.common.v1.pg_column) = { column_name: "group_mapping_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "IdP group → UDB role mapping (explicit only)" }];
+
+  // jit_policy: JIT provisioning rules (allowed_domains, require_verified_email,
+  // default_project, default_roles, ...).
+  string jit_policy_json = 13 [(udb.core.common.v1.pg_column) = { column_name: "jit_policy_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Just-in-time provisioning policy" }];
+
+  // account_linking_policy: how an external identity is linked to a UDB user
+  // when the email already exists (e.g. "explicit", "auto_verified", "deny").
+  string account_linking_policy = 14 [(udb.core.common.v1.pg_column) = { column_name: "account_linking_policy" sql_type: "VARCHAR(40)" not_null: true default_value: "'explicit'" comment: "explicit | auto_verified | deny" }];
+
+  bool enabled = 15 [(udb.core.common.v1.pg_column) = { column_name: "enabled" sql_type: "BOOLEAN" not_null: true default_value: "TRUE" index: { index_name: "idx_identity_providers_enabled" index_type: "BTREE" } }];
+
+  // Operator-supplied client secret (OIDC confidential clients / SCIM bearer).
+  // Storage-only + encrypted: never returned on read, redacted in logs/events.
+  string client_secret = 16 [(udb.core.common.v1.pg_column) = { column_name: "client_secret" sql_type: "VARCHAR(512)" comment: "OIDC confidential-client secret / SCIM bearer (storage-only)" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.encrypted_security) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_CREDENTIAL output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "tenant" }];
+
+  // SP-side private key (PEM) for SAML AuthnRequest signing. Storage-only.
+  string saml_signing_key_pem = 17 [(udb.core.common.v1.pg_column) = { column_name: "saml_signing_key_pem" sql_type: "TEXT" comment: "SP signing private key for SAML request signing (storage-only)" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.encrypted_security) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_KEY output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "tenant" }];
+
+  // IdP signing certificate(s) (PEM, JSON array) imported from SAML metadata —
+  // used to verify assertion signatures. Public material, not secret.
+  string saml_idp_certs_json = 18 [(udb.core.common.v1.pg_column) = { column_name: "saml_idp_certs_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" comment: "IdP signing certificates (PEM) from SAML metadata" }];
+
+  // SAML SingleSignOnService location (redirect/POST binding URL).
+  string saml_sso_url = 19 [(udb.core.common.v1.pg_column) = { column_name: "saml_sso_url" sql_type: "VARCHAR(512)" comment: "SAML IdP SSO endpoint URL" }];
+
+  // ── Provider health (J2.1) ────────────────────────────────────────────────
+  ProviderHealth health = 20 [(udb.core.common.v1.pg_column) = { column_name: "health" sql_type: "VARCHAR(24)" not_null: true default_value: "'PROVIDER_HEALTH_UNSPECIFIED'" }];
+
+  google.protobuf.Timestamp last_jwks_refresh_at = 21 [(udb.core.common.v1.pg_column) = { column_name: "last_jwks_refresh_at" sql_type: "TIMESTAMPTZ" comment: "Last successful JWKS/discovery refresh" }];
+
+  string last_jwks_refresh_status = 22 [(udb.core.common.v1.pg_column) = { column_name: "last_jwks_refresh_status" sql_type: "VARCHAR(255)" comment: "Outcome of the most recent JWKS refresh attempt" }];
+
+  // ── Audit (J4: changes are audited + rollbackable) ────────────────────────
+  string created_by = 23 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "VARCHAR(160)" comment: "Principal that created this provider" }];
+
+  string updated_by = 24 [(udb.core.common.v1.pg_column) = { column_name: "updated_by" sql_type: "VARCHAR(160)" comment: "Principal that last updated this provider" }];
+
+  google.protobuf.Timestamp created_at = 25 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  google.protobuf.Timestamp updated_at = 26 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true }];
+
+  google.protobuf.Timestamp deleted_at = 27 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" comment: "Soft-delete timestamp" }];
+}

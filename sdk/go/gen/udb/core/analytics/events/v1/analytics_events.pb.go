@@ -7,6 +7,7 @@
 package eventsv1
 
 import (
+	_ "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -340,7 +341,7 @@ var File_udb_core_analytics_events_v1_analytics_events_proto protoreflect.FileDe
 
 const file_udb_core_analytics_events_v1_analytics_events_proto_rawDesc = "" +
 	"\n" +
-	"3udb/core/analytics/events/v1/analytics_events.proto\x12\x1cudb.core.analytics.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xec\x02\n" +
+	"3udb/core/analytics/events/v1/analytics_events.proto\x12\x1cudb.core.analytics.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!udb/core/common/v1/security.proto\"\x81\x04\n" +
 	"\x1ePipelineSnapshotCommittedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1d\n" +
 	"\n" +
@@ -353,7 +354,8 @@ const file_udb_core_analytics_events_v1_analytics_events_proto_rawDesc = "" +
 	"\x0ecorrelation_id\x18\a \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12\x1b\n" +
-	"\ttenant_id\x18\t \x01(\tR\btenantId\"\xd5\x02\n" +
+	"\ttenant_id\x18\t \x01(\tR\btenantId:\x92\x01\x92\xb2\x19\x8d\x01\n" +
+	";udb.core.analytics.events.v1.PipelineSnapshotCommittedEvent\x12\"udb.analytics.pipeline.snapshot.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xda\x03\n" +
 	"\x16SlaBreachDetectedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1d\n" +
 	"\n" +
@@ -366,7 +368,8 @@ const file_udb_core_analytics_events_v1_analytics_events_proto_rawDesc = "" +
 	"\x0ecorrelation_id\x18\a \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12\x1b\n" +
-	"\ttenant_id\x18\t \x01(\tR\btenantId\"\xd7\x02\n" +
+	"\ttenant_id\x18\t \x01(\tR\btenantId:\x82\x01\x92\xb2\x19~\n" +
+	"3udb.core.analytics.events.v1.SlaBreachDetectedEvent\x12\x1budb.analytics.sla.breach.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xe4\x03\n" +
 	"\x1aDailySummaryGeneratedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12!\n" +
 	"\fsummary_date\x18\x02 \x01(\tR\vsummaryDate\x128\n" +
@@ -375,7 +378,8 @@ const file_udb_core_analytics_events_v1_analytics_events_proto_rawDesc = "" +
 	"\x0ecorrelation_id\x18\x05 \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12\x1b\n" +
-	"\ttenant_id\x18\a \x01(\tR\btenantIdB\x97\x02\n" +
+	"\ttenant_id\x18\a \x01(\tR\btenantId:\x8a\x01\x92\xb2\x19\x85\x01\n" +
+	"7udb.core.analytics.events.v1.DailySummaryGeneratedEvent\x12\x1eudb.analytics.daily.summary.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\x97\x02\n" +
 	" com.udb.core.analytics.events.v1B\x14AnalyticsEventsProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x1cudb.core.Analytics.Events.V1\xca\x02\x1cUdb\\Core\\Analytics\\Events\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Analytics\\Events\\V1\xea\x02 Udb::Core::Analytics::Events::V1b\x06proto3"
 
 var (

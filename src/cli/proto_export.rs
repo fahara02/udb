@@ -83,7 +83,7 @@ struct FileOutcome {
 }
 
 /// Drives the FSM. Returns a process exit code (0 success, 1 failure).
-pub(crate) fn run(out_dir: &str, manage_buf_yaml: bool) -> i32 {
+pub(crate) fn run(out_dir: &str, manage_buf_yaml: bool, format_proto: bool) -> i32 {
     let proto_dir = if out_dir.trim().is_empty() {
         "proto".to_string()
     } else {
@@ -181,6 +181,21 @@ pub(crate) fn run(out_dir: &str, manage_buf_yaml: bool) -> i32 {
         third_party.len()
     ));
 
+    if format_proto {
+        match super::proto_fmt::format_tree(root, false) {
+            Ok(report) => fsm.note(format!(
+                "formatted exported protos: {} scanned, {} changed",
+                report.scanned, report.changed
+            )),
+            Err(err) => return fsm.fail(format!("proto fmt: {err}")),
+        }
+    } else {
+        fsm.note(
+            "proto formatting skipped (pass `--fmt` to normalize long field annotations)"
+                .to_string(),
+        );
+    }
+
     // ── VendorThirdParty ──▶ Completed ──────────────────────────────────────
     if fsm.go(ProtoExportState::Completed).is_err() {
         return 1;
@@ -211,6 +226,13 @@ impl Fsm {
 
     /// Transition to `next`, enforcing `valid_transitions`. Prints the step.
     fn go(&mut self, next: ProtoExportState) -> Result<(), ()> {
+        if self.state.is_terminal() {
+            eprintln!(
+                "proto export: cannot transition out of terminal state {}",
+                self.state.as_str()
+            );
+            return Err(());
+        }
         if !self.state.valid_transitions().contains(&next) {
             eprintln!(
                 "proto export: illegal transition {} → {}",

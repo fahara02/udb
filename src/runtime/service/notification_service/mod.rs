@@ -8,19 +8,26 @@
 //! delivery (SES/Twilio/FCM/webhook) is performed by separate delivery adapters;
 //! `SendNotification` records the intent as a `NotificationLog` row.
 
+use std::sync::Arc;
+
 use sqlx::{PgPool, Row};
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
-use crate::proto::udb::core::common::v1 as common_pb;
+use crate::metrics::{MetricsRecorder, NoopMetrics};
 use crate::proto::udb::core::notification::entity::v1 as notif_entity_pb;
 use crate::proto::udb::core::notification::services::v1 as notif_pb;
 use crate::proto::udb::core::notification::services::v1::notification_service_server::NotificationService;
+use crate::runtime::channels::{ChannelManager, OperationChannel};
 use crate::runtime::native_catalog::{NativeModel, native_model};
 
 pub use crate::proto::udb::core::notification::services::v1::notification_service_server::NotificationServiceServer;
 
 use super::DataBrokerService;
+use super::native_helpers::{
+    admit_on as native_admit_on, metadata_tenant_id, native_page_response, native_page_window,
+    parse_uuid, validate_request_scope, validate_request_tenant,
+};
 
 const LOG_MSG: &str = "udb.core.notification.entity.v1.NotificationLog";
 const TEMPLATE_MSG: &str = "udb.core.notification.entity.v1.NotificationTemplate";
@@ -31,6 +38,13 @@ pub struct NotificationServiceImpl {
     /// Schema-qualified outbox table (`udb_system.outbox_events`) the CDC engine
     /// tails → Apache Kafka → the Spark streaming consumer. `None` = no emit.
     outbox_relation: Option<String>,
+    /// Per-tenant fair-admission manager (the SAME one the data plane uses via
+    /// `execute_with_channel_scoped`). Mutating/listing RPCs acquire a per-tenant
+    /// budget through this so one tenant can't starve the shared control plane.
+    /// `None` only in bare unit-test construction (no runtime wired) —
+    /// `build_notification_service` always wires it in production.
+    channels: Option<ChannelManager>,
+    metrics: Arc<dyn MetricsRecorder>,
 }
 
 /// Kafka topic for the "notification sent" domain event.
@@ -41,11 +55,26 @@ impl NotificationServiceImpl {
         Self {
             pg_pool: None,
             outbox_relation: None,
+            channels: None,
+            metrics: Arc::new(NoopMetrics),
         }
     }
 
     pub fn with_postgres(mut self, pool: Option<PgPool>) -> Self {
         self.pg_pool = pool;
+        self
+    }
+
+    pub(crate) fn with_metrics(mut self, metrics: Arc<dyn MetricsRecorder>) -> Self {
+        self.metrics = metrics;
+        self
+    }
+
+    /// Wire the shared per-tenant fair-admission manager (same one the data plane
+    /// uses) so control-plane RPCs are bounded per tenant. No-op (`None`) leaves
+    /// admission disabled for bare unit-test construction.
+    pub(crate) fn with_channels(mut self, channels: Option<ChannelManager>) -> Self {
+        self.channels = channels;
         self
     }
 
@@ -65,10 +94,9 @@ impl NotificationServiceImpl {
         })
     }
 
-    /// Best-effort: enqueue a "notification sent" event into the shared outbox
-    /// (→ CDC → Kafka → Spark). Uses the same envelope shape as the broker's
-    /// `prepare_outbox_envelope` / auth `OutboxAuthEventSink` so the CDC engine
-    /// forwards it unchanged. Never fails the RPC.
+    /// Best-effort: enqueue a "notification sent" event into the shared native
+    /// outbox envelope (top-level tenant/project for CDC routing). Never fails
+    /// the RPC.
     async fn emit_sent_event(
         &self,
         pool: &PgPool,
@@ -76,39 +104,29 @@ impl NotificationServiceImpl {
         event_type: &str,
         recipient_id: &str,
         tenant_id: &str,
+        project_id: &str,
         channels: &[i32],
+        retry: bool,
     ) {
-        let Some(rel) = self.outbox_relation.as_deref() else {
-            return;
-        };
-        let event_id = Uuid::new_v4().to_string();
-        let envelope = serde_json::json!({
-            "event_id": event_id,
-            "event_type": NOTIFICATION_SENT_TOPIC,
-            "correlation_id": log_id,
-            "document_id": recipient_id,
-            "payload": {
-                "log_id": log_id,
-                "event_type": event_type,
-                "recipient_id": recipient_id,
-                "tenant_id": tenant_id,
-                "channels": channels.iter().map(|c| channel_to_db(*c)).collect::<Vec<_>>(),
-            },
-        });
-        let sql = format!(
-            "INSERT INTO {rel} (event_id, topic, partition_key, payload, created_at) \
-             VALUES ($1::UUID, $2, $3, $4::JSONB, NOW())"
-        );
-        if let Err(err) = sqlx::query(&sql)
-            .bind(&event_id)
-            .bind(NOTIFICATION_SENT_TOPIC)
-            .bind(recipient_id)
-            .bind(envelope.to_string())
-            .execute(pool)
-            .await
-        {
-            tracing::warn!(topic = NOTIFICATION_SENT_TOPIC, error = %err, "notification outbox enqueue failed");
-        }
+        super::native_helpers::enqueue_outbox_event(
+            pool,
+            self.outbox_relation.as_deref(),
+            NOTIFICATION_SENT_TOPIC,
+            recipient_id,
+            tenant_id,
+            project_id,
+            notification_delivery_payload(
+                log_id,
+                event_type,
+                recipient_id,
+                tenant_id,
+                project_id,
+                channels,
+                retry,
+            ),
+            Some(&self.metrics),
+        )
+        .await;
     }
 }
 
@@ -154,6 +172,9 @@ fn template_model() -> NativeModel {
             "locale",
             "is_active",
             "created_by",
+            // Hybrid tenant model (F4.3): NULL = platform-global default,
+            // non-null = per-tenant override.
+            "tenant_id",
         ],
     )
 }
@@ -171,11 +192,6 @@ fn preference_model() -> NativeModel {
             "created_by",
         ],
     )
-}
-
-fn parse_uuid(field: &str, value: &str) -> Result<Uuid, Status> {
-    Uuid::parse_str(value.trim())
-        .map_err(|_| Status::invalid_argument(format!("{field} must be a valid UUID")))
 }
 
 // ── enum<->db (stored as VARCHAR via proto_enum) ──────────────────────────────
@@ -214,6 +230,89 @@ fn status_from_db(value: &str) -> i32 {
         "SUPPRESSED" => S::Suppressed as i32,
         _ => S::Unspecified as i32,
     }
+}
+
+/// Per-channel send decision: an opted-out (recipient, channel) preference is
+/// recorded as a SUPPRESSED log row — kept for audit/delivery stats but never
+/// part of the delivery emit set — while everything else queues as PENDING.
+/// Returns `(db_status, proto_status)`; the single decision point
+/// `send_notification` applies per channel.
+fn channel_send_decision(opted_out: bool) -> (&'static str, i32) {
+    if opted_out {
+        (
+            "SUPPRESSED",
+            notif_entity_pb::NotificationStatus::Suppressed as i32,
+        )
+    } else {
+        (
+            "PENDING",
+            notif_entity_pb::NotificationStatus::Pending as i32,
+        )
+    }
+}
+
+fn notification_delivery_payload(
+    log_id: &str,
+    event_type: &str,
+    recipient_id: &str,
+    tenant_id: &str,
+    project_id: &str,
+    channels: &[i32],
+    retry: bool,
+) -> serde_json::Value {
+    serde_json::json!({
+        "log_id": log_id,
+        "event_type": event_type,
+        "recipient_id": recipient_id,
+        "tenant_id": tenant_id,
+        "project_id": project_id,
+        "channels": channels.iter().map(|c| channel_to_db(*c)).collect::<Vec<_>>(),
+        "retry": retry,
+    })
+}
+
+fn deliverable_channels(logs: &[notif_entity_pb::NotificationLog]) -> Vec<i32> {
+    let pending = notif_entity_pb::NotificationStatus::Pending as i32;
+    logs.iter()
+        .filter(|log| log.status == pending)
+        .map(|log| log.channel)
+        .collect()
+}
+
+async fn is_notification_opted_out(
+    pool: &PgPool,
+    recipient_id: &str,
+    tenant_id: &str,
+    channel: i32,
+    event_type: &str,
+) -> Result<bool, Status> {
+    if recipient_id.trim().is_empty() {
+        return Ok(false);
+    }
+    let user_id = parse_uuid("recipient_id", recipient_id)?;
+    let m = preference_model();
+    let rel = m.relation.clone();
+    sqlx::query_scalar::<_, bool>(&format!(
+        "SELECT COALESCE(( \
+             SELECT {is_opted_out} FROM {rel} \
+             WHERE {user_id} = $1::UUID AND {tenant_id} = $2 AND {channel} = $3 \
+               AND {event_type} IN ($4, '') \
+             ORDER BY CASE WHEN {event_type} = $4 THEN 0 ELSE 1 END \
+             LIMIT 1 \
+         ), FALSE)",
+        is_opted_out = m.q("is_opted_out"),
+        user_id = m.q("user_id"),
+        tenant_id = m.q("tenant_id"),
+        channel = m.q("channel"),
+        event_type = m.q("event_type"),
+    ))
+    .bind(user_id)
+    .bind(tenant_id)
+    .bind(channel_to_db(channel))
+    .bind(event_type)
+    .fetch_one(pool)
+    .await
+    .map_err(|err| Status::internal(format!("notification preference lookup failed: {err}")))
 }
 
 // ── projections + row mappers ─────────────────────────────────────────────────
@@ -273,8 +372,31 @@ fn template_select_projection(m: &NativeModel) -> String {
         m.text_or_empty("locale"),
         m.select("is_active"),
         m.text_or_empty("created_by"),
+        m.text_or_empty("tenant_id"),
     ]
     .join(", ")
+}
+
+/// Build the `GetTemplate` selection query (hybrid tenant model, F4.3):
+/// candidate rows are restricted to the platform-global default
+/// (`tenant_id IS NULL`) or the CALLER's own tenant override (bound as `$4`) —
+/// a foreign tenant's override can never match — and `NULLS LAST` prefers the
+/// caller's override over the global default. Extracted so the tenant scoping
+/// of the selection is unit-testable without a live Postgres.
+fn template_selection_sql(m: &NativeModel) -> String {
+    format!(
+        "SELECT {projection} FROM {rel} \
+         WHERE {event_type} = $1 AND {channel} = $2 AND {locale} = $3 AND {deleted} IS NULL \
+           AND ({tenant_id} IS NULL OR {tenant_id} = $4) \
+         ORDER BY {tenant_id} NULLS LAST LIMIT 1",
+        projection = template_select_projection(m),
+        rel = m.relation,
+        event_type = m.q("event_type"),
+        channel = m.q("channel"),
+        locale = m.q("locale"),
+        deleted = m.q("deleted_at"),
+        tenant_id = m.q("tenant_id"),
+    )
 }
 
 fn template_from_row(
@@ -290,6 +412,8 @@ fn template_from_row(
         locale: row.try_get("locale").map_err(map)?,
         is_active: row.try_get("is_active").map_err(map)?,
         created_by: row.try_get("created_by").map_err(map)?,
+        // text_or_empty() coalesces a NULL (global default) tenant_id to "".
+        tenant_id: row.try_get("tenant_id").map_err(map)?,
         ..Default::default()
     })
 }
@@ -323,58 +447,29 @@ fn preference_from_row(
     })
 }
 
-fn page_size_of(page: &Option<common_pb::PageRequest>) -> (i64, i64) {
-    let p = page.as_ref();
-    let size = p
-        .map(|x| x.page_size)
-        .filter(|&n| n > 0)
-        .unwrap_or(50)
-        .min(500) as i64;
-    let num = p.map(|x| x.page).filter(|&n| n > 0).unwrap_or(1) as i64;
-    (size, (num - 1).max(0) * size)
-}
-
-/// Build a `PageResponse` from the requested page and the true total row count
-/// (obtained via `COUNT(*) OVER()` on the list query). Mirrors the auth
-/// service's `page_response` shape so clients get consistent pagination metadata.
-fn page_response_of(page: &Option<common_pb::PageRequest>, total: i64) -> common_pb::PageResponse {
-    let page_number = page
-        .as_ref()
-        .map(|p| p.page)
-        .filter(|&n| n > 0)
-        .unwrap_or(1);
-    let page_size = page
-        .as_ref()
-        .map(|p| p.page_size)
-        .filter(|&n| n > 0)
-        .unwrap_or(50);
-    let total_pages = if total <= 0 {
-        0
-    } else {
-        ((total as i32) + page_size - 1) / page_size
-    };
-    common_pb::PageResponse {
-        page: page_number,
-        page_size,
-        total_items: total,
-        total_pages,
-        next_page_token: String::new(),
-        total_count: total,
-        has_next: page_number < total_pages,
-        has_previous: page_number > 1 && total_pages > 0,
-    }
-}
-
 #[tonic::async_trait]
 impl NotificationService for NotificationServiceImpl {
     async fn send_notification(
         &self,
         request: Request<notif_pb::SendNotificationRequest>,
     ) -> Result<Response<notif_pb::SendNotificationResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
+        validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
         if req.event_type.trim().is_empty() {
             return Err(Status::invalid_argument("event_type is required"));
         }
+        // Per-tenant fair admission (Write budget) so one tenant's send flood
+        // can't starve the shared control plane.
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "notification",
+            OperationChannel::Write,
+            &req.tenant_id,
+            None,
+        )
+        .await?;
         let pool = self.require_pool()?;
         let m = log_model();
         let rel = m.relation.clone();
@@ -386,13 +481,22 @@ impl NotificationService for NotificationServiceImpl {
         };
         let mut logs = Vec::with_capacity(channels.len());
         for channel in channels.iter().copied() {
+            let opted_out = is_notification_opted_out(
+                pool,
+                &req.recipient_id,
+                &req.tenant_id,
+                channel,
+                &req.event_type,
+            )
+            .await?;
+            let (status_db, status_pb) = channel_send_decision(opted_out);
             let log_id = Uuid::new_v4().to_string();
             sqlx::query(&format!(
                 "INSERT INTO {rel} \
                  ({log_id}, {event_type}, {channel}, {recipient_id}, {recipient_address}, \
                   {tenant_id}, {project_id}, {resource_type}, {resource_id}, {resource_name}, \
                   {correlation_id}, {status}, {retry_count}) \
-                 VALUES ($1::UUID, $2, $3, NULLIF($4, '')::UUID, $5, $6, $7, $8, $9, $10, $11, 'PENDING', 0)",
+                 VALUES ($1::UUID, $2, $3, NULLIF($4, '')::UUID, $5, $6, $7, $8, $9, $10, $11, $12, 0)",
                 log_id = m.q("log_id"),
                 event_type = m.q("event_type"),
                 channel = m.q("channel"),
@@ -418,6 +522,7 @@ impl NotificationService for NotificationServiceImpl {
             .bind(&req.resource_id)
             .bind(&req.resource_name)
             .bind(&req.correlation_id)
+            .bind(status_db)
             .execute(pool)
             .await
             .map_err(|err| Status::internal(format!("send notification failed: {err}")))?;
@@ -430,21 +535,29 @@ impl NotificationService for NotificationServiceImpl {
                 tenant_id: req.tenant_id.clone(),
                 project_id: req.project_id.clone(),
                 correlation_id: req.correlation_id.clone(),
-                status: notif_entity_pb::NotificationStatus::Pending as i32,
+                status: status_pb,
                 ..Default::default()
             });
         }
-        // Publish the "notification sent" event to the outbox → CDC → Kafka.
-        let primary_log_id = logs.first().map(|l| l.log_id.clone()).unwrap_or_default();
-        self.emit_sent_event(
-            pool,
-            &primary_log_id,
-            &req.event_type,
-            &req.recipient_id,
-            &req.tenant_id,
-            &channels,
-        )
-        .await;
+        let delivery_channels = deliverable_channels(&logs);
+        if !delivery_channels.is_empty() {
+            let primary_log_id = logs
+                .iter()
+                .find(|log| log.status == notif_entity_pb::NotificationStatus::Pending as i32)
+                .map(|log| log.log_id.clone())
+                .unwrap_or_default();
+            self.emit_sent_event(
+                pool,
+                &primary_log_id,
+                &req.event_type,
+                &req.recipient_id,
+                &req.tenant_id,
+                &req.project_id,
+                &delivery_channels,
+                false,
+            )
+            .await;
+        }
         Ok(Response::new(notif_pb::SendNotificationResponse { logs }))
     }
 
@@ -452,6 +565,18 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<notif_pb::GetNotificationRequest>,
     ) -> Result<Response<notif_pb::GetNotificationResponse>, Status> {
+        let metadata = request.metadata().clone();
+        let scoped_tenant = metadata_tenant_id(&metadata)
+            .ok_or_else(|| Status::permission_denied("tenant-scoped metadata is required"))?;
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "notification",
+            OperationChannel::Read,
+            &scoped_tenant,
+            None,
+        )
+        .await?;
         let req = request.into_inner();
         let log_id = parse_uuid("log_id", &req.log_id)?;
         let pool = self.require_pool()?;
@@ -459,10 +584,12 @@ impl NotificationService for NotificationServiceImpl {
         let rel = m.relation.clone();
         let projection = log_select_projection(&m);
         let row = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} WHERE {log_id} = $1::UUID",
+            "SELECT {projection} FROM {rel} WHERE {log_id} = $1::UUID AND {tenant_id} = $2",
             log_id = m.q("log_id"),
+            tenant_id = m.q("tenant_id"),
         ))
         .bind(log_id)
+        .bind(&scoped_tenant)
         .fetch_optional(pool)
         .await
         .map_err(|err| Status::internal(format!("get notification failed: {err}")))?;
@@ -477,12 +604,23 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<notif_pb::ListNotificationsRequest>,
     ) -> Result<Response<notif_pb::ListNotificationsResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
+        validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "notification",
+            OperationChannel::Read,
+            &req.tenant_id,
+            None,
+        )
+        .await?;
         let pool = self.require_pool()?;
         let m = log_model();
         let rel = m.relation.clone();
         let projection = log_select_projection(&m);
-        let (limit, offset) = page_size_of(&req.page);
+        let page = native_page_window(req.page.as_ref(), 50);
         let channel = if req.channel == 0 {
             String::new()
         } else {
@@ -531,8 +669,8 @@ impl NotificationService for NotificationServiceImpl {
         .bind(&req.project_id)
         .bind(&req.resource_type)
         .bind(&req.resource_id)
-        .bind(limit)
-        .bind(offset)
+        .bind(page.limit_i64())
+        .bind(page.offset_i64())
         .fetch_all(pool)
         .await
         .map_err(|err| Status::internal(format!("list notifications failed: {err}")))?;
@@ -546,7 +684,7 @@ impl NotificationService for NotificationServiceImpl {
         }
         Ok(Response::new(notif_pb::ListNotificationsResponse {
             logs,
-            page: Some(page_response_of(&req.page, total)),
+            page: Some(native_page_response(req.page.as_ref(), total, 50)),
         }))
     }
 
@@ -554,6 +692,18 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<notif_pb::RetryNotificationRequest>,
     ) -> Result<Response<notif_pb::RetryNotificationResponse>, Status> {
+        let metadata = request.metadata().clone();
+        let scoped_tenant = metadata_tenant_id(&metadata)
+            .ok_or_else(|| Status::permission_denied("tenant-scoped metadata is required"))?;
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "notification",
+            OperationChannel::Write,
+            &scoped_tenant,
+            None,
+        )
+        .await?;
         let req = request.into_inner();
         let log_id = parse_uuid("log_id", &req.log_id)?;
         let pool = self.require_pool()?;
@@ -565,25 +715,40 @@ impl NotificationService for NotificationServiceImpl {
         // non-failed row yields no update.
         let row = sqlx::query(&format!(
             "UPDATE {rel} SET {status} = 'PENDING', {retry} = {retry} + 1 \
-             WHERE {log_id} = $1::UUID AND {status} IN ('FAILED','SUPPRESSED') \
+             WHERE {log_id} = $1::UUID AND {tenant_id} = $2 AND {status} IN ('FAILED','SUPPRESSED') \
              RETURNING {projection}",
             status = m.q("status"),
             retry = m.q("retry_count"),
             log_id = m.q("log_id"),
+            tenant_id = m.q("tenant_id"),
         ))
         .bind(log_id)
+        .bind(&scoped_tenant)
         .fetch_optional(pool)
         .await
         .map_err(|err| Status::internal(format!("retry notification failed: {err}")))?;
         let log = match row {
-            Some(row) => Some(log_from_row(&row)?),
+            Some(row) => log_from_row(&row)?,
             None => {
                 return Err(Status::failed_precondition(
                     "notification not found or not in a retryable (FAILED) state",
                 ));
             }
         };
-        Ok(Response::new(notif_pb::RetryNotificationResponse { log }))
+        self.emit_sent_event(
+            pool,
+            &log.log_id,
+            &log.event_type,
+            &log.recipient_id,
+            &log.tenant_id,
+            &log.project_id,
+            &[log.channel],
+            true,
+        )
+        .await;
+        Ok(Response::new(notif_pb::RetryNotificationResponse {
+            log: Some(log),
+        }))
     }
 
     async fn upsert_template(
@@ -594,6 +759,17 @@ impl NotificationService for NotificationServiceImpl {
         if req.event_type.trim().is_empty() {
             return Err(Status::invalid_argument("event_type is required"));
         }
+        // Platform-global template write (no body tenant); bound on the shared
+        // base Write budget so a template-write flood can't starve the control plane.
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "notification",
+            OperationChannel::Write,
+            "",
+            None,
+        )
+        .await?;
         let pool = self.require_pool()?;
         let m = template_model();
         let rel = m.relation.clone();
@@ -603,10 +779,19 @@ impl NotificationService for NotificationServiceImpl {
             req.locale.clone()
         };
         let projection = template_select_projection(&m);
+        // Hybrid tenant model (F4.3): this control-plane write path has no tenant
+        // scope in the request, so it always writes a platform-global default
+        // (tenant_id = NULL). The unique index stays on (event_type, channel) so
+        // global upserts keep deduping correctly (Postgres treats NULLs as
+        // distinct, so a tenant_id-bearing unique index would break ON CONFLICT
+        // for global rows). TODO: when a per-tenant override write path lands,
+        // split this into partial unique indexes — (event_type, channel) WHERE
+        // tenant_id IS NULL for globals and (event_type, channel, tenant_id)
+        // WHERE tenant_id IS NOT NULL for overrides — and bind the caller tenant.
         let row = sqlx::query(&format!(
             "INSERT INTO {rel} \
-             ({template_id}, {event_type}, {channel}, {subject}, {body}, {locale}, {is_active}) \
-             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6) \
+             ({template_id}, {event_type}, {channel}, {subject}, {body}, {locale}, {is_active}, {tenant_id}) \
+             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, NULL) \
              ON CONFLICT ({event_type}, {channel}) \
              DO UPDATE SET {subject} = EXCLUDED.{subject}, {body} = EXCLUDED.{body}, \
                            {locale} = EXCLUDED.{locale}, {is_active} = EXCLUDED.{is_active} \
@@ -618,6 +803,7 @@ impl NotificationService for NotificationServiceImpl {
             body = m.q("body_template"),
             locale = m.q("locale"),
             is_active = m.q("is_active"),
+            tenant_id = m.q("tenant_id"),
         ))
         .bind(&req.event_type)
         .bind(channel_to_db(req.channel))
@@ -637,30 +823,34 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<notif_pb::GetTemplateRequest>,
     ) -> Result<Response<notif_pb::GetTemplateResponse>, Status> {
+        let metadata = request.metadata().clone();
+        let scoped_tenant = metadata_tenant_id(&metadata)
+            .ok_or_else(|| Status::permission_denied("tenant-scoped metadata is required"))?;
         let req = request.into_inner();
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "notification",
+            OperationChannel::Read,
+            &scoped_tenant,
+            None,
+        )
+        .await?;
         let pool = self.require_pool()?;
         let m = template_model();
-        let rel = m.relation.clone();
         let locale = if req.locale.trim().is_empty() {
             "en".to_string()
         } else {
             req.locale.clone()
         };
-        let projection = template_select_projection(&m);
-        let row = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} \
-             WHERE {event_type} = $1 AND {channel} = $2 AND {locale} = $3 AND {deleted} IS NULL",
-            event_type = m.q("event_type"),
-            channel = m.q("channel"),
-            locale = m.q("locale"),
-            deleted = m.q("deleted_at"),
-        ))
-        .bind(&req.event_type)
-        .bind(channel_to_db(req.channel))
-        .bind(&locale)
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| Status::internal(format!("get template failed: {err}")))?;
+        let row = sqlx::query(&template_selection_sql(&m))
+            .bind(&req.event_type)
+            .bind(channel_to_db(req.channel))
+            .bind(&locale)
+            .bind(&scoped_tenant)
+            .fetch_optional(pool)
+            .await
+            .map_err(|err| Status::internal(format!("get template failed: {err}")))?;
         let template = match row {
             Some(row) => Some(template_from_row(&row)?),
             None => return Err(Status::not_found("template not found")),
@@ -672,12 +862,24 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<notif_pb::ListTemplatesRequest>,
     ) -> Result<Response<notif_pb::ListTemplatesResponse>, Status> {
+        let metadata = request.metadata().clone();
+        let scoped_tenant = metadata_tenant_id(&metadata)
+            .ok_or_else(|| Status::permission_denied("tenant-scoped metadata is required"))?;
         let req = request.into_inner();
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "notification",
+            OperationChannel::Read,
+            &scoped_tenant,
+            None,
+        )
+        .await?;
         let pool = self.require_pool()?;
         let m = template_model();
         let rel = m.relation.clone();
         let projection = template_select_projection(&m);
-        let (limit, offset) = page_size_of(&req.page);
+        let page = native_page_window(req.page.as_ref(), 50);
         let channel = if req.channel == 0 {
             String::new()
         } else {
@@ -689,17 +891,21 @@ impl NotificationService for NotificationServiceImpl {
                AND ($1 = '' OR {event_type} = $1) \
                AND ($2 = '' OR {channel} = $2) \
                AND (NOT $3 OR {is_active} = TRUE) \
-             ORDER BY {event_type} LIMIT $4 OFFSET $5",
+               AND ({tenant_id} IS NULL OR {tenant_id} = $4) \
+             ORDER BY {event_type}, {channel}, {locale}, {tenant_id} NULLS LAST LIMIT $5 OFFSET $6",
             deleted = m.q("deleted_at"),
             event_type = m.q("event_type"),
             channel = m.q("channel"),
             is_active = m.q("is_active"),
+            tenant_id = m.q("tenant_id"),
+            locale = m.q("locale"),
         ))
         .bind(&req.event_type)
         .bind(&channel)
         .bind(req.active_only)
-        .bind(limit)
-        .bind(offset)
+        .bind(&scoped_tenant)
+        .bind(page.limit_i64())
+        .bind(page.offset_i64())
         .fetch_all(pool)
         .await
         .map_err(|err| Status::internal(format!("list templates failed: {err}")))?;
@@ -713,7 +919,7 @@ impl NotificationService for NotificationServiceImpl {
         }
         Ok(Response::new(notif_pb::ListTemplatesResponse {
             templates,
-            page: Some(page_response_of(&req.page, total)),
+            page: Some(native_page_response(req.page.as_ref(), total, 50)),
         }))
     }
 
@@ -721,7 +927,18 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<notif_pb::GetDeliveryStatsRequest>,
     ) -> Result<Response<notif_pb::GetDeliveryStatsResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "notification",
+            OperationChannel::Read,
+            &req.tenant_id,
+            None,
+        )
+        .await?;
         let pool = self.require_pool()?;
         let m = log_model();
         let rel = m.relation.clone();
@@ -796,7 +1013,18 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<notif_pb::SetPreferenceRequest>,
     ) -> Result<Response<notif_pb::SetPreferenceResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "notification",
+            OperationChannel::Write,
+            &req.tenant_id,
+            None,
+        )
+        .await?;
         let user_id = parse_uuid("user_id", &req.user_id)?;
         // `tenant_id` is a VARCHAR(120) NOT NULL slug/id — bind it as text, not a
         // UUID (the column is not UUID-typed), and reject empty to honor NOT NULL.
@@ -838,7 +1066,18 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<notif_pb::GetPreferenceRequest>,
     ) -> Result<Response<notif_pb::GetPreferenceResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "notification",
+            OperationChannel::Read,
+            &req.tenant_id,
+            None,
+        )
+        .await?;
         let user_id = parse_uuid("user_id", &req.user_id)?;
         let pool = self.require_pool()?;
         let m = preference_model();
@@ -846,12 +1085,15 @@ impl NotificationService for NotificationServiceImpl {
         let projection = preference_select_projection(&m);
         let row = sqlx::query(&format!(
             "SELECT {projection} FROM {rel} \
-             WHERE {user_id} = $1::UUID AND {channel} = $2 AND {event_type} = $3",
+             WHERE {user_id} = $1::UUID AND {tenant_id} = $2 \
+               AND {channel} = $3 AND {event_type} = $4",
             user_id = m.q("user_id"),
+            tenant_id = m.q("tenant_id"),
             channel = m.q("channel"),
             event_type = m.q("event_type"),
         ))
         .bind(user_id)
+        .bind(&req.tenant_id)
         .bind(channel_to_db(req.channel))
         .bind(&req.event_type)
         .fetch_optional(pool)
@@ -870,13 +1112,24 @@ impl NotificationService for NotificationServiceImpl {
         &self,
         request: Request<notif_pb::ListPreferencesRequest>,
     ) -> Result<Response<notif_pb::ListPreferencesResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "notification",
+            OperationChannel::Read,
+            &req.tenant_id,
+            None,
+        )
+        .await?;
         let user_id = parse_uuid("user_id", &req.user_id)?;
         let pool = self.require_pool()?;
         let m = preference_model();
         let rel = m.relation.clone();
         let projection = preference_select_projection(&m);
-        let (limit, offset) = page_size_of(&req.page);
+        let page = native_page_window(req.page.as_ref(), 50);
         let rows = sqlx::query(&format!(
             "SELECT {projection}, COUNT(*) OVER() AS total_count FROM {rel} \
              WHERE {user_id} = $1::UUID AND ($2 = '' OR {tenant_id} = $2) \
@@ -887,8 +1140,8 @@ impl NotificationService for NotificationServiceImpl {
         ))
         .bind(user_id)
         .bind(&req.tenant_id)
-        .bind(limit)
-        .bind(offset)
+        .bind(page.limit_i64())
+        .bind(page.offset_i64())
         .fetch_all(pool)
         .await
         .map_err(|err| Status::internal(format!("list preferences failed: {err}")))?;
@@ -902,8 +1155,134 @@ impl NotificationService for NotificationServiceImpl {
         }
         Ok(Response::new(notif_pb::ListPreferencesResponse {
             preferences,
-            page: Some(page_response_of(&req.page, total)),
+            page: Some(native_page_response(req.page.as_ref(), total, 50)),
         }))
+    }
+}
+
+#[cfg(test)]
+mod tenant_scope_tests {
+    use super::*;
+    use tonic::metadata::MetadataValue;
+
+    /// A caller scoped to tenant-a must not send/list for another tenant by putting
+    /// a foreign tenant_id in the request BODY; the scope guard rejects this before
+    /// any pool/DB access (no Postgres needed).
+    #[tokio::test]
+    async fn list_notifications_rejects_cross_tenant_body() {
+        let svc = NotificationServiceImpl::new(); // no pool, no channels (admit no-op)
+        let mut request = Request::new(notif_pb::ListNotificationsRequest {
+            tenant_id: "tenant-b".to_string(),
+            ..Default::default()
+        });
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+        let err = svc
+            .list_notifications(request)
+            .await
+            .expect_err("cross-tenant body must be rejected");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    }
+
+    #[test]
+    fn delivery_channels_exclude_suppressed_logs() {
+        let logs = vec![
+            notif_entity_pb::NotificationLog {
+                channel: notif_entity_pb::NotificationChannel::Email as i32,
+                status: notif_entity_pb::NotificationStatus::Suppressed as i32,
+                ..Default::default()
+            },
+            notif_entity_pb::NotificationLog {
+                channel: notif_entity_pb::NotificationChannel::Sms as i32,
+                status: notif_entity_pb::NotificationStatus::Pending as i32,
+                ..Default::default()
+            },
+        ];
+
+        assert_eq!(
+            deliverable_channels(&logs),
+            vec![notif_entity_pb::NotificationChannel::Sms as i32]
+        );
+    }
+
+    #[test]
+    fn delivery_payload_marks_retry_events() {
+        let payload = notification_delivery_payload(
+            "log-1",
+            "REVIEW_ASSIGNED",
+            "user-1",
+            "tenant-a",
+            "project-a",
+            &[notif_entity_pb::NotificationChannel::Email as i32],
+            true,
+        );
+
+        assert_eq!(payload["retry"], true);
+        assert_eq!(payload["channels"][0], "EMAIL");
+        // TEST-46: the retry emit threads the retried log's id and EXACTLY its
+        // one channel alongside the retry marker — the same
+        // `notification_delivery_payload` call `retry_notification` makes via
+        // `emit_sent_event(pool, &log.log_id, …, &[log.channel], true)`. The
+        // outbox row itself (UPDATE … RETURNING → enqueue) is asserted by the
+        // env-gated live pipeline suite.
+        assert_eq!(payload["log_id"], "log-1");
+        assert_eq!(payload["channels"].as_array().map(Vec::len), Some(1));
+    }
+
+    /// TEST-44: an opted-out (recipient, channel) produces the SUPPRESSED row
+    /// decision and is excluded from the outbox emit set — driving the REAL
+    /// per-channel decision (`channel_send_decision`) and the REAL emit-set
+    /// computation (`deliverable_channels`) that `send_notification` runs; the
+    /// DB-side preference lookup feeding `opted_out` is covered by the
+    /// env-gated live suite.
+    #[test]
+    fn opted_out_channel_is_suppressed_and_excluded_from_emit_set() {
+        use notif_entity_pb::{NotificationChannel as C, NotificationStatus as S};
+
+        assert_eq!(
+            channel_send_decision(true),
+            ("SUPPRESSED", S::Suppressed as i32)
+        );
+        assert_eq!(channel_send_decision(false), ("PENDING", S::Pending as i32));
+
+        // Per-channel logs exactly as send_notification records them: EMAIL is
+        // opted out, SMS is not — only SMS may enter the emit set.
+        let logs: Vec<notif_entity_pb::NotificationLog> = [(C::Email, true), (C::Sms, false)]
+            .into_iter()
+            .map(|(channel, opted_out)| notif_entity_pb::NotificationLog {
+                channel: channel as i32,
+                status: channel_send_decision(opted_out).1,
+                ..Default::default()
+            })
+            .collect();
+        assert_eq!(deliverable_channels(&logs), vec![C::Sms as i32]);
+    }
+
+    /// TEST-45: template tenant scoping — the real selection query (the one
+    /// `get_template` executes) only admits the platform-global default
+    /// (`tenant_id IS NULL`) or the CALLER's bound tenant (`$4`), so with two
+    /// overrides in the table a tenant-B override can never be selected for a
+    /// tenant-A caller, and the caller's own override outranks the global
+    /// default.
+    #[test]
+    fn template_selection_scopes_overrides_to_the_caller_tenant() {
+        let m = template_model();
+        let sql = template_selection_sql(&m);
+        let tenant = m.q("tenant_id");
+        assert!(
+            sql.contains(&format!("({tenant} IS NULL OR {tenant} = $4)")),
+            "selection must only admit the global default or the caller's tenant: {sql}"
+        );
+        assert!(
+            sql.contains(&format!("ORDER BY {tenant} NULLS LAST LIMIT 1")),
+            "the caller's own override must outrank the global default: {sql}"
+        );
+        assert_eq!(
+            sql.matches("$4").count(),
+            1,
+            "the bound caller tenant must be the only tenant-shaped input: {sql}"
+        );
     }
 }
 
@@ -913,8 +1292,11 @@ impl DataBrokerService {
         let runtime = self.runtime.load_full();
         let pg_pool = runtime.pg_pool().ok().cloned();
         let outbox = runtime.config().cdc.outbox_relation();
+        let channels = Some(runtime.channels().clone());
         NotificationServiceImpl::new()
             .with_postgres(pg_pool)
             .with_outbox(Some(outbox))
+            .with_channels(channels)
+            .with_metrics(self.metrics.clone())
     }
 }

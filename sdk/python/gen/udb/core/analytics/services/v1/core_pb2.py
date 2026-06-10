@@ -31,9 +31,10 @@ try:
   udb_dot_core_dot_common_dot_v1_dot_domain__types__pb2 = udb_dot_core_dot_common_dot_v1_dot_types__pb2.udb_dot_core_dot_common_dot_v1_dot_domain__types__pb2
 except AttributeError:
   udb_dot_core_dot_common_dot_v1_dot_domain__types__pb2 = udb_dot_core_dot_common_dot_v1_dot_types__pb2.udb.core.common.v1.domain_types_pb2
+from udb.core.common.v1 import security_pb2 as udb_dot_core_dot_common_dot_v1_dot_security__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n)udb/core/analytics/services/v1/core.proto\x12\x1eudb.core.analytics.services.v1\x1a?udb/core/analytics/entity/v1/executor_performance_summary.proto\x1a;udb/core/analytics/entity/v1/pipeline_metric_snapshot.proto\x1a\x43udb/core/analytics/entity/v1/reconciliation_analytics_summary.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\"\xd5\x01\n\x1bRecordPipelineMetricRequest\x12\x1d\n\nstage_name\x18\x01 \x01(\tR\tstageName\x12\x1b\n\ttenant_id\x18\x02 \x01(\tR\x08tenantId\x12\x1d\n\nlatency_ms\x18\x03 \x01(\x01R\tlatencyMs\x12\x1d\n\nis_success\x18\x04 \x01(\x08R\tisSuccess\x12<\n\x07\x63ontext\x18\x05 \x01(\x0b\x32\".udb.core.common.v1.RequestContextR\x07\x63ontext\":\n\x1cRecordPipelineMetricResponse\x12\x1a\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x08R\x08\x61\x63\x63\x65pted\"\xc2\x01\n\x19GetPipelineSummaryRequest\x12\x1d\n\nstage_name\x18\x01 \x01(\tR\tstageName\x12\x1b\n\ttenant_id\x18\x02 \x01(\tR\x08tenantId\x12\x1b\n\thour_from\x18\x03 \x01(\tR\x08hourFrom\x12\x17\n\x07hour_to\x18\x04 \x01(\tR\x06hourTo\x12\x33\n\x04page\x18\x05 \x01(\x0b\x32\x1f.udb.core.common.v1.PageRequestR\x04page\"\xa6\x01\n\x1aGetPipelineSummaryResponse\x12R\n\tsnapshots\x18\x01 \x03(\x0b\x32\x34.udb.core.analytics.entity.v1.PipelineMetricSnapshotR\tsnapshots\x12\x34\n\x04page\x18\x02 \x01(\x0b\x32 .udb.core.common.v1.PageResponseR\x04page\"\xa7\x01\n\x1dGetExecutorPerformanceRequest\x12+\n\x11\x65xecutor_identity\x18\x01 \x01(\tR\x10\x65xecutorIdentity\x12#\n\rworkload_kind\x18\x02 \x01(\tR\x0cworkloadKind\x12\x1b\n\tdate_from\x18\x03 \x01(\tR\x08\x64\x61teFrom\x12\x17\n\x07\x64\x61te_to\x18\x04 \x01(\tR\x06\x64\x61teTo\"x\n\x1eGetExecutorPerformanceResponse\x12V\n\tsummaries\x18\x01 \x03(\x0b\x32\x38.udb.core.analytics.entity.v1.ExecutorPerformanceSummaryR\tsummaries\"Y\n!GetReconciliationAnalyticsRequest\x12\x1b\n\tdate_from\x18\x01 \x01(\tR\x08\x64\x61teFrom\x12\x17\n\x07\x64\x61te_to\x18\x02 \x01(\tR\x06\x64\x61teTo\"\xec\x01\n\"GetReconciliationAnalyticsResponse\x12Z\n\tsummaries\x18\x01 \x03(\x0b\x32<.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummaryR\tsummaries\x12\x36\n\x17overall_resolution_rate\x18\x02 \x01(\x01R\x15overallResolutionRate\x12\x32\n\x15\x61vg_reconciliation_ms\x18\x03 \x01(\x01R\x13\x61vgReconciliationMs\"i\n\x14GetThroughputRequest\x12\x1b\n\ttenant_id\x18\x01 \x01(\tR\x08tenantId\x12\x1b\n\thour_from\x18\x02 \x01(\tR\x08hourFrom\x12\x17\n\x07hour_to\x18\x03 \x01(\tR\x06hourTo\"\xa4\x01\n\x15GetThroughputResponse\x12\x17\n\x07\x61vg_rps\x18\x01 \x01(\x01R\x06\x61vgRps\x12\x19\n\x08peak_rps\x18\x02 \x01(\x01R\x07peakRps\x12%\n\x0etotal_requests\x18\x03 \x01(\x03R\rtotalRequests\x12\x30\n\x14overall_success_rate\x18\x04 \x01(\x01R\x12overallSuccessRate\"\xca\x01\n\x17GetSlaComplianceRequest\x12\x1d\n\nstage_name\x18\x01 \x01(\tR\tstageName\x12\x1b\n\tdate_from\x18\x02 \x01(\tR\x08\x64\x61teFrom\x12\x17\n\x07\x64\x61te_to\x18\x03 \x01(\tR\x06\x64\x61teTo\x12(\n\x10p99_threshold_ms\x18\x04 \x01(\x01R\x0ep99ThresholdMs\x12\x30\n\x14\x65rror_rate_threshold\x18\x05 \x01(\x01R\x12\x65rrorRateThreshold\"\xdd\x01\n\x12SlaComplianceEntry\x12\x1d\n\nstage_name\x18\x01 \x01(\tR\tstageName\x12\x16\n\x06period\x18\x02 \x01(\tR\x06period\x12$\n\x0ep99_latency_ms\x18\x03 \x01(\x01R\x0cp99LatencyMs\x12\x1d\n\nerror_rate\x18\x04 \x01(\x01R\terrorRate\x12\x1e\n\x0bp99_sla_met\x18\x05 \x01(\x08R\tp99SlaMet\x12+\n\x12\x65rror_rate_sla_met\x18\x06 \x01(\x08R\x0f\x65rrorRateSlaMet\"\xf3\x01\n\x18GetSlaComplianceResponse\x12L\n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x32.udb.core.analytics.services.v1.SlaComplianceEntryR\x07\x65ntries\x12=\n\x1boverall_p99_compliance_rate\x18\x02 \x01(\x01R\x18overallP99ComplianceRate\x12J\n\"overall_error_rate_compliance_rate\x18\x03 \x01(\x01R\x1eoverallErrorRateComplianceRate\"\x89\x01\n\x16TriggerSnapshotRequest\x12\x1d\n\nstage_name\x18\x01 \x01(\tR\tstageName\x12\x12\n\x04hour\x18\x02 \x01(\tR\x04hour\x12<\n\x07\x63ontext\x18\x03 \x01(\x0b\x32\".udb.core.common.v1.RequestContextR\x07\x63ontext\"F\n\x17TriggerSnapshotResponse\x12+\n\x11snapshots_written\x18\x01 \x01(\x05R\x10snapshotsWrittenB\x9a\x02\n\"com.udb.core.analytics.services.v1B\tCoreProtoP\x01ZLgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1eudb.core.Analytics.Services.V1\xca\x02\x1eUdb\\Core\\Analytics\\Services\\V1\xe2\x02*Udb\\GPBMetadata\\Core\\Analytics\\Services\\V1\xea\x02\"Udb::Core::Analytics::Services::V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n)udb/core/analytics/services/v1/core.proto\x12\x1eudb.core.analytics.services.v1\x1a?udb/core/analytics/entity/v1/executor_performance_summary.proto\x1a;udb/core/analytics/entity/v1/pipeline_metric_snapshot.proto\x1a\x43udb/core/analytics/entity/v1/reconciliation_analytics_summary.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a!udb/core/common/v1/security.proto\"\xf7\x01\n\x1bRecordPipelineMetricRequest\x12\x1d\n\nstage_name\x18\x01 \x01(\tR\tstageName\x12\x1b\n\ttenant_id\x18\x02 \x01(\tR\x08tenantId\x12\x1d\n\nlatency_ms\x18\x03 \x01(\x01R\tlatencyMs\x12\x1d\n\nis_success\x18\x04 \x01(\x08R\tisSuccess\x12<\n\x07\x63ontext\x18\x05 \x01(\x0b\x32\".udb.core.common.v1.RequestContextR\x07\x63ontext: \x9a\xb2\x19\x1c\x08\x01\x1a\x03udb(\xb0\xea\x01\x30\x03@\x01J\tanalyticsP\x01\"\\\n\x1cRecordPipelineMetricResponse\x12\x1a\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x08R\x08\x61\x63\x63\x65pted: \x9a\xb2\x19\x1c\x08\x01\x1a\x03udb(\xb0\xea\x01\x30\x03@\x01J\tanalyticsP\x01\"\xe4\x01\n\x19GetPipelineSummaryRequest\x12\x1d\n\nstage_name\x18\x01 \x01(\tR\tstageName\x12\x1b\n\ttenant_id\x18\x02 \x01(\tR\x08tenantId\x12\x1b\n\thour_from\x18\x03 \x01(\tR\x08hourFrom\x12\x17\n\x07hour_to\x18\x04 \x01(\tR\x06hourTo\x12\x33\n\x04page\x18\x05 \x01(\x0b\x32\x1f.udb.core.common.v1.PageRequestR\x04page: \x9a\xb2\x19\x1c\x08\x01\x1a\x03udb(\xb0\xea\x01\x30\x03@\x01J\tanalyticsP\x01\"\xc8\x01\n\x1aGetPipelineSummaryResponse\x12R\n\tsnapshots\x18\x01 \x03(\x0b\x32\x34.udb.core.analytics.entity.v1.PipelineMetricSnapshotR\tsnapshots\x12\x34\n\x04page\x18\x02 \x01(\x0b\x32 .udb.core.common.v1.PageResponseR\x04page: \x9a\xb2\x19\x1c\x08\x01\x1a\x03udb(\xb0\xea\x01\x30\x03@\x01J\tanalyticsP\x01\"\xc9\x01\n\x1dGetExecutorPerformanceRequest\x12+\n\x11\x65xecutor_identity\x18\x01 \x01(\tR\x10\x65xecutorIdentity\x12#\n\rworkload_kind\x18\x02 \x01(\tR\x0cworkloadKind\x12\x1b\n\tdate_from\x18\x03 \x01(\tR\x08\x64\x61teFrom\x12\x17\n\x07\x64\x61te_to\x18\x04 \x01(\tR\x06\x64\x61teTo: \x9a\xb2\x19\x1c\x08\x01\x1a\x03udb(\xb0\xea\x01\x30\x03@\x01J\tanalyticsP\x01\"\x9a\x01\n\x1eGetExecutorPerformanceResponse\x12V\n\tsummaries\x18\x01 \x03(\x0b\x32\x38.udb.core.analytics.entity.v1.ExecutorPerformanceSummaryR\tsummaries: \x9a\xb2\x19\x1c\x08\x01\x1a\x03udb(\xb0\xea\x01\x30\x03@\x01J\tanalyticsP\x01\"{\n!GetReconciliationAnalyticsRequest\x12\x1b\n\tdate_from\x18\x01 \x01(\tR\x08\x64\x61teFrom\x12\x17\n\x07\x64\x61te_to\x18\x02 \x01(\tR\x06\x64\x61teTo: \x9a\xb2\x19\x1c\x08\x01\x1a\x03udb(\xb0\xea\x01\x30\x03@\x01J\tanalyticsP\x01\"\x8e\x02\n\"GetReconciliationAnalyticsResponse\x12Z\n\tsummaries\x18\x01 \x03(\x0b\x32<.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummaryR\tsummaries\x12\x36\n\x17overall_resolution_rate\x18\x02 \x01(\x01R\x15overallResolutionRate\x12\x32\n\x15\x61vg_reconciliation_ms\x18\x03 \x01(\x01R\x13\x61vgReconciliationMs: \x9a\xb2\x19\x1c\x08\x01\x1a\x03udb(\xb0\xea\x01\x30\x03@\x01J\tanalyticsP\x01\"\x8b\x01\n\x14GetThroughputRequest\x12\x1b\n\ttenant_id\x18\x01 \x01(\tR\x08tenantId\x12\x1b\n\thour_from\x18\x02 \x01(\tR\x08hourFrom\x12\x17\n\x07hour_to\x18\x03 \x01(\tR\x06hourTo: \x9a\xb2\x19\x1c\x08\x01\x1a\x03udb(\xb0\xea\x01\x30\x03@\x01J\tanalyticsP\x01\"\xc6\x01\n\x15GetThroughputResponse\x12\x17\n\x07\x61vg_rps\x18\x01 \x01(\x01R\x06\x61vgRps\x12\x19\n\x08peak_rps\x18\x02 \x01(\x01R\x07peakRps\x12%\n\x0etotal_requests\x18\x03 \x01(\x03R\rtotalRequests\x12\x30\n\x14overall_success_rate\x18\x04 \x01(\x01R\x12overallSuccessRate: \x9a\xb2\x19\x1c\x08\x01\x1a\x03udb(\xb0\xea\x01\x30\x03@\x01J\tanalyticsP\x01\"\xec\x01\n\x17GetSlaComplianceRequest\x12\x1d\n\nstage_name\x18\x01 \x01(\tR\tstageName\x12\x1b\n\tdate_from\x18\x02 \x01(\tR\x08\x64\x61teFrom\x12\x17\n\x07\x64\x61te_to\x18\x03 \x01(\tR\x06\x64\x61teTo\x12(\n\x10p99_threshold_ms\x18\x04 \x01(\x01R\x0ep99ThresholdMs\x12\x30\n\x14\x65rror_rate_threshold\x18\x05 \x01(\x01R\x12\x65rrorRateThreshold: \x9a\xb2\x19\x1c\x08\x01\x1a\x03udb(\xb0\xea\x01\x30\x03@\x01J\tanalyticsP\x01\"\xff\x01\n\x12SlaComplianceEntry\x12\x1d\n\nstage_name\x18\x01 \x01(\tR\tstageName\x12\x16\n\x06period\x18\x02 \x01(\tR\x06period\x12$\n\x0ep99_latency_ms\x18\x03 \x01(\x01R\x0cp99LatencyMs\x12\x1d\n\nerror_rate\x18\x04 \x01(\x01R\terrorRate\x12\x1e\n\x0bp99_sla_met\x18\x05 \x01(\x08R\tp99SlaMet\x12+\n\x12\x65rror_rate_sla_met\x18\x06 \x01(\x08R\x0f\x65rrorRateSlaMet: \x9a\xb2\x19\x1c\x08\x01\x1a\x03udb(\xb0\xea\x01\x30\x03@\x01J\tanalyticsP\x01\"\x95\x02\n\x18GetSlaComplianceResponse\x12L\n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x32.udb.core.analytics.services.v1.SlaComplianceEntryR\x07\x65ntries\x12=\n\x1boverall_p99_compliance_rate\x18\x02 \x01(\x01R\x18overallP99ComplianceRate\x12J\n\"overall_error_rate_compliance_rate\x18\x03 \x01(\x01R\x1eoverallErrorRateComplianceRate: \x9a\xb2\x19\x1c\x08\x01\x1a\x03udb(\xb0\xea\x01\x30\x03@\x01J\tanalyticsP\x01\"\xab\x01\n\x16TriggerSnapshotRequest\x12\x1d\n\nstage_name\x18\x01 \x01(\tR\tstageName\x12\x12\n\x04hour\x18\x02 \x01(\tR\x04hour\x12<\n\x07\x63ontext\x18\x03 \x01(\x0b\x32\".udb.core.common.v1.RequestContextR\x07\x63ontext: \x9a\xb2\x19\x1c\x08\x01\x1a\x03udb(\xb0\xea\x01\x30\x03@\x01J\tanalyticsP\x01\"h\n\x17TriggerSnapshotResponse\x12+\n\x11snapshots_written\x18\x01 \x01(\x05R\x10snapshotsWritten: \x9a\xb2\x19\x1c\x08\x01\x1a\x03udb(\xb0\xea\x01\x30\x03@\x01J\tanalyticsP\x01\x42\x9a\x02\n\"com.udb.core.analytics.services.v1B\tCoreProtoP\x01ZLgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1eudb.core.Analytics.Services.V1\xca\x02\x1eUdb\\Core\\Analytics\\Services\\V1\xe2\x02*Udb\\GPBMetadata\\Core\\Analytics\\Services\\V1\xea\x02\"Udb::Core::Analytics::Services::V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -41,34 +42,64 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'udb.core.analytics.services
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'\n\"com.udb.core.analytics.services.v1B\tCoreProtoP\001ZLgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/services/v1;servicesv1\242\002\004UCAS\252\002\036udb.core.Analytics.Services.V1\312\002\036Udb\\Core\\Analytics\\Services\\V1\342\002*Udb\\GPBMetadata\\Core\\Analytics\\Services\\V1\352\002\"Udb::Core::Analytics::Services::V1'
-  _globals['_RECORDPIPELINEMETRICREQUEST']._serialized_start=335
-  _globals['_RECORDPIPELINEMETRICREQUEST']._serialized_end=548
-  _globals['_RECORDPIPELINEMETRICRESPONSE']._serialized_start=550
-  _globals['_RECORDPIPELINEMETRICRESPONSE']._serialized_end=608
-  _globals['_GETPIPELINESUMMARYREQUEST']._serialized_start=611
-  _globals['_GETPIPELINESUMMARYREQUEST']._serialized_end=805
-  _globals['_GETPIPELINESUMMARYRESPONSE']._serialized_start=808
-  _globals['_GETPIPELINESUMMARYRESPONSE']._serialized_end=974
-  _globals['_GETEXECUTORPERFORMANCEREQUEST']._serialized_start=977
-  _globals['_GETEXECUTORPERFORMANCEREQUEST']._serialized_end=1144
-  _globals['_GETEXECUTORPERFORMANCERESPONSE']._serialized_start=1146
-  _globals['_GETEXECUTORPERFORMANCERESPONSE']._serialized_end=1266
-  _globals['_GETRECONCILIATIONANALYTICSREQUEST']._serialized_start=1268
-  _globals['_GETRECONCILIATIONANALYTICSREQUEST']._serialized_end=1357
-  _globals['_GETRECONCILIATIONANALYTICSRESPONSE']._serialized_start=1360
-  _globals['_GETRECONCILIATIONANALYTICSRESPONSE']._serialized_end=1596
-  _globals['_GETTHROUGHPUTREQUEST']._serialized_start=1598
-  _globals['_GETTHROUGHPUTREQUEST']._serialized_end=1703
-  _globals['_GETTHROUGHPUTRESPONSE']._serialized_start=1706
-  _globals['_GETTHROUGHPUTRESPONSE']._serialized_end=1870
-  _globals['_GETSLACOMPLIANCEREQUEST']._serialized_start=1873
-  _globals['_GETSLACOMPLIANCEREQUEST']._serialized_end=2075
-  _globals['_SLACOMPLIANCEENTRY']._serialized_start=2078
-  _globals['_SLACOMPLIANCEENTRY']._serialized_end=2299
-  _globals['_GETSLACOMPLIANCERESPONSE']._serialized_start=2302
-  _globals['_GETSLACOMPLIANCERESPONSE']._serialized_end=2545
-  _globals['_TRIGGERSNAPSHOTREQUEST']._serialized_start=2548
-  _globals['_TRIGGERSNAPSHOTREQUEST']._serialized_end=2685
-  _globals['_TRIGGERSNAPSHOTRESPONSE']._serialized_start=2687
-  _globals['_TRIGGERSNAPSHOTRESPONSE']._serialized_end=2757
+  _globals['_RECORDPIPELINEMETRICREQUEST']._loaded_options = None
+  _globals['_RECORDPIPELINEMETRICREQUEST']._serialized_options = b'\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001'
+  _globals['_RECORDPIPELINEMETRICRESPONSE']._loaded_options = None
+  _globals['_RECORDPIPELINEMETRICRESPONSE']._serialized_options = b'\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001'
+  _globals['_GETPIPELINESUMMARYREQUEST']._loaded_options = None
+  _globals['_GETPIPELINESUMMARYREQUEST']._serialized_options = b'\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001'
+  _globals['_GETPIPELINESUMMARYRESPONSE']._loaded_options = None
+  _globals['_GETPIPELINESUMMARYRESPONSE']._serialized_options = b'\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001'
+  _globals['_GETEXECUTORPERFORMANCEREQUEST']._loaded_options = None
+  _globals['_GETEXECUTORPERFORMANCEREQUEST']._serialized_options = b'\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001'
+  _globals['_GETEXECUTORPERFORMANCERESPONSE']._loaded_options = None
+  _globals['_GETEXECUTORPERFORMANCERESPONSE']._serialized_options = b'\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001'
+  _globals['_GETRECONCILIATIONANALYTICSREQUEST']._loaded_options = None
+  _globals['_GETRECONCILIATIONANALYTICSREQUEST']._serialized_options = b'\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001'
+  _globals['_GETRECONCILIATIONANALYTICSRESPONSE']._loaded_options = None
+  _globals['_GETRECONCILIATIONANALYTICSRESPONSE']._serialized_options = b'\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001'
+  _globals['_GETTHROUGHPUTREQUEST']._loaded_options = None
+  _globals['_GETTHROUGHPUTREQUEST']._serialized_options = b'\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001'
+  _globals['_GETTHROUGHPUTRESPONSE']._loaded_options = None
+  _globals['_GETTHROUGHPUTRESPONSE']._serialized_options = b'\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001'
+  _globals['_GETSLACOMPLIANCEREQUEST']._loaded_options = None
+  _globals['_GETSLACOMPLIANCEREQUEST']._serialized_options = b'\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001'
+  _globals['_SLACOMPLIANCEENTRY']._loaded_options = None
+  _globals['_SLACOMPLIANCEENTRY']._serialized_options = b'\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001'
+  _globals['_GETSLACOMPLIANCERESPONSE']._loaded_options = None
+  _globals['_GETSLACOMPLIANCERESPONSE']._serialized_options = b'\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001'
+  _globals['_TRIGGERSNAPSHOTREQUEST']._loaded_options = None
+  _globals['_TRIGGERSNAPSHOTREQUEST']._serialized_options = b'\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001'
+  _globals['_TRIGGERSNAPSHOTRESPONSE']._loaded_options = None
+  _globals['_TRIGGERSNAPSHOTRESPONSE']._serialized_options = b'\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001'
+  _globals['_RECORDPIPELINEMETRICREQUEST']._serialized_start=370
+  _globals['_RECORDPIPELINEMETRICREQUEST']._serialized_end=617
+  _globals['_RECORDPIPELINEMETRICRESPONSE']._serialized_start=619
+  _globals['_RECORDPIPELINEMETRICRESPONSE']._serialized_end=711
+  _globals['_GETPIPELINESUMMARYREQUEST']._serialized_start=714
+  _globals['_GETPIPELINESUMMARYREQUEST']._serialized_end=942
+  _globals['_GETPIPELINESUMMARYRESPONSE']._serialized_start=945
+  _globals['_GETPIPELINESUMMARYRESPONSE']._serialized_end=1145
+  _globals['_GETEXECUTORPERFORMANCEREQUEST']._serialized_start=1148
+  _globals['_GETEXECUTORPERFORMANCEREQUEST']._serialized_end=1349
+  _globals['_GETEXECUTORPERFORMANCERESPONSE']._serialized_start=1352
+  _globals['_GETEXECUTORPERFORMANCERESPONSE']._serialized_end=1506
+  _globals['_GETRECONCILIATIONANALYTICSREQUEST']._serialized_start=1508
+  _globals['_GETRECONCILIATIONANALYTICSREQUEST']._serialized_end=1631
+  _globals['_GETRECONCILIATIONANALYTICSRESPONSE']._serialized_start=1634
+  _globals['_GETRECONCILIATIONANALYTICSRESPONSE']._serialized_end=1904
+  _globals['_GETTHROUGHPUTREQUEST']._serialized_start=1907
+  _globals['_GETTHROUGHPUTREQUEST']._serialized_end=2046
+  _globals['_GETTHROUGHPUTRESPONSE']._serialized_start=2049
+  _globals['_GETTHROUGHPUTRESPONSE']._serialized_end=2247
+  _globals['_GETSLACOMPLIANCEREQUEST']._serialized_start=2250
+  _globals['_GETSLACOMPLIANCEREQUEST']._serialized_end=2486
+  _globals['_SLACOMPLIANCEENTRY']._serialized_start=2489
+  _globals['_SLACOMPLIANCEENTRY']._serialized_end=2744
+  _globals['_GETSLACOMPLIANCERESPONSE']._serialized_start=2747
+  _globals['_GETSLACOMPLIANCERESPONSE']._serialized_end=3024
+  _globals['_TRIGGERSNAPSHOTREQUEST']._serialized_start=3027
+  _globals['_TRIGGERSNAPSHOTREQUEST']._serialized_end=3198
+  _globals['_TRIGGERSNAPSHOTRESPONSE']._serialized_start=3200
+  _globals['_TRIGGERSNAPSHOTRESPONSE']._serialized_end=3304
 # @@protoc_insertion_point(module_scope)

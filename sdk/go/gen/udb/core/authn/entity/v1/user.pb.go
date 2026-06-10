@@ -28,7 +28,7 @@ const (
 // authenticated by UDB and authorized by the UDB policy engine.
 //
 // Migration order 1 in schema udb_authn.
-// The password_hash uses bcrypt (cost ≥ 12).
+// The password_hash uses Argon2id PHC strings; legacy keyed-HMAC values are upgraded on login.
 // All PII fields are masked in application logs via (pii) + (log_masked).
 // ---------------------------------------------------------------------------
 type User struct {
@@ -297,7 +297,7 @@ var File_udb_core_authn_entity_v1_user_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"#udb/core/authn/entity/v1/user.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xf3!\n" +
+	"#udb/core/authn/entity/v1/user.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x8f$\n" +
 	"\x04User\x12C\n" +
 	"\auser_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
 	"\auser_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06userId\x12\xbc\x01\n" +
@@ -306,9 +306,9 @@ const file_udb_core_authn_entity_v1_user_proto_rawDesc = "" +
 	"\x12idx_users_username\x12\x05BTREE\x18\x01Z0Lowercase alphanumeric; used as login identifier\xa8\x01\x01R\busername\x12\xb9\x01\n" +
 	"\x05email\x18\x03 \x01(\tB\xa2\x01е\x18\x01\xe0\xb5\x18\x01\x82\xb6\x18 Authentication and communication\x82\xb7\x18r\n" +
 	"\x05email\x12\fVARCHAR(255)\x18\x01 \x01R\x1a\n" +
-	"\x0fidx_users_email\x12\x05BTREE\x18\x01Z8Primary email used for OTP delivery and account recovery\xa8\x01\x01R\x05email\x12r\n" +
-	"\rpassword_hash\x18\x04 \x01(\tBMص\x18\x01\xe0\xb5\x18\x01\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x189\n" +
-	"\rpassword_hash\x12\fVARCHAR(255)\x18\x01Z\x18bcrypt hash (cost >= 12)R\fpasswordHash\x12\x96\x01\n" +
+	"\x0fidx_users_email\x12\x05BTREE\x18\x01Z8Primary email used for OTP delivery and account recovery\xa8\x01\x01R\x05email\x12\xd6\x01\n" +
+	"\rpassword_hash\x18\x04 \x01(\tB\xb0\x01ص\x18\x01\xe0\xb5\x18\x01\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18\x81\x01\n" +
+	"\rpassword_hash\x12\fVARCHAR(255)\x18\x01Z`Argon2id PHC hash, peppered by deployment secret; legacy keyed-HMAC values are upgraded on login\x8a\xb7\x18\x16\b\x03\x10\x01\x18\x032\bargon2idJ\x04noneR\fpasswordHash\x12\x96\x01\n" +
 	"\faccount_kind\x18\x05 \x01(\x0e2%.udb.core.authn.entity.v1.AccountKindBL\x82\xb7\x18H\n" +
 	"\faccount_kind\x12\vVARCHAR(40)\x18\x01:\b'PERSON'R\x1f\n" +
 	"\x16idx_users_account_kind\x12\x05BTREER\vaccountKind\x12q\n" +
@@ -318,9 +318,9 @@ const file_udb_core_authn_entity_v1_user_proto_rawDesc = "" +
 	"\ttenant_id\x12\fVARCHAR(120)\x18\x01R\x1c\n" +
 	"\x13idx_users_tenant_id\x12\x05BTREEZ*Tenant/account boundary for this principalR\btenantId\x12_\n" +
 	"\tfull_name\x18\b \x01(\tBBе\x18\x01\xe0\xb5\x18\x01\x82\xb6\x18\x17Display and audit trail\x82\xb7\x18\x1b\n" +
-	"\tfull_name\x12\fVARCHAR(255)\x18\x01R\bfullName\x12\x88\x01\n" +
-	"\x0ftotp_secret_enc\x18\t \x01(\tB`\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18T\n" +
-	"\x0ftotp_secret_enc\x12\x04TEXTZ;AES-256-GCM encrypted TOTP secret; null if MFA not enrolledR\rtotpSecretEnc\x12D\n" +
+	"\tfull_name\x12\fVARCHAR(255)\x18\x01R\bfullName\x12\xa3\x01\n" +
+	"\x0ftotp_secret_enc\x18\t \x01(\tB{\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18T\n" +
+	"\x0ftotp_secret_enc\x12\x04TEXTZ;AES-256-GCM encrypted TOTP secret; null if MFA not enrolled\x8a\xb7\x18\x17\b\x05\x10\x01\x18\x03:\tauthn-mfaJ\x04noneR\rtotpSecretEnc\x12D\n" +
 	"\vmfa_enabled\x18\n" +
 	" \x01(\bB#\x82\xb7\x18\x1f\n" +
 	"\vmfa_enabled\x12\aBOOLEAN\x18\x01:\x05FALSER\n" +
@@ -377,7 +377,7 @@ const file_udb_core_authn_entity_v1_user_proto_rawDesc = "" +
 	"\x05phone\x18\x1b \x01(\tB~е\x18\x01\xe0\xb5\x18\x01\x82\xb6\x18 Authentication and communication\x82\xb7\x18N\n" +
 	"\x05phone\x12\vVARCHAR(32)Z8E.164 phone number for SMS OTP delivery and verificationR\x05phone\x12\xa1\x01\n" +
 	"\x11phone_verified_at\x18\x1c \x01(\v2\x1a.google.protobuf.TimestampBY\x82\xb7\x18U\n" +
-	"\x11phone_verified_at\x12\vTIMESTAMPTZZ3Timestamp the phone number was verified via SMS OTPR\x0fphoneVerifiedAt:\xf7\x04\xa2\xb5\x187\b\x01\x12\x12udb:user:{user_id}\x18\xac\x02 \x01(\x01:\x12REDIS_CLUSTER_ADDRB\x04user\xfa\xb6\x18\xb7\x04\n" +
+	"\x11phone_verified_at\x12\vTIMESTAMPTZZ3Timestamp the phone number was verified via SMS OTPR\x0fphoneVerifiedAt:\x93\x06\xa2\xb5\x187\b\x01\x12\x12udb:user:{user_id}\x18\xac\x02 \x01(\x01:\x12REDIS_CLUSTER_ADDRB\x04user\xfa\xb6\x18\xb7\x04\n" +
 	"\x05users\x12\tudb_authn\x18\x01 \x01*HAccounts authenticated by UDB or mapped from external identity providers0\x018\x01@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x9a\x01\x12\n" +
 	"\bpgcrypto\x12\x06public\x9a\x01\x11\n" +
@@ -391,7 +391,8 @@ const file_udb_core_authn_entity_v1_user_proto_rawDesc = "" +
 	"  NEW.updated_at = CURRENT_TIMESTAMP;\n" +
 	"  RETURN NEW;\n" +
 	"END;\n" +
-	"$$;\xea\x01\aprimary\xfa\x01\vauthn:adminB\xf4\x01\n" +
+	"$$;\xea\x01\aprimary\xfa\x01\vauthn:admin\x8a\xb2\x19\x97\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf4\x01\n" +
 	"\x1ccom.udb.core.authn.entity.v1B\tUserProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (

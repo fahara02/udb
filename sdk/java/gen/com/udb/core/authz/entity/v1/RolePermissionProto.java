@@ -43,48 +43,54 @@ public final class RolePermissionProto extends com.google.protobuf.GeneratedFile
       "\n.udb/core/authz/entity/v1/role_permissi" +
       "on.proto\022\030udb.core.authz.entity.v1\032\037goog" +
       "le/protobuf/timestamp.proto\032\033udb/core/co" +
-      "mmon/v1/db.proto\"\370\010\n\016RolePermission\022c\n\022r" +
-      "ole_permission_id\030\001 \001(\tB5\202\267\0301\n\022role_perm" +
-      "ission_id\022\004UUID\030\001(\001:\021gen_random_uuid()R\020" +
-      "rolePermissionId\022.\n\007role_id\030\002 \001(\tB\025\202\267\030\021\n" +
-      "\007role_id\022\004UUID\030\001R\006roleId\022N\n\017permission_c" +
-      "ode\030\003 \001(\tB%\202\267\030!\n\017permission_code\022\014VARCHA" +
-      "R(120)\030\001R\016permissionCode\0225\n\ngranted_by\030\004" +
-      " \001(\tB\026\202\267\030\022\n\ngranted_by\022\004UUIDR\tgrantedBy\022" +
-      "q\n\ngranted_at\030\005 \001(\0132\032.google.protobuf.Ti" +
-      "mestampB6\202\267\0302\n\ngranted_at\022\013TIMESTAMPTZ\030\001" +
-      ":\021CURRENT_TIMESTAMP`\001h\001R\tgrantedAt\022_\n\tte" +
-      "nant_id\030\006 \001(\tBB\202\267\030>\n\ttenant_id\022\013VARCHAR(" +
-      "64)\030\001R\"\n\031idx_rolepermission_tenant\022\005BTRE" +
-      "ER\010tenantId:\365\004\372\266\030\360\004\n\020role_permissions\022\tu" +
-      "db_authz\030\006 \001*QMany-to-many map from role" +
-      "s to permission codes used by ABAC and U" +
-      "I authorization@\001b^\n\020tenant_isolation\032H(" +
-      "tenant_id::text = current_setting(\'app.c" +
-      "urrent_tenant_id\', true)::text)(\001\212\001@\n\033id" +
-      "x_role_permissions_unique\022\005BTREE\030\001Z\007role" +
-      "_idZ\017permission_code\222\001C\n\007role_id\022\005roles\032" +
-      "\007role_id\"\tudb_authz(\003:\033fk_role_permissio" +
-      "ns_role_id\222\001I\n\ngranted_by\022\005users\032\007user_i" +
-      "d\"\tudb_authn(\004:\036fk_role_permissions_gran" +
-      "ted_by\242\001\301\001\n\030mv_effective_permissions\022\tud" +
-      "b_authz\032\227\001SELECT ur.user_id, ur.domain, " +
-      "ur.role_id, rp.permission_code FROM udb_" +
-      "authz.user_roles ur JOIN udb_authz.role_" +
-      "permissions rp ON rp.role_id = ur.role_i" +
-      "d \001B\376\001\n\034com.udb.core.authz.entity.v1B\023Ro" +
-      "lePermissionProtoP\001ZDgithub.com/fahara02" +
-      "/udb/sdk/go/gen/udb/core/authz/entity/v1" +
-      ";entityv1\242\002\004UCAE\252\002\030udb.core.Authz.Entity" +
-      ".V1\312\002\030Udb\\Core\\Authz\\Entity\\V1\342\002$Udb\\GPB" +
-      "Metadata\\Core\\Authz\\Entity\\V1\352\002\034Udb::Cor" +
-      "e::Authz::Entity::V1b\006proto3"
+      "mmon/v1/db.proto\032!udb/core/common/v1/sec" +
+      "urity.proto\"\224\n\n\016RolePermission\022c\n\022role_p" +
+      "ermission_id\030\001 \001(\tB5\202\267\0301\n\022role_permissio" +
+      "n_id\022\004UUID\030\001(\001:\021gen_random_uuid()R\020roleP" +
+      "ermissionId\022.\n\007role_id\030\002 \001(\tB\025\202\267\030\021\n\007role" +
+      "_id\022\004UUID\030\001R\006roleId\022N\n\017permission_code\030\003" +
+      " \001(\tB%\202\267\030!\n\017permission_code\022\014VARCHAR(120" +
+      ")\030\001R\016permissionCode\0225\n\ngranted_by\030\004 \001(\tB" +
+      "\026\202\267\030\022\n\ngranted_by\022\004UUIDR\tgrantedBy\022q\n\ngr" +
+      "anted_at\030\005 \001(\0132\032.google.protobuf.Timesta" +
+      "mpB6\202\267\0302\n\ngranted_at\022\013TIMESTAMPTZ\030\001:\021CUR" +
+      "RENT_TIMESTAMP`\001h\001R\tgrantedAt\022_\n\ttenant_" +
+      "id\030\006 \001(\tBB\202\267\030>\n\ttenant_id\022\013VARCHAR(64)\030\001" +
+      "R\"\n\031idx_rolepermission_tenant\022\005BTREER\010te" +
+      "nantId:\221\006\372\266\030\360\004\n\020role_permissions\022\tudb_au" +
+      "thz\030\006 \001*QMany-to-many map from roles to " +
+      "permission codes used by ABAC and UI aut" +
+      "horization@\001b^\n\020tenant_isolation\032H(tenan" +
+      "t_id::text = current_setting(\'app.curren" +
+      "t_tenant_id\', true)::text)(\001\212\001@\n\033idx_rol" +
+      "e_permissions_unique\022\005BTREE\030\001Z\007role_idZ\017" +
+      "permission_code\222\001C\n\007role_id\022\005roles\032\007role" +
+      "_id\"\tudb_authz(\003:\033fk_role_permissions_ro" +
+      "le_id\222\001I\n\ngranted_by\022\005users\032\007user_id\"\tud" +
+      "b_authn(\004:\036fk_role_permissions_granted_b" +
+      "y\242\001\301\001\n\030mv_effective_permissions\022\tudb_aut" +
+      "hz\032\227\001SELECT ur.user_id, ur.domain, ur.ro" +
+      "le_id, rp.permission_code FROM udb_authz" +
+      ".user_roles ur JOIN udb_authz.role_permi" +
+      "ssions rp ON rp.role_id = ur.role_id \001\212\262" +
+      "\031\227\001\n\006tenant\032\ttenant_id*4tenant_id = curr" +
+      "ent_setting(\'app.current_tenant_id\')2\013so" +
+      "ft_delete:\021authz.operational@\373\023H\002R\006tenan" +
+      "tZ\010standardr\025tenant.data_residencyB\376\001\n\034c" +
+      "om.udb.core.authz.entity.v1B\023RolePermiss" +
+      "ionProtoP\001ZDgithub.com/fahara02/udb/sdk/" +
+      "go/gen/udb/core/authz/entity/v1;entityv1" +
+      "\242\002\004UCAE\252\002\030udb.core.Authz.Entity.V1\312\002\030Udb" +
+      "\\Core\\Authz\\Entity\\V1\342\002$Udb\\GPBMetadata\\" +
+      "Core\\Authz\\Entity\\V1\352\002\034Udb::Core::Authz:" +
+      ":Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.TimestampProto.getDescriptor(),
           com.udb.core.common.v1.DbProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_authz_entity_v1_RolePermission_descriptor =
       getDescriptor().getMessageType(0);
@@ -95,8 +101,10 @@ public final class RolePermissionProto extends com.google.protobuf.GeneratedFile
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);
     registry.add(com.udb.core.common.v1.DbProto.pgTable);
     com.google.protobuf.Descriptors.FileDescriptor

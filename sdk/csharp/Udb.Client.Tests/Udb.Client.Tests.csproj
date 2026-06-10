@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Outbound conformance / unit tests for the hand-written ergonomics layer
+       (M9). Asserts request-scope population, canonical header names, authz
+       cache TTL behavior, and policy-bundle HMAC verification — all without a
+       live broker, using a fake gRPC CallInvoker. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>Udb.Client.Tests</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <!-- DefaultHttpContext (for the middleware test) lives in the ASP.NET Core
+       shared framework, not in Http.Abstractions. The test project references
+       the framework; the shipped Udb.Client only needs Http.Abstractions. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Udb.Client\Udb.Client.csproj" />
+  </ItemGroup>
+</Project>

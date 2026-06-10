@@ -1,0 +1,100 @@
+name: Cleanup · Stale packages
+
+# Removes stale/broken package versions across all UDB registries.
+#
+# Runs automatically after every Docker release, on a weekly schedule
+# (Sunday 02:00 UTC), and can be triggered manually at any time.
+#
+# What is cleaned:
+#   GHCR (ghcr.io/fahara02/udb)
+#     • Untagged versions  — build-cache ghosts and failed-push fragments.
+#     • Old sha-<sha> tags — accumulate on every release; newest 5 are kept.
+#       Semver tags (v0.x.x, 0.x, 0, latest) are never deleted.
+#
+# What is NOT cleaned here (no deletion API available):
+#   crates.io — immutable; use `cargo yank` manually if needed.
+#   PyPI      — immutable; no public delete API.
+#   npm       — deprecation only, no deletion.
+#   Packagist — mirrors a satellite repo; manage tags there directly.
+#   NuGet     — no public delete API; use nuget.org UI / API key.
+#   Maven     — immutable once released to Maven Central.
+#
+# Permissions: only needs packages:write — no repo or environment access.
+
+on:
+  workflow_run:
+    workflows: ["Release · Docker image"]
+    types: [completed]
+  schedule:
+    - cron: "0 2 * * 0"   # every Sunday 02:00 UTC
+  workflow_dispatch:
+    inputs:
+      keep_sha_tags:
+        description: "Number of recent sha-* tags to keep (default: 5)"
+        required: false
+        default: "5"
+      dry_run:
+        description: "Dry run — log what would be deleted without deleting"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  packages: write
+
+jobs:
+  # ── GHCR: ghcr.io/fahara02/udb ─────────────────────────────────────────────
+  cleanup-docker:
+    name: GHCR · ghcr.io/fahara02/udb
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Only run when triggered manually, on schedule, or when the Docker release
+    # workflow succeeded (skip when it fails — nothing new was pushed).
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'schedule'         ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      # ── Pass 1: untagged versions ─────────────────────────────────────────
+      # These are build-cache index blobs, multi-arch fragments that lost their
+      # manifest, or artifact leftovers from interrupted pushes.
+      - name: Delete untagged GHCR versions (udb)
+        uses: actions/delete-package-versions@v5
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        with:
+          package-name: udb
+          package-type: container
+          min-versions-to-keep: 0
+          delete-only-untagged-versions: 'true'
+        continue-on-error: true
+
+      # ── Pass 2: old sha-* digest tags ─────────────────────────────────────
+      # Every release push creates a sha-<short-sha> tag. Keep the newest N;
+      # delete the rest. Semver/latest are protected by ignore-versions.
+      - name: Prune old sha-* tags (udb) — keep newest ${{ github.event.inputs.keep_sha_tags || '5' }}
+        uses: actions/delete-package-versions@v5
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        with:
+          package-name: udb
+          package-type: container
+          min-versions-to-keep: ${{ github.event.inputs.keep_sha_tags || '5' }}
+          # Protect semver tags, major.minor, major-only, and "latest".
+          # Anything that does NOT match this regex (i.e. sha-* tags) is
+          # eligible for deletion once min-versions-to-keep is satisfied.
+          ignore-versions: '^(v?\d+\.\d+(\.\d+)?(-[a-zA-Z0-9._]+)?|latest|\d+\.\d+|\d+)$'
+        continue-on-error: true
+
+      # ── Dry-run summary ───────────────────────────────────────────────────
+      - name: Dry run — list package versions (no deletion)
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          echo "=== Dry run: GHCR package versions for ghcr.io/fahara02/udb ==="
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/users/fahara02/packages/container/udb/versions?per_page=100" \
+            --jq '.[] | {id, created_at, tags: .metadata.container.tags}' \
+          || echo "(gh api unavailable or no versions found)"

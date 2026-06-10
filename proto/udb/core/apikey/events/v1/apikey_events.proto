@@ -4,6 +4,7 @@ package udb.core.apikey.events.v1;
 
 import "google/protobuf/timestamp.proto";
 import "udb/core/apikey/entity/v1/enums.proto";
+import "udb/core/common/v1/security.proto";
 
 option csharp_namespace = "udb.core.Apikey.Events.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/apikey/events/v1;apikeyeventsv1";
@@ -13,6 +14,14 @@ option php_namespace = "Udb\\Core\\Apikey\\Events\\V1";
 
 // Kafka topic: udb.apikey.created.v1
 message ApiKeyCreatedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.apikey.events.v1.ApiKeyCreatedEvent"
+    outbox_topic: "udb.apikey.created.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string key_id = 2;
   string key_prefix = 3;
@@ -28,6 +37,14 @@ message ApiKeyCreatedEvent {
 
 // Kafka topic: udb.apikey.revoked.v1
 message ApiKeyRevokedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.apikey.events.v1.ApiKeyRevokedEvent"
+    outbox_topic: "udb.apikey.revoked.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string key_id = 2;
   string key_prefix = 3;
@@ -41,6 +58,14 @@ message ApiKeyRevokedEvent {
 // Kafka topic: udb.apikey.rate.limited.v1
 // Emitted when a key exceeds its rate limit
 message ApiKeyRateLimitedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.apikey.events.v1.ApiKeyRateLimitedEvent"
+    outbox_topic: "udb.apikey.rate.limited.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string key_id = 2;
   string key_prefix = 3;
@@ -51,4 +76,43 @@ message ApiKeyRateLimitedEvent {
   string correlation_id = 8;
   google.protobuf.Timestamp occurred_at = 9;
   string tenant_id = 10;
+}
+
+// Kafka topic: udb.apikey.validate.failed.v1 (Phase L)
+message ApiKeyValidateFailedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.apikey.events.v1.ApiKeyValidateFailedEvent"
+    outbox_topic: "udb.apikey.validate.failed.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string key_prefix = 2; // public prefix only, never the raw key
+  string reason_code = 3; // not_found, revoked, expired, scope_mismatch
+  string ip_address = 4; // masked
+  string correlation_id = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+  string tenant_id = 7;
+}
+
+// Kafka topic: udb.apikey.anomalous.use.v1 (Phase L)
+message ApiKeyAnomalousUseEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.apikey.events.v1.ApiKeyAnomalousUseEvent"
+    outbox_topic: "udb.apikey.anomalous.use.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string key_id = 2;
+  string key_prefix = 3;
+  string anomaly = 4; // geo_velocity, new_asn, burst, off_hours
+  string ip_address = 5; // masked
+  string correlation_id = 6;
+  google.protobuf.Timestamp occurred_at = 7;
+  string tenant_id = 8;
 }

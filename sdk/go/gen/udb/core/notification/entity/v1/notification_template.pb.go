@@ -160,7 +160,7 @@ var File_udb_core_notification_entity_v1_notification_template_proto protoreflec
 
 const file_udb_core_notification_entity_v1_notification_template_proto_rawDesc = "" +
 	"\n" +
-	";udb/core/notification/entity/v1/notification_template.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\x9a\x0e\n" +
+	";udb/core/notification/entity/v1/notification_template.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\xfb\x0e\n" +
 	"\x14NotificationTemplate\x12O\n" +
 	"\vtemplate_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vtemplate_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
@@ -202,7 +202,7 @@ const file_udb_core_notification_entity_v1_notification_template_proto_rawDesc =
 	"\n" +
 	"deleted_by\x18\f \x01(\tB)\x82\xb7\x18%\n" +
 	"\n" +
-	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\xd5\x03\xfa\xb6\x18\xd0\x03\n" +
+	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\xb6\x04\xfa\xb6\x18\xd0\x03\n" +
 	"\x16notification_templates\x12\x10udb_notification\x18\x01 \x01*8Message templates for each notification type and channel0\x018\x01\xaa\x01g\n" +
 	"+trg_notification_templates_touch_updated_at\x12\x06BEFORE\x1a\x06UPDATE\"#udb_notification.touch_updated_at()*\x03ROW\xc2\x01\xe1\x01\n" +
 	"\x19touch_updated_at_function\x12\bpostgres\x1a\x0fbefore_triggers\"\xa8\x01CREATE OR REPLACE FUNCTION udb_notification.touch_updated_at()\n" +
@@ -213,7 +213,8 @@ const file_udb_core_notification_entity_v1_notification_template_proto_rawDesc =
 	"  NEW.updated_at = CURRENT_TIMESTAMP;\n" +
 	"  RETURN NEW;\n" +
 	"END;\n" +
-	"$$;\xfa\x01\x12notification:adminB\xae\x02\n" +
+	"$$;\xfa\x01\x12notification:admin\x8a\xb2\x19]\n" +
+	"\x06global2\vsoft_delete:\x18notification.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xae\x02\n" +
 	"#com.udb.core.notification.entity.v1B\x19NotificationTemplateProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1;entityv1\xa2\x02\x04UCNE\xaa\x02\x1fudb.core.Notification.Entity.V1\xca\x02\x1fUdb\\Core\\Notification\\Entity\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1\xea\x02#Udb::Core::Notification::Entity::V1b\x06proto3"
 
 var (

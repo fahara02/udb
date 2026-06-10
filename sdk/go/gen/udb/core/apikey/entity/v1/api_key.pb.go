@@ -269,17 +269,17 @@ var File_udb_core_apikey_entity_v1_api_key_proto protoreflect.FileDescriptor
 
 const file_udb_core_apikey_entity_v1_api_key_proto_rawDesc = "" +
 	"\n" +
-	"'udb/core/apikey/entity/v1/api_key.proto\x12\x19udb.core.apikey.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a%udb/core/apikey/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x9d\x1d\n" +
+	"'udb/core/apikey/entity/v1/api_key.proto\x12\x19udb.core.apikey.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a%udb/core/apikey/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xda\x1e\n" +
 	"\x06ApiKey\x12@\n" +
 	"\x06key_id\x18\x01 \x01(\tB)\x82\xb7\x18%\n" +
 	"\x06key_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x05keyId\x12\x84\x01\n" +
 	"\n" +
 	"key_prefix\x18\x02 \x01(\tBe\x82\xb7\x18a\n" +
 	"\n" +
-	"key_prefix\x12\vVARCHAR(20)\x18\x01ZAFirst 8 chars of plain key: prefix_XXXXXXXX — shown in admin UI\xa8\x01\x01R\tkeyPrefix\x12l\n" +
-	"\bkey_hash\x18\x03 \x01(\tBQص\x18\x01\xe0\xb5\x18\x01\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18=\n" +
+	"key_prefix\x12\vVARCHAR(20)\x18\x01ZAFirst 8 chars of plain key: prefix_XXXXXXXX — shown in admin UI\xa8\x01\x01R\tkeyPrefix\x12\x8b\x01\n" +
+	"\bkey_hash\x18\x03 \x01(\tBpص\x18\x01\xe0\xb5\x18\x01\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18=\n" +
 	"\bkey_hash\x12\fVARCHAR(128)\x18\x01 \x01R\x1f\n" +
-	"\x15idx_api_keys_key_hash\x12\x04HASH\x18\x01R\akeyHash\x12G\n" +
+	"\x15idx_api_keys_key_hash\x12\x04HASH\x18\x01\x8a\xb7\x18\x1b\b\x04\x10\x01\x18\x032\vhmac-sha256J\x06tenantR\akeyHash\x12G\n" +
 	"\x04name\x18\x04 \x01(\tB3\x82\xb7\x18/\n" +
 	"\x04name\x12\fVARCHAR(150)\x18\x01Z\x17Human-readable key nameR\x04name\x129\n" +
 	"\vdescription\x18\x05 \x01(\tB\x17\x82\xb7\x18\x13\n" +
@@ -351,7 +351,7 @@ const file_udb_core_apikey_entity_v1_api_key_proto_rawDesc = "" +
 	"\x16allowed_resources_json\x18\x18 \x01(\tBx\x82\xb7\x18t\n" +
 	"\x16allowed_resources_json\x12\x05JSONB\x18\x01:\v'[]'::jsonbZBOptional resource allowlist; empty delegates to policy engine onlyx\x01R\x14allowedResourcesJson\x12i\n" +
 	"\rmetadata_json\x18\x19 \x01(\tBD\x82\xb7\x18@\n" +
-	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x17Non-secret key metadatax\x01R\fmetadataJson:\xa9\a\xfa\xb6\x18\xa4\a\n" +
+	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x17Non-secret key metadatax\x01R\fmetadataJson:\xc6\b\xfa\xb6\x18\xa4\a\n" +
 	"\bapi_keys\x12\tudb_authn\x18\x04 \x01*4Machine-to-machine API keys for integration accounts0\x018\x01\x8a\x016\n" +
 	"\x0fidx_apikey_hash\x12\x05BTREE:\x12deleted_at IS NULLZ\bkey_hash\x9a\x01\x11\n" +
 	"\apg_trgm\x12\x06public\xaa\x01R\n" +
@@ -376,7 +376,8 @@ const file_udb_core_apikey_entity_v1_api_key_proto_rawDesc = "" +
 	"  END IF;\n" +
 	"  RETURN NEW;\n" +
 	"END;\n" +
-	"$$;\xea\x01\aprimary\xfa\x01\rapikey:revokeB\xfc\x01\n" +
+	"$$;\xea\x01\aprimary\xfa\x01\rapikey:revoke\x8a\xb2\x19\x98\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x12apikey.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfc\x01\n" +
 	"\x1dcom.udb.core.apikey.entity.v1B\vApiKeyProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x19udb.core.Apikey.Entity.V1\xca\x02\x19Udb\\Core\\Apikey\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1\xea\x02\x1dUdb::Core::Apikey::Entity::V1b\x06proto3"
 
 var (

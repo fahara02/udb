@@ -111,7 +111,7 @@ var File_udb_core_authn_entity_v1_recovery_code_proto protoreflect.FileDescripto
 
 const file_udb_core_authn_entity_v1_recovery_code_proto_rawDesc = "" +
 	"\n" +
-	",udb/core/authn/entity/v1/recovery_code.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\"\xdf\x05\n" +
+	",udb/core/authn/entity/v1/recovery_code.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xba\x06\n" +
 	"\fRecoveryCode\x12]\n" +
 	"\x10recovery_code_id\x18\x01 \x01(\tB3\x82\xb7\x18/\n" +
 	"\x10recovery_code_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x0erecoveryCodeId\x12\xb4\x01\n" +
@@ -126,8 +126,9 @@ const file_udb_core_authn_entity_v1_recovery_code_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB6\x82\xb7\x182\n" +
 	"\n" +
-	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt:Z\xfa\xb6\x18V\n" +
-	"\x0erecovery_codes\x12\tudb_authn\x18\x06 \x01*+Hashed single-use MFA recovery/backup codes\xea\x01\aprimaryB\xfc\x01\n" +
+	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt:\xb4\x01\xfa\xb6\x18V\n" +
+	"\x0erecovery_codes\x12\tudb_authn\x18\x06 \x01*+Hashed single-use MFA recovery/backup codes\xea\x01\aprimary\x8a\xb2\x19V\n" +
+	"\x06global2\vsoft_delete:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfc\x01\n" +
 	"\x1ccom.udb.core.authn.entity.v1B\x11RecoveryCodeProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (

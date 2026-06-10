@@ -511,6 +511,7 @@ fn parse_s3_target(payload: &CompensationPayload) -> Result<(&str, &str), String
 /// **reverse (LIFO)** order — the last-executed forward step is undone first,
 /// which is required for correct saga semantics (a later step may depend on an
 /// earlier one). The reported `index` is still the step's original position.
+#[tracing::instrument(skip_all, name = "saga.compensate")]
 pub async fn dispatch_compensations(
     registry: &CompensatorRegistry,
     compensations: &serde_json::Value,

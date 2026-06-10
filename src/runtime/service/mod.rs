@@ -52,9 +52,27 @@ use crate::security::{
 };
 
 mod analytics_service;
+mod asset_service;
 mod auth_service;
+// Phase 10: top-level `udb doctor` folds auth-readiness into one shared
+// readiness fact set; re-export the adapter so the bin crate can reach it.
+pub use auth_service::auth_readiness_triples;
+// urgent_fix #20: offline root-bootstrap entry point for the `udb auth bootstrap`
+// CLI (the bin crate can only reach `pub` items re-exported to this level).
+pub use auth_service::bootstrap_admin_user;
+/// Wildcard CDC topic patterns covering every native auth/authz/apikey/idp/ops
+/// event. Re-exported so the CDC config (`crate::runtime::cdc`) can guarantee a
+/// tightened operator topic allowlist never silences auth security/audit events
+/// — see `CdcConfig::normalize`. (The `auth_service` module is private to this
+/// `service` module, so this `pub(crate)` re-export is the reachable handle.)
+pub(crate) use auth_service::events::topics::AUTH_TOPIC_PATTERNS;
+mod method_security;
+mod native_helpers;
+pub mod native_registry;
 mod notification_service;
+mod storage_service;
 mod tenant_service;
+mod webrtc_service;
 
 const UDB_FILE_DESCRIPTOR_SET: &[u8] = tonic::include_file_descriptor_set!("udb_descriptor");
 
@@ -201,6 +219,19 @@ pub(crate) const SUPPORTED_RPC_NAMES: &[&str] = &[
     "DropResource",
     "ListResources",
     "CreateMaterializedView",
+    "CacheGet",
+    "CacheSet",
+    "CacheDelete",
+    "CacheScan",
+    "DocumentGet",
+    "DocumentFind",
+    "DocumentUpsert",
+    "DocumentDelete",
+    "GraphQuery",
+    "GraphMutate",
+    "TimeSeriesWrite",
+    "TimeSeriesQuery",
+    "AnalyticalQuery",
     "GetCapabilities",
     "GetCatalogManifest",
     "LookupMessageSchema",
@@ -334,6 +365,14 @@ impl DataBrokerService {
             .read()
             .map(|snapshot| Arc::clone(&*snapshot))
             .unwrap_or_else(|_| build_abac_snapshot("live-abac", &[], self.abac_default_allow))
+    }
+
+    /// The shared, atomically-reloadable ABAC/authz snapshot cell. Cloned (Arc)
+    /// so callers can build a `'static` version probe over the live snapshot
+    /// (used by the control-plane reload subscriber to detect authz-only policy
+    /// changes that do not alter the sourced RLS/method-security registry).
+    fn abac_snapshot(&self) -> Arc<RwLock<Arc<AuthzSnapshot>>> {
+        self.abac_snapshot.clone()
     }
 
     pub fn runtime_snapshot(&self) -> Arc<DataBrokerRuntime> {
@@ -915,6 +954,61 @@ fn service_metrics_recorder() -> Arc<dyn MetricsRecorder> {
     }
 }
 
+async fn admit_stream_batch_item(
+    channels: &crate::runtime::channels::ChannelManager,
+    metrics: &Arc<dyn MetricsRecorder>,
+    context: &crate::RequestContext,
+    op: crate::runtime::channels::OperationChannel,
+    backend: &'static str,
+) -> Result<crate::runtime::channels::ChannelPermit, Status> {
+    let project = non_empty(&context.project_id).unwrap_or("default");
+    let tenant_hash = tenant_hash_label(&context.tenant_id);
+    let instance = non_empty(&context.target_instance).unwrap_or("default");
+    match channels
+        .acquire_fair_with_backpressure(
+            op,
+            Some(&context.tenant_id),
+            Some(&context.project_id),
+            Some(backend),
+            Some(&context.target_instance),
+            op.default_cost(),
+        )
+        .await
+    {
+        Ok(permit) => {
+            metrics.record_fair_admission(
+                project,
+                &tenant_hash,
+                backend,
+                instance,
+                op.as_str(),
+                "accepted",
+            );
+            metrics.add_fair_cost(
+                project,
+                &tenant_hash,
+                backend,
+                instance,
+                op.as_str(),
+                f64::from(op.default_cost()),
+            );
+            Ok(permit)
+        }
+        Err(err) => {
+            metrics.inc_channel_rejected(op.as_str());
+            metrics.record_fair_admission(
+                project,
+                &tenant_hash,
+                backend,
+                instance,
+                op.as_str(),
+                "rejected",
+            );
+            Err(err)
+        }
+    }
+}
+
 fn check_backend_capability(
     backend: &str,
     operation: &str,
@@ -1015,12 +1109,49 @@ fn require_admin_scope(security: &SecurityContext) -> Result<(), Status> {
     }
 }
 
+fn rls_bypass_ack(spec_json: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(spec_json)
+        .ok()
+        .and_then(|value| {
+            value
+                .get("udb_allow_rls_bypass")
+                .or_else(|| value.get("allow_rls_bypass"))
+                .and_then(|flag| flag.as_bool())
+        })
+        .unwrap_or(false)
+}
+
+fn contains_rls_bypass_sql(spec_json: &str) -> bool {
+    let lower = spec_json.to_ascii_lowercase();
+    lower.contains("truncate ")
+        || lower.contains(" truncate")
+        || lower.contains(" cascade")
+        || lower.contains("disable row level security")
+        || lower.contains("alter table")
+        || lower.contains("drop table")
+        || lower.contains("create unique index")
+        || lower.contains(" unique ")
+        || lower.contains(" primary key")
+}
+
+fn guard_rls_bypass_operation(operation: &str, spec_json: &str) -> Result<(), Status> {
+    let bypass_like = matches!(operation, "drop_resource")
+        || (matches!(operation, "query" | "mutate" | "transaction")
+            && contains_rls_bypass_sql(spec_json));
+    if bypass_like && !rls_bypass_ack(spec_json) {
+        return Err(Status::failed_precondition(
+            "operation may bypass tenant isolation/RLS; set spec_json.udb_allow_rls_bypass=true after explicit tenant-scope review",
+        ));
+    }
+    Ok(())
+}
+
 #[derive(Clone)]
-struct NativeControlPlaneAuth {
+struct WebrtcPeerTokenAuth {
     security: SecurityConfig,
 }
 
-impl NativeControlPlaneAuth {
+impl WebrtcPeerTokenAuth {
     fn new() -> Self {
         Self {
             security: SecurityConfig::current(),
@@ -1028,7 +1159,7 @@ impl NativeControlPlaneAuth {
     }
 }
 
-impl tonic::service::Interceptor for NativeControlPlaneAuth {
+impl tonic::service::Interceptor for WebrtcPeerTokenAuth {
     fn call(&mut self, request: Request<()>) -> Result<Request<()>, Status> {
         let metadata = request.metadata();
         let auth_header = metadata
@@ -1037,7 +1168,7 @@ impl tonic::service::Interceptor for NativeControlPlaneAuth {
             .unwrap_or_default();
         let token = auth_header.strip_prefix("Bearer ").ok_or_else(|| {
             Status::unauthenticated(
-                "missing or invalid authorization header (native control-plane bearer required)",
+                "missing or invalid authorization header (WebRTC peer bearer required)",
             )
         })?;
         let claims =
@@ -1046,12 +1177,12 @@ impl tonic::service::Interceptor for NativeControlPlaneAuth {
         let allowed = scopes.iter().any(|scope| {
             matches!(
                 scope.as_str(),
-                "*" | "udb:*" | "udb:admin" | "udb:auth:admin"
+                "*" | "udb:*" | "udb:webrtc:*" | "udb:webrtc:peer" | "udb:webrtc:signal"
             )
         });
         if !allowed {
             return Err(Status::permission_denied(
-                "scope udb:admin or udb:auth:admin is required",
+                "scope udb:webrtc:peer or udb:webrtc:signal is required",
             ));
         }
         if let Some(header_tenant) = metadata
@@ -1061,7 +1192,7 @@ impl tonic::service::Interceptor for NativeControlPlaneAuth {
             && claims.tenant_id.as_deref().unwrap_or_default() != header_tenant
         {
             return Err(Status::permission_denied(
-                "x-tenant-id must match the bearer token tenant",
+                "x-tenant-id must match the peer token tenant",
             ));
         }
         Ok(request)
@@ -1206,6 +1337,135 @@ pub async fn serve(
         std::io::Error::other(format!("UDB startup config validation failed: {err}"))
     })?;
     let runtime_config = runtime.config().clone();
+    native_registry::install_native_service_runtime_config(&runtime_config);
+    // Secure-transport gate (always fatal when the operator has explicitly
+    // enabled UDB_REQUIRE_SECURE_TRANSPORT / UDB_MTLS_REQUIRED but left certs
+    // unconfigured).
+    let transport_violation = validate_secure_transport(&runtime_config.service).err();
+    if let Some(err) = &transport_violation {
+        // Explicit secure-transport request without certs is a hard error
+        // regardless of posture (matches prior behavior).
+        if runtime_config.service.require_secure_transport || runtime_config.service.mtls_required {
+            return Err(std::io::Error::other(format!(
+                "secure transport startup gate failed: {err}"
+            ))
+            .into());
+        }
+    }
+    // Phase 5 fail-closed posture gate: in production / fail-closed mode a
+    // non-empty production-validation or secure-transport violation list ABORTS
+    // startup. In a dev posture (not production, not fail-closed) these are
+    // advisory only, so a plaintext local deployment is still permitted.
+    {
+        let transport = transport_violation.into_iter().collect::<Vec<_>>();
+        let violations = crate::runtime::security::hardened_startup_violations(&transport);
+        if violations.is_empty() {
+            // Dev posture (or clean prod): if there were advisory findings, surface
+            // them without aborting.
+            if !transport.is_empty()
+                || crate::runtime::security::SecurityConfig::current()
+                    .validate_production()
+                    .is_err()
+            {
+                tracing::warn!(
+                    "security posture advisory (not enforced in dev mode): set UDB_ENV=production \
+                     or UDB_FAIL_CLOSED to make these fatal"
+                );
+            }
+        } else {
+            return Err(std::io::Error::other(format!(
+                "production/secure-transport startup gate failed (enterprise mode refuses \
+                 insecure transport): {}",
+                violations.join("; ")
+            ))
+            .into());
+        }
+    }
+    // Phase 5 / urgent_fix #3: compliance-profile startup gate. When an operator
+    // selects a profile (`UDB_COMPLIANCE_PROFILE=soc2|iso27001|pci_hipaa`), validate
+    // it against actual deployment facts and REFUSE to serve on violation — making
+    // the profile an enforced runtime posture, not a documentation claim. Previously
+    // `validate_compliance_profile` was only exercised by tests.
+    {
+        let raw_profile = std::env::var("UDB_COMPLIANCE_PROFILE").unwrap_or_default();
+        match crate::runtime::security::selected_compliance_profile() {
+            Some(profile) => {
+                let cfg = crate::runtime::security::SecurityConfig::current();
+                let facts = cfg.compliance_profile_facts();
+                if let Err(violations) = cfg.validate_compliance_profile(profile, &facts) {
+                    return Err(std::io::Error::other(format!(
+                        "compliance profile '{}' startup gate failed: {}",
+                        profile.as_str(),
+                        violations.join("; ")
+                    ))
+                    .into());
+                }
+                tracing::info!(profile = profile.as_str(), "compliance profile gate passed");
+            }
+            None if !raw_profile.trim().is_empty()
+                && !raw_profile.trim().eq_ignore_ascii_case("none") =>
+            {
+                return Err(std::io::Error::other(format!(
+                    "unknown UDB_COMPLIANCE_PROFILE '{}' (expected soc2 | iso27001 | pci_hipaa)",
+                    raw_profile.trim()
+                ))
+                .into());
+            }
+            None => {}
+        }
+    }
+    // urgent_fix #30: backup / replication tenant-scope startup gate. UDB does not
+    // perform bulk data movement in-process (the external DBs / operator do — §0
+    // doctrine: "databases own data replication"); UDB owns the tenant-scope
+    // CONTRACT for it. When a backup DB is configured, REACH the fail-closed
+    // `tenant_movement` guard at startup so the contract is enforced runtime
+    // behavior, not a test-only validator: a backup copies the whole broker store
+    // across tenants, so an enterprise deployment must EITHER scope it to one
+    // tenant (`UDB_BACKUP_TENANT_ID`) OR explicitly acknowledge the privileged
+    // cross-tenant copy (`UDB_ALLOW_CROSS_TENANT_BACKUP=true`), else we refuse to
+    // serve.
+    if runtime_config.has_backup() {
+        let backup_tenant = std::env::var("UDB_BACKUP_TENANT_ID").unwrap_or_default();
+        let backup_tenant = backup_tenant.trim();
+        let privileged = std::env::var("UDB_ALLOW_CROSS_TENANT_BACKUP")
+            .map(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes"))
+            .unwrap_or(false);
+        let movement = crate::runtime::tenant_movement::TenantMovementRequest {
+            operation: crate::runtime::tenant_movement::TenantMovementOperation::BackupExport,
+            tenant_id: backup_tenant,
+            target_tenant_id: None,
+            tenant_filter_present: !backup_tenant.is_empty(),
+            privileged_cross_tenant: privileged,
+        };
+        match crate::runtime::tenant_movement::validate_tenant_movement_scope(&movement) {
+            Ok(()) => tracing::info!(
+                tenant_scoped = !backup_tenant.is_empty(),
+                privileged_cross_tenant = privileged,
+                "backup tenant-scope gate passed"
+            ),
+            Err(violation) if crate::runtime::security::fail_closed_mode() => {
+                return Err(std::io::Error::other(format!(
+                    "backup tenant-scope startup gate failed: {violation}. Set \
+                     UDB_BACKUP_TENANT_ID=<tenant> for a tenant-scoped backup, or \
+                     UDB_ALLOW_CROSS_TENANT_BACKUP=true to acknowledge a privileged \
+                     broker-wide backup."
+                ))
+                .into());
+            }
+            Err(violation) => tracing::warn!(
+                violation = %violation,
+                "backup tenant-scope advisory (not enforced in dev mode): set \
+                 UDB_FAIL_CLOSED or UDB_ENV=production to make this fatal"
+            ),
+        }
+    }
+    // urgent_fix #34: resolve the descriptor-derived method-security registry
+    // EAGERLY at startup so a corrupt/empty embedded descriptor fails fast here
+    // (fail-closed) rather than lazily on the first RPC after we are already
+    // serving. `method_security_registry()` aborts on a zero-service / undecodable
+    // manifest via `descriptor_contract_manifest()`.
+    let _ = crate::runtime::service::method_security::method_security_registry();
+
     if !runtime.postgres_configured() {
         return Err(
             "PostgreSQL startup health gate failed: UDB_PG_DSN/DATABASE_URL is required".into(),
@@ -1310,32 +1570,100 @@ pub async fn serve(
         }
     }
     runtime.mark_indeterminate_sagas().await;
-    // Item 3: roll back PostgreSQL 2PC prepared transactions abandoned by a
-    // prior crashed process (presumed-abort recovery), so orphaned PREPAREs
-    // don't hold row locks forever. Grace window via UDB_XA_RECOVERY_GRACE_SECS
-    // (default 300s) leaves in-flight prepares untouched.
+    // Items 3/5/23/24: XA recovery — drive in-doubt ledger rows terminal and
+    // run the ledger-aware presumed-abort sweep over aged `udb-%` prepared
+    // transactions. Runs immediately at startup and then on every
+    // `RecoveryConfig.interval` tick, lease-gated so exactly one node sweeps
+    // at a time. Configured MySQL instances are registered as in-doubt
+    // participants so MySQL `XA RECOVER` xids are driven terminal too. Rows
+    // that keep failing past `RecoveryConfig.max_attempts` are parked as
+    // `manual_review`. Grace window via UDB_XA_RECOVERY_GRACE_SECS (default
+    // 300s) leaves prepares from in-flight requests untouched.
     if let Some(pg_pool) = runtime.pg_pool_clone() {
         let sys_config = crate::runtime::system::SystemCatalogConfig::current();
-        match crate::runtime::xa_recovery::recover_xa_ledger_indoubt(&pg_pool, &sys_config).await {
-            Ok(n) if n > 0 => {
-                tracing::warn!("XA recovery: drove {n} ledger in-doubt transaction(s) terminal")
-            }
-            Ok(_) => {}
-            Err(e) => tracing::warn!("XA ledger recovery sweep failed: {e}"),
-        }
+        let singleton_relation = runtime_config.cdc.lock_log_relation();
+        let recovery_config = crate::runtime::xa_recovery::RecoveryConfig::default();
         let grace = std::env::var("UDB_XA_RECOVERY_GRACE_SECS")
             .ok()
             .and_then(|v| v.parse::<i64>().ok())
             .unwrap_or(300);
-        match crate::runtime::xa_recovery::recover_abandoned_prepared_transactions(&pg_pool, grace)
-            .await
+        #[allow(unused_mut)]
+        let mut registry = crate::runtime::xa_recovery::default_indoubt_registry(&pg_pool);
+        #[cfg(feature = "mysql")]
         {
-            Ok(n) if n > 0 => {
-                tracing::warn!("XA recovery: rolled back {n} abandoned prepared transaction(s)")
+            let mut instance_names: Vec<&String> = runtime.mysql_instances.keys().collect();
+            instance_names.sort();
+            for name in instance_names {
+                if let Some(mysql_pool) = runtime.mysql_instances.get(name) {
+                    registry.register(std::sync::Arc::new(
+                        crate::runtime::xa_recovery::MysqlInDoubtParticipant {
+                            label: format!("mysql:{name}"),
+                            pool: mysql_pool.clone(),
+                        },
+                    ));
+                }
             }
-            Ok(_) => {}
-            Err(e) => tracing::warn!("XA recovery sweep failed: {e}"),
+            // Bare-backend fallback (mirrors the Postgres registration) so
+            // ledger rows labelled plain "mysql" still resolve to the primary.
+            if let Some(mysql_pool) = runtime.mysql_pool_for_instance("primary") {
+                registry.register(std::sync::Arc::new(
+                    crate::runtime::xa_recovery::MysqlInDoubtParticipant {
+                        label: "mysql".to_string(),
+                        pool: mysql_pool.clone(),
+                    },
+                ));
+            }
         }
+        let xa_recovery_lease_ttl = std::cmp::max(
+            recovery_config.interval,
+            crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
+        );
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(recovery_config.interval);
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+            loop {
+                // The first tick completes immediately, preserving the
+                // startup-recovery semantics of the old one-shot call.
+                interval.tick().await;
+                match crate::runtime::singleton::run_once(
+                    &pg_pool,
+                    &singleton_relation,
+                    crate::runtime::singleton::WORKER_XA_RECOVERY,
+                    xa_recovery_lease_ttl,
+                    || async {
+                        crate::runtime::xa_recovery::run_xa_recovery_pass(
+                            &pg_pool,
+                            &sys_config,
+                            &registry,
+                            &recovery_config,
+                            grace,
+                        )
+                        .await
+                    },
+                )
+                .await
+                {
+                    Ok(Some(Ok((ledger, abandoned)))) => {
+                        if ledger > 0 {
+                            tracing::warn!(
+                                "XA recovery: drove {ledger} ledger in-doubt transaction(s) terminal"
+                            );
+                        }
+                        if abandoned > 0 {
+                            tracing::warn!(
+                                "XA recovery: drove {abandoned} aged prepared transaction(s) terminal"
+                            );
+                        }
+                    }
+                    Ok(Some(Err(e))) => tracing::warn!("XA recovery sweep failed: {e}"),
+                    Ok(None) => {
+                        tracing::debug!("XA recovery skipped: singleton lease held by peer")
+                    }
+                    Err(e) => tracing::warn!("XA recovery sweep failed: {e}"),
+                }
+            }
+        });
+        tracing::info!("XA recovery worker started (periodic, lease-gated)");
     }
     if crate::runtime::saga::SagaRecoveryWorker::is_enabled_with_settings(&runtime_config.saga) {
         // NW1-3c: route through the SystemStores registry instead of
@@ -1376,7 +1704,7 @@ pub async fn serve(
         runtime,
         lifecycle_state,
         abac_policies,
-        metrics,
+        metrics.clone(),
         cdc_engine,
         abac_default_allow,
     );
@@ -1418,31 +1746,103 @@ pub async fn serve(
             ProjectionEngine, ProjectionWorker, ReconciliationWorker,
         };
         let config = crate::runtime::system::SystemCatalogConfig::current();
-        let engine = Arc::new(ProjectionEngine::new(
-            pg_pool.clone(),
-            store.clone(),
-            config,
-        ));
+        let engine = Arc::new(ProjectionEngine::new(pg_pool.clone(), config));
         service.projection_engine = Some(Arc::clone(&engine));
 
+        let singleton_relation = service.runtime_snapshot().config().cdc.lock_log_relation();
         if ProjectionWorker::is_enabled() {
             let metrics: Arc<dyn MetricsRecorder> = service.metrics.clone();
-            let worker =
-                ProjectionWorker::new(store.clone(), service.runtime_snapshot().clone(), metrics);
-            tokio::spawn(async move { worker.run_forever().await });
+            let singleton_pool = pg_pool.clone();
+            let singleton_relation = singleton_relation.clone();
+            let runtime = service.runtime_snapshot().clone();
+            let store = store.clone();
+            tokio::spawn(async move {
+                loop {
+                    let metrics = metrics.clone();
+                    let runtime = runtime.clone();
+                    let store = store.clone();
+                    match crate::runtime::singleton::run_while_leader(
+                        &singleton_pool,
+                        &singleton_relation,
+                        crate::runtime::singleton::WORKER_PROJECTION_MATERIALIZER,
+                        crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
+                        || async move {
+                            ProjectionWorker::new(store, runtime, metrics)
+                                .run_forever()
+                                .await;
+                            Ok::<(), String>(())
+                        },
+                    )
+                    .await
+                    {
+                        Ok(Some(Ok(()))) => {}
+                        Ok(Some(Err(err))) => {
+                            tracing::warn!("projection materialization worker exited: {err}")
+                        }
+                        Ok(None) => tracing::debug!(
+                            "projection materialization worker idle: singleton lease held by peer"
+                        ),
+                        Err(err) => tracing::warn!(
+                            "projection materialization worker singleton lease failed: {err}"
+                        ),
+                    }
+                    tokio::time::sleep(crate::runtime::singleton::WORKER_SINGLETON_RETRY_SLEEP)
+                        .await;
+                }
+            });
             tracing::info!("projection materialization worker started");
         }
         if ReconciliationWorker::is_enabled() {
             let metrics: Arc<dyn MetricsRecorder> = service.metrics.clone();
             let active_catalog = service.catalog.active();
-            let worker = ReconciliationWorker::new(
-                pg_pool.clone(),
-                store.clone(),
-                metrics,
-                active_catalog.manifest.clone(),
-                active_catalog.metadata.project_id.clone(),
-            );
-            tokio::spawn(async move { worker.run_forever().await });
+            let manifest = active_catalog.manifest.clone();
+            let project_id = active_catalog.metadata.project_id.clone();
+            let singleton_pool = pg_pool.clone();
+            let singleton_relation = singleton_relation.clone();
+            let worker_pool = pg_pool.clone();
+            let store = store.clone();
+            tokio::spawn(async move {
+                loop {
+                    let metrics = metrics.clone();
+                    let manifest = manifest.clone();
+                    let project_id = project_id.clone();
+                    let store = store.clone();
+                    let worker_pool = worker_pool.clone();
+                    match crate::runtime::singleton::run_while_leader(
+                        &singleton_pool,
+                        &singleton_relation,
+                        crate::runtime::singleton::WORKER_PROJECTION_RECONCILIATION,
+                        crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
+                        || async move {
+                            ReconciliationWorker::new(
+                                worker_pool,
+                                store,
+                                metrics,
+                                manifest,
+                                project_id,
+                            )
+                            .run_forever()
+                            .await;
+                            Ok::<(), String>(())
+                        },
+                    )
+                    .await
+                    {
+                        Ok(Some(Ok(()))) => {}
+                        Ok(Some(Err(err))) => {
+                            tracing::warn!("projection reconciliation worker exited: {err}")
+                        }
+                        Ok(None) => tracing::debug!(
+                            "projection reconciliation worker idle: singleton lease held by peer"
+                        ),
+                        Err(err) => tracing::warn!(
+                            "projection reconciliation worker singleton lease failed: {err}"
+                        ),
+                    }
+                    tokio::time::sleep(crate::runtime::singleton::WORKER_SINGLETON_RETRY_SLEEP)
+                        .await;
+                }
+            });
             tracing::info!("projection reconciliation worker started");
         }
     } else {
@@ -1450,10 +1850,13 @@ pub async fn serve(
             "projection engine disabled: PostgreSQL pool and/or canonical store not available"
         );
     }
-    let (mut health_reporter, health_service) = tonic_health::server::health_reporter();
-    health_reporter
-        .set_serving::<DataBrokerServer<DataBrokerService>>()
-        .await;
+    let health_runtime = service.runtime_snapshot();
+    let health_service = handlers_meta::build_listener_health_service(
+        handlers_meta::HealthPlane::DataBroker,
+        &runtime_config,
+        Some(health_runtime.as_ref()),
+    )
+    .await;
 
     // ── Startup summary log ───────────────────────────────────────────────────
     {
@@ -1485,6 +1888,10 @@ pub async fn serve(
 
     let make_layer = || {
         tower::ServiceBuilder::new()
+            // Phase 10: outermost layer extracts the inbound W3C `traceparent`
+            // into the per-request trace-context task-local so compliance
+            // envelopes carry trace/span ids and CDC publish can re-inject them.
+            .layer(crate::runtime::otel::TraceExtractLayer::new())
             .timeout(grpc_timeout)
             .concurrency_limit(grpc_max_concurrent)
             .into_inner()
@@ -1498,13 +1905,137 @@ pub async fn serve(
         .register_encoded_file_descriptor_set(UDB_FILE_DESCRIPTOR_SET)
         .build_v1()?;
 
+    let native_control_plane_enabled = native_registry::any_control_plane_enabled(&runtime_config);
+    let native_webrtc_peer_enabled = native_registry::any_webrtc_peer_enabled(&runtime_config);
+    if !native_control_plane_enabled && !native_webrtc_peer_enabled {
+        tracing::info!(
+            public_addr = %addr,
+            "native services disabled or no native listener selected; only the public DataBroker listener will start"
+        );
+        server
+            .add_service(reflection_service)
+            .add_service(health_service)
+            .add_service(DataBrokerServer::new(service))
+            .serve_with_shutdown(addr, shutdown_signal())
+            .await?;
+        return Ok(());
+    }
+
     // Stage 1 native auth control plane, seeded from the broker's loaded policies.
     let (authn_service, authz_service, api_key_service) = service.build_auth_services();
+    // Phase 9: spawn the canary evaluator (metric-based auto-rollback of bad
+    // policy canaries before fleet-wide promotion). Detached background task.
+    let _canary_evaluator = authz_service.spawn_canary_evaluator();
+
+    // Phase 3 (I2.1): seed the DB-backed JWT signing-key registry from the env
+    // key when the registry is empty, so existing single-key deployments keep
+    // working and JWKS publishes from the registry. Best-effort (never fatal).
+    let runtime_snapshot = service.runtime_snapshot();
+    authn_service
+        .seed_signing_key_registry(runtime_snapshot.as_ref())
+        .await;
+
+    // Phase 6: auth-plane readiness — surface JWT key / Casbin model
+    // misconfiguration loudly at boot instead of failing the first request.
+    // Non-fatal (an operator may intentionally run sessions-only with no keys);
+    // a failed check logs at error level so it is visible in startup logs.
+    {
+        let readiness =
+            auth_service::readiness::check_auth_readiness(&SecurityConfig::current()).await;
+        for check in &readiness.checks {
+            if check.ok {
+                tracing::info!(check = %check.name, detail = %check.detail, "auth readiness ok");
+            } else {
+                tracing::error!(check = %check.name, detail = %check.detail, "auth readiness FAILED");
+            }
+        }
+        if !readiness.ok {
+            tracing::error!(
+                "auth-plane readiness checks failed; serving anyway — review the failed checks above"
+            );
+            // Emit the operations-plane readiness-failure event so a degraded auth
+            // boot is visible on the audit/ops stream (not only in startup logs).
+            // The body names exactly which probes failed; their `detail` strings
+            // are caller-safe — they never carry key material, by construction in
+            // `readiness.rs`. Best-effort: a publish failure is logged, never
+            // blocks serving.
+            let failed: Vec<serde_json::Value> = readiness
+                .checks
+                .iter()
+                .filter(|c| !c.ok)
+                .map(|c| serde_json::json!({ "check": c.name, "detail": c.detail }))
+                .collect();
+            let failed_names = readiness
+                .checks
+                .iter()
+                .filter(|c| !c.ok)
+                .map(|c| c.name.clone())
+                .collect::<Vec<_>>()
+                .join(",");
+            let operation_id = uuid::Uuid::new_v4().to_string();
+            authn_service
+                .emit_ops_event(
+                    auth_service::events::AuthEvent::new(
+                        auth_service::events::topics::OPS_READINESS_FAILURE,
+                        operation_id.clone(),
+                        String::new(),
+                        serde_json::json!({
+                            "operation_id": operation_id,
+                            "failed_checks": failed,
+                        }),
+                    )
+                    .with_correlation(operation_id.clone())
+                    .with_compliance(
+                        auth_service::events::ComplianceEnvelope {
+                            actor: "udb.auth.readiness".to_string(),
+                            target_resource: "auth-plane".to_string(),
+                            operation: "readiness_check".to_string(),
+                            outcome: "failure".to_string(),
+                            reason_code: if failed_names.is_empty() {
+                                "auth_readiness_failed".to_string()
+                            } else {
+                                format!("auth_readiness_failed:{failed_names}")
+                            },
+                            ..auth_service::events::ComplianceEnvelope::default()
+                        },
+                    ),
+                )
+                .await;
+        }
+    }
+
+    // Phase J: native enterprise IdP control-plane service (providers, SAML,
+    // SCIM, JIT, external-identity linking). Proto-driven Postgres CRUD.
+    let identity_provider_service = service.build_identity_provider_service();
+    // Tier-7 #31: a second IdP impl (same pool/runtime/sink) backs the optional
+    // SCIM 2.0 HTTP/REST surface. Built here while `service` is still in scope
+    // (it is moved into the data-plane server below). The listener only binds
+    // when UDB_SCIM_HTTP_ADDR is set, so this is otherwise an idle Arc.
+    let scim_http_idp = std::sync::Arc::new(service.build_identity_provider_service());
+
+    // Phase 9: versioned control-plane policy distribution (xDS-style) — streams
+    // versioned resources to nodes with ACK/NACK/nonce + ordered delivery.
+    let control_plane_service = service.build_control_plane_service();
+
     // Native tenant + notification + analytics control-plane services
     // (proto-driven Postgres CRUD).
     let tenant_service = service.build_tenant_service();
     let notification_service = service.build_notification_service();
     let analytics_service = service.build_analytics_service();
+    // Native storage (metadata/lifecycle), asset-management (pipelines), and
+    // WebRTC (rooms/peers/tracks/TURN/signaling) control-plane services.
+    let storage_service = service.build_storage_service();
+    let asset_service = service.build_asset_service();
+    let webrtc_service = service.build_webrtc_service();
+
+    // storage→asset auto-trigger: a detached Kafka consumer that turns finalized
+    // storage files (`udb.storage.file.finalized.v1`) into asset pipelines. Only
+    // when the kafka feature is built and brokers are configured.
+    #[cfg(feature = "kafka")]
+    if let Some(brokers) = runtime_config.kafka_brokers.clone() {
+        std::sync::Arc::new(service.build_asset_service())
+            .spawn_storage_finalized_consumer(brokers);
+    }
 
     // Network-isolate the native auth control plane. `AuthnService` /
     // `AuthzService` / `ApiKeyService` trust their caller — they are a policy
@@ -1515,8 +2046,8 @@ pub async fn serve(
     // defaulting to loopback so only trusted same-host PEPs/gateways can reach
     // them out of the box; operators set it to an internal interface for
     // cross-host PEPs.
-    let auth_addr: SocketAddr = match std::env::var("UDB_AUTH_GRPC_ADDR") {
-        Ok(raw) if !raw.trim().is_empty() => raw
+    let auth_addr: SocketAddr = match runtime_config.native_services.control_plane_addr.as_str() {
+        raw if !raw.trim().is_empty() => raw
             .trim()
             .parse()
             .map_err(|err| format!("invalid UDB_AUTH_GRPC_ADDR '{raw}': {err}"))?,
@@ -1533,39 +2064,124 @@ pub async fn serve(
          UDB_AUTH_GRPC_ADDR to expose it on a trusted interface"
     );
 
+    // Peer-facing WebRTC listener. Admin/control-plane WebRTC RPCs stay on the
+    // native listener above; browser/app peers use this separate listener with
+    // room/peer JWT scopes instead of `udb:admin`.
+    let webrtc_addr: SocketAddr = match runtime_config.native_services.webrtc_peer_addr.as_str() {
+        raw if !raw.trim().is_empty() => raw
+            .trim()
+            .parse()
+            .map_err(|err| format!("invalid UDB_WEBRTC_GRPC_ADDR '{raw}': {err}"))?,
+        _ => SocketAddr::new(
+            std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST),
+            addr.port().wrapping_add(20),
+        ),
+    };
+    tracing::info!(
+        %webrtc_addr,
+        public_addr = %addr,
+        "WebRTC peer listener bound with peer-token auth; set \
+         UDB_WEBRTC_GRPC_ADDR to expose it on a trusted interface"
+    );
+
     let mut auth_server = tonic::transport::Server::builder().layer(make_layer());
     if let Some(tls) = tls_config_from_settings(&runtime_config.service.tls)? {
         auth_server = auth_server.tls_config(tls)?;
     }
-    let native_auth = NativeControlPlaneAuth::new();
+    // Phase 1: per-RPC auth is driven by the proto `endpoint_security`
+    // annotations (see `method_security`). A tower layer is used instead of a
+    // tonic interceptor because only the layer sees the request URI/path needed
+    // to select per-method policy.
+    let msec = method_security::MethodSecurityLayer::new().with_metrics(metrics.clone());
+    // Phase 10: gRPC health reporting for the native control-plane listener
+    // (DataBroker already has one); marks each native service Serving iff mounted.
+    let native_health_runtime = service.runtime_snapshot();
+    let native_health = handlers_meta::build_listener_health_service(
+        handlers_meta::HealthPlane::NativeControlPlane,
+        &runtime_config,
+        Some(native_health_runtime.as_ref()),
+    )
+    .await;
     let auth_fut = auth_server
-        .add_service(auth_service::AuthnServiceServer::with_interceptor(
-            authn_service,
-            native_auth.clone(),
-        ))
-        .add_service(auth_service::AuthzServiceServer::with_interceptor(
-            authz_service,
-            native_auth.clone(),
-        ))
-        .add_service(auth_service::ApiKeyServiceServer::with_interceptor(
-            api_key_service,
-            native_auth.clone(),
-        ))
-        .add_service(tenant_service::TenantServiceServer::with_interceptor(
-            tenant_service,
-            native_auth.clone(),
-        ))
+        .add_service(native_health)
+        .add_service(msec.wrap(auth_service::AuthnServiceServer::new(authn_service)))
+        .add_service(msec.wrap(auth_service::AuthzServiceServer::new(authz_service)))
+        .add_service(msec.wrap(auth_service::ApiKeyServiceServer::new(api_key_service)))
+        .add_service(msec.wrap(auth_service::IdentityProviderServiceServer::new(
+            identity_provider_service,
+        )))
+        .add_service(msec.wrap(auth_service::ControlPlaneServiceServer::new(
+            control_plane_service,
+        )))
+        .add_service(msec.wrap(tenant_service::TenantServiceServer::new(tenant_service)))
         .add_service(
-            notification_service::NotificationServiceServer::with_interceptor(
+            msec.wrap(notification_service::NotificationServiceServer::new(
                 notification_service,
-                native_auth.clone(),
-            ),
+            )),
         )
-        .add_service(analytics_service::AnalyticsServiceServer::with_interceptor(
+        .add_service(msec.wrap(analytics_service::AnalyticsServiceServer::new(
             analytics_service,
-            native_auth,
-        ))
+        )))
+        .add_service(msec.wrap(storage_service::StorageServiceServer::new(storage_service)))
+        .add_service(msec.wrap(asset_service::AssetServiceServer::new(asset_service)))
+        // WebRTC ships five tonic services on one (Clone) impl; each mounts with
+        // the same proto-driven method-security layer.
+        .add_service(msec.wrap(webrtc_service::RoomServiceServer::new(
+            webrtc_service.clone(),
+        )))
+        .add_service(msec.wrap(webrtc_service::PeerServiceServer::new(
+            webrtc_service.clone(),
+        )))
+        .add_service(msec.wrap(webrtc_service::TrackServiceServer::new(
+            webrtc_service.clone(),
+        )))
+        .add_service(msec.wrap(webrtc_service::TurnServiceServer::new(
+            webrtc_service.clone(),
+        )))
+        .add_service(msec.wrap(webrtc_service::SignalingServiceServer::new(
+            webrtc_service.clone(),
+        )))
         .serve_with_shutdown(auth_addr, shutdown_signal());
+
+    let mut webrtc_peer_server = tonic::transport::Server::builder().layer(make_layer());
+    if let Some(tls) = tls_config_from_settings(&runtime_config.service.tls)? {
+        webrtc_peer_server = webrtc_peer_server.tls_config(tls)?;
+    }
+    let peer_auth = WebrtcPeerTokenAuth::new();
+    let webrtc_health_runtime = service.runtime_snapshot();
+    let webrtc_peer_health = handlers_meta::build_listener_health_service(
+        handlers_meta::HealthPlane::WebRtcPeer,
+        &runtime_config,
+        Some(webrtc_health_runtime.as_ref()),
+    )
+    .await;
+    let webrtc_peer_fut = webrtc_peer_server
+        .add_service(webrtc_peer_health)
+        .add_service(
+            msec.wrap(webrtc_service::PeerServiceServer::with_interceptor(
+                webrtc_service.clone(),
+                peer_auth.clone(),
+            )),
+        )
+        .add_service(
+            msec.wrap(webrtc_service::TrackServiceServer::with_interceptor(
+                webrtc_service.clone(),
+                peer_auth.clone(),
+            )),
+        )
+        .add_service(
+            msec.wrap(webrtc_service::TurnServiceServer::with_interceptor(
+                webrtc_service.clone(),
+                peer_auth.clone(),
+            )),
+        )
+        .add_service(
+            msec.wrap(webrtc_service::SignalingServiceServer::with_interceptor(
+                webrtc_service,
+                peer_auth,
+            )),
+        )
+        .serve_with_shutdown(webrtc_addr, shutdown_signal());
 
     let main_fut = server
         .add_service(reflection_service)
@@ -1573,8 +2189,35 @@ pub async fn serve(
         .add_service(DataBrokerServer::new(service))
         .serve_with_shutdown(addr, shutdown_signal());
 
-    // Run both listeners; if either exits (error or shutdown), bring down both.
-    tokio::try_join!(main_fut, auth_fut)?;
+    // Optional ws:// signalling bridge (feature `ws-signalling`, activated by
+    // UDB_WS_SIGNALLING_ADDR). Runs as a detached task bound to the same shutdown
+    // signal as tonic: a signalling failure logs but never brings down the data
+    // plane.
+    #[cfg(feature = "ws-signalling")]
+    let _ws_signalling = crate::runtime::signalling::SignalingServer::spawn_from_env_with_shutdown(
+        shutdown_signal(),
+    );
+
+    // Tier-7 #31: optional SCIM 2.0 HTTP/REST surface for off-the-shelf
+    // provisioners (Okta/Entra/OneLogin). OFF by default; binds only when
+    // UDB_SCIM_HTTP_ADDR is set (and a bearer token is configured). Maps HTTP
+    // requests onto the SAME gRPC SCIM handlers, so persistence + IdP events are
+    // not duplicated. Detached task bound to the shared shutdown signal.
+    let _scim_http = auth_service::spawn_scim_http_from_env(scim_http_idp, shutdown_signal());
+
+    // Run selected listeners together; if one exits (error or shutdown), bring down all.
+    match (native_control_plane_enabled, native_webrtc_peer_enabled) {
+        (true, true) => {
+            tokio::try_join!(main_fut, auth_fut, webrtc_peer_fut)?;
+        }
+        (true, false) => {
+            tokio::try_join!(main_fut, auth_fut)?;
+        }
+        (false, true) => {
+            tokio::try_join!(main_fut, webrtc_peer_fut)?;
+        }
+        (false, false) => unreachable!("handled before native service construction"),
+    }
     Ok(())
 }
 
@@ -1600,6 +2243,8 @@ async fn start_cdc_engine(
         tracing::warn!("CDC tailer disabled: primary PostgreSQL DSN is not configured");
         return None;
     };
+    let singleton_pool = pg_pool.clone();
+    let singleton_relation = runtime.config().cdc.lock_log_relation();
 
     #[cfg(feature = "redis")]
     let engine = CdcEngine::new(
@@ -1652,9 +2297,36 @@ async fn start_cdc_engine(
                             slot: "udb-postgres-source".to_string(),
                         });
                     let engine = engine.clone();
+                    let singleton_pool = singleton_pool.clone();
+                    let singleton_relation = singleton_relation.clone();
                     tokio::spawn(async move {
-                        if let Err(err) = engine.tail_source(source).await {
-                            tracing::warn!("CDC Postgres source tailer exited: {err}");
+                        loop {
+                            let engine = engine.clone();
+                            let source = source.clone();
+                            match crate::runtime::singleton::run_while_leader(
+                                &singleton_pool,
+                                &singleton_relation,
+                                crate::runtime::singleton::WORKER_CDC_POSTGRES_SOURCE,
+                                crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
+                                || async move { engine.tail_source(source).await },
+                            )
+                            .await
+                            {
+                                Ok(Some(Ok(()))) => {}
+                                Ok(Some(Err(err))) => {
+                                    tracing::warn!("CDC Postgres source tailer exited: {err}")
+                                }
+                                Ok(None) => tracing::debug!(
+                                    "CDC Postgres source tailer idle: singleton lease held by peer"
+                                ),
+                                Err(err) => {
+                                    tracing::warn!("CDC Postgres source tailer lease failed: {err}")
+                                }
+                            }
+                            tokio::time::sleep(
+                                crate::runtime::singleton::WORKER_SINGLETON_RETRY_SLEEP,
+                            )
+                            .await;
                         }
                     });
                     tracing::info!("CDC Postgres table source tailer started");
@@ -1673,9 +2345,36 @@ async fn start_cdc_engine(
                             server_id,
                         });
                     let engine = engine.clone();
+                    let singleton_pool = singleton_pool.clone();
+                    let singleton_relation = singleton_relation.clone();
                     tokio::spawn(async move {
-                        if let Err(err) = engine.tail_source(source).await {
-                            tracing::warn!("CDC MySQL source tailer exited: {err}");
+                        loop {
+                            let engine = engine.clone();
+                            let source = source.clone();
+                            match crate::runtime::singleton::run_while_leader(
+                                &singleton_pool,
+                                &singleton_relation,
+                                crate::runtime::singleton::WORKER_CDC_MYSQL_SOURCE,
+                                crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
+                                || async move { engine.tail_source(source).await },
+                            )
+                            .await
+                            {
+                                Ok(Some(Ok(()))) => {}
+                                Ok(Some(Err(err))) => {
+                                    tracing::warn!("CDC MySQL source tailer exited: {err}")
+                                }
+                                Ok(None) => tracing::debug!(
+                                    "CDC MySQL source tailer idle: singleton lease held by peer"
+                                ),
+                                Err(err) => {
+                                    tracing::warn!("CDC MySQL source tailer lease failed: {err}")
+                                }
+                            }
+                            tokio::time::sleep(
+                                crate::runtime::singleton::WORKER_SINGLETON_RETRY_SLEEP,
+                            )
+                            .await;
                         }
                     });
                     tracing::info!("CDC MySQL table source tailer started");
@@ -1695,9 +2394,36 @@ async fn start_cdc_engine(
                             collection,
                         });
                     let engine = engine.clone();
+                    let singleton_pool = singleton_pool.clone();
+                    let singleton_relation = singleton_relation.clone();
                     tokio::spawn(async move {
-                        if let Err(err) = engine.tail_source(source).await {
-                            tracing::warn!("CDC MongoDB source tailer exited: {err}");
+                        loop {
+                            let engine = engine.clone();
+                            let source = source.clone();
+                            match crate::runtime::singleton::run_while_leader(
+                                &singleton_pool,
+                                &singleton_relation,
+                                crate::runtime::singleton::WORKER_CDC_MONGODB_SOURCE,
+                                crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
+                                || async move { engine.tail_source(source).await },
+                            )
+                            .await
+                            {
+                                Ok(Some(Ok(()))) => {}
+                                Ok(Some(Err(err))) => {
+                                    tracing::warn!("CDC MongoDB source tailer exited: {err}")
+                                }
+                                Ok(None) => tracing::debug!(
+                                    "CDC MongoDB source tailer idle: singleton lease held by peer"
+                                ),
+                                Err(err) => {
+                                    tracing::warn!("CDC MongoDB source tailer lease failed: {err}")
+                                }
+                            }
+                            tokio::time::sleep(
+                                crate::runtime::singleton::WORKER_SINGLETON_RETRY_SLEEP,
+                            )
+                            .await;
                         }
                     });
                     tracing::info!("CDC MongoDB change-stream source tailer started");
@@ -1744,6 +2470,7 @@ async fn metrics_http_server(
             continue;
         }
 
+        refresh_native_service_degraded_metrics(&runtime, metrics.as_ref());
         let text = metrics.gather_text(&format!(
             "{}{}",
             runtime.cache_metrics_text(),
@@ -1753,25 +2480,101 @@ async fn metrics_http_server(
                 runtime.pg_pool_metrics_text()
             )
         ));
+        let ready_runtime = runtime.clone();
+        let ready_metrics = metrics.clone();
         tokio::spawn(async move {
             // GAP 18: Read the incoming request with a 5-second deadline.
             // Without this, port scanners get a 200 OK with full metrics data
             // before sending a single byte, and slow-loris clients hold
             // connections open indefinitely.
-            let _ = tokio::time::timeout(Duration::from_secs(5), async {
-                let mut buf = [0u8; 256];
-                let _ = socket.read(&mut buf).await;
-            })
-            .await;
-
-            // GAP 18: charset=utf-8 is required by the Prometheus text format spec.
-            let response = format!(
-                "HTTP/1.1 200 OK\r\ncontent-type: text/plain; version=0.0.4; charset=utf-8\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
-                text.len(),
-                text
-            );
+            let mut buf = [0u8; 256];
+            let n = tokio::time::timeout(Duration::from_secs(5), socket.read(&mut buf))
+                .await
+                .ok()
+                .and_then(|r| r.ok())
+                .unwrap_or(0);
+            // Phase 10: the metrics listener also answers HTTP liveness/readiness
+            // probes (`/healthz`, `/readyz`). `/readyz` is derived from the same
+            // ReadinessFacts as GetHealthReport and doctor, so the scrape
+            // listener cannot claim a disconnected static readiness posture.
+            let request = String::from_utf8_lossy(&buf[..n]);
+            let path = request
+                .lines()
+                .next()
+                .and_then(|line| line.split_whitespace().nth(1))
+                .unwrap_or("/");
+            let response = if path == "/healthz" {
+                let body = "ok\n";
+                format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: text/plain; charset=utf-8\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                )
+            } else if path == "/readyz" {
+                let (status, body) =
+                    metrics_readiness_response(&ready_runtime, ready_metrics.as_ref()).await;
+                format!(
+                    "HTTP/1.1 {status}\r\ncontent-type: text/plain; charset=utf-8\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                )
+            } else {
+                // GAP 18: charset=utf-8 is required by the Prometheus text format spec.
+                format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: text/plain; version=0.0.4; charset=utf-8\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+                    text.len(),
+                    text
+                )
+            };
             let _ = socket.write_all(response.as_bytes()).await;
         });
+    }
+}
+
+async fn metrics_readiness_response(
+    runtime: &DataBrokerRuntime,
+    metrics: &dyn MetricsRecorder,
+) -> (&'static str, String) {
+    let native_statuses =
+        crate::runtime::service::native_registry::resolved_native_service_statuses(
+            runtime.config(),
+        );
+    refresh_native_service_degraded_metrics(runtime, metrics);
+    let auth_triples = auth_readiness_triples(&SecurityConfig::current()).await;
+    let readiness = crate::runtime::slo::build_readiness_facts(
+        runtime.init_report(),
+        &native_statuses,
+        &auth_triples,
+    );
+    if readiness.passed() {
+        return ("200 OK", "ready\n".to_string());
+    }
+
+    let mut body = String::from("not ready\n");
+    for err in readiness.errors() {
+        body.push_str("error: ");
+        body.push_str(&err);
+        body.push('\n');
+    }
+    for warn in readiness.warnings() {
+        body.push_str("warning: ");
+        body.push_str(&warn);
+        body.push('\n');
+    }
+    ("503 Service Unavailable", body)
+}
+
+fn refresh_native_service_degraded_metrics(
+    runtime: &DataBrokerRuntime,
+    metrics: &dyn MetricsRecorder,
+) {
+    for status in
+        crate::runtime::service::native_registry::resolved_native_service_statuses(runtime.config())
+    {
+        metrics.set_native_service_degraded(
+            &status.service_id,
+            status.degraded || (status.enabled && !status.mounted),
+        );
     }
 }
 
@@ -1784,6 +2587,31 @@ async fn cdc_metrics_poller(runtime: DataBrokerRuntime, metrics: Arc<dyn Metrics
             metrics.set_cdc_outbox_depth(depth);
         }
     }
+}
+
+fn validate_secure_transport(
+    service: &crate::runtime::config::ServiceSettings,
+) -> Result<(), String> {
+    if service.require_secure_transport && !service.tls.has_server_identity() {
+        return Err(
+            "UDB_REQUIRE_SECURE_TRANSPORT/UDB_TLS_REQUIRED is enabled but TLS cert/key is not configured"
+                .to_string(),
+        );
+    }
+    let any_mtls_required = service.mtls_required
+        || service.broker_to_broker_mtls_required
+        || service.internal_control_mtls_required;
+    if any_mtls_required {
+        if !service.tls.has_server_identity() {
+            return Err("mTLS is enabled but TLS cert/key is not configured".to_string());
+        }
+        if !service.tls.has_client_ca() {
+            return Err(
+                "mTLS is enabled but UDB_MTLS_CLIENT_CA_PEM/PATH is not configured".to_string(),
+            );
+        }
+    }
+    Ok(())
 }
 
 fn tls_config_from_settings(
@@ -2490,5 +3318,7 @@ impl DataBroker for DataBrokerService {
     }
 }
 
+#[cfg(test)]
+mod live_tests;
 #[cfg(test)]
 mod tests;

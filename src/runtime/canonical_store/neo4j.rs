@@ -34,11 +34,12 @@
 //!   bump-and-create atomic, so the counter never advances without a matching
 //!   event row and two concurrent enqueues serialise on the node's write lock.
 //! - **No `ON CONFLICT … WHERE expired OR same-owner`.** Neo4j expresses the
-//!   PG disjunction directly: `MERGE` the `(:UdbLease)` node, then a
-//!   `WITH l WHERE l.owner_id = $o OR l.expires_at <= $now` gate. When the gate
-//!   fails (a live lease held by a different owner) the row is filtered out, the
-//!   `SET` does not run, and `RETURN` yields no rows → `Ok(false)`. See the
-//!   per-case reasoning on `try_acquire_advisory_lease`.
+//!   PG disjunction directly after serialising first-use lease tombstone
+//!   creation through a seeded counter node. The update then uses
+//!   `WITH l WHERE l.owner_id = $o OR l.expires_at <= $now`; when the gate fails
+//!   (a live lease held by a different owner) the row is filtered out, the `SET`
+//!   does not run, and `RETURN` yields no rows → `Ok(false)`. See the per-case
+//!   reasoning on `try_acquire_advisory_lease`.
 //!
 //! ## Test isolation (`run_tag`)
 //!
@@ -60,6 +61,8 @@ use crate::runtime::executors::neo4j::Neo4jExecutor;
 
 /// Well-known id of the single outbox-sequence counter node.
 const OUTBOX_SEQ_ID: &str = "outbox_seq";
+/// Counter node used as a Community-compatible write lock for first lease nodes.
+const LEASE_LOCK_ID: &str = "lease_lock";
 
 pub struct Neo4jCanonicalStore {
     // B.10b phase 2: the four system-store trait impls live in sibling files
@@ -163,13 +166,15 @@ impl CanonicalStore for Neo4jCanonicalStore {
         // Seed the counter node if absent (idempotent MERGE; ON CREATE seeds 0
         // so a fresh store reports outbox_max_seq == 0 — the contract's
         // freshness assertion).
-        self.executor
-            .cypher_rows(
-                "MERGE (c:UdbCounter {run_tag:$tag, id:$id}) \
-                 ON CREATE SET c.seq = 0",
-                json!({ "tag": self.tag(), "id": OUTBOX_SEQ_ID }),
-            )
-            .await?;
+        for id in [OUTBOX_SEQ_ID, LEASE_LOCK_ID] {
+            self.executor
+                .cypher_rows(
+                    "MERGE (c:UdbCounter {run_tag:$tag, id:$id}) \
+                     ON CREATE SET c.seq = 0",
+                    json!({ "tag": self.tag(), "id": id }),
+                )
+                .await?;
+        }
         Ok(())
     }
 
@@ -282,7 +287,9 @@ impl CanonicalStore for Neo4jCanonicalStore {
         // Neo4j has no tables; the lease "table" is a composite RANGE INDEX on
         // (run_tag, lease_name) (Community-compatible; see `ensure_system_tables`
         // for why NOT a uniqueness constraint). Idempotent; safe to call
-        // independently of `ensure_system_tables`.
+        // independently of `ensure_system_tables`. We still call the full
+        // system preparation so the lease-lock counter is seeded before the
+        // acquire path relies on it.
         self.executor
             .cypher_rows(
                 "CREATE INDEX udb_lease_name_idx IF NOT EXISTS \
@@ -290,6 +297,7 @@ impl CanonicalStore for Neo4jCanonicalStore {
                 json!({}),
             )
             .await?;
+        self.ensure_system_tables().await?;
         Ok(())
     }
 
@@ -302,31 +310,34 @@ impl CanonicalStore for Neo4jCanonicalStore {
         // Single-statement atomic acquire mapping PG's
         //   INSERT … ON CONFLICT DO UPDATE … WHERE expired OR same-owner.
         //
-        // `MERGE (l {lease_name})` either creates the node (fresh) or matches the
-        // existing one. The `WITH l WHERE l.owner_id = $o OR l.expires_at <= $now`
-        // gate is the disjunction: when it FAILS (a live lease held by a
-        // DIFFERENT owner) the row is filtered out → SET does not run → RETURN
-        // yields no rows → Ok(false). When it PASSES we SET owner+expires and
-        // RETURN the (now-our) owner → Ok(true).
+        // The first `MATCH` takes a write lock on a seeded counter node before
+        // the lease `MERGE`, so two first-ever acquirers for the same lease name
+        // cannot both create a fresh `UdbLease` node on Community Edition. The
+        // lease node is a tombstone: release only expires it and steady-state
+        // acquisition is an update of the existing node.
         //
         // The six contract cases, verified against this Cypher:
-        //   1. fresh (no node)            → MERGE creates, ON CREATE sets owner=$o;
-        //                                    gate `owner=$o` true → RETURN $o → true.
+        //   1. fresh (no node)            → lock serialises tombstone MERGE, ON
+        //                                    CREATE leaves it expired; gate
+        //                                    `expires<=now` true → SET owner.
         //   2. live, different owner      → MERGE matches; gate `owner=$o`(no) OR
         //                                    `expires<=now`(no) → filtered → no row → false.
         //   3. same owner, refresh        → MERGE matches; gate `owner=$o` true →
         //                                    SET refreshes expires → RETURN $o → true.
-        //   4. wrong-owner release        → handled in release (owner-scoped DELETE).
-        //   5. owner release then reacquire→ release DELETEs the node → next acquire
-        //                                    is case 1 (fresh) → true.
+        //   4. wrong-owner release        → handled in release (owner-scoped expiry).
+        //   5. owner release then reacquire→ release expires the tombstone → next
+        //                                    acquire updates it → true.
         //   6. zero-ttl takeover          → ttl=0 makes expires_at = now; a later
         //                                    acquirer sees `expires<=now` true →
         //                                    SET takes over → RETURN new owner → true.
         // (And the live-different-owner DENY of case 2/5 is the false branch.)
         let now = Self::now_unix_ms();
         let new_expires = now + (ttl.as_millis() as i64);
-        let cypher = "MERGE (l:UdbLease {run_tag:$tag, lease_name:$n}) \
-             ON CREATE SET l.owner_id = $o, l.expires_at = $exp \
+        let cypher = "MATCH (c:UdbCounter {run_tag:$tag, id:$lock_id}) \
+             SET c.seq = coalesce(c.seq, 0) + 1 \
+             WITH c \
+             MERGE (l:UdbLease {run_tag:$tag, lease_name:$n}) \
+             ON CREATE SET l.owner_id = '', l.expires_at = 0, l.released_at = $now \
              WITH l WHERE l.owner_id = $o OR l.expires_at <= $now \
              SET l.owner_id = $o, l.expires_at = $exp \
              RETURN l.owner_id AS owner";
@@ -336,6 +347,7 @@ impl CanonicalStore for Neo4jCanonicalStore {
                 cypher,
                 json!({
                     "tag": self.tag(),
+                    "lock_id": LEASE_LOCK_ID,
                     "n": lease_name,
                     "o": owner_id,
                     "exp": new_expires,
@@ -353,14 +365,17 @@ impl CanonicalStore for Neo4jCanonicalStore {
     }
 
     async fn release_advisory_lease(&self, lease_name: &str, owner_id: &str) -> Result<(), String> {
-        // Owner-scoped DELETE: the `WHERE l.owner_id = $o` makes a wrong-owner
+        // Owner-scoped expiry: the `WHERE l.owner_id = $o` makes a wrong-owner
         // release a no-op (contract case 4) instead of yanking another worker's
-        // lease, and an idempotent delete for the right owner.
+        // lease. We keep the tombstone node so the next acquire updates an
+        // existing lease instead of reopening the fresh-MERGE race.
+        let now = Self::now_unix_ms();
         self.executor
             .cypher_rows(
                 "MATCH (l:UdbLease {run_tag:$tag, lease_name:$n}) \
-                 WHERE l.owner_id = $o DELETE l",
-                json!({ "tag": self.tag(), "n": lease_name, "o": owner_id }),
+                 WHERE l.owner_id = $o \
+                 SET l.expires_at = $now, l.released_at = $now",
+                json!({ "tag": self.tag(), "n": lease_name, "o": owner_id, "now": now }),
             )
             .await?;
         Ok(())

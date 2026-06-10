@@ -208,7 +208,7 @@ var File_udb_core_authz_entity_v1_policy_rule_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_entity_v1_policy_rule_proto_rawDesc = "" +
 	"\n" +
-	"*udb/core/authz/entity/v1/policy_rule.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\"\xdf\x15\n" +
+	"*udb/core/authz/entity/v1/policy_rule.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xfb\x16\n" +
 	"\n" +
 	"PolicyRule\x12I\n" +
 	"\tpolicy_id\x18\x01 \x01(\tB,\x82\xb7\x18(\n" +
@@ -263,7 +263,7 @@ const file_udb_core_authz_entity_v1_policy_rule_proto_rawDesc = "" +
 	"\rresource_type\x12\vVARCHAR(80)R'\n" +
 	"\x1eidx_policy_rules_resource_type\x12\x05BTREEZ<Optional normalized resource type for indexing and filteringR\fresourceType\x12~\n" +
 	"\x0fattributes_json\x18\x12 \x01(\tBU\x82\xb7\x18Q\n" +
-	"\x0fattributes_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ&Policy metadata and matcher attributesx\x01R\x0eattributesJson:\xde\x04\xfa\xb6\x18\xd9\x04\n" +
+	"\x0fattributes_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ&Policy metadata and matcher attributesx\x01R\x0eattributesJson:\xfa\x05\xfa\xb6\x18\xd9\x04\n" +
 	"\fpolicy_rules\x12\tudb_authz\x18\x04 \x01*1Managed authorization rules mapped to policy rows0\x018\x01@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01i\n" +
 	"&idx_policy_rules_active_subject_domain\x12\x05BTREE:'deleted_at IS NULL AND is_active = trueZ\asubjectZ\x06domain\xaa\x01V\n" +
@@ -276,7 +276,8 @@ const file_udb_core_authz_entity_v1_policy_rule_proto_rawDesc = "" +
 	"  NEW.updated_at = CURRENT_TIMESTAMP;\n" +
 	"  RETURN NEW;\n" +
 	"END;\n" +
-	"$$;B\xfa\x01\n" +
+	"$$;\x8a\xb2\x19\x97\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x11authz.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfa\x01\n" +
 	"\x1ccom.udb.core.authz.entity.v1B\x0fPolicyRuleProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
 
 var (

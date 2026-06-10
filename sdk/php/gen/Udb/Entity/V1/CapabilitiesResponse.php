@@ -79,6 +79,10 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>repeated .udb.entity.v1.BackendProtocolSupport backend_protocol_support = 10 [json_name = "backendProtocolSupport"];</code>
      */
     private $backend_protocol_support;
+    /**
+     * Generated from protobuf field <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     */
+    private $native_services;
 
     /**
      * Constructor.
@@ -111,6 +115,7 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      *           Per-backend V2 protocol support. Additive (field 10). Lets a client know,
      *           for a specific backend, whether server-streaming reads / object streaming
      *           are available and which wire encodings that backend can emit.
+     *     @type \Udb\Entity\V1\NativeServiceStatus[] $native_services
      * }
      */
     public function __construct($data = NULL) {
@@ -393,6 +398,28 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\BackendProtocolSupport::class);
         $this->backend_protocol_support = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     * @return RepeatedField<\Udb\Entity\V1\NativeServiceStatus>
+     */
+    public function getNativeServices()
+    {
+        return $this->native_services;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated .udb.entity.v1.NativeServiceStatus native_services = 11 [json_name = "nativeServices"];</code>
+     * @param \Udb\Entity\V1\NativeServiceStatus[] $var
+     * @return $this
+     */
+    public function setNativeServices(array|RepeatedField $var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\NativeServiceStatus::class);
+        $this->native_services = $arr;
 
         return $this;
     }

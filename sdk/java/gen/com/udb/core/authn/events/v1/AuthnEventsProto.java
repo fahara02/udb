@@ -88,111 +88,146 @@ public final class AuthnEventsProto extends com.google.protobuf.GeneratedFile {
       "\n+udb/core/authn/events/v1/authn_events." +
       "proto\022\030udb.core.authn.events.v1\032\037google/" +
       "protobuf/timestamp.proto\032$udb/core/authn" +
-      "/entity/v1/enums.proto\"\365\003\n\023UserRegistere" +
-      "dEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\027\n\007use" +
-      "r_id\030\002 \001(\tR\006userId\022\032\n\010username\030\003 \001(\tR\010us" +
-      "ername\022\024\n\005email\030\004 \001(\tR\005email\022\033\n\ttenant_i" +
-      "d\030\005 \001(\tR\010tenantId\022\035\n\ncreated_by\030\006 \001(\tR\tc" +
-      "reatedBy\022%\n\016correlation_id\030\007 \001(\tR\rcorrel" +
-      "ationId\022;\n\013occurred_at\030\010 \001(\0132\032.google.pr" +
-      "otobuf.TimestampR\noccurredAt\022%\n\016access_s" +
-      "urface\030\t \001(\tR\raccessSurface\022\035\n\nproject_i" +
-      "d\030\n \001(\tR\tprojectId\022H\n\014account_kind\030\013 \001(\016" +
-      "2%.udb.core.authn.entity.v1.AccountKindR" +
-      "\013accountKind\022\'\n\017contact_address\030\014 \001(\tR\016c" +
-      "ontactAddress\022\037\n\013provider_id\030\r \001(\tR\nprov" +
-      "iderId\"\200\004\n\021UserLoggedInEvent\022\031\n\010event_id" +
-      "\030\001 \001(\tR\007eventId\022\027\n\007user_id\030\002 \001(\tR\006userId" +
-      "\022\035\n\nsession_id\030\003 \001(\tR\tsessionId\022H\n\014sessi" +
-      "on_type\030\004 \001(\0162%.udb.core.authn.entity.v1" +
-      ".SessionTypeR\013sessionType\022E\n\013device_type" +
-      "\030\005 \001(\0162$.udb.core.authn.entity.v1.Device" +
-      "TypeR\ndeviceType\022\035\n\nip_address\030\006 \001(\tR\tip" +
-      "Address\022\033\n\ttenant_id\030\007 \001(\tR\010tenantId\022%\n\016" +
-      "correlation_id\030\010 \001(\tR\rcorrelationId\022;\n\013o" +
-      "ccurred_at\030\t \001(\0132\032.google.protobuf.Times" +
-      "tampR\noccurredAt\022\035\n\nproject_id\030\n \001(\tR\tpr" +
-      "ojectId\022!\n\014principal_id\030\013 \001(\tR\013principal" +
-      "Id\022%\n\016access_surface\030\014 \001(\tR\raccessSurfac" +
-      "e\"\255\002\n\023SessionRevokedEvent\022\031\n\010event_id\030\001 " +
+      "/entity/v1/enums.proto\032!udb/core/common/" +
+      "v1/security.proto\"\363\004\n\023UserRegisteredEven" +
+      "t\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\027\n\007user_id\030" +
+      "\002 \001(\tR\006userId\022\032\n\010username\030\003 \001(\tR\010usernam" +
+      "e\022\024\n\005email\030\004 \001(\tR\005email\022\033\n\ttenant_id\030\005 \001" +
+      "(\tR\010tenantId\022\035\n\ncreated_by\030\006 \001(\tR\tcreate" +
+      "dBy\022%\n\016correlation_id\030\007 \001(\tR\rcorrelation" +
+      "Id\022;\n\013occurred_at\030\010 \001(\0132\032.google.protobu" +
+      "f.TimestampR\noccurredAt\022%\n\016access_surfac" +
+      "e\030\t \001(\tR\raccessSurface\022\035\n\nproject_id\030\n \001" +
+      "(\tR\tprojectId\022H\n\014account_kind\030\013 \001(\0162%.ud" +
+      "b.core.authn.entity.v1.AccountKindR\013acco" +
+      "untKind\022\'\n\017contact_address\030\014 \001(\tR\016contac" +
+      "tAddress\022\037\n\013provider_id\030\r \001(\tR\nproviderI" +
+      "d:|\222\262\031x\n,udb.core.authn.events.v1.UserRe" +
+      "gisteredEvent\022\034udb.authn.user.registered" +
+      ".v1\032\ttenant_id\"\010standard*\rat_least_once2" +
+      "\006stable\"\367\004\n\021UserLoggedInEvent\022\031\n\010event_i" +
+      "d\030\001 \001(\tR\007eventId\022\027\n\007user_id\030\002 \001(\tR\006userI" +
+      "d\022\035\n\nsession_id\030\003 \001(\tR\tsessionId\022H\n\014sess" +
+      "ion_type\030\004 \001(\0162%.udb.core.authn.entity.v" +
+      "1.SessionTypeR\013sessionType\022E\n\013device_typ" +
+      "e\030\005 \001(\0162$.udb.core.authn.entity.v1.Devic" +
+      "eTypeR\ndeviceType\022\035\n\nip_address\030\006 \001(\tR\ti" +
+      "pAddress\022\033\n\ttenant_id\030\007 \001(\tR\010tenantId\022%\n" +
+      "\016correlation_id\030\010 \001(\tR\rcorrelationId\022;\n\013" +
+      "occurred_at\030\t \001(\0132\032.google.protobuf.Time" +
+      "stampR\noccurredAt\022\035\n\nproject_id\030\n \001(\tR\tp" +
+      "rojectId\022!\n\014principal_id\030\013 \001(\tR\013principa" +
+      "lId\022%\n\016access_surface\030\014 \001(\tR\raccessSurfa" +
+      "ce:u\222\262\031q\n*udb.core.authn.events.v1.UserL" +
+      "oggedInEvent\022\027udb.authn.user.login.v1\032\tt" +
+      "enant_id\"\010standard*\rat_least_once2\006stabl" +
+      "e\"\253\003\n\023SessionRevokedEvent\022\031\n\010event_id\030\001 " +
       "\001(\tR\007eventId\022\035\n\nsession_id\030\002 \001(\tR\tsessio" +
       "nId\022\027\n\007user_id\030\003 \001(\tR\006userId\022\035\n\nrevoked_" +
       "by\030\004 \001(\tR\trevokedBy\022#\n\rrevoke_reason\030\005 \001" +
       "(\tR\014revokeReason\022%\n\016correlation_id\030\006 \001(\t" +
       "R\rcorrelationId\022;\n\013occurred_at\030\007 \001(\0132\032.g" +
       "oogle.protobuf.TimestampR\noccurredAt\022\033\n\t" +
-      "tenant_id\030\010 \001(\tR\010tenantId\"\311\002\n\017UserLocked" +
-      "Event\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\027\n\007user" +
-      "_id\030\002 \001(\tR\006userId\022#\n\rattempt_count\030\003 \001(\005" +
-      "R\014attemptCount\022\035\n\nip_address\030\004 \001(\tR\tipAd" +
-      "dress\022=\n\014locked_until\030\005 \001(\0132\032.google.pro" +
-      "tobuf.TimestampR\013lockedUntil\022%\n\016correlat" +
-      "ion_id\030\006 \001(\tR\rcorrelationId\022;\n\013occurred_" +
-      "at\030\007 \001(\0132\032.google.protobuf.TimestampR\noc" +
-      "curredAt\022\033\n\ttenant_id\030\010 \001(\tR\010tenantId\"\244\002" +
-      "\n\024PasswordChangedEvent\022\031\n\010event_id\030\001 \001(\t" +
-      "R\007eventId\022\027\n\007user_id\030\002 \001(\tR\006userId\022\031\n\010is" +
-      "_reset\030\003 \001(\010R\007isReset\022\035\n\nchanged_by\030\004 \001(" +
-      "\tR\tchangedBy\022%\n\016correlation_id\030\005 \001(\tR\rco" +
-      "rrelationId\022;\n\013occurred_at\030\006 \001(\0132\032.googl" +
-      "e.protobuf.TimestampR\noccurredAt\022\033\n\ttena" +
-      "nt_id\030\007 \001(\tR\010tenantId\022\035\n\nip_address\030\010 \001(" +
-      "\tR\tipAddress\"\361\002\n\014OTPSentEvent\022\031\n\010event_i" +
-      "d\030\001 \001(\tR\007eventId\022\025\n\006otp_id\030\002 \001(\tR\005otpId\022" +
-      "\027\n\007user_id\030\003 \001(\tR\006userId\022<\n\010otp_type\030\004 \001" +
-      "(\0162!.udb.core.authn.entity.v1.OTPTypeR\007o" +
-      "tpType\022)\n\020delivery_channel\030\005 \001(\tR\017delive" +
-      "ryChannel\022,\n\022expires_in_seconds\030\006 \001(\005R\020e" +
-      "xpiresInSeconds\022%\n\016correlation_id\030\007 \001(\tR" +
-      "\rcorrelationId\022;\n\013occurred_at\030\010 \001(\0132\032.go" +
-      "ogle.protobuf.TimestampR\noccurredAt\022\033\n\tt" +
-      "enant_id\030\t \001(\tR\010tenantId\"\216\003\n\026UserStatusC" +
-      "hangedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\027" +
-      "\n\007user_id\030\002 \001(\tR\006userId\022C\n\nold_status\030\003 " +
-      "\001(\0162$.udb.core.authn.entity.v1.UserStatu" +
-      "sR\toldStatus\022C\n\nnew_status\030\004 \001(\0162$.udb.c" +
-      "ore.authn.entity.v1.UserStatusR\tnewStatu" +
-      "s\022\035\n\nchanged_by\030\005 \001(\tR\tchangedBy\022\026\n\006reas" +
-      "on\030\006 \001(\tR\006reason\022%\n\016correlation_id\030\007 \001(\t" +
-      "R\rcorrelationId\022;\n\013occurred_at\030\010 \001(\0132\032.g" +
+      "tenant_id\030\010 \001(\tR\010tenantId:|\222\262\031x\n,udb.cor" +
+      "e.authn.events.v1.SessionRevokedEvent\022\034u" +
+      "db.authn.session.revoked.v1\032\ttenant_id\"\010" +
+      "standard*\rat_least_once2\006stable\"\277\003\n\017User" +
+      "LockedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\027" +
+      "\n\007user_id\030\002 \001(\tR\006userId\022#\n\rattempt_count" +
+      "\030\003 \001(\005R\014attemptCount\022\035\n\nip_address\030\004 \001(\t" +
+      "R\tipAddress\022=\n\014locked_until\030\005 \001(\0132\032.goog" +
+      "le.protobuf.TimestampR\013lockedUntil\022%\n\016co" +
+      "rrelation_id\030\006 \001(\tR\rcorrelationId\022;\n\013occ" +
+      "urred_at\030\007 \001(\0132\032.google.protobuf.Timesta" +
+      "mpR\noccurredAt\022\033\n\ttenant_id\030\010 \001(\tR\010tenan" +
+      "tId:t\222\262\031p\n(udb.core.authn.events.v1.User" +
+      "LockedEvent\022\030udb.authn.user.locked.v1\032\tt" +
+      "enant_id\"\010standard*\rat_least_once2\006stabl" +
+      "e\"\252\003\n\024PasswordChangedEvent\022\031\n\010event_id\030\001" +
+      " \001(\tR\007eventId\022\027\n\007user_id\030\002 \001(\tR\006userId\022\031" +
+      "\n\010is_reset\030\003 \001(\010R\007isReset\022\035\n\nchanged_by\030" +
+      "\004 \001(\tR\tchangedBy\022%\n\016correlation_id\030\005 \001(\t" +
+      "R\rcorrelationId\022;\n\013occurred_at\030\006 \001(\0132\032.g" +
       "oogle.protobuf.TimestampR\noccurredAt\022\033\n\t" +
-      "tenant_id\030\t \001(\tR\010tenantId\"\337\001\n\022EmailVerif" +
-      "iedEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\027\n\007u" +
-      "ser_id\030\002 \001(\tR\006userId\022\024\n\005email\030\003 \001(\tR\005ema" +
-      "il\022%\n\016correlation_id\030\004 \001(\tR\rcorrelationI" +
-      "d\022\033\n\ttenant_id\030\005 \001(\tR\010tenantId\022;\n\013occurr" +
-      "ed_at\030\006 \001(\0132\032.google.protobuf.TimestampR" +
-      "\noccurredAt\"\227\003\n\033PasswordResetRequestedEv" +
+      "tenant_id\030\007 \001(\tR\010tenantId\022\035\n\nip_address\030" +
+      "\010 \001(\tR\tipAddress:\203\001\222\262\031\177\n-udb.core.authn." +
+      "events.v1.PasswordChangedEvent\022\"udb.auth" +
+      "n.user.password.changed.v1\032\ttenant_id\"\010s" +
+      "tandard*\rat_least_once2\006stable\"\341\003\n\014OTPSe" +
+      "ntEvent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\025\n\006ot" +
+      "p_id\030\002 \001(\tR\005otpId\022\027\n\007user_id\030\003 \001(\tR\006user" +
+      "Id\022<\n\010otp_type\030\004 \001(\0162!.udb.core.authn.en" +
+      "tity.v1.OTPTypeR\007otpType\022)\n\020delivery_cha" +
+      "nnel\030\005 \001(\tR\017deliveryChannel\022,\n\022expires_i" +
+      "n_seconds\030\006 \001(\005R\020expiresInSeconds\022%\n\016cor" +
+      "relation_id\030\007 \001(\tR\rcorrelationId\022;\n\013occu" +
+      "rred_at\030\010 \001(\0132\032.google.protobuf.Timestam" +
+      "pR\noccurredAt\022\033\n\ttenant_id\030\t \001(\tR\010tenant" +
+      "Id:n\222\262\031j\n%udb.core.authn.events.v1.OTPSe" +
+      "ntEvent\022\025udb.authn.otp.sent.v1\032\ttenant_i" +
+      "d\"\010standard*\rat_least_once2\006stable\"\224\004\n\026U" +
+      "serStatusChangedEvent\022\031\n\010event_id\030\001 \001(\tR" +
+      "\007eventId\022\027\n\007user_id\030\002 \001(\tR\006userId\022C\n\nold" +
+      "_status\030\003 \001(\0162$.udb.core.authn.entity.v1" +
+      ".UserStatusR\toldStatus\022C\n\nnew_status\030\004 \001" +
+      "(\0162$.udb.core.authn.entity.v1.UserStatus" +
+      "R\tnewStatus\022\035\n\nchanged_by\030\005 \001(\tR\tchanged" +
+      "By\022\026\n\006reason\030\006 \001(\tR\006reason\022%\n\016correlatio" +
+      "n_id\030\007 \001(\tR\rcorrelationId\022;\n\013occurred_at" +
+      "\030\010 \001(\0132\032.google.protobuf.TimestampR\noccu" +
+      "rredAt\022\033\n\ttenant_id\030\t \001(\tR\010tenantId:\203\001\222\262" +
+      "\031\177\n/udb.core.authn.events.v1.UserStatusC" +
+      "hangedEvent\022 udb.authn.user.status.chang" +
+      "ed.v1\032\ttenant_id\"\010standard*\rat_least_onc" +
+      "e2\006stable\"\340\002\n\022EmailVerifiedEvent\022\031\n\010even" +
+      "t_id\030\001 \001(\tR\007eventId\022\027\n\007user_id\030\002 \001(\tR\006us" +
+      "erId\022\024\n\005email\030\003 \001(\tR\005email\022%\n\016correlatio" +
+      "n_id\030\004 \001(\tR\rcorrelationId\022\033\n\ttenant_id\030\005" +
+      " \001(\tR\010tenantId\022;\n\013occurred_at\030\006 \001(\0132\032.go" +
+      "ogle.protobuf.TimestampR\noccurredAt:\177\222\262\031" +
+      "{\n+udb.core.authn.events.v1.EmailVerifie" +
+      "dEvent\022 udb.authn.user.email.verified.v1" +
+      "\032\ttenant_id\"\010standard*\rat_least_once2\006st" +
+      "able\"\255\004\n\033PasswordResetRequestedEvent\022\031\n\010" +
+      "event_id\030\001 \001(\tR\007eventId\022\027\n\007user_id\030\002 \001(\t" +
+      "R\006userId\022\'\n\017contact_address\030\003 \001(\tR\016conta" +
+      "ctAddress\022\035\n\nip_address\030\004 \001(\tR\tipAddress" +
+      "\022E\n\013device_type\030\005 \001(\0162$.udb.core.authn.e" +
+      "ntity.v1.DeviceTypeR\ndeviceType\022\025\n\006otp_i" +
+      "d\030\006 \001(\tR\005otpId\022%\n\016correlation_id\030\007 \001(\tR\r" +
+      "correlationId\022;\n\013occurred_at\030\010 \001(\0132\032.goo" +
+      "gle.protobuf.TimestampR\noccurredAt\022\033\n\tte" +
+      "nant_id\030\t \001(\tR\010tenantId\022\035\n\nproject_id\030\n " +
+      "\001(\tR\tprojectId:\223\001\222\262\031\216\001\n4udb.core.authn.e" +
+      "vents.v1.PasswordResetRequestedEvent\022*ud" +
+      "b.authn.user.password.reset.requested.v1" +
+      "\032\ttenant_id\"\010standard*\rat_least_once2\006st" +
+      "able\"\325\003\n\"PasswordResetByEmailRequestedEv" +
       "ent\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\027\n\007user_i" +
-      "d\030\002 \001(\tR\006userId\022\'\n\017contact_address\030\003 \001(\t" +
-      "R\016contactAddress\022\035\n\nip_address\030\004 \001(\tR\tip" +
-      "Address\022E\n\013device_type\030\005 \001(\0162$.udb.core." +
-      "authn.entity.v1.DeviceTypeR\ndeviceType\022\025" +
-      "\n\006otp_id\030\006 \001(\tR\005otpId\022%\n\016correlation_id\030" +
-      "\007 \001(\tR\rcorrelationId\022;\n\013occurred_at\030\010 \001(" +
-      "\0132\032.google.protobuf.TimestampR\noccurredA" +
-      "t\022\033\n\ttenant_id\030\t \001(\tR\010tenantId\022\035\n\nprojec" +
-      "t_id\030\n \001(\tR\tprojectId\"\262\002\n\"PasswordResetB" +
-      "yEmailRequestedEvent\022\031\n\010event_id\030\001 \001(\tR\007" +
-      "eventId\022\027\n\007user_id\030\002 \001(\tR\006userId\022!\n\014emai" +
-      "l_masked\030\003 \001(\tR\013emailMasked\022\025\n\006otp_id\030\004 " +
-      "\001(\tR\005otpId\022\035\n\nip_address\030\005 \001(\tR\tipAddres" +
-      "s\022%\n\016correlation_id\030\006 \001(\tR\rcorrelationId" +
-      "\022;\n\013occurred_at\030\007 \001(\0132\032.google.protobuf." +
-      "TimestampR\noccurredAt\022\033\n\ttenant_id\030\010 \001(\t" +
-      "R\010tenantIdB\373\001\n\034com.udb.core.authn.events" +
-      ".v1B\020AuthnEventsProtoP\001ZDgithub.com/faha" +
-      "ra02/udb/sdk/go/gen/udb/core/authn/event" +
-      "s/v1;eventsv1\242\002\004UCAE\252\002\030udb.core.Authn.Ev" +
-      "ents.V1\312\002\030Udb\\Core\\Authn\\Events\\V1\342\002$Udb" +
-      "\\GPBMetadata\\Core\\Authn\\Events\\V1\352\002\034Udb:" +
-      ":Core::Authn::Events::V1b\006proto3"
+      "d\030\002 \001(\tR\006userId\022!\n\014email_masked\030\003 \001(\tR\013e" +
+      "mailMasked\022\025\n\006otp_id\030\004 \001(\tR\005otpId\022\035\n\nip_" +
+      "address\030\005 \001(\tR\tipAddress\022%\n\016correlation_" +
+      "id\030\006 \001(\tR\rcorrelationId\022;\n\013occurred_at\030\007" +
+      " \001(\0132\032.google.protobuf.TimestampR\noccurr" +
+      "edAt\022\033\n\ttenant_id\030\010 \001(\tR\010tenantId:\240\001\222\262\031\233" +
+      "\001\n;udb.core.authn.events.v1.PasswordRese" +
+      "tByEmailRequestedEvent\0220udb.authn.user.e" +
+      "mail.password.reset.requested.v1\032\ttenant" +
+      "_id\"\010standard*\rat_least_once2\006stableB\373\001\n" +
+      "\034com.udb.core.authn.events.v1B\020AuthnEven" +
+      "tsProtoP\001ZDgithub.com/fahara02/udb/sdk/g" +
+      "o/gen/udb/core/authn/events/v1;eventsv1\242" +
+      "\002\004UCAE\252\002\030udb.core.Authn.Events.V1\312\002\030Udb\\" +
+      "Core\\Authn\\Events\\V1\342\002$Udb\\GPBMetadata\\C" +
+      "ore\\Authn\\Events\\V1\352\002\034Udb::Core::Authn::" +
+      "Events::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.TimestampProto.getDescriptor(),
           com.udb.core.authn.entity.v1.EnumsProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_authn_events_v1_UserRegisteredEvent_descriptor =
       getDescriptor().getMessageType(0);
@@ -257,6 +292,12 @@ public final class AuthnEventsProto extends com.google.protobuf.GeneratedFile {
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.authn.entity.v1.EnumsProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
+    com.google.protobuf.ExtensionRegistry registry =
+        com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.messageEventContract);
+    com.google.protobuf.Descriptors.FileDescriptor
+        .internalUpdateFileDescriptor(descriptor, registry);
   }
 
   // @@protoc_insertion_point(outer_class_scope)

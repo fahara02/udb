@@ -96,6 +96,7 @@ pub struct ManifestTable {
     pub enable_rls: bool,
     pub force_rls: bool,
     pub rls_policies: Vec<ManifestPolicy>,
+    pub table_security: ManifestTableSecurity,
     pub soft_delete: bool,
     pub soft_delete_column: String,
     pub audit_fields: bool,
@@ -268,6 +269,24 @@ pub struct ManifestPolicy {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct ManifestTableSecurity {
+    pub tenant_isolation_mode: String,
+    pub project_isolation_mode: String,
+    pub tenant_column: String,
+    pub project_column: String,
+    pub rls_policy_template: String,
+    pub soft_delete_mode: String,
+    pub retention_class: String,
+    pub retention_days: i32,
+    pub audit_mode: String,
+    pub encryption_profile: String,
+    pub pii_profile: String,
+    pub break_glass_visible: bool,
+    pub export_eligible: bool,
+    pub data_residency_policy_ref: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ManifestSecurity {
     pub classification_level: String,
     pub audit_writes: bool,
@@ -372,6 +391,7 @@ struct TableDdl {
     foreign_keys: Vec<ManifestForeignKey>,
     checks: Vec<ManifestCheck>,
     rls_policies: Vec<ManifestPolicy>,
+    table_security: ManifestTableSecurity,
     partition_strategy: String,
     partition_column: String,
     partition_interval: String,
@@ -476,7 +496,16 @@ impl CatalogManifest {
 
         let schema_order = compute_schema_order(&tables);
         let schema_checksums = compute_schema_checksums(&tables)?;
-        let validation_errors = validate_manifest_tables(&tables);
+        let mut validation_errors = validate_manifest_tables(&tables);
+        // urgent_fix #24: hard-fail when `pg_table` and `db_table_security` set the
+        // SAME concern to conflicting values, instead of silently preferring one.
+        // Surfaced as a validation error → Critical drift item → the migration
+        // cannot apply unattended until the divergence is resolved in one place.
+        for schema in schemas {
+            if schema.is_table {
+                validation_errors.extend(pg_table_security_conflicts(schema));
+            }
+        }
         warnings.extend(partitioned_fk_warnings(&tables));
         let checksum_sha256 = checksum_hex(&catalog_ddl(&tables, &stores))?;
 
@@ -867,6 +896,7 @@ fn table_ddl(table: &ManifestTable) -> TableDdl {
         foreign_keys: table.foreign_keys.clone(),
         checks: table.checks.clone(),
         rls_policies: table.rls_policies.clone(),
+        table_security: table.table_security.clone(),
         partition_strategy: table.partition_strategy.clone(),
         partition_column: table.partition_column.clone(),
         partition_interval: table.partition_interval.clone(),

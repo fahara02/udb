@@ -18,8 +18,7 @@
 //!   so a freshly attached database works without rewrites.
 
 use crate::backend::BackendKind;
-use crate::generation::ManifestTable;
-use crate::ir::filter::{ComparisonOp, LogicalFilter};
+use crate::ir::filter::ComparisonOp;
 use crate::ir::operations::{
     ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead, LogicalResourceOp,
     LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
@@ -35,9 +34,6 @@ use super::{CompileContext, CompileError, CompiledRendering, Compiler};
 struct Sqlite;
 
 impl SqlDialect for Sqlite {
-    fn backend() -> BackendKind {
-        BackendKind::Sqlite
-    }
     fn quote(ident: &str) -> String {
         format!("\"{ident}\"")
     }

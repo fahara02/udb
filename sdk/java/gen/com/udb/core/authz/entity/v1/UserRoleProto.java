@@ -43,65 +43,71 @@ public final class UserRoleProto extends com.google.protobuf.GeneratedFile {
       "\n(udb/core/authz/entity/v1/user_role.pro" +
       "to\022\030udb.core.authz.entity.v1\032\037google/pro" +
       "tobuf/timestamp.proto\032\033udb/core/common/v" +
-      "1/db.proto\"\247\016\n\010UserRole\022Q\n\014user_role_id\030" +
-      "\001 \001(\tB/\202\267\030+\n\014user_role_id\022\004UUID\030\001(\001:\021gen" +
-      "_random_uuid()R\nuserRoleId\022\221\001\n\007user_id\030\002" +
-      " \001(\tBx\202\267\030t\n\007user_id\022\004UUID\030\001J4\n\005users\022\007us" +
-      "er_id\032\tudb_authn \0032\025fk_user_roles_user_i" +
-      "dR+\n\032idx_user_roles_user_domain\022\005BTREEZ\006" +
-      "domainR\006userId\022\205\001\n\007role_id\030\003 \001(\tBl\202\267\030h\n\007" +
-      "role_id\022\004UUID\030\001J4\n\005roles\022\007role_id\032\tudb_a" +
-      "uthz \0032\025fk_user_roles_role_idR\037\n\026idx_use" +
-      "r_roles_role_id\022\005BTREER\006roleId\022\227\001\n\006domai" +
-      "n\030\004 \001(\tB\177\202\267\030{\n\006domain\022\014VARCHAR(200)\030\001R\036\n" +
-      "\025idx_user_roles_domain\022\005BTREEZAAuthoriza" +
-      "tion domain such as tenant:tenant_a or p" +
-      "roject:project_aR\006domain\0228\n\013assigned_by\030" +
-      "\005 \001(\tB\027\202\267\030\023\n\013assigned_by\022\004UUIDR\nassigned" +
-      "By\022p\n\013assigned_at\030\006 \001(\0132\032.google.protobu" +
-      "f.TimestampB3\202\267\030/\n\013assigned_at\022\013TIMESTAM" +
-      "PTZ\030\001:\021CURRENT_TIMESTAMPR\nassignedAt\022\220\001\n" +
-      "\nexpires_at\030\007 \001(\0132\032.google.protobuf.Time" +
-      "stampBU\202\267\030Q\n\nexpires_at\022\013TIMESTAMPTZZ6Nu" +
-      "ll means the assignment remains active u" +
-      "ntil revokedR\texpiresAt\022q\n\ncreated_at\030\010 " +
-      "\001(\0132\032.google.protobuf.TimestampB6\202\267\0302\n\nc" +
-      "reated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMEST" +
-      "AMP`\001h\001R\tcreatedAt\022o\n\nupdated_at\030\t \001(\0132\032" +
-      ".google.protobuf.TimestampB4\202\267\0300\n\nupdate" +
+      "1/db.proto\032!udb/core/common/v1/security." +
+      "proto\"\303\017\n\010UserRole\022Q\n\014user_role_id\030\001 \001(\t" +
+      "B/\202\267\030+\n\014user_role_id\022\004UUID\030\001(\001:\021gen_rand" +
+      "om_uuid()R\nuserRoleId\022\221\001\n\007user_id\030\002 \001(\tB" +
+      "x\202\267\030t\n\007user_id\022\004UUID\030\001J4\n\005users\022\007user_id" +
+      "\032\tudb_authn \0032\025fk_user_roles_user_idR+\n\032" +
+      "idx_user_roles_user_domain\022\005BTREEZ\006domai" +
+      "nR\006userId\022\205\001\n\007role_id\030\003 \001(\tBl\202\267\030h\n\007role_" +
+      "id\022\004UUID\030\001J4\n\005roles\022\007role_id\032\tudb_authz " +
+      "\0032\025fk_user_roles_role_idR\037\n\026idx_user_rol" +
+      "es_role_id\022\005BTREER\006roleId\022\227\001\n\006domain\030\004 \001" +
+      "(\tB\177\202\267\030{\n\006domain\022\014VARCHAR(200)\030\001R\036\n\025idx_" +
+      "user_roles_domain\022\005BTREEZAAuthorization " +
+      "domain such as tenant:tenant_a or projec" +
+      "t:project_aR\006domain\0228\n\013assigned_by\030\005 \001(\t" +
+      "B\027\202\267\030\023\n\013assigned_by\022\004UUIDR\nassignedBy\022p\n" +
+      "\013assigned_at\030\006 \001(\0132\032.google.protobuf.Tim" +
+      "estampB3\202\267\030/\n\013assigned_at\022\013TIMESTAMPTZ\030\001" +
+      ":\021CURRENT_TIMESTAMPR\nassignedAt\022\220\001\n\nexpi" +
+      "res_at\030\007 \001(\0132\032.google.protobuf.Timestamp" +
+      "BU\202\267\030Q\n\nexpires_at\022\013TIMESTAMPTZZ6Null me" +
+      "ans the assignment remains active until " +
+      "revokedR\texpiresAt\022q\n\ncreated_at\030\010 \001(\0132\032" +
+      ".google.protobuf.TimestampB6\202\267\0302\n\ncreate" +
       "d_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001" +
-      "R\tupdatedAt\022a\n\ncreated_by\030\n \001(\tBB\202\267\030>\n\nc" +
-      "reated_by\022\014VARCHAR(120)Z\"Identity that c" +
-      "reated this record.R\tcreatedBy\022Y\n\ttenant" +
-      "_id\030\013 \001(\tB<\202\267\0308\n\ttenant_id\022\013VARCHAR(64)\030" +
-      "\001R\034\n\023idx_userrole_tenant\022\005BTREER\010tenantI" +
-      "d:\260\004\372\266\030\253\004\n\nuser_roles\022\tudb_authz\030\003 \001*/Ro" +
-      "le assignments scoped by authorization d" +
-      "omain8\001@\001b^\n\020tenant_isolation\032H(tenant_i" +
-      "d::text = current_setting(\'app.current_t" +
-      "enant_id\', true)::text)(\001\212\001C\n\036uq_user_ro" +
-      "les_user_role_domain\022\005BTREE\030\001Z\007user_idZ\007" +
-      "role_idZ\006domain\252\001T\n\037trg_user_roles_touch" +
-      "_updated_at\022\006BEFORE\032\006UPDATE\"\034udb_authz.t" +
-      "ouch_updated_at()*\003ROW\302\001\332\001\n\031touch_update" +
-      "d_at_function\022\010postgres\032\017before_triggers" +
-      "\"\241\001CREATE OR REPLACE FUNCTION udb_authz." +
-      "touch_updated_at()\nRETURNS trigger\nLANGU" +
-      "AGE plpgsql\nAS $$\nBEGIN\n  NEW.updated_at" +
-      " = CURRENT_TIMESTAMP;\n  RETURN NEW;\nEND;" +
-      "\n$$;B\370\001\n\034com.udb.core.authz.entity.v1B\rU" +
-      "serRoleProtoP\001ZDgithub.com/fahara02/udb/" +
-      "sdk/go/gen/udb/core/authz/entity/v1;enti" +
-      "tyv1\242\002\004UCAE\252\002\030udb.core.Authz.Entity.V1\312\002" +
-      "\030Udb\\Core\\Authz\\Entity\\V1\342\002$Udb\\GPBMetad" +
-      "ata\\Core\\Authz\\Entity\\V1\352\002\034Udb::Core::Au" +
-      "thz::Entity::V1b\006proto3"
+      "h\001R\tcreatedAt\022o\n\nupdated_at\030\t \001(\0132\032.goog" +
+      "le.protobuf.TimestampB4\202\267\0300\n\nupdated_at\022" +
+      "\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001R\tupd" +
+      "atedAt\022a\n\ncreated_by\030\n \001(\tBB\202\267\030>\n\ncreate" +
+      "d_by\022\014VARCHAR(120)Z\"Identity that create" +
+      "d this record.R\tcreatedBy\022Y\n\ttenant_id\030\013" +
+      " \001(\tB<\202\267\0308\n\ttenant_id\022\013VARCHAR(64)\030\001R\034\n\023" +
+      "idx_userrole_tenant\022\005BTREER\010tenantId:\314\005\372" +
+      "\266\030\253\004\n\nuser_roles\022\tudb_authz\030\003 \001*/Role as" +
+      "signments scoped by authorization domain" +
+      "8\001@\001b^\n\020tenant_isolation\032H(tenant_id::te" +
+      "xt = current_setting(\'app.current_tenant" +
+      "_id\', true)::text)(\001\212\001C\n\036uq_user_roles_u" +
+      "ser_role_domain\022\005BTREE\030\001Z\007user_idZ\007role_" +
+      "idZ\006domain\252\001T\n\037trg_user_roles_touch_upda" +
+      "ted_at\022\006BEFORE\032\006UPDATE\"\034udb_authz.touch_" +
+      "updated_at()*\003ROW\302\001\332\001\n\031touch_updated_at_" +
+      "function\022\010postgres\032\017before_triggers\"\241\001CR" +
+      "EATE OR REPLACE FUNCTION udb_authz.touch" +
+      "_updated_at()\nRETURNS trigger\nLANGUAGE p" +
+      "lpgsql\nAS $$\nBEGIN\n  NEW.updated_at = CU" +
+      "RRENT_TIMESTAMP;\n  RETURN NEW;\nEND;\n$$;\212" +
+      "\262\031\227\001\n\006tenant\032\ttenant_id*4tenant_id = cur" +
+      "rent_setting(\'app.current_tenant_id\')2\013s" +
+      "oft_delete:\021authz.operational@\373\023H\002R\006tena" +
+      "ntZ\010standardr\025tenant.data_residencyB\370\001\n\034" +
+      "com.udb.core.authz.entity.v1B\rUserRolePr" +
+      "otoP\001ZDgithub.com/fahara02/udb/sdk/go/ge" +
+      "n/udb/core/authz/entity/v1;entityv1\242\002\004UC" +
+      "AE\252\002\030udb.core.Authz.Entity.V1\312\002\030Udb\\Core" +
+      "\\Authz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\" +
+      "Authz\\Entity\\V1\352\002\034Udb::Core::Authz::Enti" +
+      "ty::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.TimestampProto.getDescriptor(),
           com.udb.core.common.v1.DbProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_authz_entity_v1_UserRole_descriptor =
       getDescriptor().getMessageType(0);
@@ -112,8 +118,10 @@ public final class UserRoleProto extends com.google.protobuf.GeneratedFile {
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);
     registry.add(com.udb.core.common.v1.DbProto.pgTable);
     com.google.protobuf.Descriptors.FileDescriptor

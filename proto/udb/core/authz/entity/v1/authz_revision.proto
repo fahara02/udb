@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package udb.core.authz.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/authz/entity/v1/governance_enums.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authz.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
+option java_package = "com.udb.core.authz.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Entity\\V1";
+
+// A durable, monotonic record of authz state changes for a tenant/project.
+//
+// One AuthzRevision model covers EVERY authz surface — `policy_rules`, `roles`,
+// `user_roles`, and `policy_tuples`. Any mutation (policy edit, role
+// create/update/delete, role assignment/revocation, relationship/grouping
+// tuple write, version activation, rollback) appends a row that bumps
+// `policy_revision` and/or `relationship_revision`. The latest row per
+// tenant/project is the authoritative authz revision used for optimistic
+// concurrency and durable cluster invalidation; nodes reload their snapshot
+// when they observe a higher revision than they last loaded.
+message AuthzRevision {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "authz_revisions"
+    schema_name: "udb_authz"
+    migration_order: 41
+    is_table: true
+    comment: "Durable monotonic authz revisions spanning policies, roles, assignments, and tuples"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: true
+    indexes: {
+      index_name: "idx_authz_revisions_scope_changed"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "project_id"
+      columns: "changed_at"
+    }
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "authz.governance"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string revision_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "revision_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_authz_revisions_tenant" index_type: "BTREE" } }];
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" not_null: true default_value: "''" }];
+  int64 policy_revision = 4 [(udb.core.common.v1.pg_column) = { column_name: "policy_revision" sql_type: "BIGINT" not_null: true default_value: "0" comment: "Monotonic counter for policy + role + assignment changes" }];
+  int64 relationship_revision = 5 [(udb.core.common.v1.pg_column) = { column_name: "relationship_revision" sql_type: "BIGINT" not_null: true default_value: "0" comment: "Monotonic counter for relationship/grouping tuple changes" }];
+  string content_hash = 6 [(udb.core.common.v1.pg_column) = { column_name: "content_hash" sql_type: "VARCHAR(80)" not_null: true default_value: "''" comment: "Content hash of the effective snapshot at this revision" }];
+  string changed_by = 7 [(udb.core.common.v1.pg_column) = { column_name: "changed_by" sql_type: "VARCHAR(160)" not_null: true default_value: "''" }];
+  google.protobuf.Timestamp changed_at = 8 [(udb.core.common.v1.pg_column) = { column_name: "changed_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  AuthzChangeType change_type = 9 [(udb.core.common.v1.pg_column) = { column_name: "change_type" sql_type: "VARCHAR(40)" not_null: true default_value: "'AUTHZ_CHANGE_TYPE_UNSPECIFIED'" }];
+}

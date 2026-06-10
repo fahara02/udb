@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package udb.core.authz.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authz.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
+option java_package = "com.udb.core.authz.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Entity\\V1";
+
+// A persisted record of a what-if policy simulation: a single decision
+// evaluated against both the active snapshot and a draft version, with the
+// active/draft decisions and their diff stored for impact analysis. The
+// simulation runs entirely in memory through the Casbin engine and never
+// mutates durable authorization state.
+message PolicySimulation {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "policy_simulations"
+    schema_name: "udb_authz"
+    migration_order: 42
+    is_table: true
+    comment: "Recorded active-vs-draft policy simulations for impact analysis"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: true
+    indexes: {
+      index_name: "idx_policy_simulations_version"
+      index_type: "BTREE"
+      columns: "policy_version_id"
+    }
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "authz.governance"
+    retention_days: 365
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string simulation_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "simulation_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  string policy_version_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "policy_version_id" sql_type: "UUID" comment: "Draft version simulated against (NULL = active-only)" }];
+  string principal_json = 3 [(udb.core.common.v1.pg_column) = { column_name: "principal_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" }];
+  string resource_json = 4 [(udb.core.common.v1.pg_column) = { column_name: "resource_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" }];
+  string action = 5 [(udb.core.common.v1.pg_column) = { column_name: "action" sql_type: "VARCHAR(120)" not_null: true default_value: "''" }];
+  string purpose = 6 [(udb.core.common.v1.pg_column) = { column_name: "purpose" sql_type: "VARCHAR(120)" not_null: true default_value: "''" }];
+  string active_decision_json = 7 [(udb.core.common.v1.pg_column) = { column_name: "active_decision_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" }];
+  string draft_decision_json = 8 [(udb.core.common.v1.pg_column) = { column_name: "draft_decision_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" }];
+  string diff_json = 9 [(udb.core.common.v1.pg_column) = { column_name: "diff_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" }];
+  string tenant_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policy_simulations_tenant" index_type: "BTREE" } }];
+  string project_id = 11 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" not_null: true default_value: "''" }];
+  google.protobuf.Timestamp created_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+}

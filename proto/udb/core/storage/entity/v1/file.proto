@@ -1,0 +1,129 @@
+syntax = "proto3";
+
+package udb.core.storage.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/common/v1/types.proto";
+import "udb/core/storage/entity/v1/enums.proto";
+
+option csharp_namespace = "udb.core.Storage.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/storage/entity/v1;storagev1";
+option java_package = "com.udb.core.storage.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Storage\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Storage\\Entity\\V1";
+
+// File (object-storage metadata)
+message File {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "files"
+    schema_name: "udb_storage"
+    migration_order: 1
+    is_table: true
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "storage_tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_files_tenant"
+      index_type: "BTREE"
+      columns: "tenant_id"
+    }
+    indexes: {
+      index_name: "idx_files_reference"
+      index_type: "BTREE"
+      columns: "reference_id"
+      columns: "reference_type"
+    }
+    indexes: {
+      index_name: "idx_files_uploaded_by"
+      index_type: "BTREE"
+      columns: "uploaded_by"
+    }
+    cdc_topic: "udb.storage.files.cdc"
+    required_scope: "storage:read"
+    comment: "Object-storage file metadata for uploads, downloads, and lifecycle"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "storage.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string file_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "file_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  // @inject_tag: gorm:"primaryKey;column:file_id;not null"
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "UUID" not_null: true }];
+  // @inject_tag: gorm:"column:tenant_id;not null"
+
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "UUID" }];
+  // @inject_tag: gorm:"column:project_id"
+
+  string filename = 4 [(udb.core.common.v1.pg_column) = { column_name: "filename" sql_type: "VARCHAR(512)" not_null: true }];
+  // @inject_tag: gorm:"column:filename;not null"
+
+  string content_type = 5 [(udb.core.common.v1.pg_column) = { column_name: "content_type" sql_type: "VARCHAR(160)" }];
+  // @inject_tag: gorm:"column:content_type"
+
+  int64 size_bytes = 6 [(udb.core.common.v1.pg_column) = { column_name: "size_bytes" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  // @inject_tag: gorm:"column:size_bytes;not null"
+
+  string backend = 7 [(udb.core.common.v1.pg_column) = { column_name: "backend" sql_type: "VARCHAR(40)" comment: "Object store backend: s3/minio/gcs/azure" }];
+  // @inject_tag: gorm:"column:backend"
+
+  string bucket = 8 [(udb.core.common.v1.pg_column) = { column_name: "bucket" sql_type: "VARCHAR(160)" }];
+  // @inject_tag: gorm:"column:bucket"
+
+  string object_key = 9 [(udb.core.common.v1.pg_column) = { column_name: "object_key" sql_type: "TEXT" not_null: true unique: true index: { index_name: "idx_files_object_key_unique" index_type: "BTREE" unique: true } }];
+  // @inject_tag: gorm:"column:object_key;not null"
+
+  string url = 10 [(udb.core.common.v1.pg_column) = { column_name: "url" sql_type: "TEXT" }];
+  // @inject_tag: gorm:"column:url"
+
+  string cdn_url = 11 [(udb.core.common.v1.pg_column) = { column_name: "cdn_url" sql_type: "TEXT" }];
+  // @inject_tag: gorm:"column:cdn_url"
+
+  FileType file_type = 12 [(udb.core.common.v1.pg_column) = { column_name: "file_type" sql_type: "VARCHAR(20)" }];
+  // @inject_tag: gorm:"column:file_type;serializer:proto_enum"
+
+  string reference_id = 13 [(udb.core.common.v1.pg_column) = { column_name: "reference_id" sql_type: "UUID" }];
+  // @inject_tag: gorm:"column:reference_id"
+
+  string reference_type = 14 [(udb.core.common.v1.pg_column) = { column_name: "reference_type" sql_type: "VARCHAR(80)" }];
+  // @inject_tag: gorm:"column:reference_type"
+
+  bool is_public = 15 [(udb.core.common.v1.pg_column) = { column_name: "is_public" sql_type: "BOOLEAN" not_null: true default_value: "false" }];
+  // @inject_tag: gorm:"column:is_public;not null"
+
+  FileStatus status = 16 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'PENDING'" index: { index_name: "idx_files_status" index_type: "BTREE" } }];
+  // @inject_tag: gorm:"column:status;not null;serializer:proto_enum"
+
+  string checksum = 17 [(udb.core.common.v1.pg_column) = { column_name: "checksum" sql_type: "VARCHAR(160)" }];
+  // @inject_tag: gorm:"column:checksum"
+
+  google.protobuf.Timestamp expires_at = 18 [(udb.core.common.v1.pg_column) = { column_name: "expires_at" sql_type: "TIMESTAMPTZ" }];
+  // @inject_tag: gorm:"column:expires_at"
+
+  string uploaded_by = 19 [(udb.core.common.v1.pg_column) = { column_name: "uploaded_by" sql_type: "UUID" }];
+  // @inject_tag: gorm:"column:uploaded_by"
+
+  udb.core.common.v1.AuditInfo audit_info = 20 [(udb.core.common.v1.pg_column) = { column_name: "audit_info" sql_type: "JSONB" not_null: true default_value: "'{}'::jsonb" is_json: true comment: "Audit trail stored as JSON" }];
+  // @inject_tag: gorm:"column:audit_info;not null"
+
+  google.protobuf.Timestamp deleted_at = 21 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" comment: "Soft delete timestamp" }];
+  string deleted_by = 22 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" comment: "Soft delete actor" }];
+}

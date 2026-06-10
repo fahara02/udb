@@ -1,40 +1,69 @@
 # UDB Documentation
 
-The maintained UDB documentation set. Every page describes the code that exists
-today; the source-of-truth files below are authoritative, and the docs are kept
-in step with them.
 
-**Architecture at a glance** — the root README renders three custom diagrams you
-can reuse:
+```text
+┌────────────────────────────────────────────────────────────────────────────┐
+│                                                                            │
+│    ██    ██  ██████   ██████                                               │
+│    ██    ██  ██   ██  ██   ██                                              │
+│    ██    ██  ██   ██  ██████                                               │
+│    ██    ██  ██   ██  ██   ██                                              │
+│     ██████   ██████   ██████                                               │
+│                                                                            │
+│    UNIVERSAL DATA BROKER                                                   │
+│    gRPC data plane | native control plane | tenant/project scope guard     │
+│                                                                            │
+│    crate v0.3.2 | protocol v1.0.0                                          │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+This directory contains the public documentation for UDB 0.3.2. The guides are
+organized around the product surface: architecture, annotations, integration,
+native services, operations, security, testing, and SDKs.
 
-- [`assets/architecture-pipeline.svg`](assets/architecture-pipeline.svg) — proto to manifest to generation to runtime to 18 backends
-- [`assets/request-flow.svg`](assets/request-flow.svg) — the per-request sequence: authz, admission, IR, execute
-- [`assets/control-plane.svg`](assets/control-plane.svg) — public vs. isolated internal listener topology
+## Guides
 
 | Need | Read |
 |---|---|
-| Current architecture and backend inventory | [architecture.md](architecture.md) |
-| Native control plane (Authn/Authz/ApiKey/Tenant/Notification/Analytics) | [native-services.md](native-services.md) |
-| Proto annotation contract | [annotations.md](annotations.md) |
-| Service and SDK integration | [integration.md](integration.md) |
-| Deployment, operations, reload, backup, and incident drills | [operations.md](operations.md) |
-| Security, audit, encryption, and supply-chain gates | [security.md](security.md) |
-| Test commands and live validation matrix | [testing.md](testing.md) |
+| Project overview | [../README.md](../README.md) |
+| Architecture, request flow, routing, pooling, events, and backend capability | [architecture.md](architecture.md) |
+| Proto annotations | [annotations.md](annotations.md) |
+| Application integration | [integration.md](integration.md) |
+| Native auth, authz, IdP, storage, assets, WebRTC, and SDK facades | [native-services.md](native-services.md) |
+| Production readiness, config, runbooks, SLOs, and validation | [operations.md](operations.md) |
+| Request context, identity, authorization, sensitive data, and compliance profiles | [security.md](security.md) |
+| Testing | [testing.md](testing.md) |
+| SDKs | [../sdk/README.md](../sdk/README.md) |
 
-The root [README.md](../README.md) explains the project at a high level.
-The complete environment template is [../.env.example](../.env.example).
-For the live backend capability matrix, run
-`cargo run --bin udb-proto-parser -- compat-matrix`; it is emitted from
-`src/backend/mod.rs`, the same source used by `GetCapabilities`.
+## Consolidated Topics
 
-## Source Of Truth
+Older narrow pages have been folded into the main guides:
 
-- Backend identity: [../src/backend/mod.rs](../src/backend/mod.rs)
-- Compiled plugin inventory: [../src/backend/plugins/mod.rs](../src/backend/plugins/mod.rs)
-- Runtime config/env overlay: [../src/runtime/config/mod.rs](../src/runtime/config/mod.rs)
-- gRPC service surface: [../src/runtime/service](../src/runtime/service)
-- CLI commands: [../src/cli](../src/cli)
-- Feature graph: [../Cargo.toml](../Cargo.toml)
+| Topic | Consolidated in |
+|---|---|
+| Architecture doctrine, backend matrix, routing, pooling, event contracts, canonical stores | [architecture.md](architecture.md) |
+| Production readiness, runbooks, SLOs, auth production config, HA validation, load/soak, performance baseline | [operations.md](operations.md) |
+| Auth compliance profiles, enterprise identity, sensitive-field handling, request security | [security.md](security.md) |
+| SCIM, WebSocket signalling, SDK facades, native access, storage/assets/WebRTC | [native-services.md](native-services.md) |
+| SDK generation, conformance, language packages, PHP/Laravel publishing | [../sdk/README.md](../sdk/README.md) |
 
-Docs should describe the code that exists now. Internal audit notes and private
-todo files should not be linked from the public documentation set.
+## Diagrams
+
+The maintained diagrams live in [assets](assets/):
+
+- [architecture-pipeline.svg](assets/architecture-pipeline.svg)
+- [request-flow.svg](assets/request-flow.svg)
+- [control-plane.svg](assets/control-plane.svg)
+
+## Generated Docs
+
+- [generated/native-services.md](generated/native-services.md) - native service table
+- [generated/udb-native-contract.json](generated/udb-native-contract.json) - descriptor-derived service contract
+- [generated/authn-authz-rpc-inventory.md](generated/authn-authz-rpc-inventory.md) - auth RPC inventory
+- [generated/authn-authz-sensitive-fields.md](generated/authn-authz-sensitive-fields.md) - sensitive-field inventory
+
+Regenerate descriptor-backed docs with:
+
+```bash
+udb native docs
+udb native manifest
+```

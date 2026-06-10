@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package udb.core.asset.entity.v1;
+
+option csharp_namespace = "udb.core.Asset.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/asset/entity/v1;assetv1";
+option java_package = "com.udb.core.asset.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Asset\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Asset\\Entity\\V1";
+
+enum PipelineStatus {
+  PIPELINE_STATUS_UNSPECIFIED = 0;
+  PIPELINE_STATUS_PENDING = 1;
+  PIPELINE_STATUS_RUNNING = 2;
+  PIPELINE_STATUS_COMPLETED = 3;
+  PIPELINE_STATUS_FAILED = 4;
+}
+
+enum StepStatus {
+  STEP_STATUS_UNSPECIFIED = 0;
+  STEP_STATUS_PENDING = 1;
+  STEP_STATUS_RUNNING = 2;
+  STEP_STATUS_COMPLETED = 3;
+  STEP_STATUS_SKIPPED = 4;
+  STEP_STATUS_FAILED = 5;
+}
+
+enum StepType {
+  STEP_TYPE_UNSPECIFIED = 0;
+  STEP_TYPE_EMBED = 1;
+  STEP_TYPE_THUMBNAIL = 2;
+  STEP_TYPE_RESIZE = 3;
+  STEP_TYPE_TRANSCODE = 4;
+  STEP_TYPE_CAPTION = 5;
+  STEP_TYPE_EXTRACT = 6;
+}
+
+enum AssetStatus {
+  ASSET_STATUS_UNSPECIFIED = 0;
+  ASSET_STATUS_PENDING = 1;
+  ASSET_STATUS_READY = 2;
+  ASSET_STATUS_FAILED = 3;
+}

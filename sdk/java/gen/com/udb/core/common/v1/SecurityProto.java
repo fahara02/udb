@@ -30,8 +30,21 @@ public final class SecurityProto extends com.google.protobuf.GeneratedFile {
     registry.add(com.udb.core.common.v1.SecurityProto.tokenized);
     registry.add(com.udb.core.common.v1.SecurityProto.securityClassification);
     registry.add(com.udb.core.common.v1.SecurityProto.dataCategory);
+    registry.add(com.udb.core.common.v1.SecurityProto.dbColumnSecurity);
     registry.add(com.udb.core.common.v1.SecurityProto.endpointSecurity);
     registry.add(com.udb.core.common.v1.SecurityProto.restContract);
+    registry.add(com.udb.core.common.v1.SecurityProto.sdkSurface);
+    registry.add(com.udb.core.common.v1.SecurityProto.methodCliScaffold);
+    registry.add(com.udb.core.common.v1.SecurityProto.methodEventContract);
+    registry.add(com.udb.core.common.v1.SecurityProto.methodDependencyContract);
+    registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
+    registry.add(com.udb.core.common.v1.SecurityProto.messageEventContract);
+    registry.add(com.udb.core.common.v1.SecurityProto.messageSdkSurface);
+    registry.add(com.udb.core.common.v1.SecurityProto.messageDependencyContract);
+    registry.add(com.udb.core.common.v1.SecurityProto.nativeService);
+    registry.add(com.udb.core.common.v1.SecurityProto.serviceSdkSurface);
+    registry.add(com.udb.core.common.v1.SecurityProto.serviceCliScaffold);
+    registry.add(com.udb.core.common.v1.SecurityProto.serviceDependencyContract);
   }
 
   public static void registerAllExtensions(
@@ -160,6 +173,22 @@ public final class SecurityProto extends com.google.protobuf.GeneratedFile {
           .newFileScopedGeneratedExtension(
         com.udb.core.common.v1.DataCategory.class,
         null);
+  public static final int DB_COLUMN_SECURITY_FIELD_NUMBER = 50033;
+  /**
+   * <pre>
+   * Enterprise contract v1 additive field option. This does not replace the
+   * scalar options above; generators normalize both shapes into one manifest.
+   * </pre>
+   *
+   * <code>extend .google.protobuf.FieldOptions { ... }</code>
+   */
+  public static final
+    com.google.protobuf.GeneratedMessage.GeneratedExtension<
+      com.google.protobuf.DescriptorProtos.FieldOptions,
+      com.udb.core.common.v1.DbColumnSecurityOptions> dbColumnSecurity = com.google.protobuf.GeneratedMessage
+          .newFileScopedGeneratedExtension(
+        com.udb.core.common.v1.DbColumnSecurityOptions.class,
+        com.udb.core.common.v1.DbColumnSecurityOptions.getDefaultInstance());
   public static final int ENDPOINT_SECURITY_FIELD_NUMBER = 51001;
   /**
    * <code>extend .google.protobuf.MethodOptions { ... }</code>
@@ -182,6 +211,138 @@ public final class SecurityProto extends com.google.protobuf.GeneratedFile {
           .newFileScopedGeneratedExtension(
         com.udb.core.common.v1.RestContract.class,
         com.udb.core.common.v1.RestContract.getDefaultInstance());
+  public static final int SDK_SURFACE_FIELD_NUMBER = 51003;
+  /**
+   * <code>extend .google.protobuf.MethodOptions { ... }</code>
+   */
+  public static final
+    com.google.protobuf.GeneratedMessage.GeneratedExtension<
+      com.google.protobuf.DescriptorProtos.MethodOptions,
+      com.udb.core.common.v1.SdkSurfaceOptions> sdkSurface = com.google.protobuf.GeneratedMessage
+          .newFileScopedGeneratedExtension(
+        com.udb.core.common.v1.SdkSurfaceOptions.class,
+        com.udb.core.common.v1.SdkSurfaceOptions.getDefaultInstance());
+  public static final int METHOD_CLI_SCAFFOLD_FIELD_NUMBER = 51004;
+  /**
+   * <code>extend .google.protobuf.MethodOptions { ... }</code>
+   */
+  public static final
+    com.google.protobuf.GeneratedMessage.GeneratedExtension<
+      com.google.protobuf.DescriptorProtos.MethodOptions,
+      com.udb.core.common.v1.CliScaffoldOptions> methodCliScaffold = com.google.protobuf.GeneratedMessage
+          .newFileScopedGeneratedExtension(
+        com.udb.core.common.v1.CliScaffoldOptions.class,
+        com.udb.core.common.v1.CliScaffoldOptions.getDefaultInstance());
+  public static final int METHOD_EVENT_CONTRACT_FIELD_NUMBER = 51005;
+  /**
+   * <code>extend .google.protobuf.MethodOptions { ... }</code>
+   */
+  public static final
+    com.google.protobuf.GeneratedMessage.GeneratedExtension<
+      com.google.protobuf.DescriptorProtos.MethodOptions,
+      com.udb.core.common.v1.EventContractOptions> methodEventContract = com.google.protobuf.GeneratedMessage
+          .newFileScopedGeneratedExtension(
+        com.udb.core.common.v1.EventContractOptions.class,
+        com.udb.core.common.v1.EventContractOptions.getDefaultInstance());
+  public static final int METHOD_DEPENDENCY_CONTRACT_FIELD_NUMBER = 51006;
+  /**
+   * <code>extend .google.protobuf.MethodOptions { ... }</code>
+   */
+  public static final
+    com.google.protobuf.GeneratedMessage.GeneratedExtension<
+      com.google.protobuf.DescriptorProtos.MethodOptions,
+      com.udb.core.common.v1.DependencyContractOptions> methodDependencyContract = com.google.protobuf.GeneratedMessage
+          .newFileScopedGeneratedExtension(
+        com.udb.core.common.v1.DependencyContractOptions.class,
+        com.udb.core.common.v1.DependencyContractOptions.getDefaultInstance());
+  public static final int DB_TABLE_SECURITY_FIELD_NUMBER = 52001;
+  /**
+   * <code>extend .google.protobuf.MessageOptions { ... }</code>
+   */
+  public static final
+    com.google.protobuf.GeneratedMessage.GeneratedExtension<
+      com.google.protobuf.DescriptorProtos.MessageOptions,
+      com.udb.core.common.v1.DbTableSecurityOptions> dbTableSecurity = com.google.protobuf.GeneratedMessage
+          .newFileScopedGeneratedExtension(
+        com.udb.core.common.v1.DbTableSecurityOptions.class,
+        com.udb.core.common.v1.DbTableSecurityOptions.getDefaultInstance());
+  public static final int MESSAGE_EVENT_CONTRACT_FIELD_NUMBER = 52002;
+  /**
+   * <code>extend .google.protobuf.MessageOptions { ... }</code>
+   */
+  public static final
+    com.google.protobuf.GeneratedMessage.GeneratedExtension<
+      com.google.protobuf.DescriptorProtos.MessageOptions,
+      com.udb.core.common.v1.EventContractOptions> messageEventContract = com.google.protobuf.GeneratedMessage
+          .newFileScopedGeneratedExtension(
+        com.udb.core.common.v1.EventContractOptions.class,
+        com.udb.core.common.v1.EventContractOptions.getDefaultInstance());
+  public static final int MESSAGE_SDK_SURFACE_FIELD_NUMBER = 52003;
+  /**
+   * <code>extend .google.protobuf.MessageOptions { ... }</code>
+   */
+  public static final
+    com.google.protobuf.GeneratedMessage.GeneratedExtension<
+      com.google.protobuf.DescriptorProtos.MessageOptions,
+      com.udb.core.common.v1.SdkSurfaceOptions> messageSdkSurface = com.google.protobuf.GeneratedMessage
+          .newFileScopedGeneratedExtension(
+        com.udb.core.common.v1.SdkSurfaceOptions.class,
+        com.udb.core.common.v1.SdkSurfaceOptions.getDefaultInstance());
+  public static final int MESSAGE_DEPENDENCY_CONTRACT_FIELD_NUMBER = 52004;
+  /**
+   * <code>extend .google.protobuf.MessageOptions { ... }</code>
+   */
+  public static final
+    com.google.protobuf.GeneratedMessage.GeneratedExtension<
+      com.google.protobuf.DescriptorProtos.MessageOptions,
+      com.udb.core.common.v1.DependencyContractOptions> messageDependencyContract = com.google.protobuf.GeneratedMessage
+          .newFileScopedGeneratedExtension(
+        com.udb.core.common.v1.DependencyContractOptions.class,
+        com.udb.core.common.v1.DependencyContractOptions.getDefaultInstance());
+  public static final int NATIVE_SERVICE_FIELD_NUMBER = 53001;
+  /**
+   * <code>extend .google.protobuf.ServiceOptions { ... }</code>
+   */
+  public static final
+    com.google.protobuf.GeneratedMessage.GeneratedExtension<
+      com.google.protobuf.DescriptorProtos.ServiceOptions,
+      com.udb.core.common.v1.NativeServiceOptions> nativeService = com.google.protobuf.GeneratedMessage
+          .newFileScopedGeneratedExtension(
+        com.udb.core.common.v1.NativeServiceOptions.class,
+        com.udb.core.common.v1.NativeServiceOptions.getDefaultInstance());
+  public static final int SERVICE_SDK_SURFACE_FIELD_NUMBER = 53002;
+  /**
+   * <code>extend .google.protobuf.ServiceOptions { ... }</code>
+   */
+  public static final
+    com.google.protobuf.GeneratedMessage.GeneratedExtension<
+      com.google.protobuf.DescriptorProtos.ServiceOptions,
+      com.udb.core.common.v1.SdkSurfaceOptions> serviceSdkSurface = com.google.protobuf.GeneratedMessage
+          .newFileScopedGeneratedExtension(
+        com.udb.core.common.v1.SdkSurfaceOptions.class,
+        com.udb.core.common.v1.SdkSurfaceOptions.getDefaultInstance());
+  public static final int SERVICE_CLI_SCAFFOLD_FIELD_NUMBER = 53003;
+  /**
+   * <code>extend .google.protobuf.ServiceOptions { ... }</code>
+   */
+  public static final
+    com.google.protobuf.GeneratedMessage.GeneratedExtension<
+      com.google.protobuf.DescriptorProtos.ServiceOptions,
+      com.udb.core.common.v1.CliScaffoldOptions> serviceCliScaffold = com.google.protobuf.GeneratedMessage
+          .newFileScopedGeneratedExtension(
+        com.udb.core.common.v1.CliScaffoldOptions.class,
+        com.udb.core.common.v1.CliScaffoldOptions.getDefaultInstance());
+  public static final int SERVICE_DEPENDENCY_CONTRACT_FIELD_NUMBER = 53004;
+  /**
+   * <code>extend .google.protobuf.ServiceOptions { ... }</code>
+   */
+  public static final
+    com.google.protobuf.GeneratedMessage.GeneratedExtension<
+      com.google.protobuf.DescriptorProtos.ServiceOptions,
+      com.udb.core.common.v1.DependencyContractOptions> serviceDependencyContract = com.google.protobuf.GeneratedMessage
+          .newFileScopedGeneratedExtension(
+        com.udb.core.common.v1.DependencyContractOptions.class,
+        com.udb.core.common.v1.DependencyContractOptions.getDefaultInstance());
   static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_common_v1_EndpointSecurity_descriptor;
   static final 
@@ -192,6 +353,41 @@ public final class SecurityProto extends com.google.protobuf.GeneratedFile {
   static final 
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_common_v1_RestContract_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_common_v1_NativeServiceOptions_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_common_v1_NativeServiceOptions_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_common_v1_DbTableSecurityOptions_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_common_v1_DbTableSecurityOptions_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_common_v1_DbColumnSecurityOptions_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_common_v1_DbColumnSecurityOptions_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_common_v1_SdkSurfaceOptions_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_common_v1_SdkSurfaceOptions_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_common_v1_CliScaffoldOptions_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_common_v1_CliScaffoldOptions_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_common_v1_EventContractOptions_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_common_v1_EventContractOptions_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_common_v1_DependencyContractOptions_descriptor;
+  static final 
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_common_v1_DependencyContractOptions_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -203,64 +399,246 @@ public final class SecurityProto extends com.google.protobuf.GeneratedFile {
     java.lang.String[] descriptorData = {
       "\n!udb/core/common/v1/security.proto\022\022udb" +
       ".core.common.v1\032 google/protobuf/descrip" +
-      "tor.proto\"\215\002\n\020EndpointSecurity\0220\n\004mode\030\001" +
+      "tor.proto\"\257\006\n\020EndpointSecurity\0220\n\004mode\030\001" +
       " \001(\0162\034.udb.core.common.v1.AuthModeR\004mode" +
       "\022\024\n\005roles\030\002 \003(\tR\005roles\022\026\n\006scopes\030\003 \003(\tR\006" +
       "scopes\022\'\n\017tenant_required\030\004 \001(\010R\016tenantR" +
       "equired\022#\n\rcsrf_required\030\005 \001(\010R\014csrfRequ" +
       "ired\022\035\n\npolicy_ref\030\006 \001(\tR\tpolicyRef\022,\n\022i" +
       "nternal_grpc_only\030\007 \001(\010R\020internalGrpcOnl" +
-      "y\"\250\001\n\014RestContract\022+\n\021response_envelope\030" +
-      "\001 \001(\010R\020responseEnvelope\022\033\n\tapi_error\030\002 \001" +
-      "(\010R\010apiError\022\'\n\017pagination_meta\030\003 \001(\010R\016p" +
-      "aginationMeta\022%\n\016explicit_nulls\030\004 \001(\010R\re" +
-      "xplicitNulls*\207\001\n\010AuthMode\022\031\n\025AUTH_MODE_U" +
-      "NSPECIFIED\020\000\022\024\n\020AUTH_MODE_PUBLIC\020\001\022\024\n\020AU" +
-      "TH_MODE_BEARER\020\002\022\025\n\021AUTH_MODE_API_KEY\020\003\022" +
-      "\035\n\031AUTH_MODE_SERVICE_ACCOUNT\020\004*\335\001\n\026Secur" +
-      "ityClassification\022\'\n#SECURITY_CLASSIFICA" +
-      "TION_UNSPECIFIED\020\000\022\"\n\036SECURITY_CLASSIFIC" +
-      "ATION_PUBLIC\020\001\022$\n SECURITY_CLASSIFICATIO" +
-      "N_INTERNAL\020\002\022(\n$SECURITY_CLASSIFICATION_" +
-      "CONFIDENTIAL\020\003\022&\n\"SECURITY_CLASSIFICATIO" +
-      "N_RESTRICTED\020\004*\330\001\n\014DataCategory\022\035\n\031DATA_" +
-      "CATEGORY_UNSPECIFIED\020\000\022\032\n\026DATA_CATEGORY_" +
-      "PERSONAL\020\001\022\033\n\027DATA_CATEGORY_FINANCIAL\020\002\022" +
-      "\033\n\027DATA_CATEGORY_BIOMETRIC\020\003\022\032\n\026DATA_CAT" +
-      "EGORY_IDENTITY\020\004\022\035\n\031DATA_CATEGORY_OPERAT" +
-      "IONAL\020\005\022\030\n\024DATA_CATEGORY_SYSTEM\020\006:1\n\003pii" +
-      "\022\035.google.protobuf.FieldOptions\030\332\206\003 \001(\010R" +
-      "\003pii:N\n\022encrypted_security\022\035.google.prot" +
-      "obuf.FieldOptions\030\333\206\003 \001(\010R\021encryptedSecu" +
-      "rity:>\n\nlog_masked\022\035.google.protobuf.Fie" +
-      "ldOptions\030\334\206\003 \001(\010R\tlogMasked:B\n\014log_reda" +
-      "cted\022\035.google.protobuf.FieldOptions\030\335\206\003 " +
-      "\001(\010R\013logRedacted:=\n\tsensitive\022\035.google.p" +
-      "rotobuf.FieldOptions\030\336\206\003 \001(\010R\tsensitive:" +
-      "J\n\020requires_consent\022\035.google.protobuf.Fi" +
-      "eldOptions\030\337\206\003 \001(\010R\017requiresConsent:B\n\014d" +
-      "ata_purpose\022\035.google.protobuf.FieldOptio" +
-      "ns\030\340\206\003 \001(\tR\013dataPurpose:F\n\016retention_day" +
-      "s\022\035.google.protobuf.FieldOptions\030\341\206\003 \001(\005" +
-      "R\rretentionDays:=\n\ttokenized\022\035.google.pr" +
-      "otobuf.FieldOptions\030\342\206\003 \001(\010R\ttokenized:\204" +
-      "\001\n\027security_classification\022\035.google.prot" +
-      "obuf.FieldOptions\030\343\206\003 \001(\0162*.udb.core.com" +
-      "mon.v1.SecurityClassificationR\026securityC" +
-      "lassification:f\n\rdata_category\022\035.google." +
-      "protobuf.FieldOptions\030\344\206\003 \001(\0162 .udb.core" +
-      ".common.v1.DataCategoryR\014dataCategory:s\n" +
-      "\021endpoint_security\022\036.google.protobuf.Met" +
-      "hodOptions\030\271\216\003 \001(\0132$.udb.core.common.v1." +
-      "EndpointSecurityR\020endpointSecurity:g\n\rre" +
-      "st_contract\022\036.google.protobuf.MethodOpti" +
-      "ons\030\272\216\003 \001(\0132 .udb.core.common.v1.RestCon" +
-      "tractR\014restContractB\322\001\n\026com.udb.core.com" +
-      "mon.v1B\rSecurityProtoP\001Z>github.com/faha" +
-      "ra02/udb/sdk/go/gen/udb/core/common/v1;c" +
-      "ommonv1\242\002\003UCC\252\002\022udb.core.Common.V1\312\002\022Udb" +
-      "\\Core\\Common\\V1\342\002\036Udb\\GPBMetadata\\Core\\C" +
-      "ommon\\V1\352\002\025Udb::Core::Common::V1b\006proto3"
+      "y\0228\n\030required_assurance_level\030\010 \001(\005R\026req" +
+      "uiredAssuranceLevel\022\\\n\030allowed_credentia" +
+      "l_types\030\t \003(\0162\".udb.core.common.v1.Crede" +
+      "ntialTypeR\026allowedCredentialTypes\0221\n\025rat" +
+      "e_limit_policy_ref\030\n \001(\tR\022rateLimitPolic" +
+      "yRef\022(\n\020abuse_policy_ref\030\013 \001(\tR\016abusePol" +
+      "icyRef\022(\n\020audit_event_type\030\014 \001(\tR\016auditE" +
+      "ventType\022+\n\021decision_resource\030\r \001(\tR\020dec" +
+      "isionResource\022\037\n\013owner_field\030\016 \001(\tR\nowne" +
+      "rField\022!\n\014tenant_field\030\017 \001(\tR\013tenantFiel" +
+      "d\022#\n\rproject_field\030\020 \001(\tR\014projectField\0221" +
+      "\n\024idempotency_required\030\021 \001(\010R\023idempotenc" +
+      "yRequired\0228\n\030request_context_required\030\022 " +
+      "\001(\010R\026requestContextRequired\"\250\001\n\014RestCont" +
+      "ract\022+\n\021response_envelope\030\001 \001(\010R\020respons" +
+      "eEnvelope\022\033\n\tapi_error\030\002 \001(\010R\010apiError\022\'" +
+      "\n\017pagination_meta\030\003 \001(\010R\016paginationMeta\022" +
+      "%\n\016explicit_nulls\030\004 \001(\010R\rexplicitNulls\"\247" +
+      "\006\n\024NativeServiceOptions\022\035\n\nservice_id\030\001 " +
+      "\001(\tR\tserviceId\022,\n\022logical_service_id\030\002 \001" +
+      "(\tR\020logicalServiceId\022(\n\020proto_service_id" +
+      "\030\003 \001(\tR\016protoServiceId\022!\n\014display_name\030\004" +
+      " \001(\tR\013displayName\022\032\n\010category\030\005 \001(\tR\010cat" +
+      "egory\022\'\n\017default_enabled\030\006 \001(\010R\016defaultE" +
+      "nabled\022+\n\021requires_postgres\030\007 \001(\010R\020requi" +
+      "resPostgres\022%\n\016requires_redis\030\010 \001(\010R\rreq" +
+      "uiresRedis\0222\n\025requires_object_store\030\t \001(" +
+      "\010R\023requiresObjectStore\022%\n\016requires_kafka" +
+      "\030\n \001(\010R\rrequiresKafka\022)\n\020requires_featur" +
+      "e\030\013 \001(\tR\017requiresFeature\0226\n\027public_liste" +
+      "ner_allowed\030\014 \001(\010R\025publicListenerAllowed" +
+      "\022C\n\036control_plane_listener_allowed\030\r \001(\010" +
+      "R\033controlPlaneListenerAllowed\0222\n\025peer_li" +
+      "stener_allowed\030\016 \001(\010R\023peerListenerAllowe" +
+      "d\022&\n\017sdk_facade_name\030\017 \001(\tR\rsdkFacadeNam" +
+      "e\022,\n\022cli_scaffold_group\030\020 \001(\tR\020cliScaffo" +
+      "ldGroup\022(\n\020health_check_ref\030\021 \001(\tR\016healt" +
+      "hCheckRef\022%\n\016capability_ref\030\022 \001(\tR\rcapab" +
+      "ilityRef\"\232\005\n\026DbTableSecurityOptions\0222\n\025t" +
+      "enant_isolation_mode\030\001 \001(\tR\023tenantIsolat" +
+      "ionMode\0224\n\026project_isolation_mode\030\002 \001(\tR" +
+      "\024projectIsolationMode\022#\n\rtenant_column\030\003" +
+      " \001(\tR\014tenantColumn\022%\n\016project_column\030\004 \001" +
+      "(\tR\rprojectColumn\022.\n\023rls_policy_template" +
+      "\030\005 \001(\tR\021rlsPolicyTemplate\022(\n\020soft_delete" +
+      "_mode\030\006 \001(\tR\016softDeleteMode\022\'\n\017retention" +
+      "_class\030\007 \001(\tR\016retentionClass\022%\n\016retentio" +
+      "n_days\030\010 \001(\005R\rretentionDays\022<\n\naudit_mod" +
+      "e\030\t \001(\0162\035.udb.core.common.v1.AuditModeR\t" +
+      "auditMode\022-\n\022encryption_profile\030\n \001(\tR\021e" +
+      "ncryptionProfile\022\037\n\013pii_profile\030\013 \001(\tR\np" +
+      "iiProfile\022.\n\023break_glass_visible\030\014 \001(\010R\021" +
+      "breakGlassVisible\022\'\n\017export_eligible\030\r \001" +
+      "(\010R\016exportEligible\0229\n\031data_residency_pol" +
+      "icy_ref\030\016 \001(\tR\026dataResidencyPolicyRef\"\225\005" +
+      "\n\027DbColumnSecurityOptions\022]\n\025secret_clas" +
+      "sification\030\001 \001(\0162(.udb.core.common.v1.Se" +
+      "cretClassificationR\024secretClassification" +
+      "\022?\n\013output_view\030\002 \001(\0162\036.udb.core.common." +
+      "v1.OutputViewR\noutputView\022T\n\022redaction_s" +
+      "trategy\030\003 \001(\0162%.udb.core.common.v1.Redac" +
+      "tionStrategyR\021redactionStrategy\0223\n\025token" +
+      "ization_strategy\030\004 \001(\tR\024tokenizationStra" +
+      "tegy\022)\n\020hashing_strategy\030\005 \001(\tR\017hashingS" +
+      "trategy\022+\n\021hashing_algorithm\030\006 \001(\tR\020hash" +
+      "ingAlgorithm\0220\n\024encryption_key_class\030\007 \001" +
+      "(\tR\022encryptionKeyClass\0221\n\024searchable_enc" +
+      "rypted\030\010 \001(\010R\023searchableEncrypted\022)\n\020uni" +
+      "queness_scope\030\t \001(\tR\017uniquenessScope\022\037\n\013" +
+      "owner_field\030\n \001(\010R\nownerField\022!\n\014tenant_" +
+      "field\030\013 \001(\010R\013tenantField\022#\n\rproject_fiel" +
+      "d\030\014 \001(\010R\014projectField\"\360\003\n\021SdkSurfaceOpti" +
+      "ons\022*\n\021include_in_facade\030\001 \001(\010R\017includeI" +
+      "nFacade\022!\n\014method_alias\030\002 \001(\tR\013methodAli" +
+      "as\022@\n\034required_credential_provider\030\003 \001(\t" +
+      "R\032requiredCredentialProvider\0222\n\025streamin" +
+      "g_helper_type\030\004 \001(\tR\023streamingHelperType" +
+      "\022.\n\023default_deadline_ms\030\005 \001(\005R\021defaultDe" +
+      "adlineMs\0220\n\024default_max_attempts\030\006 \001(\005R\022" +
+      "defaultMaxAttempts\022!\n\014browser_safe\030\007 \001(\010" +
+      "R\013browserSafe\022\037\n\013server_only\030\010 \001(\010R\nserv" +
+      "erOnly\0226\n\027boilerplate_recipe_tags\030\t \003(\tR" +
+      "\025boilerplateRecipeTags\0228\n\030generate_minim" +
+      "al_example\030\n \001(\010R\026generateMinimalExample" +
+      "\"\201\004\n\022CliScaffoldOptions\022)\n\020scaffold_pack" +
+      "age\030\001 \001(\tR\017scaffoldPackage\022\037\n\013import_pat" +
+      "h\030\002 \001(\tR\nimportPath\022!\n\014required_env\030\003 \003(" +
+      "\tR\013requiredEnv\022\'\n\017generated_files\030\004 \003(\tR" +
+      "\016generatedFiles\022\035\n\nroute_name\030\005 \001(\tR\trou" +
+      "teName\022\'\n\017middleware_name\030\006 \001(\tR\016middlew" +
+      "areName\0228\n\030required_native_services\030\007 \003(" +
+      "\tR\026requiredNativeServices\0228\n\030optional_na" +
+      "tive_services\030\010 \003(\tR\026optionalNativeServi" +
+      "ces\022/\n\023secret_placeholders\030\t \003(\tR\022secret" +
+      "Placeholders\0228\n\030post_generation_commands" +
+      "\030\n \003(\tR\026postGenerationCommands\022,\n\022smoke_" +
+      "test_command\030\013 \001(\tR\020smokeTestCommand\"\246\002\n" +
+      "\024EventContractOptions\022\035\n\nevent_type\030\001 \001(" +
+      "\tR\teventType\022!\n\014outbox_topic\030\002 \001(\tR\013outb" +
+      "oxTopic\022.\n\023partition_key_field\030\003 \001(\tR\021pa" +
+      "rtitionKeyField\022:\n\031payload_redaction_pro" +
+      "file\030\004 \001(\tR\027payloadRedactionProfile\022-\n\022d" +
+      "elivery_guarantee\030\005 \001(\tR\021deliveryGuarant" +
+      "ee\0221\n\024replay_compatibility\030\006 \001(\tR\023replay" +
+      "Compatibility\"\355\002\n\031DependencyContractOpti" +
+      "ons\0228\n\030required_native_services\030\001 \003(\tR\026r" +
+      "equiredNativeServices\0228\n\030optional_native" +
+      "_services\030\002 \003(\tR\026optionalNativeServices\022" +
+      "+\n\021required_backends\030\003 \003(\tR\020requiredBack" +
+      "ends\022+\n\021optional_backends\030\004 \003(\tR\020optiona" +
+      "lBackends\022+\n\021required_features\030\005 \003(\tR\020re" +
+      "quiredFeatures\022!\n\014required_env\030\006 \003(\tR\013re" +
+      "quiredEnv\0222\n\025degraded_when_missing\030\007 \003(\t" +
+      "R\023degradedWhenMissing*\207\001\n\010AuthMode\022\031\n\025AU" +
+      "TH_MODE_UNSPECIFIED\020\000\022\024\n\020AUTH_MODE_PUBLI" +
+      "C\020\001\022\024\n\020AUTH_MODE_BEARER\020\002\022\025\n\021AUTH_MODE_A" +
+      "PI_KEY\020\003\022\035\n\031AUTH_MODE_SERVICE_ACCOUNT\020\004*" +
+      "\276\002\n\016CredentialType\022\037\n\033CREDENTIAL_TYPE_UN" +
+      "SPECIFIED\020\000\022\036\n\032CREDENTIAL_TYPE_BEARER_JW" +
+      "T\020\001\022\033\n\027CREDENTIAL_TYPE_SESSION\020\002\022\033\n\027CRED" +
+      "ENTIAL_TYPE_API_KEY\020\003\022#\n\037CREDENTIAL_TYPE" +
+      "_SERVICE_ACCOUNT\020\004\022\030\n\024CREDENTIAL_TYPE_MT" +
+      "LS\020\005\022\030\n\024CREDENTIAL_TYPE_OIDC\020\006\022\030\n\024CREDEN" +
+      "TIAL_TYPE_SAML\020\007\022\034\n\030CREDENTIAL_TYPE_WEBA" +
+      "UTHN\020\010\022 \n\034CREDENTIAL_TYPE_EXTERNAL_JWT\020\t" +
+      "*\203\001\n\tAuditMode\022\032\n\026AUDIT_MODE_UNSPECIFIED" +
+      "\020\000\022\023\n\017AUDIT_MODE_NONE\020\001\022\027\n\023AUDIT_MODE_MU" +
+      "TATION\020\002\022\027\n\023AUDIT_MODE_DECISION\020\003\022\023\n\017AUD" +
+      "IT_MODE_FULL\020\004*\370\002\n\024SecretClassification\022" +
+      "%\n!SECRET_CLASSIFICATION_UNSPECIFIED\020\000\022 " +
+      "\n\034SECRET_CLASSIFICATION_PUBLIC\020\001\022\"\n\036SECR" +
+      "ET_CLASSIFICATION_INTERNAL\020\002\022$\n SECRET_C" +
+      "LASSIFICATION_CREDENTIAL\020\003\022\037\n\033SECRET_CLA" +
+      "SSIFICATION_TOKEN\020\004\022\035\n\031SECRET_CLASSIFICA" +
+      "TION_KEY\020\005\022#\n\037SECRET_CLASSIFICATION_BIOM" +
+      "ETRIC\020\006\022\"\n\036SECRET_CLASSIFICATION_IDENTIT" +
+      "Y\020\007\022\035\n\031SECRET_CLASSIFICATION_PII\020\010\022%\n!SE" +
+      "CRET_CLASSIFICATION_OPERATIONAL\020\t*\272\001\n\nOu" +
+      "tputView\022\033\n\027OUTPUT_VIEW_UNSPECIFIED\020\000\022\034\n" +
+      "\030OUTPUT_VIEW_STORAGE_ONLY\020\001\022\026\n\022OUTPUT_VI" +
+      "EW_PUBLIC\020\002\022\024\n\020OUTPUT_VIEW_SELF\020\003\022\025\n\021OUT" +
+      "PUT_VIEW_ADMIN\020\004\022\025\n\021OUTPUT_VIEW_AUDIT\020\005\022" +
+      "\025\n\021OUTPUT_VIEW_NEVER\020\006*\320\001\n\021RedactionStra" +
+      "tegy\022\"\n\036REDACTION_STRATEGY_UNSPECIFIED\020\000" +
+      "\022\033\n\027REDACTION_STRATEGY_NONE\020\001\022\033\n\027REDACTI" +
+      "ON_STRATEGY_MASK\020\002\022\035\n\031REDACTION_STRATEGY" +
+      "_REDACT\020\003\022 \n\034REDACTION_STRATEGY_HASH_ONL" +
+      "Y\020\004\022\034\n\030REDACTION_STRATEGY_LAST4\020\005*\335\001\n\026Se" +
+      "curityClassification\022\'\n#SECURITY_CLASSIF" +
+      "ICATION_UNSPECIFIED\020\000\022\"\n\036SECURITY_CLASSI" +
+      "FICATION_PUBLIC\020\001\022$\n SECURITY_CLASSIFICA" +
+      "TION_INTERNAL\020\002\022(\n$SECURITY_CLASSIFICATI" +
+      "ON_CONFIDENTIAL\020\003\022&\n\"SECURITY_CLASSIFICA" +
+      "TION_RESTRICTED\020\004*\330\001\n\014DataCategory\022\035\n\031DA" +
+      "TA_CATEGORY_UNSPECIFIED\020\000\022\032\n\026DATA_CATEGO" +
+      "RY_PERSONAL\020\001\022\033\n\027DATA_CATEGORY_FINANCIAL" +
+      "\020\002\022\033\n\027DATA_CATEGORY_BIOMETRIC\020\003\022\032\n\026DATA_" +
+      "CATEGORY_IDENTITY\020\004\022\035\n\031DATA_CATEGORY_OPE" +
+      "RATIONAL\020\005\022\030\n\024DATA_CATEGORY_SYSTEM\020\006:1\n\003" +
+      "pii\022\035.google.protobuf.FieldOptions\030\332\206\003 \001" +
+      "(\010R\003pii:N\n\022encrypted_security\022\035.google.p" +
+      "rotobuf.FieldOptions\030\333\206\003 \001(\010R\021encryptedS" +
+      "ecurity:>\n\nlog_masked\022\035.google.protobuf." +
+      "FieldOptions\030\334\206\003 \001(\010R\tlogMasked:B\n\014log_r" +
+      "edacted\022\035.google.protobuf.FieldOptions\030\335" +
+      "\206\003 \001(\010R\013logRedacted:=\n\tsensitive\022\035.googl" +
+      "e.protobuf.FieldOptions\030\336\206\003 \001(\010R\tsensiti" +
+      "ve:J\n\020requires_consent\022\035.google.protobuf" +
+      ".FieldOptions\030\337\206\003 \001(\010R\017requiresConsent:B" +
+      "\n\014data_purpose\022\035.google.protobuf.FieldOp" +
+      "tions\030\340\206\003 \001(\tR\013dataPurpose:F\n\016retention_" +
+      "days\022\035.google.protobuf.FieldOptions\030\341\206\003 " +
+      "\001(\005R\rretentionDays:=\n\ttokenized\022\035.google" +
+      ".protobuf.FieldOptions\030\342\206\003 \001(\010R\ttokenize" +
+      "d:\204\001\n\027security_classification\022\035.google.p" +
+      "rotobuf.FieldOptions\030\343\206\003 \001(\0162*.udb.core." +
+      "common.v1.SecurityClassificationR\026securi" +
+      "tyClassification:f\n\rdata_category\022\035.goog" +
+      "le.protobuf.FieldOptions\030\344\206\003 \001(\0162 .udb.c" +
+      "ore.common.v1.DataCategoryR\014dataCategory" +
+      ":z\n\022db_column_security\022\035.google.protobuf" +
+      ".FieldOptions\030\361\206\003 \001(\0132+.udb.core.common." +
+      "v1.DbColumnSecurityOptionsR\020dbColumnSecu" +
+      "rity:s\n\021endpoint_security\022\036.google.proto" +
+      "buf.MethodOptions\030\271\216\003 \001(\0132$.udb.core.com" +
+      "mon.v1.EndpointSecurityR\020endpointSecurit" +
+      "y:g\n\rrest_contract\022\036.google.protobuf.Met" +
+      "hodOptions\030\272\216\003 \001(\0132 .udb.core.common.v1." +
+      "RestContractR\014restContract:h\n\013sdk_surfac" +
+      "e\022\036.google.protobuf.MethodOptions\030\273\216\003 \001(" +
+      "\0132%.udb.core.common.v1.SdkSurfaceOptions" +
+      "R\nsdkSurface:x\n\023method_cli_scaffold\022\036.go" +
+      "ogle.protobuf.MethodOptions\030\274\216\003 \001(\0132&.ud" +
+      "b.core.common.v1.CliScaffoldOptionsR\021met" +
+      "hodCliScaffold:~\n\025method_event_contract\022" +
+      "\036.google.protobuf.MethodOptions\030\275\216\003 \001(\0132" +
+      "(.udb.core.common.v1.EventContractOption" +
+      "sR\023methodEventContract:\215\001\n\032method_depend" +
+      "ency_contract\022\036.google.protobuf.MethodOp" +
+      "tions\030\276\216\003 \001(\0132-.udb.core.common.v1.Depen" +
+      "dencyContractOptionsR\030methodDependencyCo" +
+      "ntract:y\n\021db_table_security\022\037.google.pro" +
+      "tobuf.MessageOptions\030\241\226\003 \001(\0132*.udb.core." +
+      "common.v1.DbTableSecurityOptionsR\017dbTabl" +
+      "eSecurity:\201\001\n\026message_event_contract\022\037.g" +
+      "oogle.protobuf.MessageOptions\030\242\226\003 \001(\0132(." +
+      "udb.core.common.v1.EventContractOptionsR" +
+      "\024messageEventContract:x\n\023message_sdk_sur" +
+      "face\022\037.google.protobuf.MessageOptions\030\243\226" +
+      "\003 \001(\0132%.udb.core.common.v1.SdkSurfaceOpt" +
+      "ionsR\021messageSdkSurface:\220\001\n\033message_depe" +
+      "ndency_contract\022\037.google.protobuf.Messag" +
+      "eOptions\030\244\226\003 \001(\0132-.udb.core.common.v1.De" +
+      "pendencyContractOptionsR\031messageDependen" +
+      "cyContract:r\n\016native_service\022\037.google.pr" +
+      "otobuf.ServiceOptions\030\211\236\003 \001(\0132(.udb.core" +
+      ".common.v1.NativeServiceOptionsR\rnativeS" +
+      "ervice:x\n\023service_sdk_surface\022\037.google.p" +
+      "rotobuf.ServiceOptions\030\212\236\003 \001(\0132%.udb.cor" +
+      "e.common.v1.SdkSurfaceOptionsR\021serviceSd" +
+      "kSurface:{\n\024service_cli_scaffold\022\037.googl" +
+      "e.protobuf.ServiceOptions\030\213\236\003 \001(\0132&.udb." +
+      "core.common.v1.CliScaffoldOptionsR\022servi" +
+      "ceCliScaffold:\220\001\n\033service_dependency_con" +
+      "tract\022\037.google.protobuf.ServiceOptions\030\214" +
+      "\236\003 \001(\0132-.udb.core.common.v1.DependencyCo" +
+      "ntractOptionsR\031serviceDependencyContract" +
+      "B\322\001\n\026com.udb.core.common.v1B\rSecurityPro" +
+      "toP\001Z>github.com/fahara02/udb/sdk/go/gen" +
+      "/udb/core/common/v1;commonv1\242\002\003UCC\252\002\022udb" +
+      ".core.Common.V1\312\002\022Udb\\Core\\Common\\V1\342\002\036U" +
+      "db\\GPBMetadata\\Core\\Common\\V1\352\002\025Udb::Cor" +
+      "e::Common::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -272,13 +650,55 @@ public final class SecurityProto extends com.google.protobuf.GeneratedFile {
     internal_static_udb_core_common_v1_EndpointSecurity_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_common_v1_EndpointSecurity_descriptor,
-        new java.lang.String[] { "Mode", "Roles", "Scopes", "TenantRequired", "CsrfRequired", "PolicyRef", "InternalGrpcOnly", });
+        new java.lang.String[] { "Mode", "Roles", "Scopes", "TenantRequired", "CsrfRequired", "PolicyRef", "InternalGrpcOnly", "RequiredAssuranceLevel", "AllowedCredentialTypes", "RateLimitPolicyRef", "AbusePolicyRef", "AuditEventType", "DecisionResource", "OwnerField", "TenantField", "ProjectField", "IdempotencyRequired", "RequestContextRequired", });
     internal_static_udb_core_common_v1_RestContract_descriptor =
       getDescriptor().getMessageType(1);
     internal_static_udb_core_common_v1_RestContract_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_common_v1_RestContract_descriptor,
         new java.lang.String[] { "ResponseEnvelope", "ApiError", "PaginationMeta", "ExplicitNulls", });
+    internal_static_udb_core_common_v1_NativeServiceOptions_descriptor =
+      getDescriptor().getMessageType(2);
+    internal_static_udb_core_common_v1_NativeServiceOptions_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_common_v1_NativeServiceOptions_descriptor,
+        new java.lang.String[] { "ServiceId", "LogicalServiceId", "ProtoServiceId", "DisplayName", "Category", "DefaultEnabled", "RequiresPostgres", "RequiresRedis", "RequiresObjectStore", "RequiresKafka", "RequiresFeature", "PublicListenerAllowed", "ControlPlaneListenerAllowed", "PeerListenerAllowed", "SdkFacadeName", "CliScaffoldGroup", "HealthCheckRef", "CapabilityRef", });
+    internal_static_udb_core_common_v1_DbTableSecurityOptions_descriptor =
+      getDescriptor().getMessageType(3);
+    internal_static_udb_core_common_v1_DbTableSecurityOptions_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_common_v1_DbTableSecurityOptions_descriptor,
+        new java.lang.String[] { "TenantIsolationMode", "ProjectIsolationMode", "TenantColumn", "ProjectColumn", "RlsPolicyTemplate", "SoftDeleteMode", "RetentionClass", "RetentionDays", "AuditMode", "EncryptionProfile", "PiiProfile", "BreakGlassVisible", "ExportEligible", "DataResidencyPolicyRef", });
+    internal_static_udb_core_common_v1_DbColumnSecurityOptions_descriptor =
+      getDescriptor().getMessageType(4);
+    internal_static_udb_core_common_v1_DbColumnSecurityOptions_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_common_v1_DbColumnSecurityOptions_descriptor,
+        new java.lang.String[] { "SecretClassification", "OutputView", "RedactionStrategy", "TokenizationStrategy", "HashingStrategy", "HashingAlgorithm", "EncryptionKeyClass", "SearchableEncrypted", "UniquenessScope", "OwnerField", "TenantField", "ProjectField", });
+    internal_static_udb_core_common_v1_SdkSurfaceOptions_descriptor =
+      getDescriptor().getMessageType(5);
+    internal_static_udb_core_common_v1_SdkSurfaceOptions_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_common_v1_SdkSurfaceOptions_descriptor,
+        new java.lang.String[] { "IncludeInFacade", "MethodAlias", "RequiredCredentialProvider", "StreamingHelperType", "DefaultDeadlineMs", "DefaultMaxAttempts", "BrowserSafe", "ServerOnly", "BoilerplateRecipeTags", "GenerateMinimalExample", });
+    internal_static_udb_core_common_v1_CliScaffoldOptions_descriptor =
+      getDescriptor().getMessageType(6);
+    internal_static_udb_core_common_v1_CliScaffoldOptions_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_common_v1_CliScaffoldOptions_descriptor,
+        new java.lang.String[] { "ScaffoldPackage", "ImportPath", "RequiredEnv", "GeneratedFiles", "RouteName", "MiddlewareName", "RequiredNativeServices", "OptionalNativeServices", "SecretPlaceholders", "PostGenerationCommands", "SmokeTestCommand", });
+    internal_static_udb_core_common_v1_EventContractOptions_descriptor =
+      getDescriptor().getMessageType(7);
+    internal_static_udb_core_common_v1_EventContractOptions_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_common_v1_EventContractOptions_descriptor,
+        new java.lang.String[] { "EventType", "OutboxTopic", "PartitionKeyField", "PayloadRedactionProfile", "DeliveryGuarantee", "ReplayCompatibility", });
+    internal_static_udb_core_common_v1_DependencyContractOptions_descriptor =
+      getDescriptor().getMessageType(8);
+    internal_static_udb_core_common_v1_DependencyContractOptions_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_common_v1_DependencyContractOptions_descriptor,
+        new java.lang.String[] { "RequiredNativeServices", "OptionalNativeServices", "RequiredBackends", "OptionalBackends", "RequiredFeatures", "RequiredEnv", "DegradedWhenMissing", });
     pii.internalInit(descriptor.getExtension(0));
     encryptedSecurity.internalInit(descriptor.getExtension(1));
     logMasked.internalInit(descriptor.getExtension(2));
@@ -290,8 +710,21 @@ public final class SecurityProto extends com.google.protobuf.GeneratedFile {
     tokenized.internalInit(descriptor.getExtension(8));
     securityClassification.internalInit(descriptor.getExtension(9));
     dataCategory.internalInit(descriptor.getExtension(10));
-    endpointSecurity.internalInit(descriptor.getExtension(11));
-    restContract.internalInit(descriptor.getExtension(12));
+    dbColumnSecurity.internalInit(descriptor.getExtension(11));
+    endpointSecurity.internalInit(descriptor.getExtension(12));
+    restContract.internalInit(descriptor.getExtension(13));
+    sdkSurface.internalInit(descriptor.getExtension(14));
+    methodCliScaffold.internalInit(descriptor.getExtension(15));
+    methodEventContract.internalInit(descriptor.getExtension(16));
+    methodDependencyContract.internalInit(descriptor.getExtension(17));
+    dbTableSecurity.internalInit(descriptor.getExtension(18));
+    messageEventContract.internalInit(descriptor.getExtension(19));
+    messageSdkSurface.internalInit(descriptor.getExtension(20));
+    messageDependencyContract.internalInit(descriptor.getExtension(21));
+    nativeService.internalInit(descriptor.getExtension(22));
+    serviceSdkSurface.internalInit(descriptor.getExtension(23));
+    serviceCliScaffold.internalInit(descriptor.getExtension(24));
+    serviceDependencyContract.internalInit(descriptor.getExtension(25));
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.DescriptorProtos.getDescriptor();
   }

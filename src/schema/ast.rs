@@ -128,6 +128,8 @@ pub struct ProtoSchema {
     pub enable_rls: bool,
     pub force_rls: bool,
     pub rls_policies: Vec<RlsPolicy>,
+    #[serde(default)]
+    pub table_security: ProtoTableSecurity,
     pub security: ProtoSecurity,
     pub unlogged: bool,
     pub tablespace: String,
@@ -179,6 +181,24 @@ pub struct ProtoNestedEnum {
 pub struct ProtoNestedEnumValue {
     pub name: String,
     pub number: i32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct ProtoTableSecurity {
+    pub tenant_isolation_mode: String,
+    pub project_isolation_mode: String,
+    pub tenant_column: String,
+    pub project_column: String,
+    pub rls_policy_template: String,
+    pub soft_delete_mode: String,
+    pub retention_class: String,
+    pub retention_days: i32,
+    pub audit_mode: String,
+    pub encryption_profile: String,
+    pub pii_profile: String,
+    pub break_glass_visible: bool,
+    pub export_eligible: bool,
+    pub data_residency_policy_ref: String,
 }
 
 impl ProtoSchema {

@@ -32,7 +32,8 @@ lives in the **new** `dev.udb.client.generated` package:
   - `UdbRpcException` carrying the gRPC `Status` plus the decoded
     `udb-error-detail-bin` binary trailer bytes,
   - `unary(...)` with retry + exponential backoff + **full jitter** on
-    `UNAVAILABLE` / `DEADLINE_EXCEEDED` / `RESOURCE_EXHAUSTED`,
+    `UNAVAILABLE` / `RESOURCE_EXHAUSTED`, plus `DEADLINE_EXCEEDED` only for
+    read-only RPCs,
   - `serverStreaming(...)` (single attempt; drain-time errors mapped),
   - `clientStreaming(...)` / `bidiStreaming(...)` (never retried).
 

@@ -1,0 +1,168 @@
+using Xunit;
+using AssetV1 = udb.core.Asset.Services.V1;
+using StorageV1 = udb.core.Storage.Services.V1;
+using WebRtcV1 = udb.core.Webrtc.Services.V1;
+
+namespace Udb.Client.Tests;
+
+/// <summary>
+/// Unit tests for the Wave-8 media facades (Storage / Asset / WebRTC). They use
+/// the <see cref="CapturingCallInvoker"/> to assert that each ergonomic wrapper
+/// dispatches the right gRPC method with the request it was handed — no live
+/// broker. Also pins the public <see cref="UdbProject"/> accessor surface.
+/// </summary>
+public sealed class UdbMediaFacadeTests
+{
+    private static readonly string[] CanonicalHeaderNames =
+    {
+        "x-tenant-id",
+        "x-user-id",
+        "x-purpose",
+        "x-correlation-id",
+        "x-scopes",
+        "x-service-identity",
+        "x-udb-project-id",
+        "x-udb-client-catalog-version",
+    };
+
+    private static Grpc.Core.Metadata Headers() => new()
+    {
+        { "x-tenant-id", "acme" },
+        { "x-user-id", "user-1" },
+        { "x-purpose", "media" },
+        { "x-correlation-id", "corr-1" },
+        { "x-scopes", "base" },
+        { "x-service-identity", "svc" },
+        { "x-udb-project-id", "proj-1" },
+        { "x-udb-client-catalog-version", "1.0.0" },
+    };
+
+    // ── Storage ───────────────────────────────────────────────────────────────
+    [Fact]
+    public async Task Storage_RegisterUpload_Dispatches_RegisterUpload_With_Request_And_Headers()
+    {
+        var invoker = new CapturingCallInvoker(_ => new StorageV1.RegisterUploadResponse { FileId = "f-1" });
+        var raw = new StorageV1.StorageService.StorageServiceClient(invoker);
+        var storage = new UdbStorageClient(raw, Headers);
+
+        var resp = await storage.RegisterUploadAsync(new StorageV1.RegisterUploadRequest
+        {
+            TenantId = "acme",
+            Filename = "report.pdf",
+        });
+
+        Assert.Equal("f-1", resp.FileId);
+        Assert.Equal("/udb.core.storage.services.v1.StorageService/RegisterUpload", invoker.LastMethod);
+        var req = Assert.IsType<StorageV1.RegisterUploadRequest>(invoker.LastRequest);
+        Assert.Equal("report.pdf", req.Filename);
+        AssertCanonicalHeaders(invoker);
+        Assert.Same(raw, storage.Raw);
+    }
+
+    // ── Asset ─────────────────────────────────────────────────────────────────
+    [Fact]
+    public async Task Asset_RegisterAsset_Dispatches_RegisterAsset_With_Request_And_Headers()
+    {
+        var invoker = new CapturingCallInvoker(_ => new AssetV1.RegisterAssetResponse());
+        var raw = new AssetV1.AssetService.AssetServiceClient(invoker);
+        var asset = new UdbAssetClient(raw, Headers);
+
+        await asset.RegisterAssetAsync(new AssetV1.RegisterAssetRequest());
+
+        Assert.Equal("/udb.core.asset.services.v1.AssetService/RegisterAsset", invoker.LastMethod);
+        Assert.IsType<AssetV1.RegisterAssetRequest>(invoker.LastRequest);
+        AssertCanonicalHeaders(invoker);
+        Assert.Same(raw, asset.Raw);
+    }
+
+    // ── WebRTC (grouped) ──────────────────────────────────────────────────────
+    [Fact]
+    public async Task WebRtc_Room_CreateRoom_Dispatches_CreateRoom_With_Headers()
+    {
+        var invoker = new CapturingCallInvoker(_ => new WebRtcV1.CreateRoomResponse());
+        var room = new UdbWebRtcRoomClient(new WebRtcV1.RoomService.RoomServiceClient(invoker), Headers);
+
+        await room.CreateRoomAsync(new WebRtcV1.CreateRoomRequest());
+
+        Assert.Equal("/udb.core.webrtc.services.v1.RoomService/CreateRoom", invoker.LastMethod);
+        Assert.IsType<WebRtcV1.CreateRoomRequest>(invoker.LastRequest);
+        AssertCanonicalHeaders(invoker);
+    }
+
+    [Fact]
+    public async Task WebRtc_Peer_JoinRoom_Dispatches_JoinRoom()
+    {
+        var invoker = new CapturingCallInvoker(_ => new WebRtcV1.JoinRoomResponse());
+        var peer = new UdbWebRtcPeerClient(new WebRtcV1.PeerService.PeerServiceClient(invoker), Headers);
+
+        await peer.JoinRoomAsync(new WebRtcV1.JoinRoomRequest());
+
+        Assert.Equal("/udb.core.webrtc.services.v1.PeerService/JoinRoom", invoker.LastMethod);
+        AssertCanonicalHeaders(invoker);
+    }
+
+    [Fact]
+    public async Task WebRtc_Track_PublishTrack_Dispatches_PublishTrack()
+    {
+        var invoker = new CapturingCallInvoker(_ => new WebRtcV1.PublishTrackResponse());
+        var track = new UdbWebRtcTrackClient(new WebRtcV1.TrackService.TrackServiceClient(invoker), Headers);
+
+        await track.PublishTrackAsync(new WebRtcV1.PublishTrackRequest());
+
+        Assert.Equal("/udb.core.webrtc.services.v1.TrackService/PublishTrack", invoker.LastMethod);
+        AssertCanonicalHeaders(invoker);
+    }
+
+    [Fact]
+    public async Task WebRtc_Turn_IssueCredentials_Dispatches_IssueCredentials()
+    {
+        var invoker = new CapturingCallInvoker(_ => new WebRtcV1.IssueCredentialsResponse());
+        var turn = new UdbWebRtcTurnClient(new WebRtcV1.TurnService.TurnServiceClient(invoker), Headers);
+
+        await turn.IssueCredentialsAsync(new WebRtcV1.IssueCredentialsRequest());
+
+        Assert.Equal("/udb.core.webrtc.services.v1.TurnService/IssueCredentials", invoker.LastMethod);
+        AssertCanonicalHeaders(invoker);
+    }
+
+    // ── public facade surface ─────────────────────────────────────────────────
+    [Fact]
+    public void UdbProject_Exposes_Media_Facade_Accessors()
+    {
+        var t = typeof(UdbProject);
+        Assert.Equal(typeof(UdbStorageClient), t.GetProperty("Storage")!.PropertyType);
+        Assert.Equal(typeof(UdbAssetClient), t.GetProperty("Asset")!.PropertyType);
+        Assert.Equal(typeof(UdbWebRtcClient), t.GetProperty("WebRtc")!.PropertyType);
+
+        var w = typeof(UdbWebRtcClient);
+        Assert.Equal(typeof(UdbWebRtcRoomClient), w.GetProperty("Room")!.PropertyType);
+        Assert.Equal(typeof(UdbWebRtcPeerClient), w.GetProperty("Peer")!.PropertyType);
+        Assert.Equal(typeof(UdbWebRtcTrackClient), w.GetProperty("Track")!.PropertyType);
+        Assert.Equal(typeof(UdbWebRtcTurnClient), w.GetProperty("Turn")!.PropertyType);
+        Assert.Equal(typeof(UdbWebRtcSignalingClient), w.GetProperty("Signaling")!.PropertyType);
+    }
+
+    [Fact]
+    public void UdbProject_Native_Service_Channel_Uses_Auth_Target()
+    {
+        using var project = UdbProject.Open(new UdbProjectConfig
+        {
+            Target = "http://localhost:1",
+            AuthTarget = "http://localhost:2",
+            TenantId = "acme",
+        });
+
+        Assert.NotSame(project.DataChannelForTesting, project.AuthChannelForTesting);
+        Assert.Same(project.AuthChannelForTesting, project.NativeServicesChannelForTesting);
+        Assert.Equal("localhost:2", project.NativeServicesChannelForTesting.Target);
+    }
+
+    private static void AssertCanonicalHeaders(CapturingCallInvoker invoker)
+    {
+        Assert.NotNull(invoker.LastHeaders);
+        foreach (var name in CanonicalHeaderNames)
+        {
+            Assert.Contains(invoker.LastHeaders!, e => e.Key == name);
+        }
+    }
+}

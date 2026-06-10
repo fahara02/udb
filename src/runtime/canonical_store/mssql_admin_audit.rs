@@ -159,12 +159,12 @@ impl AdminAuditStore for MssqlCanonicalStore {
                 //    statement error rolls the whole tx back (and releases the
                 //    transaction-scoped applock) instead of leaving it open.
                 client
-                    .simple_query(
+                    .simple_query(format!(
                         "SET XACT_ABORT ON; \
                          BEGIN TRANSACTION; \
-                         EXEC sp_getapplock @Resource = N'udb_admin_audit_chain', \
-                            @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 30000;",
-                    )
+                         EXEC sp_getapplock @Resource = N'{CHAIN_LOCK_NAME}', \
+                            @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 30000;"
+                    ))
                     .await?;
 
                 // 2. Read the latest hash under the lock (on the same conn).

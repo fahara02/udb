@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package udb.core.webrtc.entity.v1;
+
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/common/v1/types.proto";
+import "udb/core/webrtc/entity/v1/enums.proto";
+
+option csharp_namespace = "udb.core.Webrtc.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/webrtc/entity/v1;webrtcv1";
+option java_package = "com.udb.core.webrtc.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Webrtc\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Webrtc\\Entity\\V1";
+
+// Track: a media or data track published by a peer.
+message Track {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "tracks"
+    schema_name: "udb_webrtc"
+    migration_order: 3
+    is_table: true
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "tracks_tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_tracks_room"
+      index_type: "BTREE"
+      columns: "room_id"
+    }
+    indexes: {
+      index_name: "idx_tracks_peer"
+      index_type: "BTREE"
+      columns: "peer_id"
+    }
+    indexes: {
+      index_name: "idx_tracks_tenant"
+      index_type: "BTREE"
+      columns: "tenant_id"
+    }
+    cdc_topic: "udb.webrtc.tracks.cdc"
+    required_scope: "webrtc:read"
+    comment: "WebRTC media and data tracks published by peers"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "webrtc.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string track_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "track_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  // @inject_tag: gorm:"primaryKey;column:track_id;not null"
+
+  string room_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "room_id" sql_type: "UUID" not_null: true }];
+  // @inject_tag: gorm:"column:room_id;not null"
+
+  string peer_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "peer_id" sql_type: "UUID" not_null: true }];
+  // @inject_tag: gorm:"column:peer_id;not null"
+
+  string tenant_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "UUID" not_null: true }];
+  // @inject_tag: gorm:"column:tenant_id;not null"
+
+  TrackKind kind = 5 [(udb.core.common.v1.pg_column) = { column_name: "kind" sql_type: "VARCHAR(20)" not_null: true }];
+  // @inject_tag: gorm:"column:kind;not null;serializer:proto_enum"
+
+  string label = 6 [(udb.core.common.v1.pg_column) = { column_name: "label" sql_type: "VARCHAR(255)" }];
+  // @inject_tag: gorm:"column:label"
+
+  TrackState state = 7 [(udb.core.common.v1.pg_column) = { column_name: "state" sql_type: "VARCHAR(20)" not_null: true default_value: "'ACTIVE'" }];
+  // @inject_tag: gorm:"column:state;not null;serializer:proto_enum"
+
+  string settings = 8 [(udb.core.common.v1.pg_column) = { column_name: "settings" sql_type: "JSONB" is_json: true comment: "Track media settings" }];
+  // @inject_tag: gorm:"column:settings"
+
+  string metadata = 9 [(udb.core.common.v1.pg_column) = { column_name: "metadata" sql_type: "JSONB" is_json: true comment: "Track-specific metadata" }];
+  // @inject_tag: gorm:"column:metadata"
+
+  udb.core.common.v1.AuditInfo audit_info = 10 [(udb.core.common.v1.pg_column) = { column_name: "audit_info" sql_type: "JSONB" not_null: true default_value: "'{}'::jsonb" is_json: true comment: "Audit trail stored as JSON" }];
+  // @inject_tag: gorm:"column:audit_info;not null"
+}

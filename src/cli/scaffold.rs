@@ -4,39 +4,76 @@ use super::*;
 /// Emit a minimal project scaffold to the current directory (or UDB_INIT_DIR).
 pub(crate) fn emit_init_project_scaffold() {
     let dir = env::var("UDB_INIT_DIR").unwrap_or_else(|_| ".".to_string());
+    for (rel_path, content) in scaffold_files() {
+        let path = format!("{dir}/{rel_path}");
+        let parent = std::path::Path::new(&path).parent().unwrap();
+        if let Err(e) = fs::create_dir_all(parent) {
+            eprintln!("could not create directory {}: {e}", parent.display());
+            continue;
+        }
+        if std::path::Path::new(&path).exists() {
+            eprintln!("skipping {path} (already exists)");
+            continue;
+        }
+        match fs::write(&path, content) {
+            Ok(()) => eprintln!("created {path}"),
+            Err(e) => eprintln!("failed to write {path}: {e}"),
+        }
+    }
+    eprintln!(
+        "\nProject scaffold created. Run `udb system-ddl | psql $DATABASE_URL` to bootstrap."
+    );
+}
+
+/// The scaffold's `(relative_path, file_contents)` pairs. Extracted from the
+/// emitter so the generated example clients can be string-/compile-checked in
+/// tests and by the CI scaffold-compile gate (see `scripts/check-scaffold-compiles.sh`).
+pub(crate) fn scaffold_files() -> Vec<(&'static str, &'static str)> {
     let proto_sample = r#"syntax = "proto3";
 package myapp.v1;
 
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
 message User {
-  option (myapp.v1.table) = {
+  option (udb.core.common.v1.pg_table) = {
     table_name: "users"
     schema_name: "app"
     is_table: true
     enable_rls: true
-    tenant_column: "tenant_id"
   };
 
-  string id = 1 [(myapp.v1.column) = {
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_column: "tenant_id"
+    tenant_isolation_mode: "tenant"
+  };
+
+  string id = 1 [(udb.core.common.v1.pg_column) = {
     column_name: "id"
     sql_type: "UUID"
     primary_key: true
     not_null: true
   }];
-  string tenant_id = 2 [(myapp.v1.column) = {
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = {
     column_name: "tenant_id"
-    tenant_column: true
+    sql_type: "UUID"
     not_null: true
   }];
-  string email = 3 [(myapp.v1.column) = {
-    column_name: "email"
-    sql_type: "TEXT"
-    pii_kind: PII_KIND_EMAIL
-    encrypt: true
-  }];
-  string created_at = 4 [(myapp.v1.column) = {
+  string email = 3 [
+    (udb.core.common.v1.pg_column) = {
+      column_name: "email"
+      sql_type: "TEXT"
+      encrypted: true
+    },
+    (udb.core.common.v1.pii) = true,
+    (udb.core.common.v1.log_masked) = true,
+    (udb.core.common.v1.data_purpose) = "login"
+  ];
+  string created_at = 4 [(udb.core.common.v1.pg_column) = {
     column_name: "created_at"
     sql_type: "TIMESTAMPTZ"
-    is_created_at: true
+    not_null: true
+    default_value: "now()"
   }];
 }
 "#;
@@ -105,7 +142,7 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
 "#;
     let go_client = r#"// examples/go/client.go — minimal UDB gRPC client (Go)
-// go get google.golang.org/grpc github.com/udb-project/udb/gen/go/udb/entity/v1 github.com/udb-project/udb/gen/go/udb/services/v1
+// go get google.golang.org/grpc github.com/fahara02/udb/sdk/go/gen/udb/entity/v1 github.com/fahara02/udb/sdk/go/gen/udb/services/v1
 package main
 
 import (
@@ -114,14 +151,14 @@ import (
 	"fmt"
 	"log"
 
-	entityv1 "github.com/udb-project/udb/gen/go/udb/entity/v1"
-	servicesv1 "github.com/udb-project/udb/gen/go/udb/services/v1"
+	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
+	servicesv1 "github.com/fahara02/udb/sdk/go/gen/udb/services/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
-	conn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("dial: %v", err)
 	}
@@ -194,7 +231,7 @@ var resp = await client.GetHealthReportAsync(new HealthReportRequest {
 });
 Console.WriteLine(resp);
 "#;
-    let files = [
+    vec![
         ("proto/app/v1/user.proto", proto_sample),
         ("configs/database.yaml", config_template),
         ("docker-compose.udb.yml", docker_compose),
@@ -202,24 +239,99 @@ Console.WriteLine(resp);
         ("examples/python/client.py", python_client),
         ("examples/typescript/client.ts", typescript_client),
         ("examples/csharp/Client.cs", csharp_client),
-    ];
-    for (rel_path, content) in &files {
-        let path = format!("{dir}/{rel_path}");
-        let parent = std::path::Path::new(&path).parent().unwrap();
-        if let Err(e) = fs::create_dir_all(parent) {
-            eprintln!("could not create directory {}: {e}", parent.display());
-            continue;
-        }
-        if std::path::Path::new(&path).exists() {
-            eprintln!("skipping {path} (already exists)");
-            continue;
-        }
-        match fs::write(&path, content) {
-            Ok(()) => eprintln!("created {path}"),
-            Err(e) => eprintln!("failed to write {path}: {e}"),
-        }
+    ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn file(rel: &str) -> &'static str {
+        scaffold_files()
+            .into_iter()
+            .find(|(p, _)| *p == rel)
+            .unwrap_or_else(|| panic!("scaffold missing {rel}"))
+            .1
     }
-    eprintln!(
-        "\nProject scaffold created. Run `udb system-ddl | psql $DATABASE_URL` to bootstrap."
-    );
+
+    #[test]
+    fn go_example_uses_the_real_module_path_and_grpc_newclient() {
+        let go = file("examples/go/client.go");
+        // Real published module path (was the fictional github.com/udb-project/...).
+        assert!(
+            go.contains("github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"),
+            "Go example must import the real entity gen path"
+        );
+        assert!(
+            go.contains("github.com/fahara02/udb/sdk/go/gen/udb/services/v1"),
+            "Go example must import the real services gen path"
+        );
+        // The fictional org must not reappear.
+        assert!(
+            !go.contains("github.com/udb-project/"),
+            "Go example still references the fictional udb-project org"
+        );
+        // grpc.Dial is deprecated; the example must use grpc.NewClient.
+        assert!(
+            go.contains("grpc.NewClient("),
+            "Go example must use grpc.NewClient"
+        );
+        assert!(
+            !go.contains("grpc.Dial("),
+            "Go example must not use the deprecated grpc.Dial"
+        );
+    }
+
+    #[test]
+    fn typescript_example_loads_the_data_broker_proto() {
+        let ts = file("examples/typescript/client.ts");
+        assert!(
+            ts.contains("@grpc/grpc-js"),
+            "TS example must import @grpc/grpc-js"
+        );
+        assert!(
+            ts.contains("data_broker.proto"),
+            "TS example must load the DataBroker proto"
+        );
+    }
+
+    #[test]
+    fn scaffold_proto_catalogs_with_default_parser_options() {
+        let root = std::env::temp_dir().join(format!(
+            "udb_scaffold_quickstart_{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("system clock should be after epoch")
+                .as_nanos()
+        ));
+        for (rel, content) in scaffold_files()
+            .into_iter()
+            .filter(|(rel, _)| rel.ends_with(".proto"))
+        {
+            let path = root.join(rel);
+            std::fs::create_dir_all(path.parent().expect("scaffold proto has parent"))
+                .expect("create scaffold proto parent");
+            std::fs::write(&path, content).expect("write scaffold proto");
+        }
+
+        let schemas = udb::parse_directory(root.join("proto"), &udb::ParserConfig::default())
+            .expect("default parser should read scaffold annotations");
+        let _ = std::fs::remove_dir_all(&root);
+
+        let user = schemas
+            .iter()
+            .find(|schema| schema.message_name == "User")
+            .expect("scaffold should yield a User schema");
+        assert_eq!(user.table_name, "users");
+        assert_eq!(user.schema_name, "app");
+        assert!(user.is_table);
+        assert_eq!(user.columns.len(), 4);
+        assert!(
+            user.columns
+                .iter()
+                .any(|column| column.column_name == "email" && column.security.is_pii),
+            "scaffold email field should retain scalar security metadata"
+        );
+    }
 }

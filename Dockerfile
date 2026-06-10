@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 #
-# UDB broker image. Builds the `udb-proto-parser` binary from the ROOT crate
+# UDB broker image. Builds the `udb` binary from the ROOT crate
 # (Cargo.toml + src/ live at the repo root; there is no src/udb/ crate) and runs
 # it as the gRPC broker. `build.rs` vendors protoc via `protoc-bin-vendored`, and
 # the google/api annotation protos are checked in under third_party/googleapis.
@@ -33,8 +33,8 @@ COPY examples ./examples
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/workspace/target \
-    cargo build --release --bin udb-proto-parser --features oidc,webauthn \
-    && cp target/release/udb-proto-parser /tmp/udb-proto-parser
+    cargo build --release --bin udb --features oidc,webauthn \
+    && cp target/release/udb /tmp/udb
 
 ARG GRPC_HEALTH_PROBE_VERSION=v0.4.37
 RUN curl -fsSL \
@@ -48,7 +48,7 @@ RUN groupadd --system udb \
     && useradd --system --gid udb --home-dir /app --shell /usr/sbin/nologin udb
 
 WORKDIR /app
-COPY --from=builder /tmp/udb-proto-parser /usr/local/bin/udb-proto-parser
+COPY --from=builder /tmp/udb /usr/local/bin/udb
 COPY --from=builder /usr/local/bin/grpc_health_probe /usr/local/bin/grpc_health_probe
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 # UDB-owned proto + vendored imports + default configs. Application schemas
@@ -67,5 +67,5 @@ USER udb:udb
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
     CMD ["/usr/local/bin/grpc_health_probe", "-addr=127.0.0.1:50051"]
 
-ENTRYPOINT ["/usr/local/bin/udb-proto-parser"]
+ENTRYPOINT ["/usr/local/bin/udb"]
 CMD ["serve", "/app/proto", "", "0.0.0.0:50051"]

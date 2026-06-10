@@ -11,6 +11,7 @@ use Google\Protobuf\RepeatedField;
 
 /**
  * ── Stage 2: native database fast-path access ──────────────────────────────
+ *
  * `GetNativeAccess` runs the same `Authorize` decision and, when allowed,
  * mints a short-lived contract for the caller to talk to the backend
  * directly: a restricted role, a scoped DSN, and the exact set of

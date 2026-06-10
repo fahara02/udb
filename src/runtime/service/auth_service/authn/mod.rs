@@ -23,19 +23,70 @@ use crate::runtime::authz::Principal;
 use crate::runtime::native_catalog::{NativeModel, native_model};
 use crate::runtime::security::{SecurityConfig, validate_bearer_token};
 
-use super::events::{self, AuthEvent, AuthEventSink, topics};
+use super::events::{self, AuthEvent, AuthEventSink, ComplianceEnvelope, topics};
 use super::mappings::{
     authn_principal_to_pb, bounded_page_response, bounded_page_window, principal_from_api_key,
-    principal_from_session, session_record_to_pb, timestamp_from_unix,
+    principal_from_session, public_session_handle_from_hash, session_record_to_pb,
+    timestamp_from_unix,
 };
 use super::now_unix;
+
+// ── Proto ⟷ domain enum conversion (adapter boundary) ───────────────────────
+// The domain engine (`runtime/authn`) stores domain-owned `AccountKind` /
+// `AccountStatus` enums and never references the proto enums (final_task.md §7
+// "Move proto enum conversions out of domain engines"). These helpers convert at
+// the service boundary, where the proto types legitimately live. The integer
+// values coincide with the proto enum tags, so the conversion is a checked cast.
+use crate::runtime::authn::{AccountKind, AccountStatus};
+
+/// Proto `AccountKind` i32 → domain [`AccountKind`].
+pub(super) fn account_kind_from_proto(value: i32) -> AccountKind {
+    AccountKind::from_i32(value)
+}
+
+/// Domain [`AccountKind`] → proto `AccountKind` i32.
+pub(super) fn account_kind_to_proto(kind: AccountKind) -> i32 {
+    // Defined via the proto enum so a proto-side renumbering is caught here, not
+    // silently mismatched: map the domain variant to its proto counterpart.
+    let proto = match kind {
+        AccountKind::Unspecified => authn_entity_pb::AccountKind::Unspecified,
+        AccountKind::Person => authn_entity_pb::AccountKind::Person,
+        AccountKind::ServiceAccount => authn_entity_pb::AccountKind::ServiceAccount,
+        AccountKind::Workload => authn_entity_pb::AccountKind::Workload,
+        AccountKind::ExternalIdentity => authn_entity_pb::AccountKind::ExternalIdentity,
+        AccountKind::System => authn_entity_pb::AccountKind::System,
+        AccountKind::Anonymous => authn_entity_pb::AccountKind::Anonymous,
+    };
+    proto as i32
+}
+
+/// Proto `UserStatus` i32 → domain [`AccountStatus`].
+pub(super) fn account_status_from_proto(value: i32) -> AccountStatus {
+    AccountStatus::from_i32(value)
+}
+
+/// Domain [`AccountStatus`] → proto `UserStatus` i32.
+pub(super) fn account_status_to_proto(status: AccountStatus) -> i32 {
+    let proto = match status {
+        AccountStatus::Unspecified => authn_entity_pb::UserStatus::Unspecified,
+        AccountStatus::PendingVerification => authn_entity_pb::UserStatus::PendingVerification,
+        AccountStatus::Active => authn_entity_pb::UserStatus::Active,
+        AccountStatus::Suspended => authn_entity_pb::UserStatus::Suspended,
+        AccountStatus::Locked => authn_entity_pb::UserStatus::Locked,
+        AccountStatus::Deactivated => authn_entity_pb::UserStatus::Deactivated,
+    };
+    proto as i32
+}
 
 // Topic submodules: each holds inherent `impl AuthnServiceImpl` blocks + helpers;
 // the single `impl AuthnService` trait block below delegates to them.
 mod core;
+mod lifecycle;
 mod login;
 mod mfa;
 mod sessions;
+mod signing_keys;
+mod token_family;
 mod tokens;
 
 /// `AuthnService` handler over the UDB-owned authn primitives.
@@ -48,6 +99,21 @@ pub struct AuthnServiceImpl {
     pg_pool: Option<PgPool>,
     /// Publishes authn domain events to the outbox → Kafka relay.
     event_sink: Arc<dyn AuthEventSink>,
+    /// Records auth-plane metrics (login success/failure, lockout, MFA failure,
+    /// token-validation failure). Defaults to a no-op; production wires the
+    /// broker's shared recorder via [`AuthnServiceImpl::with_metrics`].
+    metrics: Arc<dyn crate::metrics::MetricsRecorder>,
+    /// Short-TTL cluster jti denylist (Redis) — an acceleration layer over the
+    /// durable `token_revocations` table so a revoke propagates fast across
+    /// nodes. `None` when Redis isn't configured (DB-only behavior unchanged).
+    #[cfg(feature = "redis")]
+    jti_denylist: Option<crate::runtime::authn::revocation::JtiDenylist>,
+    /// The shared, atomically-swappable authz snapshot — the SAME view the native
+    /// `AuthzService` decides against. Wired so the admin-mutation handlers can
+    /// invoke the native authz DECISION ENGINE per action (Tier-0 #5, D2-full),
+    /// recording a real `decision_id` beyond the coarse transport scope gate.
+    /// `None` keeps the scope-only defense-in-depth path working (no engine wired).
+    authz_snapshot: Option<std::sync::Arc<arc_swap::ArcSwap<crate::runtime::authz::AuthzSnapshot>>>,
 }
 
 #[cfg(feature = "webauthn")]
@@ -152,6 +218,10 @@ impl AuthnServiceImpl {
             security,
             pg_pool: None,
             event_sink: events::noop_sink(),
+            metrics: Arc::new(crate::metrics::NoopMetrics),
+            #[cfg(feature = "redis")]
+            jti_denylist: None,
+            authz_snapshot: None,
         }
     }
 
@@ -171,6 +241,10 @@ impl AuthnServiceImpl {
             security,
             pg_pool: None,
             event_sink: events::noop_sink(),
+            metrics: Arc::new(crate::metrics::NoopMetrics),
+            #[cfg(feature = "redis")]
+            jti_denylist: None,
+            authz_snapshot: None,
         }
     }
 
@@ -179,10 +253,147 @@ impl AuthnServiceImpl {
         self
     }
 
+    /// Attach the short-TTL cluster jti denylist (Redis). When set, revokes also
+    /// SET the jti_hash in Redis and validation consults it first; when `None`
+    /// the durable DB lookup is the only path (behavior unchanged).
+    #[cfg(feature = "redis")]
+    pub(crate) fn with_jti_denylist(
+        mut self,
+        denylist: Option<crate::runtime::authn::revocation::JtiDenylist>,
+    ) -> Self {
+        self.jti_denylist = denylist;
+        self
+    }
+
     /// Attach the domain-event sink (outbox → Kafka). Defaults to a no-op.
     pub(crate) fn with_event_sink(mut self, sink: Arc<dyn AuthEventSink>) -> Self {
         self.event_sink = sink;
         self
+    }
+
+    /// Attach the metrics recorder (the broker's shared recorder in production).
+    /// Defaults to a no-op.
+    pub(crate) fn with_metrics(
+        mut self,
+        metrics: Arc<dyn crate::metrics::MetricsRecorder>,
+    ) -> Self {
+        self.metrics = metrics;
+        self
+    }
+
+    /// Wire the shared authz snapshot (the SAME `Arc<ArcSwap<AuthzSnapshot>>` the
+    /// native `AuthzService` decides against) so the admin-mutation handlers can
+    /// invoke the native authz DECISION ENGINE per action (Tier-0 #5, D2-full).
+    /// When unset the handlers fall back to the coarse scope gate + action-scope
+    /// check only (defense-in-depth path, behavior unchanged).
+    pub(crate) fn with_authz_snapshot(
+        mut self,
+        snapshot: Option<std::sync::Arc<arc_swap::ArcSwap<crate::runtime::authz::AuthzSnapshot>>>,
+    ) -> Self {
+        self.authz_snapshot = snapshot;
+        self
+    }
+
+    /// Per-action native authz DECISION (Tier-0 #5, D2-full). Beyond the coarse
+    /// transport `udb:admin` gate AND the action-scope check, this asks the native
+    /// authz DECISION ENGINE (the shared `AuthzSnapshot`, same view `AuthzService`
+    /// decides against) whether `(principal, action, resource)` is permitted, and
+    /// returns the engine's real `decision_id` on allow (to thread into the audit
+    /// compliance envelope). DENIES with the engine's reason on a negative
+    /// decision.
+    ///
+    /// `grpc_path` is the RPC's gRPC path; the resource is the method's
+    /// `endpoint_security.decision_resource` (when annotated) else the synthetic
+    /// `native.rpc:<path>` form. When no snapshot is wired, or no over-the-wire
+    /// claim context is installed (in-process/test caller), this is a no-op that
+    /// returns a fresh decision id — the same posture as `authorize_action`, so it
+    /// never weakens the existing scope-gate path nor breaks direct invocation.
+    pub(super) async fn decide_action_native(
+        &self,
+        ctx: &crate::runtime::service::method_security::VerifiedClaimContext,
+        grpc_path: &str,
+        action: &str,
+    ) -> Result<String, Status> {
+        use crate::runtime::authz::{Authorizer, AuthzQuery, ResourceRef};
+
+        // No engine wired, or not an over-the-wire request → skip (the action-scope
+        // gate already ran). Return a fresh id so the envelope still links a value.
+        let Some(snapshot) = self.authz_snapshot.as_ref() else {
+            return Ok(uuid::Uuid::new_v4().to_string());
+        };
+        if !crate::runtime::service::method_security::claim_context_present() {
+            return Ok(uuid::Uuid::new_v4().to_string());
+        }
+
+        let principal = ctx.to_principal();
+        let resource_name =
+            crate::runtime::service::method_security::decision_resource_for(grpc_path);
+        let resource = ResourceRef {
+            resource_type: "native.rpc".to_string(),
+            resource_name: resource_name.clone(),
+            ..ResourceRef::default()
+        };
+        // The method's declared `endpoint_security.policy_ref` names the policy set
+        // this action must be evaluated against (Tier-0 #5 / D2-full). Surface it as
+        // a request attribute so a policy scoped to that named set (via a
+        // `policy_ref` condition) matches — letting an operator govern a specific
+        // native RPC's authorization by name, not only by resource pattern. Absent
+        // when the annotation left it unset.
+        let mut attributes = std::collections::BTreeMap::new();
+        if let Some(policy_ref) =
+            crate::runtime::service::method_security::method_policy_ref(grpc_path)
+        {
+            attributes.insert("policy_ref".to_string(), policy_ref);
+        }
+        let query = AuthzQuery {
+            principal: &principal,
+            resource: &resource,
+            action,
+            purpose: "",
+            attributes: &attributes,
+        };
+        // Synchronous v2 snapshot decision (policy/role/relationship match) — the
+        // same engine the AuthzService `check_access` path uses; no Casbin model
+        // round-trip needed for the structured snapshot decision.
+        let decision = snapshot.load().authorize(&query);
+        if decision.allowed {
+            return Ok(decision.decision_id);
+        }
+        // Distinguish an EXPLICIT deny (a policy matched this resource/action and
+        // denied) from a "no policy governs this native RPC yet" default-deny. The
+        // action-scope gate (`authorize_action`) already authorized the caller; an
+        // engine with no rule for `native.rpc:*` resources must NOT retroactively
+        // deny every legitimate operator (that would be a capability lie / outage
+        // for ungoverned deployments). So we only DENY on an EXPLICIT matched deny;
+        // a bare default-deny falls through, still recording the engine decision_id
+        // for the audit envelope (the action-scope authorization stands).
+        if decision.matched_policy_ids.is_empty() {
+            tracing::debug!(
+                target: "udb.audit.authz",
+                subject = %ctx.subject,
+                action = %action,
+                resource = %resource_name,
+                policy_ref = attributes.get("policy_ref").map(String::as_str).unwrap_or(""),
+                decision_id = %decision.decision_id,
+                "no native-RPC authz policy governs this action; action-scope authorization stands"
+            );
+            return Ok(decision.decision_id);
+        }
+        tracing::warn!(
+            target: "udb.audit.authz",
+            subject = %ctx.subject,
+            tenant = %ctx.tenant_id,
+            action = %action,
+            resource = %resource_name,
+            policy_ref = attributes.get("policy_ref").map(String::as_str).unwrap_or(""),
+            decision_id = %decision.decision_id,
+            reason = %decision.deny_reason,
+            "DENY: native authz decision engine denied the admin mutation"
+        );
+        Err(Status::permission_denied(format!(
+            "action '{action}' on '{resource_name}' denied by authz policy ({})",
+            decision.deny_reason
+        )))
     }
 
     /// Emit an authn domain event, logging (never failing the RPC) on error.
@@ -193,6 +404,34 @@ impl AuthnServiceImpl {
         if let Err(err) = self.event_sink.emit(event).await {
             tracing::warn!(topic, error = %err, "failed to publish authn event");
         }
+    }
+
+    /// Crate-public best-effort emit for the operations plane (`udb.ops.*`),
+    /// used by the serving startup path to publish boot-time operational events
+    /// (e.g. `OPS_READINESS_FAILURE`) through the SAME sink as every other auth
+    /// event. `emit_event` is `pub(super)` (sibling-module only); this exposes a
+    /// reachable entry point to `runtime::service::serve` without widening the
+    /// per-handler emit surface.
+    pub(crate) async fn emit_ops_event(&self, event: AuthEvent) {
+        self.emit_event(event).await;
+    }
+
+    /// Emit an authn domain event durably WITHIN the caller's transaction
+    /// connection, so the audit/outbox row commits atomically with the mutation
+    /// (final_task.md §7: "auth mutations either commit with their event or
+    /// fail"). Unlike [`Self::emit_event`], a write failure is propagated so the
+    /// caller can abort the transaction — the mutation and its event are all-or-
+    /// nothing.
+    pub(super) async fn emit_event_in_tx(
+        &self,
+        conn: &mut sqlx::PgConnection,
+        event: AuthEvent,
+    ) -> Result<(), Status> {
+        let topic = event.topic;
+        self.event_sink
+            .write_in_tx(conn, event)
+            .await
+            .map_err(|err| Status::internal(format!("audit event write failed for {topic}: {err}")))
     }
 
     pub(super) fn hash_key(&self) -> Vec<u8> {
@@ -215,6 +454,72 @@ impl AuthnServiceImpl {
     /// Issued at login and re-derived for validation; never stored.
     pub(super) fn csrf_token_for(&self, session_id: &str) -> String {
         authn::hash_secret(&format!("csrf:{session_id}"), &self.hash_key())
+    }
+
+    /// Phase 3: is a UDB-issued JWT still backed by live persisted auth state?
+    /// Returns `Ok(false)` when the subject user is no longer Active, or when the
+    /// issuing session (carried as the JWT `jti`, prefix `sess_`) has been
+    /// revoked/expired — so a signature-valid, unexpired token stops being
+    /// honored the moment the user is suspended or the session is revoked
+    /// (revocation before natural expiry). Service-identity tokens and subjects
+    /// that are neither a UDB user id nor a session id are exempt (validated by
+    /// signature alone). Shared by `ValidateToken` and the `Authenticate` bearer
+    /// path. `Err` is reserved for real backend failures (fail-closed at the
+    /// call site).
+    /// Is `user_id` a live, Active native UDB user? Only UUID subjects are
+    /// status-gated; empty/non-UUID subjects (service identities, external
+    /// subjects) have no user row and return `Ok(true)` (not gated here). `Err`
+    /// is reserved for real backend failures.
+    pub(super) async fn user_is_active(&self, user_id: &str) -> Result<bool, Status> {
+        if user_id.trim().is_empty() || Uuid::parse_str(user_id).is_err() {
+            return Ok(true);
+        }
+        match self.users.get_user_by_id(user_id).await {
+            Ok(Some(user)) => Ok(user.status.is_active()),
+            Ok(None) => Ok(false),
+            Err(err) => Err(Status::internal(err)),
+        }
+    }
+
+    pub(super) async fn jwt_persisted_state_valid(
+        &self,
+        claims: &crate::runtime::security::SecurityClaims,
+        now: u64,
+    ) -> Result<bool, Status> {
+        let is_service = claims
+            .service_identity
+            .as_deref()
+            .is_some_and(|s| !s.is_empty());
+        if !is_service
+            && !self
+                .user_is_active(&claims.sub.clone().unwrap_or_default())
+                .await?
+        {
+            return Ok(false);
+        }
+        // Phase 3 (I2.3): reject any token whose jti is on the durable cluster-wide
+        // revocation deny list, before its natural expiry — across every node.
+        if let Some(jti) = claims.jti.as_deref().filter(|j| !j.trim().is_empty())
+            && self.is_token_revoked(jti).await.0
+        {
+            return Ok(false);
+        }
+        if let Some(jti) = claims.jti.as_deref().filter(|j| j.starts_with("sess_")) {
+            match authn::validate_session(
+                self.sessions.as_ref(),
+                jti,
+                &self.hash_key(),
+                now,
+                self.config.session_idle_ttl_secs,
+            )
+            .await
+            {
+                Ok(Some(_)) => {}
+                Ok(None) => return Ok(false),
+                Err(err) => return Err(Status::internal(err)),
+            }
+        }
+        Ok(true)
     }
 
     #[cfg(feature = "webauthn")]
@@ -247,24 +552,52 @@ impl AuthnServiceImpl {
             ));
         }
         if id_token.matches('.').count() != 2 {
-            return Err(Status::unauthenticated(
-                "OIDC ID token must be a signed JWT",
-            ));
+            return Err(Status::unauthenticated("invalid credential"));
         }
+        // J2.1: resolve the provider from the per-tenant registry first, so OIDC
+        // config is no longer a process global. The request/env values remain as
+        // fallbacks (dev defaults) when no provider row matches. A provider that
+        // is found but disabled blocks new logins (fail closed).
+        let registered = super::idp::resolve_oidc_provider(
+            self.pg_pool.as_ref(),
+            &req.tenant_hint,
+            &req.external_provider_id,
+        )
+        .await
+        .unwrap_or(None);
+        if let Some(p) = &registered {
+            if !p.enabled {
+                return Err(Status::failed_precondition(
+                    "identity provider is disabled for this tenant",
+                ));
+            }
+        }
+        let registered_issuer = registered
+            .as_ref()
+            .map(|p| p.issuer.clone())
+            .unwrap_or_default();
+        let registered_client_id = registered
+            .as_ref()
+            .and_then(|p| p.client_ids.first().cloned())
+            .unwrap_or_default();
         let issuer = if !req.issuer.trim().is_empty() {
             req.issuer.trim().to_string()
+        } else if !registered_issuer.trim().is_empty() {
+            registered_issuer.trim().to_string()
         } else {
             std::env::var("UDB_OIDC_ISSUER").unwrap_or_default()
         };
         if issuer.is_empty() {
             return Err(Status::invalid_argument(
-                "OIDC issuer is required (request issuer or UDB_OIDC_ISSUER)",
+                "OIDC issuer is required (provider registry, request issuer, or UDB_OIDC_ISSUER)",
             ));
         }
         let client_id = if !req.client_id.trim().is_empty() {
             req.client_id.trim().to_string()
         } else if !req.audience.trim().is_empty() {
             req.audience.trim().to_string()
+        } else if !registered_client_id.trim().is_empty() {
+            registered_client_id.trim().to_string()
         } else {
             std::env::var("UDB_OIDC_CLIENT_ID").unwrap_or_default()
         };
@@ -309,7 +642,7 @@ impl AuthnServiceImpl {
             let issuer_url = IssuerUrl::new(issuer)
                 .map_err(|err| Status::invalid_argument(format!("invalid OIDC issuer: {err}")))?;
             let provider_metadata = CoreProviderMetadata::discover(&issuer_url, &http_client)
-                .map_err(|err| Status::unauthenticated(format!("OIDC discovery failed: {err}")))?;
+                .map_err(|_| Status::unauthenticated("invalid credential"))?;
             let client_secret = std::env::var("UDB_OIDC_CLIENT_SECRET")
                 .ok()
                 .filter(|secret| !secret.trim().is_empty())
@@ -320,13 +653,11 @@ impl AuthnServiceImpl {
                 client_secret,
             );
             let id_token = CoreIdToken::from_str(&id_token)
-                .map_err(|err| Status::unauthenticated(format!("invalid OIDC ID token: {err}")))?;
+                .map_err(|_| Status::unauthenticated("invalid credential"))?;
             let verifier = client.id_token_verifier();
             let claims = id_token
                 .claims(&verifier, &Nonce::new(nonce))
-                .map_err(|err| {
-                    Status::unauthenticated(format!("OIDC ID token verification failed: {err}"))
-                })?;
+                .map_err(|_| Status::unauthenticated("invalid credential"))?;
             let subject = claims.subject().as_str().to_string();
             Ok(Principal {
                 principal_id: format!("{provider_id}:{subject}"),
@@ -371,6 +702,11 @@ impl AuthnServiceImpl {
 
     #[cfg(feature = "webauthn")]
     fn webauthn(&self) -> Result<webauthn_rs::prelude::Webauthn, Status> {
+        // TODO(host): attestation/RK-UV policy needs the webauthn/openssl feature (Tier-7 #32)
+        // — configurable attestation conveyance, resident-key (discoverable
+        // credential) requirement, and user-verification policy are host-blocked
+        // on the openssl-backed webauthn build; only the 3 IdP event families are
+        // shippable in this pass.
         use std::time::Duration;
         use webauthn_rs::prelude::{Url, WebauthnBuilder};
 
@@ -443,7 +779,7 @@ impl AuthnServiceImpl {
         .fetch_optional(pool)
         .await
         .map_err(|err| Status::internal(format!("load WebAuthn challenge failed: {err}")))?
-        .ok_or_else(|| Status::not_found("WebAuthn challenge not found, expired, or consumed"))?;
+        .ok_or_else(|| Status::permission_denied("invalid WebAuthn ceremony"))?;
         Ok(WebAuthnChallengeRecord {
             user_id: row.try_get("user_id").map_err(|err| {
                 Status::internal(format!("decode WebAuthn challenge user_id failed: {err}"))
@@ -677,9 +1013,7 @@ impl AuthnServiceImpl {
             .map_err(Status::internal)?
             .ok_or_else(|| Status::not_found("user not found"))?;
         if challenge.tenant_id != user.tenant_id || challenge.project_id != user.project_id {
-            return Err(Status::permission_denied(
-                "WebAuthn challenge scope does not match user",
-            ));
+            return Err(Status::permission_denied("invalid WebAuthn ceremony"));
         }
         let envelope: WebAuthnStateEnvelope<PasskeyRegistration> =
             serde_json::from_str(&challenge.state_json).map_err(|err| {
@@ -694,11 +1028,7 @@ impl AuthnServiceImpl {
         let passkey = self
             .webauthn()?
             .finish_passkey_registration(&credential, &envelope.state)
-            .map_err(|err| {
-                Status::unauthenticated(format!(
-                    "WebAuthn registration verification failed: {err:?}"
-                ))
-            })?;
+            .map_err(|_| Status::unauthenticated("invalid credential"))?;
         let credential_id = Self::webauthn_credential_id_text(passkey.cred_id())?;
         let passkey_json = serde_json::to_string(&passkey)
             .map_err(|err| Status::internal(format!("serialize WebAuthn passkey failed: {err}")))?;
@@ -716,6 +1046,31 @@ impl AuthnServiceImpl {
             .put_user(user.clone())
             .await
             .map_err(Status::internal)?;
+        // Audit the passkey registration (security-sensitive). The credential id
+        // is a public handle, never key material.
+        self.emit_event(
+            AuthEvent::new(
+                topics::WEBAUTHN_REGISTERED,
+                user.user_id.clone(),
+                user.tenant_id.clone(),
+                serde_json::json!({
+                    "user_id": user.user_id.clone(),
+                    "credential_id": credential_id.clone(),
+                }),
+            )
+            .with_correlation(format!("webauthn_register:{}", user.user_id))
+            .with_compliance(ComplianceEnvelope {
+                actor: user.user_id.clone(),
+                actor_project: user.project_id.clone(),
+                target_resource: credential_id.clone(),
+                operation: "webauthn_register".to_string(),
+                outcome: "success".to_string(),
+                reason_code: "passkey_registered".to_string(),
+                auth_method: "passkey".to_string(),
+                ..ComplianceEnvelope::default()
+            }),
+        )
+        .await;
         Ok(authn_pb::FinishWebAuthnRegistrationResponse {
             registered: true,
             credential_id,
@@ -814,9 +1169,7 @@ impl AuthnServiceImpl {
             .map_err(Status::internal)?
             .ok_or_else(|| Status::not_found("user not found"))?;
         if challenge.tenant_id != user.tenant_id || challenge.project_id != user.project_id {
-            return Err(Status::permission_denied(
-                "WebAuthn challenge scope does not match user",
-            ));
+            return Err(Status::permission_denied("invalid WebAuthn ceremony"));
         }
         let envelope: WebAuthnStateEnvelope<PasskeyAuthentication> =
             serde_json::from_str(&challenge.state_json).map_err(|err| {
@@ -833,15 +1186,9 @@ impl AuthnServiceImpl {
         let result = self
             .webauthn()?
             .finish_passkey_authentication(&credential, &envelope.state)
-            .map_err(|err| {
-                Status::unauthenticated(format!(
-                    "WebAuthn authentication verification failed: {err:?}"
-                ))
-            })?;
+            .map_err(|_| Status::unauthenticated("invalid credential"))?;
         if !result.user_verified() {
-            return Err(Status::unauthenticated(
-                "WebAuthn assertion did not provide user verification",
-            ));
+            return Err(Status::unauthenticated("invalid credential"));
         }
         let credential_id = Self::webauthn_credential_id_text(result.cred_id())?;
         let mut matched = None;
@@ -855,9 +1202,7 @@ impl AuthnServiceImpl {
                 break;
             }
         }
-        let passkey = matched.ok_or_else(|| {
-            Status::unauthenticated("WebAuthn credential is not registered for user")
-        })?;
+        let passkey = matched.ok_or_else(|| Status::unauthenticated("invalid credential"))?;
         let passkey_json = serde_json::to_string(&passkey)
             .map_err(|err| Status::internal(format!("serialize WebAuthn passkey failed: {err}")))?;
         self.update_webauthn_passkey_after_auth(&credential_id, passkey_json)
@@ -875,6 +1220,7 @@ impl AuthnServiceImpl {
             &[],
             "",
             &session_id,
+            "webauthn",
             now,
         );
         let expires_at = if access_exp > 0 {
@@ -883,6 +1229,31 @@ impl AuthnServiceImpl {
             session_expires as i64
         };
         let principal = principal_from_user_record(&user, authn::AuthnMethod::WebAuthn);
+        // Audit the passkey authentication (security-sensitive).
+        self.emit_event(
+            AuthEvent::new(
+                topics::WEBAUTHN_AUTHENTICATED,
+                user.user_id.clone(),
+                user.tenant_id.clone(),
+                serde_json::json!({
+                    "user_id": user.user_id.clone(),
+                    "credential_id": credential_id.clone(),
+                }),
+            )
+            .with_correlation(format!("webauthn_auth:{}", user.user_id))
+            .with_compliance(ComplianceEnvelope {
+                actor: user.user_id.clone(),
+                actor_project: user.project_id.clone(),
+                target_resource: credential_id.clone(),
+                operation: "webauthn_authenticate".to_string(),
+                outcome: "success".to_string(),
+                reason_code: "passkey_verified".to_string(),
+                auth_method: "passkey".to_string(),
+                assurance_level: "aal2".to_string(),
+                ..ComplianceEnvelope::default()
+            }),
+        )
+        .await;
         Ok(authn_pb::FinishWebAuthnAuthenticationResponse {
             principal: Some(authn_principal_to_pb(&principal, expires_at)),
             session_id,
@@ -1168,5 +1539,101 @@ impl AuthnService for AuthnServiceImpl {
                 "WebAuthn requires building UDB with the `webauthn` feature",
             ))
         }
+    }
+
+    // ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+    async fn list_devices(
+        &self,
+        request: Request<authn_pb::ListDevicesRequest>,
+    ) -> Result<Response<authn_pb::ListDevicesResponse>, Status> {
+        self.list_devices_impl(request).await
+    }
+    async fn revoke_device(
+        &self,
+        request: Request<authn_pb::RevokeDeviceRequest>,
+    ) -> Result<Response<authn_pb::RevokeDeviceResponse>, Status> {
+        self.revoke_device_impl(request).await
+    }
+    async fn admin_revoke_session(
+        &self,
+        request: Request<authn_pb::AdminRevokeSessionRequest>,
+    ) -> Result<Response<authn_pb::AdminRevokeSessionResponse>, Status> {
+        self.admin_revoke_session_impl(request).await
+    }
+    async fn admin_revoke_all_user_sessions(
+        &self,
+        request: Request<authn_pb::AdminRevokeAllUserSessionsRequest>,
+    ) -> Result<Response<authn_pb::AdminRevokeAllUserSessionsResponse>, Status> {
+        self.admin_revoke_all_user_sessions_impl(request).await
+    }
+    async fn admin_revoke_all_tenant_sessions(
+        &self,
+        request: Request<authn_pb::AdminRevokeAllTenantSessionsRequest>,
+    ) -> Result<Response<authn_pb::AdminRevokeAllTenantSessionsResponse>, Status> {
+        self.admin_revoke_all_tenant_sessions_impl(request).await
+    }
+    async fn emergency_revoke(
+        &self,
+        request: Request<authn_pb::EmergencyRevokeRequest>,
+    ) -> Result<Response<authn_pb::EmergencyRevokeResponse>, Status> {
+        self.emergency_revoke_impl(request).await
+    }
+
+    // ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+    async fn issue_mfa_challenge(
+        &self,
+        request: Request<authn_pb::IssueMfaChallengeRequest>,
+    ) -> Result<Response<authn_pb::IssueMfaChallengeResponse>, Status> {
+        self.issue_mfa_challenge_impl(request).await
+    }
+    async fn verify_mfa_challenge(
+        &self,
+        request: Request<authn_pb::VerifyMfaChallengeRequest>,
+    ) -> Result<Response<authn_pb::VerifyMfaChallengeResponse>, Status> {
+        self.verify_mfa_challenge_impl(request).await
+    }
+    async fn list_mfa_factors(
+        &self,
+        request: Request<authn_pb::ListMfaFactorsRequest>,
+    ) -> Result<Response<authn_pb::ListMfaFactorsResponse>, Status> {
+        self.list_mfa_factors_impl(request).await
+    }
+    async fn disable_mfa_factor(
+        &self,
+        request: Request<authn_pb::DisableMfaFactorRequest>,
+    ) -> Result<Response<authn_pb::DisableMfaFactorResponse>, Status> {
+        self.disable_mfa_factor_impl(request).await
+    }
+    async fn rename_passkey(
+        &self,
+        request: Request<authn_pb::RenamePasskeyRequest>,
+    ) -> Result<Response<authn_pb::RenamePasskeyResponse>, Status> {
+        self.rename_passkey_impl(request).await
+    }
+    async fn revoke_recovery_codes(
+        &self,
+        request: Request<authn_pb::RevokeRecoveryCodesRequest>,
+    ) -> Result<Response<authn_pb::RevokeRecoveryCodesResponse>, Status> {
+        self.revoke_recovery_codes_impl(request).await
+    }
+    async fn admin_reset_mfa(
+        &self,
+        request: Request<authn_pb::AdminResetMfaRequest>,
+    ) -> Result<Response<authn_pb::AdminResetMfaResponse>, Status> {
+        self.admin_reset_mfa_impl(request).await
+    }
+
+    // ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+    async fn list_web_authn_credentials(
+        &self,
+        request: Request<authn_pb::ListWebAuthnCredentialsRequest>,
+    ) -> Result<Response<authn_pb::ListWebAuthnCredentialsResponse>, Status> {
+        self.list_web_authn_credentials_impl(request).await
+    }
+    async fn delete_web_authn_credential(
+        &self,
+        request: Request<authn_pb::DeleteWebAuthnCredentialRequest>,
+    ) -> Result<Response<authn_pb::DeleteWebAuthnCredentialResponse>, Status> {
+        self.delete_web_authn_credential_impl(request).await
     }
 }

@@ -101,7 +101,6 @@ pub struct SagaRecoveryReport {
 /// store (PG today; MySQL / SQLite tomorrow).
 pub struct SagaRecoveryWorker {
     store: Arc<dyn SystemStores>,
-    config: SystemCatalogConfig,
     interval: Duration,
     stale_threshold: Duration,
     worker_lease_ttl: Duration,
@@ -137,7 +136,6 @@ impl SagaRecoveryWorker {
     pub fn with_settings(store: Arc<dyn SystemStores>, settings: &SagaSettings) -> Self {
         Self {
             store,
-            config: SystemCatalogConfig::default(),
             interval: Duration::from_secs(settings.recovery_interval_secs.max(1)),
             stale_threshold: Duration::from_secs(settings.stale_threshold_secs.max(1)),
             worker_lease_ttl: Duration::from_secs(settings.worker_lease_ttl_secs.max(1)),
@@ -240,12 +238,31 @@ impl SagaRecoveryWorker {
         locked_report
     }
 
+    async fn refresh_saga_active_metric(&self) {
+        match SagaStore::saga_summary(self.store.as_ref()).await {
+            Ok(summary) => self.metrics.set_saga_active(summary.in_progress),
+            Err(err) => {
+                tracing::debug!(error = %err, "saga active metric refresh failed");
+            }
+        }
+    }
+
+    fn observe_saga_duration_since(&self, created_at: chrono::DateTime<chrono::Utc>) {
+        let seconds = chrono::Utc::now()
+            .signed_duration_since(created_at)
+            .to_std()
+            .map(|duration| duration.as_secs_f64())
+            .unwrap_or(0.0);
+        self.metrics.observe_saga_duration_seconds(seconds);
+    }
+
     async fn run_once_locked(&self) -> SagaRecoveryReport {
         let mut report = SagaRecoveryReport {
             owner_id: self.owner_id.clone(),
             lease_acquired: true,
             ..SagaRecoveryReport::default()
         };
+        self.refresh_saga_active_metric().await;
         // NW1-3c: claim_recoverable_sagas returns INDETERMINATE +
         // stale IN_PROGRESS in oldest-first order.
         let candidates = match SagaStore::claim_recoverable_sagas(
@@ -258,6 +275,7 @@ impl SagaRecoveryWorker {
             Ok(rows) => rows,
             Err(err) => {
                 report.errors.push(format!("saga scan failed: {err}"));
+                self.refresh_saga_active_metric().await;
                 return report;
             }
         };
@@ -271,6 +289,7 @@ impl SagaRecoveryWorker {
         for row in candidates {
             let saga_id = row.saga_id;
             let saga_id_str = saga_id.to_string();
+            let created_at = row.created_at;
             let compensations = row.compensations;
 
             // #134: drive the retry decision through the QuarantinePolicy. A saga
@@ -286,6 +305,7 @@ impl SagaRecoveryWorker {
             ) {
                 QuarantineState::Quarantine { .. } => {
                     manual_review_ids.push(saga_id);
+                    self.observe_saga_duration_since(created_at);
                     report.marked_manual_review += 1;
                     continue;
                 }
@@ -302,12 +322,14 @@ impl SagaRecoveryWorker {
                 Ok(_) => {
                     report.compensated += 1;
                     self.metrics.inc_saga_compensated_total();
+                    self.observe_saga_duration_since(created_at);
                     SagaStatus::Compensated
                 }
                 Err(err) => {
                     // Every failed compensation attempt is recorded (whether it
                     // will be retried next sweep or escalated to manual review).
                     self.metrics.inc_saga_failed_compensations_total();
+                    self.metrics.inc_compensation_failures_total();
                     // Increment recovery_attempts atomically. The
                     // trait returns the post-increment counter; the
                     // pre-NW1-3c code did the same via PG `RETURNING`.
@@ -329,6 +351,7 @@ impl SagaRecoveryWorker {
 
                     if attempts >= self.poison_threshold {
                         report.marked_manual_review += 1;
+                        self.observe_saga_duration_since(created_at);
                         SagaStatus::ManualReview
                     } else {
                         report.errors.push(format!(
@@ -374,6 +397,7 @@ impl SagaRecoveryWorker {
                 .errors
                 .push(format!("batch manual-review status update failed: {err}"));
         }
+        self.refresh_saga_active_metric().await;
         report
     }
 
@@ -871,5 +895,79 @@ mod tests {
         let mut report_b2 = SagaRecoveryReport::default();
         let b_now = worker_b.try_acquire_worker_lease(&mut report_b2).await;
         assert!(b_now);
+    }
+
+    /// Phase 1 HA pin: model two broker replicas against the same SystemStores
+    /// lease. While replica A owns the recovery lease, replica B's full
+    /// `run_once` must skip without scanning or incrementing recovery attempts.
+    /// Once A releases, B may recover the saga exactly once.
+    #[cfg(feature = "sqlite")]
+    #[tokio::test]
+    async fn multi_node_saga_recovery_skips_peer_until_lease_release() {
+        let store = fresh_store().await;
+        let saga_id = SagaStore::record_saga(
+            store.as_ref(),
+            &SagaInsert {
+                tx_id: Uuid::new_v4().to_string(),
+                tenant_id: "tenant-a".to_string(),
+                correlation_id: "corr-ha".to_string(),
+                backend_instance: "primary".to_string(),
+                operation: "upsert".to_string(),
+                status: SagaStatus::Indeterminate,
+                steps: serde_json::json!([]),
+                compensations: serde_json::json!([]),
+            },
+        )
+        .await
+        .unwrap();
+
+        let settings = SagaSettings {
+            recovery_interval_secs: 1,
+            stale_threshold_secs: 1,
+            worker_lease_ttl_secs: 60,
+            ..Default::default()
+        };
+        let worker_a = SagaRecoveryWorker::with_settings(store.clone(), &settings);
+        let mut worker_b = SagaRecoveryWorker::with_settings(store.clone(), &settings);
+        // This test exercises failover handoff (the next replica performs the
+        // recovery attempt once the lease is released), not the #134 per-saga
+        // retry cooldown. The freshly-created saga's `updated_at` is "now", so
+        // the default 30s cooldown would otherwise skip it as still-cooling and
+        // leave `recovery_attempts` at 0. Zero the cooldown so the handoff is
+        // observed deterministically regardless of wall-clock timing.
+        worker_b.quarantine_policy.cooldown_secs = 0;
+
+        let mut held = SagaRecoveryReport::default();
+        assert!(
+            worker_a.try_acquire_worker_lease(&mut held).await,
+            "replica A should acquire the shared recovery lease"
+        );
+
+        let skipped = worker_b.run_once().await;
+        assert!(!skipped.lease_acquired);
+        assert_eq!(skipped.scanned, 0);
+        let row = SagaStore::get_saga(store.as_ref(), saga_id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            row.recovery_attempts, 0,
+            "peer replica must not touch saga state while the lease is held"
+        );
+
+        worker_a.release_worker_lease(&mut held).await;
+        assert!(held.errors.is_empty(), "lease release must be clean");
+
+        let recovered = worker_b.run_once().await;
+        assert!(recovered.lease_acquired);
+        assert_eq!(recovered.scanned, 1);
+        let row = SagaStore::get_saga(store.as_ref(), saga_id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            row.recovery_attempts, 1,
+            "after failover, the next replica performs one recovery attempt"
+        );
     }
 }

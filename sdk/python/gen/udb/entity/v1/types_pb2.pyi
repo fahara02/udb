@@ -74,6 +74,7 @@ from udb.entity.v1.admin_pb2 import ProtocolSupport as ProtocolSupport
 from udb.entity.v1.admin_pb2 import BackendProtocolSupport as BackendProtocolSupport
 from udb.entity.v1.admin_pb2 import BackendCapabilityDescriptor as BackendCapabilityDescriptor
 from udb.entity.v1.admin_pb2 import BackendInstanceStatus as BackendInstanceStatus
+from udb.entity.v1.admin_pb2 import NativeServiceStatus as NativeServiceStatus
 from udb.entity.v1.admin_pb2 import CatalogManifestRequest as CatalogManifestRequest
 from udb.entity.v1.admin_pb2 import CatalogManifestResponse as CatalogManifestResponse
 from udb.entity.v1.admin_pb2 import MessageSchemaLookupRequest as MessageSchemaLookupRequest

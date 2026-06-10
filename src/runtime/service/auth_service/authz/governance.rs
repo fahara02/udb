@@ -1,0 +1,577 @@
+//! Phase K: Authz Policy Governance.
+//!
+//! Draft/version/approval workflow, separation of duties, simulation/explain,
+//! durable cluster invalidation, built-in role seeding, and legacy ABAC
+//! migration — all layered over the existing Postgres-backed authz store and
+//! the [`crate::runtime::authz::PolicyEngine`] decision surface.
+//!
+//! Governance invariants:
+//!   * Drafts and simulations NEVER mutate the live authorization snapshot.
+//!     They are evaluated in-memory through the Casbin engine.
+//!   * Only `ActivatePolicyVersion` / `RollbackPolicyVersion` change the active
+//!     policy/role/tuple rows, and each bumps the durable [`AuthzRevision`].
+//!   * Every authz admin mutation is itself authorized under
+//!     `native.authz.governance` with an explicit governance scope (or a
+//!     short-TTL break-glass grant) — never a bare bearer token.
+//!   * Separation of duties: the author of a high-risk draft cannot approve it.
+
+use super::*;
+use crate::runtime::authz::PolicyEngine;
+
+// ── Governance scopes / SoD constants ──────────────────────────────────────
+
+/// Scope granting full authz governance authority (activate/rollback/seed).
+pub(super) const SCOPE_AUTHZ_ADMIN: &str = "authz:admin";
+/// Scope to author/edit/submit policy drafts and write policy rows.
+pub(super) const SCOPE_POLICY_WRITE: &str = "authz:policy:write";
+/// Scope to approve/reject submitted drafts (distinct from authoring).
+pub(super) const SCOPE_POLICY_APPROVE: &str = "authz:policy:approve";
+/// Scope to read governance state (drafts, versions, diffs, simulations).
+pub(super) const SCOPE_POLICY_READ: &str = "authz:policy:read";
+/// Scope to write/assign roles.
+pub(super) const SCOPE_ROLE_WRITE: &str = "authz:role:write";
+
+/// Maximum lifetime of a break-glass grant. A break-glass actor whose
+/// `break_glass_expires_at_unix` is unset or further out than this is rejected,
+/// so emergency bypasses are always short-lived.
+pub(super) const BREAK_GLASS_MAX_TTL_SECS: i64 = 900; // 15 minutes
+
+/// Built-in role definitions seeded per tenant (Phase K5). `(role_code, name)`.
+/// These cover the distinct security-admin / policy-author / policy-approver /
+/// auditor separation-of-duties roles plus operational admin roles.
+pub(super) const BUILTIN_ROLES: &[(&str, &str, &str)] = &[
+    (
+        "organization_owner",
+        "Organization Owner",
+        "Full control across the organization",
+    ),
+    (
+        "tenant_admin",
+        "Tenant Admin",
+        "Administers a single tenant",
+    ),
+    (
+        "security_admin",
+        "Security Admin",
+        "Manages authn/authz security configuration",
+    ),
+    (
+        "policy_author",
+        "Policy Author",
+        "Drafts and submits authorization policy changes",
+    ),
+    (
+        "policy_approver",
+        "Policy Approver",
+        "Reviews and approves authorization policy changes",
+    ),
+    (
+        "auditor",
+        "Auditor",
+        "Read-only access to audit and governance state",
+    ),
+    (
+        "service_account_manager",
+        "Service Account Manager",
+        "Manages service accounts",
+    ),
+    ("api_key_manager", "API Key Manager", "Manages API keys"),
+    (
+        "billing_admin",
+        "Billing Admin",
+        "Manages billing configuration",
+    ),
+    (
+        "break_glass_admin",
+        "Break-Glass Admin",
+        "Emergency break-glass operations",
+    ),
+];
+
+impl AuthzServiceImpl {
+    // ── Native models for the governance tables ────────────────────────────
+
+    pub(super) fn policy_sets_model(&self) -> NativeModel {
+        native_model(
+            "udb.core.authz.entity.v1.PolicySet",
+            &[
+                "policy_set_id",
+                "tenant_id",
+                "project_id",
+                "name",
+                "active_version_id",
+                "rollback_version_id",
+                "description",
+                "created_by",
+                "deleted_at",
+            ],
+        )
+    }
+
+    pub(super) fn policy_drafts_model(&self) -> NativeModel {
+        native_model(
+            "udb.core.authz.entity.v1.PolicyDraft",
+            &[
+                "draft_id",
+                "tenant_id",
+                "project_id",
+                "title",
+                "description",
+                "proposed_policies_json",
+                "proposed_tuples_json",
+                "base_version_id",
+                "status",
+                "author",
+                "high_risk",
+            ],
+        )
+    }
+
+    pub(super) fn policy_versions_model(&self) -> NativeModel {
+        native_model(
+            "udb.core.authz.entity.v1.PolicyVersion",
+            &[
+                "policy_version_id",
+                "policy_set_id",
+                "version_number",
+                "state",
+                "snapshot_hash",
+                "created_by",
+                "activated_by",
+                "rollback_of",
+                "change_reason",
+                "revision",
+                "content_hash",
+                "tenant_id",
+                "project_id",
+                "payload_json",
+                "high_risk",
+                "submitted_by",
+                "source_draft_id",
+            ],
+        )
+    }
+
+    pub(super) fn policy_approvals_model(&self) -> NativeModel {
+        native_model(
+            "udb.core.authz.entity.v1.PolicyApproval",
+            &[
+                "approval_id",
+                "draft_id",
+                "tenant_id",
+                "actor",
+                "role",
+                "decision",
+                "reason",
+            ],
+        )
+    }
+
+    pub(super) fn authz_revisions_model(&self) -> NativeModel {
+        native_model(
+            "udb.core.authz.entity.v1.AuthzRevision",
+            &[
+                "revision_id",
+                "tenant_id",
+                "project_id",
+                "policy_revision",
+                "relationship_revision",
+                "content_hash",
+                "changed_by",
+                "change_type",
+            ],
+        )
+    }
+
+    pub(super) fn policy_simulations_model(&self) -> NativeModel {
+        native_model(
+            "udb.core.authz.entity.v1.PolicySimulation",
+            &[
+                "simulation_id",
+                "policy_version_id",
+                "principal_json",
+                "resource_json",
+                "action",
+                "purpose",
+                "active_decision_json",
+                "draft_decision_json",
+                "diff_json",
+                "tenant_id",
+                "project_id",
+            ],
+        )
+    }
+
+    // ── Governance authorization gate (K2.2) ───────────────────────────────
+
+    /// Authorize a governance mutation as a resource under
+    /// `native.authz.governance` and require an explicit governance scope (or a
+    /// valid short-TTL break-glass grant). Fails closed: a bare bearer token
+    /// with no governance scope is rejected. Returns the canonical actor
+    /// subject used for audit/`changed_by`.
+    ///
+    /// `resource_action` is the governance verb (e.g. `governance.activate`);
+    /// `required_scopes` lists scopes that satisfy the gate (any one suffices).
+    pub(super) async fn authorize_governance(
+        &self,
+        actor: Option<&authz_pb::GovernanceActor>,
+        rpc: &str,
+        resource_action: &str,
+        required_scopes: &[&str],
+        now: i64,
+    ) -> Result<String, Status> {
+        let actor = actor.ok_or_else(|| {
+            Status::permission_denied(format!(
+                "{rpc} requires a governance actor with an explicit authz scope"
+            ))
+        })?;
+        let subject = if actor.subject.trim().is_empty() {
+            "anonymous".to_string()
+        } else {
+            actor.subject.clone()
+        };
+        let tenant = actor.tenant_id.clone();
+
+        // Break-glass: a short-TTL, reason-bearing emergency bypass. Still
+        // audited as a governance resource; just not blocked on a standing scope.
+        if actor.break_glass {
+            if actor.break_glass_reason.trim().is_empty() {
+                return Err(Status::permission_denied("break-glass requires a reason"));
+            }
+            let exp = actor.break_glass_expires_at_unix;
+            if exp <= now || exp - now > BREAK_GLASS_MAX_TTL_SECS {
+                return Err(Status::permission_denied(format!(
+                    "break-glass grant must expire within {BREAK_GLASS_MAX_TTL_SECS}s and be in the future"
+                )));
+            }
+            self.audit_governance(&subject, &tenant, rpc, resource_action, true, now)
+                .await;
+            // Break-glass bypass GRANTED (security-sensitive ops event): a
+            // short-TTL, reason-bearing emergency authorization that skipped the
+            // standing-scope gate. Always audited so security review sees every
+            // break-glass use.
+            self.emit_event(
+                AuthEvent::new(
+                    topics::OPS_BREAK_GLASS_GRANT,
+                    subject.clone(),
+                    tenant.clone(),
+                    serde_json::json!({
+                        "subject": subject.clone(),
+                        "tenant_id": tenant.clone(),
+                        "rpc": rpc,
+                        "resource": format!("native.authz.governance/{resource_action}"),
+                        "reason": actor.break_glass_reason.clone(),
+                        "expires_at_unix": actor.break_glass_expires_at_unix,
+                        "granted_at_unix": now,
+                    }),
+                )
+                .with_correlation(format!("break_glass:{subject}:{rpc}"))
+                .with_compliance(events::ComplianceEnvelope {
+                    actor: subject.clone(),
+                    target_resource: format!("native.authz.governance/{resource_action}"),
+                    operation: "break_glass_grant".to_string(),
+                    outcome: "allow".to_string(),
+                    reason_code: if actor.break_glass_reason.trim().is_empty() {
+                        "break_glass".to_string()
+                    } else {
+                        actor.break_glass_reason.clone()
+                    },
+                    auth_method: "break_glass".to_string(),
+                    ..events::ComplianceEnvelope::default()
+                }),
+            )
+            .await;
+            return Ok(subject);
+        }
+
+        // Standing authority: the actor must carry at least one of the required
+        // governance scopes. `authz:admin` is a superset that satisfies any gate.
+        let has_scope = actor.scopes.iter().any(|s| {
+            let s = s.trim();
+            s == SCOPE_AUTHZ_ADMIN || required_scopes.iter().any(|req| *req == s)
+        });
+        if !has_scope {
+            self.audit_governance(&subject, &tenant, rpc, resource_action, false, now)
+                .await;
+            return Err(Status::permission_denied(format!(
+                "{rpc} requires one of the authz governance scopes {:?} (or break-glass); a bearer token alone is insufficient",
+                required_scopes
+            )));
+        }
+
+        // Authorize the governance action itself through the live snapshot, so an
+        // operator may additionally gate governance with Casbin policy over
+        // `native.authz.governance` resources. When no governance policy exists,
+        // the scope check above is authoritative (scopes are the floor).
+        if let Ok(snap) = self.current_snapshot().await {
+            if snap
+                .policies
+                .iter()
+                .any(|p| p.resource.starts_with("native.authz.governance"))
+            {
+                let principal = Principal {
+                    principal_id: subject.clone(),
+                    subject: subject.clone(),
+                    user_id: subject.clone(),
+                    tenant_id: tenant.clone(),
+                    project_id: actor.project_id.clone(),
+                    scopes: actor.scopes.clone(),
+                    roles: actor.roles.clone(),
+                    ..Default::default()
+                };
+                let resource = ResourceRef {
+                    resource_type: "governance".to_string(),
+                    resource_name: format!("native.authz.governance/{resource_action}"),
+                    message_type: "native.authz.governance".to_string(),
+                    ..Default::default()
+                };
+                let attrs = BTreeMap::new();
+                let decision = PolicyEngine::decide(
+                    snap.as_ref(),
+                    &AuthzQuery {
+                        principal: &principal,
+                        resource: &resource,
+                        action: resource_action,
+                        purpose: "governance",
+                        attributes: &attrs,
+                    },
+                )
+                .await;
+                if !decision.allowed {
+                    self.audit_governance(&subject, &tenant, rpc, resource_action, false, now)
+                        .await;
+                    return Err(Status::permission_denied(format!(
+                        "{rpc} denied by native.authz.governance policy: {}",
+                        decision.deny_reason
+                    )));
+                }
+            }
+        }
+
+        self.audit_governance(&subject, &tenant, rpc, resource_action, true, now)
+            .await;
+        Ok(subject)
+    }
+
+    /// Audit a governance authorization decision as a resource under
+    /// `native.authz.governance`. Denials are published to the access-denied
+    /// stream so security dashboards see attempted governance bypasses; allowed
+    /// governance mutations are audited by each handler's own domain event, so we
+    /// only emit here on denial to avoid duplicating allow events on read RPCs.
+    async fn audit_governance(
+        &self,
+        subject: &str,
+        tenant: &str,
+        rpc: &str,
+        resource_action: &str,
+        allowed: bool,
+        now: i64,
+    ) {
+        if allowed {
+            tracing::debug!(
+                subject,
+                tenant,
+                rpc,
+                resource = %format!("native.authz.governance/{resource_action}"),
+                "governance action authorized"
+            );
+            return;
+        }
+        self.emit_event(
+            AuthEvent::new(
+                topics::ACCESS_DENIED,
+                subject.to_string(),
+                tenant.to_string(),
+                serde_json::json!({
+                    "kind": "governance_decision",
+                    "rpc": rpc,
+                    "resource": format!("native.authz.governance/{resource_action}"),
+                    "subject": subject,
+                    "tenant_id": tenant,
+                    "allowed": false,
+                    "decided_at_unix": now,
+                }),
+            )
+            .with_correlation(format!("governance_deny:{subject}:{rpc}"))
+            .with_compliance(events::ComplianceEnvelope {
+                actor: subject.to_string(),
+                target_resource: format!("native.authz.governance/{resource_action}"),
+                operation: resource_action.to_string(),
+                outcome: "deny".to_string(),
+                reason_code: "governance_scope_denied".to_string(),
+                ..events::ComplianceEnvelope::default()
+            }),
+        )
+        .await;
+    }
+}
+
+impl AuthzServiceImpl {
+    // ── AuthzRevision (K2.1): one durable revision spanning policies, roles,
+    //    assignments, and tuples. The latest row per tenant/project is current. ─
+
+    /// Read the current `(policy_revision, relationship_revision, content_hash)`
+    /// for a tenant/project. Returns zeros when no revision row exists yet.
+    pub(super) async fn current_authz_revision(
+        &self,
+        tenant: &str,
+        project: &str,
+    ) -> Result<(i64, i64, String), Status> {
+        let pool = self.require_pool()?;
+        let m = self.authz_revisions_model();
+        let rel = m.relation.clone();
+        let row = sqlx::query(&format!(
+            "SELECT {policy_revision}, {relationship_revision}, COALESCE({content_hash}, '') AS content_hash \
+             FROM {rel} WHERE {tenant_id} = $1 AND {project_id} = $2 \
+             ORDER BY {policy_revision} DESC, {relationship_revision} DESC, {changed_at} DESC LIMIT 1",
+            policy_revision = m.q("policy_revision"),
+            relationship_revision = m.q("relationship_revision"),
+            content_hash = m.q("content_hash"),
+            tenant_id = m.q("tenant_id"),
+            project_id = m.q("project_id"),
+            changed_at = m.q("changed_at"),
+        ))
+        .bind(tenant)
+        .bind(project)
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| Status::internal(format!("read authz revision failed: {err}")))?;
+        match row {
+            Some(row) => Ok((
+                row.try_get("policy_revision").unwrap_or(0),
+                row.try_get("relationship_revision").unwrap_or(0),
+                row.try_get("content_hash").unwrap_or_default(),
+            )),
+            None => Ok((0, 0, String::new())),
+        }
+    }
+
+    /// Append a new `AuthzRevision` row, bumping the policy and/or relationship
+    /// counter. Returns the new `(policy_revision, relationship_revision)`. This
+    /// is the single revision-bump point invoked by EVERY active authz mutation
+    /// — policy edits, role create/update/delete, role assignment/revocation,
+    /// relationship/grouping tuple writes, activation, and rollback — so cached
+    /// bundles invalidate on any of them, not only policy/tuple edits.
+    pub(super) async fn bump_authz_revision(
+        &self,
+        tenant: &str,
+        project: &str,
+        change_type: authz_entity_pb::AuthzChangeType,
+        content_hash: &str,
+        changed_by: &str,
+    ) -> Result<(i64, i64), Status> {
+        let pool = self.require_pool()?;
+        let (cur_policy, cur_rel, _) = self.current_authz_revision(tenant, project).await?;
+        let bumps_relationship = matches!(
+            change_type,
+            authz_entity_pb::AuthzChangeType::Relationship
+                | authz_entity_pb::AuthzChangeType::Activation
+                | authz_entity_pb::AuthzChangeType::Rollback
+        );
+        // Policy/role/assignment/activation/rollback all bump the policy counter;
+        // relationship + activation + rollback also bump the relationship counter.
+        let new_policy = cur_policy + 1;
+        let new_rel = if bumps_relationship {
+            cur_rel + 1
+        } else {
+            cur_rel
+        };
+        let m = self.authz_revisions_model();
+        let rel = m.relation.clone();
+        sqlx::query(&format!(
+            "INSERT INTO {rel} \
+             ({revision_id}, {tenant_id}, {project_id}, {policy_revision}, {relationship_revision}, {content_hash}, {changed_by}, {change_type}) \
+             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)",
+            revision_id = m.q("revision_id"),
+            tenant_id = m.q("tenant_id"),
+            project_id = m.q("project_id"),
+            policy_revision = m.q("policy_revision"),
+            relationship_revision = m.q("relationship_revision"),
+            content_hash = m.q("content_hash"),
+            changed_by = m.q("changed_by"),
+            change_type = m.q("change_type"),
+        ))
+        .bind(tenant)
+        .bind(project)
+        .bind(new_policy)
+        .bind(new_rel)
+        .bind(content_hash)
+        .bind(changed_by)
+        .bind(change_type_to_db(change_type))
+        .execute(pool)
+        .await
+        .map_err(|err| Status::internal(format!("bump authz revision failed: {err}")))?;
+        Ok((new_policy, new_rel))
+    }
+
+    /// Emit the durable cluster-invalidation event (K2.4). Every node tailing the
+    /// outbox observes this and reloads its snapshot + revokes cached bundles
+    /// below `policy_revision`, rather than waiting for the local TTL.
+    pub(super) async fn emit_bundle_invalidation(
+        &self,
+        tenant: &str,
+        project: &str,
+        policy_revision: i64,
+        relationship_revision: i64,
+        reason: &str,
+        changed_by: &str,
+    ) {
+        self.emit_event(AuthEvent::new(
+            topics::POLICY_BUNDLE_INVALIDATED,
+            format!("{tenant}/{project}"),
+            tenant.to_string(),
+            serde_json::json!({
+                "tenant_id": tenant,
+                "project_id": project,
+                "policy_revision": policy_revision,
+                "relationship_revision": relationship_revision,
+                "reason": reason,
+                "changed_by": changed_by,
+            }),
+        ))
+        .await;
+    }
+}
+
+fn change_type_to_db(ct: authz_entity_pb::AuthzChangeType) -> &'static str {
+    use authz_entity_pb::AuthzChangeType as T;
+    match ct {
+        T::Unspecified => "AUTHZ_CHANGE_TYPE_UNSPECIFIED",
+        T::Policy => "AUTHZ_CHANGE_TYPE_POLICY",
+        T::Role => "AUTHZ_CHANGE_TYPE_ROLE",
+        T::RoleAssignment => "AUTHZ_CHANGE_TYPE_ROLE_ASSIGNMENT",
+        T::Relationship => "AUTHZ_CHANGE_TYPE_RELATIONSHIP",
+        T::Activation => "AUTHZ_CHANGE_TYPE_ACTIVATION",
+        T::Rollback => "AUTHZ_CHANGE_TYPE_ROLLBACK",
+    }
+}
+
+/// Reject a direct role mutation when governed mode is on. Role CRUD /
+/// assignment RPCs carry no `GovernanceActor`, so in governed mode they fail
+/// closed (callers must use a governed policy draft, which carries role bindings,
+/// or a break-glass governance RPC). `required` names the scope that would be
+/// needed (`authz:role:write`) in the rejection message. Off by default.
+pub(super) fn guard_governed_role_mutation(rpc: &str) -> Result<(), tonic::Status> {
+    if governed_mode_enabled() {
+        return Err(tonic::Status::failed_precondition(format!(
+            "governed mode: direct {rpc} is disabled; bind roles through a governed policy draft \
+             (carrying role bindings) and activate it, or use a break-glass governance RPC with {SCOPE_ROLE_WRITE}"
+        )));
+    }
+    Ok(())
+}
+
+/// Whether governed mode is active. In governed mode the direct active-mutation
+/// RPCs (PutAuthzPolicy, CreatePolicyRule, role mutations, role binding,
+/// relationship writes) require an explicit governance/break-glass grant rather
+/// than only a bearer token; otherwise they create drafts. Off by default so
+/// existing deployments keep working; opt in with `UDB_AUTHZ_GOVERNED_MODE=1`.
+pub(super) fn governed_mode_enabled() -> bool {
+    std::env::var("UDB_AUTHZ_GOVERNED_MODE")
+        .ok()
+        .map(|v| {
+            let v = v.trim().to_ascii_lowercase();
+            v == "1" || v == "true" || v == "yes" || v == "on"
+        })
+        .unwrap_or(false)
+}

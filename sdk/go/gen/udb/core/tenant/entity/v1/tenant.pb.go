@@ -153,7 +153,7 @@ var File_udb_core_tenant_entity_v1_tenant_proto protoreflect.FileDescriptor
 
 const file_udb_core_tenant_entity_v1_tenant_proto_rawDesc = "" +
 	"\n" +
-	"&udb/core/tenant/entity/v1/tenant.proto\x12\x19udb.core.tenant.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/tenant/entity/v1/enums.proto\"\xbc\r\n" +
+	"&udb/core/tenant/entity/v1/tenant.proto\x12\x19udb.core.tenant.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/tenant/entity/v1/enums.proto\"\xd9\x0e\n" +
 	"\x06Tenant\x12I\n" +
 	"\ttenant_id\x18\x01 \x01(\tB,\x82\xb7\x18(\n" +
 	"\ttenant_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\btenantId\x12S\n" +
@@ -187,7 +187,7 @@ const file_udb_core_tenant_entity_v1_tenant_proto_rawDesc = "" +
 	"\n" +
 	"deleted_by\x18\v \x01(\tB)\x82\xb7\x18%\n" +
 	"\n" +
-	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\xa7\x05\xfa\xb6\x18\xa2\x05\n" +
+	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy:\xc4\x06\xfa\xb6\x18\xa2\x05\n" +
 	"\atenants\x12\n" +
 	"udb_tenant\x18\x01 \x01*KMulti-tenancy support for organizations, workspaces, accounts, and projects0\x018\x01@\x01b\x97\x01\n" +
 	"\x17tenant_self_or_platform\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01<\n" +
@@ -201,7 +201,8 @@ const file_udb_core_tenant_entity_v1_tenant_proto_rawDesc = "" +
 	"  NEW.updated_at = CURRENT_TIMESTAMP;\n" +
 	"  RETURN NEW;\n" +
 	"END;\n" +
-	"$$;\xf2\x01\x16udb.tenant.tenants.cdc\xfa\x01\vtenant:readB\xfc\x01\n" +
+	"$$;\xf2\x01\x16udb.tenant.tenants.cdc\xfa\x01\vtenant:read\x8a\xb2\x19\x98\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x12tenant.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfc\x01\n" +
 	"\x1dcom.udb.core.tenant.entity.v1B\vTenantProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/tenant/entity/v1;entityv1\xa2\x02\x04UCTE\xaa\x02\x19udb.core.Tenant.Entity.V1\xca\x02\x19Udb\\Core\\Tenant\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Tenant\\Entity\\V1\xea\x02\x1dUdb::Core::Tenant::Entity::V1b\x06proto3"
 
 var (

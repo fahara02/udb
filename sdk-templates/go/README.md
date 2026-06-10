@@ -44,8 +44,9 @@ hand-written files are templated or overwritten.
 - `GeneratedClient` — wraps an existing `grpc.ClientConnInterface`, applies the 8
   UDB headers plus optional `authorization` / `x-api-key` / `x-request-id`,
   per-call deadline, retry with exponential backoff + jitter on transient codes
-  (`UNAVAILABLE`, `DEADLINE_EXCEEDED`, `RESOURCE_EXHAUSTED`), and typed error
-  mapping (`*Error`, decoding the `udb-error-detail-bin` trailer).
+  (`UNAVAILABLE`, `RESOURCE_EXHAUSTED`; plus `DEADLINE_EXCEEDED` only for
+  read-only RPCs), and typed error mapping (`*Error`, decoding the
+  `udb-error-detail-bin` trailer).
 - `DialOptions()` — unary + stream interceptors so the typed hand-written
   wrappers (`Client`, `AuthClient`) transparently gain retry/metadata/error
   mapping when you build them on a connection dialed with these options.

@@ -35,17 +35,23 @@
 //!     `{{RPC_NAME}}`, `{{RPC_SNAKE}}`, `{{RPC_INPUT}}`, `{{RPC_INPUT_PKG}}`,
 //!     `{{RPC_OUTPUT}}`, `{{RPC_OUTPUT_PKG}}`, `{{RPC_CLIENT_STREAMING}}`,
 //!     `{{RPC_SERVER_STREAMING}}`, `{{RPC_KIND}}`, `{{RPC_PATH}}`,
-//!     `{{SERVICE_NAME}}`, `{{SERVICE_PKG}}`, `{{SERVICE_FULL}}`.
+//!     `{{RPC_CSRF_REQUIRED}}`, `{{RPC_INTERNAL_GRPC_ONLY}}`,
+//!     `{{RPC_PUBLIC_LISTENER}}`, `{{RPC_CONTROL_PLANE_LISTENER}}`,
+//!     `{{RPC_PEER_LISTENER}}`,
+//!     `{{SERVICE_NAME}}`, `{{SERVICE_PKG}}`, `{{SERVICE_FULL}}`. The optional
+//!     BEGIN filter also accepts `surface=public|control_plane|peer`,
+//!     `auth=<mode>`, and `native_service=<id>` in addition to `service=`/`kind=`.
 //!   * **Per-service blocks** — `@@UDB_SERVICE_BEGIN`/`@@UDB_SERVICE_END`, repeated
 //!     per service, with `{{SERVICE_NAME}}`, `{{SERVICE_PKG}}`, `{{SERVICE_FULL}}`,
 //!     `{{SERVICE_RPC_COUNT}}`.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
+use std::process::Command as ProcessCommand;
 
 use udb::runtime::sdk_manifest::{RpcDescriptor, rpc_manifest};
 
-use super::SdkAction;
+use super::{SdkAction, SdkSelector};
 
 /// States of the SDK-generation FSM.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -87,12 +93,339 @@ impl SdkGenState {
 }
 
 /// Entry point for `udb sdk <action>`.
-pub(crate) fn run(action: SdkAction, lang: &str, templates_dir: &str, out_dir: &str) -> i32 {
+pub(crate) fn run(
+    action: SdkAction,
+    lang: &str,
+    templates_dir: &str,
+    out_dir: &str,
+    selector: &SdkSelector,
+) -> i32 {
     match action {
         SdkAction::Manifest => emit_manifest_json(),
         SdkAction::ListLangs => list_languages(templates_dir),
-        SdkAction::Generate => generate(lang, templates_dir, out_dir),
+        SdkAction::Init => init_sdk(lang),
+        SdkAction::Generate => generate(lang, templates_dir, out_dir, selector),
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RequirementKind {
+    Required,
+    Recommended,
+}
+
+#[derive(Debug, Clone)]
+struct SdkRequirement {
+    name: &'static str,
+    ok: bool,
+    kind: RequirementKind,
+    install: &'static str,
+}
+
+#[derive(Debug, Clone)]
+struct SdkPreflight {
+    lang: &'static str,
+    title: &'static str,
+    bootstrap: String,
+    requirements: Vec<SdkRequirement>,
+}
+
+const UDB_PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+fn init_sdk(lang: &str) -> i32 {
+    let languages = match resolve_init_languages(lang) {
+        Ok(languages) => languages,
+        Err(message) => {
+            eprintln!("{message}");
+            return 2;
+        }
+    };
+
+    let mut missing_required = 0usize;
+    println!(
+        "sdk init preflight — checking {} language SDK(s) plus native feature tools",
+        languages.len()
+    );
+    for lang in languages {
+        let report = preflight_language(lang);
+        missing_required += print_preflight_report(&report);
+    }
+
+    let native_report = native_feature_preflight();
+    missing_required += print_preflight_report(&native_report);
+
+    if missing_required == 0 {
+        println!("\nsdk init preflight OK");
+        0
+    } else {
+        eprintln!(
+            "\nsdk init preflight found {missing_required} missing required prerequisite(s)."
+        );
+        eprintln!("Install the missing tools/extensions above, then rerun `udb sdk init`.");
+        1
+    }
+}
+
+fn print_preflight_report(report: &SdkPreflight) -> usize {
+    let mut missing_required = 0usize;
+    println!("\n{} ({})", report.title, report.lang);
+    println!("  bootstrap: {}", report.bootstrap);
+    for req in &report.requirements {
+        let marker = if req.ok { "ok" } else { "missing" };
+        let kind = match req.kind {
+            RequirementKind::Required => "required",
+            RequirementKind::Recommended => "recommended",
+        };
+        println!("  [{marker}] {kind}: {}", req.name);
+        if !req.ok {
+            println!("        install: {}", req.install);
+            if req.kind == RequirementKind::Required {
+                missing_required += 1;
+            }
+        }
+    }
+    missing_required
+}
+
+fn resolve_init_languages(lang: &str) -> Result<Vec<&'static str>, String> {
+    let normalized = lang.trim().to_ascii_lowercase();
+    if normalized.is_empty() || normalized == "all" {
+        return Ok(vec!["typescript", "python", "go", "java", "csharp", "php"]);
+    }
+    let lang = match normalized.as_str() {
+        "ts" | "typescript" | "node" | "javascript" => "typescript",
+        "py" | "python" => "python",
+        "go" | "golang" => "go",
+        "java" | "jvm" => "java",
+        "cs" | "c#" | "csharp" | "dotnet" => "csharp",
+        "php" | "laravel" | "symfony" => "php",
+        other => {
+            return Err(format!(
+                "sdk init: unknown language `{other}`; expected all, typescript, python, go, java, csharp, or php"
+            ));
+        }
+    };
+    Ok(vec![lang])
+}
+
+fn preflight_language(lang: &str) -> SdkPreflight {
+    match lang {
+        "typescript" => SdkPreflight {
+            lang: "typescript",
+            title: "TypeScript / Node SDK",
+            bootstrap: format!("npm i @udb_plus/sdk@{UDB_PACKAGE_VERSION}"),
+            requirements: vec![
+                command_req(
+                    "node",
+                    "Node.js",
+                    "Install Node.js 20+ from https://nodejs.org/",
+                ),
+                command_req("npm", "npm", "Install Node.js/npm, then run `npm install`."),
+            ],
+        },
+        "python" => SdkPreflight {
+            lang: "python",
+            title: "Python SDK",
+            bootstrap: format!("python -m pip install udb-client=={UDB_PACKAGE_VERSION}"),
+            requirements: vec![
+                any_command_req(
+                    &["python", "python3", "py"],
+                    "Python",
+                    "Install Python 3.10+ and ensure `python` is on PATH.",
+                ),
+                any_command_req(
+                    &["pip", "pip3"],
+                    "pip",
+                    "Install pip or run `python -m ensurepip --upgrade`.",
+                ),
+            ],
+        },
+        "go" => SdkPreflight {
+            lang: "go",
+            title: "Go SDK",
+            bootstrap: format!("go get github.com/fahara02/udb/sdk/go@v{UDB_PACKAGE_VERSION}"),
+            requirements: vec![command_req(
+                "go",
+                "Go toolchain",
+                "Install Go 1.22+ from https://go.dev/dl/.",
+            )],
+        },
+        "java" => SdkPreflight {
+            lang: "java",
+            title: "Java SDK",
+            bootstrap: "mvn test  # or add the UDB Java client dependency in your pom.xml"
+                .to_string(),
+            requirements: vec![
+                command_req(
+                    "java",
+                    "Java runtime/JDK",
+                    "Install JDK 17+ and ensure `java` is on PATH.",
+                ),
+                command_req(
+                    "mvn",
+                    "Maven",
+                    "Install Apache Maven and ensure `mvn` is on PATH.",
+                ),
+            ],
+        },
+        "csharp" => SdkPreflight {
+            lang: "csharp",
+            title: "C# / .NET SDK",
+            bootstrap: format!("dotnet add package Udb.Client --version {UDB_PACKAGE_VERSION}"),
+            requirements: vec![command_req(
+                "dotnet",
+                ".NET SDK",
+                "Install .NET SDK 8+ from https://dotnet.microsoft.com/download.",
+            )],
+        },
+        "php" => SdkPreflight {
+            lang: "php",
+            title: "PHP / Laravel SDK",
+            bootstrap: format!("composer require fahara02/udb-laravel:^{UDB_PACKAGE_VERSION}"),
+            requirements: vec![
+                command_req(
+                    "php",
+                    "PHP CLI",
+                    "Install PHP 8.1+ and ensure `php` is on PATH.",
+                ),
+                command_req(
+                    "composer",
+                    "Composer",
+                    "Install Composer from https://getcomposer.org/.",
+                ),
+                php_extension_req(
+                    "grpc",
+                    RequirementKind::Required,
+                    "Linux/macOS: `pecl install grpc` then add `extension=grpc.so`; Windows: download the matching PECL php_grpc.dll and add `extension=php_grpc.dll` to the active php.ini.",
+                ),
+                php_extension_req(
+                    "protobuf",
+                    RequirementKind::Recommended,
+                    "Linux/macOS: `pecl install protobuf` then add `extension=protobuf.so`; Windows: download the matching PECL php_protobuf.dll and add `extension=php_protobuf.dll`. The Composer google/protobuf runtime works without it but is slower.",
+                ),
+            ],
+        },
+        _ => unreachable!("resolve_init_languages normalizes languages"),
+    }
+}
+
+fn native_feature_preflight() -> SdkPreflight {
+    SdkPreflight {
+        lang: "native",
+        title: "Native feature/toolchain preflight",
+        bootstrap: "udb proto export --buf-yaml && buf generate && udb native doctor".to_string(),
+        requirements: vec![
+            command_req(
+                "buf",
+                "Buf CLI",
+                "Install buf from https://buf.build/docs/installation, then rerun proto export/generation.",
+            ),
+            command_req_kind(
+                "cmake",
+                "CMake",
+                RequirementKind::Recommended,
+                "Install CMake and ensure it is on PATH; default Kafka/rdkafka builds use cmake-build.",
+            ),
+            command_req_kind(
+                "perl",
+                "Perl for vendored OpenSSL",
+                RequirementKind::Recommended,
+                "Install Strawberry Perl on Windows or system Perl on Linux/macOS; `--features webauthn` builds vendored OpenSSL through openssl-sys.",
+            ),
+            command_req_kind(
+                "openssl",
+                "OpenSSL CLI",
+                RequirementKind::Recommended,
+                "Install OpenSSL if you need certificate/key inspection; WebAuthn uses vendored OpenSSL but operators often need the CLI.",
+            ),
+            command_req_kind(
+                "ffmpeg",
+                "FFmpeg",
+                RequirementKind::Recommended,
+                "Install FFmpeg for native media/video transcode or caption pipelines before enabling those workloads.",
+            ),
+            command_req_kind(
+                "ghz",
+                "ghz gRPC load tester",
+                RequirementKind::Recommended,
+                "Install ghz from https://ghz.sh/ for scripts/native-load-test smoke and load checks.",
+            ),
+            command_req_kind(
+                "docker",
+                "Docker",
+                RequirementKind::Recommended,
+                "Install Docker Desktop or Docker Engine for local Postgres/Redis/Qdrant/MinIO/Kafka dependencies.",
+            ),
+            command_req_kind(
+                "protoc",
+                "protoc",
+                RequirementKind::Recommended,
+                "Install protoc if you use offline protobuf generation; buf-managed generation is preferred.",
+            ),
+        ],
+    }
+}
+
+fn command_req(command: &'static str, name: &'static str, install: &'static str) -> SdkRequirement {
+    command_req_kind(command, name, RequirementKind::Required, install)
+}
+
+fn command_req_kind(
+    command: &'static str,
+    name: &'static str,
+    kind: RequirementKind,
+    install: &'static str,
+) -> SdkRequirement {
+    SdkRequirement {
+        name,
+        ok: command_exists(command),
+        kind,
+        install,
+    }
+}
+
+fn any_command_req(commands: &[&str], name: &'static str, install: &'static str) -> SdkRequirement {
+    SdkRequirement {
+        name,
+        ok: commands.iter().any(|command| command_exists(command)),
+        kind: RequirementKind::Required,
+        install,
+    }
+}
+
+fn php_extension_req(
+    extension: &'static str,
+    kind: RequirementKind,
+    install: &'static str,
+) -> SdkRequirement {
+    SdkRequirement {
+        name: extension,
+        ok: php_extension_loaded(extension),
+        kind,
+        install,
+    }
+}
+
+fn command_exists(command: &str) -> bool {
+    let probe = if cfg!(windows) { "where" } else { "sh" };
+    let mut cmd = ProcessCommand::new(probe);
+    if cfg!(windows) {
+        cmd.arg(command);
+    } else {
+        cmd.arg("-c")
+            .arg(format!("command -v {command} >/dev/null 2>&1"));
+    }
+    cmd.output()
+        .map(|out| out.status.success())
+        .unwrap_or(false)
+}
+
+fn php_extension_loaded(extension: &str) -> bool {
+    let output = ProcessCommand::new("php")
+        .arg("-r")
+        .arg(format!("exit(extension_loaded('{extension}') ? 0 : 1);"))
+        .output();
+    output.map(|out| out.status.success()).unwrap_or(false)
 }
 
 /// Print the RPC manifest (proto-derived) as JSON, grouped by service.
@@ -138,18 +471,144 @@ fn emit_manifest_json() -> i32 {
 }
 
 fn rpc_to_json(rpc: &RpcDescriptor) -> serde_json::Value {
-    serde_json::json!({
-        "method": rpc.method,
-        "method_snake": rpc.method_snake,
-        "input": rpc.input_short,
-        "input_pkg": rpc.input_pkg,
-        "output": rpc.output_short,
-        "output_pkg": rpc.output_pkg,
-        "client_streaming": rpc.client_streaming,
-        "server_streaming": rpc.server_streaming,
-        "kind": rpc.kind(),
-        "path": rpc.grpc_path(),
-    })
+    let mut obj = serde_json::Map::new();
+    obj.insert("method".to_string(), serde_json::json!(&rpc.method));
+    obj.insert(
+        "method_snake".to_string(),
+        serde_json::json!(&rpc.method_snake),
+    );
+    obj.insert("input".to_string(), serde_json::json!(&rpc.input_short));
+    obj.insert("input_pkg".to_string(), serde_json::json!(&rpc.input_pkg));
+    obj.insert("output".to_string(), serde_json::json!(&rpc.output_short));
+    obj.insert("output_pkg".to_string(), serde_json::json!(&rpc.output_pkg));
+    obj.insert(
+        "client_streaming".to_string(),
+        serde_json::json!(rpc.client_streaming),
+    );
+    obj.insert(
+        "server_streaming".to_string(),
+        serde_json::json!(rpc.server_streaming),
+    );
+    obj.insert("kind".to_string(), serde_json::json!(rpc.kind()));
+    obj.insert("path".to_string(), serde_json::json!(rpc.grpc_path()));
+    obj.insert(
+        "native_service_id".to_string(),
+        serde_json::json!(&rpc.native_service_id),
+    );
+    obj.insert(
+        "logical_service_id".to_string(),
+        serde_json::json!(&rpc.logical_service_id),
+    );
+    obj.insert(
+        "sdk_facade_name".to_string(),
+        serde_json::json!(&rpc.sdk_facade_name),
+    );
+    obj.insert(
+        "cli_scaffold_group".to_string(),
+        serde_json::json!(&rpc.cli_scaffold_group),
+    );
+    obj.insert("auth_mode".to_string(), serde_json::json!(&rpc.auth_mode));
+    obj.insert("roles".to_string(), serde_json::json!(&rpc.roles));
+    obj.insert("scopes".to_string(), serde_json::json!(&rpc.scopes));
+    obj.insert("policy_ref".to_string(), serde_json::json!(&rpc.policy_ref));
+    obj.insert(
+        "tenant_required".to_string(),
+        serde_json::json!(rpc.tenant_required),
+    );
+    obj.insert(
+        "tenant_field".to_string(),
+        serde_json::json!(&rpc.tenant_field),
+    );
+    obj.insert(
+        "project_field".to_string(),
+        serde_json::json!(&rpc.project_field),
+    );
+    obj.insert(
+        "credential_types".to_string(),
+        serde_json::json!(&rpc.credential_types),
+    );
+    obj.insert(
+        "requires_postgres".to_string(),
+        serde_json::json!(rpc.requires_postgres),
+    );
+    obj.insert(
+        "requires_redis".to_string(),
+        serde_json::json!(rpc.requires_redis),
+    );
+    obj.insert(
+        "requires_object_store".to_string(),
+        serde_json::json!(rpc.requires_object_store),
+    );
+    obj.insert(
+        "requires_kafka".to_string(),
+        serde_json::json!(rpc.requires_kafka),
+    );
+    obj.insert(
+        "requires_feature".to_string(),
+        serde_json::json!(&rpc.requires_feature),
+    );
+    obj.insert(
+        "default_enabled".to_string(),
+        serde_json::json!(rpc.default_enabled),
+    );
+    obj.insert("surface".to_string(), serde_json::json!(&rpc.surface));
+    obj.insert(
+        "listener_kind".to_string(),
+        serde_json::json!(&rpc.listener_kind),
+    );
+    obj.insert(
+        "global_enablement_key".to_string(),
+        serde_json::json!(&rpc.global_enablement_key),
+    );
+    obj.insert(
+        "service_enablement_key".to_string(),
+        serde_json::json!(&rpc.service_enablement_key),
+    );
+    obj.insert(
+        "required_dependencies".to_string(),
+        serde_json::json!(&rpc.required_dependencies),
+    );
+    obj.insert(
+        "disabled_service_error_contract".to_string(),
+        serde_json::json!(&rpc.disabled_service_error_contract),
+    );
+    obj.insert(
+        "browser_safe".to_string(),
+        serde_json::json!(rpc.browser_safe),
+    );
+    obj.insert(
+        "server_only".to_string(),
+        serde_json::json!(rpc.server_only),
+    );
+    obj.insert(
+        "default_deadline_ms".to_string(),
+        serde_json::json!(rpc.default_deadline_ms),
+    );
+    obj.insert(
+        "default_max_attempts".to_string(),
+        serde_json::json!(rpc.default_max_attempts),
+    );
+    obj.insert(
+        "csrf_required".to_string(),
+        serde_json::json!(rpc.csrf_required),
+    );
+    obj.insert(
+        "internal_grpc_only".to_string(),
+        serde_json::json!(rpc.internal_grpc_only),
+    );
+    obj.insert(
+        "public_listener_allowed".to_string(),
+        serde_json::json!(rpc.public_listener_allowed),
+    );
+    obj.insert(
+        "control_plane_listener_allowed".to_string(),
+        serde_json::json!(rpc.control_plane_listener_allowed),
+    );
+    obj.insert(
+        "peer_listener_allowed".to_string(),
+        serde_json::json!(rpc.peer_listener_allowed),
+    );
+    serde_json::Value::Object(obj)
 }
 
 /// List the language template directories available under `templates_dir`.
@@ -184,16 +643,41 @@ fn list_languages(templates_dir: &str) -> i32 {
 }
 
 /// Drive the generation FSM for one language or `all`.
-fn generate(lang: &str, templates_dir: &str, out_dir: &str) -> i32 {
+fn generate(lang: &str, templates_dir: &str, out_dir: &str, selector: &SdkSelector) -> i32 {
     let mut fsm = Fsm::new();
 
     // ── Start ─▶ LoadManifest ───────────────────────────────────────────────
     if fsm.go(SdkGenState::LoadManifest).is_err() {
         return 1;
     }
-    let manifest = rpc_manifest();
-    if manifest.is_empty() {
+    let full_manifest = rpc_manifest();
+    if full_manifest.is_empty() {
         return fsm.fail("RPC manifest empty (descriptor-set build mismatch)".to_string());
+    }
+    // Apply CLI selectors (surface/service/native-only/deps/strict). With no
+    // flags this is a clone of the full manifest — behavior is unchanged.
+    let manifest = match apply_selectors(&full_manifest, selector) {
+        Ok(filtered) => filtered,
+        Err(err) => return fsm.fail(err),
+    };
+    if manifest.is_empty() {
+        return fsm.fail(
+            "selectors matched no RPCs — relax --surface/--service/--native-services".to_string(),
+        );
+    }
+    if manifest.len() != full_manifest.len() {
+        fsm.note(format!(
+            "selectors retained {} of {} RPC(s)",
+            manifest.len(),
+            full_manifest.len()
+        ));
+    }
+    if selector.include_deps {
+        // Accepted but a documented no-op: see `apply_selectors` — proto asserts
+        // no inter-service dependency edges to expand against.
+        fsm.note(
+            "--include-deps: no derivable inter-service edges; selection unchanged".to_string(),
+        );
     }
     let service_count = manifest
         .iter()
@@ -265,6 +749,90 @@ fn generate(lang: &str, templates_dir: &str, out_dir: &str) -> i32 {
         langs.len()
     );
     0
+}
+
+/// Apply the `udb sdk generate` selectors to the full RPC manifest.
+///
+/// Order: validate `--service` names, then keep an RPC iff it satisfies every
+/// active selector. With an all-default [`SdkSelector`] this returns a clone of
+/// the input (identical to historical behavior).
+///
+/// `--include-deps`: the descriptor manifest exposes no explicit inter-service
+/// dependency edges (services declare backend `requires_*`, not "service A
+/// needs service B"), so a service's only derivable "dependency set" is itself.
+/// We therefore treat `--include-deps` as an accepted, documented no-op rather
+/// than fabricating an edge that proto does not assert. If proto later gains a
+/// `depends_on_service` option, expand `selected_services` here.
+///
+/// `--strict-server-capabilities`: drop RPCs marked `internal_grpc_only` — a
+/// generated client speaking the public/control-plane channel cannot reach the
+/// loopback-only listener, so emitting a typed wrapper for it would be a
+/// capability lie.
+fn apply_selectors(
+    manifest: &[RpcDescriptor],
+    selector: &SdkSelector,
+) -> Result<Vec<RpcDescriptor>, String> {
+    // Validate --service against the known native/logical service IDs.
+    if !selector.services.is_empty() {
+        let known: BTreeSet<String> = manifest
+            .iter()
+            .flat_map(|rpc| {
+                [
+                    rpc.native_service_id.clone(),
+                    rpc.logical_service_id.clone(),
+                ]
+            })
+            .filter(|id| !id.is_empty())
+            .collect();
+        let unknown: Vec<&String> = selector
+            .services
+            .iter()
+            .filter(|id| !known.contains(*id))
+            .collect();
+        if !unknown.is_empty() {
+            let mut sorted: Vec<&String> = known.iter().collect();
+            sorted.sort();
+            return Err(format!(
+                "unknown --service {:?}; known services: {}",
+                unknown,
+                sorted
+                    .iter()
+                    .map(|s| s.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+    }
+
+    let selected: Vec<RpcDescriptor> = manifest
+        .iter()
+        .filter(|rpc| selector_matches(rpc, selector))
+        .cloned()
+        .collect();
+    Ok(selected)
+}
+
+fn selector_matches(rpc: &RpcDescriptor, selector: &SdkSelector) -> bool {
+    if let Some(surface) = &selector.surface {
+        if !rpc_matches_surface(rpc, surface) {
+            return false;
+        }
+    }
+    if !selector.services.is_empty()
+        && !selector
+            .services
+            .iter()
+            .any(|id| id == &rpc.native_service_id || id == &rpc.logical_service_id)
+    {
+        return false;
+    }
+    if selector.native_only && rpc.native_service_id.is_empty() {
+        return false;
+    }
+    if selector.strict_server_capabilities && rpc.internal_grpc_only {
+        return false;
+    }
+    true
 }
 
 /// Resolve the languages to generate. `all` → every subdir of `templates_root`;
@@ -482,23 +1050,55 @@ fn collect_body(lines: &[&str], start: usize, end_token: &str) -> (String, usize
 }
 
 /// Parse a `key=value` filter string into matchers. Supported keys: `service`,
-/// `kind`. Unknown tokens are ignored.
+/// `kind`, `surface` (`public`|`control_plane`|`peer`, matched against the
+/// owning service's listener flags), `auth` (the RPC's `auth_mode`), and
+/// `native_service` (the RPC's `native_service_id` or `logical_service_id`).
+/// Unknown tokens are ignored.
 struct BlockFilter {
     service: Option<String>,
     kind: Option<String>,
+    surface: Option<String>,
+    auth: Option<String>,
+    native_service: Option<String>,
 }
 
 fn parse_filter(filter: &str) -> BlockFilter {
     let mut service = None;
     let mut kind = None;
+    let mut surface = None;
+    let mut auth = None;
+    let mut native_service = None;
     for token in filter.split_whitespace() {
         if let Some(v) = token.strip_prefix("service=") {
             service = Some(v.to_string());
         } else if let Some(v) = token.strip_prefix("kind=") {
             kind = Some(v.to_string());
+        } else if let Some(v) = token.strip_prefix("surface=") {
+            surface = Some(v.to_string());
+        } else if let Some(v) = token.strip_prefix("auth=") {
+            auth = Some(v.to_string());
+        } else if let Some(v) = token.strip_prefix("native_service=") {
+            native_service = Some(v.to_string());
         }
     }
-    BlockFilter { service, kind }
+    BlockFilter {
+        service,
+        kind,
+        surface,
+        auth,
+        native_service,
+    }
+}
+
+/// Whether `rpc`'s owning service may bind the named listener surface
+/// (`public`|`control_plane`|`peer`).
+fn rpc_matches_surface(rpc: &RpcDescriptor, surface: &str) -> bool {
+    match surface {
+        "public" => rpc.public_listener_allowed,
+        "control_plane" => rpc.control_plane_listener_allowed,
+        "peer" => rpc.peer_listener_allowed,
+        _ => false,
+    }
 }
 
 fn rpc_matches(rpc: &RpcDescriptor, filter: &str) -> bool {
@@ -510,6 +1110,21 @@ fn rpc_matches(rpc: &RpcDescriptor, filter: &str) -> bool {
     }
     if let Some(kind) = &f.kind {
         if rpc.kind() != kind {
+            return false;
+        }
+    }
+    if let Some(surface) = &f.surface {
+        if !rpc_matches_surface(rpc, surface) {
+            return false;
+        }
+    }
+    if let Some(auth) = &f.auth {
+        if &rpc.auth_mode != auth {
+            return false;
+        }
+    }
+    if let Some(native) = &f.native_service {
+        if &rpc.native_service_id != native && &rpc.logical_service_id != native {
             return false;
         }
     }
@@ -552,7 +1167,7 @@ fn service_matches(svc: &ServiceInfo, filter: &str) -> bool {
 }
 
 fn substitute_rpc(body: &str, rpc: &RpcDescriptor) -> String {
-    let pairs: [(&str, String); 13] = [
+    let pairs: [(&str, String); 18] = [
         ("{{RPC_NAME}}", rpc.method.clone()),
         ("{{RPC_SNAKE}}", rpc.method_snake.clone()),
         ("{{RPC_INPUT}}", rpc.input_short.clone()),
@@ -566,6 +1181,23 @@ fn substitute_rpc(body: &str, rpc: &RpcDescriptor) -> String {
         ("{{SERVICE_NAME}}", rpc.service_name.clone()),
         ("{{SERVICE_PKG}}", rpc.service_pkg.clone()),
         ("{{SERVICE_FULL}}", rpc.service_full()),
+        ("{{RPC_CSRF_REQUIRED}}", rpc.csrf_required.to_string()),
+        (
+            "{{RPC_INTERNAL_GRPC_ONLY}}",
+            rpc.internal_grpc_only.to_string(),
+        ),
+        (
+            "{{RPC_PUBLIC_LISTENER}}",
+            rpc.public_listener_allowed.to_string(),
+        ),
+        (
+            "{{RPC_CONTROL_PLANE_LISTENER}}",
+            rpc.control_plane_listener_allowed.to_string(),
+        ),
+        (
+            "{{RPC_PEER_LISTENER}}",
+            rpc.peer_listener_allowed.to_string(),
+        ),
     ];
     let mut text = body.to_string();
     for (key, value) in &pairs {
@@ -613,6 +1245,13 @@ impl Fsm {
     }
 
     fn go(&mut self, next: SdkGenState) -> Result<(), ()> {
+        if self.state.is_terminal() {
+            eprintln!(
+                "sdk generate: cannot transition out of terminal state {}",
+                self.state.as_str()
+            );
+            return Err(());
+        }
         if !self.state.valid_transitions().contains(&next) {
             eprintln!(
                 "sdk generate: illegal transition {} → {}",
@@ -655,6 +1294,39 @@ mod tests {
                 output_pkg: "udb.entity.v1".into(),
                 client_streaming: false,
                 server_streaming: false,
+                native_service_id: String::new(),
+                logical_service_id: String::new(),
+                sdk_facade_name: String::new(),
+                cli_scaffold_group: String::new(),
+                auth_mode: String::new(),
+                roles: Vec::new(),
+                scopes: Vec::new(),
+                policy_ref: String::new(),
+                tenant_required: false,
+                tenant_field: String::new(),
+                project_field: String::new(),
+                credential_types: Vec::new(),
+                requires_postgres: false,
+                requires_redis: false,
+                requires_object_store: false,
+                requires_kafka: false,
+                requires_feature: String::new(),
+                default_enabled: true,
+                surface: "data_plane".to_string(),
+                listener_kind: "public".to_string(),
+                global_enablement_key: String::new(),
+                service_enablement_key: String::new(),
+                required_dependencies: Vec::new(),
+                disabled_service_error_contract: String::new(),
+                browser_safe: false,
+                server_only: false,
+                default_deadline_ms: 0,
+                default_max_attempts: 0,
+                csrf_required: false,
+                internal_grpc_only: false,
+                public_listener_allowed: true,
+                control_plane_listener_allowed: false,
+                peer_listener_allowed: false,
             },
             RpcDescriptor {
                 service_name: "DataBroker".into(),
@@ -667,6 +1339,39 @@ mod tests {
                 output_pkg: "udb.entity.v1".into(),
                 client_streaming: false,
                 server_streaming: true,
+                native_service_id: String::new(),
+                logical_service_id: String::new(),
+                sdk_facade_name: String::new(),
+                cli_scaffold_group: String::new(),
+                auth_mode: String::new(),
+                roles: Vec::new(),
+                scopes: Vec::new(),
+                policy_ref: String::new(),
+                tenant_required: false,
+                tenant_field: String::new(),
+                project_field: String::new(),
+                credential_types: Vec::new(),
+                requires_postgres: false,
+                requires_redis: false,
+                requires_object_store: false,
+                requires_kafka: false,
+                requires_feature: String::new(),
+                default_enabled: true,
+                surface: "data_plane".to_string(),
+                listener_kind: "public".to_string(),
+                global_enablement_key: String::new(),
+                service_enablement_key: String::new(),
+                required_dependencies: Vec::new(),
+                disabled_service_error_contract: String::new(),
+                browser_safe: false,
+                server_only: false,
+                default_deadline_ms: 0,
+                default_max_attempts: 0,
+                csrf_required: false,
+                internal_grpc_only: false,
+                public_listener_allowed: true,
+                control_plane_listener_allowed: false,
+                peer_listener_allowed: false,
             },
         ]
     }
@@ -740,6 +1445,106 @@ mod tests {
         assert!(should_skip("sub/.gitkeep"));
         assert!(!should_skip("udb_client/client.py.tmpl"));
         assert!(!should_skip("src/GeneratedClient.cs"));
+    }
+
+    #[test]
+    fn surface_filter_selects_public_listener_rpcs() {
+        let tmpl = "// @@UDB_RPC_BEGIN surface=public\n{{RPC_NAME}}\n// @@UDB_RPC_END\n";
+        let out = render_text(tmpl, &sample_manifest(), &[]);
+        // Both sample RPCs allow the public listener.
+        assert!(out.contains("Select"));
+        assert!(out.contains("SelectV2"));
+
+        let tmpl_cp = "// @@UDB_RPC_BEGIN surface=control_plane\n{{RPC_NAME}}\n// @@UDB_RPC_END\n";
+        let out_cp = render_text(tmpl_cp, &sample_manifest(), &[]);
+        // Neither sample RPC allows the control-plane listener.
+        assert!(!out_cp.lines().any(|l| l.trim() == "Select"));
+        assert!(!out_cp.contains("SelectV2"));
+    }
+
+    #[test]
+    fn apply_selectors_default_is_identity() {
+        let manifest = sample_manifest();
+        let out = apply_selectors(&manifest, &SdkSelector::default()).expect("default ok");
+        assert_eq!(out.len(), manifest.len());
+    }
+
+    #[test]
+    fn apply_selectors_surface_public_keeps_all_and_control_plane_drops_all() {
+        let manifest = sample_manifest();
+        let public = apply_selectors(
+            &manifest,
+            &SdkSelector {
+                surface: Some("public".to_string()),
+                ..Default::default()
+            },
+        )
+        .expect("public ok");
+        assert_eq!(public.len(), manifest.len());
+
+        let cp = apply_selectors(
+            &manifest,
+            &SdkSelector {
+                surface: Some("control_plane".to_string()),
+                ..Default::default()
+            },
+        )
+        .expect("cp ok");
+        assert!(cp.is_empty());
+    }
+
+    #[test]
+    fn apply_selectors_unknown_service_errors_with_known_list() {
+        let manifest = sample_manifest();
+        let err = apply_selectors(
+            &manifest,
+            &SdkSelector {
+                services: vec!["does_not_exist".to_string()],
+                ..Default::default()
+            },
+        )
+        .unwrap_err();
+        assert!(err.contains("unknown --service"));
+    }
+
+    #[test]
+    fn sdk_preflight_bootstrap_uses_package_version_source() {
+        let version = env!("CARGO_PKG_VERSION");
+        assert_eq!(
+            preflight_language("typescript").bootstrap,
+            format!("npm i @udb_plus/sdk@{version}")
+        );
+        assert_eq!(
+            preflight_language("python").bootstrap,
+            format!("python -m pip install udb-client=={version}")
+        );
+        assert_eq!(
+            preflight_language("go").bootstrap,
+            format!("go get github.com/fahara02/udb/sdk/go@v{version}")
+        );
+        assert_eq!(
+            preflight_language("csharp").bootstrap,
+            format!("dotnet add package Udb.Client --version {version}")
+        );
+        assert_eq!(
+            preflight_language("php").bootstrap,
+            format!("composer require fahara02/udb-laravel:^{version}")
+        );
+    }
+
+    #[test]
+    fn apply_selectors_native_only_drops_public_broker_rpcs() {
+        // The sample manifest's RPCs have empty native_service_id.
+        let manifest = sample_manifest();
+        let out = apply_selectors(
+            &manifest,
+            &SdkSelector {
+                native_only: true,
+                ..Default::default()
+            },
+        )
+        .expect("native-only ok");
+        assert!(out.is_empty());
     }
 
     #[test]

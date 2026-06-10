@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enterprise &amp; HA — UDB</title>
+<meta name="description" content="UDB at scale: leader election and singleton coordination, real 2PC/saga recovery, edge backpressure and per-tenant rate limits, OpenTelemetry, SLOs and error budgets, gRPC health, and runbooks.">
+<meta name="theme-color" content="#121214">
+<link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body id="top">
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="./index.html"><img src="./assets/udb_logo.svg" alt="UDB logo">UDB</a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+    <nav class="nav-links">
+      <a href="./architecture.html">Architecture</a>
+      <a href="./data-plane.html">Data&nbsp;Plane</a>
+      <a href="./control-plane.html">Control&nbsp;Plane</a>
+      <a href="./security.html">Security</a>
+      <a href="./enterprise.html" class="active">Enterprise</a>
+      <a href="./sdks.html">SDKs</a>
+      <a href="./playground.html">Playground</a>
+      <a class="nav-cta" href="https://github.com/fahara02/udb">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <div class="eyebrow">Enterprise &amp; high availability</div>
+    <h1>Run many replicas, <span class="g">safely</span></h1>
+    <p class="lead">UDB is a broker — backend databases own data replication; UDB owns broker HA: leader
+      election for singleton work, real recovery, backpressure, observability, and operational runbooks.
+      Multiple replicas run behind a load balancer without duplicating singleton work.</p>
+  </div>
+
+  <section style="border-top:none">
+    <div class="wrap">
+      <div class="eyebrow reveal">HA control plane</div>
+      <h2 class="reveal">Leader election &amp; <span class="accent">singleton coordination</span></h2>
+      <p class="lead reveal d1">CDC tailers, saga/2PC recovery, and reapers are singleton workers — UDB coordinates
+        them with a durable Postgres row lease (heartbeat, TTL, fencing token, peer-skip), so two replicas never
+        double-run them and lease-owner loss causes bounded failover to another replica.</p>
+      <div class="grid c3 mt28">
+        <div class="card reveal"><div class="ic">👑</div><h3>Leased singletons</h3><p>CDC tailer, saga recovery, 2PC in-doubt recovery, storage orphan reaper, and projection workers run under one shared singleton lease with a monotonic fencing token.</p></div>
+        <div class="card warm reveal d1"><div class="ic">🧩</div><h3>Real 2PC recovery</h3><p>A durable in-doubt participant ledger with idempotent commit/rollback retry and lease-protected ownership; split-brain races resolve to a single terminal outcome.</p></div>
+        <div class="card reveal d2"><div class="ic">↩️</div><h3>Real saga recovery</h3><p>Durable state transitions, idempotent compensations, and resumable recovery after restart — proven by multi-node peer-skip tests.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow reveal">Edge scale</div>
+      <h2 class="reveal">Backpressure &amp; <span class="accent">per-tenant fairness</span></h2>
+      <div class="grid c2 mt28">
+        <ul class="flist reveal">
+          <li><span class="mk">✓</span><div><b>Global + per-method concurrency limits</b> via bounded operation channels and a server concurrency limit.</div></li>
+          <li><span class="mk">✓</span><div><b>Per-tenant concurrency</b> — scoped semaphores so one tenant can’t starve others or exhaust the backend pool.</div></li>
+          <li><span class="mk">✓</span><div><b>Overload semantics</b> — <code>ResourceExhausted</code> with a bounded queue timeout instead of unbounded waiting.</div></li>
+        </ul>
+        <ul class="flist reveal d1">
+          <li><span class="mk">✓</span><div><b>Per-tenant rate limits</b> on auth bootstrap, authz checks, storage presign/finalize, WebRTC signaling, and CDC/admin APIs.</div></li>
+          <li><span class="mk">✓</span><div><b>Stateless replicas</b> — durable leases own background work; admission uses request metadata + shared stores, not process-local ownership.</div></li>
+          <li><span class="mk">✓</span><div><b>Shard-aware routing</b> — tenant primary key, secondary indexes, scatter-gather fallback, and cross-shard cost metrics.</div></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow reveal">Observability</div>
+      <h2 class="reveal">SLOs, traces, and <span class="accent">honest health</span></h2>
+      <div class="grid c3 mt28">
+        <div class="card reveal"><div class="ic">🔭</div><h3>OpenTelemetry</h3><p>W3C trace propagation and spans at the chokepoints: <code>grpc.request</code> → <code>authz.decide</code> → <code>backend.query</code>/<code>mutate</code> → <code>cdc.publish</code> → <code>saga.compensate</code>.</p></div>
+        <div class="card reveal d1"><div class="ic">📈</div><h3>SLOs &amp; error budgets</h3><p>14 lanes with p50/p95/p99 + availability mapped to real metrics — authn, authz, storage, asset, WebRTC, CDC, and policy-distribution latency.</p></div>
+        <div class="card reveal d2"><div class="ic">🩺</div><h3>gRPC health per listener</h3><p><code>doctor</code>, <code>GetHealthReport</code>, gRPC health, and <code>/readyz</code> all fold the same readiness facts — capabilities match actual mounted routes.</p></div>
+      </div>
+      <div class="callout cool mt28 reveal">
+        <p style="margin:0"><b>Metrics that matter:</b> method-security denials, tenant mismatch, revocation-lookup failures, CDC lag, DLQ depth, journal failures, outbox enqueue failures, compensation failures, native-service degraded states, and edge load-shedding — all exported for alerting.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow reveal">Operability</div>
+      <h2 class="reveal">Runbooks for the <span class="accent">bad days</span></h2>
+      <div class="chips mt28 reveal d1">
+        <span class="chip">Signing-key compromise</span>
+        <span class="chip">Refresh-token replay wave</span>
+        <span class="chip">Authz policy rollback</span>
+        <span class="chip">Tenant-wide emergency revoke</span>
+        <span class="chip">CDC backlog / DLQ recovery</span>
+        <span class="chip">Native-service dependency outage</span>
+        <span class="chip">Object/vector backend partial failure</span>
+        <span class="chip">Leader-election failover</span>
+        <span class="chip">Bad policy rollout rollback</span>
+      </div>
+      <p class="lead mt40 reveal">Multi-node, load, conformance, and compliance readiness gates run in CI or a documented staging gate before UDB is called enterprise-ready.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div class="brand"><img src="./assets/udb_logo.svg" alt="" style="width:26px;height:26px;border-radius:7px"> UDB — Universal Data Broker</div>
+    <nav class="foot-links">
+      <a href="./index.html">Home</a><a href="./sdks.html">SDKs</a>
+      <a href="https://github.com/fahara02/udb">GitHub</a>
+      <a href="https://github.com/fahara02/udb/blob/main/LICENSE">MIT</a>
+    </nav>
+  </div>
+  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.3.2 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
+</footer>
+
+<script defer src="./app.js"></script>
+</body>
+</html>

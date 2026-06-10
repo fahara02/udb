@@ -43,9 +43,10 @@ forwards to the underlying stub method of the same `PascalCase` name and adds:
 
 - **per-call deadline / timeout** (constructor default, per-call override);
 - **retry** with exponential backoff + jitter on `UNAVAILABLE`,
-  `DEADLINE_EXCEEDED`, `RESOURCE_EXHAUSTED` (`RetryPolicy`). Unary and the
-  pre-first-message phase of server-streaming retry; client-streaming and bidi
-  never auto-retry (request stream is not replayable);
+  `RESOURCE_EXHAUSTED`, and `DEADLINE_EXCEEDED` only for read-only RPCs
+  (`RetryPolicy`). Unary and the pre-first-message phase of server-streaming
+  retry; client-streaming and bidi never auto-retry (request stream is not
+  replayable);
 - **TLS / credentials** wiring (`secure`, `root_certificates`,
   `channel_credentials`, `call_credentials`) or a caller-supplied `channel`;
 - **metadata**: the full `udb_client.metadata.Metadata` header set, plus

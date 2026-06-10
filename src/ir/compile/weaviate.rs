@@ -554,7 +554,6 @@ mod tests {
         ConflictStrategy, LogicalDelete, LogicalRead, LogicalRecord, LogicalResourceOp,
         LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
     };
-    use crate::ir::projection::LogicalPagination;
     use crate::ir::value::LogicalValue;
 
     fn fixture() -> CatalogManifest {

@@ -7,6 +7,7 @@ import "udb/core/apikey/entity/v1/api_key.proto";
 import "udb/core/apikey/entity/v1/enums.proto";
 import "udb/core/common/v1/dto.proto";
 import "udb/core/common/v1/types.proto";
+import "udb/core/common/v1/security.proto";
 
 option csharp_namespace = "udb.core.Apikey.Services.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/apikey/services/v1;apikeyservicev1";
@@ -19,6 +20,15 @@ option php_namespace = "Udb\\Core\\Apikey\\Services\\V1";
 // ============================================================
 
 message CreateApiKeyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
   string name = 1;
   string description = 2;
   udb.core.apikey.entity.v1.ApiKeyOwnerType owner_type = 3;
@@ -32,20 +42,56 @@ message CreateApiKeyRequest {
 }
 
 message CreateApiKeyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
   udb.core.apikey.entity.v1.ApiKey key = 1;
   // Plain key returned ONCE — not stored, must be saved by caller
   string plain_key = 2;
 }
 
 message GetApiKeyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
   string key_id = 1;
 }
 
 message GetApiKeyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
   udb.core.apikey.entity.v1.ApiKey key = 1;
 }
 
 message ListApiKeysRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
   string owner_id = 1;
   udb.core.apikey.entity.v1.ApiKeyOwnerType owner_type = 2;
   udb.core.apikey.entity.v1.ApiKeyStatus status = 3;
@@ -53,17 +99,44 @@ message ListApiKeysRequest {
 }
 
 message ListApiKeysResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
   repeated udb.core.apikey.entity.v1.ApiKey keys = 1;
   udb.core.common.v1.PageResponse page = 2;
 }
 
 message RevokeApiKeyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
   string key_id = 1;
   string revoke_reason = 2;
   udb.core.common.v1.RequestContext context = 3;
 }
 
 message RevokeApiKeyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
   string key_id = 1;
   google.protobuf.Timestamp revoked_at = 2;
   string operation_id = 3;
@@ -71,6 +144,15 @@ message RevokeApiKeyResponse {
 
 // Update mutable fields: name, description, scopes, ip_allowlist, rate limits, expires_at
 message UpdateApiKeyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
   string key_id = 1;
   string name = 2;
   string description = 3;
@@ -83,7 +165,88 @@ message UpdateApiKeyRequest {
 }
 
 message UpdateApiKeyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
   udb.core.apikey.entity.v1.ApiKey key = 1;
+}
+
+// Rotate a key: mint a fresh secret under the same key record + lineage, return
+// the new plain key ONCE, and invalidate the old secret. The rotated key keeps
+// the same key_id, owner, scopes, tenant, and project (rotation lineage).
+message RotateApiKeyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
+  string key_id = 1;
+  string rotation_reason = 2;
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message RotateApiKeyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
+  udb.core.apikey.entity.v1.ApiKey key = 1;
+  // New plain key returned ONCE; the prior secret is invalidated immediately.
+  string plain_key = 2;
+  string previous_key_id = 3;
+}
+
+// Emergency revoke matching keys by one or more selectors. At least one selector
+// must be set. Resolves matching records and revokes each (no prefix-only blind
+// mutation): the caller's tenant/owner/admin authority is enforced per record.
+message EmergencyRevokeApiKeysRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
+  string key_prefix = 1;
+  string owner_id = 2;
+  string tenant_id = 3;
+  string project_id = 4;
+  string scope = 5;
+  google.protobuf.Timestamp created_before = 6;
+  string reason = 7;
+  udb.core.common.v1.RequestContext context = 8;
+}
+
+message EmergencyRevokeApiKeysResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
+  int64 revoked_count = 1;
+  repeated string revoked_key_ids = 2;
+  string operation_id = 3;
 }
 
 // ============================================================
@@ -91,6 +254,15 @@ message UpdateApiKeyResponse {
 // ============================================================
 
 message ValidateApiKeyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
   string plain_key = 1; // Raw key from Authorization header
   string endpoint = 2; // gRPC method or HTTP path being accessed
   string required_scope = 3; // e.g. "resource:write"
@@ -98,6 +270,15 @@ message ValidateApiKeyRequest {
 }
 
 message ValidateApiKeyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
   bool valid = 1;
   string key_id = 2;
   string owner_id = 3;
@@ -112,12 +293,30 @@ message ValidateApiKeyResponse {
 // ============================================================
 
 message GetApiKeyUsageStatsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
   string key_id = 1;
   google.protobuf.Timestamp from = 2;
   google.protobuf.Timestamp to = 3;
 }
 
 message ApiKeyDailyStat {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
   string date = 1; // YYYY-MM-DD
   int64 total_requests = 2;
   int64 rate_limited_count = 3;
@@ -126,6 +325,15 @@ message ApiKeyDailyStat {
 }
 
 message GetApiKeyUsageStatsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "apikey"
+    generate_minimal_example: true
+  };
   repeated ApiKeyDailyStat stats = 1;
   int64 total_requests = 2;
 }

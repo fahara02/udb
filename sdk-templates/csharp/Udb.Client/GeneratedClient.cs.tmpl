@@ -75,7 +75,7 @@ public sealed partial class Generated{{SERVICE_NAME}}Client
 {
     /// <summary>
     /// <c>{{RPC_NAME}}</c> (unary) — forwards to <c>{{SERVICE_NAME}}Client.{{RPC_NAME}}Async</c>.
-    /// gRPC path: <c>{{RPC_PATH}}</c>. Retries transient failures.
+    /// gRPC path: <c>{{RPC_PATH}}</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
     public Task<dynamic> {{RPC_NAME}}Async(
         dynamic request,
@@ -88,7 +88,8 @@ public sealed partial class Generated{{SERVICE_NAME}}Client
             "{{RPC_PATH}}",
             co => (object)_stub.{{RPC_NAME}}Async(request, co),
             deadline,
-            cancellationToken);
+            cancellationToken,
+            IsReadOnlyRpcName("{{RPC_NAME}}"));
     }
 }
 // @@UDB_RPC_END

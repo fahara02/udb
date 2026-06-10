@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Udb.Examples.NativeServices</RootNamespace>
+    <!-- Two entry points (admin + consumer) selected at runtime by argv[0],
+         so the project compiles as one exe. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Local path reference to the in-repo SDK (the published package id is
+         Udb.Client). The SDK in turn compiles the committed buf-generated
+         stubs under sdk/csharp/gen. -->
+    <ProjectReference Include="..\..\..\sdk\csharp\Udb.Client\Udb.Client.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -35,6 +35,19 @@ message ApiKeyUsage {
       permissive: true
     }
   };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "apikey.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
 
   string usage_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "usage_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
 

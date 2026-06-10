@@ -100,4 +100,135 @@ public interface EndpointSecurityOrBuilder extends
    * @return The internalGrpcOnly.
    */
   boolean getInternalGrpcOnly();
+
+  /**
+   * <code>int32 required_assurance_level = 8 [json_name = "requiredAssuranceLevel"];</code>
+   * @return The requiredAssuranceLevel.
+   */
+  int getRequiredAssuranceLevel();
+
+  /**
+   * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+   * @return A list containing the allowedCredentialTypes.
+   */
+  java.util.List<com.udb.core.common.v1.CredentialType> getAllowedCredentialTypesList();
+  /**
+   * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+   * @return The count of allowedCredentialTypes.
+   */
+  int getAllowedCredentialTypesCount();
+  /**
+   * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+   * @param index The index of the element to return.
+   * @return The allowedCredentialTypes at the given index.
+   */
+  com.udb.core.common.v1.CredentialType getAllowedCredentialTypes(int index);
+  /**
+   * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+   * @return A list containing the enum numeric values on the wire for allowedCredentialTypes.
+   */
+  java.util.List<java.lang.Integer>
+  getAllowedCredentialTypesValueList();
+  /**
+   * <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
+   * @param index The index of the value to return.
+   * @return The enum numeric value on the wire of allowedCredentialTypes at the given index.
+   */
+  int getAllowedCredentialTypesValue(int index);
+
+  /**
+   * <code>string rate_limit_policy_ref = 10 [json_name = "rateLimitPolicyRef"];</code>
+   * @return The rateLimitPolicyRef.
+   */
+  java.lang.String getRateLimitPolicyRef();
+  /**
+   * <code>string rate_limit_policy_ref = 10 [json_name = "rateLimitPolicyRef"];</code>
+   * @return The bytes for rateLimitPolicyRef.
+   */
+  com.google.protobuf.ByteString
+      getRateLimitPolicyRefBytes();
+
+  /**
+   * <code>string abuse_policy_ref = 11 [json_name = "abusePolicyRef"];</code>
+   * @return The abusePolicyRef.
+   */
+  java.lang.String getAbusePolicyRef();
+  /**
+   * <code>string abuse_policy_ref = 11 [json_name = "abusePolicyRef"];</code>
+   * @return The bytes for abusePolicyRef.
+   */
+  com.google.protobuf.ByteString
+      getAbusePolicyRefBytes();
+
+  /**
+   * <code>string audit_event_type = 12 [json_name = "auditEventType"];</code>
+   * @return The auditEventType.
+   */
+  java.lang.String getAuditEventType();
+  /**
+   * <code>string audit_event_type = 12 [json_name = "auditEventType"];</code>
+   * @return The bytes for auditEventType.
+   */
+  com.google.protobuf.ByteString
+      getAuditEventTypeBytes();
+
+  /**
+   * <code>string decision_resource = 13 [json_name = "decisionResource"];</code>
+   * @return The decisionResource.
+   */
+  java.lang.String getDecisionResource();
+  /**
+   * <code>string decision_resource = 13 [json_name = "decisionResource"];</code>
+   * @return The bytes for decisionResource.
+   */
+  com.google.protobuf.ByteString
+      getDecisionResourceBytes();
+
+  /**
+   * <code>string owner_field = 14 [json_name = "ownerField"];</code>
+   * @return The ownerField.
+   */
+  java.lang.String getOwnerField();
+  /**
+   * <code>string owner_field = 14 [json_name = "ownerField"];</code>
+   * @return The bytes for ownerField.
+   */
+  com.google.protobuf.ByteString
+      getOwnerFieldBytes();
+
+  /**
+   * <code>string tenant_field = 15 [json_name = "tenantField"];</code>
+   * @return The tenantField.
+   */
+  java.lang.String getTenantField();
+  /**
+   * <code>string tenant_field = 15 [json_name = "tenantField"];</code>
+   * @return The bytes for tenantField.
+   */
+  com.google.protobuf.ByteString
+      getTenantFieldBytes();
+
+  /**
+   * <code>string project_field = 16 [json_name = "projectField"];</code>
+   * @return The projectField.
+   */
+  java.lang.String getProjectField();
+  /**
+   * <code>string project_field = 16 [json_name = "projectField"];</code>
+   * @return The bytes for projectField.
+   */
+  com.google.protobuf.ByteString
+      getProjectFieldBytes();
+
+  /**
+   * <code>bool idempotency_required = 17 [json_name = "idempotencyRequired"];</code>
+   * @return The idempotencyRequired.
+   */
+  boolean getIdempotencyRequired();
+
+  /**
+   * <code>bool request_context_required = 18 [json_name = "requestContextRequired"];</code>
+   * @return The requestContextRequired.
+   */
+  boolean getRequestContextRequired();
 }

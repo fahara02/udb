@@ -98,6 +98,11 @@ func (a *AuthzCache) Invalidate() {
 // GetPolicyBundle fetches a signed policy bundle for the caller's tenant/project
 // scope. SDKs can persist and verify it to drive a fully offline cache; the
 // signature + expiry let a caller trust a cached bundle between fetches.
+//
+// When a bundle secret has been configured on the client via
+// SetPolicyBundleSecret, the fetched bundle's HMAC signature is verified before
+// it is returned; a mismatch returns a *PolicyBundleSignatureError (which
+// errors.Is matches ErrPolicyBundleSignature) and no bundle.
 func (c *AuthClient) GetPolicyBundle(ctx context.Context) (*authzv1.SignedPolicyBundle, error) {
 	resp, err := c.Authz.GetPolicyBundle(c.Context(ctx), &authzv1.PolicyBundleRequest{
 		TenantId:  c.Meta.TenantID,
@@ -106,5 +111,11 @@ func (c *AuthClient) GetPolicyBundle(ctx context.Context) (*authzv1.SignedPolicy
 	if err != nil {
 		return nil, err
 	}
-	return resp.GetBundle(), nil
+	bundle := resp.GetBundle()
+	if len(c.policyBundleSecret) > 0 {
+		if err := VerifyPolicyBundle(bundle, c.policyBundleSecret); err != nil {
+			return nil, err
+		}
+	}
+	return bundle, nil
 }

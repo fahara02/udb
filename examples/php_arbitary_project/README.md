@@ -39,13 +39,12 @@ generate `db_ops/` from `proto/`. If no local UDB binary is configured, the
 Docker runner downloads the latest GitHub Release CLI asset and executes it
 inside Compose.
 
-Before the first public UDB release exists, the default
-`releases/latest/download/...` URL will 404. For local pre-release testing,
-point the scripts at a binary you already built or downloaded:
+For local source-checkout testing, point the scripts at a binary you already
+built:
 
 ```powershell
-cargo build --release --bin udb-proto-parser
-$env:UDB_CLI = "E:\Projects\udb\target\release\udb-proto-parser.exe"
+cargo build --release --bin udb
+$env:UDB_CLI = "E:/Projects/udb/target/release/udb.exe"
 .\scripts\generate.ps1 -Runner auto
 ```
 

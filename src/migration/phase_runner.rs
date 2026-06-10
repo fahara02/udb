@@ -45,6 +45,7 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
+use sqlx::{PgPool, Row};
 
 use crate::migration::diff_backends::MigrationPhase;
 
@@ -83,6 +84,28 @@ impl PhaseStatus {
     }
 }
 
+fn phase_from_str(value: &str) -> Result<MigrationPhase, String> {
+    match value {
+        "prepare" => Ok(MigrationPhase::Prepare),
+        "backfill" => Ok(MigrationPhase::Backfill),
+        "validate" => Ok(MigrationPhase::Validate),
+        "switch" => Ok(MigrationPhase::Switch),
+        "cleanup" => Ok(MigrationPhase::Cleanup),
+        _ => Err(format!("unknown migration phase '{value}'")),
+    }
+}
+
+fn phase_status_from_str(value: &str) -> Result<PhaseStatus, String> {
+    match value {
+        "pending" => Ok(PhaseStatus::Pending),
+        "running" => Ok(PhaseStatus::Running),
+        "completed" => Ok(PhaseStatus::Completed),
+        "failed" => Ok(PhaseStatus::Failed),
+        "abandoned" => Ok(PhaseStatus::Abandoned),
+        _ => Err(format!("unknown migration phase status '{value}'")),
+    }
+}
+
 /// One row in the phase ledger.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PhaseRecord {
@@ -111,6 +134,151 @@ pub struct PhaseRecord {
 pub trait PhaseLedger: Send + Sync {
     async fn load(&self, run_id: &str) -> Result<Vec<PhaseRecord>, String>;
     async fn write(&self, record: PhaseRecord) -> Result<(), String>;
+}
+
+/// Durable Postgres-backed phase ledger used by the production
+/// catalog-admin apply path.
+///
+/// The table is created lazily so older installations that already have
+/// `udb_migration_runs` / `udb_migration_op_ledger` can start recording phase
+/// progress without requiring a separate bootstrap migration first.
+pub struct PostgresPhaseLedger {
+    pool: PgPool,
+    relation: String,
+}
+
+impl PostgresPhaseLedger {
+    pub fn new(pool: PgPool, relation: impl Into<String>) -> Self {
+        Self {
+            pool,
+            relation: relation.into(),
+        }
+    }
+
+    async fn ensure_table(&self) -> Result<(), String> {
+        let rel = &self.relation;
+        let ddl = format!(
+            "CREATE TABLE IF NOT EXISTS {rel} (
+                id BIGSERIAL PRIMARY KEY,
+                run_id TEXT NOT NULL,
+                phase TEXT NOT NULL CHECK (phase IN ('prepare','backfill','validate','switch','cleanup')),
+                status TEXT NOT NULL CHECK (status IN ('pending','running','completed','failed','abandoned')),
+                started_at TIMESTAMPTZ,
+                finished_at TIMESTAMPTZ,
+                error TEXT NOT NULL DEFAULT '',
+                attempt INTEGER NOT NULL DEFAULT 0,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE (run_id, phase)
+            )"
+        );
+        sqlx::query(&ddl)
+            .execute(&self.pool)
+            .await
+            .map_err(|err| format!("ensure phase ledger table failed: {err}"))?;
+
+        let idx = format!(
+            "CREATE INDEX IF NOT EXISTS \"idx_udb_migration_phase_ledger_run\"
+             ON {rel} (run_id, phase)"
+        );
+        sqlx::query(&idx)
+            .execute(&self.pool)
+            .await
+            .map_err(|err| format!("ensure phase ledger index failed: {err}"))?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl PhaseLedger for PostgresPhaseLedger {
+    async fn load(&self, run_id: &str) -> Result<Vec<PhaseRecord>, String> {
+        self.ensure_table().await?;
+        let rel = &self.relation;
+        let sql = format!(
+            "SELECT run_id, phase, status,
+                    (EXTRACT(EPOCH FROM started_at) * 1000)::BIGINT AS started_at_unix_ms,
+                    (EXTRACT(EPOCH FROM finished_at) * 1000)::BIGINT AS finished_at_unix_ms,
+                    error, attempt
+             FROM {rel}
+             WHERE run_id = $1
+             ORDER BY CASE phase
+                 WHEN 'prepare' THEN 1
+                 WHEN 'backfill' THEN 2
+                 WHEN 'validate' THEN 3
+                 WHEN 'switch' THEN 4
+                 WHEN 'cleanup' THEN 5
+                 ELSE 99
+             END"
+        );
+        let rows = sqlx::query(&sql)
+            .bind(run_id)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|err| format!("load phase ledger failed: {err}"))?;
+
+        let mut out = Vec::with_capacity(rows.len());
+        for row in rows {
+            let phase = phase_from_str(
+                row.try_get::<String, _>("phase")
+                    .unwrap_or_default()
+                    .as_str(),
+            )?;
+            let status = phase_status_from_str(
+                row.try_get::<String, _>("status")
+                    .unwrap_or_default()
+                    .as_str(),
+            )?;
+            out.push(PhaseRecord {
+                run_id: row.try_get::<String, _>("run_id").unwrap_or_default(),
+                phase,
+                status,
+                started_at_unix_ms: row
+                    .try_get::<Option<i64>, _>("started_at_unix_ms")
+                    .ok()
+                    .flatten(),
+                finished_at_unix_ms: row
+                    .try_get::<Option<i64>, _>("finished_at_unix_ms")
+                    .ok()
+                    .flatten(),
+                error: row.try_get::<String, _>("error").unwrap_or_default(),
+                attempt: row.try_get::<i32, _>("attempt").unwrap_or_default().max(0) as u32,
+            });
+        }
+        Ok(out)
+    }
+
+    async fn write(&self, record: PhaseRecord) -> Result<(), String> {
+        self.ensure_table().await?;
+        let rel = &self.relation;
+        let sql = format!(
+            "INSERT INTO {rel}
+                (run_id, phase, status, started_at, finished_at, error, attempt, updated_at)
+             VALUES (
+                $1, $2, $3,
+                CASE WHEN $4::BIGINT IS NULL THEN NULL ELSE to_timestamp(($4::BIGINT)::DOUBLE PRECISION / 1000.0) END,
+                CASE WHEN $5::BIGINT IS NULL THEN NULL ELSE to_timestamp(($5::BIGINT)::DOUBLE PRECISION / 1000.0) END,
+                $6, $7, NOW()
+             )
+             ON CONFLICT (run_id, phase) DO UPDATE
+                SET status = EXCLUDED.status,
+                    started_at = EXCLUDED.started_at,
+                    finished_at = EXCLUDED.finished_at,
+                    error = EXCLUDED.error,
+                    attempt = EXCLUDED.attempt,
+                    updated_at = NOW()"
+        );
+        sqlx::query(&sql)
+            .bind(&record.run_id)
+            .bind(record.phase.as_str())
+            .bind(record.status.as_str())
+            .bind(record.started_at_unix_ms)
+            .bind(record.finished_at_unix_ms)
+            .bind(&record.error)
+            .bind(i32::try_from(record.attempt).unwrap_or(i32::MAX))
+            .execute(&self.pool)
+            .await
+            .map_err(|err| format!("write phase ledger failed: {err}"))?;
+        Ok(())
+    }
 }
 
 /// The per-phase user hook the runner calls. Returns `Ok(())` to
@@ -264,15 +432,9 @@ pub async fn run_to_completion(
 /// C (2026-05-30): in-memory `PhaseLedger` for orchestration UNIT TESTS only.
 /// Stores rows behind a `Mutex` so the trait methods stay `&self`.
 ///
-/// IN-MEMORY-AUDIT [A1, no-in-memory rule]: now `#[cfg(test)]`-gated so it is
-/// NOT compiled into the shipped binary (it was previously `pub` and shippable).
-/// REMAINING FEATURE GAP (O4 — a missing feature, not an in-memory bug): no
-/// durable Postgres-backed `PhaseLedger` exists yet and the production apply path
-/// uses the non-phased `apply_artifacts_audited`, so online/phased migrations have
-/// no crash-resumable state in production. Tracked as Wave A3 in
-/// PARSER_AST_MIGRATION_MASTER_PLAN.md (add a canonical-store
-/// `udb_migration_phase_ledger` + route `apply_migration` through
-/// `apply_artifacts_phased`).
+/// IN-MEMORY-AUDIT [A1, no-in-memory rule]: `#[cfg(test)]`-gated so it is
+/// NOT compiled into the shipped binary. Production uses
+/// [`PostgresPhaseLedger`] through the catalog-admin apply path.
 #[cfg(test)]
 #[derive(Default, Debug)]
 pub struct MemoryPhaseLedger {

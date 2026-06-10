@@ -45,8 +45,9 @@ Each per-RPC method adds, over the raw stub:
 
 - per-call deadline / timeout (`deadlineMs`, defaultable on the client);
 - retry with exponential backoff + full jitter on transient gRPC codes
-  (`UNAVAILABLE`, `DEADLINE_EXCEEDED`, `RESOURCE_EXHAUSTED`) for unary calls only
-  — client-streaming / bidi are never auto-retried;
+  (`UNAVAILABLE`, `RESOURCE_EXHAUSTED`, and `DEADLINE_EXCEEDED` only for
+  read-only RPCs) for unary calls only — client-streaming / bidi are never
+  auto-retried;
 - TLS / mTLS credentials wiring (`secure`, `tls`);
 - metadata: the `UdbMetadata` headers plus `authorization: Bearer …` / `x-api-key`
   / `x-request-id` / SDK + protocol-version tags;

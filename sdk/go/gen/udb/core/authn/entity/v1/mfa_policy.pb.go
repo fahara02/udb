@@ -109,7 +109,7 @@ var File_udb_core_authn_entity_v1_mfa_policy_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_mfa_policy_proto_rawDesc = "" +
 	"\n" +
-	")udb/core/authn/entity/v1/mfa_policy.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\"\xfe\x04\n" +
+	")udb/core/authn/entity/v1/mfa_policy.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x9b\x06\n" +
 	"\tMfaPolicy\x12I\n" +
 	"\tpolicy_id\x18\x01 \x01(\tB,\x82\xb7\x18(\n" +
 	"\tpolicy_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\bpolicyId\x12`\n" +
@@ -126,8 +126,9 @@ const file_udb_core_authn_entity_v1_mfa_policy_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB2\x82\xb7\x18.\n" +
 	"\n" +
-	"updated_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMPR\tupdatedAt:N\xfa\xb6\x18J\n" +
-	"\fmfa_policies\x12\tudb_authn\x18\a \x01*!Per-tenant MFA enforcement policy\xea\x01\aprimaryB\xf9\x01\n" +
+	"updated_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMPR\tupdatedAt:\xea\x01\xfa\xb6\x18J\n" +
+	"\fmfa_policies\x12\tudb_authn\x18\a \x01*!Per-tenant MFA enforcement policy\xea\x01\aprimary\x8a\xb2\x19\x97\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf9\x01\n" +
 	"\x1ccom.udb.core.authn.entity.v1B\x0eMfaPolicyProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (

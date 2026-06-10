@@ -15,12 +15,15 @@ use sqlx::{PgPool, Row};
 
 use crate::runtime::security::hmac_sha256;
 
-use crate::proto::udb::core::apikey::entity::v1 as apikey_entity_pb;
-use crate::proto::udb::core::authn::entity::v1 as authn_entity_pb;
 use crate::runtime::authz::Principal;
 use crate::runtime::native_catalog::{NativeModel, native_model};
 
 /// RFC 6238 TOTP for native MFA (enrollment, verification, secret-at-rest).
+pub mod mfa_challenge;
+pub mod profile;
+pub mod revocation;
+pub mod signing_keys;
+pub mod token_family;
 pub mod totp;
 
 /// How a principal authenticated.
@@ -303,6 +306,271 @@ pub struct IdentityRecord {
     pub disabled_at_unix: u64,
 }
 
+/// Domain-owned principal category for a native user account.
+///
+/// This mirrors the proto `udb.core.authn.entity.v1.AccountKind` *values* but is
+/// owned by the domain engine and carries no prost/proto dependency — the
+/// domain must not store proto enum integers (final_task.md §7 "Move proto enum
+/// conversions out of domain engines"). Discriminants match the proto integer
+/// values so the adapter's i32 conversion is a 1:1 cast, but that coupling is the
+/// adapter's concern, not the domain's. DB persistence uses [`AccountKind::to_db`]
+/// / [`AccountKind::from_db`], not the integer.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[repr(i32)]
+pub enum AccountKind {
+    #[default]
+    Unspecified = 0,
+    Person = 1,
+    ServiceAccount = 2,
+    Workload = 3,
+    ExternalIdentity = 4,
+    System = 5,
+    Anonymous = 6,
+}
+
+impl AccountKind {
+    /// Canonical upper-snake DB string (matches the persisted column values).
+    pub fn to_db(self) -> &'static str {
+        match self {
+            AccountKind::Unspecified => "UNSPECIFIED",
+            AccountKind::Person => "PERSON",
+            AccountKind::ServiceAccount => "SERVICE_ACCOUNT",
+            AccountKind::Workload => "WORKLOAD",
+            AccountKind::ExternalIdentity => "EXTERNAL_IDENTITY",
+            AccountKind::System => "SYSTEM",
+            AccountKind::Anonymous => "ANONYMOUS",
+        }
+    }
+
+    /// Parse the DB string, accepting both the bare (`"PERSON"`) and the
+    /// proto-prefixed (`"ACCOUNT_KIND_PERSON"`) spellings; unknown → `Unspecified`.
+    pub fn from_db(value: &str) -> Self {
+        match value.strip_prefix("ACCOUNT_KIND_").unwrap_or(value) {
+            "PERSON" => AccountKind::Person,
+            "SERVICE_ACCOUNT" => AccountKind::ServiceAccount,
+            "WORKLOAD" => AccountKind::Workload,
+            "EXTERNAL_IDENTITY" => AccountKind::ExternalIdentity,
+            "SYSTEM" => AccountKind::System,
+            "ANONYMOUS" => AccountKind::Anonymous,
+            _ => AccountKind::Unspecified,
+        }
+    }
+
+    /// The raw enum integer. Equal to the proto value, but this is a plain
+    /// integer accessor — the *proto* conversion lives in the service adapter.
+    pub fn as_i32(self) -> i32 {
+        self as i32
+    }
+
+    /// Build from a raw enum integer; unknown values map to `Unspecified`.
+    pub fn from_i32(value: i32) -> Self {
+        match value {
+            1 => AccountKind::Person,
+            2 => AccountKind::ServiceAccount,
+            3 => AccountKind::Workload,
+            4 => AccountKind::ExternalIdentity,
+            5 => AccountKind::System,
+            6 => AccountKind::Anonymous,
+            _ => AccountKind::Unspecified,
+        }
+    }
+}
+
+/// Domain-owned account lifecycle state for a native user account.
+///
+/// Mirrors the proto `udb.core.authn.entity.v1.UserStatus` values without any
+/// proto dependency (see [`AccountKind`] for the rationale). DB persistence uses
+/// [`AccountStatus::to_db`] / [`AccountStatus::from_db`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[repr(i32)]
+pub enum AccountStatus {
+    #[default]
+    Unspecified = 0,
+    PendingVerification = 1,
+    Active = 2,
+    Suspended = 3,
+    Locked = 4,
+    Deactivated = 5,
+}
+
+impl AccountStatus {
+    pub fn to_db(self) -> &'static str {
+        match self {
+            AccountStatus::Unspecified => "UNSPECIFIED",
+            AccountStatus::PendingVerification => "PENDING_VERIFICATION",
+            AccountStatus::Active => "ACTIVE",
+            AccountStatus::Suspended => "SUSPENDED",
+            AccountStatus::Locked => "LOCKED",
+            AccountStatus::Deactivated => "DEACTIVATED",
+        }
+    }
+
+    pub fn from_db(value: &str) -> Self {
+        match value.strip_prefix("USER_STATUS_").unwrap_or(value) {
+            "PENDING_VERIFICATION" => AccountStatus::PendingVerification,
+            "ACTIVE" => AccountStatus::Active,
+            "SUSPENDED" => AccountStatus::Suspended,
+            "LOCKED" => AccountStatus::Locked,
+            "DEACTIVATED" => AccountStatus::Deactivated,
+            _ => AccountStatus::Unspecified,
+        }
+    }
+
+    pub fn as_i32(self) -> i32 {
+        self as i32
+    }
+
+    pub fn from_i32(value: i32) -> Self {
+        match value {
+            1 => AccountStatus::PendingVerification,
+            2 => AccountStatus::Active,
+            3 => AccountStatus::Suspended,
+            4 => AccountStatus::Locked,
+            5 => AccountStatus::Deactivated,
+            _ => AccountStatus::Unspecified,
+        }
+    }
+
+    pub fn is_active(self) -> bool {
+        matches!(self, AccountStatus::Active)
+    }
+}
+
+/// Domain-owned one-time-password purpose.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[repr(i32)]
+pub enum OtpType {
+    #[default]
+    Unspecified = 0,
+    EmailVerification = 1,
+    Login2fa = 2,
+    PasswordReset = 3,
+    SensitiveOperation = 4,
+    PhoneVerification = 5,
+}
+
+impl OtpType {
+    pub fn to_db(self) -> &'static str {
+        match self {
+            OtpType::Unspecified => "UNSPECIFIED",
+            OtpType::EmailVerification => "EMAIL_VERIFICATION",
+            OtpType::Login2fa => "LOGIN_2FA",
+            OtpType::PasswordReset => "PASSWORD_RESET",
+            OtpType::SensitiveOperation => "SENSITIVE_OPERATION",
+            OtpType::PhoneVerification => "PHONE_VERIFICATION",
+        }
+    }
+
+    pub fn from_db(value: &str) -> Self {
+        match value.strip_prefix("OTP_TYPE_").unwrap_or(value) {
+            "EMAIL_VERIFICATION" => OtpType::EmailVerification,
+            "LOGIN_2FA" => OtpType::Login2fa,
+            "PASSWORD_RESET" => OtpType::PasswordReset,
+            "SENSITIVE_OPERATION" => OtpType::SensitiveOperation,
+            "PHONE_VERIFICATION" => OtpType::PhoneVerification,
+            _ => OtpType::Unspecified,
+        }
+    }
+
+    pub fn as_i32(self) -> i32 {
+        self as i32
+    }
+
+    pub fn from_i32(value: i32) -> Self {
+        match value {
+            1 => OtpType::EmailVerification,
+            2 => OtpType::Login2fa,
+            3 => OtpType::PasswordReset,
+            4 => OtpType::SensitiveOperation,
+            5 => OtpType::PhoneVerification,
+            _ => OtpType::Unspecified,
+        }
+    }
+}
+
+/// Domain-owned one-time-password lifecycle state.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[repr(i32)]
+pub enum OtpStatus {
+    #[default]
+    Unspecified = 0,
+    Pending = 1,
+    Used = 2,
+    Expired = 3,
+    Invalidated = 4,
+}
+
+impl OtpStatus {
+    pub fn to_db(self) -> &'static str {
+        match self {
+            OtpStatus::Unspecified => "UNSPECIFIED",
+            OtpStatus::Pending => "PENDING",
+            OtpStatus::Used => "USED",
+            OtpStatus::Expired => "EXPIRED",
+            OtpStatus::Invalidated => "INVALIDATED",
+        }
+    }
+
+    pub fn from_db(value: &str) -> Self {
+        match value.strip_prefix("OTP_STATUS_").unwrap_or(value) {
+            "PENDING" => OtpStatus::Pending,
+            "USED" => OtpStatus::Used,
+            "EXPIRED" => OtpStatus::Expired,
+            "INVALIDATED" => OtpStatus::Invalidated,
+            _ => OtpStatus::Unspecified,
+        }
+    }
+
+    pub fn as_i32(self) -> i32 {
+        self as i32
+    }
+
+    pub fn from_i32(value: i32) -> Self {
+        match value {
+            1 => OtpStatus::Pending,
+            2 => OtpStatus::Used,
+            3 => OtpStatus::Expired,
+            4 => OtpStatus::Invalidated,
+            _ => OtpStatus::Unspecified,
+        }
+    }
+}
+
+/// Domain-owned API-key lifecycle state.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[repr(i32)]
+pub enum ApiKeyStatus {
+    #[default]
+    Unspecified = 0,
+    Active = 1,
+    Revoked = 2,
+    Expired = 3,
+}
+
+impl ApiKeyStatus {
+    pub fn to_db(self) -> &'static str {
+        match self {
+            ApiKeyStatus::Unspecified => "UNSPECIFIED",
+            ApiKeyStatus::Active => "ACTIVE",
+            ApiKeyStatus::Revoked => "REVOKED",
+            ApiKeyStatus::Expired => "EXPIRED",
+        }
+    }
+
+    pub fn from_i32(value: i32) -> Self {
+        match value {
+            1 => ApiKeyStatus::Active,
+            2 => ApiKeyStatus::Revoked,
+            3 => ApiKeyStatus::Expired,
+            _ => ApiKeyStatus::Unspecified,
+        }
+    }
+
+    pub fn as_i32(self) -> i32 {
+        self as i32
+    }
+}
+
 /// Native user account record stored by Stage-1 authn.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct UserRecord {
@@ -310,8 +578,12 @@ pub struct UserRecord {
     pub username: String,
     pub email: String,
     pub password_hash: String,
-    pub account_kind: i32,
-    pub status: i32,
+    /// Domain-owned principal category (no proto/prost dependency). The adapter
+    /// converts to/from the proto `AccountKind` enum at the service boundary.
+    pub account_kind: AccountKind,
+    /// Domain-owned account lifecycle state (no proto/prost dependency). The
+    /// adapter converts to/from the proto `UserStatus` enum at the boundary.
+    pub status: AccountStatus,
     pub tenant_id: String,
     pub full_name: String,
     pub totp_secret_hash: String,
@@ -347,6 +619,9 @@ pub struct OtpRecord {
     pub used_at_unix: u64,
     pub created_at_unix: u64,
     pub correlation_id: String,
+    /// Tenant boundary, denormalized from the owning user. Empty when unknown
+    /// (column is nullable; read tolerates NULL).
+    pub tenant_id: String,
 }
 
 // ── Authn interfaces (Postgres/Redis impls are a thin async layer) ──────────
@@ -500,106 +775,24 @@ fn uuid_or_empty_as_text(model: &NativeModel, field_name: &str) -> String {
     model.text_or_empty(field_name)
 }
 
-/// Generate the `<name>_to_db` / `<name>_from_db` mapping pair for a proto enum
-/// stored as an upper-snake-case DB string.
-///
-/// - `to_db(i32)` decodes the proto enum (`try_from(..).unwrap_or_default()`) and
-///   maps each variant to its canonical DB string; the `unspecified` variant maps
-///   to `"UNSPECIFIED"`.
-/// - `from_db(&str)` accepts either the bare DB string (`"PERSON"`) or the
-///   proto-prefixed form (`"ACCOUNT_KIND_PERSON"`) by stripping the optional
-///   `$prefix` before matching, and falls back to `unspecified` for anything else.
-///
-/// Behavior is identical to the previous hand-written pairs (the strip-prefix
-/// normalization accepts exactly the bare + single-prefixed spellings the old
-/// `"X" | "PREFIX_X"` arms did).
-macro_rules! enum_db_mapping {
-    (
-        $enum_path:path,
-        prefix = $prefix:literal,
-        to_db = $to_db:ident,
-        from_db = $from_db:ident,
-        unspecified = $unspecified:ident,
-        $( $variant:ident => $db:literal ),+ $(,)?
-    ) => {
-        fn $to_db(value: i32) -> &'static str {
-            use $enum_path as Enum;
-            match Enum::try_from(value).unwrap_or_default() {
-                $( Enum::$variant => $db, )+
-                Enum::$unspecified => "UNSPECIFIED",
-            }
-        }
-
-        fn $from_db(value: &str) -> i32 {
-            use $enum_path as Enum;
-            let bare = value.strip_prefix($prefix).unwrap_or(value);
-            match bare {
-                $( $db => Enum::$variant as i32, )+
-                _ => Enum::$unspecified as i32,
-            }
-        }
-    };
+fn otp_type_to_db(value: i32) -> &'static str {
+    OtpType::from_i32(value).to_db()
 }
 
-enum_db_mapping! {
-    authn_entity_pb::AccountKind,
-    prefix = "ACCOUNT_KIND_",
-    to_db = account_kind_to_db,
-    from_db = account_kind_from_db,
-    unspecified = Unspecified,
-    Person => "PERSON",
-    ServiceAccount => "SERVICE_ACCOUNT",
-    Workload => "WORKLOAD",
-    ExternalIdentity => "EXTERNAL_IDENTITY",
-    System => "SYSTEM",
-    Anonymous => "ANONYMOUS",
+fn otp_type_from_db(value: &str) -> i32 {
+    OtpType::from_db(value).as_i32()
 }
 
-enum_db_mapping! {
-    authn_entity_pb::UserStatus,
-    prefix = "USER_STATUS_",
-    to_db = user_status_to_db,
-    from_db = user_status_from_db,
-    unspecified = Unspecified,
-    PendingVerification => "PENDING_VERIFICATION",
-    Active => "ACTIVE",
-    Suspended => "SUSPENDED",
-    Locked => "LOCKED",
-    Deactivated => "DEACTIVATED",
+fn otp_status_to_db(value: i32) -> &'static str {
+    OtpStatus::from_i32(value).to_db()
 }
 
-enum_db_mapping! {
-    authn_entity_pb::OtpType,
-    prefix = "OTP_TYPE_",
-    to_db = otp_type_to_db,
-    from_db = otp_type_from_db,
-    unspecified = Unspecified,
-    EmailVerification => "EMAIL_VERIFICATION",
-    Login2fa => "LOGIN_2FA",
-    PasswordReset => "PASSWORD_RESET",
-    SensitiveOperation => "SENSITIVE_OPERATION",
-    PhoneVerification => "PHONE_VERIFICATION",
+fn otp_status_from_db(value: &str) -> i32 {
+    OtpStatus::from_db(value).as_i32()
 }
 
-enum_db_mapping! {
-    authn_entity_pb::OtpStatus,
-    prefix = "OTP_STATUS_",
-    to_db = otp_status_to_db,
-    from_db = otp_status_from_db,
-    unspecified = Unspecified,
-    Pending => "PENDING",
-    Used => "USED",
-    Expired => "EXPIRED",
-    Invalidated => "INVALIDATED",
-}
-
-fn api_key_status_to_db(status: i32) -> &'static str {
-    match apikey_entity_pb::ApiKeyStatus::try_from(status).unwrap_or_default() {
-        apikey_entity_pb::ApiKeyStatus::Active => "ACTIVE",
-        apikey_entity_pb::ApiKeyStatus::Revoked => "REVOKED",
-        apikey_entity_pb::ApiKeyStatus::Expired => "EXPIRED",
-        apikey_entity_pb::ApiKeyStatus::Unspecified => "UNSPECIFIED",
-    }
+fn api_key_status_to_db(status: ApiKeyStatus) -> &'static str {
+    status.to_db()
 }
 
 fn session_from_row(row: &sqlx::postgres::PgRow) -> Result<SessionRecord, sqlx::Error> {
@@ -643,8 +836,8 @@ fn user_from_row(row: &sqlx::postgres::PgRow) -> Result<UserRecord, sqlx::Error>
         username: row.try_get("username")?,
         email: row.try_get("email")?,
         password_hash: row.try_get("password_hash")?,
-        account_kind: account_kind_from_db(&row.try_get::<String, _>("account_kind")?),
-        status: user_status_from_db(&row.try_get::<String, _>("status")?),
+        account_kind: AccountKind::from_db(&row.try_get::<String, _>("account_kind")?),
+        status: AccountStatus::from_db(&row.try_get::<String, _>("status")?),
         tenant_id: row.try_get("tenant_id")?,
         full_name: row.try_get("full_name")?,
         totp_secret_hash: row_string(row, "totp_secret_hash")?,
@@ -680,6 +873,7 @@ fn otp_from_row(row: &sqlx::postgres::PgRow) -> Result<OtpRecord, sqlx::Error> {
         used_at_unix: row.try_get::<i64, _>("used_at_unix")?.max(0) as u64,
         created_at_unix: row.try_get::<i64, _>("created_at_unix")?.max(0) as u64,
         correlation_id: row.try_get("correlation_id")?,
+        tenant_id: row_string(row, "tenant_id")?,
     })
 }
 
@@ -701,6 +895,17 @@ pub trait SessionStore: Send + Sync {
         principal_id: &str,
         now_unix: u64,
     ) -> Result<usize, String>;
+    /// Revoke a principal's sessions on an existing transaction connection, so the
+    /// revoke commits atomically with the caller's other writes (audit event etc.).
+    /// Default: non-atomic `revoke_all_for_principal` for non-transactional stores.
+    async fn revoke_all_for_principal_in_tx(
+        &self,
+        _conn: &mut sqlx::PgConnection,
+        principal_id: &str,
+        now_unix: u64,
+    ) -> Result<usize, String> {
+        self.revoke_all_for_principal(principal_id, now_unix).await
+    }
     async fn list_for_principal(
         &self,
         principal_id: &str,
@@ -751,7 +956,7 @@ pub trait ApiKeyStore: Send + Sync {
     async fn list_for_principal_status_page(
         &self,
         principal_id: &str,
-        status: apikey_entity_pb::ApiKeyStatus,
+        status: ApiKeyStatus,
         now_unix: u64,
         limit: usize,
         offset: usize,
@@ -760,12 +965,12 @@ pub trait ApiKeyStore: Send + Sync {
             .list_for_principal(principal_id, false, now_unix)
             .await?;
         match status {
-            apikey_entity_pb::ApiKeyStatus::Unspecified => {}
-            apikey_entity_pb::ApiKeyStatus::Active => {
+            ApiKeyStatus::Unspecified => {}
+            ApiKeyStatus::Active => {
                 all.retain(|rec| !rec.is_revoked() && !rec.is_expired(now_unix));
             }
-            apikey_entity_pb::ApiKeyStatus::Revoked => all.retain(ApiKeyRecord::is_revoked),
-            apikey_entity_pb::ApiKeyStatus::Expired => {
+            ApiKeyStatus::Revoked => all.retain(ApiKeyRecord::is_revoked),
+            ApiKeyStatus::Expired => {
                 all.retain(|rec| !rec.is_revoked() && rec.is_expired(now_unix));
             }
         }
@@ -799,20 +1004,73 @@ pub trait ApiKeyStore: Send + Sync {
 #[async_trait]
 pub trait UserStore: Send + Sync {
     async fn put_user(&self, record: UserRecord) -> Result<(), String>;
+
+    /// Persist `record` on an existing transaction connection so it commits
+    /// atomically with the caller's other writes (e.g. an audit/outbox event).
+    /// Default: non-atomic `put_user` for stores without a transactional impl.
+    async fn put_user_in_tx(
+        &self,
+        _conn: &mut sqlx::PgConnection,
+        record: UserRecord,
+    ) -> Result<(), String> {
+        self.put_user(record).await
+    }
     async fn get_user_by_id(&self, user_id: &str) -> Result<Option<UserRecord>, String>;
     async fn get_user_by_username(&self, username: &str) -> Result<Option<UserRecord>, String>;
     async fn get_user_by_email(&self, email: &str) -> Result<Option<UserRecord>, String>;
+    async fn get_user_by_id_in_tenant(
+        &self,
+        user_id: &str,
+        tenant_id: &str,
+    ) -> Result<Option<UserRecord>, String> {
+        let tenant_id = tenant_id.trim();
+        if tenant_id.is_empty() {
+            return Ok(None);
+        }
+        Ok(self
+            .get_user_by_id(user_id)
+            .await?
+            .filter(|rec| rec.tenant_id == tenant_id))
+    }
+    async fn get_user_by_username_in_tenant(
+        &self,
+        username: &str,
+        tenant_id: &str,
+    ) -> Result<Option<UserRecord>, String> {
+        let tenant_id = tenant_id.trim();
+        if tenant_id.is_empty() {
+            return Ok(None);
+        }
+        Ok(self
+            .get_user_by_username(username)
+            .await?
+            .filter(|rec| rec.tenant_id == tenant_id))
+    }
+    async fn get_user_by_email_in_tenant(
+        &self,
+        email: &str,
+        tenant_id: &str,
+    ) -> Result<Option<UserRecord>, String> {
+        let tenant_id = tenant_id.trim();
+        if tenant_id.is_empty() {
+            return Ok(None);
+        }
+        Ok(self
+            .get_user_by_email(email)
+            .await?
+            .filter(|rec| rec.tenant_id == tenant_id))
+    }
     async fn list_users(
         &self,
         tenant_id: &str,
-        account_kind: i32,
-        status: i32,
+        account_kind: AccountKind,
+        status: AccountStatus,
     ) -> Result<Vec<UserRecord>, String>;
     async fn list_users_page(
         &self,
         tenant_id: &str,
-        account_kind: i32,
-        status: i32,
+        account_kind: AccountKind,
+        status: AccountStatus,
         limit: usize,
         offset: usize,
     ) -> Result<(Vec<UserRecord>, usize), String> {
@@ -827,6 +1085,18 @@ pub trait UserStore: Send + Sync {
         now_unix: u64,
     ) -> Result<bool, String>;
     async fn put_otp(&self, record: OtpRecord) -> Result<(), String>;
+
+    /// Persist `record` on an existing transaction connection so the OTP row
+    /// commits atomically with the caller's other writes (e.g. the `create_user`
+    /// upsert + its audit/outbox event). Default: non-atomic `put_otp` for stores
+    /// without a transactional impl.
+    async fn put_otp_in_tx(
+        &self,
+        _conn: &mut sqlx::PgConnection,
+        record: OtpRecord,
+    ) -> Result<(), String> {
+        self.put_otp(record).await
+    }
     async fn get_otp(&self, otp_id: &str) -> Result<Option<OtpRecord>, String>;
     async fn update_otp(&self, record: OtpRecord) -> Result<(), String>;
     /// Most recent OTP `created_at_unix` for (user, otp_type), used for send /
@@ -850,6 +1120,7 @@ pub trait UserStore: Send + Sync {
     async fn replace_recovery_codes(
         &self,
         _user_id: &str,
+        _tenant_id: &str,
         _code_hashes: &[String],
     ) -> Result<(), String> {
         Err("recovery codes require the Postgres user store".to_string())
@@ -973,8 +1244,8 @@ impl UserStore for UnavailableUserStore {
     async fn list_users(
         &self,
         _tenant_id: &str,
-        _account_kind: i32,
-        _status: i32,
+        _account_kind: AccountKind,
+        _status: AccountStatus,
     ) -> Result<Vec<UserRecord>, String> {
         Err("Postgres user store is not configured".to_string())
     }
@@ -1051,6 +1322,36 @@ impl PostgresSessionStore {
 
     fn relation(&self) -> String {
         self.model.relation.clone()
+    }
+}
+
+impl PostgresSessionStore {
+    /// `revoke_all_for_principal` over any executor — `&self.pool` for a standalone
+    /// revoke, or a `&mut PgConnection` so it commits in the caller's transaction.
+    pub(crate) async fn revoke_all_for_principal_on<'c, E>(
+        &self,
+        executor: E,
+        principal_id: &str,
+        now_unix: u64,
+    ) -> Result<usize, String>
+    where
+        E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+    {
+        let rel = self.relation();
+        let principal_id_col = self.model.q("principal_id");
+        let is_active = self.model.q("is_active");
+        let last_active_at = self.model.q("last_active_at");
+        let revoke_reason = self.model.q("revoke_reason");
+        let result = sqlx::query(&format!(
+            "UPDATE {rel} SET {is_active} = FALSE, {last_active_at} = to_timestamp($2::DOUBLE PRECISION), {revoke_reason} = 'principal_revoke' \
+             WHERE {principal_id_col} = $1 AND {is_active} = TRUE"
+        ))
+        .bind(principal_id)
+        .bind(now_unix as i64)
+        .execute(executor)
+        .await
+        .map_err(|err| format!("revoke principal sessions failed: {err}"))?;
+        Ok(result.rows_affected() as usize)
     }
 }
 
@@ -1195,21 +1496,18 @@ impl SessionStore for PostgresSessionStore {
         principal_id: &str,
         now_unix: u64,
     ) -> Result<usize, String> {
-        let rel = self.relation();
-        let principal_id_col = self.model.q("principal_id");
-        let is_active = self.model.q("is_active");
-        let last_active_at = self.model.q("last_active_at");
-        let revoke_reason = self.model.q("revoke_reason");
-        let result = sqlx::query(&format!(
-            "UPDATE {rel} SET {is_active} = FALSE, {last_active_at} = to_timestamp($2::DOUBLE PRECISION), {revoke_reason} = 'principal_revoke' \
-             WHERE {principal_id_col} = $1 AND {is_active} = TRUE"
-        ))
-        .bind(principal_id)
-        .bind(now_unix as i64)
-        .execute(&self.pool)
-        .await
-        .map_err(|err| format!("revoke principal sessions failed: {err}"))?;
-        Ok(result.rows_affected() as usize)
+        self.revoke_all_for_principal_on(&self.pool, principal_id, now_unix)
+            .await
+    }
+
+    async fn revoke_all_for_principal_in_tx(
+        &self,
+        conn: &mut sqlx::PgConnection,
+        principal_id: &str,
+        now_unix: u64,
+    ) -> Result<usize, String> {
+        self.revoke_all_for_principal_on(&mut *conn, principal_id, now_unix)
+            .await
     }
 
     async fn list_for_principal(
@@ -1545,7 +1843,7 @@ pub struct PostgresApiKeyStore {
 fn bind_api_key_insert<'q>(
     query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
     record: &'q ApiKeyRecord,
-    status: i32,
+    status: ApiKeyStatus,
     metadata_json: String,
 ) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
     query
@@ -1659,9 +1957,9 @@ impl PostgresApiKeyStore {
 impl ApiKeyStore for PostgresApiKeyStore {
     async fn put(&self, record: ApiKeyRecord) -> Result<(), String> {
         let status = if record.revoked_at_unix > 0 {
-            apikey_entity_pb::ApiKeyStatus::Revoked as i32
+            ApiKeyStatus::Revoked
         } else {
-            apikey_entity_pb::ApiKeyStatus::Active as i32
+            ApiKeyStatus::Active
         };
         let metadata_json = serde_json::json!({
             "service_identity": record.service_identity,
@@ -1683,9 +1981,9 @@ impl ApiKeyStore for PostgresApiKeyStore {
         // #209: insert-new + revoke-old in ONE transaction so a revoke failure
         // after a successful insert can't leave both keys active (split-brain).
         let status = if new_record.revoked_at_unix > 0 {
-            apikey_entity_pb::ApiKeyStatus::Revoked as i32
+            ApiKeyStatus::Revoked
         } else {
-            apikey_entity_pb::ApiKeyStatus::Active as i32
+            ApiKeyStatus::Active
         };
         let metadata_json = serde_json::json!({
             "service_identity": new_record.service_identity,
@@ -1881,7 +2179,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
     async fn list_for_principal_status_page(
         &self,
         principal_id: &str,
-        status: apikey_entity_pb::ApiKeyStatus,
+        status: ApiKeyStatus,
         now_unix: u64,
         limit: usize,
         offset: usize,
@@ -1907,14 +2205,14 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let expires_at = m.q("expires_at");
         let created_at = m.q("created_at");
         let status_clause = match status {
-            apikey_entity_pb::ApiKeyStatus::Unspecified => String::new(),
-            apikey_entity_pb::ApiKeyStatus::Active => format!(
+            ApiKeyStatus::Unspecified => String::new(),
+            ApiKeyStatus::Active => format!(
                 "AND {deleted_at} IS NULL AND {status_col} = 'ACTIVE' AND ({expires_at} IS NULL OR {expires_at} > to_timestamp($2::DOUBLE PRECISION))"
             ),
-            apikey_entity_pb::ApiKeyStatus::Revoked => {
+            ApiKeyStatus::Revoked => {
                 format!("AND ({deleted_at} IS NOT NULL OR {status_col} = 'REVOKED')")
             }
-            apikey_entity_pb::ApiKeyStatus::Expired => format!(
+            ApiKeyStatus::Expired => format!(
                 "AND {deleted_at} IS NULL AND ({status_col} = 'EXPIRED' OR ({status_col} = 'ACTIVE' AND {expires_at} IS NOT NULL AND {expires_at} <= to_timestamp($2::DOUBLE PRECISION)))"
             ),
         };
@@ -1922,10 +2220,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
             "SELECT COUNT(*)::BIGINT AS total_count FROM {rel} WHERE ({owner_id_col} = $1 OR {service_identity_expr} = $1) {status_clause}"
         );
         let mut count_query = sqlx::query(&count_sql).bind(principal_id);
-        if matches!(
-            status,
-            apikey_entity_pb::ApiKeyStatus::Active | apikey_entity_pb::ApiKeyStatus::Expired
-        ) {
+        if matches!(status, ApiKeyStatus::Active | ApiKeyStatus::Expired) {
             count_query = count_query.bind(now_unix as i64);
         }
         let total = count_query
@@ -1935,24 +2230,19 @@ impl ApiKeyStore for PostgresApiKeyStore {
             .try_get::<i64, _>("total_count")
             .map_err(|err| format!("decode api key count failed: {err}"))?
             .max(0) as usize;
-        let (limit_param, offset_param) = if matches!(
-            status,
-            apikey_entity_pb::ApiKeyStatus::Active | apikey_entity_pb::ApiKeyStatus::Expired
-        ) {
-            ("$3", "$4")
-        } else {
-            ("$2", "$3")
-        };
+        let (limit_param, offset_param) =
+            if matches!(status, ApiKeyStatus::Active | ApiKeyStatus::Expired) {
+                ("$3", "$4")
+            } else {
+                ("$2", "$3")
+            };
         let sql = format!(
             "SELECT {key_prefix_col}, {key_hash}, {owner_id}, {service_identity}, {tenant_id}, {project_id}, {scopes}, \
                     {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix} \
              FROM {rel} WHERE ({owner_id_col} = $1 OR {service_identity_expr} = $1) {status_clause} ORDER BY {created_at} DESC LIMIT {limit_param} OFFSET {offset_param}"
         );
         let mut query = sqlx::query(&sql).bind(principal_id);
-        if matches!(
-            status,
-            apikey_entity_pb::ApiKeyStatus::Active | apikey_entity_pb::ApiKeyStatus::Expired
-        ) {
+        if matches!(status, ApiKeyStatus::Active | ApiKeyStatus::Expired) {
             query = query.bind(now_unix as i64);
         }
         let rows = query
@@ -2137,6 +2427,7 @@ impl PostgresUserStore {
             m.select("attempt_count"),
             m.text_or_empty("superseded_by_id"),
             m.text_or_empty("correlation_id"),
+            m.text_or_empty("tenant_id"),
             m.timestamp_unix_as("expires_at", "expires_at_unix"),
             m.timestamp_unix_as("used_at", "used_at_unix"),
             m.timestamp_unix_as("created_at", "created_at_unix"),
@@ -2145,9 +2436,18 @@ impl PostgresUserStore {
     }
 }
 
-#[async_trait]
-impl UserStore for PostgresUserStore {
-    async fn put_user(&self, record: UserRecord) -> Result<(), String> {
+impl PostgresUserStore {
+    /// `put_user` over any executor — `&self.pool` for a standalone write, or a
+    /// `&mut PgConnection` so the upsert commits inside the caller's transaction
+    /// (used by `put_user_in_tx` for enterprise auth-mutation atomicity).
+    pub(crate) async fn put_user_on<'c, E>(
+        &self,
+        executor: E,
+        record: UserRecord,
+    ) -> Result<(), String>
+    where
+        E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+    {
         let rel = self.users_relation();
         let m = &self.users_model;
         let user_id = m.q("user_id");
@@ -2195,8 +2495,8 @@ impl UserStore for PostgresUserStore {
         .bind(&record.username)
         .bind(&record.email)
         .bind(&record.password_hash)
-        .bind(account_kind_to_db(record.account_kind))
-        .bind(user_status_to_db(record.status))
+        .bind(record.account_kind.to_db())
+        .bind(record.status.to_db())
         .bind(&record.tenant_id)
         .bind(&record.full_name)
         .bind(&record.totp_secret_hash)
@@ -2214,10 +2514,81 @@ impl UserStore for PostgresUserStore {
         .bind(&record.external_provider_id)
         .bind(&record.external_subject)
         .bind(json_object_or_empty(&record.profile_attributes_json))
-        .execute(&self.pool)
+        .execute(executor)
         .await
         .map_err(|err| format!("put user failed: {err}"))?;
         Ok(())
+    }
+
+    /// `put_otp` over any executor — `&self.pool` for a standalone write, or a
+    /// `&mut PgConnection` so the OTP upsert commits inside the caller's
+    /// transaction (used by `put_otp_in_tx` for `create_user` atomicity).
+    pub(crate) async fn put_otp_on<'c, E>(
+        &self,
+        executor: E,
+        record: OtpRecord,
+    ) -> Result<(), String>
+    where
+        E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+    {
+        let rel = self.otps_relation();
+        let m = &self.otps_model;
+        let otp_id = m.q("otp_id");
+        let user_id = m.q("user_id");
+        let otp_type = m.q("otp_type");
+        let code_hash = m.q("code_hash");
+        let delivery_channel = m.q("delivery_channel");
+        let delivery_address = m.q("delivery_address");
+        let status = m.q("status");
+        let attempt_count = m.q("attempt_count");
+        let superseded_by_id = m.q("superseded_by_id");
+        let expires_at = m.q("expires_at");
+        let used_at = m.q("used_at");
+        let created_at = m.q("created_at");
+        let correlation_id = m.q("correlation_id");
+        let tenant_id = m.q("tenant_id");
+        sqlx::query(&format!(
+            "INSERT INTO {rel} \
+             ({otp_id}, {user_id}, {otp_type}, {code_hash}, {delivery_channel}, {delivery_address}, {status}, {attempt_count}, {superseded_by_id}, {expires_at}, {used_at}, {created_at}, {correlation_id}, {tenant_id}) \
+             VALUES ($1::UUID, $2::UUID, $3, $4, $5, $6, $7, $8, NULLIF($9, '')::UUID, to_timestamp($10::DOUBLE PRECISION), \
+                     CASE WHEN $11::BIGINT > 0 THEN to_timestamp($11::DOUBLE PRECISION) ELSE NULL END, to_timestamp($12::DOUBLE PRECISION), $13, NULLIF($14, '')) \
+             ON CONFLICT ({otp_id}) DO UPDATE SET {status} = EXCLUDED.{status}, {attempt_count} = EXCLUDED.{attempt_count}, {superseded_by_id} = EXCLUDED.{superseded_by_id}, {used_at} = EXCLUDED.{used_at}"
+        ))
+        .bind(&record.otp_id)
+        .bind(&record.user_id)
+        .bind(otp_type_to_db(record.otp_type))
+        .bind(&record.code_hash)
+        .bind(&record.delivery_channel)
+        .bind(&record.delivery_address)
+        .bind(otp_status_to_db(record.status))
+        .bind(record.attempt_count)
+        .bind(&record.superseded_by_id)
+        .bind(record.expires_at_unix as i64)
+        .bind(record.used_at_unix as i64)
+        .bind(record.created_at_unix as i64)
+        .bind(&record.correlation_id)
+        .bind(&record.tenant_id)
+        .execute(executor)
+        .await
+        .map_err(|err| format!("put otp failed: {err}"))?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl UserStore for PostgresUserStore {
+    async fn put_user(&self, record: UserRecord) -> Result<(), String> {
+        self.put_user_on(&self.pool, record).await
+    }
+
+    /// Atomic variant: upsert the user on the caller's transaction connection so
+    /// it commits with the caller's other writes (e.g. its audit/outbox event).
+    async fn put_user_in_tx(
+        &self,
+        conn: &mut sqlx::PgConnection,
+        record: UserRecord,
+    ) -> Result<(), String> {
+        self.put_user_on(&mut *conn, record).await
     }
 
     async fn get_user_by_id(&self, user_id: &str) -> Result<Option<UserRecord>, String> {
@@ -2232,11 +2603,37 @@ impl UserStore for PostgresUserStore {
         self.get_user_by("email", email).await
     }
 
+    async fn get_user_by_id_in_tenant(
+        &self,
+        user_id: &str,
+        tenant_id: &str,
+    ) -> Result<Option<UserRecord>, String> {
+        self.get_user_by_in_tenant("user_id", user_id, tenant_id)
+            .await
+    }
+
+    async fn get_user_by_username_in_tenant(
+        &self,
+        username: &str,
+        tenant_id: &str,
+    ) -> Result<Option<UserRecord>, String> {
+        self.get_user_by_in_tenant("username", username, tenant_id)
+            .await
+    }
+
+    async fn get_user_by_email_in_tenant(
+        &self,
+        email: &str,
+        tenant_id: &str,
+    ) -> Result<Option<UserRecord>, String> {
+        self.get_user_by_in_tenant("email", email, tenant_id).await
+    }
+
     async fn list_users(
         &self,
         tenant_id: &str,
-        account_kind: i32,
-        status: i32,
+        account_kind: AccountKind,
+        status: AccountStatus,
     ) -> Result<Vec<UserRecord>, String> {
         let rel = self.users_relation();
         let projection = self.user_select_projection();
@@ -2245,8 +2642,8 @@ impl UserStore for PostgresUserStore {
         let status_col = self.users_model.q("status");
         let created_at = self.users_model.q("created_at");
         let deleted_at = self.users_model.q("deleted_at");
-        let account_kind_filter = account_kind_to_db(account_kind);
-        let status_filter = user_status_to_db(status);
+        let account_kind_filter = account_kind.to_db();
+        let status_filter = status.to_db();
         let rows = sqlx::query(&format!(
             "SELECT {projection} \
              FROM {rel} WHERE {deleted_at} IS NULL AND ($1 = '' OR {tenant_id_col} = $1) AND ($2 = 'UNSPECIFIED' OR {account_kind_col} = $2) AND ($3 = 'UNSPECIFIED' OR {status_col} = $3) ORDER BY {created_at} DESC"
@@ -2266,8 +2663,8 @@ impl UserStore for PostgresUserStore {
     async fn list_users_page(
         &self,
         tenant_id: &str,
-        account_kind: i32,
-        status: i32,
+        account_kind: AccountKind,
+        status: AccountStatus,
         limit: usize,
         offset: usize,
     ) -> Result<(Vec<UserRecord>, usize), String> {
@@ -2278,8 +2675,8 @@ impl UserStore for PostgresUserStore {
         let status_col = self.users_model.q("status");
         let created_at = self.users_model.q("created_at");
         let deleted_at = self.users_model.q("deleted_at");
-        let account_kind_filter = account_kind_to_db(account_kind);
-        let status_filter = user_status_to_db(status);
+        let account_kind_filter = account_kind.to_db();
+        let status_filter = status.to_db();
         let where_clause = format!(
             "{deleted_at} IS NULL AND ($1 = '' OR {tenant_id_col} = $1) AND ($2 = 'UNSPECIFIED' OR {account_kind_col} = $2) AND ($3 = 'UNSPECIFIED' OR {status_col} = $3)"
         );
@@ -2287,8 +2684,8 @@ impl UserStore for PostgresUserStore {
             "SELECT COUNT(*)::BIGINT AS total_count FROM {rel} WHERE {where_clause}"
         ))
         .bind(tenant_id)
-        .bind(&account_kind_filter)
-        .bind(&status_filter)
+        .bind(account_kind_filter)
+        .bind(status_filter)
         .fetch_one(&self.pool)
         .await
         .map_err(|err| format!("count users failed: {err}"))?
@@ -2338,45 +2735,18 @@ impl UserStore for PostgresUserStore {
     }
 
     async fn put_otp(&self, record: OtpRecord) -> Result<(), String> {
-        let rel = self.otps_relation();
-        let m = &self.otps_model;
-        let otp_id = m.q("otp_id");
-        let user_id = m.q("user_id");
-        let otp_type = m.q("otp_type");
-        let code_hash = m.q("code_hash");
-        let delivery_channel = m.q("delivery_channel");
-        let delivery_address = m.q("delivery_address");
-        let status = m.q("status");
-        let attempt_count = m.q("attempt_count");
-        let superseded_by_id = m.q("superseded_by_id");
-        let expires_at = m.q("expires_at");
-        let used_at = m.q("used_at");
-        let created_at = m.q("created_at");
-        let correlation_id = m.q("correlation_id");
-        sqlx::query(&format!(
-            "INSERT INTO {rel} \
-             ({otp_id}, {user_id}, {otp_type}, {code_hash}, {delivery_channel}, {delivery_address}, {status}, {attempt_count}, {superseded_by_id}, {expires_at}, {used_at}, {created_at}, {correlation_id}) \
-             VALUES ($1::UUID, $2::UUID, $3, $4, $5, $6, $7, $8, NULLIF($9, '')::UUID, to_timestamp($10::DOUBLE PRECISION), \
-                     CASE WHEN $11::BIGINT > 0 THEN to_timestamp($11::DOUBLE PRECISION) ELSE NULL END, to_timestamp($12::DOUBLE PRECISION), $13) \
-             ON CONFLICT ({otp_id}) DO UPDATE SET {status} = EXCLUDED.{status}, {attempt_count} = EXCLUDED.{attempt_count}, {superseded_by_id} = EXCLUDED.{superseded_by_id}, {used_at} = EXCLUDED.{used_at}"
-        ))
-        .bind(&record.otp_id)
-        .bind(&record.user_id)
-        .bind(otp_type_to_db(record.otp_type))
-        .bind(&record.code_hash)
-        .bind(&record.delivery_channel)
-        .bind(&record.delivery_address)
-        .bind(otp_status_to_db(record.status))
-        .bind(record.attempt_count)
-        .bind(&record.superseded_by_id)
-        .bind(record.expires_at_unix as i64)
-        .bind(record.used_at_unix as i64)
-        .bind(record.created_at_unix as i64)
-        .bind(&record.correlation_id)
-        .execute(&self.pool)
-        .await
-        .map_err(|err| format!("put otp failed: {err}"))?;
-        Ok(())
+        self.put_otp_on(&self.pool, record).await
+    }
+
+    /// Atomic variant: upsert the OTP on the caller's transaction connection so
+    /// it commits with the caller's other writes (e.g. `create_user`'s user
+    /// upsert + audit/outbox event).
+    async fn put_otp_in_tx(
+        &self,
+        conn: &mut sqlx::PgConnection,
+        record: OtpRecord,
+    ) -> Result<(), String> {
+        self.put_otp_on(&mut *conn, record).await
     }
 
     async fn get_otp(&self, otp_id: &str) -> Result<Option<OtpRecord>, String> {
@@ -2436,8 +2806,8 @@ impl UserStore for PostgresUserStore {
         ))
         .bind(otp_id)
         .bind(now_unix as i64)
-        .bind(otp_status_to_db(authn_entity_pb::OtpStatus::Used as i32))
-        .bind(otp_status_to_db(authn_entity_pb::OtpStatus::Pending as i32))
+        .bind(otp_status_to_db(OtpStatus::Used.as_i32()))
+        .bind(otp_status_to_db(OtpStatus::Pending.as_i32()))
         .fetch_optional(&self.pool)
         .await
         .map_err(|err| format!("consume otp failed: {err}"))?;
@@ -2447,11 +2817,13 @@ impl UserStore for PostgresUserStore {
     async fn replace_recovery_codes(
         &self,
         user_id: &str,
+        tenant_id: &str,
         code_hashes: &[String],
     ) -> Result<(), String> {
         let rel = self.recovery_codes_relation();
         let user_col = self.recovery_codes_model.q("user_id");
         let code_col = self.recovery_codes_model.q("code_hash");
+        let tenant_col = self.recovery_codes_model.q("tenant_id");
         let mut tx = self
             .pool
             .begin()
@@ -2464,10 +2836,11 @@ impl UserStore for PostgresUserStore {
             .map_err(|err| format!("recovery codes clear failed: {err}"))?;
         for hash in code_hashes {
             sqlx::query(&format!(
-                "INSERT INTO {rel} ({user_col}, {code_col}) VALUES ($1::UUID, $2)"
+                "INSERT INTO {rel} ({user_col}, {code_col}, {tenant_col}) VALUES ($1::UUID, $2, NULLIF($3, ''))"
             ))
             .bind(user_id)
             .bind(hash)
+            .bind(tenant_id)
             .execute(&mut *tx)
             .await
             .map_err(|err| format!("recovery code insert failed: {err}"))?;
@@ -2595,6 +2968,39 @@ impl PostgresUserStore {
             .map(user_from_row)
             .transpose()
             .map_err(|err| format!("decode user failed: {err}"))
+    }
+
+    async fn get_user_by_in_tenant(
+        &self,
+        column: &str,
+        value: &str,
+        tenant_id: &str,
+    ) -> Result<Option<UserRecord>, String> {
+        if tenant_id.trim().is_empty() {
+            return Ok(None);
+        }
+        let rel = self.users_relation();
+        let col = self.users_model.q(column);
+        let tenant_col = self.users_model.q("tenant_id");
+        let projection = self.user_select_projection();
+        let deleted_at = self.users_model.q("deleted_at");
+        let value_expr = if column == "user_id" {
+            "$1::UUID"
+        } else {
+            "$1"
+        };
+        let row = sqlx::query(&format!(
+            "SELECT {projection} FROM {rel} WHERE {col} = {value_expr} AND {tenant_col} = $2 AND {deleted_at} IS NULL"
+        ))
+        .bind(value)
+        .bind(tenant_id.trim())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|err| format!("get tenant-scoped user failed: {err}"))?;
+        row.as_ref()
+            .map(user_from_row)
+            .transpose()
+            .map_err(|err| format!("decode tenant-scoped user failed: {err}"))
     }
 }
 

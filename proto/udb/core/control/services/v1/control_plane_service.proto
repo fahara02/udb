@@ -1,0 +1,125 @@
+syntax = "proto3";
+
+package udb.core.control.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/control/services/v1/core.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Control.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/control/services/v1;controlservicev1";
+option java_package = "com.udb.core.control.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Control\\Services\\V1";
+option php_namespace = "Udb\\Core\\Control\\Services\\V1";
+
+// ---------------------------------------------------------------------------
+// ControlPlaneService — Versioned, ACK/NACK, nonce-paired, ordered control-plane
+// policy/config distribution (xDS-style). Nodes (data-plane PEPs) open an
+// aggregated state-of-the-world stream (StreamResources) or an incremental delta
+// stream (DeltaResources) and receive versioned resources in dependency order
+// (backend-target definitions before referencing routing/RLS policies), each
+// response carrying a fresh nonce the node echoes to ACK (apply) or NACK (reject
+// without applying). A node that NACKs keeps its last-good version. Unary helpers
+// fetch resources on demand (incl. by tenant) and expose per-node ack visibility.
+//
+// Server-only control plane: runs on the isolated native auth listener with an
+// admin/service-account credential; never exposed on the public DataBroker port.
+// ---------------------------------------------------------------------------
+service ControlPlaneService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "control"
+    logical_service_id: "control"
+    proto_service_id: "control"
+    display_name: "Control Plane Distribution"
+    category: "control"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "controlPlane"
+    cli_scaffold_group: "control"
+    health_check_ref: "control"
+    capability_ref: "native.control"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 60000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "control"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "control"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // ── Aggregated state-of-the-world (ADS) ───────────────────────────────────
+  rpc StreamResources(stream DiscoveryRequest) returns (stream DiscoveryResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:control:stream-resources"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "control.StreamResources"
+      request_context_required: true
+      tenant_required: false
+    };
+  }
+
+  // ── Incremental / delta discovery ─────────────────────────────────────────
+  rpc DeltaResources(stream DeltaDiscoveryRequest) returns (stream DeltaDiscoveryResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:control:delta-resources"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "control.DeltaResources"
+      request_context_required: true
+      tenant_required: false
+    };
+  }
+
+  // ── On-demand fetch (incl. by tenant) ─────────────────────────────────────
+  rpc GetResources(GetResourcesRequest) returns (GetResourcesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:control:get-resources"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "control.GetResources"
+      request_context_required: true
+      tenant_required: false
+    };
+    option (google.api.http) = {get: "/v1/control/resources"};
+  }
+
+  // ── Admin visibility ──────────────────────────────────────────────────────
+  rpc ListNodeStates(ListNodeStatesRequest) returns (ListNodeStatesResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:control:list-node-states"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "control.ListNodeStates"
+      request_context_required: true
+      tenant_required: false
+    };
+    option (google.api.http) = {get: "/v1/control/node-states"};
+  }
+
+  rpc AckStatus(AckStatusRequest) returns (AckStatusResponse) {
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:control:ack-status"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "control.AckStatus"
+      request_context_required: true
+      tenant_required: false
+    };
+    option (google.api.http) = {get: "/v1/control/node-states/{node_id}:ack-status"};
+  }
+}

@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package udb.core.control.entity.v1;
+
+option csharp_namespace = "udb.core.Control.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/control/entity/v1;controlv1";
+option java_package = "com.udb.core.control.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Control\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Control\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// ResourceType — the kinds of control-plane configuration a node can subscribe
+// to in the xDS-style versioned distribution stream. "Definition" resources
+// (backend targets) MUST be pushed before referencing policies so a referencing
+// policy is never applied before its target exists (make-before-break).
+// ---------------------------------------------------------------------------
+enum ResourceType {
+  RESOURCE_TYPE_UNSPECIFIED = 0;
+  // Request routing / backend selection policy (references backend targets).
+  RESOURCE_TYPE_ROUTING_POLICY = 1;
+  // Per-RPC method-security policy (the proto endpoint_security map).
+  RESOURCE_TYPE_METHOD_SECURITY_POLICY = 2;
+  // Row-level-security / tenant isolation policy (references backend targets).
+  RESOURCE_TYPE_RLS_TENANT_POLICY = 3;
+  // Which native control-plane services are enabled on a node.
+  RESOURCE_TYPE_NATIVE_SERVICE_ENABLEMENT = 4;
+  // Backend target/cluster definitions — the "definitions" that routing and
+  // RLS policies reference. Pushed BEFORE the referencing policies.
+  RESOURCE_TYPE_BACKEND_TARGET_DEFINITION = 5;
+}

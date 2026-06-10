@@ -24,7 +24,7 @@
 
 use crate::backend::BackendKind;
 use crate::generation::ManifestTable;
-use crate::ir::filter::{ComparisonOp, LogicalFilter};
+use crate::ir::filter::ComparisonOp;
 use crate::ir::operations::{
     ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead, LogicalResourceOp,
     LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
@@ -40,9 +40,6 @@ use super::{CompileContext, CompileError, CompiledRendering, Compiler};
 struct Mssql;
 
 impl SqlDialect for Mssql {
-    fn backend() -> BackendKind {
-        BackendKind::Mssql
-    }
     fn quote(ident: &str) -> String {
         format!("[{ident}]")
     }

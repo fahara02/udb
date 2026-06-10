@@ -15,6 +15,12 @@ impl AuthzServiceImpl {
         &self,
         request: Request<authz_pb::PutRoleBindingRequest>,
     ) -> Result<Response<authz_pb::AuthMutationResponse>, Status> {
+        // K2.2: governed mode disables direct active mutation (use the draft flow).
+        if super::governance::governed_mode_enabled() {
+            return Err(Status::failed_precondition(
+                "governed mode: direct PutRoleBinding is disabled; create a policy draft and activate it (or use break-glass governance)",
+            ));
+        }
         let binding = request
             .into_inner()
             .binding
@@ -61,6 +67,15 @@ impl AuthzServiceImpl {
             .execute(pool)
             .await
             .map_err(|err| Status::internal(format!("store role binding failed: {err}")))?;
+            let _ = self
+                .bump_authz_revision(
+                    &scope_tenant,
+                    &binding.project,
+                    authz_entity_pb::AuthzChangeType::RoleAssignment,
+                    "role-binding-put",
+                    &binding.source,
+                )
+                .await;
         } else {
             self.require_snapshot_fallback()?;
         }
@@ -75,6 +90,12 @@ impl AuthzServiceImpl {
         &self,
         request: Request<authz_pb::PutRelationshipRequest>,
     ) -> Result<Response<authz_pb::AuthMutationResponse>, Status> {
+        // K2.2: governed mode disables direct active mutation (use the draft flow).
+        if super::governance::governed_mode_enabled() {
+            return Err(Status::failed_precondition(
+                "governed mode: direct PutRelationship is disabled; create a policy draft and activate it (or use break-glass governance)",
+            ));
+        }
         let tuple = request
             .into_inner()
             .tuple
@@ -126,10 +147,48 @@ impl AuthzServiceImpl {
             .execute(pool)
             .await
             .map_err(|err| Status::internal(format!("store relationship tuple failed: {err}")))?;
+            let _ = self
+                .bump_authz_revision(
+                    &scope_tenant,
+                    &tuple.project,
+                    authz_entity_pb::AuthzChangeType::Relationship,
+                    "relationship-put",
+                    &tuple.source,
+                )
+                .await;
         } else {
             self.require_snapshot_fallback()?;
         }
         self.invalidate_snapshot_cache();
+        // Phase L2/L3 task5: publish the relationship-tuple change so security
+        // dashboards and the audit plane observe ReBAC edits (no raw condition
+        // material in the body — the outbox sink scrubs credential-shaped keys).
+        self.emit_event(
+            AuthEvent::new(
+                topics::RELATIONSHIP_TUPLE_CHANGED,
+                format!("{}:{}:{}", tuple.subject, tuple.relation, tuple.object),
+                scope_tenant.clone(),
+                serde_json::json!({
+                    "subject": tuple.subject,
+                    "relation": tuple.relation,
+                    "object": tuple.object,
+                    "tenant_id": scope_tenant,
+                    "project_id": tuple.project,
+                    "verb": "upsert",
+                }),
+            )
+            .with_compliance(events::ComplianceEnvelope {
+                actor: tuple.subject.clone(),
+                target_resource: tuple.object.clone(),
+                actor_project: tuple.project.clone(),
+                operation: "upsert".to_string(),
+                outcome: "success".to_string(),
+                reason_code: "relationship_tuple_upsert".to_string(),
+                ..Default::default()
+            })
+            .with_correlation(format!("reltuple:{}:{}", tuple.subject, tuple.object)),
+        )
+        .await;
         Ok(Response::new(authz_pb::AuthMutationResponse {
             ok: true,
             message: "relationship tuple stored".to_string(),

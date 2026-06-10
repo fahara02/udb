@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture — UDB</title>
+<meta name="description" content="How UDB works: proto files become a catalog manifest that drives build-time generation and a per-request runtime pipeline — authn, authz, admission, neutral IR, executor, backend.">
+<meta name="theme-color" content="#121214">
+<link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body id="top">
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="./index.html"><img src="./assets/udb_logo.svg" alt="UDB logo">UDB</a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">&#9776;</button>
+    <nav class="nav-links">
+      <a href="./architecture.html" class="active">Architecture</a>
+      <a href="./data-plane.html">Data&nbsp;Plane</a>
+      <a href="./control-plane.html">Control&nbsp;Plane</a>
+      <a href="./security.html">Security</a>
+      <a href="./enterprise.html">Enterprise</a>
+      <a href="./sdks.html">SDKs</a>
+      <a href="./playground.html">Playground</a>
+      <a class="nav-cta" href="https://github.com/fahara02/udb">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <div class="eyebrow">Architecture</div>
+    <h1>Proto in, <span class="g">typed responses</span> out</h1>
+    <p class="lead">UDB is a broker over external databases — backends own data replication; UDB owns the
+      contract, routing, tenant isolation, control-plane state, CDC, sagas, and SDKs. One descriptor
+      drives build-time generation and runtime enforcement, so docs, SDKs, and behavior can’t drift.</p>
+  </div>
+
+  <section>
+    <div class="wrap">
+      <figure class="diagram">
+        <img src="./assets/architecture-pipeline.svg" alt="UDB architecture pipeline: project protos parsed into a catalog manifest that drives build-time generation and the per-request runtime pipeline (authn/authz → admission → neutral IR → executor → backends).">
+        <figcaption>Project protos → catalog manifest → build-time generation + per-request runtime pipeline.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">Single source of truth</div>
+      <h2>The descriptor <span class="accent">is the contract</span></h2>
+      <p class="lead">Proto plus the embedded descriptor manifest is the one product contract for RPCs,
+        DTOs, table/column security, endpoint security, SDK metadata, CLI scaffolds, events, native
+        service ids, and docs. Runtime decodes it and fails closed if it can’t.</p>
+      <div class="grid c3 mt28">
+        <div class="card"><div class="ic">📐</div><h3>You own the model</h3><p>Describe entities in normal <code>.proto</code> files and annotate where data lives and how it’s secured.</p></div>
+        <div class="card"><div class="ic">🏗️</div><h3>Generation</h3><p>The parser builds a deterministic catalog manifest → DDL/RLS, migrations, SDKs, CLI scaffolds, and generated docs.</p></div>
+        <div class="card"><div class="ic">🛡️</div><h3>Runtime enforcement</h3><p>The same descriptor drives the method-security tower layer, redaction, event contracts, and capability reporting.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">Per-request pipeline</div>
+      <h2>What happens on <span class="accent">every call</span></h2>
+      <div class="grid c2 mt28" style="align-items:start">
+        <figure class="diagram">
+          <img src="./assets/request-flow.svg" alt="UDB request flow from SDK call through authentication, authorization, admission control, neutral IR, executor dispatch, and backend execution.">
+          <figcaption>Request lifecycle from SDK to backend and back.</figcaption>
+        </figure>
+        <ul class="flist">
+          <li><span class="mk">1</span><div><b>Authenticate</b> — bearer JWT, session, API key, or federated identity; mTLS SAN where configured.</div></li>
+          <li><span class="mk">2</span><div><b>Authorize</b> — one engine for RBAC + ABAC + ReBAC over Casbin, with explicit-deny-wins and a deterministic <code>decision_id</code>.</div></li>
+          <li><span class="mk">3</span><div><b>Admission</b> — per-tenant fair channels, concurrency limits, and bounded-queue backpressure.</div></li>
+          <li><span class="mk">4</span><div><b>Neutral IR</b> — the request compiles to a backend-agnostic intermediate representation.</div></li>
+          <li><span class="mk">5</span><div><b>Execute</b> — the right executor speaks the backend dialect; RLS context is applied with <code>SET LOCAL</code>.</div></li>
+          <li><span class="mk">6</span><div><b>Emit &amp; audit</b> — typed response back; events to the transactional outbox; a redacted compliance envelope to audit.</div></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">Two planes, one contract</div>
+      <h2>Data plane and a <span class="accent">network-isolated</span> control plane</h2>
+      <div class="tablewrap mt28">
+        <table>
+          <thead><tr><th>Plane</th><th>Listener</th><th>Surface</th><th class="n">RPCs</th></tr></thead>
+          <tbody>
+            <tr><td><b>Data plane</b></td><td>Public <code>DataBroker</code></td><td>Relational, vector, object, cache, document, graph, time-series, analytical; transactions, CDC, catalog, migration, saga</td><td class="n">76</td></tr>
+            <tr><td><b>Control plane</b></td><td>Isolated <code>UDB_AUTH_GRPC_ADDR</code></td><td>15 native services — authn, authz, API keys, IdP, tenant, notification, analytics, storage, asset, WebRTC, policy distribution</td><td class="n">186</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="lead mt28">The control plane is PEP-frontable and serves the public plane via
+        <code>Authorize</code>/<code>GetNativeAccess</code>. Runtime domain modules own the business
+        engines; service modules only adapt them to gRPC.</p>
+      <div class="cta" style="justify-content:flex-start">
+        <a class="btn primary" href="./data-plane.html">Explore the data plane</a>
+        <a class="btn ghost" href="./control-plane.html">Explore the control plane</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div class="brand"><img src="./assets/udb_logo.svg" alt="" style="width:26px;height:26px;border-radius:7px"> UDB — Universal Data Broker</div>
+    <nav class="foot-links">
+      <a href="./index.html">Home</a><a href="./control-plane.html">Control Plane</a>
+      <a href="https://github.com/fahara02/udb">GitHub</a>
+      <a href="https://github.com/fahara02/udb/blob/main/LICENSE">MIT License</a>
+    </nav>
+  </div>
+  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.3.2 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
+</footer>
+
+<script defer src="./app.js"></script>
+
+</body>
+</html>

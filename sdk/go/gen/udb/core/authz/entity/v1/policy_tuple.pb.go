@@ -144,7 +144,7 @@ var File_udb_core_authz_entity_v1_policy_tuple_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_entity_v1_policy_tuple_proto_rawDesc = "" +
 	"\n" +
-	"+udb/core/authz/entity/v1/policy_tuple.proto\x12\x18udb.core.authz.entity.v1\x1a\x1budb/core/common/v1/db.proto\"\x87\v\n" +
+	"+udb/core/authz/entity/v1/policy_tuple.proto\x12\x18udb.core.authz.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xa3\f\n" +
 	"\vPolicyTuple\x12L\n" +
 	"\x0fpolicy_tuple_id\x18\x01 \x01(\x03B$\x82\xb7\x18 \n" +
 	"\x0fpolicy_tuple_id\x12\tBIGSERIAL\x18\x01(\x01R\rpolicyTupleId\x12\x8c\x01\n" +
@@ -173,11 +173,12 @@ const file_udb_core_authz_entity_v1_policy_tuple_proto_rawDesc = "" +
 	" \x01(\tB@\x82\xb7\x18<\n" +
 	"\n" +
 	"project_id\x12\fVARCHAR(120)R \n" +
-	"\x17idx_policytuple_project\x12\x05BTREER\tprojectId:\x9a\x03\xa2\xb5\x18\\\b\x01\x12/udb:authz:tuple:{tuple_kind}:{subject}:{domain}\x18\xac\x02 \x01(\x01:\x12REDIS_CLUSTER_ADDRB\fauthz_policy\xfa\xb6\x18\xb5\x02\n" +
+	"\x17idx_policytuple_project\x12\x05BTREER\tprojectId:\xb6\x04\xa2\xb5\x18\\\b\x01\x12/udb:authz:tuple:{tuple_kind}:{subject}:{domain}\x18\xac\x02 \x01(\x01:\x12REDIS_CLUSTER_ADDRB\fauthz_policy\xfa\xb6\x18\xb5\x02\n" +
 	"\rpolicy_tuples\x12\tudb_authz\x18\x01 \x01*BNormalized authorization policy, grouping, and relationship tuples@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01V\n" +
 	"\x16uq_policy_tuples_tuple\x12\x05BTREE\x18\x01Z\n" +
-	"tuple_kindZ\asubjectZ\x06domainZ\x06objectZ\x06actionZ\x06effect\xea\x01\aprimary\xfa\x01\vauthz:adminB\xfb\x01\n" +
+	"tuple_kindZ\asubjectZ\x06domainZ\x06objectZ\x06actionZ\x06effect\xea\x01\aprimary\xfa\x01\vauthz:admin\x8a\xb2\x19\x97\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x11authz.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfb\x01\n" +
 	"\x1ccom.udb.core.authz.entity.v1B\x10PolicyTupleProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
 
 var (

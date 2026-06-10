@@ -675,10 +675,15 @@ impl DataBrokerService {
         let runtime = self.runtime_snapshot();
         let project_id = req.project_id.clone();
         let run_id = req.run_id.clone();
+        let token_for_store = token.clone();
         let result = self
             .execute_with_channel(
                 crate::runtime::channels::OperationChannel::Migration,
-                || async move { runtime.apply_migration(&project_id, &run_id, &token).await },
+                || async move {
+                    runtime
+                        .approve_migration_plan(&project_id, &run_id, &token_for_store)
+                        .await
+                },
             )
             .await;
         match result {
@@ -693,6 +698,7 @@ impl DataBrokerService {
                             "project_id": req.project_id.clone(),
                             "run_id": req.run_id.clone(),
                             "idempotency_key": req.idempotency_key.clone(),
+                            "approval_token_issued": true,
                         }),
                         "ok",
                         &security.tenant_id,
@@ -700,16 +706,19 @@ impl DataBrokerService {
                         &security.correlation_id,
                     )
                     .await;
-                self.record_grpc(
-                    "ApproveMigrationPlan",
-                    started,
-                    Ok(Response::new(MigrationStatusResponse {
-                        run_id: req.run_id,
-                        project_id: req.project_id,
-                        state: "COMPLETED".into(),
-                        ..Default::default()
-                    })),
-                )
+                let mut response = Response::new(MigrationStatusResponse {
+                    run_id: req.run_id,
+                    project_id: req.project_id,
+                    state: "APPROVED".into(),
+                    ..Default::default()
+                });
+                response.metadata_mut().insert(
+                    "x-udb-approval-token",
+                    tonic::metadata::MetadataValue::try_from(token.as_str()).map_err(|err| {
+                        Status::internal(format!("approval token metadata failed: {err}"))
+                    })?,
+                );
+                self.record_grpc("ApproveMigrationPlan", started, Ok(response))
             }
             Err(err) => self.record_grpc("ApproveMigrationPlan", started, Err(err)),
         }

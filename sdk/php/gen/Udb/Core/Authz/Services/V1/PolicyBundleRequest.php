@@ -11,6 +11,7 @@ use Google\Protobuf\RepeatedField;
 
 /**
  * ── Stage 2: signed policy bundles for local SDK authorization caches ───────
+ *
  * `GetPolicyBundle` serializes the live authorization snapshot (policies,
  * role bindings, relationship tuples) and signs it so an SDK can cache it
  * and answer `can()` locally without a round-trip, while still being able

@@ -252,6 +252,43 @@ impl CanonicalStore for SqliteCanonicalStore {
 mod tests {
     use super::*;
     use sqlx::sqlite::SqlitePoolOptions;
+    use std::path::PathBuf;
+    use uuid::Uuid;
+
+    struct TempSqliteDb {
+        path: PathBuf,
+    }
+
+    impl TempSqliteDb {
+        fn new(prefix: &str) -> Self {
+            let path = std::env::temp_dir().join(format!("{prefix}-{}.db", Uuid::new_v4()));
+            let db = Self { path };
+            db.cleanup();
+            db
+        }
+
+        fn dsn(&self) -> String {
+            let path = self.path.to_string_lossy().replace('\\', "/");
+            format!("sqlite://{path}?mode=rwc")
+        }
+
+        fn cleanup(&self) {
+            let base = self.path.to_string_lossy();
+            for path in [
+                self.path.clone(),
+                PathBuf::from(format!("{base}-wal")),
+                PathBuf::from(format!("{base}-shm")),
+            ] {
+                let _ = std::fs::remove_file(path);
+            }
+        }
+    }
+
+    impl Drop for TempSqliteDb {
+        fn drop(&mut self) {
+            self.cleanup();
+        }
+    }
 
     async fn in_memory_pool() -> SqlitePool {
         SqlitePoolOptions::new()
@@ -406,6 +443,53 @@ mod tests {
             .await
             .unwrap();
         assert!(second, "expired lease must be re-acquirable");
+    }
+
+    /// Phase 1 HA pin: model two broker replicas with independent pools pointed
+    /// at the same canonical SQLite file. The outbox sequence allocator must
+    /// produce distinct monotone event_seq values under concurrent enqueues.
+    #[tokio::test]
+    async fn two_store_handles_allocate_distinct_outbox_sequences() {
+        let db = TempSqliteDb::new("udb-outbox-ha");
+        let dsn = db.dsn();
+
+        let pool_a = SqlitePoolOptions::new()
+            .max_connections(2)
+            .connect(&dsn)
+            .await
+            .expect("sqlite file pool a");
+        let pool_b = SqlitePoolOptions::new()
+            .max_connections(2)
+            .connect(&dsn)
+            .await
+            .expect("sqlite file pool b");
+        let store_a = SqliteCanonicalStore::new(pool_a, "broker-a", "udb_outbox_events");
+        let store_b = SqliteCanonicalStore::new(pool_b, "broker-b", "udb_outbox_events");
+        store_a.ensure_system_tables().await.expect("DDL from A");
+        store_b.ensure_system_tables().await.expect("DDL from B");
+        let payload_a = serde_json::json!({"broker": "a"});
+        let payload_b = serde_json::json!({"broker": "b"});
+
+        let (seq_a, seq_b) = tokio::join!(
+            store_a.enqueue_outbox_event(
+                "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "test.outbox.ha",
+                "pk-a",
+                &payload_a,
+            ),
+            store_b.enqueue_outbox_event(
+                "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                "test.outbox.ha",
+                "pk-b",
+                &payload_b,
+            )
+        );
+        let mut seqs = vec![seq_a.expect("seq a"), seq_b.expect("seq b")];
+        seqs.sort_unstable();
+        assert_eq!(seqs, vec![1, 2]);
+        assert_eq!(store_a.outbox_max_seq().await.expect("max seq"), 2);
+        drop(store_a);
+        drop(store_b);
     }
 
     /// Pin: unsafe table name (SQLite identifiers don't allow `.` or

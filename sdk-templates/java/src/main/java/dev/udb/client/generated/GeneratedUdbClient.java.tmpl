@@ -82,8 +82,9 @@ public final class GeneratedUdbClient implements AutoCloseable {
   }
 
   // ── Unary RPCs ───────────────────────────────────────────────────────────────
-  // Retried (exponential backoff + jitter) on UNAVAILABLE / DEADLINE_EXCEEDED /
-  // RESOURCE_EXHAUSTED. The optional `deadline` overrides the tuning default.
+  // Retried (exponential backoff + jitter) on UNAVAILABLE / RESOURCE_EXHAUSTED,
+  // plus DEADLINE_EXCEEDED only for read-only RPCs. The optional `deadline`
+  // overrides the tuning default.
   // @@UDB_RPC_BEGIN kind=unary
 
   /** {@code {{RPC_PATH}}} — unary call on {{SERVICE_FULL}}. */
@@ -101,7 +102,8 @@ public final class GeneratedUdbClient implements AutoCloseable {
         request,
         tuning,
         deadline,
-        headers);
+        headers,
+        GeneratedClientSupport.isReadOnlyRpcName("{{RPC_NAME}}"));
   }
   // @@UDB_RPC_END
 

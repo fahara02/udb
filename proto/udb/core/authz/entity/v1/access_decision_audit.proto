@@ -5,6 +5,7 @@ package udb.core.authz.entity.v1;
 import "google/protobuf/timestamp.proto";
 import "udb/core/authz/entity/v1/enums.proto";
 import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
 
 option csharp_namespace = "udb.core.Authz.Entity.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
@@ -31,6 +32,19 @@ message AccessDecisionAudit {
       permissive: true
     }
   };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "authz.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
 
   string decision_audit_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "decision_audit_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
 
@@ -56,4 +70,31 @@ message AccessDecisionAudit {
 
   google.protobuf.Timestamp decided_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "decided_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" }];
   string tenant_id = 13 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_accessdecisionaudit_tenant" index_type: "BTREE" } }];
+
+  // ── Phase L3 task4: expanded compliance columns ───────────────────────────
+  // Stable decision id linking this audit row to the gRPC Decision returned to
+  // the caller and to the access-deny domain event.
+  string decision_id = 14 [(udb.core.common.v1.pg_column) = { column_name: "decision_id" sql_type: "VARCHAR(120)" index: { index_name: "idx_accessdecisionaudit_decision" index_type: "BTREE" } }];
+  // Authz snapshot versions at decision time.
+  string policy_version = 15 [(udb.core.common.v1.pg_column) = { column_name: "policy_version" sql_type: "VARCHAR(120)" }];
+  string relationship_version = 16 [(udb.core.common.v1.pg_column) = { column_name: "relationship_version" sql_type: "VARCHAR(120)" }];
+  // Declared purpose of the access (purpose-binding / GDPR).
+  string purpose = 17 [(udb.core.common.v1.pg_column) = { column_name: "purpose" sql_type: "VARCHAR(120)" }];
+  // Scopes required by the matched policy (comma-joined).
+  string scopes = 18 [(udb.core.common.v1.pg_column) = { column_name: "scopes" sql_type: "TEXT" }];
+  // Every policy id that matched (Postgres text array), not just the first.
+  repeated string matched_policy_ids = 19 [(udb.core.common.v1.pg_column) = { column_name: "matched_policy_ids" sql_type: "TEXT[]" }];
+  // Project domain (tenant lives on tenant_id).
+  string project_id = 20 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(64)" }];
+  // Actor kind: "user" | "service" | "external".
+  string actor_kind = 21 [(udb.core.common.v1.pg_column) = { column_name: "actor_kind" sql_type: "VARCHAR(20)" }];
+  // Resource type/reference for the object being acted upon.
+  string resource_type = 22 [(udb.core.common.v1.pg_column) = { column_name: "resource_type" sql_type: "VARCHAR(120)" }];
+  // Distributed-trace correlation (OpenTelemetry).
+  string trace_id = 23 [(udb.core.common.v1.pg_column) = { column_name: "trace_id" sql_type: "VARCHAR(64)" }];
+  string span_id = 24 [(udb.core.common.v1.pg_column) = { column_name: "span_id" sql_type: "VARCHAR(64)" }];
+  // Hashed user-agent (never raw) from the request context.
+  string user_agent_hash = 25 [(udb.core.common.v1.pg_column) = { column_name: "user_agent_hash" sql_type: "VARCHAR(80)" }];
+  // Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+  string decision_input = 26 [(udb.core.common.v1.pg_column) = { column_name: "decision_input" sql_type: "JSONB" }];
 }

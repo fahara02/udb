@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package udb.core.webrtc.events.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Webrtc.Events.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/webrtc/events/v1;webrtceventsv1";
+option java_package = "com.udb.core.webrtc.events.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Webrtc\\Events\\V1";
+option php_namespace = "Udb\\Core\\Webrtc\\Events\\V1";
+
+// Emitted when a room is created.
+message RoomCreated {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.webrtc.events.v1.RoomCreated"
+    outbox_topic: "udb.webrtc.room_created.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string room_id = 2;
+  string tenant_id = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+// Emitted when a room is closed.
+message RoomClosed {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.webrtc.events.v1.RoomClosed"
+    outbox_topic: "udb.webrtc.room_closed.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string room_id = 2;
+  string tenant_id = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+// Emitted when a peer joins a room.
+message PeerJoined {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.webrtc.events.v1.PeerJoined"
+    outbox_topic: "udb.webrtc.peer_joined.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string room_id = 2;
+  string peer_id = 3;
+  string tenant_id = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+// Emitted when a peer leaves a room.
+message PeerLeft {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.webrtc.events.v1.PeerLeft"
+    outbox_topic: "udb.webrtc.peer_left.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string room_id = 2;
+  string peer_id = 3;
+  string tenant_id = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+// Emitted when a track is published.
+message TrackPublished {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.webrtc.events.v1.TrackPublished"
+    outbox_topic: "udb.webrtc.track_published.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string room_id = 2;
+  string peer_id = 3;
+  string track_id = 4;
+  string tenant_id = 5;
+  google.protobuf.Timestamp timestamp = 6;
+}

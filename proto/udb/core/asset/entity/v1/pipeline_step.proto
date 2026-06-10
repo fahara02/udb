@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package udb.core.asset.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/common/v1/types.proto";
+import "udb/core/asset/entity/v1/enums.proto";
+
+option csharp_namespace = "udb.core.Asset.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/asset/entity/v1;assetv1";
+option java_package = "com.udb.core.asset.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Asset\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Asset\\Entity\\V1";
+
+// PipelineStep is one executable unit within a PipelineInstance.
+message PipelineStep {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "pipeline_steps"
+    schema_name: "udb_asset"
+    migration_order: 4
+    is_table: true
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "pipeline_steps_tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_pipeline_step_instance"
+      index_type: "BTREE"
+      columns: "instance_id"
+    }
+    indexes: {
+      index_name: "idx_pipeline_step_tenant"
+      index_type: "BTREE"
+      columns: "tenant_id"
+    }
+    cdc_topic: "udb.asset.pipeline_steps.cdc"
+    required_scope: "asset:read"
+    comment: "Individual executable steps within a pipeline instance"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "asset.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string step_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "step_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  // @inject_tag: gorm:"primaryKey;column:step_id;not null"
+
+  string instance_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "instance_id" sql_type: "UUID" not_null: true }];
+  // @inject_tag: gorm:"column:instance_id;not null"
+
+  // Denormalized from the owning pipeline_instance so the tenant RLS policy can
+  // filter steps directly (steps are created by the service from the instance).
+  string tenant_id = 12 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "UUID" not_null: true }];
+  // @inject_tag: gorm:"column:tenant_id;not null"
+
+  string step_name = 3 [(udb.core.common.v1.pg_column) = { column_name: "step_name" sql_type: "VARCHAR(160)" not_null: true }];
+  // @inject_tag: gorm:"column:step_name;not null"
+
+  StepType step_type = 4 [(udb.core.common.v1.pg_column) = { column_name: "step_type" sql_type: "VARCHAR(20)" not_null: true }];
+  // @inject_tag: gorm:"column:step_type;not null;serializer:proto_enum"
+
+  StepStatus status = 5 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'PENDING'" }];
+  // @inject_tag: gorm:"column:status;not null;serializer:proto_enum"
+
+  string result = 6 [(udb.core.common.v1.pg_column) = { column_name: "result" sql_type: "JSONB" is_json: true comment: "Step result payload" }];
+  // @inject_tag: gorm:"column:result"
+
+  string error = 7 [(udb.core.common.v1.pg_column) = { column_name: "error" sql_type: "TEXT" }];
+  // @inject_tag: gorm:"column:error"
+
+  int32 retry_count = 8 [(udb.core.common.v1.pg_column) = { column_name: "retry_count" sql_type: "INTEGER" not_null: true default_value: "0" }];
+  // @inject_tag: gorm:"column:retry_count;not null"
+
+  google.protobuf.Timestamp started_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "started_at" sql_type: "TIMESTAMPTZ" }];
+  // @inject_tag: gorm:"column:started_at"
+
+  google.protobuf.Timestamp completed_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "completed_at" sql_type: "TIMESTAMPTZ" }];
+  // @inject_tag: gorm:"column:completed_at"
+
+  udb.core.common.v1.AuditInfo audit_info = 11 [(udb.core.common.v1.pg_column) = { column_name: "audit_info" sql_type: "JSONB" not_null: true default_value: "'{}'::jsonb" is_json: true comment: "Audit trail stored as JSON" }];
+  // @inject_tag: gorm:"column:audit_info;not null"
+}

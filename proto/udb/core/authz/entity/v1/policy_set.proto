@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package udb.core.authz.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authz.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/entity/v1;authzv1";
+option java_package = "com.udb.core.authz.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Entity\\V1";
+
+// A governed collection of policy versions. Each tenant/project/name names one
+// policy set; its `active_version_id` points at the currently-enforced
+// `PolicyVersion`, and `rollback_version_id` records the version a rollback
+// restored to. Drafts are created against a policy set and only take effect
+// once a version is activated (Phase K governance workflow).
+message PolicySet {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "policy_sets"
+    schema_name: "udb_authz"
+    migration_order: 40
+    is_table: true
+    comment: "Governed policy sets owning versioned, reviewable policy drafts"
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    indexes: {
+      index_name: "uq_policy_sets_tenant_project_name"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "project_id"
+      columns: "name"
+    }
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "authz.governance"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string policy_set_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "policy_set_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policy_sets_tenant" index_type: "BTREE" } }];
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" not_null: true default_value: "''" comment: "Optional project namespace ('' = tenant-wide)" index: { index_name: "idx_policy_sets_project" index_type: "BTREE" } }];
+  string name = 4 [(udb.core.common.v1.pg_column) = { column_name: "name" sql_type: "VARCHAR(160)" not_null: true comment: "Human-readable policy-set name, unique within tenant/project" }];
+  string active_version_id = 5 [(udb.core.common.v1.pg_column) = { column_name: "active_version_id" sql_type: "UUID" comment: "Currently-enforced PolicyVersion (NULL until first activation)" }];
+  string rollback_version_id = 6 [(udb.core.common.v1.pg_column) = { column_name: "rollback_version_id" sql_type: "UUID" comment: "Version a rollback restored to, for audit" }];
+  string description = 7 [(udb.core.common.v1.pg_column) = { column_name: "description" sql_type: "TEXT" }];
+  string created_by = 8 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "VARCHAR(160)" }];
+  google.protobuf.Timestamp created_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  google.protobuf.Timestamp updated_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true }];
+  google.protobuf.Timestamp deleted_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" comment: "Soft-delete tombstone" }];
+}

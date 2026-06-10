@@ -952,7 +952,7 @@ var File_udb_core_analytics_services_v1_core_proto protoreflect.FileDescriptor
 
 const file_udb_core_analytics_services_v1_core_proto_rawDesc = "" +
 	"\n" +
-	")udb/core/analytics/services/v1/core.proto\x12\x1eudb.core.analytics.services.v1\x1a?udb/core/analytics/entity/v1/executor_performance_summary.proto\x1a;udb/core/analytics/entity/v1/pipeline_metric_snapshot.proto\x1aCudb/core/analytics/entity/v1/reconciliation_analytics_summary.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\"\xd5\x01\n" +
+	")udb/core/analytics/services/v1/core.proto\x12\x1eudb.core.analytics.services.v1\x1a?udb/core/analytics/entity/v1/executor_performance_summary.proto\x1a;udb/core/analytics/entity/v1/pipeline_metric_snapshot.proto\x1aCudb/core/analytics/entity/v1/reconciliation_analytics_summary.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a!udb/core/common/v1/security.proto\"\xf7\x01\n" +
 	"\x1bRecordPipelineMetricRequest\x12\x1d\n" +
 	"\n" +
 	"stage_name\x18\x01 \x01(\tR\tstageName\x12\x1b\n" +
@@ -961,49 +961,49 @@ const file_udb_core_analytics_services_v1_core_proto_rawDesc = "" +
 	"latency_ms\x18\x03 \x01(\x01R\tlatencyMs\x12\x1d\n" +
 	"\n" +
 	"is_success\x18\x04 \x01(\bR\tisSuccess\x12<\n" +
-	"\acontext\x18\x05 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\":\n" +
+	"\acontext\x18\x05 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\"\\\n" +
 	"\x1cRecordPipelineMetricResponse\x12\x1a\n" +
-	"\baccepted\x18\x01 \x01(\bR\baccepted\"\xc2\x01\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\"\xe4\x01\n" +
 	"\x19GetPipelineSummaryRequest\x12\x1d\n" +
 	"\n" +
 	"stage_name\x18\x01 \x01(\tR\tstageName\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1b\n" +
 	"\thour_from\x18\x03 \x01(\tR\bhourFrom\x12\x17\n" +
 	"\ahour_to\x18\x04 \x01(\tR\x06hourTo\x123\n" +
-	"\x04page\x18\x05 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page\"\xa6\x01\n" +
+	"\x04page\x18\x05 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\"\xc8\x01\n" +
 	"\x1aGetPipelineSummaryResponse\x12R\n" +
 	"\tsnapshots\x18\x01 \x03(\v24.udb.core.analytics.entity.v1.PipelineMetricSnapshotR\tsnapshots\x124\n" +
-	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page\"\xa7\x01\n" +
+	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\"\xc9\x01\n" +
 	"\x1dGetExecutorPerformanceRequest\x12+\n" +
 	"\x11executor_identity\x18\x01 \x01(\tR\x10executorIdentity\x12#\n" +
 	"\rworkload_kind\x18\x02 \x01(\tR\fworkloadKind\x12\x1b\n" +
 	"\tdate_from\x18\x03 \x01(\tR\bdateFrom\x12\x17\n" +
-	"\adate_to\x18\x04 \x01(\tR\x06dateTo\"x\n" +
+	"\adate_to\x18\x04 \x01(\tR\x06dateTo: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\"\x9a\x01\n" +
 	"\x1eGetExecutorPerformanceResponse\x12V\n" +
-	"\tsummaries\x18\x01 \x03(\v28.udb.core.analytics.entity.v1.ExecutorPerformanceSummaryR\tsummaries\"Y\n" +
+	"\tsummaries\x18\x01 \x03(\v28.udb.core.analytics.entity.v1.ExecutorPerformanceSummaryR\tsummaries: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\"{\n" +
 	"!GetReconciliationAnalyticsRequest\x12\x1b\n" +
 	"\tdate_from\x18\x01 \x01(\tR\bdateFrom\x12\x17\n" +
-	"\adate_to\x18\x02 \x01(\tR\x06dateTo\"\xec\x01\n" +
+	"\adate_to\x18\x02 \x01(\tR\x06dateTo: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\"\x8e\x02\n" +
 	"\"GetReconciliationAnalyticsResponse\x12Z\n" +
 	"\tsummaries\x18\x01 \x03(\v2<.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummaryR\tsummaries\x126\n" +
 	"\x17overall_resolution_rate\x18\x02 \x01(\x01R\x15overallResolutionRate\x122\n" +
-	"\x15avg_reconciliation_ms\x18\x03 \x01(\x01R\x13avgReconciliationMs\"i\n" +
+	"\x15avg_reconciliation_ms\x18\x03 \x01(\x01R\x13avgReconciliationMs: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\"\x8b\x01\n" +
 	"\x14GetThroughputRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1b\n" +
 	"\thour_from\x18\x02 \x01(\tR\bhourFrom\x12\x17\n" +
-	"\ahour_to\x18\x03 \x01(\tR\x06hourTo\"\xa4\x01\n" +
+	"\ahour_to\x18\x03 \x01(\tR\x06hourTo: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\"\xc6\x01\n" +
 	"\x15GetThroughputResponse\x12\x17\n" +
 	"\aavg_rps\x18\x01 \x01(\x01R\x06avgRps\x12\x19\n" +
 	"\bpeak_rps\x18\x02 \x01(\x01R\apeakRps\x12%\n" +
 	"\x0etotal_requests\x18\x03 \x01(\x03R\rtotalRequests\x120\n" +
-	"\x14overall_success_rate\x18\x04 \x01(\x01R\x12overallSuccessRate\"\xca\x01\n" +
+	"\x14overall_success_rate\x18\x04 \x01(\x01R\x12overallSuccessRate: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\"\xec\x01\n" +
 	"\x17GetSlaComplianceRequest\x12\x1d\n" +
 	"\n" +
 	"stage_name\x18\x01 \x01(\tR\tstageName\x12\x1b\n" +
 	"\tdate_from\x18\x02 \x01(\tR\bdateFrom\x12\x17\n" +
 	"\adate_to\x18\x03 \x01(\tR\x06dateTo\x12(\n" +
 	"\x10p99_threshold_ms\x18\x04 \x01(\x01R\x0ep99ThresholdMs\x120\n" +
-	"\x14error_rate_threshold\x18\x05 \x01(\x01R\x12errorRateThreshold\"\xdd\x01\n" +
+	"\x14error_rate_threshold\x18\x05 \x01(\x01R\x12errorRateThreshold: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\"\xff\x01\n" +
 	"\x12SlaComplianceEntry\x12\x1d\n" +
 	"\n" +
 	"stage_name\x18\x01 \x01(\tR\tstageName\x12\x16\n" +
@@ -1012,18 +1012,18 @@ const file_udb_core_analytics_services_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"error_rate\x18\x04 \x01(\x01R\terrorRate\x12\x1e\n" +
 	"\vp99_sla_met\x18\x05 \x01(\bR\tp99SlaMet\x12+\n" +
-	"\x12error_rate_sla_met\x18\x06 \x01(\bR\x0ferrorRateSlaMet\"\xf3\x01\n" +
+	"\x12error_rate_sla_met\x18\x06 \x01(\bR\x0ferrorRateSlaMet: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\"\x95\x02\n" +
 	"\x18GetSlaComplianceResponse\x12L\n" +
 	"\aentries\x18\x01 \x03(\v22.udb.core.analytics.services.v1.SlaComplianceEntryR\aentries\x12=\n" +
 	"\x1boverall_p99_compliance_rate\x18\x02 \x01(\x01R\x18overallP99ComplianceRate\x12J\n" +
-	"\"overall_error_rate_compliance_rate\x18\x03 \x01(\x01R\x1eoverallErrorRateComplianceRate\"\x89\x01\n" +
+	"\"overall_error_rate_compliance_rate\x18\x03 \x01(\x01R\x1eoverallErrorRateComplianceRate: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\"\xab\x01\n" +
 	"\x16TriggerSnapshotRequest\x12\x1d\n" +
 	"\n" +
 	"stage_name\x18\x01 \x01(\tR\tstageName\x12\x12\n" +
 	"\x04hour\x18\x02 \x01(\tR\x04hour\x12<\n" +
-	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"F\n" +
+	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01\"h\n" +
 	"\x17TriggerSnapshotResponse\x12+\n" +
-	"\x11snapshots_written\x18\x01 \x01(\x05R\x10snapshotsWrittenB\x9a\x02\n" +
+	"\x11snapshots_written\x18\x01 \x01(\x05R\x10snapshotsWritten: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tanalyticsP\x01B\x9a\x02\n" +
 	"\"com.udb.core.analytics.services.v1B\tCoreProtoP\x01ZLgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1eudb.core.Analytics.Services.V1\xca\x02\x1eUdb\\Core\\Analytics\\Services\\V1\xe2\x02*Udb\\GPBMetadata\\Core\\Analytics\\Services\\V1\xea\x02\"Udb::Core::Analytics::Services::V1b\x06proto3"
 
 var (

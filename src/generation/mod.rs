@@ -4,6 +4,7 @@ pub mod drift_report;
 pub mod dsn;
 pub mod lint;
 pub mod manifest;
+pub mod manifest_index;
 pub mod sql;
 
 pub use backends::{
@@ -22,6 +23,6 @@ pub use manifest::{
     CatalogManifest, GENERATOR_VERSION, ManifestCheck, ManifestColumn, ManifestColumnSecurity,
     ManifestExtension, ManifestForeignKey, ManifestIndex, ManifestMaterializedView,
     ManifestMigrationReport, ManifestSchemaChecksum, ManifestStore, ManifestStoreOption,
-    ManifestTable, ManifestTrigger, migrate_manifest_to_current,
+    ManifestTable, ManifestTableSecurity, ManifestTrigger, migrate_manifest_to_current,
 };
 pub use sql::{GeneratedArtifact, SqlGenerationConfig, generate_bootstrap_sql, generate_delta_sql};

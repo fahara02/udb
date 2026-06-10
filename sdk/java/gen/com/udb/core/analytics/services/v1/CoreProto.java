@@ -118,75 +118,88 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
       "o\032Cudb/core/analytics/entity/v1/reconcil" +
       "iation_analytics_summary.proto\032\034udb/core" +
       "/common/v1/dto.proto\032\036udb/core/common/v1" +
-      "/types.proto\"\325\001\n\033RecordPipelineMetricReq" +
-      "uest\022\035\n\nstage_name\030\001 \001(\tR\tstageName\022\033\n\tt" +
-      "enant_id\030\002 \001(\tR\010tenantId\022\035\n\nlatency_ms\030\003" +
-      " \001(\001R\tlatencyMs\022\035\n\nis_success\030\004 \001(\010R\tisS" +
-      "uccess\022<\n\007context\030\005 \001(\0132\".udb.core.commo" +
-      "n.v1.RequestContextR\007context\":\n\034RecordPi" +
-      "pelineMetricResponse\022\032\n\010accepted\030\001 \001(\010R\010" +
-      "accepted\"\302\001\n\031GetPipelineSummaryRequest\022\035" +
-      "\n\nstage_name\030\001 \001(\tR\tstageName\022\033\n\ttenant_" +
-      "id\030\002 \001(\tR\010tenantId\022\033\n\thour_from\030\003 \001(\tR\010h" +
-      "ourFrom\022\027\n\007hour_to\030\004 \001(\tR\006hourTo\0223\n\004page" +
-      "\030\005 \001(\0132\037.udb.core.common.v1.PageRequestR" +
-      "\004page\"\246\001\n\032GetPipelineSummaryResponse\022R\n\t" +
-      "snapshots\030\001 \003(\01324.udb.core.analytics.ent" +
-      "ity.v1.PipelineMetricSnapshotR\tsnapshots" +
-      "\0224\n\004page\030\002 \001(\0132 .udb.core.common.v1.Page" +
-      "ResponseR\004page\"\247\001\n\035GetExecutorPerformanc" +
-      "eRequest\022+\n\021executor_identity\030\001 \001(\tR\020exe" +
-      "cutorIdentity\022#\n\rworkload_kind\030\002 \001(\tR\014wo" +
-      "rkloadKind\022\033\n\tdate_from\030\003 \001(\tR\010dateFrom\022" +
-      "\027\n\007date_to\030\004 \001(\tR\006dateTo\"x\n\036GetExecutorP" +
-      "erformanceResponse\022V\n\tsummaries\030\001 \003(\01328." +
-      "udb.core.analytics.entity.v1.ExecutorPer" +
-      "formanceSummaryR\tsummaries\"Y\n!GetReconci" +
+      "/types.proto\032!udb/core/common/v1/securit" +
+      "y.proto\"\367\001\n\033RecordPipelineMetricRequest\022" +
+      "\035\n\nstage_name\030\001 \001(\tR\tstageName\022\033\n\ttenant" +
+      "_id\030\002 \001(\tR\010tenantId\022\035\n\nlatency_ms\030\003 \001(\001R" +
+      "\tlatencyMs\022\035\n\nis_success\030\004 \001(\010R\tisSucces" +
+      "s\022<\n\007context\030\005 \001(\0132\".udb.core.common.v1." +
+      "RequestContextR\007context: \232\262\031\034\010\001\032\003udb(\260\352\001" +
+      "0\003@\001J\tanalyticsP\001\"\\\n\034RecordPipelineMetri" +
+      "cResponse\022\032\n\010accepted\030\001 \001(\010R\010accepted: \232" +
+      "\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001\"\344\001\n\031GetP" +
+      "ipelineSummaryRequest\022\035\n\nstage_name\030\001 \001(" +
+      "\tR\tstageName\022\033\n\ttenant_id\030\002 \001(\tR\010tenantI" +
+      "d\022\033\n\thour_from\030\003 \001(\tR\010hourFrom\022\027\n\007hour_t" +
+      "o\030\004 \001(\tR\006hourTo\0223\n\004page\030\005 \001(\0132\037.udb.core" +
+      ".common.v1.PageRequestR\004page: \232\262\031\034\010\001\032\003ud" +
+      "b(\260\352\0010\003@\001J\tanalyticsP\001\"\310\001\n\032GetPipelineSu" +
+      "mmaryResponse\022R\n\tsnapshots\030\001 \003(\01324.udb.c" +
+      "ore.analytics.entity.v1.PipelineMetricSn" +
+      "apshotR\tsnapshots\0224\n\004page\030\002 \001(\0132 .udb.co" +
+      "re.common.v1.PageResponseR\004page: \232\262\031\034\010\001\032" +
+      "\003udb(\260\352\0010\003@\001J\tanalyticsP\001\"\311\001\n\035GetExecuto" +
+      "rPerformanceRequest\022+\n\021executor_identity" +
+      "\030\001 \001(\tR\020executorIdentity\022#\n\rworkload_kin" +
+      "d\030\002 \001(\tR\014workloadKind\022\033\n\tdate_from\030\003 \001(\t" +
+      "R\010dateFrom\022\027\n\007date_to\030\004 \001(\tR\006dateTo: \232\262\031" +
+      "\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001\"\232\001\n\036GetExe" +
+      "cutorPerformanceResponse\022V\n\tsummaries\030\001 " +
+      "\003(\01328.udb.core.analytics.entity.v1.Execu" +
+      "torPerformanceSummaryR\tsummaries: \232\262\031\034\010\001" +
+      "\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001\"{\n!GetReconci" +
       "liationAnalyticsRequest\022\033\n\tdate_from\030\001 \001" +
-      "(\tR\010dateFrom\022\027\n\007date_to\030\002 \001(\tR\006dateTo\"\354\001" +
-      "\n\"GetReconciliationAnalyticsResponse\022Z\n\t" +
-      "summaries\030\001 \003(\0132<.udb.core.analytics.ent" +
-      "ity.v1.ReconciliationAnalyticsSummaryR\ts" +
-      "ummaries\0226\n\027overall_resolution_rate\030\002 \001(" +
-      "\001R\025overallResolutionRate\0222\n\025avg_reconcil" +
-      "iation_ms\030\003 \001(\001R\023avgReconciliationMs\"i\n\024" +
-      "GetThroughputRequest\022\033\n\ttenant_id\030\001 \001(\tR" +
-      "\010tenantId\022\033\n\thour_from\030\002 \001(\tR\010hourFrom\022\027" +
-      "\n\007hour_to\030\003 \001(\tR\006hourTo\"\244\001\n\025GetThroughpu" +
-      "tResponse\022\027\n\007avg_rps\030\001 \001(\001R\006avgRps\022\031\n\010pe" +
-      "ak_rps\030\002 \001(\001R\007peakRps\022%\n\016total_requests\030" +
-      "\003 \001(\003R\rtotalRequests\0220\n\024overall_success_" +
-      "rate\030\004 \001(\001R\022overallSuccessRate\"\312\001\n\027GetSl" +
-      "aComplianceRequest\022\035\n\nstage_name\030\001 \001(\tR\t" +
-      "stageName\022\033\n\tdate_from\030\002 \001(\tR\010dateFrom\022\027" +
-      "\n\007date_to\030\003 \001(\tR\006dateTo\022(\n\020p99_threshold" +
-      "_ms\030\004 \001(\001R\016p99ThresholdMs\0220\n\024error_rate_" +
-      "threshold\030\005 \001(\001R\022errorRateThreshold\"\335\001\n\022" +
-      "SlaComplianceEntry\022\035\n\nstage_name\030\001 \001(\tR\t" +
-      "stageName\022\026\n\006period\030\002 \001(\tR\006period\022$\n\016p99" +
-      "_latency_ms\030\003 \001(\001R\014p99LatencyMs\022\035\n\nerror" +
-      "_rate\030\004 \001(\001R\terrorRate\022\036\n\013p99_sla_met\030\005 " +
-      "\001(\010R\tp99SlaMet\022+\n\022error_rate_sla_met\030\006 \001" +
-      "(\010R\017errorRateSlaMet\"\363\001\n\030GetSlaCompliance" +
-      "Response\022L\n\007entries\030\001 \003(\01322.udb.core.ana" +
-      "lytics.services.v1.SlaComplianceEntryR\007e" +
-      "ntries\022=\n\033overall_p99_compliance_rate\030\002 " +
-      "\001(\001R\030overallP99ComplianceRate\022J\n\"overall" +
-      "_error_rate_compliance_rate\030\003 \001(\001R\036overa" +
-      "llErrorRateComplianceRate\"\211\001\n\026TriggerSna" +
-      "pshotRequest\022\035\n\nstage_name\030\001 \001(\tR\tstageN" +
-      "ame\022\022\n\004hour\030\002 \001(\tR\004hour\022<\n\007context\030\003 \001(\013" +
-      "2\".udb.core.common.v1.RequestContextR\007co" +
-      "ntext\"F\n\027TriggerSnapshotResponse\022+\n\021snap" +
-      "shots_written\030\001 \001(\005R\020snapshotsWrittenB\232\002" +
-      "\n\"com.udb.core.analytics.services.v1B\tCo" +
-      "reProtoP\001ZLgithub.com/fahara02/udb/sdk/g" +
-      "o/gen/udb/core/analytics/services/v1;ser" +
-      "vicesv1\242\002\004UCAS\252\002\036udb.core.Analytics.Serv" +
-      "ices.V1\312\002\036Udb\\Core\\Analytics\\Services\\V1" +
-      "\342\002*Udb\\GPBMetadata\\Core\\Analytics\\Servic" +
-      "es\\V1\352\002\"Udb::Core::Analytics::Services::" +
-      "V1b\006proto3"
+      "(\tR\010dateFrom\022\027\n\007date_to\030\002 \001(\tR\006dateTo: \232" +
+      "\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001\"\216\002\n\"GetR" +
+      "econciliationAnalyticsResponse\022Z\n\tsummar" +
+      "ies\030\001 \003(\0132<.udb.core.analytics.entity.v1" +
+      ".ReconciliationAnalyticsSummaryR\tsummari" +
+      "es\0226\n\027overall_resolution_rate\030\002 \001(\001R\025ove" +
+      "rallResolutionRate\0222\n\025avg_reconciliation" +
+      "_ms\030\003 \001(\001R\023avgReconciliationMs: \232\262\031\034\010\001\032\003" +
+      "udb(\260\352\0010\003@\001J\tanalyticsP\001\"\213\001\n\024GetThroughp" +
+      "utRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\033" +
+      "\n\thour_from\030\002 \001(\tR\010hourFrom\022\027\n\007hour_to\030\003" +
+      " \001(\tR\006hourTo: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanaly" +
+      "ticsP\001\"\306\001\n\025GetThroughputResponse\022\027\n\007avg_" +
+      "rps\030\001 \001(\001R\006avgRps\022\031\n\010peak_rps\030\002 \001(\001R\007pea" +
+      "kRps\022%\n\016total_requests\030\003 \001(\003R\rtotalReque" +
+      "sts\0220\n\024overall_success_rate\030\004 \001(\001R\022overa" +
+      "llSuccessRate: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanal" +
+      "yticsP\001\"\354\001\n\027GetSlaComplianceRequest\022\035\n\ns" +
+      "tage_name\030\001 \001(\tR\tstageName\022\033\n\tdate_from\030" +
+      "\002 \001(\tR\010dateFrom\022\027\n\007date_to\030\003 \001(\tR\006dateTo" +
+      "\022(\n\020p99_threshold_ms\030\004 \001(\001R\016p99Threshold" +
+      "Ms\0220\n\024error_rate_threshold\030\005 \001(\001R\022errorR" +
+      "ateThreshold: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanaly" +
+      "ticsP\001\"\377\001\n\022SlaComplianceEntry\022\035\n\nstage_n" +
+      "ame\030\001 \001(\tR\tstageName\022\026\n\006period\030\002 \001(\tR\006pe" +
+      "riod\022$\n\016p99_latency_ms\030\003 \001(\001R\014p99Latency" +
+      "Ms\022\035\n\nerror_rate\030\004 \001(\001R\terrorRate\022\036\n\013p99" +
+      "_sla_met\030\005 \001(\010R\tp99SlaMet\022+\n\022error_rate_" +
+      "sla_met\030\006 \001(\010R\017errorRateSlaMet: \232\262\031\034\010\001\032\003" +
+      "udb(\260\352\0010\003@\001J\tanalyticsP\001\"\225\002\n\030GetSlaCompl" +
+      "ianceResponse\022L\n\007entries\030\001 \003(\01322.udb.cor" +
+      "e.analytics.services.v1.SlaComplianceEnt" +
+      "ryR\007entries\022=\n\033overall_p99_compliance_ra" +
+      "te\030\002 \001(\001R\030overallP99ComplianceRate\022J\n\"ov" +
+      "erall_error_rate_compliance_rate\030\003 \001(\001R\036" +
+      "overallErrorRateComplianceRate: \232\262\031\034\010\001\032\003" +
+      "udb(\260\352\0010\003@\001J\tanalyticsP\001\"\253\001\n\026TriggerSnap" +
+      "shotRequest\022\035\n\nstage_name\030\001 \001(\tR\tstageNa" +
+      "me\022\022\n\004hour\030\002 \001(\tR\004hour\022<\n\007context\030\003 \001(\0132" +
+      "\".udb.core.common.v1.RequestContextR\007con" +
+      "text: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tanalyticsP\001\"h" +
+      "\n\027TriggerSnapshotResponse\022+\n\021snapshots_w" +
+      "ritten\030\001 \001(\005R\020snapshotsWritten: \232\262\031\034\010\001\032\003" +
+      "udb(\260\352\0010\003@\001J\tanalyticsP\001B\232\002\n\"com.udb.cor" +
+      "e.analytics.services.v1B\tCoreProtoP\001ZLgi" +
+      "thub.com/fahara02/udb/sdk/go/gen/udb/cor" +
+      "e/analytics/services/v1;servicesv1\242\002\004UCA" +
+      "S\252\002\036udb.core.Analytics.Services.V1\312\002\036Udb" +
+      "\\Core\\Analytics\\Services\\V1\342\002*Udb\\GPBMet" +
+      "adata\\Core\\Analytics\\Services\\V1\352\002\"Udb::" +
+      "Core::Analytics::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -196,6 +209,7 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
           com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummaryProto.getDescriptor(),
           com.udb.core.common.v1.DtoProto.getDescriptor(),
           com.udb.core.common.v1.TypesProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_analytics_services_v1_RecordPipelineMetricRequest_descriptor =
       getDescriptor().getMessageType(0);
@@ -293,6 +307,12 @@ public final class CoreProto extends com.google.protobuf.GeneratedFile {
     com.udb.core.analytics.entity.v1.ReconciliationAnalyticsSummaryProto.getDescriptor();
     com.udb.core.common.v1.DtoProto.getDescriptor();
     com.udb.core.common.v1.TypesProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
+    com.google.protobuf.ExtensionRegistry registry =
+        com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.messageSdkSurface);
+    com.google.protobuf.Descriptors.FileDescriptor
+        .internalUpdateFileDescriptor(descriptor, registry);
   }
 
   // @@protoc_insertion_point(outer_class_scope)

@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package udb.core.idp.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Idp.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/idp/entity/v1;idpv1";
+option java_package = "com.udb.core.idp.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Idp\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// ExternalIdentity — Mapping from an IdP subject to a UDB user/principal.
+//
+// One row per (tenant, provider, subject). Established at first login (JIT) or
+// via an explicit account-linking flow. RLS scopes rows to the current tenant.
+//
+// Migration order 11 — after identity_providers + authn users.
+// ---------------------------------------------------------------------------
+message ExternalIdentity {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "external_identities"
+    schema_name: "udb_idp"
+    migration_order: 11
+    is_table: true
+    comment: "Links an IdP subject to a UDB user (one per tenant+provider+subject)"
+    soft_delete: true
+    audit_fields: false
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "uq_external_identities_tenant_provider_subject"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "provider_id"
+      columns: "subject"
+    }
+    indexes: {
+      index_name: "idx_external_identities_user"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "user_id"
+    }
+    cdc_topic: "udb.idp.external_identities.cdc"
+    required_scope: "idp:identities:read"
+    replica_hint: "primary"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "idp.identity"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string external_identity_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "external_identity_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" not_null: true }];
+
+  string provider_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "provider_id" sql_type: "UUID" not_null: true comment: "FK to udb_idp.identity_providers.provider_id" foreign_key: { references_table: "identity_providers" references_column: "provider_id" references_schema: "udb_idp" on_delete: REFERENTIAL_ACTION_CASCADE } }];
+
+  // Stable IdP subject (sub / NameID).
+  string subject = 4 [(udb.core.common.v1.pg_column) = { column_name: "subject" sql_type: "VARCHAR(320)" not_null: true comment: "IdP subject (OIDC sub / SAML NameID)" }];
+
+  string user_id = 5 [(udb.core.common.v1.pg_column) = { column_name: "user_id" sql_type: "UUID" not_null: true comment: "FK to udb_authn.users.user_id" index: { index_name: "idx_external_identities_user_id" index_type: "BTREE" } }];
+
+  string email = 6 [(udb.core.common.v1.pg_column) = { column_name: "email" sql_type: "VARCHAR(320)" comment: "Email asserted by the IdP" }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.data_purpose) = "Account linking and notification"];
+
+  bool email_verified = 7 [(udb.core.common.v1.pg_column) = { column_name: "email_verified" sql_type: "BOOLEAN" not_null: true default_value: "FALSE" }];
+
+  google.protobuf.Timestamp linked_at = 8 [(udb.core.common.v1.pg_column) = { column_name: "linked_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_update: true }];
+
+  google.protobuf.Timestamp last_login_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "last_login_at" sql_type: "TIMESTAMPTZ" comment: "Updated on each successful federated login" }];
+
+  google.protobuf.Timestamp deleted_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" comment: "Soft-delete (unlink) timestamp" }];
+}

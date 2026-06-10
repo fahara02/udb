@@ -596,7 +596,7 @@ pub(crate) fn mssql_migration_audit_ddl(runs: &str, ledger: &str) -> (String, St
                 project_id        NVARCHAR(255) NOT NULL CONSTRAINT df_{runs}_project_id DEFAULT '', \
                 catalog_version   NVARCHAR(255) NOT NULL CONSTRAINT df_{runs}_catalog_version DEFAULT '', \
                 state             NVARCHAR(32) NOT NULL CONSTRAINT df_{runs}_state DEFAULT 'DRY_RUN' \
-                                  CONSTRAINT chk_{runs}_state CHECK (state IN ('DRY_RUN','PREFLIGHT','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')), \
+                                  CONSTRAINT chk_{runs}_state CHECK (state IN ('DRY_RUN','PREFLIGHT','APPROVED','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')), \
                 operations_hash   NVARCHAR(255) NOT NULL CONSTRAINT df_{runs}_operations_hash DEFAULT '', \
                 approval_token    NVARCHAR(255) NOT NULL CONSTRAINT df_{runs}_approval_token DEFAULT '', \
                 started_at        DATETIME2(7) NOT NULL CONSTRAINT df_{runs}_started_at DEFAULT SYSUTCDATETIME(), \
@@ -618,7 +618,7 @@ pub(crate) fn mssql_migration_audit_ddl(runs: &str, ledger: &str) -> (String, St
                 operation_kind    NVARCHAR(64) NOT NULL CONSTRAINT df_{ledger}_operation_kind DEFAULT '', \
                 status            NVARCHAR(32) NOT NULL CONSTRAINT df_{ledger}_status DEFAULT 'PENDING' \
                                   CONSTRAINT chk_{ledger}_status CHECK (status IN ('PENDING','APPLIED','VERIFIED','SKIPPED','FAILED','ROLLED_BACK')), \
-                rollback_json     NVARCHAR(MAX) NOT NULL CONSTRAINT chk_{ledger}_rollback_json CHECK (ISJSON(rollback_json) = 1), \
+                payload_json     NVARCHAR(MAX) NOT NULL CONSTRAINT chk_{ledger}_payload_json CHECK (ISJSON(payload_json) = 1), \
                 error             NVARCHAR(MAX) NOT NULL CONSTRAINT df_{ledger}_error DEFAULT '', \
                 applied_at        DATETIME2(7) NULL \
             ); \
@@ -758,7 +758,7 @@ pub(crate) fn postgres_migration_audit_ddl(runs_rel: &str, ledger_rel: &str) -> 
                     project_id        TEXT NOT NULL DEFAULT '',
                     catalog_version   TEXT NOT NULL DEFAULT '',
                     state             TEXT NOT NULL DEFAULT 'DRY_RUN'
-                                      CHECK (state IN ('DRY_RUN','PREFLIGHT','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')),
+                                      CHECK (state IN ('DRY_RUN','PREFLIGHT','APPROVED','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')),
                     operations_hash   TEXT NOT NULL DEFAULT '',
                     approval_token    TEXT NOT NULL DEFAULT '',
                     started_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -782,7 +782,7 @@ pub(crate) fn postgres_migration_audit_ddl(runs_rel: &str, ledger_rel: &str) -> 
                     operation_kind    TEXT NOT NULL DEFAULT '',
                     status            TEXT NOT NULL DEFAULT 'PENDING'
                                       CHECK (status IN ('PENDING','APPLIED','VERIFIED','SKIPPED','FAILED','ROLLED_BACK')),
-                    rollback_json     JSONB NOT NULL DEFAULT '{{}}'::JSONB,
+                    payload_json     JSONB NOT NULL DEFAULT '{{}}'::JSONB,
                     error             TEXT NOT NULL DEFAULT '',
                     applied_at        TIMESTAMPTZ
                 )
@@ -822,7 +822,7 @@ pub(crate) fn mysql_migration_audit_ddl(runs: &str, ledger: &str) -> MysqlMigrat
                 started_at        TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                 finished_at       TIMESTAMP(6) NULL,
                 error             TEXT NOT NULL,
-                CONSTRAINT chk_{runs_table}_state CHECK (state IN ('DRY_RUN','PREFLIGHT','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER'))
+                CONSTRAINT chk_{runs_table}_state CHECK (state IN ('DRY_RUN','PREFLIGHT','APPROVED','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER'))
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             "#
         ),
@@ -839,7 +839,7 @@ pub(crate) fn mysql_migration_audit_ddl(runs: &str, ledger: &str) -> MysqlMigrat
                 resource_uri      TEXT NOT NULL,
                 operation_kind    VARCHAR(64) NOT NULL DEFAULT '',
                 status            VARCHAR(32) NOT NULL DEFAULT 'PENDING',
-                rollback_json     JSON NOT NULL,
+                payload_json     JSON NOT NULL,
                 error             TEXT NOT NULL,
                 applied_at        TIMESTAMP(6) NULL,
                 CONSTRAINT chk_{ledger_table}_status CHECK (status IN ('PENDING','APPLIED','VERIFIED','SKIPPED','FAILED','ROLLED_BACK')),
@@ -868,7 +868,7 @@ pub(crate) fn sqlite_migration_audit_ddl(runs: &str, ledger: &str) -> Vec<String
                 project_id        TEXT NOT NULL DEFAULT '',
                 catalog_version   TEXT NOT NULL DEFAULT '',
                 state             TEXT NOT NULL DEFAULT 'DRY_RUN'
-                                  CHECK (state IN ('DRY_RUN','PREFLIGHT','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')),
+                                  CHECK (state IN ('DRY_RUN','PREFLIGHT','APPROVED','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')),
                 operations_hash   TEXT NOT NULL DEFAULT '',
                 approval_token    TEXT NOT NULL DEFAULT '',
                 started_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
@@ -892,7 +892,7 @@ pub(crate) fn sqlite_migration_audit_ddl(runs: &str, ledger: &str) -> Vec<String
                 operation_kind    TEXT NOT NULL DEFAULT '',
                 status            TEXT NOT NULL DEFAULT 'PENDING'
                                   CHECK (status IN ('PENDING','APPLIED','VERIFIED','SKIPPED','FAILED','ROLLED_BACK')),
-                rollback_json     TEXT NOT NULL DEFAULT '{{}}',
+                payload_json     TEXT NOT NULL DEFAULT '{{}}',
                 error             TEXT NOT NULL DEFAULT '',
                 applied_at        TEXT,
                 FOREIGN KEY (run_id) REFERENCES {runs_table}(run_id) ON DELETE CASCADE
@@ -1467,7 +1467,7 @@ mod tests {
                 project_id        NVARCHAR(255) NOT NULL CONSTRAINT df_{runs}_project_id DEFAULT '', \
                 catalog_version   NVARCHAR(255) NOT NULL CONSTRAINT df_{runs}_catalog_version DEFAULT '', \
                 state             NVARCHAR(32) NOT NULL CONSTRAINT df_{runs}_state DEFAULT 'DRY_RUN' \
-                                  CONSTRAINT chk_{runs}_state CHECK (state IN ('DRY_RUN','PREFLIGHT','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')), \
+                                  CONSTRAINT chk_{runs}_state CHECK (state IN ('DRY_RUN','PREFLIGHT','APPROVED','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')), \
                 operations_hash   NVARCHAR(255) NOT NULL CONSTRAINT df_{runs}_operations_hash DEFAULT '', \
                 approval_token    NVARCHAR(255) NOT NULL CONSTRAINT df_{runs}_approval_token DEFAULT '', \
                 started_at        DATETIME2(7) NOT NULL CONSTRAINT df_{runs}_started_at DEFAULT SYSUTCDATETIME(), \
@@ -1489,7 +1489,7 @@ mod tests {
                 operation_kind    NVARCHAR(64) NOT NULL CONSTRAINT df_{ledger}_operation_kind DEFAULT '', \
                 status            NVARCHAR(32) NOT NULL CONSTRAINT df_{ledger}_status DEFAULT 'PENDING' \
                                   CONSTRAINT chk_{ledger}_status CHECK (status IN ('PENDING','APPLIED','VERIFIED','SKIPPED','FAILED','ROLLED_BACK')), \
-                rollback_json     NVARCHAR(MAX) NOT NULL CONSTRAINT chk_{ledger}_rollback_json CHECK (ISJSON(rollback_json) = 1), \
+                payload_json     NVARCHAR(MAX) NOT NULL CONSTRAINT chk_{ledger}_payload_json CHECK (ISJSON(payload_json) = 1), \
                 error             NVARCHAR(MAX) NOT NULL CONSTRAINT df_{ledger}_error DEFAULT '', \
                 applied_at        DATETIME2(7) NULL \
             ); \
@@ -1625,7 +1625,7 @@ mod tests {
                     project_id        TEXT NOT NULL DEFAULT '',
                     catalog_version   TEXT NOT NULL DEFAULT '',
                     state             TEXT NOT NULL DEFAULT 'DRY_RUN'
-                                      CHECK (state IN ('DRY_RUN','PREFLIGHT','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')),
+                                      CHECK (state IN ('DRY_RUN','PREFLIGHT','APPROVED','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')),
                     operations_hash   TEXT NOT NULL DEFAULT '',
                     approval_token    TEXT NOT NULL DEFAULT '',
                     started_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -1649,7 +1649,7 @@ mod tests {
                     operation_kind    TEXT NOT NULL DEFAULT '',
                     status            TEXT NOT NULL DEFAULT 'PENDING'
                                       CHECK (status IN ('PENDING','APPLIED','VERIFIED','SKIPPED','FAILED','ROLLED_BACK')),
-                    rollback_json     JSONB NOT NULL DEFAULT '{{}}'::JSONB,
+                    payload_json     JSONB NOT NULL DEFAULT '{{}}'::JSONB,
                     error             TEXT NOT NULL DEFAULT '',
                     applied_at        TIMESTAMPTZ
                 )
@@ -1680,7 +1680,7 @@ mod tests {
                 started_at        TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                 finished_at       TIMESTAMP(6) NULL,
                 error             TEXT NOT NULL,
-                CONSTRAINT chk_{RUNS_TABLE}_state CHECK (state IN ('DRY_RUN','PREFLIGHT','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER'))
+                CONSTRAINT chk_{RUNS_TABLE}_state CHECK (state IN ('DRY_RUN','PREFLIGHT','APPROVED','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER'))
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             "#
         );
@@ -1697,7 +1697,7 @@ mod tests {
                 resource_uri      TEXT NOT NULL,
                 operation_kind    VARCHAR(64) NOT NULL DEFAULT '',
                 status            VARCHAR(32) NOT NULL DEFAULT 'PENDING',
-                rollback_json     JSON NOT NULL,
+                payload_json     JSON NOT NULL,
                 error             TEXT NOT NULL,
                 applied_at        TIMESTAMP(6) NULL,
                 CONSTRAINT chk_{LEDGER_TABLE}_status CHECK (status IN ('PENDING','APPLIED','VERIFIED','SKIPPED','FAILED','ROLLED_BACK')),
@@ -1728,7 +1728,7 @@ mod tests {
                 project_id        TEXT NOT NULL DEFAULT '',
                 catalog_version   TEXT NOT NULL DEFAULT '',
                 state             TEXT NOT NULL DEFAULT 'DRY_RUN'
-                                  CHECK (state IN ('DRY_RUN','PREFLIGHT','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')),
+                                  CHECK (state IN ('DRY_RUN','PREFLIGHT','APPROVED','APPLYING','VERIFYING','COMPLETED','ERROR','DEAD_LETTER')),
                 operations_hash   TEXT NOT NULL DEFAULT '',
                 approval_token    TEXT NOT NULL DEFAULT '',
                 started_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
@@ -1752,7 +1752,7 @@ mod tests {
                 operation_kind    TEXT NOT NULL DEFAULT '',
                 status            TEXT NOT NULL DEFAULT 'PENDING'
                                   CHECK (status IN ('PENDING','APPLIED','VERIFIED','SKIPPED','FAILED','ROLLED_BACK')),
-                rollback_json     TEXT NOT NULL DEFAULT '{{}}',
+                payload_json     TEXT NOT NULL DEFAULT '{{}}',
                 error             TEXT NOT NULL DEFAULT '',
                 applied_at        TEXT,
                 FOREIGN KEY (run_id) REFERENCES {RUNS_TABLE}(run_id) ON DELETE CASCADE

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use crate::ast::ProtoSchema;
 use crate::control::auto_alter::{LintInput, plan_repairs};
 use crate::control::plan_approval::{
-    ApprovalConfig, ApprovedPlan, ExportedPlan, plan_matches_current_diff,
+    ApprovalConfig, ApprovedPlan, ExportedPlan, current_unix_ms, plan_matches_current_diff,
 };
 use crate::db_ops_sync::{discover_db_ops_root, resolve_seeders_dir};
 use crate::engine::{Engine, FsmState};
@@ -13,7 +13,7 @@ use crate::generation::{
     CatalogManifest, DsnGenerationConfig, GeneratedArtifact, LintSeverity, SqlGenerationConfig,
     generate_bootstrap_sql, generate_delta_sql, generate_unified_dsn_catalog,
 };
-use crate::migration::diff::{ChangeOperation, ChangeSafety, diff_manifests};
+use crate::migration::diff::{ChangeKind, ChangeOperation, ChangeSafety, diff_manifests};
 use crate::provisioning::try_build_provisioning_plan;
 use crate::runtime::DataBrokerRuntime;
 use crate::tracker::all_tracker_ddl_sql_for_schema;
@@ -79,6 +79,177 @@ fn record_change_metric_operations(
                 .to_string(),
             });
     }
+}
+
+const REVIEW_REQUIRED_SQL_ARTIFACT_MARKER: &str = "UDB:sql_artifact_requires_review=true";
+
+fn sql_artifact_requires_review(content: &str) -> bool {
+    content.lines().any(|line| {
+        let line = line.trim();
+        line.contains(REVIEW_REQUIRED_SQL_ARTIFACT_MARKER) || line.contains("requires_review=true")
+    })
+}
+
+fn review_required_sql_artifacts(artifacts: &[GeneratedArtifact]) -> Vec<String> {
+    artifacts
+        .iter()
+        .filter(|artifact| sql_artifact_requires_review(&artifact.content))
+        .map(|artifact| {
+            if artifact.schema.trim().is_empty() || artifact.table.trim().is_empty() {
+                artifact.rel_path.clone()
+            } else {
+                format!(
+                    "{} ({}.{}): review-required SQL artifact",
+                    artifact.rel_path, artifact.schema, artifact.table
+                )
+            }
+        })
+        .collect()
+}
+
+fn reject_review_required_sql_artifacts(
+    runtime: &DataBrokerRuntime,
+    report: &mut StartupLifecycleReport,
+    artifacts: &[GeneratedArtifact],
+) -> Result<(), String> {
+    let held = review_required_sql_artifacts(artifacts);
+    if held.is_empty() {
+        return Ok(());
+    }
+    Err(fail(
+        runtime,
+        report,
+        "review_required_sql_artifact",
+        format!(
+            "{} review-required bootstrap SQL artifact(s) require manual approval and were not applied: {}",
+            held.len(),
+            held.join("; ")
+        ),
+    ))
+}
+
+#[derive(Debug)]
+enum ApprovalPlanFile {
+    Sealed(ApprovedPlan),
+    Legacy(ExportedPlan),
+}
+
+fn parse_approval_plan_file(
+    raw: &str,
+    require_signed_plan: bool,
+) -> Result<ApprovalPlanFile, String> {
+    match serde_json::from_str::<ApprovedPlan>(raw) {
+        Ok(plan) if !plan.signatures.is_empty() => Ok(ApprovalPlanFile::Sealed(plan)),
+        Ok(_) if require_signed_plan => Err(
+            "approval policy requires a signed ApprovedPlan, but the file has no signatures"
+                .to_string(),
+        ),
+        Err(err) if require_signed_plan => Err(format!(
+            "approval policy requires a signed ApprovedPlan, but the file did not parse as one: {err}"
+        )),
+        _ => serde_json::from_str::<ExportedPlan>(raw)
+            .map(ApprovalPlanFile::Legacy)
+            .map_err(|err| format!("approved plan is not valid JSON: {err}")),
+    }
+}
+
+fn approval_policy_requires_signed_plan(
+    config: &ApprovalConfig,
+    signing_key_env_set: bool,
+) -> bool {
+    signing_key_env_set || config.requires_signed_plan()
+}
+
+fn review_required_sql_artifact_changes(manifest: &CatalogManifest) -> Vec<ChangeOperation> {
+    diff_manifests(None, manifest)
+        .into_iter()
+        .filter(|change| {
+            change.kind == ChangeKind::ApplySqlArtifact
+                && change.safety == ChangeSafety::RequiresReview
+        })
+        .collect()
+}
+
+fn require_approved_plan_for_changes(
+    runtime: &DataBrokerRuntime,
+    report: &mut StartupLifecycleReport,
+    manifest: &CatalogManifest,
+    changes: &[ChangeOperation],
+    gate_reason: &str,
+    accepted_message: impl FnOnce(&str) -> String,
+) -> Result<(), String> {
+    let approval_plan_path = runtime
+        .config()
+        .migration
+        .require_approval_plan
+        .trim()
+        .to_string();
+    if approval_plan_path.is_empty() {
+        return Err(fail(
+            runtime,
+            report,
+            gate_reason,
+            "review-required migration work needs migration.require_approval_plan before it can run"
+                .to_string(),
+        ));
+    }
+
+    let raw = fs::read_to_string(&approval_plan_path).map_err(|err| {
+        fail(
+            runtime,
+            report,
+            "load_approved_plan",
+            format!("cannot read approved plan {approval_plan_path}: {err}"),
+        )
+    })?;
+    let approval_config = ApprovalConfig::from_env();
+    let require_signed_plan = approval_policy_requires_signed_plan(
+        &approval_config,
+        std::env::var_os("UDB_APPROVAL_SIGNING_KEY").is_some(),
+    );
+    let approval_plan = parse_approval_plan_file(&raw, require_signed_plan).map_err(|err| {
+        fail(
+            runtime,
+            report,
+            "load_approved_plan",
+            format!("approved plan {approval_plan_path} rejected: {err}"),
+        )
+    })?;
+    let verdict = match approval_plan {
+        ApprovalPlanFile::Sealed(sealed) => sealed
+            .ready_to_apply(&approval_config, manifest, changes, current_unix_ms())
+            .map_err(|err| {
+                fail(
+                    runtime,
+                    report,
+                    "approval_plan_rejected",
+                    format!("sealed approval plan {approval_plan_path} rejected: {err:?}"),
+                )
+            })?,
+        ApprovalPlanFile::Legacy(approved) => {
+            if require_signed_plan {
+                return Err(fail(
+                    runtime,
+                    report,
+                    "approval_plan_rejected",
+                    format!(
+                        "approval policy requires signed ApprovedPlan {approval_plan_path}; unsigned ExportedPlan fallback is disabled"
+                    ),
+                ));
+            }
+            plan_matches_current_diff(&approved, manifest, changes)
+        }
+    };
+    if !verdict.is_match() {
+        return Err(fail(
+            runtime,
+            report,
+            "approval_plan_mismatch",
+            format!("current diff does not match approved plan {approval_plan_path}: {verdict:?}"),
+        ));
+    }
+    report.step(FsmState::Applying, accepted_message(&approval_plan_path));
+    Ok(())
 }
 
 /// Run the startup migration lifecycle and POST the configured migration
@@ -576,12 +747,24 @@ async fn run_startup_lifecycle_core(
                         artifact.kind.clone()
                     },
                     schema: artifact.schema.clone(),
-                    safety: "auto".to_string(),
+                    safety: if sql_artifact_requires_review(&artifact.content) {
+                        "requires_review".to_string()
+                    } else {
+                        "auto".to_string()
+                    },
                 });
         }
 
         // GAP 8: In dry-run mode, collect artifact SQL for the plan report instead of executing.
         if dry_run {
+            let held = review_required_sql_artifacts(&sql_artifacts);
+            if !held.is_empty() {
+                report.warnings.push(format!(
+                    "{} review-required bootstrap SQL artifact(s) would be held for manual approval: {}",
+                    held.len(),
+                    held.join("; ")
+                ));
+            }
             report.step(
                 FsmState::Applying,
                 format!(
@@ -596,6 +779,33 @@ async fn run_startup_lifecycle_core(
                 ));
             }
         } else {
+            let held = review_required_sql_artifacts(&sql_artifacts);
+            if !held.is_empty() {
+                let review_changes = review_required_sql_artifact_changes(manifest);
+                if review_changes.is_empty() {
+                    // Unattended bootstrap: there is no approvable diff to
+                    // match a plan against, so fail closed through the shared
+                    // gate helper — a single source of truth for the abort
+                    // message/metric. `held` is non-empty here, so the gate
+                    // always aborts before any artifact reaches the execute
+                    // list below.
+                    reject_review_required_sql_artifacts(runtime, &mut report, &sql_artifacts)?;
+                } else {
+                    require_approved_plan_for_changes(
+                        runtime,
+                        &mut report,
+                        manifest,
+                        &review_changes,
+                        "review_required_sql_artifact",
+                        |path| {
+                            format!(
+                                "approved plan {path} accepted for {} review-required bootstrap SQL artifact(s)",
+                                held.len()
+                            )
+                        },
+                    )?;
+                }
+            }
             runtime
                 .execute_sql_artifacts(&sql_artifacts)
                 .await
@@ -794,23 +1004,23 @@ async fn run_startup_lifecycle_core(
                         format!("cannot read approved plan {approval_plan_path}: {err}"),
                     )
                 })?;
-                // Prefer the SEALED quorum format (ApprovedPlan = ExportedPlan +
-                // HMAC signatures + expiry + seal). When the file is a sealed
-                // plan carrying at least one signature, enforce the full
-                // four-eyes check (signatures + freshness + diff match) via
-                // ready_to_apply using the UDB_APPROVAL_* config. Otherwise fall
-                // back to a bare ExportedPlan + count/hash diff match (the
-                // single-signer / Git-PR model).
-                let sealed: Option<ApprovedPlan> = serde_json::from_str::<ApprovedPlan>(&raw)
-                    .ok()
-                    .filter(|p| !p.signatures.is_empty());
-                let verdict = if let Some(sealed) = sealed {
-                    let now_ms = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .map(|d| d.as_millis() as i64)
-                        .unwrap_or(0);
-                    sealed
-                        .ready_to_apply(&ApprovalConfig::from_env(), manifest, &changes, now_ms)
+                let approval_config = ApprovalConfig::from_env();
+                let require_signed_plan = approval_policy_requires_signed_plan(
+                    &approval_config,
+                    std::env::var_os("UDB_APPROVAL_SIGNING_KEY").is_some(),
+                );
+                let approval_plan =
+                    parse_approval_plan_file(&raw, require_signed_plan).map_err(|err| {
+                        fail(
+                            runtime,
+                            &mut report,
+                            "load_approved_plan",
+                            format!("approved plan {approval_plan_path} rejected: {err}"),
+                        )
+                    })?;
+                let verdict = match approval_plan {
+                    ApprovalPlanFile::Sealed(sealed) => sealed
+                        .ready_to_apply(&approval_config, manifest, &changes, current_unix_ms())
                         .map_err(|err| {
                             fail(
                                 runtime,
@@ -820,17 +1030,20 @@ async fn run_startup_lifecycle_core(
                                     "sealed approval plan {approval_plan_path} rejected: {err:?}"
                                 ),
                             )
-                        })?
-                } else {
-                    let approved: ExportedPlan = serde_json::from_str(&raw).map_err(|err| {
-                        fail(
-                            runtime,
-                            &mut report,
-                            "load_approved_plan",
-                            format!("approved plan {approval_plan_path} is not valid JSON: {err}"),
-                        )
-                    })?;
-                    plan_matches_current_diff(&approved, manifest, &changes)
+                        })?,
+                    ApprovalPlanFile::Legacy(approved) => {
+                        if require_signed_plan {
+                            return Err(fail(
+                                runtime,
+                                &mut report,
+                                "approval_plan_rejected",
+                                format!(
+                                    "approval policy requires signed ApprovedPlan {approval_plan_path}; unsigned ExportedPlan fallback is disabled"
+                                ),
+                            ));
+                        }
+                        plan_matches_current_diff(&approved, manifest, &changes)
+                    }
                 };
                 if !verdict.is_match() {
                     return Err(fail(
@@ -860,6 +1073,12 @@ async fn run_startup_lifecycle_core(
                 ),
             );
             if !delta.is_empty() && !dry_run {
+                // Same shared review gate as the first-bootstrap branch: a
+                // changed review-required artifact must abort BEFORE the delta
+                // execute list runs. The non-SafeAuto check above already
+                // rejects such diffs at the change level; this keeps the
+                // artifact-marker gate fail-closed with one source of truth.
+                reject_review_required_sql_artifacts(runtime, &mut report, &delta)?;
                 // Apply the delta (ALTER TABLE, ADD COLUMN, …) against the live DB.
                 runtime.execute_sql_artifacts(&delta).await.map_err(|err| {
                     fail(runtime, &mut report, "apply_delta_sql", err.to_string())
@@ -1574,6 +1793,148 @@ fn parse_seed_identity(file_name: &str) -> (String, String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn review_required_sql_artifacts_are_detected_from_render_marker() {
+        let artifacts = vec![
+            GeneratedArtifact {
+                rel_path: "public/001_safe.sql".to_string(),
+                content: "-- UDB:sql_artifact_requires_review=false\nSELECT 1;\n".to_string(),
+                ..GeneratedArtifact::default()
+            },
+            GeneratedArtifact {
+                rel_path: "public/002_hold.sql".to_string(),
+                schema: "public".to_string(),
+                table: "orders".to_string(),
+                content: "-- UDB:sql_artifact_requires_review=true\nSELECT dangerous();\n"
+                    .to_string(),
+                ..GeneratedArtifact::default()
+            },
+        ];
+
+        let held = review_required_sql_artifacts(&artifacts);
+        assert_eq!(held.len(), 1);
+        assert!(held[0].contains("public/002_hold.sql"));
+        assert!(held[0].contains("public.orders"));
+    }
+
+    fn safe_bootstrap_artifact() -> GeneratedArtifact {
+        GeneratedArtifact {
+            rel_path: "public/001_safe.sql".to_string(),
+            schema: "public".to_string(),
+            table: "widgets".to_string(),
+            content: "-- UDB:sql_artifact_requires_review=false\nCREATE TABLE IF NOT EXISTS public.widgets (id TEXT PRIMARY KEY);\n".to_string(),
+            ..GeneratedArtifact::default()
+        }
+    }
+
+    fn review_required_bootstrap_artifact() -> GeneratedArtifact {
+        GeneratedArtifact {
+            rel_path: "public/002_hold.sql".to_string(),
+            schema: "public".to_string(),
+            table: "orders".to_string(),
+            content: "-- UDB:sql_artifact_requires_review=true\nALTER TABLE public.orders DROP COLUMN total;\n".to_string(),
+            ..GeneratedArtifact::default()
+        }
+    }
+
+    /// Audit item 11: a changed requires_review artifact in unattended mode
+    /// must hit the wired gate helper and abort BEFORE any execute list could
+    /// include it — exercised against the REAL serving-path gate
+    /// (`reject_review_required_sql_artifacts`) and the real partitioning
+    /// function (`review_required_sql_artifacts`), not a re-implementation.
+    #[test]
+    fn unattended_review_required_artifact_aborts_via_wired_gate_before_execute() {
+        let runtime = DataBrokerRuntime::planning_only();
+        let mut report = StartupLifecycleReport::default();
+        let artifacts = vec![safe_bootstrap_artifact(), review_required_bootstrap_artifact()];
+
+        // Partitioning first: the review-required artifact lands in the held
+        // set; the safe artifact does not.
+        let held = review_required_sql_artifacts(&artifacts);
+        assert_eq!(held.len(), 1);
+        assert!(held[0].contains("public/002_hold.sql"));
+        assert!(!held.iter().any(|entry| entry.contains("001_safe.sql")));
+
+        // The gate aborts the run (Err) so no execute list is ever built; the
+        // serialized report names the held artifact and records the error.
+        let err = reject_review_required_sql_artifacts(&runtime, &mut report, &artifacts)
+            .expect_err("review-required artifact must abort unattended bootstrap");
+        assert!(err.contains("public/002_hold.sql"));
+        assert!(err.contains("require manual approval and were not applied"));
+        assert!(
+            report
+                .errors
+                .iter()
+                .any(|message| message.contains("public/002_hold.sql"))
+        );
+    }
+
+    #[test]
+    fn gate_passes_when_no_artifact_requires_review() {
+        let runtime = DataBrokerRuntime::planning_only();
+        let mut report = StartupLifecycleReport::default();
+        let artifacts = vec![safe_bootstrap_artifact()];
+
+        reject_review_required_sql_artifacts(&runtime, &mut report, &artifacts)
+            .expect("safe artifacts must pass the review gate");
+        assert!(report.errors.is_empty());
+    }
+
+    fn legacy_exported_plan_json() -> String {
+        serde_json::to_string(&ExportedPlan {
+            generated_at: "2026-01-01T00:00:00Z".to_string(),
+            manifest_checksum: "checksum".to_string(),
+            auto_count: 0,
+            blocked_count: 0,
+            hint_warnings: 0,
+            operations: Vec::new(),
+            blocked: Vec::new(),
+            hints: Vec::new(),
+            operations_hash: "sha256:empty".to_string(),
+        })
+        .unwrap()
+    }
+
+    #[test]
+    fn approval_plan_parser_preserves_legacy_exported_plan_without_signed_policy() {
+        let parsed = parse_approval_plan_file(&legacy_exported_plan_json(), false).unwrap();
+        assert!(matches!(parsed, ApprovalPlanFile::Legacy(_)));
+    }
+
+    #[test]
+    fn approval_policy_requires_signed_plan_when_signing_key_env_is_present() {
+        let config = ApprovalConfig {
+            quorum_size: 1,
+            allowed_roles: Vec::new(),
+            expiry: std::time::Duration::from_secs(3600),
+            signing_key: Vec::new(),
+        };
+
+        assert!(!approval_policy_requires_signed_plan(&config, false));
+        assert!(approval_policy_requires_signed_plan(&config, true));
+    }
+
+    #[test]
+    fn approval_plan_parser_rejects_legacy_exported_plan_when_signed_policy_required() {
+        let err = parse_approval_plan_file(&legacy_exported_plan_json(), true).unwrap_err();
+        assert!(err.contains("requires a signed ApprovedPlan"));
+    }
+
+    #[test]
+    fn approval_plan_parser_rejects_unsigned_approved_plan_when_signed_policy_required() {
+        let plan: ExportedPlan = serde_json::from_str(&legacy_exported_plan_json()).unwrap();
+        let raw = serde_json::to_string(&ApprovedPlan {
+            plan,
+            signatures: Vec::new(),
+            expires_at_unix_ms: 1_000,
+            seal: "sha256:empty".to_string(),
+        })
+        .unwrap();
+
+        let err = parse_approval_plan_file(&raw, true).unwrap_err();
+        assert!(err.contains("no signatures"));
+    }
 
     #[test]
     fn load_seed_artifacts_from_runner_preserves_runner_order() {

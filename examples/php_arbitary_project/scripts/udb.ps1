@@ -20,7 +20,7 @@ function Invoke-UdbDocker {
 function Get-ReleaseCli {
     $binDir = Join-Path $ProjectRoot ".udb/bin"
     New-Item -ItemType Directory -Force $binDir | Out-Null
-    $exe = if ($IsWindows -or $env:OS -eq "Windows_NT") { "udb-proto-parser.exe" } else { "udb-proto-parser" }
+    $exe = if ($IsWindows -or $env:OS -eq "Windows_NT") { "udb.exe" } else { "udb" }
     $target = Join-Path $binDir $exe
     if (Test-Path $target) {
         return $target
@@ -47,10 +47,10 @@ function Get-ReleaseCli {
     $os = if ($IsWindows -or $env:OS -eq "Windows_NT") { "windows" } elseif ($IsMacOS) { "darwin|macos" } else { "linux" }
     $arch = if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -match "Arm64") { "arm64|aarch64" } else { "amd64|x86_64" }
     $asset = $release.assets |
-        Where-Object { $_.name -match "udb-proto-parser" -and $_.name -match $os -and $_.name -match $arch -and $_.name -notmatch "\.(zip|tar\.gz)$" } |
+        Where-Object { $_.name -match "udb" -and $_.name -match $os -and $_.name -match $arch -and $_.name -notmatch "\.(zip|tar\.gz)$" } |
         Select-Object -First 1
     if (-not $asset) {
-        throw "No matching UDB CLI release asset found. Set UDB_CLI_URL to the exact udb-proto-parser binary URL."
+        throw "No matching UDB CLI release asset found. Set UDB_CLI_URL to the exact udb binary URL."
     }
     Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $target
     if (-not ($IsWindows -or $env:OS -eq "Windows_NT")) {
@@ -69,7 +69,7 @@ if ($Runner -eq "auto") {
         & $env:UDB_CLI @UdbArgs
         exit $LASTEXITCODE
     }
-    $installed = Get-Command udb-proto-parser -ErrorAction SilentlyContinue
+    $installed = Get-Command udb -ErrorAction SilentlyContinue
     if ($installed) {
         & $installed.Source @UdbArgs
         exit $LASTEXITCODE

@@ -111,7 +111,8 @@ var File_udb_core_authz_entity_v1_role_permission_proto protoreflect.FileDescrip
 
 const file_udb_core_authz_entity_v1_role_permission_proto_rawDesc = "" +
 	"\n" +
-	".udb/core/authz/entity/v1/role_permission.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\"\xf8\b\n" +
+	".udb/core/authz/entity/v1/role_permission.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x94\n" +
+	"\n" +
 	"\x0eRolePermission\x12c\n" +
 	"\x12role_permission_id\x18\x01 \x01(\tB5\x82\xb7\x181\n" +
 	"\x12role_permission_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x10rolePermissionId\x12.\n" +
@@ -129,14 +130,15 @@ const file_udb_core_authz_entity_v1_role_permission_proto_rawDesc = "" +
 	"granted_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tgrantedAt\x12_\n" +
 	"\ttenant_id\x18\x06 \x01(\tBB\x82\xb7\x18>\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R\"\n" +
-	"\x19idx_rolepermission_tenant\x12\x05BTREER\btenantId:\xf5\x04\xfa\xb6\x18\xf0\x04\n" +
+	"\x19idx_rolepermission_tenant\x12\x05BTREER\btenantId:\x91\x06\xfa\xb6\x18\xf0\x04\n" +
 	"\x10role_permissions\x12\tudb_authz\x18\x06 \x01*QMany-to-many map from roles to permission codes used by ABAC and UI authorization@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01@\n" +
 	"\x1bidx_role_permissions_unique\x12\x05BTREE\x18\x01Z\arole_idZ\x0fpermission_code\x92\x01C\n" +
 	"\arole_id\x12\x05roles\x1a\arole_id\"\tudb_authz(\x03:\x1bfk_role_permissions_role_id\x92\x01I\n" +
 	"\n" +
 	"granted_by\x12\x05users\x1a\auser_id\"\tudb_authn(\x04:\x1efk_role_permissions_granted_by\xa2\x01\xc1\x01\n" +
-	"\x18mv_effective_permissions\x12\tudb_authz\x1a\x97\x01SELECT ur.user_id, ur.domain, ur.role_id, rp.permission_code FROM udb_authz.user_roles ur JOIN udb_authz.role_permissions rp ON rp.role_id = ur.role_id \x01B\xfe\x01\n" +
+	"\x18mv_effective_permissions\x12\tudb_authz\x1a\x97\x01SELECT ur.user_id, ur.domain, ur.role_id, rp.permission_code FROM udb_authz.user_roles ur JOIN udb_authz.role_permissions rp ON rp.role_id = ur.role_id \x01\x8a\xb2\x19\x97\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x11authz.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfe\x01\n" +
 	"\x1ccom.udb.core.authz.entity.v1B\x13RolePermissionProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Entity.V1\xca\x02\x18Udb\\Core\\Authz\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\xea\x02\x1cUdb::Core::Authz::Entity::V1b\x06proto3"
 
 var (

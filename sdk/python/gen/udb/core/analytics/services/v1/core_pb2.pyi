@@ -4,6 +4,7 @@ from udb.core.analytics.entity.v1 import reconciliation_analytics_summary_pb2 as
 from udb.core.common.v1 import dto_pb2 as _dto_pb2
 from udb.core.common.v1 import types_pb2 as _types_pb2
 from udb.core.common.v1 import domain_types_pb2 as _domain_types_pb2
+from udb.core.common.v1 import security_pb2 as _security_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message

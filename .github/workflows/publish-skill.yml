@@ -1,0 +1,161 @@
+name: Publish UDB skill
+
+# Publishes the agent-agnostic "Using UDB" skill on every change.
+#  - Claude  : published by the repo itself — the root `.claude-plugin/marketplace.json`
+#              makes `/plugin marketplace add fahara02/udb` + `/plugin install udb@udb-skills`
+#              work on the merged commit. The `validate` job gates structure; an
+#              advisory `smoke` job (gated on ANTHROPIC_API_KEY) headlessly loads the
+#              plugin and checks the skill answers a UDB question.
+#  - Ollama  : `ollama create` + `ollama push` to the registry (uses OLLAMA_API_KEY).
+#  - OpenAI  : create/update an Assistant from openai/instructions.md (uses OPENAI_API_KEY).
+# Publish steps self-skip when their secret is absent, so the run never fails for a
+# missing optional secret.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "udb-skill/**"
+      - ".claude-plugin/**"
+      - ".github/workflows/publish-skill.yml"
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate skill
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate manifests + structure (hard gate)
+        run: |
+          set -euo pipefail
+          for f in \
+            udb-skill/plugins/udb/skills/using-udb/SKILL.md \
+            udb-skill/plugins/udb/skills/using-udb/references/using-udb.md \
+            udb-skill/shared/using-udb.md \
+            udb-skill/openai/instructions.md \
+            udb-skill/ollama/Modelfile \
+            udb-skill/LICENSE; do
+            test -f "$f" || { echo "::error::missing $f"; exit 1; }
+          done
+          for f in \
+            .claude-plugin/marketplace.json \
+            udb-skill/.claude-plugin/marketplace.json \
+            udb-skill/plugins/udb/.claude-plugin/plugin.json; do
+            python3 -c "import json; json.load(open('$f'))" && echo "json ok: $f"
+          done
+          # SKILL.md must carry a description in its frontmatter.
+          grep -q '^description:' udb-skill/plugins/udb/skills/using-udb/SKILL.md \
+            || { echo "::error::SKILL.md missing description"; exit 1; }
+          # Root marketplace plugin source must resolve to a real plugin dir.
+          python3 -c "import json,os; m=json.load(open('.claude-plugin/marketplace.json')); s=m['plugins'][0]['source']; assert os.path.isfile(os.path.join(s,'.claude-plugin','plugin.json')), s; print('marketplace source ok:', s)"
+          echo "skill validation passed"
+      - name: Wrapper drift check (advisory, CR-tolerant)
+        run: |
+          a=udb-skill/shared/using-udb.md
+          b=udb-skill/plugins/udb/skills/using-udb/references/using-udb.md
+          if ! diff -q <(tr -d '\r' < "$a") <(tr -d '\r' < "$b") >/dev/null; then
+            echo "::warning::Claude reference differs from shared/using-udb.md — re-sync the wrappers (see README)."
+          else
+            echo "wrappers in sync"
+          fi
+      - name: Validate with Claude CLI (best-effort)
+        run: |
+          if npm i -g @anthropic-ai/claude-code >/dev/null 2>&1 && command -v claude >/dev/null; then
+            claude plugin validate ./udb-skill || echo "::warning::claude plugin validate reported issues"
+          else
+            echo "claude CLI unavailable on runner; skipped (structure already validated above)"
+          fi
+
+  smoke:
+    name: Skill smoke test (Claude, advisory)
+    needs: validate
+    runs-on: ubuntu-latest
+    continue-on-error: true   # non-deterministic LLM output must never block publish
+    steps:
+      - uses: actions/checkout@v4
+      - name: Headless skill activation test
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -uo pipefail
+          if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+            echo "ANTHROPIC_API_KEY not set — skipping smoke test (publish is unaffected)."
+            exit 0
+          fi
+          npm i -g @anthropic-ai/claude-code >/dev/null 2>&1 || { echo "::warning::could not install claude CLI"; exit 0; }
+          prompt="Use the using-udb skill. State the exact package name to install the UDB TypeScript SDK, and name three request-metadata fields a UDB client must set."
+          claude --plugin-dir ./udb-skill/plugins/udb -p "$prompt" >/tmp/out.txt 2>/tmp/err.txt || true
+          echo "----- model output -----"; cat /tmp/out.txt; echo "------------------------"
+          if grep -qi "@udb_plus/sdk" /tmp/out.txt && grep -Eqi "tenant|scopes|project" /tmp/out.txt; then
+            echo "smoke: UDB skill content present in response ✅"
+          else
+            echo "::warning::smoke: expected skill facts (@udb_plus/sdk + tenant/scopes/project) not found in output — LLM output varies; verify the skill manually."
+          fi
+
+  ollama:
+    name: Publish Ollama model
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish to Ollama registry
+        env:
+          OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
+          OLLAMA_NAMESPACE: ${{ vars.OLLAMA_NAMESPACE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${OLLAMA_API_KEY:-}" ]; then
+            echo "OLLAMA_API_KEY not set — skipping Ollama publish."
+            exit 0
+          fi
+          ns="${OLLAMA_NAMESPACE:-fahara02}"
+          curl -fsSL https://ollama.com/install.sh | sh
+          ollama serve >/tmp/ollama.log 2>&1 &
+          for i in $(seq 1 30); do ollama list >/dev/null 2>&1 && break; sleep 1; done
+          cd udb-skill/ollama
+          ollama create "$ns/udb-assistant" -f ./Modelfile
+          # Auth: modern Ollama reads OLLAMA_API_KEY from the environment for
+          # authenticated registry pushes. If your account uses the SSH-key flow
+          # instead, provide the private key and `ollama` will use ~/.ollama/id_ed25519.
+          ollama push "$ns/udb-assistant"
+          echo "pushed $ns/udb-assistant"
+
+  openai:
+    name: Sync OpenAI Assistant
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create/update Assistant from instructions
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            echo "OPENAI_API_KEY not set — skipping OpenAI Assistant sync (instructions.md is published via the repo)."
+            exit 0
+          fi
+          model="${OPENAI_MODEL:-gpt-4o-mini}"
+          name="UDB Assistant"
+          instr="$(cat udb-skill/openai/instructions.md)"
+          base="https://api.openai.com/v1"
+          auth=(-H "Authorization: Bearer ${OPENAI_API_KEY}" -H "OpenAI-Beta: assistants=v2" -H "Content-Type: application/json")
+          # Idempotent upsert by assistant name.
+          id="$(curl -fsS "${auth[@]}" "$base/assistants?limit=100" \
+                | jq -r --arg n "$name" '.data[] | select(.name==$n) | .id' | head -1)"
+          payload="$(jq -n --arg n "$name" --arg m "$model" --arg i "$instr" \
+                     '{name:$n, model:$m, instructions:$i}')"
+          if [ -n "$id" ] && [ "$id" != "null" ]; then
+            curl -fsS "${auth[@]}" -X POST "$base/assistants/$id" -d "$payload" >/dev/null
+            echo "updated assistant $id"
+          else
+            new_id="$(curl -fsS "${auth[@]}" -X POST "$base/assistants" -d "$payload" | jq -r '.id')"
+            echo "created assistant $new_id"
+          fi

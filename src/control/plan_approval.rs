@@ -4,7 +4,7 @@
 // proto diff exactly matches a previously exported and approved plan file.
 //
 // This provides a four-eyes / change-management gate for production migrations:
-//   1. Engineer runs `udb-proto-parser plan proto/ > db/migration_plan.json`.
+//   1. Engineer runs `udb plan proto/ > db/migration_plan.json`.
 //   2. Tech lead reviews and approves the JSON file (e.g. via Git PR).
 //   3. On the next deploy, the engine loads `require_approval_plan` and calls
 //      `plan_matches_current_diff()` before entering APPLYING.
@@ -428,6 +428,14 @@ impl ApprovalConfig {
     pub fn from_env() -> Self {
         Self::default()
     }
+
+    /// True when operators opted into cryptographic approval enforcement.
+    /// In this mode lifecycle callers must not fall back to bare `ExportedPlan`
+    /// fingerprint matching if the configured plan file is not a signed
+    /// `ApprovedPlan`.
+    pub fn requires_signed_plan(&self) -> bool {
+        self.quorum_size > 1 || !self.signing_key.is_empty()
+    }
 }
 
 /// Typed failure modes the workflow surfaces. Each maps to a clear
@@ -557,6 +565,55 @@ fn compute_seal(plan: &ExportedPlan, signatures: &[ApprovalSignature]) -> String
     format!("sha256:{:x}", h.finalize())
 }
 
+fn validate_signature_policy(
+    plan: &ExportedPlan,
+    signatures: &[ApprovalSignature],
+    config: &ApprovalConfig,
+) -> Result<(), ApprovalError> {
+    let mut seen_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for sig in signatures {
+        if sig.reason.trim().is_empty() {
+            return Err(ApprovalError::EmptyReason {
+                approver_id: sig.approver_id.clone(),
+            });
+        }
+        if !seen_ids.insert(sig.approver_id.clone()) {
+            return Err(ApprovalError::DuplicateApprover {
+                approver_id: sig.approver_id.clone(),
+            });
+        }
+        if !config.allowed_roles.is_empty()
+            && !config.allowed_roles.iter().any(|r| r == &sig.approver_role)
+        {
+            return Err(ApprovalError::UnknownRole {
+                role: sig.approver_role.clone(),
+            });
+        }
+        let expected = compute_signature(
+            &plan.operations_hash,
+            &sig.approver_id,
+            &sig.reason,
+            &config.signing_key,
+        );
+        // Constant-time-ish compare via fixed-length string equality
+        // - HMAC outputs are fixed length so naive `==` is fine
+        // against timing attacks at the broker layer (the network
+        // round-trip dominates any string-compare delta).
+        if expected != sig.signature {
+            return Err(ApprovalError::BadSignature {
+                approver_id: sig.approver_id.clone(),
+            });
+        }
+    }
+    if (signatures.len() as u32) < config.quorum_size {
+        return Err(ApprovalError::InsufficientQuorum {
+            required: config.quorum_size,
+            got: signatures.len() as u32,
+        });
+    }
+    Ok(())
+}
+
 impl ApprovedPlan {
     /// Seal a plan with N signatures under the given config. Validates:
     ///   - reason non-empty for every signature
@@ -573,48 +630,7 @@ impl ApprovedPlan {
         config: &ApprovalConfig,
         now_unix_ms: i64,
     ) -> Result<Self, ApprovalError> {
-        // Reason + role gates per signature.
-        let mut seen_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
-        for sig in &signatures {
-            if sig.reason.trim().is_empty() {
-                return Err(ApprovalError::EmptyReason {
-                    approver_id: sig.approver_id.clone(),
-                });
-            }
-            if !seen_ids.insert(sig.approver_id.clone()) {
-                return Err(ApprovalError::DuplicateApprover {
-                    approver_id: sig.approver_id.clone(),
-                });
-            }
-            if !config.allowed_roles.is_empty()
-                && !config.allowed_roles.iter().any(|r| r == &sig.approver_role)
-            {
-                return Err(ApprovalError::UnknownRole {
-                    role: sig.approver_role.clone(),
-                });
-            }
-            let expected = compute_signature(
-                &plan.operations_hash,
-                &sig.approver_id,
-                &sig.reason,
-                &config.signing_key,
-            );
-            // Constant-time-ish compare via fixed-length string equality
-            // — HMAC outputs are fixed length so naive `==` is fine
-            // against timing attacks at the broker layer (the network
-            // round-trip dominates any string-compare delta).
-            if expected != sig.signature {
-                return Err(ApprovalError::BadSignature {
-                    approver_id: sig.approver_id.clone(),
-                });
-            }
-        }
-        if (signatures.len() as u32) < config.quorum_size {
-            return Err(ApprovalError::InsufficientQuorum {
-                required: config.quorum_size,
-                got: signatures.len() as u32,
-            });
-        }
+        validate_signature_policy(&plan, &signatures, config)?;
         let seal = compute_seal(&plan, &signatures);
         let expires_at_unix_ms = now_unix_ms + (config.expiry.as_millis() as i64);
         Ok(Self {
@@ -642,28 +658,15 @@ impl ApprovedPlan {
 
     /// Re-verify every signature + the seal under the given config.
     /// Catches: key rotation, tampering with any signature field,
-    /// reordering signatures after the seal was computed.
+    /// reordering signatures after the seal was computed, and policy
+    /// changes such as a larger quorum or narrower role allow-list.
     pub fn verify(&self, config: &ApprovalConfig) -> Result<(), ApprovalError> {
         // Seal integrity first — cheaper than recomputing every HMAC.
         let expected_seal = compute_seal(&self.plan, &self.signatures);
         if expected_seal != self.seal {
             return Err(ApprovalError::SealMismatch);
         }
-        // HMAC each signature.
-        for sig in &self.signatures {
-            let expected = compute_signature(
-                &self.plan.operations_hash,
-                &sig.approver_id,
-                &sig.reason,
-                &config.signing_key,
-            );
-            if expected != sig.signature {
-                return Err(ApprovalError::BadSignature {
-                    approver_id: sig.approver_id.clone(),
-                });
-            }
-        }
-        Ok(())
+        validate_signature_policy(&self.plan, &self.signatures, config)
     }
 
     /// Full ready-to-apply check: verify signatures + check freshness +
@@ -795,6 +798,32 @@ mod tests {
     }
 
     #[test]
+    fn approval_config_requires_signed_plan_for_key_or_quorum() {
+        let base = ApprovalConfig {
+            quorum_size: 1,
+            allowed_roles: Vec::new(),
+            expiry: std::time::Duration::from_secs(3600),
+            signing_key: Vec::new(),
+        };
+
+        assert!(!base.requires_signed_plan());
+        assert!(
+            ApprovalConfig {
+                signing_key: b"configured-key".to_vec(),
+                ..base.clone()
+            }
+            .requires_signed_plan()
+        );
+        assert!(
+            ApprovalConfig {
+                quorum_size: 2,
+                ..base
+            }
+            .requires_signed_plan()
+        );
+    }
+
+    #[test]
     fn approval_single_signer_happy_path() {
         let cfg = approval_config(1, vec!["sre"]);
         let plan = sample_plan();
@@ -873,6 +902,21 @@ mod tests {
         let sig_a = signed(&plan, "alice", "sre", "shipping this", &cfg);
         let sig_b = signed(&plan, "bob", "dba", "schema looks fine", &cfg);
         assert!(ApprovedPlan::create(plan, vec![sig_a, sig_b], &cfg, 0).is_ok());
+    }
+
+    #[test]
+    fn approval_verify_rejects_loaded_plan_below_current_quorum() {
+        let cfg_one = approval_config(1, vec![]);
+        let plan = sample_plan();
+        let sig = signed(&plan, "alice", "sre", "single signer", &cfg_one);
+        let approved = ApprovedPlan::create(plan, vec![sig], &cfg_one, 0).unwrap();
+        let cfg_two = ApprovalConfig {
+            quorum_size: 2,
+            ..cfg_one
+        };
+
+        let err = approved.verify(&cfg_two).unwrap_err();
+        assert!(matches!(err, ApprovalError::InsufficientQuorum { .. }));
     }
 
     #[test]

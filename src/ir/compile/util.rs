@@ -9,6 +9,10 @@ use serde_json::{Value as Json, json};
 
 use super::{CompileContext, CompileError};
 use crate::generation::ManifestTable;
+use crate::generation::sql::{
+    resolve_project_column as shared_resolve_project_column,
+    resolve_tenant_column as shared_resolve_tenant_column,
+};
 use crate::ir::operations::AggregateExpr;
 use crate::ir::value::LogicalValue;
 
@@ -116,53 +120,12 @@ pub(super) fn validate_no_groupby_alias_collision(
     Ok(())
 }
 
-/// Resolve the tenant-isolation column for a table under ONE naming policy
-/// shared by every compiler-layer-RLS backend (ClickHouse, Cassandra, …).
-///
-/// Policy (in order):
-/// 1. the authoritative `is_tenant_column` manifest flag (proto source of
-///    truth) — the first column carrying it wins;
-/// 2. fall back to the conventional name list, matching either `tenant_id`
-///    or `_tenant_id` against `column_name` or `field_name`
-///    (case-insensitive). The `_`-prefixed form marks "system" columns.
-///
-/// Returns the physical `column_name` to emit. Accepting both `tenant_id`
-/// and `_tenant_id` everywhere fixes the previous divergence where Cassandra
-/// silently lost isolation for a `_tenant_id`-named key.
 pub(super) fn resolve_tenant_column(table: &ManifestTable) -> Option<&str> {
-    if let Some(c) = table.columns.iter().find(|c| c.is_tenant_column) {
-        return Some(c.column_name.as_str());
-    }
-    table
-        .columns
-        .iter()
-        .find(|c| {
-            let cn = c.column_name.as_str();
-            let fnm = c.field_name.as_str();
-            cn.eq_ignore_ascii_case("tenant_id")
-                || cn.eq_ignore_ascii_case("_tenant_id")
-                || fnm.eq_ignore_ascii_case("tenant_id")
-                || fnm.eq_ignore_ascii_case("_tenant_id")
-        })
-        .map(|c| c.column_name.as_str())
+    shared_resolve_tenant_column(table)
 }
 
-/// Resolve the project-isolation column. Same naming policy as
-/// [`resolve_tenant_column`] but for `project_id` / `_project_id`. There is
-/// no manifest flag for project columns, so this is name-list only.
 pub(super) fn resolve_project_column(table: &ManifestTable) -> Option<&str> {
-    table
-        .columns
-        .iter()
-        .find(|c| {
-            let cn = c.column_name.as_str();
-            let fnm = c.field_name.as_str();
-            cn.eq_ignore_ascii_case("project_id")
-                || cn.eq_ignore_ascii_case("_project_id")
-                || fnm.eq_ignore_ascii_case("project_id")
-                || fnm.eq_ignore_ascii_case("_project_id")
-        })
-        .map(|c| c.column_name.as_str())
+    shared_resolve_project_column(table)
 }
 
 /// Tenant system-field for SCHEMALESS backends (MongoDB, Elasticsearch,

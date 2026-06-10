@@ -4,13 +4,15 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::generation::manifest::{
     CatalogManifest, ManifestCheck, ManifestColumn, ManifestExtension, ManifestForeignKey,
-    ManifestIndex, ManifestMaterializedView, ManifestPolicy, ManifestReservedRange,
-    ManifestSqlArtifact, ManifestTable, ManifestTrigger, check_key, fk_key, index_key,
+    ManifestIndex, ManifestMaterializedView, ManifestPolicy, ManifestSqlArtifact, ManifestTable,
+    ManifestTrigger, check_key, fk_key, index_key,
 };
+use crate::generation::sql::validate_enum_value;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ChangeKind {
     HintWarning,
+    ApplySqlArtifact,
     AddSchema,
     #[default]
     CreateTable,
@@ -37,6 +39,11 @@ pub enum ChangeKind {
     DropForeignKey,
     EnableRls,
     DisableRls,
+    /// A change to a table's `db_table_security` (tenant/project isolation mode or
+    /// column, RLS policy template, soft-delete mode, audit mode, retention,
+    /// encryption/PII profile). Review-required: it alters the tenant-isolation /
+    /// compliance posture of persisted data.
+    AlterTableSecurity,
     CreatePolicy,
     DropPolicy,
     CreateExtension,
@@ -149,6 +156,26 @@ pub fn diff_manifests(
                 "table is present in desired proto AST",
                 "",
             ));
+            // Gate enum types created during bootstrap with the same safety
+            // classification as enum additions on an existing table: unsafe values
+            // are Blocked, otherwise SafeAuto. Without this, a fresh-bootstrap
+            // (old = None) path would emit unvalidated CREATE TYPE ... AS ENUM DDL.
+            for col in &table.columns {
+                if !col.enum_values.is_empty() {
+                    let (safety, blocked_reason) = enum_create_safety(&col.enum_values);
+                    ops.push(op(
+                        ChangeKind::CreateEnum,
+                        safety,
+                        &table.schema,
+                        &table.table,
+                        &col.column_name,
+                        &enum_type_name(table, &col.column_name),
+                        "enum column is present in desired proto AST",
+                        blocked_reason.as_deref().unwrap_or_default(),
+                    ));
+                }
+            }
+            lint_bootstrap_review_gates(table, &mut ops);
         }
         for store in &new.stores {
             ops.push(op(
@@ -340,6 +367,25 @@ fn lint_hints(
     }
 }
 
+fn lint_bootstrap_review_gates(table: &ManifestTable, ops: &mut Vec<ChangeOperation>) {
+    for artifact in table
+        .sql_artifacts
+        .iter()
+        .filter(|artifact| artifact.requires_review)
+    {
+        ops.push(op(
+            ChangeKind::ApplySqlArtifact,
+            ChangeSafety::RequiresReview,
+            &table.schema,
+            &table.table,
+            "",
+            &artifact.name,
+            "sql_artifact is marked requires_review in desired proto AST",
+            "review-required SQL artifacts cannot be applied by unattended bootstrap",
+        ));
+    }
+}
+
 fn diff_table(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOperation>) {
     diff_table_properties(old, new, ops);
     diff_columns(old, new, ops);
@@ -350,17 +396,24 @@ fn diff_table(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOper
     diff_materialized_views(old, new, ops);
     diff_triggers(old, new, ops);
     diff_sql_artifacts(old, new, ops);
+    diff_table_security(old, new, ops);
 
     if !old.enable_rls && new.enable_rls {
+        // urgent_fix #25: enabling RLS on an EXISTING table is review-required, not
+        // SafeAuto — turning RLS on immediately filters every row that doesn't match
+        // a policy, so an existing table's reads can silently go empty until the
+        // policies are confirmed. Symmetric with DisableRls (both alter the
+        // row-visibility posture). (Fresh-bootstrap tables create RLS via CreateTable,
+        // not this diff op, so first-time setup is unaffected.)
         ops.push(op(
             ChangeKind::EnableRls,
-            ChangeSafety::SafeAuto,
+            ChangeSafety::RequiresReview,
             &new.schema,
             &new.table,
             "",
             &new.table,
-            "desired proto AST enables row-level security",
-            "",
+            "desired proto AST enables row-level security on an existing table",
+            "enabling RLS changes row visibility on existing data and requires migration review",
         ));
     } else if old.enable_rls && !new.enable_rls {
         ops.push(op(
@@ -374,6 +427,73 @@ fn diff_table(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOper
             "disable_rls requires explicit migration approval",
         ));
     }
+}
+
+/// urgent_fix #23: surface `db_table_security` changes as a review-required
+/// migration item. Previously the migration diff never inspected `table_security`,
+/// so a change to the tenant-isolation mode/column, RLS policy template,
+/// soft-delete mode, audit mode, retention, or encryption/PII profile produced NO
+/// migration/drift item (only the orthogonal CLI contract-diff saw it). These are
+/// security-posture changes to persisted data and must not apply unattended.
+fn diff_table_security(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOperation>) {
+    let o = &old.table_security;
+    let n = &new.table_security;
+    let mut changed: Vec<&str> = Vec::new();
+    if o.tenant_isolation_mode != n.tenant_isolation_mode {
+        changed.push("tenant_isolation_mode");
+    }
+    if o.project_isolation_mode != n.project_isolation_mode {
+        changed.push("project_isolation_mode");
+    }
+    if o.tenant_column != n.tenant_column {
+        changed.push("tenant_column");
+    }
+    if o.project_column != n.project_column {
+        changed.push("project_column");
+    }
+    if o.rls_policy_template != n.rls_policy_template {
+        changed.push("rls_policy_template");
+    }
+    if o.soft_delete_mode != n.soft_delete_mode {
+        changed.push("soft_delete_mode");
+    }
+    if o.retention_class != n.retention_class {
+        changed.push("retention_class");
+    }
+    if o.retention_days != n.retention_days {
+        changed.push("retention_days");
+    }
+    if o.audit_mode != n.audit_mode {
+        changed.push("audit_mode");
+    }
+    if o.encryption_profile != n.encryption_profile {
+        changed.push("encryption_profile");
+    }
+    if o.pii_profile != n.pii_profile {
+        changed.push("pii_profile");
+    }
+    if o.break_glass_visible != n.break_glass_visible {
+        changed.push("break_glass_visible");
+    }
+    if o.export_eligible != n.export_eligible {
+        changed.push("export_eligible");
+    }
+    if o.data_residency_policy_ref != n.data_residency_policy_ref {
+        changed.push("data_residency_policy_ref");
+    }
+    if changed.is_empty() {
+        return;
+    }
+    ops.push(op(
+        ChangeKind::AlterTableSecurity,
+        ChangeSafety::RequiresReview,
+        &new.schema,
+        &new.table,
+        "",
+        &new.table,
+        &format!("db_table_security changed: {}", changed.join(", ")),
+        "table-security changes alter tenant-isolation / compliance posture and require migration review",
+    ));
 }
 
 fn diff_table_properties(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOperation>) {
@@ -522,15 +642,16 @@ fn diff_columns(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOp
             continue;
         }
         if !new_col.enum_values.is_empty() {
+            let (safety, blocked_reason) = enum_create_safety(&new_col.enum_values);
             ops.push(op(
                 ChangeKind::CreateEnum,
-                ChangeSafety::SafeAuto,
+                safety,
                 &new.schema,
                 &new.table,
                 &new_col.column_name,
                 &enum_type_name(new, &new_col.column_name),
                 "enum column was added to desired proto AST",
-                "",
+                blocked_reason.as_deref().unwrap_or_default(),
             ));
         }
         if !new_col.previous_column_name.trim().is_empty()
@@ -824,36 +945,47 @@ fn diff_enum_values(
     let enum_name = enum_type_name(table, &new.column_name);
 
     if old_values.is_empty() && !new_values.is_empty() {
+        let (safety, blocked_reason) = enum_create_safety(&new.enum_values);
         ops.push(op(
             ChangeKind::CreateEnum,
-            ChangeSafety::SafeAuto,
+            safety,
             &table.schema,
             &table.table,
             &new.column_name,
             &enum_name,
             "column gained enum values",
-            "",
+            blocked_reason.as_deref().unwrap_or_default(),
         ));
         return;
     }
 
     for value in new_values.difference(&old_values) {
+        let safety = if validate_enum_value(value).is_ok() {
+            ChangeSafety::RequiresReview
+        } else {
+            ChangeSafety::Blocked
+        };
+        let blocked_reason = if safety == ChangeSafety::Blocked {
+            "enum value failed SQL safety validation"
+        } else {
+            "PostgreSQL enum value additions are non-transactional and require production review"
+        };
         ops.push(op(
             ChangeKind::AlterEnumAddValue,
-            ChangeSafety::SafeAuto,
+            safety,
             &table.schema,
             &table.table,
             value,
             &enum_name,
             "enum value was added to desired proto AST",
-            "",
+            blocked_reason,
         ));
     }
 
     if old_values.difference(&new_values).next().is_some() {
         ops.push(op(
             ChangeKind::DropEnum,
-            ChangeSafety::RequiresReview,
+            ChangeSafety::Blocked,
             &table.schema,
             &table.table,
             &new.column_name,
@@ -862,6 +994,38 @@ fn diff_enum_values(
             "PostgreSQL cannot drop enum values in place; a reviewed replacement migration is required",
         ));
     }
+
+    // Reordering: identical value set but a different ordered sequence. This is
+    // not caught by the set-based add/drop checks above, yet it changes protobuf
+    // enum field numbers (wire compatibility) and PostgreSQL enum sort order.
+    // Treat as review-required (mirrors the oneof presence-semantics gate).
+    if old_values == new_values && old.enum_values != new.enum_values {
+        ops.push(op(
+            ChangeKind::ValidationError,
+            ChangeSafety::RequiresReview,
+            &table.schema,
+            &table.table,
+            &new.column_name,
+            &enum_name,
+            "enum value order changed",
+            "enum value reordering changes protobuf field numbers and PostgreSQL enum sort order; requires review",
+        ));
+    }
+}
+
+fn enum_create_safety(values: &[String]) -> (ChangeSafety, Option<String>) {
+    for value in values {
+        if let Err(reason) = validate_enum_value(value) {
+            return (
+                ChangeSafety::Blocked,
+                Some(format!(
+                    "enum value '{}' failed SQL safety validation: {}",
+                    value, reason
+                )),
+            );
+        }
+    }
+    (ChangeSafety::SafeAuto, None)
 }
 
 fn diff_checks(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOperation>) {
@@ -1284,6 +1448,7 @@ fn priority(kind: &ChangeKind) -> i32 {
     match kind {
         ChangeKind::ValidationError => 0,
         ChangeKind::HintWarning => 1,
+        ChangeKind::ApplySqlArtifact => 87,
         ChangeKind::CreateExtension | ChangeKind::DropExtension => 5,
         ChangeKind::AddSchema => 10,
         ChangeKind::CreateEnum => 15,
@@ -1293,6 +1458,7 @@ fn priority(kind: &ChangeKind) -> i32 {
         ChangeKind::AttachPartition => 23,
         ChangeKind::RenameTable => 25,
         ChangeKind::SetTableLogged | ChangeKind::SetTableUnlogged | ChangeKind::SetTablespace => 28,
+        ChangeKind::AlterTableSecurity => 29,
         ChangeKind::AddColumn => 30,
         ChangeKind::RenameColumn
         | ChangeKind::ChangeColumnType
@@ -1499,10 +1665,13 @@ fn sql_artifact_content_key(artifact: &ManifestSqlArtifact) -> String {
         format!("{:x}", h.finalize())
     };
     format!(
-        "{}|{}|{}|{}",
+        "{}|{}|{}|{}|{}|{}|{}",
         artifact.name.to_ascii_lowercase(),
         artifact.backend.to_ascii_lowercase(),
         artifact.phase.to_ascii_lowercase(),
+        artifact.file,
+        artifact.checksum_sha256,
+        artifact.requires_review,
         sql_hash
     )
 }
@@ -1530,6 +1699,31 @@ fn diff_sql_artifacts(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<Ch
         return;
     }
 
+    for artifact in new
+        .sql_artifacts
+        .iter()
+        .filter(|artifact| !old_keys.contains(&sql_artifact_content_key(artifact)))
+    {
+        ops.push(op(
+            ChangeKind::ApplySqlArtifact,
+            if artifact.requires_review {
+                ChangeSafety::RequiresReview
+            } else {
+                ChangeSafety::SafeAuto
+            },
+            &new.schema,
+            &new.table,
+            "",
+            &artifact.name,
+            "sql_artifact content, file, checksum, phase, or review flag changed",
+            if artifact.requires_review {
+                "review-required SQL artifacts cannot be applied unattended"
+            } else {
+                ""
+            },
+        ));
+    }
+
     // Re-emit CreateTrigger for every trigger associated with this table so
     // that `render_delta_table` includes both the refreshed function DDL and
     // each trigger that calls it.
@@ -1543,13 +1737,29 @@ fn diff_sql_artifacts(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<Ch
         if !already_emitted {
             ops.push(op(
                 ChangeKind::CreateTrigger,
-                ChangeSafety::SafeAuto,
+                if new
+                    .sql_artifacts
+                    .iter()
+                    .any(|artifact| artifact.requires_review)
+                {
+                    ChangeSafety::RequiresReview
+                } else {
+                    ChangeSafety::SafeAuto
+                },
                 &new.schema,
                 &new.table,
                 "",
                 &trigger.name,
                 "sql_artifact function body changed — refreshing trigger to re-apply function",
-                "",
+                if new
+                    .sql_artifacts
+                    .iter()
+                    .any(|artifact| artifact.requires_review)
+                {
+                    "review-required SQL artifacts cannot refresh triggers unattended"
+                } else {
+                    ""
+                },
             ));
         }
     }
@@ -1558,6 +1768,10 @@ fn diff_sql_artifacts(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<Ch
 #[cfg(test)]
 mod tests {
     use super::*;
+    // `ManifestReservedRange` is only constructed by the reserved-field-reuse
+    // tests; production code reads the `reserved_numbers`/`reserved_names`
+    // ManifestTable fields, not the range type itself.
+    use crate::generation::manifest::ManifestReservedRange;
 
     fn column(name: &str, sql_type: &str) -> ManifestColumn {
         ManifestColumn {
@@ -1588,6 +1802,82 @@ mod tests {
             tables: vec![table],
             ..CatalogManifest::default()
         }
+    }
+
+    fn sql_artifact(name: &str, sql: &str) -> ManifestSqlArtifact {
+        ManifestSqlArtifact {
+            name: name.to_string(),
+            backend: "postgres".to_string(),
+            phase: "before_triggers".to_string(),
+            sql: sql.to_string(),
+            ..ManifestSqlArtifact::default()
+        }
+    }
+
+    #[test]
+    fn sql_artifact_identity_includes_file_checksum_and_review_flag() {
+        let mut a = sql_artifact("touch", "SELECT 1;");
+        let mut b = a.clone();
+        assert_eq!(sql_artifact_content_key(&a), sql_artifact_content_key(&b));
+
+        b.file = "sql/touch.sql".to_string();
+        assert_ne!(sql_artifact_content_key(&a), sql_artifact_content_key(&b));
+
+        a.file = b.file.clone();
+        b.checksum_sha256 = "abc123".to_string();
+        assert_ne!(sql_artifact_content_key(&a), sql_artifact_content_key(&b));
+
+        a.checksum_sha256 = b.checksum_sha256.clone();
+        b.requires_review = true;
+        assert_ne!(sql_artifact_content_key(&a), sql_artifact_content_key(&b));
+    }
+
+    #[test]
+    fn review_required_sql_artifact_blocks_unattended_delta() {
+        let old_manifest = manifest(table(vec![column("id", "TEXT")]), "v1", "v1-table");
+        let mut new_table = table(vec![column("id", "TEXT")]);
+        let mut artifact = sql_artifact("touch", "SELECT 2;");
+        artifact.requires_review = true;
+        new_table.sql_artifacts.push(artifact);
+        let new_manifest = manifest(new_table, "v2", "v2-table");
+
+        let changes = diff_manifests(Some(&old_manifest), &new_manifest);
+        let artifact_change = changes
+            .iter()
+            .find(|c| c.kind == ChangeKind::ApplySqlArtifact && c.object_name == "touch")
+            .expect("sql artifact change emitted");
+        assert_eq!(artifact_change.safety, ChangeSafety::RequiresReview);
+    }
+
+    #[test]
+    fn structured_trigger_and_materialized_view_creation_is_auto_safe() {
+        let old_manifest = manifest(table(vec![column("id", "TEXT")]), "v1", "v1-table");
+        let mut new_table = table(vec![column("id", "TEXT")]);
+        new_table.triggers.push(ManifestTrigger {
+            name: "trg_patients_touch".to_string(),
+            schema: "public".to_string(),
+            table: "patients".to_string(),
+            event: "UPDATE".to_string(),
+            timing: "BEFORE".to_string(),
+            function: "touch_updated_at()".to_string(),
+            for_each: "ROW".to_string(),
+            ..ManifestTrigger::default()
+        });
+        new_table.materialized_views.push(ManifestMaterializedView {
+            name: "patient_summary".to_string(),
+            schema: "public".to_string(),
+            query: "SELECT count(*) FROM public.patients".to_string(),
+            with_data: false,
+        });
+        let new_manifest = manifest(new_table, "v2", "v2-table");
+
+        let changes = diff_manifests(Some(&old_manifest), &new_manifest);
+        assert!(changes.iter().any(|c| {
+            c.kind == ChangeKind::CreateTrigger && c.safety == ChangeSafety::SafeAuto
+        }));
+        assert!(changes.iter().any(|c| {
+            c.kind == ChangeKind::CreateMaterializedView && c.safety == ChangeSafety::SafeAuto
+        }));
     }
 
     // ── NW-universal: reserved-field reuse blocked ────────────────
@@ -1689,14 +1979,14 @@ mod tests {
 
         assert!(changes.iter().any(|change| {
             change.kind == ChangeKind::AlterEnumAddValue
-                && change.safety == ChangeSafety::SafeAuto
+                && change.safety == ChangeSafety::RequiresReview
                 && change.object_name == "patients_status_enum"
                 && change.column == "paused"
         }));
     }
 
     #[test]
-    fn diff_blocks_enum_value_removal_for_review() {
+    fn diff_blocks_enum_value_removal() {
         let mut old_status = column("status", "patients_status_enum");
         old_status.enum_values = vec!["active".to_string(), "paused".to_string()];
         let mut new_status = old_status.clone();
@@ -1708,8 +1998,52 @@ mod tests {
 
         assert!(changes.iter().any(|change| {
             change.kind == ChangeKind::DropEnum
-                && change.safety == ChangeSafety::RequiresReview
+                && change.safety == ChangeSafety::Blocked
                 && change.object_name == "patients_status_enum"
+        }));
+    }
+
+    #[test]
+    fn diff_flags_enum_reorder_as_review() {
+        // Same value set, different order: not caught by set-based add/drop, but it
+        // changes protobuf field numbers + Postgres enum sort order → review.
+        let mut old_status = column("status", "patients_status_enum");
+        old_status.enum_values = vec!["active".to_string(), "paused".to_string()];
+        let mut new_status = old_status.clone();
+        new_status.enum_values = vec!["paused".to_string(), "active".to_string()];
+
+        let old_manifest = manifest(table(vec![old_status]), "old", "old-table");
+        let new_manifest = manifest(table(vec![new_status]), "new", "new-table");
+        let changes = diff_manifests(Some(&old_manifest), &new_manifest);
+
+        assert!(
+            changes.iter().any(|change| {
+                change.kind == ChangeKind::ValidationError
+                    && change.safety == ChangeSafety::RequiresReview
+                    && change.object_name == "patients_status_enum"
+            }),
+            "enum reorder must be review-required, got: {changes:?}"
+        );
+        // And it must NOT be misclassified as a safe add/drop.
+        assert!(!changes.iter().any(|change| {
+            change.kind == ChangeKind::DropEnum || change.kind == ChangeKind::AlterEnumAddValue
+        }));
+    }
+
+    #[test]
+    fn diff_blocks_unsafe_enum_value() {
+        let mut status = column("status", "patients_status_enum");
+        status.enum_values = vec!["active".to_string(), "bad$value".to_string()];
+
+        let new_manifest = manifest(table(vec![status]), "new", "new-table");
+        let changes = diff_manifests(None, &new_manifest);
+
+        assert!(changes.iter().any(|change| {
+            change.kind == ChangeKind::CreateEnum
+                && change.safety == ChangeSafety::Blocked
+                && change
+                    .blocked_reason
+                    .contains("failed SQL safety validation")
         }));
     }
 

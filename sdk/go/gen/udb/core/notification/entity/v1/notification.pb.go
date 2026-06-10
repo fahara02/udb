@@ -7,6 +7,7 @@
 package entityv1
 
 import (
+	_ "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -199,7 +200,7 @@ var File_udb_core_notification_entity_v1_notification_proto protoreflect.FileDes
 
 const file_udb_core_notification_entity_v1_notification_proto_rawDesc = "" +
 	"\n" +
-	"2udb/core/notification/entity/v1/notification.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\xf2\a\n" +
+	"2udb/core/notification/entity/v1/notification.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\xf5\v\n" +
 	"\fNotification\x12'\n" +
 	"\x0fnotification_id\x18\x01 \x01(\tR\x0enotificationId\x12!\n" +
 	"\frecipient_id\x18\x02 \x01(\tR\vrecipientId\x12E\n" +
@@ -223,7 +224,12 @@ const file_udb_core_notification_entity_v1_notification_proto_rawDesc = "" +
 	"\ttenant_id\x18\x11 \x01(\tR\btenantId\x1a?\n" +
 	"\x11TemplateDataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\xa6\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x80\x04\xfa\xb6\x18\xd7\x02\n" +
+	"\rnotifications\x12\x10udb_notification\x18\x01 \x01*8Queued, sent, delivered, and failed notification records0\x018\x01@\x01b^\n" +
+	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01;\n" +
+	"\x1fidx_notifications_tenant_status\x12\x05BTREEZ\ttenant_idZ\x06status\x8a\x012\n" +
+	"\x1bidx_notifications_recipient\x12\x05BTREEZ\frecipient_id\xea\x01\aprimary\xfa\x01\x12notification:write\x8a\xb2\x19\x9f\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\vsoft_delete:\x18notification.operational@\xfb\x13H\x02R\x06tenantZ\trecipientr\x15tenant.data_residencyB\xa6\x02\n" +
 	"#com.udb.core.notification.entity.v1B\x11NotificationProtoP\x01ZKgithub.com/fahara02/udb/sdk/go/gen/udb/core/notification/entity/v1;entityv1\xa2\x02\x04UCNE\xaa\x02\x1fudb.core.Notification.Entity.V1\xca\x02\x1fUdb\\Core\\Notification\\Entity\\V1\xe2\x02+Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1\xea\x02#Udb::Core::Notification::Entity::V1b\x06proto3"
 
 var (

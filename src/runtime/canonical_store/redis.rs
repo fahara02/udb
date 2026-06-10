@@ -27,6 +27,7 @@ use super::system_store::{
 use super::{CanonicalStore, DurabilityToken};
 
 const REDIS_DURABILITY_POLL_MS: u64 = 10;
+const REDIS_OUTBOX_EVENT_TTL: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 const AUDIT_LOCK: &str = "admin-audit-chain";
 
 pub struct RedisCanonicalStore {
@@ -170,6 +171,19 @@ impl RedisCanonicalStore {
         Ok(removed > 0)
     }
 
+    async fn remove_projection_member(&self, task_id: Uuid) -> SystemStoreResult<bool> {
+        let row_key = self.projection_task_key(task_id);
+        let mut conn = self
+            .connection()
+            .await
+            .map_err(|err| SystemStoreError::io("redis", err))?;
+        let removed: i64 = conn
+            .srem(self.key("projection:all"), row_key)
+            .await
+            .map_err(|err| SystemStoreError::query("redis", "SREM projection:all", err))?;
+        Ok(removed > 0)
+    }
+
     async fn add_claimable(&self, task_id: Uuid, when: DateTime<Utc>) -> SystemStoreResult<()> {
         let mut conn = self
             .connection()
@@ -300,7 +314,12 @@ impl CanonicalStore for RedisCanonicalStore {
         };
         let raw = serde_json::to_string(&event)
             .map_err(|err| format!("redis outbox encode failed: {err}"))?;
-        conn.set::<_, _, ()>(self.key(&format!("outbox:event:{seq}")), raw)
+        redis::cmd("SET")
+            .arg(self.key(&format!("outbox:event:{seq}")))
+            .arg(raw)
+            .arg("PX")
+            .arg(REDIS_OUTBOX_EVENT_TTL.as_millis().max(1) as u64)
+            .query_async::<()>(&mut conn)
             .await
             .map_err(|err| format!("redis outbox SET failed: {err}"))?;
         Ok(seq)
@@ -334,30 +353,25 @@ impl CanonicalStore for RedisCanonicalStore {
         let key = self.key(&format!("lease:{lease_name}"));
         let ttl_ms = ttl.as_millis().max(1) as u64;
         let mut conn = self.connection().await?;
-        let acquired: bool = redis::cmd("SET")
-            .arg(&key)
-            .arg(owner_id)
-            .arg("PX")
-            .arg(ttl_ms)
-            .arg("NX")
-            .query_async(&mut conn)
-            .await
-            .unwrap_or(false);
-        if acquired {
-            return Ok(true);
-        }
-        let current: Option<String> = conn
-            .get(&key)
-            .await
-            .map_err(|err| format!("redis lease GET failed: {err}"))?;
-        if current.as_deref() == Some(owner_id) {
-            conn.set_ex::<_, _, ()>(&key, owner_id, ttl.as_secs().max(1))
-                .await
-                .map_err(|err| format!("redis lease refresh failed: {err}"))?;
-            Ok(true)
-        } else {
-            Ok(false)
-        }
+        redis::Script::new(
+            "local current = redis.call('GET', KEYS[1]); \
+             if not current then \
+               redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2]); \
+               return 1; \
+             end; \
+             if current == ARGV[1] then \
+               redis.call('PEXPIRE', KEYS[1], ARGV[2]); \
+               return 1; \
+             end; \
+             return 0",
+        )
+        .key(key)
+        .arg(owner_id)
+        .arg(ttl_ms)
+        .invoke_async::<i64>(&mut conn)
+        .await
+        .map(|value| value == 1)
+        .map_err(|err| format!("redis lease acquire/refresh failed: {err}"))
     }
 
     async fn release_advisory_lease(&self, lease_name: &str, owner_id: &str) -> Result<(), String> {
@@ -543,6 +557,7 @@ impl ProjectionTaskStore for RedisCanonicalStore {
         row.next_retry_at = None;
         self.set_json(&row_key, &row).await?;
         let _ = self.remove_claimable(task_id).await?;
+        let _ = self.remove_projection_member(task_id).await?;
         Ok(())
     }
 
@@ -567,6 +582,9 @@ impl ProjectionTaskStore for RedisCanonicalStore {
             self.add_claimable(task_id, row.updated_at).await?;
         } else {
             let _ = self.remove_claimable(task_id).await?;
+            if new_status == ProjectionTaskStatus::Completed {
+                let _ = self.remove_projection_member(task_id).await?;
+            }
         }
         Ok(())
     }
@@ -1159,7 +1177,7 @@ impl MigrationAuditStore for RedisCanonicalStore {
             resource_uri: op.resource_uri.clone(),
             operation_kind: op.operation_kind.clone(),
             status: op.status,
-            rollback_json: op.rollback_json.clone(),
+            payload_json: op.payload_json.clone(),
             error: op.error.clone(),
             applied_at: Some(Utc::now()),
         };

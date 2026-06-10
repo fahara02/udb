@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package shop.v1;
+
+import "udb/core/common/v1/db.proto";
+
+option php_namespace = "PhpQuickstart\\Shop\\V1";
+option php_metadata_namespace = "PhpQuickstart\\GPBMetadata\\Shop\\V1";
+
+// Example 3 — relationships & queries.
+//
+// A second table that references Customer by id. Example 3 inserts several
+// orders for one customer and then queries them back with a filter + ordering +
+// limit, showing multi-row reads and how one entity relates to another.
+message Order {
+  option (udb.core.common.v1.table) = {
+    table_name: "orders"
+    schema_name: "shop"
+    migration_order: 30
+    is_table: true
+    comment: "Orders placed by a customer"
+  };
+
+  string order_id = 1 [(udb.core.common.v1.column) = {
+    column_name: "order_id"
+    sql_type: "UUID"
+    primary_key: true
+    default_value: "gen_random_uuid()"
+  }];
+
+  string customer_id = 2 [(udb.core.common.v1.column) = {
+    column_name: "customer_id"
+    sql_type: "UUID"
+    not_null: true
+  }];
+
+  int64 amount_cents = 3 [(udb.core.common.v1.column) = {
+    column_name: "amount_cents"
+    sql_type: "BIGINT"
+    not_null: true
+    default_value: "0"
+  }];
+
+  string status = 4 [(udb.core.common.v1.column) = {
+    column_name: "status"
+    sql_type: "VARCHAR(32)"
+    not_null: true
+    default_value: "'pending'"
+  }];
+
+  string created_at = 5 [(udb.core.common.v1.column) = {
+    column_name: "created_at"
+    sql_type: "TIMESTAMPTZ"
+    not_null: true
+    default_value: "now()"
+    exclude_from_insert: true
+    exclude_from_update: true
+  }];
+}

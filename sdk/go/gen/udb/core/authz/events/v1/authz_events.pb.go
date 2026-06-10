@@ -7,6 +7,7 @@
 package eventsv1
 
 import (
+	_ "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -749,7 +750,7 @@ var File_udb_core_authz_events_v1_authz_events_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_events_v1_authz_events_proto_rawDesc = "" +
 	"\n" +
-	"+udb/core/authz/events/v1/authz_events.proto\x12\x18udb.core.authz.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf8\x02\n" +
+	"+udb/core/authz/events/v1/authz_events.proto\x12\x18udb.core.authz.events.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!udb/core/common/v1/security.proto\"\xf2\x03\n" +
 	"\x11RoleAssignedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12 \n" +
 	"\fuser_role_id\x18\x02 \x01(\tR\n" +
@@ -766,7 +767,8 @@ const file_udb_core_authz_events_v1_authz_events_proto_rawDesc = "" +
 	"\n" +
 	"project_id\x18\n" +
 	" \x01(\tR\tprojectId\x12%\n" +
-	"\x0eaccess_surface\x18\v \x01(\tR\raccessSurface\"\x96\x02\n" +
+	"\x0eaccess_surface\x18\v \x01(\tR\raccessSurface:x\x92\xb2\x19t\n" +
+	"*udb.core.authz.events.v1.RoleAssignedEvent\x12\x1audb.authz.role.assigned.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\x8e\x03\n" +
 	"\x10RoleRevokedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12 \n" +
 	"\fuser_role_id\x18\x02 \x01(\tR\n" +
@@ -778,7 +780,8 @@ const file_udb_core_authz_events_v1_authz_events_proto_rawDesc = "" +
 	"revoked_by\x18\x06 \x01(\tR\trevokedBy\x12\x16\n" +
 	"\x06reason\x18\a \x01(\tR\x06reason\x12;\n" +
 	"\voccurred_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt\"\xf6\x01\n" +
+	"occurredAt:v\x92\xb2\x19r\n" +
+	")udb.core.authz.events.v1.RoleRevokedEvent\x12\x19udb.authz.role.revoked.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xf0\x02\n" +
 	"\x11AccessDeniedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1b\n" +
@@ -788,7 +791,8 @@ const file_udb_core_authz_events_v1_authz_events_proto_rawDesc = "" +
 	"\vdeny_reason\x18\x06 \x01(\tR\n" +
 	"denyReason\x12;\n" +
 	"\voccurred_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt\"\xdc\x01\n" +
+	"occurredAt:x\x92\xb2\x19t\n" +
+	"*udb.core.authz.events.v1.AccessDeniedEvent\x12\x1audb.authz.access.denied.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xd4\x02\n" +
 	"\x10RoleCreatedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
 	"\arole_id\x18\x02 \x01(\tR\x06roleId\x12\x1b\n" +
@@ -797,7 +801,8 @@ const file_udb_core_authz_events_v1_authz_events_proto_rawDesc = "" +
 	"\n" +
 	"created_by\x18\x05 \x01(\tR\tcreatedBy\x12;\n" +
 	"\voccurred_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt\"\xba\x02\n" +
+	"occurredAt:v\x92\xb2\x19r\n" +
+	")udb.core.authz.events.v1.RoleCreatedEvent\x12\x19udb.authz.role.created.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xb2\x03\n" +
 	"\x10RoleUpdatedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
 	"\arole_id\x18\x02 \x01(\tR\x06roleId\x12\x1b\n" +
@@ -808,7 +813,8 @@ const file_udb_core_authz_events_v1_authz_events_proto_rawDesc = "" +
 	"\x11added_permissions\x18\x06 \x03(\tR\x10addedPermissions\x12/\n" +
 	"\x13removed_permissions\x18\a \x03(\tR\x12removedPermissions\x12;\n" +
 	"\voccurred_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt\"\xaf\x02\n" +
+	"occurredAt:v\x92\xb2\x19r\n" +
+	")udb.core.authz.events.v1.RoleUpdatedEvent\x12\x19udb.authz.role.updated.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\xad\x03\n" +
 	"\x10RoleRemovedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12 \n" +
 	"\fuser_role_id\x18\x02 \x01(\tR\n" +
@@ -821,7 +827,8 @@ const file_udb_core_authz_events_v1_authz_events_proto_rawDesc = "" +
 	"removed_by\x18\a \x01(\tR\tremovedBy\x12\x16\n" +
 	"\x06reason\x18\b \x01(\tR\x06reason\x12;\n" +
 	"\voccurred_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt\"\xf4\x02\n" +
+	"occurredAt:|\x92\xb2\x19x\n" +
+	")udb.core.authz.events.v1.RoleRemovedEvent\x12\x1fudb.authz.role_removed_event.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\"\x81\x04\n" +
 	"\x19AccessSurfaceUpdatedEvent\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12!\n" +
 	"\fprincipal_id\x18\x02 \x01(\tR\vprincipalId\x12,\n" +
@@ -834,7 +841,8 @@ const file_udb_core_authz_events_v1_authz_events_proto_rawDesc = "" +
 	"updated_by\x18\a \x01(\tR\tupdatedBy\x12%\n" +
 	"\x0ecorrelation_id\x18\b \x01(\tR\rcorrelationId\x12;\n" +
 	"\voccurred_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAtB\xfb\x01\n" +
+	"occurredAt:\x8a\x01\x92\xb2\x19\x85\x01\n" +
+	"2udb.core.authz.events.v1.AccessSurfaceUpdatedEvent\x12#udb.authz.access.surface.updated.v1\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stableB\xfb\x01\n" +
 	"\x1ccom.udb.core.authz.events.v1B\x10AuthzEventsProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authz/events/v1;eventsv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authz.Events.V1\xca\x02\x18Udb\\Core\\Authz\\Events\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authz\\Events\\V1\xea\x02\x1cUdb::Core::Authz::Events::V1b\x06proto3"
 
 var (

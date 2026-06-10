@@ -44,83 +44,88 @@ public final class PolicyRuleProto extends com.google.protobuf.GeneratedFile {
       "roto\022\030udb.core.authz.entity.v1\032\037google/p" +
       "rotobuf/timestamp.proto\032$udb/core/authz/" +
       "entity/v1/enums.proto\032\033udb/core/common/v" +
-      "1/db.proto\"\337\025\n\nPolicyRule\022I\n\tpolicy_id\030\001" +
-      " \001(\tB,\202\267\030(\n\tpolicy_id\022\004UUID\030\001(\001:\021gen_ran" +
-      "dom_uuid()R\010policyId\022\212\001\n\007subject\030\002 \001(\tBp" +
-      "\202\267\030l\n\007subject\022\014VARCHAR(200)\030\001ZQPrincipal" +
-      " selector such as role:<name>, user:<id>" +
-      ", group:<id>, service:<id>, or *R\007subjec" +
-      "t\022\273\001\n\006domain\030\003 \001(\tB\242\001\202\267\030\235\001\n\006domain\022\014VARC" +
-      "HAR(200)\030\001R/\n\036idx_policy_rules_domain_ob" +
-      "ject\022\005BTREEZ\006objectZRAuthorization domai" +
-      "n such as tenant:<id>, project:<id>, res" +
-      "ource:<type>/<id>, or *R\006domain\022\226\001\n\006obje" +
-      "ct\030\004 \001(\tB~\202\267\030z\n\006object\022\014VARCHAR(200)\030\001Z`" +
-      "Protected object or resource pattern suc" +
-      "h as table:orders, bucket:invoices/*, or" +
-      " service:billingR\006object\022\222\001\n\006action\030\005 \001(" +
-      "\tBz\202\267\030v\n\006action\022\013VARCHAR(80)\030\001Z]Operatio" +
-      "n such as read, write, delete, data.sele" +
-      "ct, object.presign, or project-defined a" +
-      "ctionR\006action\022d\n\006effect\030\006 \001(\0162&.udb.core" +
-      ".authz.entity.v1.PolicyEffectB$\202\267\030 \n\006eff" +
-      "ect\022\013VARCHAR(20)\030\001:\007\'ALLOW\'R\006effect\022m\n\tc" +
-      "ondition\030\007 \001(\tBO\202\267\030K\n\tcondition\022\004TEXTZ8R" +
-      "eserved for contextual or ABAC-like matc" +
-      "her expressionsR\tcondition\0229\n\013descriptio" +
-      "n\030\010 \001(\tB\027\202\267\030\023\n\013description\022\004TEXTR\013descri" +
-      "ption\022=\n\tis_active\030\t \001(\010B \202\267\030\034\n\tis_activ" +
-      "e\022\007BOOLEAN\030\001:\004trueR\010isActive\0225\n\ncreated_" +
-      "by\030\n \001(\tB\026\202\267\030\022\n\ncreated_by\022\004UUIDR\tcreate" +
-      "dBy\022q\n\ncreated_at\030\013 \001(\0132\032.google.protobu" +
-      "f.TimestampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMP" +
-      "TZ\030\001:\021CURRENT_TIMESTAMP`\001h\001R\tcreatedAt\022o" +
-      "\n\nupdated_at\030\014 \001(\0132\032.google.protobuf.Tim" +
-      "estampB4\202\267\0300\n\nupdated_at\022\013TIMESTAMPTZ\030\001:" +
-      "\021CURRENT_TIMESTAMP`\001R\tupdatedAt\022\235\001\n\ndele" +
-      "ted_at\030\r \001(\0132\032.google.protobuf.Timestamp" +
-      "Bb\202\267\030^\n\ndeleted_at\022\013TIMESTAMPTZZCSoft-de" +
-      "lete tombstone. Non-NULL means the row i" +
-      "s logically deleted.R\tdeletedAt\022\230\001\n\ttena" +
-      "nt_id\030\016 \001(\tB{\202\267\030w\n\ttenant_id\022\013VARCHAR(64" +
-      ")\030\001R \n\027idx_policy_rules_tenant\022\005BTREE\312\0018" +
-      "COALESCE(NULLIF(split_part(domain, \':\', " +
-      "2), \'\'), domain)R\010tenantId\022H\n\ndeleted_by" +
-      "\030\017 \001(\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Soft del" +
-      "ete actorR\tdeletedBy\022\213\001\n\nproject_id\030\020 \001(" +
-      "\tBl\202\267\030h\n\nproject_id\022\014VARCHAR(120)R$\n\033idx" +
-      "_policy_rules_project_id\022\005BTREEZ&Optiona" +
-      "l project/application namespaceR\tproject" +
-      "Id\022\256\001\n\rresource_type\030\021 \001(\tB\210\001\202\267\030\203\001\n\rreso" +
-      "urce_type\022\013VARCHAR(80)R\'\n\036idx_policy_rul" +
-      "es_resource_type\022\005BTREEZ<Optional normal" +
-      "ized resource type for indexing and filt" +
-      "eringR\014resourceType\022~\n\017attributes_json\030\022" +
-      " \001(\tBU\202\267\030Q\n\017attributes_json\022\005JSONB\030\001:\013\'{" +
-      "}\'::jsonbZ&Policy metadata and matcher a" +
-      "ttributesx\001R\016attributesJson:\336\004\372\266\030\331\004\n\014pol" +
-      "icy_rules\022\tudb_authz\030\004 \001*1Managed author" +
-      "ization rules mapped to policy rows0\0018\001@" +
-      "\001b^\n\020tenant_isolation\032H(tenant_id::text " +
-      "= current_setting(\'app.current_tenant_id" +
-      "\', true)::text)(\001\212\001i\n&idx_policy_rules_a" +
-      "ctive_subject_domain\022\005BTREE:\'deleted_at " +
-      "IS NULL AND is_active = trueZ\007subjectZ\006d" +
-      "omain\252\001V\n!trg_policy_rules_touch_updated" +
-      "_at\022\006BEFORE\032\006UPDATE\"\034udb_authz.touch_upd" +
-      "ated_at()*\003ROW\302\001\332\001\n\031touch_updated_at_fun" +
-      "ction\022\010postgres\032\017before_triggers\"\241\001CREAT" +
-      "E OR REPLACE FUNCTION udb_authz.touch_up" +
-      "dated_at()\nRETURNS trigger\nLANGUAGE plpg" +
-      "sql\nAS $$\nBEGIN\n  NEW.updated_at = CURRE" +
-      "NT_TIMESTAMP;\n  RETURN NEW;\nEND;\n$$;B\372\001\n" +
-      "\034com.udb.core.authz.entity.v1B\017PolicyRul" +
-      "eProtoP\001ZDgithub.com/fahara02/udb/sdk/go" +
-      "/gen/udb/core/authz/entity/v1;entityv1\242\002" +
-      "\004UCAE\252\002\030udb.core.Authz.Entity.V1\312\002\030Udb\\C" +
-      "ore\\Authz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Co" +
-      "re\\Authz\\Entity\\V1\352\002\034Udb::Core::Authz::E" +
-      "ntity::V1b\006proto3"
+      "1/db.proto\032!udb/core/common/v1/security." +
+      "proto\"\373\026\n\nPolicyRule\022I\n\tpolicy_id\030\001 \001(\tB" +
+      ",\202\267\030(\n\tpolicy_id\022\004UUID\030\001(\001:\021gen_random_u" +
+      "uid()R\010policyId\022\212\001\n\007subject\030\002 \001(\tBp\202\267\030l\n" +
+      "\007subject\022\014VARCHAR(200)\030\001ZQPrincipal sele" +
+      "ctor such as role:<name>, user:<id>, gro" +
+      "up:<id>, service:<id>, or *R\007subject\022\273\001\n" +
+      "\006domain\030\003 \001(\tB\242\001\202\267\030\235\001\n\006domain\022\014VARCHAR(2" +
+      "00)\030\001R/\n\036idx_policy_rules_domain_object\022" +
+      "\005BTREEZ\006objectZRAuthorization domain suc" +
+      "h as tenant:<id>, project:<id>, resource" +
+      ":<type>/<id>, or *R\006domain\022\226\001\n\006object\030\004 " +
+      "\001(\tB~\202\267\030z\n\006object\022\014VARCHAR(200)\030\001Z`Prote" +
+      "cted object or resource pattern such as " +
+      "table:orders, bucket:invoices/*, or serv" +
+      "ice:billingR\006object\022\222\001\n\006action\030\005 \001(\tBz\202\267" +
+      "\030v\n\006action\022\013VARCHAR(80)\030\001Z]Operation suc" +
+      "h as read, write, delete, data.select, o" +
+      "bject.presign, or project-defined action" +
+      "R\006action\022d\n\006effect\030\006 \001(\0162&.udb.core.auth" +
+      "z.entity.v1.PolicyEffectB$\202\267\030 \n\006effect\022\013" +
+      "VARCHAR(20)\030\001:\007\'ALLOW\'R\006effect\022m\n\tcondit" +
+      "ion\030\007 \001(\tBO\202\267\030K\n\tcondition\022\004TEXTZ8Reserv" +
+      "ed for contextual or ABAC-like matcher e" +
+      "xpressionsR\tcondition\0229\n\013description\030\010 \001" +
+      "(\tB\027\202\267\030\023\n\013description\022\004TEXTR\013description" +
+      "\022=\n\tis_active\030\t \001(\010B \202\267\030\034\n\tis_active\022\007BO" +
+      "OLEAN\030\001:\004trueR\010isActive\0225\n\ncreated_by\030\n " +
+      "\001(\tB\026\202\267\030\022\n\ncreated_by\022\004UUIDR\tcreatedBy\022q" +
+      "\n\ncreated_at\030\013 \001(\0132\032.google.protobuf.Tim" +
+      "estampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:" +
+      "\021CURRENT_TIMESTAMP`\001h\001R\tcreatedAt\022o\n\nupd" +
+      "ated_at\030\014 \001(\0132\032.google.protobuf.Timestam" +
+      "pB4\202\267\0300\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021CURR" +
+      "ENT_TIMESTAMP`\001R\tupdatedAt\022\235\001\n\ndeleted_a" +
+      "t\030\r \001(\0132\032.google.protobuf.TimestampBb\202\267\030" +
+      "^\n\ndeleted_at\022\013TIMESTAMPTZZCSoft-delete " +
+      "tombstone. Non-NULL means the row is log" +
+      "ically deleted.R\tdeletedAt\022\230\001\n\ttenant_id" +
+      "\030\016 \001(\tB{\202\267\030w\n\ttenant_id\022\013VARCHAR(64)\030\001R " +
+      "\n\027idx_policy_rules_tenant\022\005BTREE\312\0018COALE" +
+      "SCE(NULLIF(split_part(domain, \':\', 2), \'" +
+      "\'), domain)R\010tenantId\022H\n\ndeleted_by\030\017 \001(" +
+      "\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Soft delete a" +
+      "ctorR\tdeletedBy\022\213\001\n\nproject_id\030\020 \001(\tBl\202\267" +
+      "\030h\n\nproject_id\022\014VARCHAR(120)R$\n\033idx_poli" +
+      "cy_rules_project_id\022\005BTREEZ&Optional pro" +
+      "ject/application namespaceR\tprojectId\022\256\001" +
+      "\n\rresource_type\030\021 \001(\tB\210\001\202\267\030\203\001\n\rresource_" +
+      "type\022\013VARCHAR(80)R\'\n\036idx_policy_rules_re" +
+      "source_type\022\005BTREEZ<Optional normalized " +
+      "resource type for indexing and filtering" +
+      "R\014resourceType\022~\n\017attributes_json\030\022 \001(\tB" +
+      "U\202\267\030Q\n\017attributes_json\022\005JSONB\030\001:\013\'{}\'::j" +
+      "sonbZ&Policy metadata and matcher attrib" +
+      "utesx\001R\016attributesJson:\372\005\372\266\030\331\004\n\014policy_r" +
+      "ules\022\tudb_authz\030\004 \001*1Managed authorizati" +
+      "on rules mapped to policy rows0\0018\001@\001b^\n\020" +
+      "tenant_isolation\032H(tenant_id::text = cur" +
+      "rent_setting(\'app.current_tenant_id\', tr" +
+      "ue)::text)(\001\212\001i\n&idx_policy_rules_active" +
+      "_subject_domain\022\005BTREE:\'deleted_at IS NU" +
+      "LL AND is_active = trueZ\007subjectZ\006domain" +
+      "\252\001V\n!trg_policy_rules_touch_updated_at\022\006" +
+      "BEFORE\032\006UPDATE\"\034udb_authz.touch_updated_" +
+      "at()*\003ROW\302\001\332\001\n\031touch_updated_at_function" +
+      "\022\010postgres\032\017before_triggers\"\241\001CREATE OR " +
+      "REPLACE FUNCTION udb_authz.touch_updated" +
+      "_at()\nRETURNS trigger\nLANGUAGE plpgsql\nA" +
+      "S $$\nBEGIN\n  NEW.updated_at = CURRENT_TI" +
+      "MESTAMP;\n  RETURN NEW;\nEND;\n$$;\212\262\031\227\001\n\006te" +
+      "nant\032\ttenant_id*4tenant_id = current_set" +
+      "ting(\'app.current_tenant_id\')2\013soft_dele" +
+      "te:\021authz.operational@\373\023H\002R\006tenantZ\010stan" +
+      "dardr\025tenant.data_residencyB\372\001\n\034com.udb." +
+      "core.authz.entity.v1B\017PolicyRuleProtoP\001Z" +
+      "Dgithub.com/fahara02/udb/sdk/go/gen/udb/" +
+      "core/authz/entity/v1;entityv1\242\002\004UCAE\252\002\030u" +
+      "db.core.Authz.Entity.V1\312\002\030Udb\\Core\\Authz" +
+      "\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\" +
+      "Entity\\V1\352\002\034Udb::Core::Authz::Entity::V1" +
+      "b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -128,6 +133,7 @@ public final class PolicyRuleProto extends com.google.protobuf.GeneratedFile {
           com.google.protobuf.TimestampProto.getDescriptor(),
           com.udb.core.authz.entity.v1.EnumsProto.getDescriptor(),
           com.udb.core.common.v1.DbProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
         });
     internal_static_udb_core_authz_entity_v1_PolicyRule_descriptor =
       getDescriptor().getMessageType(0);
@@ -139,8 +145,10 @@ public final class PolicyRuleProto extends com.google.protobuf.GeneratedFile {
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.authz.entity.v1.EnumsProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);
     registry.add(com.udb.core.common.v1.DbProto.pgTable);
     com.google.protobuf.Descriptors.FileDescriptor

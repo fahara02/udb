@@ -9,8 +9,8 @@ package udbclient
 //
 //   - configurable per-call deadline / timeout
 //   - retry with exponential backoff + jitter on transient gRPC codes
-//     (UNAVAILABLE, DEADLINE_EXCEEDED, RESOURCE_EXHAUSTED), never retrying
-//     non-idempotent client-streaming / bidi RPCs
+//     (UNAVAILABLE, RESOURCE_EXHAUSTED; plus DEADLINE_EXCEEDED only for
+//     read-only RPCs), never retrying non-idempotent streaming RPCs
 //   - TLS / credential wiring (via the dial options you pass)
 //   - metadata injection (the same 8 UDB headers as Client.Context, plus
 //     authorization / api-key / request-id)
@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"strings"
 	"time"
 
 	"google.golang.org/grpc"
@@ -69,7 +70,8 @@ type RetryConfig struct {
 }
 
 // DefaultRetryConfig returns the proven UDB defaults: 4 attempts, 100ms base,
-// 5s ceiling, full jitter, retrying only safe transient codes.
+// 5s ceiling, full jitter, retrying only transient codes safe for mutations.
+// DEADLINE_EXCEEDED is admitted separately for read-only RPCs.
 func DefaultRetryConfig() RetryConfig {
 	return RetryConfig{
 		MaxAttempts: 4,
@@ -78,7 +80,6 @@ func DefaultRetryConfig() RetryConfig {
 		Jitter:      1.0,
 		RetryOnCodes: []codes.Code{
 			codes.Unavailable,
-			codes.DeadlineExceeded,
 			codes.ResourceExhausted,
 		},
 	}
@@ -91,6 +92,13 @@ func (rc RetryConfig) retryable(code codes.Code) bool {
 		}
 	}
 	return false
+}
+
+func (rc RetryConfig) retryableForRPC(code codes.Code, readOnly bool) bool {
+	if code == codes.DeadlineExceeded {
+		return readOnly
+	}
+	return rc.retryable(code)
 }
 
 func (rc RetryConfig) backoff(attempt int) time.Duration {
@@ -251,6 +259,7 @@ func (g *GeneratedClient) withDeadline(ctx context.Context) (context.Context, co
 // is the engine the typed wrappers below delegate to.
 func (g *GeneratedClient) InvokeUnary(ctx context.Context, fullMethod string, req, reply any, opts ...grpc.CallOption) error {
 	rc := g.opt.Retry
+	readOnly := isReadOnlyUnaryRPC(fullMethod)
 	var lastErr error
 	for attempt := 0; attempt < max(1, rc.MaxAttempts); attempt++ {
 		if attempt > 0 {
@@ -269,7 +278,7 @@ func (g *GeneratedClient) InvokeUnary(ctx context.Context, fullMethod string, re
 			return nil
 		}
 		lastErr = mapError(fullMethod, err, trailer)
-		if !rc.retryable(status.Code(err)) {
+		if !rc.retryableForRPC(status.Code(err), readOnly) {
 			return lastErr
 		}
 	}
@@ -350,8 +359,8 @@ func (s *cancelOnCloseStream) CloseSend() error {
 // grpc.NewClient(target, append(yourSecurityOpts, gc.DialOptions()...)...).
 
 // DialOptions returns the unary + stream interceptors that apply this client's
-// metadata, deadline, retry, and error mapping to ANY call on the dialed
-// connection (including the typed udbclient.Client wrappers).
+// metadata, deadline, retry for read-only unary calls, and error mapping to
+// calls on the dialed connection (including typed udbclient.Client wrappers).
 func (g *GeneratedClient) DialOptions() []grpc.DialOption {
 	return []grpc.DialOption{
 		grpc.WithChainUnaryInterceptor(g.unaryInterceptor()),
@@ -362,6 +371,7 @@ func (g *GeneratedClient) DialOptions() []grpc.DialOption {
 func (g *GeneratedClient) unaryInterceptor() grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		rc := g.opt.Retry
+		readOnly := isReadOnlyUnaryRPC(method)
 		var lastErr error
 		for attempt := 0; attempt < max(1, rc.MaxAttempts); attempt++ {
 			if attempt > 0 {
@@ -380,7 +390,7 @@ func (g *GeneratedClient) unaryInterceptor() grpc.UnaryClientInterceptor {
 				return nil
 			}
 			lastErr = mapError(method, err, trailer)
-			if !rc.retryable(status.Code(err)) {
+			if !readOnly || !rc.retryableForRPC(status.Code(err), readOnly) {
 				return lastErr
 			}
 		}
@@ -434,12 +444,13 @@ type RPCInfo struct {
 	FullMethod string  // e.g. /udb.services.v1.DataBroker/Select
 	Name       string  // e.g. Select
 	Kind       RPCKind // streaming shape
+	ReadOnly   bool    // true when DEADLINE_EXCEEDED/read-only retry is safe
 }
 
 // AllRPCs lists every RPC across every UDB service in this build.
 var AllRPCs = []RPCInfo{
 	// @@UDB_RPC_BEGIN
-	{Service: "{{SERVICE_NAME}}", ServicePkg: "{{SERVICE_PKG}}", FullMethod: "{{RPC_PATH}}", Name: "{{RPC_NAME}}", Kind: RPCKind("{{RPC_KIND}}")},
+	{Service: "{{SERVICE_NAME}}", ServicePkg: "{{SERVICE_PKG}}", FullMethod: "{{RPC_PATH}}", Name: "{{RPC_NAME}}", Kind: RPCKind("{{RPC_KIND}}"), ReadOnly: isReadOnlyRPCName("{{RPC_NAME}}")},
 	// @@UDB_RPC_END
 }
 
@@ -464,6 +475,28 @@ var rpcIndex = func() map[string]RPCInfo {
 func LookupRPC(nameOrPath string) (RPCInfo, bool) {
 	r, ok := rpcIndex[nameOrPath]
 	return r, ok
+}
+
+func isReadOnlyUnaryRPC(method string) bool {
+	r, ok := LookupRPC(method)
+	if !ok {
+		return false
+	}
+	return r.Kind == KindUnary && (r.ReadOnly || isReadOnlyRPCName(r.Name))
+}
+
+func isReadOnlyRPCName(name string) bool {
+	for _, prefix := range []string{
+		"Get", "List", "Check", "Validate", "Introspect", "Authorize",
+		"BatchCheck", "Preview", "Resolve", "Explain", "Diff", "Lint",
+		"Test", "Select", "AnalyticalQuery", "VectorSearch", "GraphQuery",
+		"CacheGet", "CacheScan", "DocumentGet", "DocumentFind",
+	} {
+		if strings.HasPrefix(name, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func init() {

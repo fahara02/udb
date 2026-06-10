@@ -82,7 +82,10 @@ pub(super) fn parse_bool(value: &str) -> bool {
 }
 
 pub(super) fn parse_i32(value: &str) -> i32 {
-    value.parse::<i32>().unwrap_or_default()
+    match value.trim().parse::<i32>() {
+        Ok(value) => value,
+        Err(_) => 0,
+    }
 }
 
 pub(super) fn to_snake_case(value: &str) -> String {

@@ -26,6 +26,10 @@ pub struct QdrantGenerationConfig {
 }
 
 const TENANT_CONTEXT_GUC: &str = "app.current_tenant_id";
+const PROJECT_CONTEXT_GUC: &str = "app.current_project_id";
+pub const TENANT_COLUMN_CANDIDATES: &[&str] =
+    &["tenant_id", "_tenant_id", "org_id", "institution_id"];
+pub const PROJECT_COLUMN_CANDIDATES: &[&str] = &["project_id", "_project_id"];
 
 impl Default for QdrantGenerationConfig {
     fn default() -> Self {
@@ -471,32 +475,92 @@ pub fn render_bootstrap_table(
 /// SQL NULL (no rows) rather than an error, matching the explicit policies the
 /// proto entities already declare.
 fn default_tenant_rls_policy(table: &ManifestTable) -> Option<ManifestPolicy> {
-    let column = table
-        .columns
-        .iter()
-        .find(|c| c.is_tenant_column)
-        .or_else(|| {
-            table.columns.iter().find(|c| {
-                let column = c.column_name.as_str();
-                let field = c.field_name.as_str();
-                ["tenant_id", "_tenant_id", "org_id", "institution_id"]
-                    .iter()
-                    .any(|candidate| {
-                        column.eq_ignore_ascii_case(candidate)
-                            || field.eq_ignore_ascii_case(candidate)
-                    })
-            })
-        })?;
-    let predicate = format!(
-        "({col}::text = current_setting('{TENANT_CONTEXT_GUC}', true)::text)",
-        col = qi(&column.column_name)
-    );
+    let mut predicates = Vec::new();
+    if let Some(column_name) = resolve_tenant_column(table) {
+        predicates.push(format!(
+            "({col}::text = current_setting('{TENANT_CONTEXT_GUC}', true)::text)",
+            col = qi(column_name)
+        ));
+    }
+    if let Some(column_name) = resolve_project_column(table) {
+        predicates.push(format!(
+            "({col}::text = current_setting('{PROJECT_CONTEXT_GUC}', true)::text)",
+            col = qi(column_name)
+        ));
+    }
+    if predicates.is_empty() {
+        return None;
+    }
+    let predicate = predicates.join(" AND ");
     Some(ManifestPolicy {
         name: "tenant_isolation".to_string(),
         command: "ALL".to_string(),
         using_expression: predicate.clone(),
         with_check: predicate,
         permissive: true,
+    })
+}
+
+/// Resolve the tenant-isolation column under the shared policy used by
+/// generation, planning, IR compilers, and runtime helpers.
+pub fn resolve_tenant_column_ref(table: &ManifestTable) -> Option<&ManifestColumn> {
+    declared_security_column_ref(table, &table.table_security.tenant_column)
+        .or_else(|| table.columns.iter().find(|column| column.is_tenant_column))
+        .or_else(|| find_named_column(table, TENANT_COLUMN_CANDIDATES))
+}
+
+pub fn resolve_tenant_column(table: &ManifestTable) -> Option<&str> {
+    resolve_tenant_column_ref(table).map(|column| column.column_name.as_str())
+}
+
+/// Resolve the project-isolation column. Project columns have their own proto
+/// flag and conventional `project_id` / `_project_id` names.
+pub fn resolve_project_column_ref(table: &ManifestTable) -> Option<&ManifestColumn> {
+    declared_security_column_ref(table, &table.table_security.project_column)
+        .or_else(|| table.columns.iter().find(|column| column.is_project_column))
+        .or_else(|| find_named_column(table, PROJECT_COLUMN_CANDIDATES))
+}
+
+pub fn resolve_project_column(table: &ManifestTable) -> Option<&str> {
+    resolve_project_column_ref(table).map(|column| column.column_name.as_str())
+}
+
+pub fn table_requires_tenant_column(table: &ManifestTable) -> bool {
+    table.enable_rls
+        || tenant_isolation_enabled(&table.table_security.tenant_isolation_mode)
+        || !table.table_security.tenant_column.trim().is_empty()
+}
+
+pub fn tenant_isolation_enabled(mode: &str) -> bool {
+    !matches!(
+        mode.trim().to_ascii_lowercase().as_str(),
+        "" | "none" | "global" | "disabled" | "off"
+    )
+}
+
+fn declared_security_column_ref<'a>(
+    table: &'a ManifestTable,
+    name: &str,
+) -> Option<&'a ManifestColumn> {
+    let name = name.trim();
+    if name.is_empty() {
+        return None;
+    }
+    table
+        .columns
+        .iter()
+        .find(|column| column.column_name == name || column.field_name == name)
+}
+
+fn find_named_column<'a>(
+    table: &'a ManifestTable,
+    candidates: &[&str],
+) -> Option<&'a ManifestColumn> {
+    table.columns.iter().find(|column| {
+        candidates.iter().any(|candidate| {
+            column.column_name.eq_ignore_ascii_case(candidate)
+                || column.field_name.eq_ignore_ascii_case(candidate)
+        })
     })
 }
 
@@ -509,6 +573,15 @@ pub(crate) use render_ext::*;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn named_column(field_name: &str, column_name: &str) -> ManifestColumn {
+        ManifestColumn {
+            field_name: field_name.to_string(),
+            column_name: column_name.to_string(),
+            sql_type: "TEXT".to_string(),
+            ..ManifestColumn::default()
+        }
+    }
 
     fn partitioned_table() -> ManifestTable {
         ManifestTable {
@@ -550,6 +623,55 @@ mod tests {
             }],
             ..ManifestTable::default()
         }
+    }
+
+    #[test]
+    fn shared_tenant_resolver_uses_flag_system_name_and_legacy_names() {
+        let flagged = ManifestTable {
+            columns: vec![
+                named_column("tenant_id", "tenant_id"),
+                ManifestColumn {
+                    field_name: "account".to_string(),
+                    column_name: "account_id".to_string(),
+                    is_tenant_column: true,
+                    ..named_column("account", "account_id")
+                },
+            ],
+            ..ManifestTable::default()
+        };
+        assert_eq!(resolve_tenant_column(&flagged), Some("account_id"));
+
+        let system = ManifestTable {
+            columns: vec![named_column("_tenant_id", "_tenant_id")],
+            ..ManifestTable::default()
+        };
+        assert_eq!(resolve_tenant_column(&system), Some("_tenant_id"));
+
+        let legacy = ManifestTable {
+            columns: vec![named_column("org_id", "organization_id")],
+            ..ManifestTable::default()
+        };
+        assert_eq!(resolve_tenant_column(&legacy), Some("organization_id"));
+    }
+
+    #[test]
+    fn shared_project_resolver_uses_flag_and_system_name() {
+        let flagged = ManifestTable {
+            columns: vec![ManifestColumn {
+                field_name: "workspace".to_string(),
+                column_name: "workspace_id".to_string(),
+                is_project_column: true,
+                ..named_column("workspace", "workspace_id")
+            }],
+            ..ManifestTable::default()
+        };
+        assert_eq!(resolve_project_column(&flagged), Some("workspace_id"));
+
+        let system = ManifestTable {
+            columns: vec![named_column("_project_id", "_project_id")],
+            ..ManifestTable::default()
+        };
+        assert_eq!(resolve_project_column(&system), Some("_project_id"));
     }
 
     #[test]

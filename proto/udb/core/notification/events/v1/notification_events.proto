@@ -3,6 +3,7 @@ syntax = "proto3";
 package udb.core.notification.events.v1;
 
 import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/security.proto";
 
 option csharp_namespace = "udb.core.Notification.Events.V1";
 option go_package = "github.com/udb-project/udb/gen/go/udb/core/notification/events/v1;notificationeventsv1";
@@ -19,6 +20,14 @@ option php_namespace = "Udb\\Core\\Notification\\Events\\V1";
 // Emitted when a notification has been dispatched to a delivery channel.
 // Kafka topic: udb.notification.sent.v1
 message NotificationSentEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.notification.events.v1.NotificationSentEvent"
+    outbox_topic: "udb.notification.sent.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string log_id = 2; // NotificationLog.notification_log_id
   string template_id = 3;
@@ -33,6 +42,14 @@ message NotificationSentEvent {
 // Emitted when a notification delivery attempt fails (may be retried).
 // Kafka topic: udb.notification.failed.v1
 message NotificationFailedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.notification.events.v1.NotificationFailedEvent"
+    outbox_topic: "udb.notification.failed.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string log_id = 2;
   string template_id = 3;
@@ -50,6 +67,14 @@ message NotificationFailedEvent {
 // Emitted when a notification is suppressed due to rate limiting or user opt-out.
 // Kafka topic: udb.notification.suppressed.v1
 message NotificationSuppressedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.notification.events.v1.NotificationSuppressedEvent"
+    outbox_topic: "udb.notification.suppressed.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string template_id = 2;
   string event_type = 3;
@@ -64,6 +89,14 @@ message NotificationSuppressedEvent {
 // Emitted when delivery is confirmed (e.g. email open, webhook 2xx).
 // Kafka topic: udb.notification.delivered.v1
 message NotificationDeliveredEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.notification.events.v1.NotificationDeliveredEvent"
+    outbox_topic: "udb.notification.delivered.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string log_id = 2;
   string channel = 3;
@@ -75,6 +108,14 @@ message NotificationDeliveredEvent {
 // Emitted when a notification template is created or updated.
 // Kafka topic: udb.notification.template.changed.v1
 message NotificationTemplateChangedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.notification.events.v1.NotificationTemplateChangedEvent"
+    outbox_topic: "udb.notification.template.changed.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string template_id = 2;
   string event_type = 3;
@@ -90,6 +131,14 @@ message NotificationTemplateChangedEvent {
 // services can fan out completion or failure to connected clients.
 // Kafka topic: udb.notification.resource.ingest.status.v1
 message ResourceIngestStatusEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.notification.events.v1.ResourceIngestStatusEvent"
+    outbox_topic: "udb.notification.resource.ingest.status.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
   string event_id = 1;
   string resource_id = 2;
   string tenant_id = 3;

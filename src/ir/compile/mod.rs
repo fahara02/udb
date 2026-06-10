@@ -149,6 +149,219 @@ pub trait Compiler: Send + Sync {
     }
 }
 
+/// Borrowed neutral operation for runtime dispatch. This keeps the compiler
+/// registry independent of the gRPC/request-layer envelope while still giving
+/// the runtime one call-site for every backend/op pair.
+pub enum CompileOperation<'a> {
+    Read(&'a LogicalRead),
+    Write(&'a LogicalWrite),
+    Delete(&'a LogicalDelete),
+    Search(&'a LogicalSearch),
+    ResourceOp(&'a LogicalResourceOp),
+    Aggregate(&'a LogicalAggregate),
+}
+
+impl<'a> CompileOperation<'a> {
+    pub fn token(&self) -> &'static str {
+        match self {
+            Self::Read(_) => "read",
+            Self::Write(_) => "write",
+            Self::Delete(_) => "delete",
+            Self::Search(_) => "search",
+            Self::ResourceOp(_) => "resource_op",
+            Self::Aggregate(_) => "aggregate",
+        }
+    }
+}
+
+fn compile_with<C: Compiler>(
+    compiler: C,
+    op: CompileOperation<'_>,
+    ctx: &CompileContext<'_>,
+) -> Result<CompiledRendering, CompileError> {
+    match op {
+        CompileOperation::Read(op) => compiler.compile_read(op, ctx),
+        CompileOperation::Write(op) => compiler.compile_write(op, ctx),
+        CompileOperation::Delete(op) => compiler.compile_delete(op, ctx),
+        CompileOperation::Search(op) => compiler.compile_search(op, ctx),
+        CompileOperation::ResourceOp(op) => compiler.compile_resource_op(op, ctx),
+        CompileOperation::Aggregate(op) => compiler.compile_aggregate(op, ctx),
+    }
+}
+
+/// Compile one neutral operation for a backend whose compiler is present in
+/// this build. `None` means the backend has no compiler compiled into the
+/// binary, which is distinct from a compiler rejecting an unsupported op.
+pub fn compile_for_backend(
+    kind: &BackendKind,
+    op: CompileOperation<'_>,
+    ctx: &CompileContext<'_>,
+) -> Option<Result<CompiledRendering, CompileError>> {
+    match kind {
+        BackendKind::Postgres => Some(compile_with(postgres::PostgresCompiler, op, ctx)),
+        BackendKind::Mysql => {
+            #[cfg(any(feature = "mysql", test))]
+            {
+                Some(compile_with(mysql::MysqlCompiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "mysql", test)))]
+            {
+                None
+            }
+        }
+        BackendKind::Sqlite => {
+            #[cfg(any(feature = "sqlite", test))]
+            {
+                Some(compile_with(sqlite::SqliteCompiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "sqlite", test)))]
+            {
+                None
+            }
+        }
+        BackendKind::Mssql => {
+            #[cfg(any(feature = "mssql", test))]
+            {
+                Some(compile_with(mssql::MssqlCompiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "mssql", test)))]
+            {
+                None
+            }
+        }
+        BackendKind::Clickhouse => {
+            #[cfg(any(feature = "clickhouse", test))]
+            {
+                Some(compile_with(clickhouse::ClickHouseCompiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "clickhouse", test)))]
+            {
+                None
+            }
+        }
+        BackendKind::Mongodb => {
+            #[cfg(any(feature = "mongodb", test))]
+            {
+                Some(compile_with(mongodb::MongoDbCompiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "mongodb", test)))]
+            {
+                None
+            }
+        }
+        BackendKind::Neo4j => {
+            #[cfg(any(feature = "neo4j", test))]
+            {
+                Some(compile_with(neo4j::Neo4jCompiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "neo4j", test)))]
+            {
+                None
+            }
+        }
+        BackendKind::Qdrant => {
+            #[cfg(any(feature = "qdrant", test))]
+            {
+                Some(compile_with(qdrant::QdrantCompiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "qdrant", test)))]
+            {
+                None
+            }
+        }
+        BackendKind::Elasticsearch => {
+            #[cfg(any(feature = "elasticsearch", test))]
+            {
+                Some(compile_with(elasticsearch::ElasticsearchCompiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "elasticsearch", test)))]
+            {
+                None
+            }
+        }
+        BackendKind::Memcached => {
+            #[cfg(any(feature = "memcached", test))]
+            {
+                Some(compile_with(memcached::MemcachedCompiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "memcached", test)))]
+            {
+                None
+            }
+        }
+        BackendKind::Weaviate => {
+            #[cfg(any(feature = "weaviate", test))]
+            {
+                Some(compile_with(weaviate::WeaviateCompiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "weaviate", test)))]
+            {
+                None
+            }
+        }
+        BackendKind::Pinecone => {
+            #[cfg(any(feature = "pinecone", test))]
+            {
+                Some(compile_with(pinecone::PineconeCompiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "pinecone", test)))]
+            {
+                None
+            }
+        }
+        BackendKind::Cassandra => {
+            #[cfg(any(feature = "cassandra", test))]
+            {
+                Some(compile_with(cassandra::CassandraCompiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "cassandra", test)))]
+            {
+                None
+            }
+        }
+        BackendKind::AzureBlob => {
+            #[cfg(any(feature = "azureblob", test))]
+            {
+                Some(compile_with(azureblob::AzureBlobCompiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "azureblob", test)))]
+            {
+                None
+            }
+        }
+        BackendKind::Gcs => {
+            #[cfg(any(feature = "gcs", test))]
+            {
+                Some(compile_with(gcs::GcsCompiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "gcs", test)))]
+            {
+                None
+            }
+        }
+        BackendKind::Redis => {
+            #[cfg(any(feature = "redis", test))]
+            {
+                Some(compile_with(redis::RedisCompiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "redis", test)))]
+            {
+                None
+            }
+        }
+        BackendKind::S3 | BackendKind::Minio => {
+            #[cfg(any(feature = "s3", test))]
+            {
+                Some(compile_with(s3::S3Compiler, op, ctx))
+            }
+            #[cfg(not(any(feature = "s3", test)))]
+            {
+                None
+            }
+        }
+    }
+}
+
 /// Inputs every compiler needs but doesn't own.
 ///
 /// `manifest` resolves logical message types to physical

@@ -1,0 +1,559 @@
+syntax = "proto3";
+
+package udb.core.authz.services.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/authz/entity/v1/governance_enums.proto";
+import "udb/core/authz/entity/v1/policy_approval.proto";
+import "udb/core/authz/entity/v1/policy_canary.proto";
+import "udb/core/authz/entity/v1/policy_draft.proto";
+import "udb/core/authz/entity/v1/policy_set.proto";
+import "udb/core/authz/entity/v1/policy_version.proto";
+import "udb/core/authz/services/v1/core.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authz.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/services/v1;authzservicev1";
+option java_package = "com.udb.core.authz.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Services\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Services\\V1";
+
+// The governance actor whose authorization is checked under
+// `native.authz.governance` for every governance mutation. Carries the scopes
+// the broker resolved for the caller so the service can require an explicit
+// `authz:admin` / `authz:policy:write` / `authz:role:write` capability rather
+// than trusting a bare bearer token.
+message GovernanceActor {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  string subject = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+  repeated string scopes = 4;
+  repeated string roles = 5;
+  // Break-glass: when set, a short-TTL emergency bypass with a recorded reason.
+  bool break_glass = 6;
+  string break_glass_reason = 7;
+  int64 break_glass_expires_at_unix = 8;
+}
+
+// A candidate policy document the governance APIs operate on (drafts and
+// simulations). Unifies the full field richness of CreatePolicyRule and
+// PutAuthzPolicy (role, purpose, relationship, priority, required scopes,
+// conditions, tenant, project, domain) so every governed surface is parity.
+message PolicyDocument {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  repeated AuthzPolicyRecord policies = 1;
+  repeated RoleBinding role_bindings = 2;
+  repeated RelationshipTuple relationship_tuples = 3;
+}
+
+message CreatePolicyDraftRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+  string policy_set_name = 4;
+  string title = 5;
+  string change_reason = 6;
+  bool high_risk = 7;
+  // Initial document. Empty + branch_from_active=true clones the active snapshot.
+  PolicyDocument document = 8;
+  bool branch_from_active = 9;
+}
+
+message PolicyDraftResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  udb.core.authz.entity.v1.PolicyDraft draft = 1;
+  udb.core.authz.entity.v1.PolicySet policy_set = 2;
+  // Document parsed back from the stored draft (convenience).
+  PolicyDocument document = 3;
+}
+
+message UpdatePolicyDraftRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string draft_id = 2;
+  PolicyDocument document = 3;
+  string change_reason = 4;
+  // Optimistic concurrency: must equal the draft's current updated_at epoch.
+  int64 expected_updated_at_unix = 5;
+  bool high_risk = 6;
+  string title = 7;
+}
+
+message DiffPolicyDraftRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string draft_id = 2;
+  // When set, diff against this version instead of the active snapshot.
+  string against_version_id = 3;
+}
+
+message PolicyDiffEntry {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  // "added" | "removed" | "changed"
+  string change = 1;
+  // "policy" | "role_binding" | "relationship_tuple"
+  string kind = 2;
+  string id = 3;
+  string before_json = 4;
+  string after_json = 5;
+}
+
+message DiffPolicyDraftResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  repeated PolicyDiffEntry entries = 1;
+  // Machine-readable diff document.
+  string diff_json = 2;
+}
+
+message SubmitPolicyDraftRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string draft_id = 2;
+  int64 expected_updated_at_unix = 3;
+}
+
+message ApprovePolicyDraftRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string draft_id = 2;
+  string reviewer = 3;
+  string reason = 4;
+}
+
+message RejectPolicyDraftRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string draft_id = 2;
+  string reviewer = 3;
+  string reason = 4;
+}
+
+message PolicyApprovalResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  udb.core.authz.entity.v1.PolicyDraft draft = 1;
+  udb.core.authz.entity.v1.PolicyApproval approval = 2;
+  // The promoted version, present once the draft is approved.
+  udb.core.authz.entity.v1.PolicyVersion version = 3;
+}
+
+message ActivatePolicyVersionRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string policy_version_id = 2;
+  int64 expected_revision = 3;
+  // Optimistic concurrency over the live authz revision counters.
+  int64 expected_policy_revision = 4;
+  int64 expected_relationship_revision = 5;
+}
+
+message RollbackPolicyVersionRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string policy_set_id = 2;
+  // Version to restore. Empty = the policy set's rollback_version_id.
+  string target_version_id = 3;
+  string change_reason = 4;
+}
+
+message ActivationResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  udb.core.authz.entity.v1.PolicyVersion version = 1;
+  udb.core.authz.entity.v1.PolicySet policy_set = 2;
+  // The authz revision the activation/rollback produced (for cluster reload).
+  int64 policy_revision = 3;
+  int64 relationship_revision = 4;
+  string content_hash = 5;
+}
+
+// ── Progressive rollout: canary + metric-based auto-rollback ────────────────
+
+// Activate a policy version to a CANARY scope (a subset of the fleet) rather
+// than fleet-wide. The version is served only to in-scope nodes/tenants (or a
+// percentage slice) while a metric-based evaluator watches the success window;
+// it then either promotes fleet-wide, auto-rolls back on breach, or pauses on
+// an inconclusive signal. Additive to the Phase-K activation surface.
+message ActivateCanaryRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string policy_version_id = 2;
+  udb.core.authz.entity.v1.CanaryScopeKind scope_kind = 3;
+  // NODE/TENANT: explicit id list. PERCENT: a single value 1..=100.
+  repeated string scope_values = 4;
+  // Evaluator settings (zero = service defaults).
+  int64 success_window_secs = 5;
+  double metric_threshold = 6;
+  int64 min_samples = 7;
+  // Optimistic concurrency over the candidate version's own revision.
+  int64 expected_revision = 8;
+}
+
+message CanaryResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  udb.core.authz.entity.v1.PolicyCanary canary = 1;
+  udb.core.authz.entity.v1.PolicyVersion version = 2;
+  udb.core.authz.entity.v1.PolicySet policy_set = 3;
+}
+
+// Promote a baked (within-threshold) canary to fleet-wide. Fails unless the
+// canary is promote-eligible (ACTIVE and its success window has elapsed within
+// threshold). On success the canaried version becomes the active version of its
+// policy set fleet-wide and the canary moves to PROMOTED.
+message PromoteCanaryRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string canary_id = 2;
+  int64 expected_revision = 3;
+}
+
+message GetCanaryStatusRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string canary_id = 2;
+}
+
+message GetCanaryStatusResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  udb.core.authz.entity.v1.PolicyCanary canary = 1;
+  // True when the success window has elapsed and the canary is ACTIVE within
+  // threshold — i.e. PromoteCanary would succeed right now.
+  bool promote_eligible = 2;
+  // Seconds remaining in the success window (0 once elapsed).
+  int64 window_remaining_secs = 3;
+}
+
+// ── Simulation / explain ───────────────────────────────────────────────────
+
+message SimulationCase {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  Principal principal = 1;
+  ResourceRef resource = 2;
+  string action = 3;
+  string purpose = 4;
+  map<string, string> attributes = 5;
+  // Optional label echoed in the result for batch correlation.
+  string label = 6;
+}
+
+message SimulatePolicyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+  // Draft to evaluate the candidate decision against (its document is loaded
+  // in-memory). Empty + candidate set = simulate an ad-hoc document.
+  string draft_id = 4;
+  // Candidate authz inputs evaluated in-memory WITHOUT mutating durable state.
+  PolicyDocument candidate = 5;
+  // One or more cases to evaluate (single + batch share one shape).
+  repeated SimulationCase cases = 6;
+  // Persist a PolicySimulation row per case (impact-analysis record).
+  bool persist = 7;
+  // Optional draft version id to stamp on persisted PolicySimulation rows.
+  string policy_version_id = 8;
+}
+
+message SimulationResult {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  string label = 1;
+  Decision active_decision = 2;
+  Decision draft_decision = 3;
+  // True when active and draft decisions differ on `allowed`.
+  bool changed = 4;
+  string diff_json = 5;
+}
+
+message SimulatePolicyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  repeated SimulationResult results = 1;
+  // Aggregate machine-readable diff over all cases.
+  string diff_json = 2;
+}
+
+message ExplainPolicyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+  // Empty = explain against the active snapshot.
+  string draft_id = 4;
+  PolicyDocument candidate = 5;
+  SimulationCase test_case = 6;
+}
+
+message ExplainPolicyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  Decision decision = 1;
+  // Ids of every policy that matched the request (post ABAC pre-filter).
+  repeated string matched_policy_ids = 2;
+  // Human-readable deny reason (empty on allow).
+  string deny_reason = 3;
+  // Per-matched-policy explanation lines.
+  repeated string explanation = 4;
+}
+
+message ListPolicyVersionsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+  string policy_set_id = 4;
+  udb.core.authz.entity.v1.PolicyVersionState state = 5;
+  udb.core.common.v1.PageRequest page = 6;
+}
+
+message ListPolicyVersionsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  repeated udb.core.authz.entity.v1.PolicyVersion versions = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+// ── Cluster invalidation ───────────────────────────────────────────────────
+
+message GetAuthzRevisionRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  string tenant_id = 1;
+  string project_id = 2;
+}
+
+message GetAuthzRevisionResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  int64 policy_revision = 1;
+  int64 relationship_revision = 2;
+  string content_hash = 3;
+  google.protobuf.Timestamp changed_at = 4;
+}
+
+message InvalidatePolicyBundlesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+  string reason = 4;
+}
+
+message InvalidatePolicyBundlesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  bool ok = 1;
+  int64 policy_revision = 2;
+  int64 relationship_revision = 3;
+}
+
+// ── Built-in roles seed / legacy migration ─────────────────────────────────
+
+message SeedBuiltinRolesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+}
+
+message SeedBuiltinRolesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  repeated string seeded_role_codes = 1;
+  int32 created = 2;
+  int32 existing = 3;
+}
+
+message MigrateLegacyPoliciesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  GovernanceActor actor = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+  // When true, write a governed draft; when false, only produce the report.
+  bool apply = 4;
+  string policy_set_name = 5;
+}
+
+message MigrateLegacyPoliciesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+  };
+  // Draft created when apply=true (empty otherwise).
+  udb.core.authz.entity.v1.PolicyDraft draft = 1;
+  // Migration diff report (added/removed/changed).
+  repeated PolicyDiffEntry diff = 2;
+  // Per-sample-case simulation report proving parity.
+  repeated SimulationResult simulation = 3;
+  string report_json = 4;
+}

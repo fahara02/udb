@@ -40,7 +40,7 @@ use super::neo4j::{
 };
 use super::system_store::{
     AdminAuditChainReport, AdminAuditInsert, AdminAuditListFilter, AdminAuditRow, AdminAuditStore,
-    SystemStoreError, SystemStoreResult, compute_admin_audit_hash, verify_admin_audit_chain_step,
+    SystemStoreResult, compute_admin_audit_hash, verify_admin_audit_chain_step,
 };
 
 /// Build an `AdminAuditRow` from a `node{.*}` map projection.

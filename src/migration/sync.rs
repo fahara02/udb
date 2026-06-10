@@ -61,6 +61,7 @@
 //! ```
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
@@ -481,6 +482,8 @@ fn sync_backend_artifacts(
                 let content =
                     fs::read_to_string(&dest).map_err(|e| SyncError::Io(dest.clone(), e))?;
                 let embedded = extract_proto_checksum_header(&content);
+                let body_checksum = artifact_body_checksum(&content);
+                let expected_body_checksum = artifact_body_checksum(&artifact.content);
                 let status = if embedded.is_empty() {
                     warnings.push(format!(
                         "migrations/{}: missing proto_manifest_checksum header — cannot verify",
@@ -488,7 +491,16 @@ fn sync_backend_artifacts(
                     ));
                     FileSyncStatus::NoHeader
                 } else if embedded == proto_checksum {
-                    FileSyncStatus::Verified
+                    if body_checksum == expected_body_checksum {
+                        FileSyncStatus::Verified
+                    } else {
+                        warnings.push(format!(
+                            "migrations/{}: artifact body checksum mismatch — expected {}, found {}",
+                            artifact.rel_path, expected_body_checksum, body_checksum
+                        ));
+                        stale_schemas.insert(artifact.schema.clone());
+                        FileSyncStatus::Stale
+                    }
                 } else {
                     stale_schemas.insert(artifact.schema.clone());
                     FileSyncStatus::Stale
@@ -848,6 +860,11 @@ fn extract_proto_checksum_header(content: &str) -> String {
     String::new()
 }
 
+fn artifact_body_checksum(content: &str) -> String {
+    let digest = Sha256::digest(content.as_bytes());
+    format!("sha256:{digest:x}")
+}
+
 // ── db_ops root discovery ─────────────────────────────────────────────────────
 
 /// Discover the `db_ops` root directory by walking up from the current working
@@ -1071,6 +1088,83 @@ message Widget {
         assert!(
             report2.verified > 0,
             "at least one file verified on second run"
+        );
+
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn sync_db_ops_marks_preserved_header_body_edit_stale() {
+        let tmp = std::env::temp_dir().join(format!(
+            "udb_test_body_stale_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&tmp).unwrap();
+
+        let cfg = DbOpsSyncConfig {
+            db_ops_root: Some(tmp.clone()),
+            force_bootstrap: false,
+            backend: BackendSyncTarget::Postgres,
+            ..Default::default()
+        };
+
+        let schemas = parse_simple();
+        let report1 = sync_db_ops(&schemas, &cfg).expect("first sync");
+
+        let migrations_dir = tmp.join("postgres").join("migrations");
+        let target = scan_artifact_files_recursive(&migrations_dir)
+            .expect("scan migrations")
+            .into_iter()
+            .find(|path| {
+                fs::read_to_string(path)
+                    .map(|content| !extract_proto_checksum_header(&content).is_empty())
+                    .unwrap_or(false)
+            })
+            .expect("migration with checksum header");
+        let rel_path = format!(
+            "migrations/{}",
+            relative_artifact_path(&migrations_dir, &target).expect("relative path")
+        );
+        let original = fs::read_to_string(&target).unwrap();
+        assert_eq!(
+            extract_proto_checksum_header(&original),
+            report1.proto_checksum,
+            "test setup must preserve the current header checksum"
+        );
+        fs::write(
+            &target,
+            format!("{original}\n-- hand-edited body with preserved header\n"),
+        )
+        .unwrap();
+
+        let review_cfg = DbOpsSyncConfig {
+            db_ops_root: Some(tmp.clone()),
+            force_bootstrap: true,
+            backend: BackendSyncTarget::Postgres,
+            ..Default::default()
+        };
+
+        let report2 = sync_db_ops(&schemas, &review_cfg).expect("second sync");
+        let record = report2
+            .files
+            .iter()
+            .find(|record| record.rel_path == rel_path)
+            .expect("edited migration record");
+        assert_eq!(record.status, FileSyncStatus::Stale);
+        assert_eq!(
+            record.file_checksum, report2.proto_checksum,
+            "the preserved header still matches the current proto checksum"
+        );
+        assert!(!report2.clean, "body edit must make review-mode sync dirty");
+        assert!(
+            report2
+                .warnings
+                .iter()
+                .any(|warning| warning.contains("artifact body checksum mismatch")),
+            "body checksum mismatch should be reported"
         );
 
         let _ = fs::remove_dir_all(&tmp);

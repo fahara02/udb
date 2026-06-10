@@ -77,6 +77,320 @@ func (AuthMode) EnumDescriptor() ([]byte, []int) {
 	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{0}
 }
 
+type CredentialType int32
+
+const (
+	CredentialType_CREDENTIAL_TYPE_UNSPECIFIED     CredentialType = 0
+	CredentialType_CREDENTIAL_TYPE_BEARER_JWT      CredentialType = 1
+	CredentialType_CREDENTIAL_TYPE_SESSION         CredentialType = 2
+	CredentialType_CREDENTIAL_TYPE_API_KEY         CredentialType = 3
+	CredentialType_CREDENTIAL_TYPE_SERVICE_ACCOUNT CredentialType = 4
+	CredentialType_CREDENTIAL_TYPE_MTLS            CredentialType = 5
+	CredentialType_CREDENTIAL_TYPE_OIDC            CredentialType = 6
+	CredentialType_CREDENTIAL_TYPE_SAML            CredentialType = 7
+	CredentialType_CREDENTIAL_TYPE_WEBAUTHN        CredentialType = 8
+	CredentialType_CREDENTIAL_TYPE_EXTERNAL_JWT    CredentialType = 9
+)
+
+// Enum value maps for CredentialType.
+var (
+	CredentialType_name = map[int32]string{
+		0: "CREDENTIAL_TYPE_UNSPECIFIED",
+		1: "CREDENTIAL_TYPE_BEARER_JWT",
+		2: "CREDENTIAL_TYPE_SESSION",
+		3: "CREDENTIAL_TYPE_API_KEY",
+		4: "CREDENTIAL_TYPE_SERVICE_ACCOUNT",
+		5: "CREDENTIAL_TYPE_MTLS",
+		6: "CREDENTIAL_TYPE_OIDC",
+		7: "CREDENTIAL_TYPE_SAML",
+		8: "CREDENTIAL_TYPE_WEBAUTHN",
+		9: "CREDENTIAL_TYPE_EXTERNAL_JWT",
+	}
+	CredentialType_value = map[string]int32{
+		"CREDENTIAL_TYPE_UNSPECIFIED":     0,
+		"CREDENTIAL_TYPE_BEARER_JWT":      1,
+		"CREDENTIAL_TYPE_SESSION":         2,
+		"CREDENTIAL_TYPE_API_KEY":         3,
+		"CREDENTIAL_TYPE_SERVICE_ACCOUNT": 4,
+		"CREDENTIAL_TYPE_MTLS":            5,
+		"CREDENTIAL_TYPE_OIDC":            6,
+		"CREDENTIAL_TYPE_SAML":            7,
+		"CREDENTIAL_TYPE_WEBAUTHN":        8,
+		"CREDENTIAL_TYPE_EXTERNAL_JWT":    9,
+	}
+)
+
+func (x CredentialType) Enum() *CredentialType {
+	p := new(CredentialType)
+	*p = x
+	return p
+}
+
+func (x CredentialType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CredentialType) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_common_v1_security_proto_enumTypes[1].Descriptor()
+}
+
+func (CredentialType) Type() protoreflect.EnumType {
+	return &file_udb_core_common_v1_security_proto_enumTypes[1]
+}
+
+func (x CredentialType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CredentialType.Descriptor instead.
+func (CredentialType) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{1}
+}
+
+type AuditMode int32
+
+const (
+	AuditMode_AUDIT_MODE_UNSPECIFIED AuditMode = 0
+	AuditMode_AUDIT_MODE_NONE        AuditMode = 1
+	AuditMode_AUDIT_MODE_MUTATION    AuditMode = 2
+	AuditMode_AUDIT_MODE_DECISION    AuditMode = 3
+	AuditMode_AUDIT_MODE_FULL        AuditMode = 4
+)
+
+// Enum value maps for AuditMode.
+var (
+	AuditMode_name = map[int32]string{
+		0: "AUDIT_MODE_UNSPECIFIED",
+		1: "AUDIT_MODE_NONE",
+		2: "AUDIT_MODE_MUTATION",
+		3: "AUDIT_MODE_DECISION",
+		4: "AUDIT_MODE_FULL",
+	}
+	AuditMode_value = map[string]int32{
+		"AUDIT_MODE_UNSPECIFIED": 0,
+		"AUDIT_MODE_NONE":        1,
+		"AUDIT_MODE_MUTATION":    2,
+		"AUDIT_MODE_DECISION":    3,
+		"AUDIT_MODE_FULL":        4,
+	}
+)
+
+func (x AuditMode) Enum() *AuditMode {
+	p := new(AuditMode)
+	*p = x
+	return p
+}
+
+func (x AuditMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AuditMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_common_v1_security_proto_enumTypes[2].Descriptor()
+}
+
+func (AuditMode) Type() protoreflect.EnumType {
+	return &file_udb_core_common_v1_security_proto_enumTypes[2]
+}
+
+func (x AuditMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AuditMode.Descriptor instead.
+func (AuditMode) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{2}
+}
+
+type SecretClassification int32
+
+const (
+	SecretClassification_SECRET_CLASSIFICATION_UNSPECIFIED SecretClassification = 0
+	SecretClassification_SECRET_CLASSIFICATION_PUBLIC      SecretClassification = 1
+	SecretClassification_SECRET_CLASSIFICATION_INTERNAL    SecretClassification = 2
+	SecretClassification_SECRET_CLASSIFICATION_CREDENTIAL  SecretClassification = 3
+	SecretClassification_SECRET_CLASSIFICATION_TOKEN       SecretClassification = 4
+	SecretClassification_SECRET_CLASSIFICATION_KEY         SecretClassification = 5
+	SecretClassification_SECRET_CLASSIFICATION_BIOMETRIC   SecretClassification = 6
+	SecretClassification_SECRET_CLASSIFICATION_IDENTITY    SecretClassification = 7
+	SecretClassification_SECRET_CLASSIFICATION_PII         SecretClassification = 8
+	SecretClassification_SECRET_CLASSIFICATION_OPERATIONAL SecretClassification = 9
+)
+
+// Enum value maps for SecretClassification.
+var (
+	SecretClassification_name = map[int32]string{
+		0: "SECRET_CLASSIFICATION_UNSPECIFIED",
+		1: "SECRET_CLASSIFICATION_PUBLIC",
+		2: "SECRET_CLASSIFICATION_INTERNAL",
+		3: "SECRET_CLASSIFICATION_CREDENTIAL",
+		4: "SECRET_CLASSIFICATION_TOKEN",
+		5: "SECRET_CLASSIFICATION_KEY",
+		6: "SECRET_CLASSIFICATION_BIOMETRIC",
+		7: "SECRET_CLASSIFICATION_IDENTITY",
+		8: "SECRET_CLASSIFICATION_PII",
+		9: "SECRET_CLASSIFICATION_OPERATIONAL",
+	}
+	SecretClassification_value = map[string]int32{
+		"SECRET_CLASSIFICATION_UNSPECIFIED": 0,
+		"SECRET_CLASSIFICATION_PUBLIC":      1,
+		"SECRET_CLASSIFICATION_INTERNAL":    2,
+		"SECRET_CLASSIFICATION_CREDENTIAL":  3,
+		"SECRET_CLASSIFICATION_TOKEN":       4,
+		"SECRET_CLASSIFICATION_KEY":         5,
+		"SECRET_CLASSIFICATION_BIOMETRIC":   6,
+		"SECRET_CLASSIFICATION_IDENTITY":    7,
+		"SECRET_CLASSIFICATION_PII":         8,
+		"SECRET_CLASSIFICATION_OPERATIONAL": 9,
+	}
+)
+
+func (x SecretClassification) Enum() *SecretClassification {
+	p := new(SecretClassification)
+	*p = x
+	return p
+}
+
+func (x SecretClassification) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SecretClassification) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_common_v1_security_proto_enumTypes[3].Descriptor()
+}
+
+func (SecretClassification) Type() protoreflect.EnumType {
+	return &file_udb_core_common_v1_security_proto_enumTypes[3]
+}
+
+func (x SecretClassification) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SecretClassification.Descriptor instead.
+func (SecretClassification) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{3}
+}
+
+type OutputView int32
+
+const (
+	OutputView_OUTPUT_VIEW_UNSPECIFIED  OutputView = 0
+	OutputView_OUTPUT_VIEW_STORAGE_ONLY OutputView = 1
+	OutputView_OUTPUT_VIEW_PUBLIC       OutputView = 2
+	OutputView_OUTPUT_VIEW_SELF         OutputView = 3
+	OutputView_OUTPUT_VIEW_ADMIN        OutputView = 4
+	OutputView_OUTPUT_VIEW_AUDIT        OutputView = 5
+	OutputView_OUTPUT_VIEW_NEVER        OutputView = 6
+)
+
+// Enum value maps for OutputView.
+var (
+	OutputView_name = map[int32]string{
+		0: "OUTPUT_VIEW_UNSPECIFIED",
+		1: "OUTPUT_VIEW_STORAGE_ONLY",
+		2: "OUTPUT_VIEW_PUBLIC",
+		3: "OUTPUT_VIEW_SELF",
+		4: "OUTPUT_VIEW_ADMIN",
+		5: "OUTPUT_VIEW_AUDIT",
+		6: "OUTPUT_VIEW_NEVER",
+	}
+	OutputView_value = map[string]int32{
+		"OUTPUT_VIEW_UNSPECIFIED":  0,
+		"OUTPUT_VIEW_STORAGE_ONLY": 1,
+		"OUTPUT_VIEW_PUBLIC":       2,
+		"OUTPUT_VIEW_SELF":         3,
+		"OUTPUT_VIEW_ADMIN":        4,
+		"OUTPUT_VIEW_AUDIT":        5,
+		"OUTPUT_VIEW_NEVER":        6,
+	}
+)
+
+func (x OutputView) Enum() *OutputView {
+	p := new(OutputView)
+	*p = x
+	return p
+}
+
+func (x OutputView) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (OutputView) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_common_v1_security_proto_enumTypes[4].Descriptor()
+}
+
+func (OutputView) Type() protoreflect.EnumType {
+	return &file_udb_core_common_v1_security_proto_enumTypes[4]
+}
+
+func (x OutputView) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use OutputView.Descriptor instead.
+func (OutputView) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{4}
+}
+
+type RedactionStrategy int32
+
+const (
+	RedactionStrategy_REDACTION_STRATEGY_UNSPECIFIED RedactionStrategy = 0
+	RedactionStrategy_REDACTION_STRATEGY_NONE        RedactionStrategy = 1
+	RedactionStrategy_REDACTION_STRATEGY_MASK        RedactionStrategy = 2
+	RedactionStrategy_REDACTION_STRATEGY_REDACT      RedactionStrategy = 3
+	RedactionStrategy_REDACTION_STRATEGY_HASH_ONLY   RedactionStrategy = 4
+	RedactionStrategy_REDACTION_STRATEGY_LAST4       RedactionStrategy = 5
+)
+
+// Enum value maps for RedactionStrategy.
+var (
+	RedactionStrategy_name = map[int32]string{
+		0: "REDACTION_STRATEGY_UNSPECIFIED",
+		1: "REDACTION_STRATEGY_NONE",
+		2: "REDACTION_STRATEGY_MASK",
+		3: "REDACTION_STRATEGY_REDACT",
+		4: "REDACTION_STRATEGY_HASH_ONLY",
+		5: "REDACTION_STRATEGY_LAST4",
+	}
+	RedactionStrategy_value = map[string]int32{
+		"REDACTION_STRATEGY_UNSPECIFIED": 0,
+		"REDACTION_STRATEGY_NONE":        1,
+		"REDACTION_STRATEGY_MASK":        2,
+		"REDACTION_STRATEGY_REDACT":      3,
+		"REDACTION_STRATEGY_HASH_ONLY":   4,
+		"REDACTION_STRATEGY_LAST4":       5,
+	}
+)
+
+func (x RedactionStrategy) Enum() *RedactionStrategy {
+	p := new(RedactionStrategy)
+	*p = x
+	return p
+}
+
+func (x RedactionStrategy) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RedactionStrategy) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_common_v1_security_proto_enumTypes[5].Descriptor()
+}
+
+func (RedactionStrategy) Type() protoreflect.EnumType {
+	return &file_udb_core_common_v1_security_proto_enumTypes[5]
+}
+
+func (x RedactionStrategy) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RedactionStrategy.Descriptor instead.
+func (RedactionStrategy) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{5}
+}
+
 type SecurityClassification int32
 
 const (
@@ -116,11 +430,11 @@ func (x SecurityClassification) String() string {
 }
 
 func (SecurityClassification) Descriptor() protoreflect.EnumDescriptor {
-	return file_udb_core_common_v1_security_proto_enumTypes[1].Descriptor()
+	return file_udb_core_common_v1_security_proto_enumTypes[6].Descriptor()
 }
 
 func (SecurityClassification) Type() protoreflect.EnumType {
-	return &file_udb_core_common_v1_security_proto_enumTypes[1]
+	return &file_udb_core_common_v1_security_proto_enumTypes[6]
 }
 
 func (x SecurityClassification) Number() protoreflect.EnumNumber {
@@ -129,7 +443,7 @@ func (x SecurityClassification) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SecurityClassification.Descriptor instead.
 func (SecurityClassification) EnumDescriptor() ([]byte, []int) {
-	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{1}
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{6}
 }
 
 type DataCategory int32
@@ -177,11 +491,11 @@ func (x DataCategory) String() string {
 }
 
 func (DataCategory) Descriptor() protoreflect.EnumDescriptor {
-	return file_udb_core_common_v1_security_proto_enumTypes[2].Descriptor()
+	return file_udb_core_common_v1_security_proto_enumTypes[7].Descriptor()
 }
 
 func (DataCategory) Type() protoreflect.EnumType {
-	return &file_udb_core_common_v1_security_proto_enumTypes[2]
+	return &file_udb_core_common_v1_security_proto_enumTypes[7]
 }
 
 func (x DataCategory) Number() protoreflect.EnumNumber {
@@ -190,20 +504,31 @@ func (x DataCategory) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use DataCategory.Descriptor instead.
 func (DataCategory) EnumDescriptor() ([]byte, []int) {
-	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{2}
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{7}
 }
 
 type EndpointSecurity struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Mode             AuthMode               `protobuf:"varint,1,opt,name=mode,proto3,enum=udb.core.common.v1.AuthMode" json:"mode,omitempty"`
-	Roles            []string               `protobuf:"bytes,2,rep,name=roles,proto3" json:"roles,omitempty"`
-	Scopes           []string               `protobuf:"bytes,3,rep,name=scopes,proto3" json:"scopes,omitempty"`
-	TenantRequired   bool                   `protobuf:"varint,4,opt,name=tenant_required,json=tenantRequired,proto3" json:"tenant_required,omitempty"`
-	CsrfRequired     bool                   `protobuf:"varint,5,opt,name=csrf_required,json=csrfRequired,proto3" json:"csrf_required,omitempty"`
-	PolicyRef        string                 `protobuf:"bytes,6,opt,name=policy_ref,json=policyRef,proto3" json:"policy_ref,omitempty"`
-	InternalGrpcOnly bool                   `protobuf:"varint,7,opt,name=internal_grpc_only,json=internalGrpcOnly,proto3" json:"internal_grpc_only,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Mode                   AuthMode               `protobuf:"varint,1,opt,name=mode,proto3,enum=udb.core.common.v1.AuthMode" json:"mode,omitempty"`
+	Roles                  []string               `protobuf:"bytes,2,rep,name=roles,proto3" json:"roles,omitempty"`
+	Scopes                 []string               `protobuf:"bytes,3,rep,name=scopes,proto3" json:"scopes,omitempty"`
+	TenantRequired         bool                   `protobuf:"varint,4,opt,name=tenant_required,json=tenantRequired,proto3" json:"tenant_required,omitempty"`
+	CsrfRequired           bool                   `protobuf:"varint,5,opt,name=csrf_required,json=csrfRequired,proto3" json:"csrf_required,omitempty"`
+	PolicyRef              string                 `protobuf:"bytes,6,opt,name=policy_ref,json=policyRef,proto3" json:"policy_ref,omitempty"`
+	InternalGrpcOnly       bool                   `protobuf:"varint,7,opt,name=internal_grpc_only,json=internalGrpcOnly,proto3" json:"internal_grpc_only,omitempty"`
+	RequiredAssuranceLevel int32                  `protobuf:"varint,8,opt,name=required_assurance_level,json=requiredAssuranceLevel,proto3" json:"required_assurance_level,omitempty"`
+	AllowedCredentialTypes []CredentialType       `protobuf:"varint,9,rep,packed,name=allowed_credential_types,json=allowedCredentialTypes,proto3,enum=udb.core.common.v1.CredentialType" json:"allowed_credential_types,omitempty"`
+	RateLimitPolicyRef     string                 `protobuf:"bytes,10,opt,name=rate_limit_policy_ref,json=rateLimitPolicyRef,proto3" json:"rate_limit_policy_ref,omitempty"`
+	AbusePolicyRef         string                 `protobuf:"bytes,11,opt,name=abuse_policy_ref,json=abusePolicyRef,proto3" json:"abuse_policy_ref,omitempty"`
+	AuditEventType         string                 `protobuf:"bytes,12,opt,name=audit_event_type,json=auditEventType,proto3" json:"audit_event_type,omitempty"`
+	DecisionResource       string                 `protobuf:"bytes,13,opt,name=decision_resource,json=decisionResource,proto3" json:"decision_resource,omitempty"`
+	OwnerField             string                 `protobuf:"bytes,14,opt,name=owner_field,json=ownerField,proto3" json:"owner_field,omitempty"`
+	TenantField            string                 `protobuf:"bytes,15,opt,name=tenant_field,json=tenantField,proto3" json:"tenant_field,omitempty"`
+	ProjectField           string                 `protobuf:"bytes,16,opt,name=project_field,json=projectField,proto3" json:"project_field,omitempty"`
+	IdempotencyRequired    bool                   `protobuf:"varint,17,opt,name=idempotency_required,json=idempotencyRequired,proto3" json:"idempotency_required,omitempty"`
+	RequestContextRequired bool                   `protobuf:"varint,18,opt,name=request_context_required,json=requestContextRequired,proto3" json:"request_context_required,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *EndpointSecurity) Reset() {
@@ -285,6 +610,83 @@ func (x *EndpointSecurity) GetInternalGrpcOnly() bool {
 	return false
 }
 
+func (x *EndpointSecurity) GetRequiredAssuranceLevel() int32 {
+	if x != nil {
+		return x.RequiredAssuranceLevel
+	}
+	return 0
+}
+
+func (x *EndpointSecurity) GetAllowedCredentialTypes() []CredentialType {
+	if x != nil {
+		return x.AllowedCredentialTypes
+	}
+	return nil
+}
+
+func (x *EndpointSecurity) GetRateLimitPolicyRef() string {
+	if x != nil {
+		return x.RateLimitPolicyRef
+	}
+	return ""
+}
+
+func (x *EndpointSecurity) GetAbusePolicyRef() string {
+	if x != nil {
+		return x.AbusePolicyRef
+	}
+	return ""
+}
+
+func (x *EndpointSecurity) GetAuditEventType() string {
+	if x != nil {
+		return x.AuditEventType
+	}
+	return ""
+}
+
+func (x *EndpointSecurity) GetDecisionResource() string {
+	if x != nil {
+		return x.DecisionResource
+	}
+	return ""
+}
+
+func (x *EndpointSecurity) GetOwnerField() string {
+	if x != nil {
+		return x.OwnerField
+	}
+	return ""
+}
+
+func (x *EndpointSecurity) GetTenantField() string {
+	if x != nil {
+		return x.TenantField
+	}
+	return ""
+}
+
+func (x *EndpointSecurity) GetProjectField() string {
+	if x != nil {
+		return x.ProjectField
+	}
+	return ""
+}
+
+func (x *EndpointSecurity) GetIdempotencyRequired() bool {
+	if x != nil {
+		return x.IdempotencyRequired
+	}
+	return false
+}
+
+func (x *EndpointSecurity) GetRequestContextRequired() bool {
+	if x != nil {
+		return x.RequestContextRequired
+	}
+	return false
+}
+
 type RestContract struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	ResponseEnvelope bool                   `protobuf:"varint,1,opt,name=response_envelope,json=responseEnvelope,proto3" json:"response_envelope,omitempty"`
@@ -351,6 +753,882 @@ func (x *RestContract) GetExplicitNulls() bool {
 		return x.ExplicitNulls
 	}
 	return false
+}
+
+type NativeServiceOptions struct {
+	state                       protoimpl.MessageState `protogen:"open.v1"`
+	ServiceId                   string                 `protobuf:"bytes,1,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty"`
+	LogicalServiceId            string                 `protobuf:"bytes,2,opt,name=logical_service_id,json=logicalServiceId,proto3" json:"logical_service_id,omitempty"`
+	ProtoServiceId              string                 `protobuf:"bytes,3,opt,name=proto_service_id,json=protoServiceId,proto3" json:"proto_service_id,omitempty"`
+	DisplayName                 string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Category                    string                 `protobuf:"bytes,5,opt,name=category,proto3" json:"category,omitempty"`
+	DefaultEnabled              bool                   `protobuf:"varint,6,opt,name=default_enabled,json=defaultEnabled,proto3" json:"default_enabled,omitempty"`
+	RequiresPostgres            bool                   `protobuf:"varint,7,opt,name=requires_postgres,json=requiresPostgres,proto3" json:"requires_postgres,omitempty"`
+	RequiresRedis               bool                   `protobuf:"varint,8,opt,name=requires_redis,json=requiresRedis,proto3" json:"requires_redis,omitempty"`
+	RequiresObjectStore         bool                   `protobuf:"varint,9,opt,name=requires_object_store,json=requiresObjectStore,proto3" json:"requires_object_store,omitempty"`
+	RequiresKafka               bool                   `protobuf:"varint,10,opt,name=requires_kafka,json=requiresKafka,proto3" json:"requires_kafka,omitempty"`
+	RequiresFeature             string                 `protobuf:"bytes,11,opt,name=requires_feature,json=requiresFeature,proto3" json:"requires_feature,omitempty"`
+	PublicListenerAllowed       bool                   `protobuf:"varint,12,opt,name=public_listener_allowed,json=publicListenerAllowed,proto3" json:"public_listener_allowed,omitempty"`
+	ControlPlaneListenerAllowed bool                   `protobuf:"varint,13,opt,name=control_plane_listener_allowed,json=controlPlaneListenerAllowed,proto3" json:"control_plane_listener_allowed,omitempty"`
+	PeerListenerAllowed         bool                   `protobuf:"varint,14,opt,name=peer_listener_allowed,json=peerListenerAllowed,proto3" json:"peer_listener_allowed,omitempty"`
+	SdkFacadeName               string                 `protobuf:"bytes,15,opt,name=sdk_facade_name,json=sdkFacadeName,proto3" json:"sdk_facade_name,omitempty"`
+	CliScaffoldGroup            string                 `protobuf:"bytes,16,opt,name=cli_scaffold_group,json=cliScaffoldGroup,proto3" json:"cli_scaffold_group,omitempty"`
+	HealthCheckRef              string                 `protobuf:"bytes,17,opt,name=health_check_ref,json=healthCheckRef,proto3" json:"health_check_ref,omitempty"`
+	CapabilityRef               string                 `protobuf:"bytes,18,opt,name=capability_ref,json=capabilityRef,proto3" json:"capability_ref,omitempty"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
+}
+
+func (x *NativeServiceOptions) Reset() {
+	*x = NativeServiceOptions{}
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NativeServiceOptions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NativeServiceOptions) ProtoMessage() {}
+
+func (x *NativeServiceOptions) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NativeServiceOptions.ProtoReflect.Descriptor instead.
+func (*NativeServiceOptions) Descriptor() ([]byte, []int) {
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *NativeServiceOptions) GetServiceId() string {
+	if x != nil {
+		return x.ServiceId
+	}
+	return ""
+}
+
+func (x *NativeServiceOptions) GetLogicalServiceId() string {
+	if x != nil {
+		return x.LogicalServiceId
+	}
+	return ""
+}
+
+func (x *NativeServiceOptions) GetProtoServiceId() string {
+	if x != nil {
+		return x.ProtoServiceId
+	}
+	return ""
+}
+
+func (x *NativeServiceOptions) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *NativeServiceOptions) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *NativeServiceOptions) GetDefaultEnabled() bool {
+	if x != nil {
+		return x.DefaultEnabled
+	}
+	return false
+}
+
+func (x *NativeServiceOptions) GetRequiresPostgres() bool {
+	if x != nil {
+		return x.RequiresPostgres
+	}
+	return false
+}
+
+func (x *NativeServiceOptions) GetRequiresRedis() bool {
+	if x != nil {
+		return x.RequiresRedis
+	}
+	return false
+}
+
+func (x *NativeServiceOptions) GetRequiresObjectStore() bool {
+	if x != nil {
+		return x.RequiresObjectStore
+	}
+	return false
+}
+
+func (x *NativeServiceOptions) GetRequiresKafka() bool {
+	if x != nil {
+		return x.RequiresKafka
+	}
+	return false
+}
+
+func (x *NativeServiceOptions) GetRequiresFeature() string {
+	if x != nil {
+		return x.RequiresFeature
+	}
+	return ""
+}
+
+func (x *NativeServiceOptions) GetPublicListenerAllowed() bool {
+	if x != nil {
+		return x.PublicListenerAllowed
+	}
+	return false
+}
+
+func (x *NativeServiceOptions) GetControlPlaneListenerAllowed() bool {
+	if x != nil {
+		return x.ControlPlaneListenerAllowed
+	}
+	return false
+}
+
+func (x *NativeServiceOptions) GetPeerListenerAllowed() bool {
+	if x != nil {
+		return x.PeerListenerAllowed
+	}
+	return false
+}
+
+func (x *NativeServiceOptions) GetSdkFacadeName() string {
+	if x != nil {
+		return x.SdkFacadeName
+	}
+	return ""
+}
+
+func (x *NativeServiceOptions) GetCliScaffoldGroup() string {
+	if x != nil {
+		return x.CliScaffoldGroup
+	}
+	return ""
+}
+
+func (x *NativeServiceOptions) GetHealthCheckRef() string {
+	if x != nil {
+		return x.HealthCheckRef
+	}
+	return ""
+}
+
+func (x *NativeServiceOptions) GetCapabilityRef() string {
+	if x != nil {
+		return x.CapabilityRef
+	}
+	return ""
+}
+
+type DbTableSecurityOptions struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	TenantIsolationMode    string                 `protobuf:"bytes,1,opt,name=tenant_isolation_mode,json=tenantIsolationMode,proto3" json:"tenant_isolation_mode,omitempty"`
+	ProjectIsolationMode   string                 `protobuf:"bytes,2,opt,name=project_isolation_mode,json=projectIsolationMode,proto3" json:"project_isolation_mode,omitempty"`
+	TenantColumn           string                 `protobuf:"bytes,3,opt,name=tenant_column,json=tenantColumn,proto3" json:"tenant_column,omitempty"`
+	ProjectColumn          string                 `protobuf:"bytes,4,opt,name=project_column,json=projectColumn,proto3" json:"project_column,omitempty"`
+	RlsPolicyTemplate      string                 `protobuf:"bytes,5,opt,name=rls_policy_template,json=rlsPolicyTemplate,proto3" json:"rls_policy_template,omitempty"`
+	SoftDeleteMode         string                 `protobuf:"bytes,6,opt,name=soft_delete_mode,json=softDeleteMode,proto3" json:"soft_delete_mode,omitempty"`
+	RetentionClass         string                 `protobuf:"bytes,7,opt,name=retention_class,json=retentionClass,proto3" json:"retention_class,omitempty"`
+	RetentionDays          int32                  `protobuf:"varint,8,opt,name=retention_days,json=retentionDays,proto3" json:"retention_days,omitempty"`
+	AuditMode              AuditMode              `protobuf:"varint,9,opt,name=audit_mode,json=auditMode,proto3,enum=udb.core.common.v1.AuditMode" json:"audit_mode,omitempty"`
+	EncryptionProfile      string                 `protobuf:"bytes,10,opt,name=encryption_profile,json=encryptionProfile,proto3" json:"encryption_profile,omitempty"`
+	PiiProfile             string                 `protobuf:"bytes,11,opt,name=pii_profile,json=piiProfile,proto3" json:"pii_profile,omitempty"`
+	BreakGlassVisible      bool                   `protobuf:"varint,12,opt,name=break_glass_visible,json=breakGlassVisible,proto3" json:"break_glass_visible,omitempty"`
+	ExportEligible         bool                   `protobuf:"varint,13,opt,name=export_eligible,json=exportEligible,proto3" json:"export_eligible,omitempty"`
+	DataResidencyPolicyRef string                 `protobuf:"bytes,14,opt,name=data_residency_policy_ref,json=dataResidencyPolicyRef,proto3" json:"data_residency_policy_ref,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *DbTableSecurityOptions) Reset() {
+	*x = DbTableSecurityOptions{}
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DbTableSecurityOptions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DbTableSecurityOptions) ProtoMessage() {}
+
+func (x *DbTableSecurityOptions) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DbTableSecurityOptions.ProtoReflect.Descriptor instead.
+func (*DbTableSecurityOptions) Descriptor() ([]byte, []int) {
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *DbTableSecurityOptions) GetTenantIsolationMode() string {
+	if x != nil {
+		return x.TenantIsolationMode
+	}
+	return ""
+}
+
+func (x *DbTableSecurityOptions) GetProjectIsolationMode() string {
+	if x != nil {
+		return x.ProjectIsolationMode
+	}
+	return ""
+}
+
+func (x *DbTableSecurityOptions) GetTenantColumn() string {
+	if x != nil {
+		return x.TenantColumn
+	}
+	return ""
+}
+
+func (x *DbTableSecurityOptions) GetProjectColumn() string {
+	if x != nil {
+		return x.ProjectColumn
+	}
+	return ""
+}
+
+func (x *DbTableSecurityOptions) GetRlsPolicyTemplate() string {
+	if x != nil {
+		return x.RlsPolicyTemplate
+	}
+	return ""
+}
+
+func (x *DbTableSecurityOptions) GetSoftDeleteMode() string {
+	if x != nil {
+		return x.SoftDeleteMode
+	}
+	return ""
+}
+
+func (x *DbTableSecurityOptions) GetRetentionClass() string {
+	if x != nil {
+		return x.RetentionClass
+	}
+	return ""
+}
+
+func (x *DbTableSecurityOptions) GetRetentionDays() int32 {
+	if x != nil {
+		return x.RetentionDays
+	}
+	return 0
+}
+
+func (x *DbTableSecurityOptions) GetAuditMode() AuditMode {
+	if x != nil {
+		return x.AuditMode
+	}
+	return AuditMode_AUDIT_MODE_UNSPECIFIED
+}
+
+func (x *DbTableSecurityOptions) GetEncryptionProfile() string {
+	if x != nil {
+		return x.EncryptionProfile
+	}
+	return ""
+}
+
+func (x *DbTableSecurityOptions) GetPiiProfile() string {
+	if x != nil {
+		return x.PiiProfile
+	}
+	return ""
+}
+
+func (x *DbTableSecurityOptions) GetBreakGlassVisible() bool {
+	if x != nil {
+		return x.BreakGlassVisible
+	}
+	return false
+}
+
+func (x *DbTableSecurityOptions) GetExportEligible() bool {
+	if x != nil {
+		return x.ExportEligible
+	}
+	return false
+}
+
+func (x *DbTableSecurityOptions) GetDataResidencyPolicyRef() string {
+	if x != nil {
+		return x.DataResidencyPolicyRef
+	}
+	return ""
+}
+
+type DbColumnSecurityOptions struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	SecretClassification SecretClassification   `protobuf:"varint,1,opt,name=secret_classification,json=secretClassification,proto3,enum=udb.core.common.v1.SecretClassification" json:"secret_classification,omitempty"`
+	OutputView           OutputView             `protobuf:"varint,2,opt,name=output_view,json=outputView,proto3,enum=udb.core.common.v1.OutputView" json:"output_view,omitempty"`
+	RedactionStrategy    RedactionStrategy      `protobuf:"varint,3,opt,name=redaction_strategy,json=redactionStrategy,proto3,enum=udb.core.common.v1.RedactionStrategy" json:"redaction_strategy,omitempty"`
+	TokenizationStrategy string                 `protobuf:"bytes,4,opt,name=tokenization_strategy,json=tokenizationStrategy,proto3" json:"tokenization_strategy,omitempty"`
+	HashingStrategy      string                 `protobuf:"bytes,5,opt,name=hashing_strategy,json=hashingStrategy,proto3" json:"hashing_strategy,omitempty"`
+	HashingAlgorithm     string                 `protobuf:"bytes,6,opt,name=hashing_algorithm,json=hashingAlgorithm,proto3" json:"hashing_algorithm,omitempty"`
+	EncryptionKeyClass   string                 `protobuf:"bytes,7,opt,name=encryption_key_class,json=encryptionKeyClass,proto3" json:"encryption_key_class,omitempty"`
+	SearchableEncrypted  bool                   `protobuf:"varint,8,opt,name=searchable_encrypted,json=searchableEncrypted,proto3" json:"searchable_encrypted,omitempty"`
+	UniquenessScope      string                 `protobuf:"bytes,9,opt,name=uniqueness_scope,json=uniquenessScope,proto3" json:"uniqueness_scope,omitempty"`
+	OwnerField           bool                   `protobuf:"varint,10,opt,name=owner_field,json=ownerField,proto3" json:"owner_field,omitempty"`
+	TenantField          bool                   `protobuf:"varint,11,opt,name=tenant_field,json=tenantField,proto3" json:"tenant_field,omitempty"`
+	ProjectField         bool                   `protobuf:"varint,12,opt,name=project_field,json=projectField,proto3" json:"project_field,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *DbColumnSecurityOptions) Reset() {
+	*x = DbColumnSecurityOptions{}
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DbColumnSecurityOptions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DbColumnSecurityOptions) ProtoMessage() {}
+
+func (x *DbColumnSecurityOptions) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DbColumnSecurityOptions.ProtoReflect.Descriptor instead.
+func (*DbColumnSecurityOptions) Descriptor() ([]byte, []int) {
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *DbColumnSecurityOptions) GetSecretClassification() SecretClassification {
+	if x != nil {
+		return x.SecretClassification
+	}
+	return SecretClassification_SECRET_CLASSIFICATION_UNSPECIFIED
+}
+
+func (x *DbColumnSecurityOptions) GetOutputView() OutputView {
+	if x != nil {
+		return x.OutputView
+	}
+	return OutputView_OUTPUT_VIEW_UNSPECIFIED
+}
+
+func (x *DbColumnSecurityOptions) GetRedactionStrategy() RedactionStrategy {
+	if x != nil {
+		return x.RedactionStrategy
+	}
+	return RedactionStrategy_REDACTION_STRATEGY_UNSPECIFIED
+}
+
+func (x *DbColumnSecurityOptions) GetTokenizationStrategy() string {
+	if x != nil {
+		return x.TokenizationStrategy
+	}
+	return ""
+}
+
+func (x *DbColumnSecurityOptions) GetHashingStrategy() string {
+	if x != nil {
+		return x.HashingStrategy
+	}
+	return ""
+}
+
+func (x *DbColumnSecurityOptions) GetHashingAlgorithm() string {
+	if x != nil {
+		return x.HashingAlgorithm
+	}
+	return ""
+}
+
+func (x *DbColumnSecurityOptions) GetEncryptionKeyClass() string {
+	if x != nil {
+		return x.EncryptionKeyClass
+	}
+	return ""
+}
+
+func (x *DbColumnSecurityOptions) GetSearchableEncrypted() bool {
+	if x != nil {
+		return x.SearchableEncrypted
+	}
+	return false
+}
+
+func (x *DbColumnSecurityOptions) GetUniquenessScope() string {
+	if x != nil {
+		return x.UniquenessScope
+	}
+	return ""
+}
+
+func (x *DbColumnSecurityOptions) GetOwnerField() bool {
+	if x != nil {
+		return x.OwnerField
+	}
+	return false
+}
+
+func (x *DbColumnSecurityOptions) GetTenantField() bool {
+	if x != nil {
+		return x.TenantField
+	}
+	return false
+}
+
+func (x *DbColumnSecurityOptions) GetProjectField() bool {
+	if x != nil {
+		return x.ProjectField
+	}
+	return false
+}
+
+type SdkSurfaceOptions struct {
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	IncludeInFacade            bool                   `protobuf:"varint,1,opt,name=include_in_facade,json=includeInFacade,proto3" json:"include_in_facade,omitempty"`
+	MethodAlias                string                 `protobuf:"bytes,2,opt,name=method_alias,json=methodAlias,proto3" json:"method_alias,omitempty"`
+	RequiredCredentialProvider string                 `protobuf:"bytes,3,opt,name=required_credential_provider,json=requiredCredentialProvider,proto3" json:"required_credential_provider,omitempty"`
+	StreamingHelperType        string                 `protobuf:"bytes,4,opt,name=streaming_helper_type,json=streamingHelperType,proto3" json:"streaming_helper_type,omitempty"`
+	DefaultDeadlineMs          int32                  `protobuf:"varint,5,opt,name=default_deadline_ms,json=defaultDeadlineMs,proto3" json:"default_deadline_ms,omitempty"`
+	DefaultMaxAttempts         int32                  `protobuf:"varint,6,opt,name=default_max_attempts,json=defaultMaxAttempts,proto3" json:"default_max_attempts,omitempty"`
+	BrowserSafe                bool                   `protobuf:"varint,7,opt,name=browser_safe,json=browserSafe,proto3" json:"browser_safe,omitempty"`
+	ServerOnly                 bool                   `protobuf:"varint,8,opt,name=server_only,json=serverOnly,proto3" json:"server_only,omitempty"`
+	BoilerplateRecipeTags      []string               `protobuf:"bytes,9,rep,name=boilerplate_recipe_tags,json=boilerplateRecipeTags,proto3" json:"boilerplate_recipe_tags,omitempty"`
+	GenerateMinimalExample     bool                   `protobuf:"varint,10,opt,name=generate_minimal_example,json=generateMinimalExample,proto3" json:"generate_minimal_example,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *SdkSurfaceOptions) Reset() {
+	*x = SdkSurfaceOptions{}
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SdkSurfaceOptions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SdkSurfaceOptions) ProtoMessage() {}
+
+func (x *SdkSurfaceOptions) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SdkSurfaceOptions.ProtoReflect.Descriptor instead.
+func (*SdkSurfaceOptions) Descriptor() ([]byte, []int) {
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *SdkSurfaceOptions) GetIncludeInFacade() bool {
+	if x != nil {
+		return x.IncludeInFacade
+	}
+	return false
+}
+
+func (x *SdkSurfaceOptions) GetMethodAlias() string {
+	if x != nil {
+		return x.MethodAlias
+	}
+	return ""
+}
+
+func (x *SdkSurfaceOptions) GetRequiredCredentialProvider() string {
+	if x != nil {
+		return x.RequiredCredentialProvider
+	}
+	return ""
+}
+
+func (x *SdkSurfaceOptions) GetStreamingHelperType() string {
+	if x != nil {
+		return x.StreamingHelperType
+	}
+	return ""
+}
+
+func (x *SdkSurfaceOptions) GetDefaultDeadlineMs() int32 {
+	if x != nil {
+		return x.DefaultDeadlineMs
+	}
+	return 0
+}
+
+func (x *SdkSurfaceOptions) GetDefaultMaxAttempts() int32 {
+	if x != nil {
+		return x.DefaultMaxAttempts
+	}
+	return 0
+}
+
+func (x *SdkSurfaceOptions) GetBrowserSafe() bool {
+	if x != nil {
+		return x.BrowserSafe
+	}
+	return false
+}
+
+func (x *SdkSurfaceOptions) GetServerOnly() bool {
+	if x != nil {
+		return x.ServerOnly
+	}
+	return false
+}
+
+func (x *SdkSurfaceOptions) GetBoilerplateRecipeTags() []string {
+	if x != nil {
+		return x.BoilerplateRecipeTags
+	}
+	return nil
+}
+
+func (x *SdkSurfaceOptions) GetGenerateMinimalExample() bool {
+	if x != nil {
+		return x.GenerateMinimalExample
+	}
+	return false
+}
+
+type CliScaffoldOptions struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	ScaffoldPackage        string                 `protobuf:"bytes,1,opt,name=scaffold_package,json=scaffoldPackage,proto3" json:"scaffold_package,omitempty"`
+	ImportPath             string                 `protobuf:"bytes,2,opt,name=import_path,json=importPath,proto3" json:"import_path,omitempty"`
+	RequiredEnv            []string               `protobuf:"bytes,3,rep,name=required_env,json=requiredEnv,proto3" json:"required_env,omitempty"`
+	GeneratedFiles         []string               `protobuf:"bytes,4,rep,name=generated_files,json=generatedFiles,proto3" json:"generated_files,omitempty"`
+	RouteName              string                 `protobuf:"bytes,5,opt,name=route_name,json=routeName,proto3" json:"route_name,omitempty"`
+	MiddlewareName         string                 `protobuf:"bytes,6,opt,name=middleware_name,json=middlewareName,proto3" json:"middleware_name,omitempty"`
+	RequiredNativeServices []string               `protobuf:"bytes,7,rep,name=required_native_services,json=requiredNativeServices,proto3" json:"required_native_services,omitempty"`
+	OptionalNativeServices []string               `protobuf:"bytes,8,rep,name=optional_native_services,json=optionalNativeServices,proto3" json:"optional_native_services,omitempty"`
+	SecretPlaceholders     []string               `protobuf:"bytes,9,rep,name=secret_placeholders,json=secretPlaceholders,proto3" json:"secret_placeholders,omitempty"`
+	PostGenerationCommands []string               `protobuf:"bytes,10,rep,name=post_generation_commands,json=postGenerationCommands,proto3" json:"post_generation_commands,omitempty"`
+	SmokeTestCommand       string                 `protobuf:"bytes,11,opt,name=smoke_test_command,json=smokeTestCommand,proto3" json:"smoke_test_command,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *CliScaffoldOptions) Reset() {
+	*x = CliScaffoldOptions{}
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CliScaffoldOptions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CliScaffoldOptions) ProtoMessage() {}
+
+func (x *CliScaffoldOptions) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CliScaffoldOptions.ProtoReflect.Descriptor instead.
+func (*CliScaffoldOptions) Descriptor() ([]byte, []int) {
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CliScaffoldOptions) GetScaffoldPackage() string {
+	if x != nil {
+		return x.ScaffoldPackage
+	}
+	return ""
+}
+
+func (x *CliScaffoldOptions) GetImportPath() string {
+	if x != nil {
+		return x.ImportPath
+	}
+	return ""
+}
+
+func (x *CliScaffoldOptions) GetRequiredEnv() []string {
+	if x != nil {
+		return x.RequiredEnv
+	}
+	return nil
+}
+
+func (x *CliScaffoldOptions) GetGeneratedFiles() []string {
+	if x != nil {
+		return x.GeneratedFiles
+	}
+	return nil
+}
+
+func (x *CliScaffoldOptions) GetRouteName() string {
+	if x != nil {
+		return x.RouteName
+	}
+	return ""
+}
+
+func (x *CliScaffoldOptions) GetMiddlewareName() string {
+	if x != nil {
+		return x.MiddlewareName
+	}
+	return ""
+}
+
+func (x *CliScaffoldOptions) GetRequiredNativeServices() []string {
+	if x != nil {
+		return x.RequiredNativeServices
+	}
+	return nil
+}
+
+func (x *CliScaffoldOptions) GetOptionalNativeServices() []string {
+	if x != nil {
+		return x.OptionalNativeServices
+	}
+	return nil
+}
+
+func (x *CliScaffoldOptions) GetSecretPlaceholders() []string {
+	if x != nil {
+		return x.SecretPlaceholders
+	}
+	return nil
+}
+
+func (x *CliScaffoldOptions) GetPostGenerationCommands() []string {
+	if x != nil {
+		return x.PostGenerationCommands
+	}
+	return nil
+}
+
+func (x *CliScaffoldOptions) GetSmokeTestCommand() string {
+	if x != nil {
+		return x.SmokeTestCommand
+	}
+	return ""
+}
+
+type EventContractOptions struct {
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	EventType               string                 `protobuf:"bytes,1,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	OutboxTopic             string                 `protobuf:"bytes,2,opt,name=outbox_topic,json=outboxTopic,proto3" json:"outbox_topic,omitempty"`
+	PartitionKeyField       string                 `protobuf:"bytes,3,opt,name=partition_key_field,json=partitionKeyField,proto3" json:"partition_key_field,omitempty"`
+	PayloadRedactionProfile string                 `protobuf:"bytes,4,opt,name=payload_redaction_profile,json=payloadRedactionProfile,proto3" json:"payload_redaction_profile,omitempty"`
+	DeliveryGuarantee       string                 `protobuf:"bytes,5,opt,name=delivery_guarantee,json=deliveryGuarantee,proto3" json:"delivery_guarantee,omitempty"`
+	ReplayCompatibility     string                 `protobuf:"bytes,6,opt,name=replay_compatibility,json=replayCompatibility,proto3" json:"replay_compatibility,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *EventContractOptions) Reset() {
+	*x = EventContractOptions{}
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventContractOptions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventContractOptions) ProtoMessage() {}
+
+func (x *EventContractOptions) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventContractOptions.ProtoReflect.Descriptor instead.
+func (*EventContractOptions) Descriptor() ([]byte, []int) {
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *EventContractOptions) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *EventContractOptions) GetOutboxTopic() string {
+	if x != nil {
+		return x.OutboxTopic
+	}
+	return ""
+}
+
+func (x *EventContractOptions) GetPartitionKeyField() string {
+	if x != nil {
+		return x.PartitionKeyField
+	}
+	return ""
+}
+
+func (x *EventContractOptions) GetPayloadRedactionProfile() string {
+	if x != nil {
+		return x.PayloadRedactionProfile
+	}
+	return ""
+}
+
+func (x *EventContractOptions) GetDeliveryGuarantee() string {
+	if x != nil {
+		return x.DeliveryGuarantee
+	}
+	return ""
+}
+
+func (x *EventContractOptions) GetReplayCompatibility() string {
+	if x != nil {
+		return x.ReplayCompatibility
+	}
+	return ""
+}
+
+type DependencyContractOptions struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	RequiredNativeServices []string               `protobuf:"bytes,1,rep,name=required_native_services,json=requiredNativeServices,proto3" json:"required_native_services,omitempty"`
+	OptionalNativeServices []string               `protobuf:"bytes,2,rep,name=optional_native_services,json=optionalNativeServices,proto3" json:"optional_native_services,omitempty"`
+	RequiredBackends       []string               `protobuf:"bytes,3,rep,name=required_backends,json=requiredBackends,proto3" json:"required_backends,omitempty"`
+	OptionalBackends       []string               `protobuf:"bytes,4,rep,name=optional_backends,json=optionalBackends,proto3" json:"optional_backends,omitempty"`
+	RequiredFeatures       []string               `protobuf:"bytes,5,rep,name=required_features,json=requiredFeatures,proto3" json:"required_features,omitempty"`
+	RequiredEnv            []string               `protobuf:"bytes,6,rep,name=required_env,json=requiredEnv,proto3" json:"required_env,omitempty"`
+	DegradedWhenMissing    []string               `protobuf:"bytes,7,rep,name=degraded_when_missing,json=degradedWhenMissing,proto3" json:"degraded_when_missing,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *DependencyContractOptions) Reset() {
+	*x = DependencyContractOptions{}
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DependencyContractOptions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DependencyContractOptions) ProtoMessage() {}
+
+func (x *DependencyContractOptions) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_common_v1_security_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DependencyContractOptions.ProtoReflect.Descriptor instead.
+func (*DependencyContractOptions) Descriptor() ([]byte, []int) {
+	return file_udb_core_common_v1_security_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *DependencyContractOptions) GetRequiredNativeServices() []string {
+	if x != nil {
+		return x.RequiredNativeServices
+	}
+	return nil
+}
+
+func (x *DependencyContractOptions) GetOptionalNativeServices() []string {
+	if x != nil {
+		return x.OptionalNativeServices
+	}
+	return nil
+}
+
+func (x *DependencyContractOptions) GetRequiredBackends() []string {
+	if x != nil {
+		return x.RequiredBackends
+	}
+	return nil
+}
+
+func (x *DependencyContractOptions) GetOptionalBackends() []string {
+	if x != nil {
+		return x.OptionalBackends
+	}
+	return nil
+}
+
+func (x *DependencyContractOptions) GetRequiredFeatures() []string {
+	if x != nil {
+		return x.RequiredFeatures
+	}
+	return nil
+}
+
+func (x *DependencyContractOptions) GetRequiredEnv() []string {
+	if x != nil {
+		return x.RequiredEnv
+	}
+	return nil
+}
+
+func (x *DependencyContractOptions) GetDegradedWhenMissing() []string {
+	if x != nil {
+		return x.DegradedWhenMissing
+	}
+	return nil
 }
 
 var file_udb_core_common_v1_security_proto_extTypes = []protoimpl.ExtensionInfo{
@@ -443,6 +1721,14 @@ var file_udb_core_common_v1_security_proto_extTypes = []protoimpl.ExtensionInfo{
 		Filename:      "udb/core/common/v1/security.proto",
 	},
 	{
+		ExtendedType:  (*descriptorpb.FieldOptions)(nil),
+		ExtensionType: (*DbColumnSecurityOptions)(nil),
+		Field:         50033,
+		Name:          "udb.core.common.v1.db_column_security",
+		Tag:           "bytes,50033,opt,name=db_column_security",
+		Filename:      "udb/core/common/v1/security.proto",
+	},
+	{
 		ExtendedType:  (*descriptorpb.MethodOptions)(nil),
 		ExtensionType: (*EndpointSecurity)(nil),
 		Field:         51001,
@@ -456,6 +1742,102 @@ var file_udb_core_common_v1_security_proto_extTypes = []protoimpl.ExtensionInfo{
 		Field:         51002,
 		Name:          "udb.core.common.v1.rest_contract",
 		Tag:           "bytes,51002,opt,name=rest_contract",
+		Filename:      "udb/core/common/v1/security.proto",
+	},
+	{
+		ExtendedType:  (*descriptorpb.MethodOptions)(nil),
+		ExtensionType: (*SdkSurfaceOptions)(nil),
+		Field:         51003,
+		Name:          "udb.core.common.v1.sdk_surface",
+		Tag:           "bytes,51003,opt,name=sdk_surface",
+		Filename:      "udb/core/common/v1/security.proto",
+	},
+	{
+		ExtendedType:  (*descriptorpb.MethodOptions)(nil),
+		ExtensionType: (*CliScaffoldOptions)(nil),
+		Field:         51004,
+		Name:          "udb.core.common.v1.method_cli_scaffold",
+		Tag:           "bytes,51004,opt,name=method_cli_scaffold",
+		Filename:      "udb/core/common/v1/security.proto",
+	},
+	{
+		ExtendedType:  (*descriptorpb.MethodOptions)(nil),
+		ExtensionType: (*EventContractOptions)(nil),
+		Field:         51005,
+		Name:          "udb.core.common.v1.method_event_contract",
+		Tag:           "bytes,51005,opt,name=method_event_contract",
+		Filename:      "udb/core/common/v1/security.proto",
+	},
+	{
+		ExtendedType:  (*descriptorpb.MethodOptions)(nil),
+		ExtensionType: (*DependencyContractOptions)(nil),
+		Field:         51006,
+		Name:          "udb.core.common.v1.method_dependency_contract",
+		Tag:           "bytes,51006,opt,name=method_dependency_contract",
+		Filename:      "udb/core/common/v1/security.proto",
+	},
+	{
+		ExtendedType:  (*descriptorpb.MessageOptions)(nil),
+		ExtensionType: (*DbTableSecurityOptions)(nil),
+		Field:         52001,
+		Name:          "udb.core.common.v1.db_table_security",
+		Tag:           "bytes,52001,opt,name=db_table_security",
+		Filename:      "udb/core/common/v1/security.proto",
+	},
+	{
+		ExtendedType:  (*descriptorpb.MessageOptions)(nil),
+		ExtensionType: (*EventContractOptions)(nil),
+		Field:         52002,
+		Name:          "udb.core.common.v1.message_event_contract",
+		Tag:           "bytes,52002,opt,name=message_event_contract",
+		Filename:      "udb/core/common/v1/security.proto",
+	},
+	{
+		ExtendedType:  (*descriptorpb.MessageOptions)(nil),
+		ExtensionType: (*SdkSurfaceOptions)(nil),
+		Field:         52003,
+		Name:          "udb.core.common.v1.message_sdk_surface",
+		Tag:           "bytes,52003,opt,name=message_sdk_surface",
+		Filename:      "udb/core/common/v1/security.proto",
+	},
+	{
+		ExtendedType:  (*descriptorpb.MessageOptions)(nil),
+		ExtensionType: (*DependencyContractOptions)(nil),
+		Field:         52004,
+		Name:          "udb.core.common.v1.message_dependency_contract",
+		Tag:           "bytes,52004,opt,name=message_dependency_contract",
+		Filename:      "udb/core/common/v1/security.proto",
+	},
+	{
+		ExtendedType:  (*descriptorpb.ServiceOptions)(nil),
+		ExtensionType: (*NativeServiceOptions)(nil),
+		Field:         53001,
+		Name:          "udb.core.common.v1.native_service",
+		Tag:           "bytes,53001,opt,name=native_service",
+		Filename:      "udb/core/common/v1/security.proto",
+	},
+	{
+		ExtendedType:  (*descriptorpb.ServiceOptions)(nil),
+		ExtensionType: (*SdkSurfaceOptions)(nil),
+		Field:         53002,
+		Name:          "udb.core.common.v1.service_sdk_surface",
+		Tag:           "bytes,53002,opt,name=service_sdk_surface",
+		Filename:      "udb/core/common/v1/security.proto",
+	},
+	{
+		ExtendedType:  (*descriptorpb.ServiceOptions)(nil),
+		ExtensionType: (*CliScaffoldOptions)(nil),
+		Field:         53003,
+		Name:          "udb.core.common.v1.service_cli_scaffold",
+		Tag:           "bytes,53003,opt,name=service_cli_scaffold",
+		Filename:      "udb/core/common/v1/security.proto",
+	},
+	{
+		ExtendedType:  (*descriptorpb.ServiceOptions)(nil),
+		ExtensionType: (*DependencyContractOptions)(nil),
+		Field:         53004,
+		Name:          "udb.core.common.v1.service_dependency_contract",
+		Tag:           "bytes,53004,opt,name=service_dependency_contract",
 		Filename:      "udb/core/common/v1/security.proto",
 	},
 }
@@ -484,21 +1866,58 @@ var (
 	E_SecurityClassification = &file_udb_core_common_v1_security_proto_extTypes[9]
 	// optional udb.core.common.v1.DataCategory data_category = 50020;
 	E_DataCategory = &file_udb_core_common_v1_security_proto_extTypes[10]
+	// Enterprise contract v1 additive field option. This does not replace the
+	// scalar options above; generators normalize both shapes into one manifest.
+	//
+	// optional udb.core.common.v1.DbColumnSecurityOptions db_column_security = 50033;
+	E_DbColumnSecurity = &file_udb_core_common_v1_security_proto_extTypes[11]
 )
 
 // Extension fields to descriptorpb.MethodOptions.
 var (
 	// optional udb.core.common.v1.EndpointSecurity endpoint_security = 51001;
-	E_EndpointSecurity = &file_udb_core_common_v1_security_proto_extTypes[11]
+	E_EndpointSecurity = &file_udb_core_common_v1_security_proto_extTypes[12]
 	// optional udb.core.common.v1.RestContract rest_contract = 51002;
-	E_RestContract = &file_udb_core_common_v1_security_proto_extTypes[12]
+	E_RestContract = &file_udb_core_common_v1_security_proto_extTypes[13]
+	// optional udb.core.common.v1.SdkSurfaceOptions sdk_surface = 51003;
+	E_SdkSurface = &file_udb_core_common_v1_security_proto_extTypes[14]
+	// optional udb.core.common.v1.CliScaffoldOptions method_cli_scaffold = 51004;
+	E_MethodCliScaffold = &file_udb_core_common_v1_security_proto_extTypes[15]
+	// optional udb.core.common.v1.EventContractOptions method_event_contract = 51005;
+	E_MethodEventContract = &file_udb_core_common_v1_security_proto_extTypes[16]
+	// optional udb.core.common.v1.DependencyContractOptions method_dependency_contract = 51006;
+	E_MethodDependencyContract = &file_udb_core_common_v1_security_proto_extTypes[17]
+)
+
+// Extension fields to descriptorpb.MessageOptions.
+var (
+	// optional udb.core.common.v1.DbTableSecurityOptions db_table_security = 52001;
+	E_DbTableSecurity = &file_udb_core_common_v1_security_proto_extTypes[18]
+	// optional udb.core.common.v1.EventContractOptions message_event_contract = 52002;
+	E_MessageEventContract = &file_udb_core_common_v1_security_proto_extTypes[19]
+	// optional udb.core.common.v1.SdkSurfaceOptions message_sdk_surface = 52003;
+	E_MessageSdkSurface = &file_udb_core_common_v1_security_proto_extTypes[20]
+	// optional udb.core.common.v1.DependencyContractOptions message_dependency_contract = 52004;
+	E_MessageDependencyContract = &file_udb_core_common_v1_security_proto_extTypes[21]
+)
+
+// Extension fields to descriptorpb.ServiceOptions.
+var (
+	// optional udb.core.common.v1.NativeServiceOptions native_service = 53001;
+	E_NativeService = &file_udb_core_common_v1_security_proto_extTypes[22]
+	// optional udb.core.common.v1.SdkSurfaceOptions service_sdk_surface = 53002;
+	E_ServiceSdkSurface = &file_udb_core_common_v1_security_proto_extTypes[23]
+	// optional udb.core.common.v1.CliScaffoldOptions service_cli_scaffold = 53003;
+	E_ServiceCliScaffold = &file_udb_core_common_v1_security_proto_extTypes[24]
+	// optional udb.core.common.v1.DependencyContractOptions service_dependency_contract = 53004;
+	E_ServiceDependencyContract = &file_udb_core_common_v1_security_proto_extTypes[25]
 )
 
 var File_udb_core_common_v1_security_proto protoreflect.FileDescriptor
 
 const file_udb_core_common_v1_security_proto_rawDesc = "" +
 	"\n" +
-	"!udb/core/common/v1/security.proto\x12\x12udb.core.common.v1\x1a google/protobuf/descriptor.proto\"\x8d\x02\n" +
+	"!udb/core/common/v1/security.proto\x12\x12udb.core.common.v1\x1a google/protobuf/descriptor.proto\"\xaf\x06\n" +
 	"\x10EndpointSecurity\x120\n" +
 	"\x04mode\x18\x01 \x01(\x0e2\x1c.udb.core.common.v1.AuthModeR\x04mode\x12\x14\n" +
 	"\x05roles\x18\x02 \x03(\tR\x05roles\x12\x16\n" +
@@ -507,18 +1926,174 @@ const file_udb_core_common_v1_security_proto_rawDesc = "" +
 	"\rcsrf_required\x18\x05 \x01(\bR\fcsrfRequired\x12\x1d\n" +
 	"\n" +
 	"policy_ref\x18\x06 \x01(\tR\tpolicyRef\x12,\n" +
-	"\x12internal_grpc_only\x18\a \x01(\bR\x10internalGrpcOnly\"\xa8\x01\n" +
+	"\x12internal_grpc_only\x18\a \x01(\bR\x10internalGrpcOnly\x128\n" +
+	"\x18required_assurance_level\x18\b \x01(\x05R\x16requiredAssuranceLevel\x12\\\n" +
+	"\x18allowed_credential_types\x18\t \x03(\x0e2\".udb.core.common.v1.CredentialTypeR\x16allowedCredentialTypes\x121\n" +
+	"\x15rate_limit_policy_ref\x18\n" +
+	" \x01(\tR\x12rateLimitPolicyRef\x12(\n" +
+	"\x10abuse_policy_ref\x18\v \x01(\tR\x0eabusePolicyRef\x12(\n" +
+	"\x10audit_event_type\x18\f \x01(\tR\x0eauditEventType\x12+\n" +
+	"\x11decision_resource\x18\r \x01(\tR\x10decisionResource\x12\x1f\n" +
+	"\vowner_field\x18\x0e \x01(\tR\n" +
+	"ownerField\x12!\n" +
+	"\ftenant_field\x18\x0f \x01(\tR\vtenantField\x12#\n" +
+	"\rproject_field\x18\x10 \x01(\tR\fprojectField\x121\n" +
+	"\x14idempotency_required\x18\x11 \x01(\bR\x13idempotencyRequired\x128\n" +
+	"\x18request_context_required\x18\x12 \x01(\bR\x16requestContextRequired\"\xa8\x01\n" +
 	"\fRestContract\x12+\n" +
 	"\x11response_envelope\x18\x01 \x01(\bR\x10responseEnvelope\x12\x1b\n" +
 	"\tapi_error\x18\x02 \x01(\bR\bapiError\x12'\n" +
 	"\x0fpagination_meta\x18\x03 \x01(\bR\x0epaginationMeta\x12%\n" +
-	"\x0eexplicit_nulls\x18\x04 \x01(\bR\rexplicitNulls*\x87\x01\n" +
+	"\x0eexplicit_nulls\x18\x04 \x01(\bR\rexplicitNulls\"\xa7\x06\n" +
+	"\x14NativeServiceOptions\x12\x1d\n" +
+	"\n" +
+	"service_id\x18\x01 \x01(\tR\tserviceId\x12,\n" +
+	"\x12logical_service_id\x18\x02 \x01(\tR\x10logicalServiceId\x12(\n" +
+	"\x10proto_service_id\x18\x03 \x01(\tR\x0eprotoServiceId\x12!\n" +
+	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\x12\x1a\n" +
+	"\bcategory\x18\x05 \x01(\tR\bcategory\x12'\n" +
+	"\x0fdefault_enabled\x18\x06 \x01(\bR\x0edefaultEnabled\x12+\n" +
+	"\x11requires_postgres\x18\a \x01(\bR\x10requiresPostgres\x12%\n" +
+	"\x0erequires_redis\x18\b \x01(\bR\rrequiresRedis\x122\n" +
+	"\x15requires_object_store\x18\t \x01(\bR\x13requiresObjectStore\x12%\n" +
+	"\x0erequires_kafka\x18\n" +
+	" \x01(\bR\rrequiresKafka\x12)\n" +
+	"\x10requires_feature\x18\v \x01(\tR\x0frequiresFeature\x126\n" +
+	"\x17public_listener_allowed\x18\f \x01(\bR\x15publicListenerAllowed\x12C\n" +
+	"\x1econtrol_plane_listener_allowed\x18\r \x01(\bR\x1bcontrolPlaneListenerAllowed\x122\n" +
+	"\x15peer_listener_allowed\x18\x0e \x01(\bR\x13peerListenerAllowed\x12&\n" +
+	"\x0fsdk_facade_name\x18\x0f \x01(\tR\rsdkFacadeName\x12,\n" +
+	"\x12cli_scaffold_group\x18\x10 \x01(\tR\x10cliScaffoldGroup\x12(\n" +
+	"\x10health_check_ref\x18\x11 \x01(\tR\x0ehealthCheckRef\x12%\n" +
+	"\x0ecapability_ref\x18\x12 \x01(\tR\rcapabilityRef\"\x9a\x05\n" +
+	"\x16DbTableSecurityOptions\x122\n" +
+	"\x15tenant_isolation_mode\x18\x01 \x01(\tR\x13tenantIsolationMode\x124\n" +
+	"\x16project_isolation_mode\x18\x02 \x01(\tR\x14projectIsolationMode\x12#\n" +
+	"\rtenant_column\x18\x03 \x01(\tR\ftenantColumn\x12%\n" +
+	"\x0eproject_column\x18\x04 \x01(\tR\rprojectColumn\x12.\n" +
+	"\x13rls_policy_template\x18\x05 \x01(\tR\x11rlsPolicyTemplate\x12(\n" +
+	"\x10soft_delete_mode\x18\x06 \x01(\tR\x0esoftDeleteMode\x12'\n" +
+	"\x0fretention_class\x18\a \x01(\tR\x0eretentionClass\x12%\n" +
+	"\x0eretention_days\x18\b \x01(\x05R\rretentionDays\x12<\n" +
+	"\n" +
+	"audit_mode\x18\t \x01(\x0e2\x1d.udb.core.common.v1.AuditModeR\tauditMode\x12-\n" +
+	"\x12encryption_profile\x18\n" +
+	" \x01(\tR\x11encryptionProfile\x12\x1f\n" +
+	"\vpii_profile\x18\v \x01(\tR\n" +
+	"piiProfile\x12.\n" +
+	"\x13break_glass_visible\x18\f \x01(\bR\x11breakGlassVisible\x12'\n" +
+	"\x0fexport_eligible\x18\r \x01(\bR\x0eexportEligible\x129\n" +
+	"\x19data_residency_policy_ref\x18\x0e \x01(\tR\x16dataResidencyPolicyRef\"\x95\x05\n" +
+	"\x17DbColumnSecurityOptions\x12]\n" +
+	"\x15secret_classification\x18\x01 \x01(\x0e2(.udb.core.common.v1.SecretClassificationR\x14secretClassification\x12?\n" +
+	"\voutput_view\x18\x02 \x01(\x0e2\x1e.udb.core.common.v1.OutputViewR\n" +
+	"outputView\x12T\n" +
+	"\x12redaction_strategy\x18\x03 \x01(\x0e2%.udb.core.common.v1.RedactionStrategyR\x11redactionStrategy\x123\n" +
+	"\x15tokenization_strategy\x18\x04 \x01(\tR\x14tokenizationStrategy\x12)\n" +
+	"\x10hashing_strategy\x18\x05 \x01(\tR\x0fhashingStrategy\x12+\n" +
+	"\x11hashing_algorithm\x18\x06 \x01(\tR\x10hashingAlgorithm\x120\n" +
+	"\x14encryption_key_class\x18\a \x01(\tR\x12encryptionKeyClass\x121\n" +
+	"\x14searchable_encrypted\x18\b \x01(\bR\x13searchableEncrypted\x12)\n" +
+	"\x10uniqueness_scope\x18\t \x01(\tR\x0funiquenessScope\x12\x1f\n" +
+	"\vowner_field\x18\n" +
+	" \x01(\bR\n" +
+	"ownerField\x12!\n" +
+	"\ftenant_field\x18\v \x01(\bR\vtenantField\x12#\n" +
+	"\rproject_field\x18\f \x01(\bR\fprojectField\"\xf0\x03\n" +
+	"\x11SdkSurfaceOptions\x12*\n" +
+	"\x11include_in_facade\x18\x01 \x01(\bR\x0fincludeInFacade\x12!\n" +
+	"\fmethod_alias\x18\x02 \x01(\tR\vmethodAlias\x12@\n" +
+	"\x1crequired_credential_provider\x18\x03 \x01(\tR\x1arequiredCredentialProvider\x122\n" +
+	"\x15streaming_helper_type\x18\x04 \x01(\tR\x13streamingHelperType\x12.\n" +
+	"\x13default_deadline_ms\x18\x05 \x01(\x05R\x11defaultDeadlineMs\x120\n" +
+	"\x14default_max_attempts\x18\x06 \x01(\x05R\x12defaultMaxAttempts\x12!\n" +
+	"\fbrowser_safe\x18\a \x01(\bR\vbrowserSafe\x12\x1f\n" +
+	"\vserver_only\x18\b \x01(\bR\n" +
+	"serverOnly\x126\n" +
+	"\x17boilerplate_recipe_tags\x18\t \x03(\tR\x15boilerplateRecipeTags\x128\n" +
+	"\x18generate_minimal_example\x18\n" +
+	" \x01(\bR\x16generateMinimalExample\"\x81\x04\n" +
+	"\x12CliScaffoldOptions\x12)\n" +
+	"\x10scaffold_package\x18\x01 \x01(\tR\x0fscaffoldPackage\x12\x1f\n" +
+	"\vimport_path\x18\x02 \x01(\tR\n" +
+	"importPath\x12!\n" +
+	"\frequired_env\x18\x03 \x03(\tR\vrequiredEnv\x12'\n" +
+	"\x0fgenerated_files\x18\x04 \x03(\tR\x0egeneratedFiles\x12\x1d\n" +
+	"\n" +
+	"route_name\x18\x05 \x01(\tR\trouteName\x12'\n" +
+	"\x0fmiddleware_name\x18\x06 \x01(\tR\x0emiddlewareName\x128\n" +
+	"\x18required_native_services\x18\a \x03(\tR\x16requiredNativeServices\x128\n" +
+	"\x18optional_native_services\x18\b \x03(\tR\x16optionalNativeServices\x12/\n" +
+	"\x13secret_placeholders\x18\t \x03(\tR\x12secretPlaceholders\x128\n" +
+	"\x18post_generation_commands\x18\n" +
+	" \x03(\tR\x16postGenerationCommands\x12,\n" +
+	"\x12smoke_test_command\x18\v \x01(\tR\x10smokeTestCommand\"\xa6\x02\n" +
+	"\x14EventContractOptions\x12\x1d\n" +
+	"\n" +
+	"event_type\x18\x01 \x01(\tR\teventType\x12!\n" +
+	"\foutbox_topic\x18\x02 \x01(\tR\voutboxTopic\x12.\n" +
+	"\x13partition_key_field\x18\x03 \x01(\tR\x11partitionKeyField\x12:\n" +
+	"\x19payload_redaction_profile\x18\x04 \x01(\tR\x17payloadRedactionProfile\x12-\n" +
+	"\x12delivery_guarantee\x18\x05 \x01(\tR\x11deliveryGuarantee\x121\n" +
+	"\x14replay_compatibility\x18\x06 \x01(\tR\x13replayCompatibility\"\xed\x02\n" +
+	"\x19DependencyContractOptions\x128\n" +
+	"\x18required_native_services\x18\x01 \x03(\tR\x16requiredNativeServices\x128\n" +
+	"\x18optional_native_services\x18\x02 \x03(\tR\x16optionalNativeServices\x12+\n" +
+	"\x11required_backends\x18\x03 \x03(\tR\x10requiredBackends\x12+\n" +
+	"\x11optional_backends\x18\x04 \x03(\tR\x10optionalBackends\x12+\n" +
+	"\x11required_features\x18\x05 \x03(\tR\x10requiredFeatures\x12!\n" +
+	"\frequired_env\x18\x06 \x03(\tR\vrequiredEnv\x122\n" +
+	"\x15degraded_when_missing\x18\a \x03(\tR\x13degradedWhenMissing*\x87\x01\n" +
 	"\bAuthMode\x12\x19\n" +
 	"\x15AUTH_MODE_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10AUTH_MODE_PUBLIC\x10\x01\x12\x14\n" +
 	"\x10AUTH_MODE_BEARER\x10\x02\x12\x15\n" +
 	"\x11AUTH_MODE_API_KEY\x10\x03\x12\x1d\n" +
-	"\x19AUTH_MODE_SERVICE_ACCOUNT\x10\x04*\xdd\x01\n" +
+	"\x19AUTH_MODE_SERVICE_ACCOUNT\x10\x04*\xbe\x02\n" +
+	"\x0eCredentialType\x12\x1f\n" +
+	"\x1bCREDENTIAL_TYPE_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aCREDENTIAL_TYPE_BEARER_JWT\x10\x01\x12\x1b\n" +
+	"\x17CREDENTIAL_TYPE_SESSION\x10\x02\x12\x1b\n" +
+	"\x17CREDENTIAL_TYPE_API_KEY\x10\x03\x12#\n" +
+	"\x1fCREDENTIAL_TYPE_SERVICE_ACCOUNT\x10\x04\x12\x18\n" +
+	"\x14CREDENTIAL_TYPE_MTLS\x10\x05\x12\x18\n" +
+	"\x14CREDENTIAL_TYPE_OIDC\x10\x06\x12\x18\n" +
+	"\x14CREDENTIAL_TYPE_SAML\x10\a\x12\x1c\n" +
+	"\x18CREDENTIAL_TYPE_WEBAUTHN\x10\b\x12 \n" +
+	"\x1cCREDENTIAL_TYPE_EXTERNAL_JWT\x10\t*\x83\x01\n" +
+	"\tAuditMode\x12\x1a\n" +
+	"\x16AUDIT_MODE_UNSPECIFIED\x10\x00\x12\x13\n" +
+	"\x0fAUDIT_MODE_NONE\x10\x01\x12\x17\n" +
+	"\x13AUDIT_MODE_MUTATION\x10\x02\x12\x17\n" +
+	"\x13AUDIT_MODE_DECISION\x10\x03\x12\x13\n" +
+	"\x0fAUDIT_MODE_FULL\x10\x04*\xf8\x02\n" +
+	"\x14SecretClassification\x12%\n" +
+	"!SECRET_CLASSIFICATION_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cSECRET_CLASSIFICATION_PUBLIC\x10\x01\x12\"\n" +
+	"\x1eSECRET_CLASSIFICATION_INTERNAL\x10\x02\x12$\n" +
+	" SECRET_CLASSIFICATION_CREDENTIAL\x10\x03\x12\x1f\n" +
+	"\x1bSECRET_CLASSIFICATION_TOKEN\x10\x04\x12\x1d\n" +
+	"\x19SECRET_CLASSIFICATION_KEY\x10\x05\x12#\n" +
+	"\x1fSECRET_CLASSIFICATION_BIOMETRIC\x10\x06\x12\"\n" +
+	"\x1eSECRET_CLASSIFICATION_IDENTITY\x10\a\x12\x1d\n" +
+	"\x19SECRET_CLASSIFICATION_PII\x10\b\x12%\n" +
+	"!SECRET_CLASSIFICATION_OPERATIONAL\x10\t*\xba\x01\n" +
+	"\n" +
+	"OutputView\x12\x1b\n" +
+	"\x17OUTPUT_VIEW_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18OUTPUT_VIEW_STORAGE_ONLY\x10\x01\x12\x16\n" +
+	"\x12OUTPUT_VIEW_PUBLIC\x10\x02\x12\x14\n" +
+	"\x10OUTPUT_VIEW_SELF\x10\x03\x12\x15\n" +
+	"\x11OUTPUT_VIEW_ADMIN\x10\x04\x12\x15\n" +
+	"\x11OUTPUT_VIEW_AUDIT\x10\x05\x12\x15\n" +
+	"\x11OUTPUT_VIEW_NEVER\x10\x06*\xd0\x01\n" +
+	"\x11RedactionStrategy\x12\"\n" +
+	"\x1eREDACTION_STRATEGY_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17REDACTION_STRATEGY_NONE\x10\x01\x12\x1b\n" +
+	"\x17REDACTION_STRATEGY_MASK\x10\x02\x12\x1d\n" +
+	"\x19REDACTION_STRATEGY_REDACT\x10\x03\x12 \n" +
+	"\x1cREDACTION_STRATEGY_HASH_ONLY\x10\x04\x12\x1c\n" +
+	"\x18REDACTION_STRATEGY_LAST4\x10\x05*\xdd\x01\n" +
 	"\x16SecurityClassification\x12'\n" +
 	"#SECURITY_CLASSIFICATION_UNSPECIFIED\x10\x00\x12\"\n" +
 	"\x1eSECURITY_CLASSIFICATION_PUBLIC\x10\x01\x12$\n" +
@@ -544,9 +2119,23 @@ const file_udb_core_common_v1_security_proto_rawDesc = "" +
 	"\x0eretention_days\x12\x1d.google.protobuf.FieldOptions\x18\xe1\x86\x03 \x01(\x05R\rretentionDays:=\n" +
 	"\ttokenized\x12\x1d.google.protobuf.FieldOptions\x18\xe2\x86\x03 \x01(\bR\ttokenized:\x84\x01\n" +
 	"\x17security_classification\x12\x1d.google.protobuf.FieldOptions\x18\xe3\x86\x03 \x01(\x0e2*.udb.core.common.v1.SecurityClassificationR\x16securityClassification:f\n" +
-	"\rdata_category\x12\x1d.google.protobuf.FieldOptions\x18\xe4\x86\x03 \x01(\x0e2 .udb.core.common.v1.DataCategoryR\fdataCategory:s\n" +
+	"\rdata_category\x12\x1d.google.protobuf.FieldOptions\x18\xe4\x86\x03 \x01(\x0e2 .udb.core.common.v1.DataCategoryR\fdataCategory:z\n" +
+	"\x12db_column_security\x12\x1d.google.protobuf.FieldOptions\x18\xf1\x86\x03 \x01(\v2+.udb.core.common.v1.DbColumnSecurityOptionsR\x10dbColumnSecurity:s\n" +
 	"\x11endpoint_security\x12\x1e.google.protobuf.MethodOptions\x18\xb9\x8e\x03 \x01(\v2$.udb.core.common.v1.EndpointSecurityR\x10endpointSecurity:g\n" +
-	"\rrest_contract\x12\x1e.google.protobuf.MethodOptions\x18\xba\x8e\x03 \x01(\v2 .udb.core.common.v1.RestContractR\frestContractB\xd2\x01\n" +
+	"\rrest_contract\x12\x1e.google.protobuf.MethodOptions\x18\xba\x8e\x03 \x01(\v2 .udb.core.common.v1.RestContractR\frestContract:h\n" +
+	"\vsdk_surface\x12\x1e.google.protobuf.MethodOptions\x18\xbb\x8e\x03 \x01(\v2%.udb.core.common.v1.SdkSurfaceOptionsR\n" +
+	"sdkSurface:x\n" +
+	"\x13method_cli_scaffold\x12\x1e.google.protobuf.MethodOptions\x18\xbc\x8e\x03 \x01(\v2&.udb.core.common.v1.CliScaffoldOptionsR\x11methodCliScaffold:~\n" +
+	"\x15method_event_contract\x12\x1e.google.protobuf.MethodOptions\x18\xbd\x8e\x03 \x01(\v2(.udb.core.common.v1.EventContractOptionsR\x13methodEventContract:\x8d\x01\n" +
+	"\x1amethod_dependency_contract\x12\x1e.google.protobuf.MethodOptions\x18\xbe\x8e\x03 \x01(\v2-.udb.core.common.v1.DependencyContractOptionsR\x18methodDependencyContract:y\n" +
+	"\x11db_table_security\x12\x1f.google.protobuf.MessageOptions\x18\xa1\x96\x03 \x01(\v2*.udb.core.common.v1.DbTableSecurityOptionsR\x0fdbTableSecurity:\x81\x01\n" +
+	"\x16message_event_contract\x12\x1f.google.protobuf.MessageOptions\x18\xa2\x96\x03 \x01(\v2(.udb.core.common.v1.EventContractOptionsR\x14messageEventContract:x\n" +
+	"\x13message_sdk_surface\x12\x1f.google.protobuf.MessageOptions\x18\xa3\x96\x03 \x01(\v2%.udb.core.common.v1.SdkSurfaceOptionsR\x11messageSdkSurface:\x90\x01\n" +
+	"\x1bmessage_dependency_contract\x12\x1f.google.protobuf.MessageOptions\x18\xa4\x96\x03 \x01(\v2-.udb.core.common.v1.DependencyContractOptionsR\x19messageDependencyContract:r\n" +
+	"\x0enative_service\x12\x1f.google.protobuf.ServiceOptions\x18\x89\x9e\x03 \x01(\v2(.udb.core.common.v1.NativeServiceOptionsR\rnativeService:x\n" +
+	"\x13service_sdk_surface\x12\x1f.google.protobuf.ServiceOptions\x18\x8a\x9e\x03 \x01(\v2%.udb.core.common.v1.SdkSurfaceOptionsR\x11serviceSdkSurface:{\n" +
+	"\x14service_cli_scaffold\x12\x1f.google.protobuf.ServiceOptions\x18\x8b\x9e\x03 \x01(\v2&.udb.core.common.v1.CliScaffoldOptionsR\x12serviceCliScaffold:\x90\x01\n" +
+	"\x1bservice_dependency_contract\x12\x1f.google.protobuf.ServiceOptions\x18\x8c\x9e\x03 \x01(\v2-.udb.core.common.v1.DependencyContractOptionsR\x19serviceDependencyContractB\xd2\x01\n" +
 	"\x16com.udb.core.common.v1B\rSecurityProtoP\x01Z>github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1;commonv1\xa2\x02\x03UCC\xaa\x02\x12udb.core.Common.V1\xca\x02\x12Udb\\Core\\Common\\V1\xe2\x02\x1eUdb\\GPBMetadata\\Core\\Common\\V1\xea\x02\x15Udb::Core::Common::V1b\x06proto3"
 
 var (
@@ -561,41 +2150,86 @@ func file_udb_core_common_v1_security_proto_rawDescGZIP() []byte {
 	return file_udb_core_common_v1_security_proto_rawDescData
 }
 
-var file_udb_core_common_v1_security_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_udb_core_common_v1_security_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_udb_core_common_v1_security_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
+var file_udb_core_common_v1_security_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_udb_core_common_v1_security_proto_goTypes = []any{
-	(AuthMode)(0),                      // 0: udb.core.common.v1.AuthMode
-	(SecurityClassification)(0),        // 1: udb.core.common.v1.SecurityClassification
-	(DataCategory)(0),                  // 2: udb.core.common.v1.DataCategory
-	(*EndpointSecurity)(nil),           // 3: udb.core.common.v1.EndpointSecurity
-	(*RestContract)(nil),               // 4: udb.core.common.v1.RestContract
-	(*descriptorpb.FieldOptions)(nil),  // 5: google.protobuf.FieldOptions
-	(*descriptorpb.MethodOptions)(nil), // 6: google.protobuf.MethodOptions
+	(AuthMode)(0),                       // 0: udb.core.common.v1.AuthMode
+	(CredentialType)(0),                 // 1: udb.core.common.v1.CredentialType
+	(AuditMode)(0),                      // 2: udb.core.common.v1.AuditMode
+	(SecretClassification)(0),           // 3: udb.core.common.v1.SecretClassification
+	(OutputView)(0),                     // 4: udb.core.common.v1.OutputView
+	(RedactionStrategy)(0),              // 5: udb.core.common.v1.RedactionStrategy
+	(SecurityClassification)(0),         // 6: udb.core.common.v1.SecurityClassification
+	(DataCategory)(0),                   // 7: udb.core.common.v1.DataCategory
+	(*EndpointSecurity)(nil),            // 8: udb.core.common.v1.EndpointSecurity
+	(*RestContract)(nil),                // 9: udb.core.common.v1.RestContract
+	(*NativeServiceOptions)(nil),        // 10: udb.core.common.v1.NativeServiceOptions
+	(*DbTableSecurityOptions)(nil),      // 11: udb.core.common.v1.DbTableSecurityOptions
+	(*DbColumnSecurityOptions)(nil),     // 12: udb.core.common.v1.DbColumnSecurityOptions
+	(*SdkSurfaceOptions)(nil),           // 13: udb.core.common.v1.SdkSurfaceOptions
+	(*CliScaffoldOptions)(nil),          // 14: udb.core.common.v1.CliScaffoldOptions
+	(*EventContractOptions)(nil),        // 15: udb.core.common.v1.EventContractOptions
+	(*DependencyContractOptions)(nil),   // 16: udb.core.common.v1.DependencyContractOptions
+	(*descriptorpb.FieldOptions)(nil),   // 17: google.protobuf.FieldOptions
+	(*descriptorpb.MethodOptions)(nil),  // 18: google.protobuf.MethodOptions
+	(*descriptorpb.MessageOptions)(nil), // 19: google.protobuf.MessageOptions
+	(*descriptorpb.ServiceOptions)(nil), // 20: google.protobuf.ServiceOptions
 }
 var file_udb_core_common_v1_security_proto_depIdxs = []int32{
 	0,  // 0: udb.core.common.v1.EndpointSecurity.mode:type_name -> udb.core.common.v1.AuthMode
-	5,  // 1: udb.core.common.v1.pii:extendee -> google.protobuf.FieldOptions
-	5,  // 2: udb.core.common.v1.encrypted_security:extendee -> google.protobuf.FieldOptions
-	5,  // 3: udb.core.common.v1.log_masked:extendee -> google.protobuf.FieldOptions
-	5,  // 4: udb.core.common.v1.log_redacted:extendee -> google.protobuf.FieldOptions
-	5,  // 5: udb.core.common.v1.sensitive:extendee -> google.protobuf.FieldOptions
-	5,  // 6: udb.core.common.v1.requires_consent:extendee -> google.protobuf.FieldOptions
-	5,  // 7: udb.core.common.v1.data_purpose:extendee -> google.protobuf.FieldOptions
-	5,  // 8: udb.core.common.v1.retention_days:extendee -> google.protobuf.FieldOptions
-	5,  // 9: udb.core.common.v1.tokenized:extendee -> google.protobuf.FieldOptions
-	5,  // 10: udb.core.common.v1.security_classification:extendee -> google.protobuf.FieldOptions
-	5,  // 11: udb.core.common.v1.data_category:extendee -> google.protobuf.FieldOptions
-	6,  // 12: udb.core.common.v1.endpoint_security:extendee -> google.protobuf.MethodOptions
-	6,  // 13: udb.core.common.v1.rest_contract:extendee -> google.protobuf.MethodOptions
-	1,  // 14: udb.core.common.v1.security_classification:type_name -> udb.core.common.v1.SecurityClassification
-	2,  // 15: udb.core.common.v1.data_category:type_name -> udb.core.common.v1.DataCategory
-	3,  // 16: udb.core.common.v1.endpoint_security:type_name -> udb.core.common.v1.EndpointSecurity
-	4,  // 17: udb.core.common.v1.rest_contract:type_name -> udb.core.common.v1.RestContract
-	18, // [18:18] is the sub-list for method output_type
-	18, // [18:18] is the sub-list for method input_type
-	14, // [14:18] is the sub-list for extension type_name
-	1,  // [1:14] is the sub-list for extension extendee
-	0,  // [0:1] is the sub-list for field type_name
+	1,  // 1: udb.core.common.v1.EndpointSecurity.allowed_credential_types:type_name -> udb.core.common.v1.CredentialType
+	2,  // 2: udb.core.common.v1.DbTableSecurityOptions.audit_mode:type_name -> udb.core.common.v1.AuditMode
+	3,  // 3: udb.core.common.v1.DbColumnSecurityOptions.secret_classification:type_name -> udb.core.common.v1.SecretClassification
+	4,  // 4: udb.core.common.v1.DbColumnSecurityOptions.output_view:type_name -> udb.core.common.v1.OutputView
+	5,  // 5: udb.core.common.v1.DbColumnSecurityOptions.redaction_strategy:type_name -> udb.core.common.v1.RedactionStrategy
+	17, // 6: udb.core.common.v1.pii:extendee -> google.protobuf.FieldOptions
+	17, // 7: udb.core.common.v1.encrypted_security:extendee -> google.protobuf.FieldOptions
+	17, // 8: udb.core.common.v1.log_masked:extendee -> google.protobuf.FieldOptions
+	17, // 9: udb.core.common.v1.log_redacted:extendee -> google.protobuf.FieldOptions
+	17, // 10: udb.core.common.v1.sensitive:extendee -> google.protobuf.FieldOptions
+	17, // 11: udb.core.common.v1.requires_consent:extendee -> google.protobuf.FieldOptions
+	17, // 12: udb.core.common.v1.data_purpose:extendee -> google.protobuf.FieldOptions
+	17, // 13: udb.core.common.v1.retention_days:extendee -> google.protobuf.FieldOptions
+	17, // 14: udb.core.common.v1.tokenized:extendee -> google.protobuf.FieldOptions
+	17, // 15: udb.core.common.v1.security_classification:extendee -> google.protobuf.FieldOptions
+	17, // 16: udb.core.common.v1.data_category:extendee -> google.protobuf.FieldOptions
+	17, // 17: udb.core.common.v1.db_column_security:extendee -> google.protobuf.FieldOptions
+	18, // 18: udb.core.common.v1.endpoint_security:extendee -> google.protobuf.MethodOptions
+	18, // 19: udb.core.common.v1.rest_contract:extendee -> google.protobuf.MethodOptions
+	18, // 20: udb.core.common.v1.sdk_surface:extendee -> google.protobuf.MethodOptions
+	18, // 21: udb.core.common.v1.method_cli_scaffold:extendee -> google.protobuf.MethodOptions
+	18, // 22: udb.core.common.v1.method_event_contract:extendee -> google.protobuf.MethodOptions
+	18, // 23: udb.core.common.v1.method_dependency_contract:extendee -> google.protobuf.MethodOptions
+	19, // 24: udb.core.common.v1.db_table_security:extendee -> google.protobuf.MessageOptions
+	19, // 25: udb.core.common.v1.message_event_contract:extendee -> google.protobuf.MessageOptions
+	19, // 26: udb.core.common.v1.message_sdk_surface:extendee -> google.protobuf.MessageOptions
+	19, // 27: udb.core.common.v1.message_dependency_contract:extendee -> google.protobuf.MessageOptions
+	20, // 28: udb.core.common.v1.native_service:extendee -> google.protobuf.ServiceOptions
+	20, // 29: udb.core.common.v1.service_sdk_surface:extendee -> google.protobuf.ServiceOptions
+	20, // 30: udb.core.common.v1.service_cli_scaffold:extendee -> google.protobuf.ServiceOptions
+	20, // 31: udb.core.common.v1.service_dependency_contract:extendee -> google.protobuf.ServiceOptions
+	6,  // 32: udb.core.common.v1.security_classification:type_name -> udb.core.common.v1.SecurityClassification
+	7,  // 33: udb.core.common.v1.data_category:type_name -> udb.core.common.v1.DataCategory
+	12, // 34: udb.core.common.v1.db_column_security:type_name -> udb.core.common.v1.DbColumnSecurityOptions
+	8,  // 35: udb.core.common.v1.endpoint_security:type_name -> udb.core.common.v1.EndpointSecurity
+	9,  // 36: udb.core.common.v1.rest_contract:type_name -> udb.core.common.v1.RestContract
+	13, // 37: udb.core.common.v1.sdk_surface:type_name -> udb.core.common.v1.SdkSurfaceOptions
+	14, // 38: udb.core.common.v1.method_cli_scaffold:type_name -> udb.core.common.v1.CliScaffoldOptions
+	15, // 39: udb.core.common.v1.method_event_contract:type_name -> udb.core.common.v1.EventContractOptions
+	16, // 40: udb.core.common.v1.method_dependency_contract:type_name -> udb.core.common.v1.DependencyContractOptions
+	11, // 41: udb.core.common.v1.db_table_security:type_name -> udb.core.common.v1.DbTableSecurityOptions
+	15, // 42: udb.core.common.v1.message_event_contract:type_name -> udb.core.common.v1.EventContractOptions
+	13, // 43: udb.core.common.v1.message_sdk_surface:type_name -> udb.core.common.v1.SdkSurfaceOptions
+	16, // 44: udb.core.common.v1.message_dependency_contract:type_name -> udb.core.common.v1.DependencyContractOptions
+	10, // 45: udb.core.common.v1.native_service:type_name -> udb.core.common.v1.NativeServiceOptions
+	13, // 46: udb.core.common.v1.service_sdk_surface:type_name -> udb.core.common.v1.SdkSurfaceOptions
+	14, // 47: udb.core.common.v1.service_cli_scaffold:type_name -> udb.core.common.v1.CliScaffoldOptions
+	16, // 48: udb.core.common.v1.service_dependency_contract:type_name -> udb.core.common.v1.DependencyContractOptions
+	49, // [49:49] is the sub-list for method output_type
+	49, // [49:49] is the sub-list for method input_type
+	32, // [32:49] is the sub-list for extension type_name
+	6,  // [6:32] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_common_v1_security_proto_init() }
@@ -608,9 +2242,9 @@ func file_udb_core_common_v1_security_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_common_v1_security_proto_rawDesc), len(file_udb_core_common_v1_security_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   2,
-			NumExtensions: 13,
+			NumEnums:      8,
+			NumMessages:   9,
+			NumExtensions: 26,
 			NumServices:   0,
 		},
 		GoTypes:           file_udb_core_common_v1_security_proto_goTypes,

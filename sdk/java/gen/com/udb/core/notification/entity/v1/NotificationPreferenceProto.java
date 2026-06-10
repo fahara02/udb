@@ -43,61 +43,67 @@ public final class NotificationPreferenceProto extends com.google.protobuf.Gener
       "\n=udb/core/notification/entity/v1/notifi" +
       "cation_preference.proto\022\037udb.core.notifi" +
       "cation.entity.v1\032\037google/protobuf/timest" +
-      "amp.proto\032\033udb/core/common/v1/db.proto\032+" +
-      "udb/core/notification/entity/v1/enums.pr" +
-      "oto\"\365\013\n\026NotificationPreference\022U\n\rprefer" +
-      "ence_id\030\001 \001(\tB0\202\267\030,\n\rpreference_id\022\004UUID" +
-      "\030\001(\001:\021gen_random_uuid()R\014preferenceId\022q\n" +
-      "\007user_id\030\002 \001(\tBX\202\267\030T\n\007user_id\022\004UUID\030\001RA\n" +
-      "\"idx_notif_prefs_user_channel_event\022\005BTR" +
-      "EE\030\001Z\022channel,event_typeR\006userId\022`\n\ttena" +
-      "nt_id\030\003 \001(\tBC\202\267\030?\n\ttenant_id\022\014VARCHAR(12" +
-      "0)\030\001R\"\n\031idx_notif_prefs_tenant_id\022\005BTREE" +
-      "R\010tenantId\022l\n\007channel\030\004 \001(\01624.udb.core.n" +
-      "otification.entity.v1.NotificationChanne" +
-      "lB\034\202\267\030\030\n\007channel\022\013VARCHAR(20)\030\001R\007channel" +
-      "\022\201\001\n\nevent_type\030\005 \001(\tBb\202\267\030^\n\nevent_type\022" +
-      "\013VARCHAR(80)\030\001:\002\'\'Z=\'\' = channel-wide; e" +
-      ".g. \'REVIEW_ASSIGNED\' = per-event opt-ou" +
-      "tR\teventType\022F\n\014is_opted_out\030\006 \001(\010B$\202\267\030 " +
-      "\n\014is_opted_out\022\007BOOLEAN\030\001:\005FALSER\nisOpte" +
-      "dOut\022q\n\ncreated_at\030\007 \001(\0132\032.google.protob" +
-      "uf.TimestampB6\202\267\0302\n\ncreated_at\022\013TIMESTAM" +
-      "PTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001R\tcreatedAt\022" +
-      "o\n\nupdated_at\030\010 \001(\0132\032.google.protobuf.Ti" +
-      "mestampB4\202\267\0300\n\nupdated_at\022\013TIMESTAMPTZ\030\001" +
-      ":\021CURRENT_TIMESTAMP`\001R\tupdatedAt\022a\n\ncrea" +
-      "ted_by\030\t \001(\tBB\202\267\030>\n\ncreated_by\022\014VARCHAR(" +
-      "120)Z\"Identity that created this record." +
-      "R\tcreatedBy:\255\004\372\266\030\250\004\n\030notification_prefer" +
-      "ences\022\020udb_notification\030\003 \001*APer-user pe" +
-      "r-channel per-event-type notification op" +
-      "t-out settings8\001@\001b^\n\020tenant_isolation\032H" +
-      "(tenant_id::text = current_setting(\'app." +
-      "current_tenant_id\', true)::text)(\001\252\001i\n-t" +
-      "rg_notification_preferences_touch_update" +
-      "d_at\022\006BEFORE\032\006UPDATE\"#udb_notification.t" +
-      "ouch_updated_at()*\003ROW\302\001\341\001\n\031touch_update" +
-      "d_at_function\022\010postgres\032\017before_triggers" +
-      "\"\250\001CREATE OR REPLACE FUNCTION udb_notifi" +
-      "cation.touch_updated_at()\nRETURNS trigge" +
-      "r\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  NEW.upd" +
-      "ated_at = CURRENT_TIMESTAMP;\n  RETURN NE" +
-      "W;\nEND;\n$$;B\260\002\n#com.udb.core.notificatio" +
-      "n.entity.v1B\033NotificationPreferenceProto" +
-      "P\001ZKgithub.com/fahara02/udb/sdk/go/gen/u" +
-      "db/core/notification/entity/v1;entityv1\242" +
-      "\002\004UCNE\252\002\037udb.core.Notification.Entity.V1" +
-      "\312\002\037Udb\\Core\\Notification\\Entity\\V1\342\002+Udb" +
-      "\\GPBMetadata\\Core\\Notification\\Entity\\V1" +
-      "\352\002#Udb::Core::Notification::Entity::V1b\006" +
-      "proto3"
+      "amp.proto\032\033udb/core/common/v1/db.proto\032!" +
+      "udb/core/common/v1/security.proto\032+udb/c" +
+      "ore/notification/entity/v1/enums.proto\"\230" +
+      "\r\n\026NotificationPreference\022U\n\rpreference_" +
+      "id\030\001 \001(\tB0\202\267\030,\n\rpreference_id\022\004UUID\030\001(\001:" +
+      "\021gen_random_uuid()R\014preferenceId\022q\n\007user" +
+      "_id\030\002 \001(\tBX\202\267\030T\n\007user_id\022\004UUID\030\001RA\n\"idx_" +
+      "notif_prefs_user_channel_event\022\005BTREE\030\001Z" +
+      "\022channel,event_typeR\006userId\022`\n\ttenant_id" +
+      "\030\003 \001(\tBC\202\267\030?\n\ttenant_id\022\014VARCHAR(120)\030\001R" +
+      "\"\n\031idx_notif_prefs_tenant_id\022\005BTREER\010ten" +
+      "antId\022l\n\007channel\030\004 \001(\01624.udb.core.notifi" +
+      "cation.entity.v1.NotificationChannelB\034\202\267" +
+      "\030\030\n\007channel\022\013VARCHAR(20)\030\001R\007channel\022\201\001\n\n" +
+      "event_type\030\005 \001(\tBb\202\267\030^\n\nevent_type\022\013VARC" +
+      "HAR(80)\030\001:\002\'\'Z=\'\' = channel-wide; e.g. \'" +
+      "REVIEW_ASSIGNED\' = per-event opt-outR\tev" +
+      "entType\022F\n\014is_opted_out\030\006 \001(\010B$\202\267\030 \n\014is_" +
+      "opted_out\022\007BOOLEAN\030\001:\005FALSER\nisOptedOut\022" +
+      "q\n\ncreated_at\030\007 \001(\0132\032.google.protobuf.Ti" +
+      "mestampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001" +
+      ":\021CURRENT_TIMESTAMP`\001h\001R\tcreatedAt\022o\n\nup" +
+      "dated_at\030\010 \001(\0132\032.google.protobuf.Timesta" +
+      "mpB4\202\267\0300\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021CUR" +
+      "RENT_TIMESTAMP`\001R\tupdatedAt\022a\n\ncreated_b" +
+      "y\030\t \001(\tBB\202\267\030>\n\ncreated_by\022\014VARCHAR(120)Z" +
+      "\"Identity that created this record.R\tcre" +
+      "atedBy:\320\005\372\266\030\250\004\n\030notification_preferences" +
+      "\022\020udb_notification\030\003 \001*APer-user per-cha" +
+      "nnel per-event-type notification opt-out" +
+      " settings8\001@\001b^\n\020tenant_isolation\032H(tena" +
+      "nt_id::text = current_setting(\'app.curre" +
+      "nt_tenant_id\', true)::text)(\001\252\001i\n-trg_no" +
+      "tification_preferences_touch_updated_at\022" +
+      "\006BEFORE\032\006UPDATE\"#udb_notification.touch_" +
+      "updated_at()*\003ROW\302\001\341\001\n\031touch_updated_at_" +
+      "function\022\010postgres\032\017before_triggers\"\250\001CR" +
+      "EATE OR REPLACE FUNCTION udb_notificatio" +
+      "n.touch_updated_at()\nRETURNS trigger\nLAN" +
+      "GUAGE plpgsql\nAS $$\nBEGIN\n  NEW.updated_" +
+      "at = CURRENT_TIMESTAMP;\n  RETURN NEW;\nEN" +
+      "D;\n$$;\212\262\031\236\001\n\006tenant\032\ttenant_id*4tenant_i" +
+      "d = current_setting(\'app.current_tenant_" +
+      "id\')2\013soft_delete:\030notification.operatio" +
+      "nal@\373\023H\002R\006tenantZ\010standardr\025tenant.data_" +
+      "residencyB\260\002\n#com.udb.core.notification." +
+      "entity.v1B\033NotificationPreferenceProtoP\001" +
+      "ZKgithub.com/fahara02/udb/sdk/go/gen/udb" +
+      "/core/notification/entity/v1;entityv1\242\002\004" +
+      "UCNE\252\002\037udb.core.Notification.Entity.V1\312\002" +
+      "\037Udb\\Core\\Notification\\Entity\\V1\342\002+Udb\\G" +
+      "PBMetadata\\Core\\Notification\\Entity\\V1\352\002" +
+      "#Udb::Core::Notification::Entity::V1b\006pr" +
+      "oto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           com.google.protobuf.TimestampProto.getDescriptor(),
           com.udb.core.common.v1.DbProto.getDescriptor(),
+          com.udb.core.common.v1.SecurityProto.getDescriptor(),
           com.udb.core.notification.entity.v1.EnumsProto.getDescriptor(),
         });
     internal_static_udb_core_notification_entity_v1_NotificationPreference_descriptor =
@@ -109,9 +115,11 @@ public final class NotificationPreferenceProto extends com.google.protobuf.Gener
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();
+    com.udb.core.common.v1.SecurityProto.getDescriptor();
     com.udb.core.notification.entity.v1.EnumsProto.getDescriptor();
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
+    registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
     registry.add(com.udb.core.common.v1.DbProto.pgColumn);
     registry.add(com.udb.core.common.v1.DbProto.pgTable);
     com.google.protobuf.Descriptors.FileDescriptor

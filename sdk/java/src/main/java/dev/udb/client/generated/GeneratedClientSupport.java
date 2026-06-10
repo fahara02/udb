@@ -45,11 +45,10 @@ public final class GeneratedClientSupport {
 
   private GeneratedClientSupport() {}
 
-  /** gRPC status codes treated as transient (safe to retry for idempotent calls). */
+  /** gRPC status codes treated as transient for mutating calls. */
   public static final Set<Status.Code> RETRYABLE_CODES =
       Set.of(
           Status.Code.UNAVAILABLE,
-          Status.Code.DEADLINE_EXCEEDED,
           Status.Code.RESOURCE_EXHAUSTED);
 
   /** Binary trailer key carrying the prost-encoded {@code udb.entity.v1.ErrorDetail}. */
@@ -207,8 +206,9 @@ public final class GeneratedClientSupport {
   // ── Unary (retried) ─────────────────────────────────────────────────────────
 
   /**
-   * Invoke an idempotent unary RPC with retry + exponential backoff + full jitter
-   * on transient codes. A fresh metadata snapshot is produced for every attempt.
+   * Invoke a unary RPC with retry + exponential backoff + full jitter on
+   * transient codes. DEADLINE_EXCEEDED is retried only for read-only RPCs.
+   * A fresh metadata snapshot is produced for every attempt.
    */
   public static <I, O> O unary(
       Channel channel,
@@ -216,7 +216,8 @@ public final class GeneratedClientSupport {
       I request,
       CallTuning tuning,
       Duration deadlineOverride,
-      Supplier<Metadata> headers) {
+      Supplier<Metadata> headers,
+      boolean readOnly) {
     String rpcPath = method.getFullMethodName();
     Duration backoff = tuning.initialBackoff;
     CallOptions opts = callOptions(tuning, deadlineOverride);
@@ -226,7 +227,7 @@ public final class GeneratedClientSupport {
         return ClientCalls.blockingUnaryCall(ch, method, opts, request);
       } catch (StatusRuntimeException ex) {
         if (attempt < tuning.maxAttempts
-            && RETRYABLE_CODES.contains(ex.getStatus().getCode())) {
+            && isRetryable(ex.getStatus().getCode(), readOnly)) {
           sleep(backoff);
           backoff = nextBackoff(backoff, tuning);
           continue;
@@ -234,6 +235,34 @@ public final class GeneratedClientSupport {
         throw new UdbRpcException(rpcPath, ex);
       }
     }
+  }
+
+  public static boolean isReadOnlyRpcName(String name) {
+    return name.startsWith("Get")
+        || name.startsWith("List")
+        || name.startsWith("Check")
+        || name.startsWith("Validate")
+        || name.startsWith("Introspect")
+        || name.startsWith("Authorize")
+        || name.startsWith("BatchCheck")
+        || name.startsWith("Preview")
+        || name.startsWith("Resolve")
+        || name.startsWith("Explain")
+        || name.startsWith("Diff")
+        || name.startsWith("Lint")
+        || name.startsWith("Test")
+        || name.startsWith("Select")
+        || name.startsWith("AnalyticalQuery")
+        || name.startsWith("VectorSearch")
+        || name.startsWith("GraphQuery")
+        || name.startsWith("CacheGet")
+        || name.startsWith("CacheScan")
+        || name.startsWith("DocumentGet")
+        || name.startsWith("DocumentFind");
+  }
+
+  private static boolean isRetryable(Status.Code code, boolean readOnly) {
+    return code == Status.Code.DEADLINE_EXCEEDED ? readOnly : RETRYABLE_CODES.contains(code);
   }
 
   // ── Server streaming (single attempt) ────────────────────────────────────────

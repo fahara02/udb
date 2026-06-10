@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-cli=/tmp/udb-proto-parser
+cli=/tmp/udb
 
 if [ ! -x "$cli" ]; then
   if ! command -v curl >/dev/null 2>&1; then

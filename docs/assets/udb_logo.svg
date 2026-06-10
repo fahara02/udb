@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" role="img" aria-labelledby="title desc">
+  <title id="title">UDB logo</title>
+  <desc id="desc">Universal Data Broker mark: guarded broker core routing three data lanes across tenant-scoped backend targets.</desc>
+  <defs>
+    <linearGradient id="lane-in" x1="104" y1="478" x2="328" y2="190" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0055FF"/>
+      <stop offset="1" stop-color="#00E5FF"/>
+    </linearGradient>
+    <linearGradient id="lane-core" x1="176" y1="190" x2="462" y2="454" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF9F1C"/>
+      <stop offset="1" stop-color="#FF6B00"/>
+    </linearGradient>
+    <linearGradient id="lane-out" x1="314" y1="144" x2="536" y2="480" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00E5FF"/>
+      <stop offset="1" stop-color="#0086FF"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="286" y1="270" x2="358" y2="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E2E8F0"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity="0.36"/>
+    </filter>
+  </defs>
+
+  <rect width="640" height="640" rx="56" fill="#121214"/>
+  <path d="M320 70 542 198v256L320 582 98 454V198Z" fill="#151820" stroke="#273244" stroke-width="5"/>
+  <path d="M320 70v512M98 198l444 256M542 198 98 454" fill="none" stroke="#243044" stroke-width="3" stroke-dasharray="12 14" opacity="0.9"/>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#shadow)">
+    <path d="M112 206 320 326 320 572" stroke="url(#lane-in)" stroke-width="26"/>
+    <path d="M320 84 320 326 528 454" stroke="url(#lane-out)" stroke-width="26"/>
+    <path d="M528 206 320 326 112 454" stroke="url(#lane-core)" stroke-width="16"/>
+  </g>
+
+  <g fill="#121214" stroke="#334155" stroke-width="5">
+    <circle cx="320" cy="84" r="16"/>
+    <circle cx="112" cy="206" r="16"/>
+    <circle cx="528" cy="206" r="16"/>
+    <circle cx="112" cy="454" r="16"/>
+    <circle cx="528" cy="454" r="16"/>
+    <circle cx="320" cy="572" r="16"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <circle cx="320" cy="326" r="66" fill="#121214" stroke="#FF9F1C" stroke-width="10"/>
+    <path d="M320 258 366 278v52c0 40-22 70-46 84-24-14-46-44-46-84v-52Z" fill="url(#shield)" stroke="#E2E8F0" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M292 330h56M320 302v64" stroke="#121214" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="320" cy="326" r="12" fill="#00E5FF"/>
+  </g>
+
+  <g fill="#E2E8F0" font-family="Inter, Segoe UI, Arial, sans-serif" text-anchor="middle">
+    <text x="320" y="122" font-size="44" font-weight="900">UDB</text>
+    <text x="320" y="616" font-size="19" font-weight="800" letter-spacing="3">UNIVERSAL DATA BROKER</text>
+  </g>
+</svg>

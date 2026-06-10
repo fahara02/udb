@@ -37,6 +37,7 @@ impl DataBrokerService {
         }
     }
 
+    #[tracing::instrument(skip_all, name = "cdc.publish")]
     pub(crate) async fn publish_cdc_inner(
         &self,
         request: Request<CdcSubscriptionRequest>,
@@ -72,12 +73,25 @@ impl DataBrokerService {
         } else {
             Some(request.since_event_id)
         };
+        // urgent_fix #2: scope the CDC channel permit to the caller's tenant/project
+        // so PublishCDC is rate-limited PER TENANT, not as a single shared
+        // `anonymous` bucket (the unscoped `execute_with_channel` defaulted the
+        // tenant to `anonymous`).
+        let cdc_ctx = security.request_context();
         let result = self
-            .execute_with_channel(
+            .execute_with_channel_scoped(
                 crate::runtime::channels::OperationChannel::Cdc,
+                Some(&cdc_ctx),
+                None,
                 || async move {
                     cdc_engine
-                        .stream_cdc(security.scopes.clone(), topic_pattern, since_event_id)
+                        .stream_cdc(
+                            security.scopes.clone(),
+                            topic_pattern,
+                            since_event_id,
+                            Some(security.tenant_id.clone()),
+                            Some(security.project_id.clone()),
+                        )
                         .await
                 },
             )
@@ -188,9 +202,13 @@ impl DataBrokerService {
             cdc_config.redaction_version,
         );
 
+        // urgent_fix #2: scope the CDC channel permit to the caller's tenant/project
+        // (per-tenant rate limiting) instead of the shared `anonymous` bucket.
         let result = self
-            .execute_with_channel(
+            .execute_with_channel_scoped(
                 crate::runtime::channels::OperationChannel::Cdc,
+                Some(&response_context),
+                None,
                 || async move {
                     runtime
                         .enqueue_outbox_event(

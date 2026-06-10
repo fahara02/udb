@@ -111,11 +111,16 @@ pub(crate) fn render_delta_table(
     let has_create_trigger = ops
         .iter()
         .any(|op| matches!(op.kind, ChangeKind::CreateTrigger));
-    if has_create_trigger && let Some(t) = table_manifest {
-        let artifact_sql = render_sql_artifacts(t, "before_triggers");
-        if !artifact_sql.trim().is_empty() {
-            sql.push_str("-- sql_artifacts: trigger support functions\n");
-            sql.push_str(&artifact_sql);
+    let has_explicit_sql_artifact = ops
+        .iter()
+        .any(|op| matches!(op.kind, ChangeKind::ApplySqlArtifact));
+    if has_create_trigger && !has_explicit_sql_artifact {
+        if let Some(t) = table_manifest {
+            let artifact_sql = render_sql_artifacts(t, "before_triggers");
+            if !artifact_sql.trim().is_empty() {
+                sql.push_str("-- sql_artifacts: trigger support functions\n");
+                sql.push_str(&artifact_sql);
+            }
         }
     }
 
@@ -219,6 +224,10 @@ pub(crate) fn render_delta_operation(
     op: &ChangeOperation,
 ) -> String {
     match op.kind {
+        ChangeKind::ApplySqlArtifact => table
+            .and_then(|table| find_sql_artifact(table, &op.object_name))
+            .and_then(|artifact| render_sql_artifact(artifact, &artifact.phase))
+            .unwrap_or_else(|| missing_object_note(op, "sql_artifact", &op.object_name)),
         ChangeKind::CreateExtension => find_extension(manifest, &op.schema, &op.object_name)
             .map(render_create_extension)
             .unwrap_or_default(),
@@ -468,7 +477,7 @@ pub(crate) fn render_delta_operation(
         // GAP 4: ENUM type additions
         ChangeKind::CreateEnum => table
             .and_then(|table| find_column(table, &op.column))
-            .map(|column| {
+            .and_then(|column| {
                 let mut values = column.enum_values.clone();
                 values.sort();
                 values.dedup();
@@ -480,13 +489,19 @@ pub(crate) fn render_delta_operation(
                 );
                 let value_list = values
                     .iter()
-                    .filter(|v| validate_enum_value(v).is_ok())
-                    .map(|v| format!("'{}'", v.replace('\'', "''")))
+                    .try_fold(Vec::new(), |mut acc, v| {
+                        validate_enum_value(v).map(|_| {
+                            acc.push(format!("'{}'", v.replace('\'', "''")));
+                            acc
+                        })
+                    })
+                    .ok()?
+                    .into_iter()
                     .collect::<Vec<_>>()
                     .join(", ");
-                format!(
+                Some(format!(
                     "DO $$BEGIN\n  CREATE TYPE {type_name} AS ENUM ({value_list});\nEXCEPTION WHEN duplicate_object THEN NULL;\nEND$$;"
-                )
+                ))
             })
             .unwrap_or_default(),
         // GAP 4: GAP 12 — ALTER TYPE ... ADD VALUE must run outside a transaction
@@ -500,12 +515,7 @@ pub(crate) fn render_delta_operation(
         // this artifact runs with no surrounding DO block / transaction.
         ChangeKind::AlterEnumAddValue => {
             if validate_enum_value(&op.column).is_err() {
-                format!(
-                    "-- skipped AlterEnumAddValue on {}.{}: enum value failed validation \
-                     (unsafe character)",
-                    qi(&op.schema),
-                    qi(&op.object_name)
-                )
+                String::new()
             } else {
                 format!(
                     "-- NOTE: run outside a transaction (no BEGIN/COMMIT)\n\

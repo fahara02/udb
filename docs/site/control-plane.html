@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control Plane — UDB</title>
+<meta name="description" content="UDB's native control plane: 15 services and 186 RPCs for authentication, authorization, API keys, identity federation, tenancy, notifications, analytics, storage, assets, WebRTC, and policy distribution.">
+<meta name="theme-color" content="#121214">
+<link rel="icon" type="image/svg+xml" href="./assets/udb_logo.svg">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body id="top">
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="./index.html"><img src="./assets/udb_logo.svg" alt="UDB logo">UDB</a>
+    <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">&#9776;</button>
+    <nav class="nav-links">
+      <a href="./architecture.html">Architecture</a>
+      <a href="./data-plane.html">Data&nbsp;Plane</a>
+      <a href="./control-plane.html" class="active">Control&nbsp;Plane</a>
+      <a href="./security.html">Security</a>
+      <a href="./enterprise.html">Enterprise</a>
+      <a href="./sdks.html">SDKs</a>
+      <a href="./playground.html">Playground</a>
+      <a class="nav-cta" href="https://github.com/fahara02/udb">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <div class="eyebrow">Native control plane · 15 services · 186 RPCs</div>
+    <h1>Identity, policy, and tenancy on an <span class="g">isolated listener</span></h1>
+    <p class="lead">Alongside the data plane, UDB ships a network-isolated native control plane defined
+      under <code>proto/udb/core/**</code> — all proto-driven and Postgres-backed, fail-closed, with no
+      in-memory stores. Counts are authoritative from the generated descriptor contract.</p>
+  </div>
+
+  <section style="border-top:none">
+    <div class="wrap">
+      <figure class="diagram">
+        <img src="./assets/control-plane.svg" alt="UDB topology: apps reach the public DataBroker listener; a trusted policy-enforcement point reaches the isolated internal control-plane listener; both reach the backends and emit events to Kafka.">
+        <figcaption>Apps reach the public data plane; a trusted PEP reaches the isolated control plane.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">The 15 services</div>
+      <h2>Everything the platform <span class="accent">enforces</span></h2>
+      <div class="tablewrap mt28">
+        <table>
+          <thead><tr><th>Service</th><th>Category</th><th>What it does</th><th class="n">RPCs</th></tr></thead>
+          <tbody>
+            <tr><td><code>AuthnService</code></td><td>auth</td><td>JWT / session / API-key / external auth, RS256 signing + refresh, TOTP MFA, CSRF, OTP, devices, WebAuthn, signing-key rotation, user admin</td><td class="n">50</td></tr>
+            <tr><td><code>AuthzService</code></td><td>governance</td><td>RBAC + ABAC + ReBAC over a Casbin enforcer, role/policy/relationship CRUD, governance + simulation, audit decisions, <code>GetNativeAccess</code>, <code>GetPolicyBundle</code></td><td class="n">41</td></tr>
+            <tr><td><code>IdentityProviderService</code></td><td>auth</td><td>OIDC/SAML providers, SCIM provisioning, JIT, external-identity linking</td><td class="n">27</td></tr>
+            <tr><td><code>NotificationService</code></td><td>messaging</td><td>Notifications, templates, preferences, delivery stats (emits to Kafka)</td><td class="n">11</td></tr>
+            <tr><td><code>ApiKeyService</code></td><td>auth</td><td>Create / get / list / update / revoke / validate API keys + usage stats</td><td class="n">9</td></tr>
+            <tr><td><code>AssetService</code></td><td>storage</td><td>Asset-management pipelines (steps, EMBED → vector upsert), executor trait</td><td class="n">8</td></tr>
+            <tr><td><code>AnalyticsService</code></td><td>analytics</td><td>Pipeline metrics, executor performance, reconciliation, throughput, SLA compliance</td><td class="n">7</td></tr>
+            <tr><td><code>StorageService</code></td><td>storage</td><td>Object-storage metadata/lifecycle, quotas, presigned URLs, GC</td><td class="n">7</td></tr>
+            <tr><td><code>TenantService</code></td><td>tenant</td><td>Tenant + tenant-config CRUD</td><td class="n">6</td></tr>
+            <tr><td><code>ControlPlaneService</code></td><td>control</td><td>xDS-style versioned policy distribution (ACK/NACK/nonce, ordered delivery, canary rollout)</td><td class="n">5</td></tr>
+            <tr><td><code>RoomService</code> · WebRTC</td><td>realtime</td><td>Room lifecycle CRUD</td><td class="n">5</td></tr>
+            <tr><td><code>PeerService</code> · WebRTC</td><td>realtime</td><td>Peer lifecycle CRUD</td><td class="n">4</td></tr>
+            <tr><td><code>TrackService</code> · WebRTC</td><td>realtime</td><td>Track lifecycle CRUD</td><td class="n">4</td></tr>
+            <tr><td><code>TurnService</code> · WebRTC</td><td>realtime</td><td>TURN credential issuance (fail-closed)</td><td class="n">1</td></tr>
+            <tr><td><code>SignalingService</code> · WebRTC</td><td>realtime</td><td>WebRTC signaling bridge (PixelStreaming + json-relay)</td><td class="n">1</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">Identity &amp; access</div>
+      <h2>Auth that’s <span class="accent">native, not bolted on</span></h2>
+      <div class="grid c2 mt28">
+        <div class="card"><div class="ic">🔑</div><h3>Authentication</h3><p>Native JWT (static PEM or JWKS with <code>kid</code> rotation), UDB-issued RS256 access + refresh tokens, Argon2id passwords, RFC 6238 TOTP MFA, server-side sessions with idle/absolute TTL + revocation, CSRF, and mTLS SAN identity. External-provider auth requires a signed, verified JWT before claims are mapped.</p></div>
+        <div class="card"><div class="ic">⚖️</div><h3>Authorization</h3><p>One engine for RBAC (roles + bindings), ABAC (attribute conditions), and ReBAC (relationship tuples) over Casbin — tenant/project domains, explicit-deny-wins, priority, deterministic <code>decision_id</code> + audit records, and <code>GetNativeAccess</code> for a restricted role + scoped DSN + RLS session vars.</p></div>
+        <div class="card warm"><div class="ic">🪪</div><h3>Identity federation</h3><p>OIDC/JWT provider registry, SAML lifecycle (metadata/login/ACS/replay), SCIM user/group provisioning, JIT, and account linking. External groups map to UDB roles only through configured, audited mappings.</p></div>
+        <div class="card warm"><div class="ic">📨</div><h3>Tenant · notification · analytics</h3><p>Tenant + config management, notifications with templates/preferences/delivery-stats (Kafka emit), and pipeline/executor/reconciliation/throughput/SLA analytics.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">Versioned policy distribution</div>
+      <h2>An <span class="accent">xDS-style</span> control plane for fleets</h2>
+      <p class="lead">Policy and config distribution is modeled on Envoy-style versioned, ACK/NACK,
+        nonce-paired, ordered, delta delivery — for routing policy, method-security, RLS/tenant policy,
+        native-service enablement, and backend targets.</p>
+      <ul class="flist mt28">
+        <li><span class="mk">✓</span><div><b>ACK/NACK with nonce</b> — a node can reject a bad policy without silently diverging; the last-good version is preserved.</div></li>
+        <li><span class="mk">✓</span><div><b>Make-before-break ordering</b> — referencing policies are never applied before their target definitions.</div></li>
+        <li><span class="mk">✓</span><div><b>Progressive rollout</b> — canary by node or tenant with a metric-based success condition and automatic rollback before fleet-wide impact.</div></li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div class="brand"><img src="./assets/udb_logo.svg" alt="" style="width:26px;height:26px;border-radius:7px"> UDB — Universal Data Broker</div>
+    <nav class="foot-links">
+      <a href="./index.html">Home</a><a href="./security.html">Security</a>
+      <a href="https://github.com/fahara02/udb">GitHub</a>
+      <a href="https://github.com/fahara02/udb/blob/main/LICENSE">MIT License</a>
+    </nav>
+  </div>
+  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.3.2 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
+</footer>
+
+<script defer src="./app.js"></script>
+
+</body>
+</html>

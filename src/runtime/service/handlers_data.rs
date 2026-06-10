@@ -173,49 +173,18 @@ impl DataBrokerService {
                 )?;
                 let item_context =
                     security_for_stream.request_context_with_decision(&item_decision_id);
-                let op = crate::runtime::channels::OperationChannel::Read;
-                let project = non_empty(&metadata_context.project_id).unwrap_or("default");
-                let tenant_hash = tenant_hash_label(&metadata_context.tenant_id);
-                let instance = non_empty(&metadata_context.target_instance).unwrap_or("default");
-
-                let _permit = match channels.acquire_fair_with_backpressure(
-                    op,
-                    Some(&metadata_context.tenant_id),
-                    Some(&metadata_context.project_id),
-                    Some("postgres"),
-                    Some(&metadata_context.target_instance),
-                    op.default_cost(),
-                ).await {
-                    Ok(permit) => {
-                        metrics.record_fair_admission(project, &tenant_hash, "postgres", instance, op.as_str(), "accepted");
-                        metrics.add_fair_cost(project, &tenant_hash, "postgres", instance, op.as_str(), f64::from(op.default_cost()));
-                        permit
-                    },
-                    Err(err) => {
-                        metrics.inc_channel_rejected("read");
-                        metrics.record_fair_admission(project, &tenant_hash, "postgres", instance, op.as_str(), "rejected");
-                        Err(err)?
-                    }
-                };
-                metrics.inc_channel_inflight("read");
-                let start = Instant::now();
-
-                let res = tokio::time::timeout(
-                    Duration::from_secs(channels.deadline_secs(crate::runtime::channels::OperationChannel::Read, Some("postgres"))),
-                    runtime.select(&manifest, item, item_context)
-                ).await;
-
-                metrics.dec_channel_inflight("read");
-                metrics.observe_channel_latency("read", start.elapsed().as_secs_f64());
-
-                match res {
-                    Ok(Ok(val)) => yield val,
-                    Ok(Err(e)) => Err(e)?,
-                    Err(_) => {
-                        metrics.inc_channel_timeout("read");
-                        Err(Status::deadline_exceeded("read channel timeout"))?
-                    }
-                }
+                // FIX-77: admission + inflight gauge + per-item deadline +
+                // latency + timeout mapping all live in the shared helper.
+                let val = super::native_helpers::execute_stream_batch_item(
+                    &channels,
+                    &metrics,
+                    &metadata_context,
+                    crate::runtime::channels::OperationChannel::Read,
+                    "postgres",
+                    runtime.select(&manifest, item, item_context),
+                )
+                .await?;
+                yield val;
             }
         };
         self.record_grpc(
@@ -316,48 +285,18 @@ impl DataBrokerService {
                 )?;
                 let item_context =
                     security_for_stream.request_context_with_decision(&item_decision_id);
-                let op = crate::runtime::channels::OperationChannel::Write;
-                let project = non_empty(&metadata_context.project_id).unwrap_or("default");
-                let tenant_hash = tenant_hash_label(&metadata_context.tenant_id);
-                let instance = non_empty(&metadata_context.target_instance).unwrap_or("default");
-                let _permit = match channels.acquire_fair_with_backpressure(
-                    op,
-                    Some(&metadata_context.tenant_id),
-                    Some(&metadata_context.project_id),
-                    Some("postgres"),
-                    Some(&metadata_context.target_instance),
-                    op.default_cost(),
-                ).await {
-                    Ok(permit) => {
-                        metrics.record_fair_admission(project, &tenant_hash, "postgres", instance, op.as_str(), "accepted");
-                        metrics.add_fair_cost(project, &tenant_hash, "postgres", instance, op.as_str(), f64::from(op.default_cost()));
-                        permit
-                    },
-                    Err(err) => {
-                        metrics.inc_channel_rejected("write");
-                        metrics.record_fair_admission(project, &tenant_hash, "postgres", instance, op.as_str(), "rejected");
-                        Err(err)?
-                    }
-                };
-                metrics.inc_channel_inflight("write");
-                let start = Instant::now();
-
-                let res = tokio::time::timeout(
-                    Duration::from_secs(channels.deadline_secs(crate::runtime::channels::OperationChannel::Write, Some("postgres"))),
-                    runtime.upsert(&manifest, item, item_context)
-                ).await;
-
-                metrics.dec_channel_inflight("write");
-                metrics.observe_channel_latency("write", start.elapsed().as_secs_f64());
-
-                match res {
-                    Ok(Ok(val)) => yield val,
-                    Ok(Err(e)) => Err(e)?,
-                    Err(_) => {
-                        metrics.inc_channel_timeout("write");
-                        Err(Status::deadline_exceeded("write channel timeout"))?
-                    }
-                }
+                // FIX-77: admission + inflight gauge + per-item deadline +
+                // latency + timeout mapping all live in the shared helper.
+                let val = super::native_helpers::execute_stream_batch_item(
+                    &channels,
+                    &metrics,
+                    &metadata_context,
+                    crate::runtime::channels::OperationChannel::Write,
+                    "postgres",
+                    runtime.upsert(&manifest, item, item_context),
+                )
+                .await?;
+                yield val;
             }
         };
         self.record_grpc(
@@ -542,9 +481,35 @@ impl DataBrokerService {
         resource_name: String,
         spec_json: String,
     ) -> Result<String, tonic::Status> {
+        guard_rls_bypass_operation(&operation, &spec_json)?;
         let runtime = self.runtime_snapshot();
         let resolved_backend =
             runtime.resolve_backend_selector_for_project(backend, &context.project_id)?;
+        let active_catalog = self.catalog.active_for(&context.project_id);
+        let compiled_dispatch = compile_neutral_ir_dispatch(
+            &resolved_backend.backend,
+            resolved_backend.instance.as_deref(),
+            context,
+            &active_catalog.manifest,
+            &operation,
+            &spec_json,
+        )?;
+        let operation = compiled_dispatch
+            .as_ref()
+            .map(|compiled| compiled.operation.clone())
+            .unwrap_or(operation);
+        let spec_json = compiled_dispatch
+            .as_ref()
+            .map(|compiled| compiled.spec_json.clone())
+            .unwrap_or(spec_json);
+        let write = if compiled_dispatch.is_some() {
+            matches!(
+                operation.as_str(),
+                "ensure_resource" | "drop_resource" | "mutate" | "transaction" | "put_object"
+            )
+        } else {
+            write
+        };
         let target = runtime.backend_executor_for_project(
             &resolved_backend.backend,
             resolved_backend.instance.as_deref(),
@@ -632,5 +597,560 @@ impl DataBrokerService {
             result.is_ok(),
         );
         result
+    }
+}
+
+#[derive(Debug, Clone)]
+struct CompiledDispatchRequest {
+    operation: String,
+    spec_json: String,
+}
+
+fn compile_neutral_ir_dispatch(
+    backend: &str,
+    instance: Option<&str>,
+    context: &crate::RequestContext,
+    manifest: &CatalogManifest,
+    requested_operation: &str,
+    spec_json: &str,
+) -> Result<Option<CompiledDispatchRequest>, Status> {
+    let spec: serde_json::Value = serde_json::from_str(spec_json)
+        .map_err(|err| Status::invalid_argument(format!("invalid spec_json: {err}")))?;
+    let Some(ir) = spec
+        .get("ir")
+        .or_else(|| spec.get("neutral_ir"))
+        .or_else(|| spec.get("logical_operation"))
+    else {
+        return Ok(None);
+    };
+    let Some(kind) = crate::backend::BackendKind::from_token(backend) else {
+        return Err(Status::invalid_argument(format!(
+            "backend '{backend}' has no neutral-IR compiler"
+        )));
+    };
+    let ir_op = ir
+        .get("op")
+        .or_else(|| ir.get("operation"))
+        .or_else(|| spec.get("ir_op"))
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| Status::invalid_argument("neutral IR dispatch requires `ir.op`"))?;
+    let payload = ir_payload(ir)?;
+    let mut ctx = crate::ir::compile::CompileContext::new(manifest)
+        .with_tenant(&context.tenant_id)
+        .with_project(&context.project_id);
+    if let Some(instance) = instance.filter(|value| !value.trim().is_empty()) {
+        ctx = ctx.with_instance(instance);
+    }
+    let (rendering, family) = compile_ir_payload(&kind, ir_op, payload, &ctx)?;
+    let compiled = compiled_rendering_to_dispatch(&rendering, family)?;
+    if !requested_operation.trim().is_empty() && requested_operation != compiled.operation {
+        tracing::debug!(
+            backend = %backend,
+            requested_operation = %requested_operation,
+            compiled_operation = %compiled.operation,
+            ir_op = %ir_op,
+            "neutral IR dispatch operation rewritten after compilation"
+        );
+    }
+    Ok(Some(compiled))
+}
+
+fn ir_payload(ir: &serde_json::Value) -> Result<serde_json::Value, Status> {
+    if let Some(payload) = ir.get("request").or_else(|| ir.get("body")) {
+        return Ok(payload.clone());
+    }
+    let serde_json::Value::Object(map) = ir else {
+        return Err(Status::invalid_argument(
+            "neutral IR dispatch `ir` must be an object",
+        ));
+    };
+    let mut payload = map.clone();
+    payload.remove("op");
+    payload.remove("operation");
+    Ok(serde_json::Value::Object(payload))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LogicalOpFamily {
+    Read,
+    Write,
+    Delete,
+    Search,
+    ResourceOp,
+    Aggregate,
+}
+
+fn compile_ir_payload(
+    kind: &crate::backend::BackendKind,
+    ir_op: &str,
+    payload: serde_json::Value,
+    ctx: &crate::ir::compile::CompileContext<'_>,
+) -> Result<(crate::ir::compile::CompiledRendering, LogicalOpFamily), Status> {
+    use crate::ir::compile::{CompileOperation, compile_for_backend};
+    let compile = |op: CompileOperation<'_>| {
+        compile_for_backend(kind, op, ctx)
+            .ok_or_else(|| {
+                Status::failed_precondition(format!(
+                    "backend '{}' has no neutral-IR compiler in this build",
+                    kind.as_str()
+                ))
+            })?
+            .map_err(|err| {
+                Status::invalid_argument(format!(
+                    "neutral IR compile failed [{}]: {err}",
+                    err.code()
+                ))
+            })
+    };
+    match ir_op.trim().to_ascii_lowercase().as_str() {
+        "read" | "query" => {
+            let op: crate::ir::LogicalRead = serde_json::from_value(payload)
+                .map_err(|err| Status::invalid_argument(format!("invalid LogicalRead: {err}")))?;
+            Ok((compile(CompileOperation::Read(&op))?, LogicalOpFamily::Read))
+        }
+        "write" | "upsert" | "mutate" => {
+            let op: crate::ir::LogicalWrite = serde_json::from_value(payload)
+                .map_err(|err| Status::invalid_argument(format!("invalid LogicalWrite: {err}")))?;
+            Ok((
+                compile(CompileOperation::Write(&op))?,
+                LogicalOpFamily::Write,
+            ))
+        }
+        "delete" => {
+            let op: crate::ir::LogicalDelete = serde_json::from_value(payload)
+                .map_err(|err| Status::invalid_argument(format!("invalid LogicalDelete: {err}")))?;
+            Ok((
+                compile(CompileOperation::Delete(&op))?,
+                LogicalOpFamily::Delete,
+            ))
+        }
+        "search" => {
+            let op: crate::ir::LogicalSearch = serde_json::from_value(payload)
+                .map_err(|err| Status::invalid_argument(format!("invalid LogicalSearch: {err}")))?;
+            Ok((
+                compile(CompileOperation::Search(&op))?,
+                LogicalOpFamily::Search,
+            ))
+        }
+        "resource_op" | "resource" => {
+            let op: crate::ir::LogicalResourceOp =
+                serde_json::from_value(payload).map_err(|err| {
+                    Status::invalid_argument(format!("invalid LogicalResourceOp: {err}"))
+                })?;
+            Ok((
+                compile(CompileOperation::ResourceOp(&op))?,
+                LogicalOpFamily::ResourceOp,
+            ))
+        }
+        "aggregate" => {
+            let op: crate::ir::LogicalAggregate =
+                serde_json::from_value(payload).map_err(|err| {
+                    Status::invalid_argument(format!("invalid LogicalAggregate: {err}"))
+                })?;
+            Ok((
+                compile(CompileOperation::Aggregate(&op))?,
+                LogicalOpFamily::Aggregate,
+            ))
+        }
+        other => Err(Status::invalid_argument(format!(
+            "unsupported neutral IR op '{other}'"
+        ))),
+    }
+}
+
+fn compiled_rendering_to_dispatch(
+    rendering: &crate::ir::compile::CompiledRendering,
+    family: LogicalOpFamily,
+) -> Result<CompiledDispatchRequest, Status> {
+    use crate::backend::BackendKind;
+    use crate::ir::compile::{CompiledRendering, KeyValueOp, ObjectOp};
+    match rendering {
+        CompiledRendering::Sql {
+            backend,
+            statement,
+            params,
+        } => {
+            let sql = if matches!(backend, BackendKind::Clickhouse) {
+                inline_sql_params(statement, params)?
+            } else {
+                statement.clone()
+            };
+            let params_json = if matches!(backend, BackendKind::Clickhouse) {
+                Vec::new()
+            } else {
+                params.iter().map(logical_value_to_json).collect::<Vec<_>>()
+            };
+            let operation = if matches!(
+                family,
+                LogicalOpFamily::Read | LogicalOpFamily::Search | LogicalOpFamily::Aggregate
+            ) {
+                "query"
+            } else {
+                "mutate"
+            };
+            Ok(CompiledDispatchRequest {
+                operation: operation.to_string(),
+                spec_json: serde_json::json!({
+                    "sql": sql,
+                    "params": params_json,
+                    "compiler_mediated": true,
+                })
+                .to_string(),
+            })
+        }
+        CompiledRendering::Json {
+            backend,
+            method,
+            path,
+            body,
+        } => json_rendering_to_dispatch(backend, method, path, body, family),
+        CompiledRendering::KeyValue {
+            op,
+            key_template,
+            value,
+            ttl_seconds,
+            ..
+        } => {
+            let (operation, request_op) = match op {
+                KeyValueOp::Get => ("query", "get"),
+                KeyValueOp::Exists => ("query", "exists"),
+                KeyValueOp::Scan => ("query", "scan"),
+                KeyValueOp::Set => ("mutate", "set"),
+                KeyValueOp::Delete => ("mutate", "delete"),
+            };
+            let mut spec = serde_json::json!({
+                "operation": request_op,
+                "key": key_template,
+                "compiler_mediated": true,
+            });
+            if let Some(value) = value {
+                spec["value"] = serde_json::Value::String(
+                    String::from_utf8(value.clone()).unwrap_or_else(|_| {
+                        use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
+                        format!("base64:{}", B64.encode(value))
+                    }),
+                );
+            }
+            if let Some(ttl) = ttl_seconds {
+                spec["ttl"] = serde_json::json!(ttl);
+            }
+            Ok(CompiledDispatchRequest {
+                operation: operation.to_string(),
+                spec_json: spec.to_string(),
+            })
+        }
+        CompiledRendering::Object {
+            op,
+            bucket,
+            key,
+            content_type,
+            ..
+        } => {
+            let operation = match op {
+                ObjectOp::GetObject | ObjectOp::HeadObject => "get_object",
+                ObjectOp::PutObject => "put_object",
+                ObjectOp::DeleteObject | ObjectOp::ListObjects | ObjectOp::GeneratePresigned => {
+                    return Err(Status::failed_precondition(format!(
+                        "compiled object op '{op:?}' is not exposed by GenericDispatch"
+                    )));
+                }
+            };
+            let mut spec = serde_json::json!({
+                "bucket": bucket,
+                "key": key,
+                "object_key": key,
+                "compiler_mediated": true,
+            });
+            if let Some(content_type) = content_type {
+                spec["content_type"] = serde_json::json!(content_type);
+            }
+            Ok(CompiledDispatchRequest {
+                operation: operation.to_string(),
+                spec_json: spec.to_string(),
+            })
+        }
+    }
+}
+
+fn json_rendering_to_dispatch(
+    backend: &crate::backend::BackendKind,
+    method: &crate::ir::compile::HttpMethod,
+    path: &str,
+    body: &serde_json::Value,
+    family: LogicalOpFamily,
+) -> Result<CompiledDispatchRequest, Status> {
+    use crate::backend::BackendKind;
+    let operation = match family {
+        LogicalOpFamily::Write | LogicalOpFamily::Delete => "mutate",
+        LogicalOpFamily::Search => "search",
+        LogicalOpFamily::ResourceOp => "mutate",
+        LogicalOpFamily::Read | LogicalOpFamily::Aggregate => "query",
+    };
+    let spec = match backend {
+        BackendKind::Mongodb => mongodb_rendering_body(path, body, family)?,
+        BackendKind::Qdrant => qdrant_rendering_body(path, body, family)?,
+        BackendKind::Elasticsearch | BackendKind::Pinecone | BackendKind::Weaviate => {
+            serde_json::json!({
+                "method": http_method_token(method),
+                "path": path,
+                "body": body,
+                "compiler_mediated": true,
+            })
+        }
+        _ => serde_json::json!({
+            "method": http_method_token(method),
+            "path": path,
+            "body": body,
+            "compiler_mediated": true,
+        }),
+    };
+    Ok(CompiledDispatchRequest {
+        operation: operation.to_string(),
+        spec_json: spec.to_string(),
+    })
+}
+
+fn mongodb_rendering_body(
+    path: &str,
+    body: &serde_json::Value,
+    family: LogicalOpFamily,
+) -> Result<serde_json::Value, Status> {
+    let mut spec = body.clone();
+    let serde_json::Value::Object(map) = &mut spec else {
+        return Err(Status::invalid_argument(
+            "MongoDB compiled rendering body must be an object",
+        ));
+    };
+    match family {
+        LogicalOpFamily::Read => {}
+        LogicalOpFamily::Aggregate | LogicalOpFamily::Search => {
+            map.insert("operation".into(), serde_json::json!("aggregate"));
+        }
+        LogicalOpFamily::Write => {
+            if path.ends_with("insertMany") || map.contains_key("documents") {
+                map.insert("operation".into(), serde_json::json!("insert_many"));
+            } else if path.ends_with("insertOne") || map.contains_key("document") {
+                map.insert("operation".into(), serde_json::json!("insert"));
+            } else if let Some(replacement) = map.remove("replacement") {
+                map.insert("operation".into(), serde_json::json!("upsert"));
+                map.insert("document".into(), replacement);
+            } else {
+                map.insert("operation".into(), serde_json::json!("upsert"));
+            }
+        }
+        LogicalOpFamily::Delete => {
+            map.insert("operation".into(), serde_json::json!("delete_many"));
+        }
+        LogicalOpFamily::ResourceOp => {}
+    }
+    map.insert("compiler_mediated".into(), serde_json::json!(true));
+    Ok(spec)
+}
+
+fn qdrant_rendering_body(
+    path: &str,
+    body: &serde_json::Value,
+    family: LogicalOpFamily,
+) -> Result<serde_json::Value, Status> {
+    let mut spec = body.clone();
+    let serde_json::Value::Object(map) = &mut spec else {
+        return Err(Status::invalid_argument(
+            "Qdrant compiled rendering body must be an object",
+        ));
+    };
+    if let Some(collection) = qdrant_collection_from_path(path) {
+        map.insert("collection".into(), serde_json::json!(collection));
+    }
+    match family {
+        LogicalOpFamily::Write => {
+            map.insert("operation".into(), serde_json::json!("upsert"));
+        }
+        LogicalOpFamily::Delete => {
+            map.insert("operation".into(), serde_json::json!("delete"));
+        }
+        _ => {}
+    }
+    map.insert("compiler_mediated".into(), serde_json::json!(true));
+    Ok(spec)
+}
+
+fn qdrant_collection_from_path(path: &str) -> Option<String> {
+    let mut parts = path.split('/').filter(|part| !part.is_empty());
+    while let Some(part) = parts.next() {
+        if part == "collections" {
+            return parts.next().map(str::to_string);
+        }
+    }
+    None
+}
+
+fn http_method_token(method: &crate::ir::compile::HttpMethod) -> &'static str {
+    match method {
+        crate::ir::compile::HttpMethod::Get => "GET",
+        crate::ir::compile::HttpMethod::Post => "POST",
+        crate::ir::compile::HttpMethod::Put => "PUT",
+        crate::ir::compile::HttpMethod::Patch => "PATCH",
+        crate::ir::compile::HttpMethod::Delete => "DELETE",
+    }
+}
+
+fn logical_value_to_json(value: &crate::ir::value::LogicalValue) -> serde_json::Value {
+    use crate::ir::value::LogicalValue;
+    match value {
+        LogicalValue::Null => serde_json::Value::Null,
+        LogicalValue::Bool(value) => serde_json::Value::Bool(*value),
+        LogicalValue::Int(value) => serde_json::json!(value),
+        LogicalValue::Float(value) => serde_json::Number::from_f64(*value)
+            .map(serde_json::Value::Number)
+            .unwrap_or(serde_json::Value::Null),
+        LogicalValue::String(value) => serde_json::Value::String(value.clone()),
+        LogicalValue::Bytes(value) => {
+            use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
+            serde_json::Value::String(format!("base64:{}", B64.encode(value)))
+        }
+        LogicalValue::Timestamp(value) => serde_json::Value::String(value.to_rfc3339()),
+        LogicalValue::Json(value) => value.clone(),
+        LogicalValue::Array(values) => {
+            serde_json::Value::Array(values.iter().map(logical_value_to_json).collect())
+        }
+    }
+}
+
+fn inline_sql_params(
+    statement: &str,
+    params: &[crate::ir::value::LogicalValue],
+) -> Result<String, Status> {
+    let mut out = String::with_capacity(statement.len() + params.len() * 8);
+    let mut params = params.iter();
+    for ch in statement.chars() {
+        if ch == '?' {
+            let value = params.next().ok_or_else(|| {
+                Status::invalid_argument("compiled SQL has more placeholders than params")
+            })?;
+            out.push_str(&clickhouse_literal(value));
+        } else {
+            out.push(ch);
+        }
+    }
+    if params.next().is_some() {
+        return Err(Status::invalid_argument(
+            "compiled SQL has more params than placeholders",
+        ));
+    }
+    Ok(out)
+}
+
+fn clickhouse_literal(value: &crate::ir::value::LogicalValue) -> String {
+    use crate::ir::value::LogicalValue;
+    match value {
+        LogicalValue::Null => "NULL".to_string(),
+        LogicalValue::Bool(value) => {
+            if *value {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            }
+        }
+        LogicalValue::Int(value) => value.to_string(),
+        LogicalValue::Float(value) => value.to_string(),
+        LogicalValue::String(value) => format!("'{}'", value.replace('\'', "''")),
+        LogicalValue::Bytes(value) => {
+            use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
+            format!("'{}'", B64.encode(value))
+        }
+        LogicalValue::Timestamp(value) => format!("'{}'", value.to_rfc3339()),
+        LogicalValue::Json(value) => format!("'{}'", value.to_string().replace('\'', "''")),
+        LogicalValue::Array(values) => format!(
+            "[{}]",
+            values
+                .iter()
+                .map(clickhouse_literal)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::generation::{ManifestColumn, ManifestTable};
+
+    fn fixture_manifest() -> CatalogManifest {
+        CatalogManifest {
+            tables: vec![ManifestTable {
+                message_name: "acme.billing.v1.Customer".to_string(),
+                schema: "public".to_string(),
+                table: "customers".to_string(),
+                primary_key: vec!["id".to_string()],
+                columns: vec![
+                    ManifestColumn {
+                        field_name: "id".into(),
+                        column_name: "id".into(),
+                        proto_type: "string".into(),
+                        sql_type: "uuid".into(),
+                        is_primary: true,
+                        not_null: true,
+                        ..Default::default()
+                    },
+                    ManifestColumn {
+                        field_name: "email".into(),
+                        column_name: "email".into(),
+                        proto_type: "string".into(),
+                        sql_type: "text".into(),
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn neutral_ir_dispatch_compiles_to_executor_ready_postgres_query() {
+        let manifest = fixture_manifest();
+        let context = crate::RequestContext {
+            tenant_id: "tenant-a".into(),
+            project_id: "billing".into(),
+            ..Default::default()
+        };
+        let spec = serde_json::json!({
+            "ir": {
+                "op": "read",
+                "message_type": "acme.billing.v1.Customer",
+                "filter": {
+                    "Comparison": {
+                        "field": "email",
+                        "op": "eq",
+                        "value": { "String": "a@b.com" }
+                    }
+                },
+                "pagination": { "limit": 5 }
+            }
+        });
+
+        let compiled = compile_neutral_ir_dispatch(
+            "postgres",
+            None,
+            &context,
+            &manifest,
+            "query",
+            &spec.to_string(),
+        )
+        .expect("compile dispatch")
+        .expect("compiled request");
+        assert_eq!(compiled.operation, "query");
+
+        let dispatch: serde_json::Value =
+            serde_json::from_str(&compiled.spec_json).expect("dispatch json");
+        assert_eq!(dispatch["compiler_mediated"], true);
+        assert!(
+            dispatch["sql"]
+                .as_str()
+                .unwrap()
+                .contains("FROM \"public\".\"customers\"")
+        );
+        assert_eq!(dispatch["params"], serde_json::json!(["a@b.com"]));
     }
 }

@@ -1,4 +1,5 @@
 use super::*;
+use base64::Engine as _;
 
 #[test]
 fn default_migration_options() {
@@ -120,6 +121,267 @@ fn project_routing_mode_merge_env_overrides_file_values() {
     assert_eq!(config.project_routing_mode, "strict_with_default:billing");
 
     restore_env("UDB_PROJECT_ROUTING_MODE", prior);
+}
+
+#[test]
+fn native_services_merge_env_precedence_and_legacy_alias() {
+    let prior_new = std::env::var("UDB_NATIVE_SERVICES_ENABLED").ok();
+    let prior_old = std::env::var("UDB_NATIVE_AUTH").ok();
+    let prior_list = std::env::var("UDB_NATIVE_SERVICES").ok();
+    let prior_storage = std::env::var("UDB_NATIVE_STORAGE_ENABLED").ok();
+    let prior_storage_migrate = std::env::var("UDB_NATIVE_STORAGE_MIGRATE_ENABLED").ok();
+
+    #[allow(unused_unsafe)]
+    unsafe {
+        std::env::set_var("UDB_NATIVE_AUTH", "0");
+        std::env::set_var("UDB_NATIVE_SERVICES_ENABLED", "1");
+        std::env::set_var("UDB_NATIVE_SERVICES", "authn,storage");
+        std::env::set_var("UDB_NATIVE_STORAGE_ENABLED", "false");
+        std::env::set_var("UDB_NATIVE_STORAGE_MIGRATE_ENABLED", "true");
+    }
+
+    let mut cfg = UdbConfig::default();
+    cfg.merge_env();
+    assert!(
+        cfg.native_services.enabled,
+        "canonical env wins over legacy alias"
+    );
+    assert!(!cfg.native_services.default_enabled);
+    assert_eq!(cfg.native_services.services["authn"].enabled, Some(true));
+    assert_eq!(cfg.native_services.services["storage"].enabled, Some(false));
+    assert_eq!(cfg.native_services.services["storage"].migrate, Some(true));
+
+    restore_env("UDB_NATIVE_SERVICES_ENABLED", prior_new);
+    restore_env("UDB_NATIVE_AUTH", prior_old);
+    restore_env("UDB_NATIVE_SERVICES", prior_list);
+    restore_env("UDB_NATIVE_STORAGE_ENABLED", prior_storage);
+    restore_env("UDB_NATIVE_STORAGE_MIGRATE_ENABLED", prior_storage_migrate);
+}
+
+#[test]
+fn production_service_settings_default_to_secure_internal_transport() {
+    let prior_env = std::env::var("UDB_ENV").ok();
+    let prior_tls = std::env::var("UDB_REQUIRE_SECURE_TRANSPORT").ok();
+    let prior_legacy_tls = std::env::var("UDB_TLS_REQUIRED").ok();
+    let prior_mtls = std::env::var("UDB_MTLS_REQUIRED").ok();
+    let prior_broker_mtls = std::env::var("UDB_BROKER_MTLS_REQUIRED").ok();
+    let prior_internal_mtls = std::env::var("UDB_INTERNAL_CONTROL_MTLS_REQUIRED").ok();
+
+    #[allow(unused_unsafe)]
+    unsafe {
+        std::env::set_var("UDB_ENV", "production");
+        std::env::remove_var("UDB_REQUIRE_SECURE_TRANSPORT");
+        std::env::remove_var("UDB_TLS_REQUIRED");
+        std::env::remove_var("UDB_MTLS_REQUIRED");
+        std::env::remove_var("UDB_BROKER_MTLS_REQUIRED");
+        std::env::remove_var("UDB_INTERNAL_CONTROL_MTLS_REQUIRED");
+    }
+
+    let mut service = ServiceSettings::default();
+    service.merge_env();
+    assert!(
+        service.require_secure_transport,
+        "production service listeners must require TLS by default"
+    );
+    assert!(
+        service.mtls_required,
+        "production internal/control-plane listeners must require mTLS by default"
+    );
+    assert!(
+        service.broker_to_broker_mtls_required,
+        "production broker-to-broker channels must require mTLS by default"
+    );
+    assert!(
+        service.internal_control_mtls_required,
+        "production worker/control channels must require mTLS by default"
+    );
+
+    restore_env("UDB_ENV", prior_env);
+    restore_env("UDB_REQUIRE_SECURE_TRANSPORT", prior_tls);
+    restore_env("UDB_TLS_REQUIRED", prior_legacy_tls);
+    restore_env("UDB_MTLS_REQUIRED", prior_mtls);
+    restore_env("UDB_BROKER_MTLS_REQUIRED", prior_broker_mtls);
+    restore_env("UDB_INTERNAL_CONTROL_MTLS_REQUIRED", prior_internal_mtls);
+}
+
+#[test]
+fn dev_service_settings_do_not_force_secure_transport() {
+    let prior_env = std::env::var("UDB_ENV").ok();
+    let prior_tls = std::env::var("UDB_REQUIRE_SECURE_TRANSPORT").ok();
+    let prior_legacy_tls = std::env::var("UDB_TLS_REQUIRED").ok();
+    let prior_mtls = std::env::var("UDB_MTLS_REQUIRED").ok();
+    let prior_broker_mtls = std::env::var("UDB_BROKER_MTLS_REQUIRED").ok();
+    let prior_internal_mtls = std::env::var("UDB_INTERNAL_CONTROL_MTLS_REQUIRED").ok();
+
+    #[allow(unused_unsafe)]
+    unsafe {
+        std::env::set_var("UDB_ENV", "development");
+        std::env::remove_var("UDB_REQUIRE_SECURE_TRANSPORT");
+        std::env::remove_var("UDB_TLS_REQUIRED");
+        std::env::remove_var("UDB_MTLS_REQUIRED");
+        std::env::remove_var("UDB_BROKER_MTLS_REQUIRED");
+        std::env::remove_var("UDB_INTERNAL_CONTROL_MTLS_REQUIRED");
+    }
+
+    let mut service = ServiceSettings::default();
+    service.merge_env();
+    assert!(!service.require_secure_transport);
+    assert!(!service.mtls_required);
+    assert!(!service.broker_to_broker_mtls_required);
+    assert!(!service.internal_control_mtls_required);
+
+    restore_env("UDB_ENV", prior_env);
+    restore_env("UDB_REQUIRE_SECURE_TRANSPORT", prior_tls);
+    restore_env("UDB_TLS_REQUIRED", prior_legacy_tls);
+    restore_env("UDB_MTLS_REQUIRED", prior_mtls);
+    restore_env("UDB_BROKER_MTLS_REQUIRED", prior_broker_mtls);
+    restore_env("UDB_INTERNAL_CONTROL_MTLS_REQUIRED", prior_internal_mtls);
+}
+
+#[test]
+fn mtls_umbrella_enables_broker_and_internal_control_mtls() {
+    let prior_mtls = std::env::var("UDB_MTLS_REQUIRED").ok();
+    let prior_broker_mtls = std::env::var("UDB_BROKER_MTLS_REQUIRED").ok();
+    let prior_internal_mtls = std::env::var("UDB_INTERNAL_CONTROL_MTLS_REQUIRED").ok();
+
+    #[allow(unused_unsafe)]
+    unsafe {
+        std::env::set_var("UDB_MTLS_REQUIRED", "true");
+        std::env::remove_var("UDB_BROKER_MTLS_REQUIRED");
+        std::env::remove_var("UDB_INTERNAL_CONTROL_MTLS_REQUIRED");
+    }
+
+    let mut service = ServiceSettings::default();
+    service.merge_env();
+    assert!(service.mtls_required);
+    assert!(service.broker_to_broker_mtls_required);
+    assert!(service.internal_control_mtls_required);
+
+    restore_env("UDB_MTLS_REQUIRED", prior_mtls);
+    restore_env("UDB_BROKER_MTLS_REQUIRED", prior_broker_mtls);
+    restore_env("UDB_INTERNAL_CONTROL_MTLS_REQUIRED", prior_internal_mtls);
+}
+
+#[test]
+fn compliance_hardened_yaml_matches_secure_runtime_posture() {
+    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let yaml = std::fs::read_to_string(root.join("configs/compliance-hardened.yaml"))
+        .expect("compliance-hardened.yaml should be readable");
+    let mut config: UdbConfig =
+        serde_yaml::from_str(&yaml).expect("compliance-hardened.yaml must parse as UdbConfig");
+
+    config.service.apply_security_posture(false);
+
+    assert!(
+        config.security.validate_production().is_ok(),
+        "hardened compliance YAML must satisfy SecurityConfig::validate_production: {:?}",
+        config.security.validate_production()
+    );
+    assert!(
+        config.security.is_production(),
+        "hardened compliance YAML must put SecurityConfig in production posture"
+    );
+    assert!(
+        config.service.require_secure_transport,
+        "hardened compliance YAML must require TLS on service listeners"
+    );
+    assert!(
+        config.service.mtls_required,
+        "hardened compliance YAML must require listener mTLS"
+    );
+    assert!(
+        config.service.broker_to_broker_mtls_required,
+        "listener mTLS must imply broker-to-broker mTLS"
+    );
+    assert!(
+        config.service.internal_control_mtls_required,
+        "listener mTLS must imply worker/control mTLS"
+    );
+}
+
+#[test]
+fn required_object_native_state_encryption_requires_key_source() {
+    let mut cfg = UdbConfig::default();
+    cfg.primary.direct_dsn = "postgres://user:pass@localhost:5432/udb".to_string();
+    cfg.encryption.object_native_state_required = true;
+
+    let report = cfg.validate();
+    assert!(
+        report
+            .errors
+            .iter()
+            .any(|err| err.contains("object/native-state encryption is required")),
+        "required object/native-state encryption must fail closed without key source: {:?}",
+        report.errors
+    );
+}
+
+#[test]
+fn required_object_native_state_encryption_accepts_inline_key_source() {
+    let mut cfg = UdbConfig::default();
+    cfg.primary.direct_dsn = "postgres://user:pass@localhost:5432/udb".to_string();
+    cfg.encryption.object_native_state_required = true;
+    cfg.encryption.keys.insert(
+        1,
+        base64::engine::general_purpose::STANDARD.encode([0x42u8; 32]),
+    );
+
+    let report = cfg.validate();
+    assert!(
+        !report
+            .errors
+            .iter()
+            .any(|err| err.contains("object/native-state encryption is required")),
+        "configured key source should satisfy object/native-state encryption gate: {:?}",
+        report.errors
+    );
+}
+
+#[test]
+fn native_services_yaml_merge_preserves_per_service_overrides() {
+    let base = UdbConfig {
+        native_services: NativeServicesSettings {
+            enabled: true,
+            services: [(
+                "storage".to_string(),
+                NativeServiceConfig {
+                    enabled: Some(true),
+                    migrate: Some(true),
+                    ..NativeServiceConfig::default()
+                },
+            )]
+            .into_iter()
+            .collect(),
+            ..NativeServicesSettings::default()
+        },
+        ..UdbConfig::default()
+    };
+    let file = UdbConfig {
+        native_services: NativeServicesSettings {
+            default_enabled: false,
+            services: [(
+                "storage".to_string(),
+                NativeServiceConfig {
+                    enabled: Some(false),
+                    required_backends: vec!["postgres".to_string(), "object_storage".to_string()],
+                    ..NativeServiceConfig::default()
+                },
+            )]
+            .into_iter()
+            .collect(),
+            ..NativeServicesSettings::default()
+        },
+        ..UdbConfig::default()
+    };
+    let merged = merge_udb_config(base, file);
+    let storage = &merged.native_services.services["storage"];
+    assert_eq!(storage.enabled, Some(false));
+    assert_eq!(storage.migrate, Some(true));
+    assert_eq!(
+        storage.required_backends,
+        vec!["postgres", "object_storage"]
+    );
+    assert!(!merged.native_services.default_enabled);
 }
 
 #[test]

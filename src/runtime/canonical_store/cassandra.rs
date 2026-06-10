@@ -112,11 +112,6 @@ impl CassandraCanonicalStore {
         &self.client
     }
 
-    /// The (validated) keyspace this store's system tables live in.
-    pub(super) fn keyspace(&self) -> &str {
-        &self.keyspace
-    }
-
     /// Ensure the keyspace exists (idempotent). The four phase-2 system-store
     /// `ensure_*_tables` methods call this before their `CREATE TABLE` so they
     /// work on a fresh store even if `ensure_system_tables` wasn't called first

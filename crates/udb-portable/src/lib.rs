@@ -15,6 +15,24 @@
 //!   `window.fetch` / edge KV and passes the bytes to
 //!   [`parser::parse_proto_source`] or
 //!   [`parser::parse_ast_source`].
+//! - [`generation`] — build a `CatalogManifest` from parsed schemas and
+//!   render bootstrap + delta **DDL** for any SQL backend
+//!   ([`generation::sql::generate_bootstrap_sql`] /
+//!   [`generation::sql::generate_delta_sql`]).
+//! - [`migration`] — diff two manifests into `ChangeOperation`s with
+//!   SafeAuto/RequiresReview/Blocked classification ([`migration::diff`],
+//!   [`migration::diff_backends`]). (The full `build_migration_plan` —
+//!   SQL/DSN/provisioning artifacts — stays server-side.)
+//! - [`ir`] — **the IR → backend query compiler.** Lowers neutral
+//!   `LogicalRead`/`Write`/`Delete`/`Search`/`Aggregate` operations into a
+//!   `CompiledRendering` (SQL / JSON / key-value / object) string for all 18
+//!   backends ([`ir::compile`]) — browser/edge query compilation with zero
+//!   server round-trip, reusing the exact lowering the server runs.
+//! - [`backend`] — the [`backend::BackendKind`] enum the compilers match on.
+//! - [`descriptor`] — hand-decode the embedded `FileDescriptorSet` bytes into
+//!   the full UDB contract (services/RPCs/messages, endpoint+field security,
+//!   native-service surface, emitted events) via
+//!   [`descriptor::descriptor_contract_manifest_from_bytes`].
 //!
 //! ## What's deliberately NOT in here
 //!
@@ -74,6 +92,125 @@ pub use schema::checksum::schema_checksum;
 pub mod schema_cache;
 pub use schema_cache::{CatalogCompatibility, Negotiation, SchemaCache};
 
+/// Manifest generation, DDL rendering, and manifest diff — the portable
+/// half of `udb`'s `generation` + `migration` subsystems. A WASM/edge
+/// client can build a [`generation::manifest::CatalogManifest`] from
+/// parsed `ProtoSchema`s, emit bootstrap + delta DDL for any SQL backend
+/// (`generation::sql::generate_bootstrap_sql` / `generate_delta_sql`),
+/// and diff two manifests into `ChangeOperation`s with
+/// SafeAuto/RequiresReview/Blocked classification — entirely client-side.
+///
+/// Deliberately NOT included (server-only): `build_migration_plan`, DSN
+/// catalogs, provisioning, `apply`/`sync`/`phase_runner`, and the
+/// per-backend driver DDL in `generation::backends`. The included
+/// modules' `crate::ast::*` paths resolve via the `pub use schema::ast`
+/// re-export above; `generation::sql` and `migration::diff` have a mutual
+/// dependency (the DDL renderer reads `ChangeOperation`; the differ reads
+/// `generation::sql::validate_enum_value`) and are both included here.
+pub mod generation {
+    #[path = "../../../../src/generation/manifest/mod.rs"]
+    pub mod manifest;
+
+    #[path = "../../../../src/generation/manifest_index.rs"]
+    pub mod manifest_index;
+
+    #[path = "../../../../src/generation/sql/mod.rs"]
+    pub mod sql;
+
+    // Re-export at the `generation` level exactly like the server's
+    // `generation/mod.rs`, so the IR compilers' `crate::generation::CatalogManifest`
+    // / `ManifestTable` paths (and the manifest-build/diff consumers) resolve
+    // identically in both crates.
+    pub use manifest::{
+        CatalogManifest, GENERATOR_VERSION, ManifestCheck, ManifestColumn, ManifestColumnSecurity,
+        ManifestExtension, ManifestForeignKey, ManifestIndex, ManifestMaterializedView,
+        ManifestMigrationReport, ManifestSchemaChecksum, ManifestStore, ManifestStoreOption,
+        ManifestTable, ManifestTableSecurity, ManifestTrigger, migrate_manifest_to_current,
+    };
+    pub use sql::{
+        GeneratedArtifact, SqlGenerationConfig, generate_bootstrap_sql, generate_delta_sql,
+    };
+}
+
+pub mod migration {
+    //! Portable schema-diff surface only (no apply/sync/ledger).
+    #[path = "../../../../src/migration/diff.rs"]
+    pub mod diff;
+
+    #[path = "../../../../src/migration/diff_backends.rs"]
+    pub mod diff_backends;
+}
+
+/// The backend-identity enum the IR→SQL compilers match on. Just the enum
+/// (split into `src/backend/kind.rs`); the native `backend::plugin`/`plugins`
+/// driver inventory is NOT included.
+pub mod backend {
+    #[path = "../../../../src/backend/kind.rs"]
+    mod kind;
+    pub use kind::BackendKind;
+}
+
+/// The single broker function the IR→SQL compilers call
+/// (`SqlCompiler::resolve_table`), re-exported from the portable
+/// `generation::manifest_index` leaf so `crate::broker::table_for_message`
+/// resolves identically to the server.
+pub mod broker {
+    pub use crate::generation::manifest_index::table_for_message;
+}
+
+/// **The IR → backend query compiler — the big prize.** Lowers neutral
+/// `LogicalRead`/`Write`/`Delete`/`Search`/`Aggregate` operations into a
+/// `CompiledRendering` (SQL / JSON / key-value / object) string for any of the
+/// 18 supported backends (every backend module enabled by the `all-compilers`
+/// default feature). It is pure CPU work — a browser or edge worker can compile
+/// a query to backend-native SQL/DSL with ZERO server round-trip, reusing the
+/// exact lowering the server runs.
+///
+/// Excluded (not on the compile path): `ir::plan` (multi-backend async
+/// execution — pulls tokio) and `ir::raw_dispatch` (runtime policy / env).
+pub mod ir {
+    #[path = "../../../../src/ir/cache_key.rs"]
+    pub mod cache_key;
+    #[path = "../../../../src/ir/compile/mod.rs"]
+    pub mod compile;
+    #[path = "../../../../src/ir/filter.rs"]
+    pub mod filter;
+    #[path = "../../../../src/ir/operations.rs"]
+    pub mod operations;
+    #[path = "../../../../src/ir/projection.rs"]
+    pub mod projection;
+    #[path = "../../../../src/ir/value.rs"]
+    pub mod value;
+}
+
+/// Minimal shim so the `#[path]`-shared `descriptor_manifest.rs` resolves its one
+/// `crate::runtime::native_catalog::embedded_file_descriptor_set()` reference on a
+/// target that does not bundle the server's embedded descriptor. On wasm/edge the
+/// caller supplies the descriptor bytes itself (browser fetch / embedded asset)
+/// and uses [`descriptor::descriptor_contract_manifest_from_bytes`]; the no-arg
+/// server-style accessor decodes empty here.
+pub mod runtime {
+    pub mod native_catalog {
+        /// Stub: no embedded descriptor on the portable target — returns empty.
+        pub fn embedded_file_descriptor_set() -> &'static [u8] {
+            &[]
+        }
+    }
+}
+
+/// Descriptor / RPC-contract decode — hand-decodes the embedded
+/// `FileDescriptorSet` bytes into the UDB contract manifest (services, RPCs,
+/// messages, endpoint/field security, native-service surface, emitted events),
+/// preserving the custom UDB option extensions that `prost_types` would drop. A
+/// browser/edge client fetches `udb_descriptor.bin` and calls
+/// [`descriptor::descriptor_contract_manifest_from_bytes`] to read the full
+/// contract entirely client-side.
+pub mod descriptor {
+    #[path = "../../../../src/runtime/descriptor_manifest.rs"]
+    mod inner;
+    pub use inner::*;
+}
+
 pub mod parser {
     //! Proto file lexer + source-based parser. See crate docs for why
     //! we don't expose the path-based variants.
@@ -107,132 +244,19 @@ pub mod parser {
     #[path = "../../../../src/parser/db_parser.rs"]
     mod db_parser;
 
-    use std::fmt;
-    use std::path::PathBuf;
+    #[path = "../../../../src/parser/facade.rs"]
+    mod facade;
 
     use crate::ast::{ProtoFileAst, ProtoSchema};
     use ast_parser::ProtoAstParser;
     use db_parser::ProtoParser;
-    use lexer::{LexError, Lexer};
+    use lexer::Lexer;
     use selection::dedupe_canonical_table_schemas;
 
-    /// Pinned at the same value as the main `udb` crate so a WASM
-    /// client and the server agree on the annotation contract version.
-    pub const UDB_ANNOTATION_VERSION: &str = "1";
-
-    /// Mirror of the main crate's `AnnotationParserMode`. The shared
-    /// parser submodules read it via `super::AnnotationParserMode`.
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub enum AnnotationParserMode {
-        Compat,
-        Warn,
-        Strict,
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct ParserConfig {
-        pub proto_namespace: String,
-        pub annotation_mode: AnnotationParserMode,
-        pub expected_annotation_version: String,
-    }
-
-    impl ParserConfig {
-        pub fn new(proto_namespace: impl Into<String>) -> Self {
-            Self {
-                proto_namespace: proto_namespace.into(),
-                annotation_mode: AnnotationParserMode::Compat,
-                expected_annotation_version: UDB_ANNOTATION_VERSION.to_string(),
-            }
-        }
-
-        pub fn with_annotation_mode(mut self, mode: AnnotationParserMode) -> Self {
-            self.annotation_mode = mode;
-            self
-        }
-
-        pub fn with_expected_annotation_version(mut self, version: impl Into<String>) -> Self {
-            self.expected_annotation_version = version.into();
-            self
-        }
-    }
-
-    impl Default for ParserConfig {
-        fn default() -> Self {
-            Self::new("")
-        }
-    }
-
-    #[derive(Debug, Clone, PartialEq, Eq)]
-    pub struct ParserDiagnostic {
-        pub file: String,
-        pub line: usize,
-        pub column: usize,
-        pub code: String,
-        pub message: String,
-    }
-
-    impl fmt::Display for ParserDiagnostic {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(
-                f,
-                "{}:{}:{} [{}]: {}",
-                self.file, self.line, self.column, self.code, self.message
-            )
-        }
-    }
-
-    #[derive(Debug, Clone, PartialEq, Eq, Default)]
-    pub struct ParseReport {
-        pub schemas: Vec<ProtoSchema>,
-        pub diagnostics: Vec<ParserDiagnostic>,
-    }
-
-    impl ParseReport {
-        pub fn passed(&self) -> bool {
-            self.diagnostics.is_empty()
-        }
-    }
-
-    /// Source-only variant of `ParseError`. Notably no `Directory` or
-    /// `Io` variants — those exist on the main crate's `ParseError` to
-    /// surface `std::fs::read_dir` failures, which the portable crate
-    /// can't produce because it doesn't read the filesystem.
-    #[derive(Debug)]
-    pub enum ParseError {
-        Lex(LexError),
-        Syntax {
-            file: String,
-            line: usize,
-            column: usize,
-            message: String,
-        },
-        /// Retained so the source-based functions can still produce a
-        /// path-shaped error if a caller passes a logical path string
-        /// (e.g. a URL or virtual FS path).
-        Io {
-            path: PathBuf,
-            source: std::io::Error,
-        },
-    }
-
-    impl fmt::Display for ParseError {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            match self {
-                Self::Lex(source) => write!(f, "{source}"),
-                Self::Syntax {
-                    file,
-                    line,
-                    column,
-                    message,
-                } => write!(f, "{file}:{line}:{column}: {message}"),
-                Self::Io { path, source } => {
-                    write!(f, "cannot read {}: {source}", path.display())
-                }
-            }
-        }
-    }
-
-    impl std::error::Error for ParseError {}
+    pub use facade::{
+        AnnotationParserMode, ParseError, ParseReport, ParserConfig, ParserDiagnostic,
+        UDB_ANNOTATION_VERSION,
+    };
 
     /// Parse a proto-DB schema from in-memory bytes. The portable
     /// equivalent of `udb::parser::parse_file`, minus the filesystem.

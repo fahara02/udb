@@ -4,6 +4,54 @@ use super::*;
 use crate::runtime::executors::BackendHealth;
 
 impl DataBrokerRuntime {
+    pub fn configured_probe_backends(
+        &self,
+        include_postgres: bool,
+    ) -> Vec<crate::backend::BackendKind> {
+        use crate::backend::BackendKind;
+
+        let init = self.init_report();
+        BackendKind::all_known()
+            .iter()
+            .cloned()
+            .filter(|kind| kind.has_runtime_probe())
+            .filter(|kind| match kind {
+                BackendKind::Postgres => include_postgres && init.postgres_configured,
+                BackendKind::Redis => init.redis_configured,
+                BackendKind::Qdrant => init.qdrant_configured,
+                BackendKind::Minio | BackendKind::S3 => init.s3_configured,
+                BackendKind::Mongodb => init.mongodb_configured,
+                BackendKind::Neo4j => init.neo4j_configured,
+                BackendKind::Clickhouse => init.clickhouse_configured,
+                _ => false,
+            })
+            .collect()
+    }
+
+    pub async fn probe_backend(&self, kind: crate::backend::BackendKind) -> BackendProbeResult {
+        use crate::backend::BackendKind;
+
+        let mut result = match &kind {
+            BackendKind::Postgres => self.probe_postgres().await,
+            #[cfg(feature = "redis")]
+            BackendKind::Redis => self.probe_redis_ping().await,
+            BackendKind::Qdrant => self.probe_qdrant_collections().await,
+            #[cfg(feature = "s3")]
+            BackendKind::Minio | BackendKind::S3 => self.probe_s3_access().await,
+            BackendKind::Mongodb => self.probe_mongodb_ping().await,
+            BackendKind::Neo4j => self.probe_neo4j_ping().await,
+            BackendKind::Clickhouse => self.probe_clickhouse_ping().await,
+            _ => BackendProbeResult {
+                backend: kind.as_str().to_string(),
+                ok: false,
+                latency_ms: 0,
+                error: Some("backend has no live runtime probe".to_string()),
+            },
+        };
+        result.backend = kind.as_str().to_string();
+        result
+    }
+
     /// Probe MongoDB Atlas Data API by calling the `ping` command.
     #[cfg(not(feature = "mongodb"))]
     pub async fn probe_mongodb_ping(&self) -> BackendProbeResult {
@@ -899,9 +947,50 @@ impl DataBrokerRuntime {
         instance: Option<&str>,
         request_json: &str,
     ) -> Result<Vec<u8>, tonic::Status> {
+        self.get_object_backend_target_for_project(
+            backend,
+            instance,
+            crate::runtime::catalog::DEFAULT_PROJECT_ID,
+            request_json,
+        )
+        .await
+    }
+
+    pub async fn get_object_backend_target_for_project(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        project_id: &str,
+        request_json: &str,
+    ) -> Result<Vec<u8>, tonic::Status> {
         // Validate well-formed JSON before dispatch; the executor re-parses shape.
         parse_dispatch_json(request_json)?;
         use crate::runtime::executors::ObjectExecutor;
+        #[cfg(not(feature = "s3"))]
+        let _ = project_id;
+        #[cfg(feature = "s3")]
+        if matches!(backend, "s3" | "minio") {
+            let project = project_id.trim();
+            let project = if project.is_empty() {
+                crate::runtime::catalog::DEFAULT_PROJECT_ID
+            } else {
+                project
+            };
+            let target_instance = instance
+                .filter(|value| !value.trim().is_empty())
+                .or_else(|| {
+                    self.choose_instance_name_for_project("minio", false, project)
+                        .or_else(|| self.choose_instance_name_for_project("s3", false, project))
+                });
+            return ObjectExecutor::get_object(
+                &crate::runtime::executors::s3::S3Executor(
+                    self.s3_for_instance_for_project(target_instance, project)?
+                        .clone(),
+                ),
+                request_json,
+            )
+            .await;
+        }
         ObjectExecutor::get_object(
             &self.resolve_dispatch_executor(
                 backend,
@@ -935,9 +1024,53 @@ impl DataBrokerRuntime {
         request_json: &str,
         bytes: Vec<u8>,
     ) -> Result<String, tonic::Status> {
+        self.put_object_backend_target_for_project(
+            backend,
+            instance,
+            crate::runtime::catalog::DEFAULT_PROJECT_ID,
+            request_json,
+            bytes,
+        )
+        .await
+    }
+
+    pub async fn put_object_backend_target_for_project(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        project_id: &str,
+        request_json: &str,
+        bytes: Vec<u8>,
+    ) -> Result<String, tonic::Status> {
         // Validate well-formed JSON before dispatch; the executor re-parses shape.
         parse_dispatch_json(request_json)?;
         use crate::runtime::executors::ObjectExecutor;
+        #[cfg(not(feature = "s3"))]
+        let _ = project_id;
+        #[cfg(feature = "s3")]
+        if matches!(backend, "s3" | "minio") {
+            let project = project_id.trim();
+            let project = if project.is_empty() {
+                crate::runtime::catalog::DEFAULT_PROJECT_ID
+            } else {
+                project
+            };
+            let target_instance = instance
+                .filter(|value| !value.trim().is_empty())
+                .or_else(|| {
+                    self.choose_instance_name_for_project("minio", true, project)
+                        .or_else(|| self.choose_instance_name_for_project("s3", true, project))
+                });
+            return ObjectExecutor::put_object(
+                &crate::runtime::executors::s3::S3Executor(
+                    self.s3_for_instance_for_project(target_instance, project)?
+                        .clone(),
+                ),
+                request_json,
+                bytes,
+            )
+            .await;
+        }
         ObjectExecutor::put_object(
             &self.resolve_dispatch_executor(
                 backend,
@@ -959,10 +1092,34 @@ impl DataBrokerRuntime {
         &self,
         backend: &str,
         instance: Option<&str>,
+        project_id: &str,
         request_json: &str,
     ) -> Result<(), tonic::Status> {
         parse_dispatch_json(request_json)?;
         use crate::runtime::executors::ObjectExecutor;
+        #[cfg(feature = "s3")]
+        if matches!(backend, "s3" | "minio") {
+            let project = project_id.trim();
+            let project = if project.is_empty() {
+                crate::runtime::catalog::DEFAULT_PROJECT_ID
+            } else {
+                project
+            };
+            let target_instance = instance
+                .filter(|value| !value.trim().is_empty())
+                .or_else(|| {
+                    self.choose_instance_name_for_project("minio", true, project)
+                        .or_else(|| self.choose_instance_name_for_project("s3", true, project))
+                });
+            return ObjectExecutor::delete_object(
+                &crate::runtime::executors::s3::S3Executor(
+                    self.s3_for_instance_for_project(target_instance, project)?
+                        .clone(),
+                ),
+                request_json,
+            )
+            .await;
+        }
         ObjectExecutor::delete_object(
             &self.resolve_dispatch_executor(
                 backend,

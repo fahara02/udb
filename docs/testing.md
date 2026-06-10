@@ -1,56 +1,65 @@
 # Testing
 
-The default Rust suite should not require external services. Live service tests
-must be explicit, ignored, or environment-gated.
 
-## Local Gates
+```text
+┌────────────────────────────────────────────────────────────────────────────┐
+│                                                                            │
+│    ██    ██  ██████   ██████                                               │
+│    ██    ██  ██   ██  ██   ██                                              │
+│    ██    ██  ██   ██  ██████                                               │
+│    ██    ██  ██   ██  ██   ██                                              │
+│     ██████   ██████   ██████                                               │
+│                                                                            │
+│    UNIVERSAL DATA BROKER                                                   │
+│    gRPC data plane | native control plane | tenant/project scope guard     │
+│                                                                            │
+│    crate v0.3.2 | protocol v1.0.0                                          │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+## Fast Checks
 
-```powershell
+```bash
 cargo test --lib
-cargo test --workspace
-cargo check --all-features
-cargo check --no-default-features --features postgres
-cargo test -p udb-portable
+buf lint
+buf build
+node scripts/check-versions.mjs
+node sdk-conformance/run.mjs
 ```
 
-Recommended hygiene gates:
+## Feature Sweeps
 
-```powershell
-cargo fmt --check
-cargo clippy --workspace --all-targets --all-features
-cargo deny check advisories bans licenses sources
+```bash
+cargo test --all-features --lib
+cargo test --no-default-features --features postgres --lib
+cargo test --features clickhouse,mssql,cassandra --lib
 ```
 
-## CLI Smoke
+## Descriptor And Docs
 
-```powershell
-cargo run --bin udb-proto-parser -- doctor --human
-cargo run --bin udb-proto-parser -- lint proto
-cargo run --bin udb-proto-parser -- system-ddl
-cargo run --bin udb-proto-parser -- policy-lint
+```bash
+udb native lint
+udb native docs
+udb native manifest
 ```
 
-## Playground
+## SDKs
 
-```powershell
-cargo run --bin udb-proto-parser -- dev up
-cargo run --bin udb-proto-parser -- dev status
-cargo run --bin udb-proto-parser -- dev smoke
-cargo run --bin udb-proto-parser -- dev down
+```bash
+cd sdk/typescript && npm test
+cd sdk/python && pytest
+cd sdk/go && go test ./...
+dotnet test sdk/csharp/Udb.Client.Tests/Udb.Client.Tests.csproj
+mvn -f sdk/java/pom.xml test
+cd sdk/php && composer test
 ```
 
-## Live Acceptance Matrix
+## Live Backends
 
-| Area | Evidence to collect |
-|---|---|
-| Postgres canonical path | typed select/upsert/delete, migration apply, catalog activation |
-| MySQL/SQLite canonical path | conformance tests and one live round trip when available |
-| Optional backend plugins | feature enabled, env set, plugin appears in capabilities |
-| CDC | outbox publish, offset resume, DLQ replay/quarantine |
-| Saga recovery | retry, compensation, manual-review path |
-| Reload | traffic continues through config/client replacement |
-| Backup/restore | clean restore plus projection rebuild |
-| Tenant fairness | queue waits and rate limits under noisy-neighbor traffic |
+Live checks require matching infrastructure. Start the integration compose stack
+before enabling live-test environment variables.
 
-Do not write static performance numbers into docs unless they include date,
-commit, feature set, hardware, service topology, and command.
+```bash
+docker compose -f docker-compose.integration.yml up -d --wait
+UDB_INTEGRATION_TESTS=1 cargo test --test integration_tests -- --nocapture
+docker compose -f docker-compose.integration.yml down -v --remove-orphans
+```

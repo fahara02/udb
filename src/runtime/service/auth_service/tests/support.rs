@@ -113,6 +113,60 @@ pub(super) fn authn_service_with_cooldown(
     .with_postgres(Some(pool))
 }
 
+/// Like [`authn_service`] but with RS256 JWT signing/verification keys configured
+/// (from `testdata/`), so `login` issues a real UDB access token and
+/// `ValidateToken`(JWT) can verify it — used by the JWT-lifecycle tests.
+pub(super) fn authn_service_with_jwt(pool: sqlx::PgPool) -> AuthnServiceImpl {
+    let config = AuthnConfig {
+        session_enabled: true,
+        session_hash_secret: "live-auth-test-secret".to_string(),
+        otp_cooldown_secs: 0,
+        ..AuthnConfig::default()
+    };
+    let security = SecurityConfig {
+        jwt_private_key: Some(include_str!("../../../testdata/jwt_rs256_private.pem").to_string()),
+        jwt_public_key: Some(include_str!("../../../testdata/jwt_rs256_public.pem").to_string()),
+        ..SecurityConfig::default()
+    };
+    let sessions: Arc<dyn SessionStore> = Arc::new(PostgresSessionStore::new(pool.clone(), ""));
+    AuthnServiceImpl::with_stores(
+        config,
+        security,
+        sessions,
+        Arc::new(PostgresApiKeyStore::new(pool.clone(), "")),
+        Arc::new(PostgresUserStore::new(pool.clone(), "")),
+    )
+    .with_postgres(Some(pool))
+}
+
+/// An [`AuthEventSink`] whose transactional write always fails. Injected into a
+/// service to prove enterprise auth-mutation atomicity (§7): when the audit/outbox
+/// write inside the handler's transaction fails, the handler must propagate the
+/// error and the whole transaction (the mutation + the event) must roll back, so
+/// the DB is left exactly as it was before the call.
+pub(super) struct FailingAuthEventSink;
+
+#[async_trait::async_trait]
+impl super::super::events::AuthEventSink for FailingAuthEventSink {
+    async fn emit(&self, _event: super::super::events::AuthEvent) -> Result<(), String> {
+        Err("forced audit emit failure (atomicity test)".to_string())
+    }
+
+    async fn write_in_tx(
+        &self,
+        _conn: &mut sqlx::PgConnection,
+        _event: super::super::events::AuthEvent,
+    ) -> Result<(), String> {
+        Err("forced transactional audit write failure (atomicity test)".to_string())
+    }
+}
+
+/// Like [`authn_service`] but with an event sink whose transactional write always
+/// fails, so a handler's `emit_event_in_tx` returns an error and rolls back.
+pub(super) fn authn_service_with_failing_sink(pool: sqlx::PgPool) -> AuthnServiceImpl {
+    authn_service(pool).with_event_sink(Arc::new(FailingAuthEventSink))
+}
+
 pub(super) fn api_key_service(pool: sqlx::PgPool) -> ApiKeyServiceImpl {
     let config = AuthnConfig {
         session_enabled: true,

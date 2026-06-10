@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package udb.core.authn.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/authn/entity/v1/enums.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authn.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";
+option java_package = "com.udb.core.authn.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// SigningKey — DB-backed registry of JWT signing keys (Phase 3 / I1).
+//
+// Replaces the single process-global RS256 key: tokens are signed with the
+// ACTIVE key and validated against ACTIVE + VERIFYING public keys (JWKS),
+// enabling zero-downtime rotation. The private material is STORAGE_ONLY and
+// encrypted; only the public material is ever published (JWKS).
+//
+// Migration order 20 (after the existing authn tables).
+// ---------------------------------------------------------------------------
+message SigningKey {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "signing_keys"
+    schema_name: "udb_authn"
+    migration_order: 20
+    is_table: true
+    comment: "JWT signing-key registry for issuance and JWKS verification"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: false
+    indexes: {
+      index_name: "idx_signing_keys_state"
+      index_type: "BTREE"
+      columns: "state"
+    }
+    indexes: {
+      index_name: "idx_signing_keys_tenant"
+      index_type: "BTREE"
+      columns: "tenant_id"
+    }
+    replica_hint: "primary"
+    required_scope: "authn:signing-keys:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    soft_delete_mode: "none"
+    retention_class: "authn.security"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  // Key id (kid) stamped into the JWT header and the published JWK.
+  string key_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "key_id" sql_type: "VARCHAR(80)" primary_key: true not_null: true }];
+
+  // Empty = global key; otherwise a tenant-scoped signing key.
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" comment: "Optional tenant boundary; empty = global key" }];
+
+  // JWA algorithm name (e.g. RS256, EdDSA).
+  string algorithm = 3 [(udb.core.common.v1.pg_column) = { column_name: "algorithm" sql_type: "VARCHAR(20)" not_null: true default_value: "'RS256'" }];
+
+  // Public key material (PEM) — published in JWKS, never secret.
+  string public_material = 4 [(udb.core.common.v1.pg_column) = { column_name: "public_material" sql_type: "TEXT" not_null: true comment: "Public key PEM (SPKI/PKCS1)" }];
+
+  // Encrypted private key material (PEM ciphertext). STORAGE_ONLY: never leaves
+  // the service, never appears in any read DTO or event.
+  string encrypted_private_material = 5 [(udb.core.common.v1.pg_column) = { column_name: "encrypted_private_material" sql_type: "TEXT" comment: "Encrypted private key PEM; STORAGE_ONLY" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.encrypted_security) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_KEY output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT }];
+
+  // KMS key reference when private material is held in an external KMS instead
+  // of `encrypted_private_material`.
+  string kms_key_ref = 6 [(udb.core.common.v1.pg_column) = { column_name: "kms_key_ref" sql_type: "VARCHAR(255)" comment: "External KMS key reference; mutually exclusive with encrypted_private_material" }];
+
+  SigningKeyState state = 7 [(udb.core.common.v1.pg_column) = { column_name: "state" sql_type: "VARCHAR(20)" not_null: true default_value: "'NEXT'" }];
+
+  google.protobuf.Timestamp not_before = 8 [(udb.core.common.v1.pg_column) = { column_name: "not_before" sql_type: "TIMESTAMPTZ" }];
+
+  google.protobuf.Timestamp not_after = 9 [(udb.core.common.v1.pg_column) = { column_name: "not_after" sql_type: "TIMESTAMPTZ" }];
+
+  google.protobuf.Timestamp created_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  google.protobuf.Timestamp retired_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "retired_at" sql_type: "TIMESTAMPTZ" }];
+
+  string created_by = 12 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "VARCHAR(160)" }];
+
+  string retired_by = 13 [(udb.core.common.v1.pg_column) = { column_name: "retired_by" sql_type: "VARCHAR(160)" }];
+
+  string rotation_reason = 14 [(udb.core.common.v1.pg_column) = { column_name: "rotation_reason" sql_type: "VARCHAR(120)" }];
+}
