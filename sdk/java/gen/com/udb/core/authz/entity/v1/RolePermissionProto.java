@@ -44,7 +44,7 @@ public final class RolePermissionProto extends com.google.protobuf.GeneratedFile
       "on.proto\022\030udb.core.authz.entity.v1\032\037goog" +
       "le/protobuf/timestamp.proto\032\033udb/core/co" +
       "mmon/v1/db.proto\032!udb/core/common/v1/sec" +
-      "urity.proto\"\215\n\n\016RolePermission\022c\n\022role_p" +
+      "urity.proto\"\220\n\n\016RolePermission\022c\n\022role_p" +
       "ermission_id\030\001 \001(\tB5\202\267\0301\n\022role_permissio" +
       "n_id\022\004UUID\030\001(\001:\021gen_random_uuid()R\020roleP" +
       "ermissionId\022.\n\007role_id\030\002 \001(\tB\025\202\267\030\021\n\007role" +
@@ -54,36 +54,36 @@ public final class RolePermissionProto extends com.google.protobuf.GeneratedFile
       "\026\202\267\030\022\n\ngranted_by\022\004UUIDR\tgrantedBy\022q\n\ngr" +
       "anted_at\030\005 \001(\0132\032.google.protobuf.Timesta" +
       "mpB6\202\267\0302\n\ngranted_at\022\013TIMESTAMPTZ\030\001:\021CUR" +
-      "RENT_TIMESTAMP`\001h\001R\tgrantedAt\022_\n\ttenant_" +
-      "id\030\006 \001(\tBB\202\267\030>\n\ttenant_id\022\013VARCHAR(64)\030\001" +
-      "R\"\n\031idx_rolepermission_tenant\022\005BTREER\010te" +
-      "nantId:\212\006\372\266\030\360\004\n\020role_permissions\022\tudb_au" +
-      "thz\030\006 \001*QMany-to-many map from roles to " +
-      "permission codes used by ABAC and UI aut" +
-      "horization@\001b^\n\020tenant_isolation\032H(tenan" +
-      "t_id::text = current_setting(\'app.curren" +
-      "t_tenant_id\', true)::text)(\001\212\001@\n\033idx_rol" +
-      "e_permissions_unique\022\005BTREE\030\001Z\007role_idZ\017" +
-      "permission_code\222\001C\n\007role_id\022\005roles\032\007role" +
-      "_id\"\tudb_authz(\003:\033fk_role_permissions_ro" +
-      "le_id\222\001I\n\ngranted_by\022\005users\032\007user_id\"\tud" +
-      "b_authn(\004:\036fk_role_permissions_granted_b" +
-      "y\242\001\301\001\n\030mv_effective_permissions\022\tudb_aut" +
-      "hz\032\227\001SELECT ur.user_id, ur.domain, ur.ro" +
-      "le_id, rp.permission_code FROM udb_authz" +
-      ".user_roles ur JOIN udb_authz.role_permi" +
-      "ssions rp ON rp.role_id = ur.role_id \001\212\262" +
-      "\031\220\001\n\006tenant\032\ttenant_id*4tenant_id = curr" +
-      "ent_setting(\'app.current_tenant_id\')2\004no" +
-      "ne:\021authz.operational@\373\023H\002R\006tenantZ\010stan" +
-      "dardr\025tenant.data_residencyB\376\001\n\034com.udb." +
-      "core.authz.entity.v1B\023RolePermissionProt" +
-      "oP\001ZDgithub.com/fahara02/udb/sdk/go/gen/" +
-      "udb/core/authz/entity/v1;entityv1\242\002\004UCAE" +
-      "\252\002\030udb.core.Authz.Entity.V1\312\002\030Udb\\Core\\A" +
-      "uthz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Au" +
-      "thz\\Entity\\V1\352\002\034Udb::Core::Authz::Entity" +
-      "::V1b\006proto3"
+      "RENT_TIMESTAMP`\001h\001R\tgrantedAt\022b\n\ttenant_" +
+      "id\030\006 \001(\tBE\202\267\030A\n\ttenant_id\022\013VARCHAR(64)\030\001" +
+      "R\"\n\031idx_rolepermission_tenant\022\005BTREE\230\002\001R" +
+      "\010tenantId:\212\006\372\266\030\360\004\n\020role_permissions\022\tudb" +
+      "_authz\030\006 \001*QMany-to-many map from roles " +
+      "to permission codes used by ABAC and UI " +
+      "authorization@\001b^\n\020tenant_isolation\032H(te" +
+      "nant_id::text = current_setting(\'app.cur" +
+      "rent_tenant_id\', true)::text)(\001\212\001@\n\033idx_" +
+      "role_permissions_unique\022\005BTREE\030\001Z\007role_i" +
+      "dZ\017permission_code\222\001C\n\007role_id\022\005roles\032\007r" +
+      "ole_id\"\tudb_authz(\003:\033fk_role_permissions" +
+      "_role_id\222\001I\n\ngranted_by\022\005users\032\007user_id\"" +
+      "\tudb_authn(\004:\036fk_role_permissions_grante" +
+      "d_by\242\001\301\001\n\030mv_effective_permissions\022\tudb_" +
+      "authz\032\227\001SELECT ur.user_id, ur.domain, ur" +
+      ".role_id, rp.permission_code FROM udb_au" +
+      "thz.user_roles ur JOIN udb_authz.role_pe" +
+      "rmissions rp ON rp.role_id = ur.role_id " +
+      "\001\212\262\031\220\001\n\006tenant\032\ttenant_id*4tenant_id = c" +
+      "urrent_setting(\'app.current_tenant_id\')2" +
+      "\004none:\021authz.operational@\373\023H\002R\006tenantZ\010s" +
+      "tandardr\025tenant.data_residencyB\376\001\n\034com.u" +
+      "db.core.authz.entity.v1B\023RolePermissionP" +
+      "rotoP\001ZDgithub.com/fahara02/udb/sdk/go/g" +
+      "en/udb/core/authz/entity/v1;entityv1\242\002\004U" +
+      "CAE\252\002\030udb.core.Authz.Entity.V1\312\002\030Udb\\Cor" +
+      "e\\Authz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core" +
+      "\\Authz\\Entity\\V1\352\002\034Udb::Core::Authz::Ent" +
+      "ity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

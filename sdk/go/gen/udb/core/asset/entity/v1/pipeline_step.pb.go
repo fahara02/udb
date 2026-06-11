@@ -162,15 +162,15 @@ var File_udb_core_asset_entity_v1_pipeline_step_proto protoreflect.FileDescripto
 
 const file_udb_core_asset_entity_v1_pipeline_step_proto_rawDesc = "" +
 	"\n" +
-	",udb/core/asset/entity/v1/pipeline_step.proto\x12\x18udb.core.asset.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a$udb/core/asset/entity/v1/enums.proto\"\xe2\v\n" +
+	",udb/core/asset/entity/v1/pipeline_step.proto\x12\x18udb.core.asset.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a$udb/core/asset/entity/v1/enums.proto\"\xe5\v\n" +
 	"\fPipelineStep\x12C\n" +
 	"\astep_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
 	"\astep_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06stepId\x12:\n" +
 	"\vinstance_id\x18\x02 \x01(\tB\x19\x82\xb7\x18\x15\n" +
 	"\vinstance_id\x12\x04UUID\x18\x01R\n" +
-	"instanceId\x124\n" +
-	"\ttenant_id\x18\f \x01(\tB\x17\x82\xb7\x18\x13\n" +
-	"\ttenant_id\x12\x04UUID\x18\x01R\btenantId\x12<\n" +
+	"instanceId\x127\n" +
+	"\ttenant_id\x18\f \x01(\tB\x1a\x82\xb7\x18\x16\n" +
+	"\ttenant_id\x12\x04UUID\x18\x01\x98\x02\x01R\btenantId\x12<\n" +
 	"\tstep_name\x18\x03 \x01(\tB\x1f\x82\xb7\x18\x1b\n" +
 	"\tstep_name\x12\fVARCHAR(160)\x18\x01R\bstepName\x12_\n" +
 	"\tstep_type\x18\x04 \x01(\x0e2\".udb.core.asset.entity.v1.StepTypeB\x1e\x82\xb7\x18\x1a\n" +

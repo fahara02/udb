@@ -190,6 +190,8 @@ impl AuthnServiceImpl {
         &self,
         user: &UserRecord,
         client_fingerprint: String,
+        scopes: Vec<String>,
+        roles: Vec<String>,
         now: u64,
     ) -> Result<(String, u64), Status> {
         if !self.config.sessions_usable() {
@@ -206,8 +208,12 @@ impl AuthnServiceImpl {
             service_identity: String::new(),
             tenant_id: user.tenant_id.clone(),
             project_id: user.project_id.clone(),
-            scopes: Vec::new(),
-            roles: Vec::new(),
+            // Block 1 (auth_fix.md, Decision E): the SessionRecord is the carrier —
+            // seed the resolved role-derived grants here so the legacy session
+            // refresh path (`:443`) and any consumer reads the real grants, not
+            // an empty set. The caller resolves once and threads them in.
+            scopes,
+            roles,
             relationship_version: String::new(),
             created_at_unix: now,
             updated_at_unix: now,
@@ -440,12 +446,24 @@ impl AuthnServiceImpl {
         if !self.user_is_active(&rec.user_id).await? {
             return Err(Status::permission_denied("user is not active"));
         }
+        // Block 1 (auth_fix.md, Decision E): re-resolve on refresh so a role
+        // revoked since login stops minting `udb:admin`. The `service_identity`
+        // discriminator (NOT emptiness) decides the source: a service-principal
+        // session carries scopes asserted at `CreateSession` that are not
+        // role-derived, so keep its stored set; a user session takes the freshly
+        // resolved grants verbatim (empty ⇒ empty drops admin on last-role
+        // revocation, which a "fall back when empty" rule would mask).
+        let (scopes, roles) = if rec.service_identity.trim().is_empty() {
+            self.resolve_effective_grants(&rec.user_id, &rec.tenant_id, &rec.project_id)
+        } else {
+            (rec.scopes.clone(), rec.roles.clone())
+        };
         let (access_token, access_exp) = self.issue_access_token(
             &rec.user_id,
             &rec.tenant_id,
             &rec.project_id,
-            &rec.scopes,
-            &rec.roles,
+            &scopes,
+            &roles,
             &rec.service_identity,
             &session_ref,
             "refresh",
@@ -485,12 +503,21 @@ impl AuthnServiceImpl {
                 if !self.user_is_active(&family.user_id).await? {
                     return Err(Status::permission_denied("user is not active"));
                 }
+                // Block 1 (auth_fix.md, Decision E): the token family stores no
+                // grants (`TokenFamilyRow` has no scopes/roles columns), so
+                // re-resolve from the warm snapshot — the `user_is_active` check
+                // above already touched this user, so the read is free.
+                let (scopes, roles) = self.resolve_effective_grants(
+                    &family.user_id,
+                    &family.tenant_id,
+                    &family.project_id,
+                );
                 let (access_token, access_exp) = self.issue_access_token(
                     &family.user_id,
                     &family.tenant_id,
                     &family.project_id,
-                    &[],
-                    &[],
+                    &scopes,
+                    &roles,
                     "",
                     &format!("rtf_{family_id}"),
                     "refresh",

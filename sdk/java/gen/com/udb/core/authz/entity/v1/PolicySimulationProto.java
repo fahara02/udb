@@ -44,7 +44,7 @@ public final class PolicySimulationProto extends com.google.protobuf.GeneratedFi
       "tion.proto\022\030udb.core.authz.entity.v1\032\037go" +
       "ogle/protobuf/timestamp.proto\032\033udb/core/" +
       "common/v1/db.proto\032!udb/core/common/v1/s" +
-      "ecurity.proto\"\323\013\n\020PolicySimulation\022U\n\rsi" +
+      "ecurity.proto\"\326\013\n\020PolicySimulation\022U\n\rsi" +
       "mulation_id\030\001 \001(\tB0\202\267\030,\n\rsimulation_id\022\004" +
       "UUID\030\001(\001:\021gen_random_uuid()R\014simulationI" +
       "d\022\177\n\021policy_version_id\030\002 \001(\tBS\202\267\030O\n\021poli" +
@@ -64,31 +64,31 @@ public final class PolicySimulationProto extends com.google.protobuf.GeneratedFi
       "_decision_json\022\005JSONB\030\001:\013\'{}\'::jsonbx\001R\021" +
       "draftDecisionJson\022D\n\tdiff_json\030\t \001(\tB\'\202\267" +
       "\030#\n\tdiff_json\022\005JSONB\030\001:\013\'{}\'::jsonbx\001R\010d" +
-      "iffJson\022c\n\ttenant_id\030\n \001(\tBF\202\267\030B\n\ttenant" +
+      "iffJson\022f\n\ttenant_id\030\n \001(\tBI\202\267\030E\n\ttenant" +
       "_id\022\013VARCHAR(64)\030\001R&\n\035idx_policy_simulat" +
-      "ions_tenant\022\005BTREER\010tenantId\022C\n\nproject_" +
-      "id\030\013 \001(\tB$\202\267\030 \n\nproject_id\022\014VARCHAR(120)" +
-      "\030\001:\002\'\'R\tprojectId\022q\n\ncreated_at\030\014 \001(\0132\032." +
-      "google.protobuf.TimestampB6\202\267\0302\n\ncreated" +
-      "_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h" +
-      "\001R\tcreatedAt:\234\003\372\266\030\203\002\n\022policy_simulations" +
-      "\022\tudb_authz\030* \001*?Recorded active-vs-draf" +
-      "t policy simulations for impact analysis" +
-      "@\001b^\n\020tenant_isolation\032H(tenant_id::text" +
-      " = current_setting(\'app.current_tenant_i" +
-      "d\', true)::text)(\001\212\001:\n\036idx_policy_simula" +
-      "tions_version\022\005BTREEZ\021policy_version_id\212" +
-      "\262\031\217\001\n\006tenant\032\ttenant_id*4tenant_id = cur" +
-      "rent_setting(\'app.current_tenant_id\')2\004n" +
-      "one:\020authz.governance@\355\002H\002R\006tenantZ\010stan" +
-      "dardr\025tenant.data_residencyB\200\002\n\034com.udb." +
-      "core.authz.entity.v1B\025PolicySimulationPr" +
-      "otoP\001ZDgithub.com/fahara02/udb/sdk/go/ge" +
-      "n/udb/core/authz/entity/v1;entityv1\242\002\004UC" +
-      "AE\252\002\030udb.core.Authz.Entity.V1\312\002\030Udb\\Core" +
-      "\\Authz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\" +
-      "Authz\\Entity\\V1\352\002\034Udb::Core::Authz::Enti" +
-      "ty::V1b\006proto3"
+      "ions_tenant\022\005BTREE\230\002\001R\010tenantId\022C\n\nproje" +
+      "ct_id\030\013 \001(\tB$\202\267\030 \n\nproject_id\022\014VARCHAR(1" +
+      "20)\030\001:\002\'\'R\tprojectId\022q\n\ncreated_at\030\014 \001(\013" +
+      "2\032.google.protobuf.TimestampB6\202\267\0302\n\ncrea" +
+      "ted_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP" +
+      "`\001h\001R\tcreatedAt:\234\003\372\266\030\203\002\n\022policy_simulati" +
+      "ons\022\tudb_authz\030* \001*?Recorded active-vs-d" +
+      "raft policy simulations for impact analy" +
+      "sis@\001b^\n\020tenant_isolation\032H(tenant_id::t" +
+      "ext = current_setting(\'app.current_tenan" +
+      "t_id\', true)::text)(\001\212\001:\n\036idx_policy_sim" +
+      "ulations_version\022\005BTREEZ\021policy_version_" +
+      "id\212\262\031\217\001\n\006tenant\032\ttenant_id*4tenant_id = " +
+      "current_setting(\'app.current_tenant_id\')" +
+      "2\004none:\020authz.governance@\355\002H\002R\006tenantZ\010s" +
+      "tandardr\025tenant.data_residencyB\200\002\n\034com.u" +
+      "db.core.authz.entity.v1B\025PolicySimulatio" +
+      "nProtoP\001ZDgithub.com/fahara02/udb/sdk/go" +
+      "/gen/udb/core/authz/entity/v1;entityv1\242\002" +
+      "\004UCAE\252\002\030udb.core.Authz.Entity.V1\312\002\030Udb\\C" +
+      "ore\\Authz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Co" +
+      "re\\Authz\\Entity\\V1\352\002\034Udb::Core::Authz::E" +
+      "ntity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

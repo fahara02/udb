@@ -45,55 +45,55 @@ public final class SigningKeyProto extends com.google.protobuf.GeneratedFile {
       "rotobuf/timestamp.proto\032$udb/core/authn/" +
       "entity/v1/enums.proto\032\033udb/core/common/v" +
       "1/db.proto\032!udb/core/common/v1/security." +
-      "proto\"\366\014\n\nSigningKey\0224\n\006key_id\030\001 \001(\tB\035\202\267" +
-      "\030\031\n\006key_id\022\013VARCHAR(80)\030\001(\001R\005keyId\022g\n\tte" +
-      "nant_id\030\002 \001(\tBJ\202\267\030F\n\ttenant_id\022\013VARCHAR(" +
+      "proto\"\371\014\n\nSigningKey\0224\n\006key_id\030\001 \001(\tB\035\202\267" +
+      "\030\031\n\006key_id\022\013VARCHAR(80)\030\001(\001R\005keyId\022j\n\tte" +
+      "nant_id\030\002 \001(\tBM\202\267\030I\n\ttenant_id\022\013VARCHAR(" +
       "64)Z,Optional tenant boundary; empty = g" +
-      "lobal keyR\010tenantId\022E\n\talgorithm\030\003 \001(\tB\'" +
-      "\202\267\030#\n\talgorithm\022\013VARCHAR(20)\030\001:\007\'RS256\'R" +
-      "\talgorithm\022c\n\017public_material\030\004 \001(\tB:\202\267\030" +
-      "6\n\017public_material\022\004TEXT\030\001Z\033Public key P" +
-      "EM (SPKI/PKCS1)R\016publicMaterial\022\243\001\n\032encr" +
-      "ypted_private_material\030\005 \001(\tBe\330\265\030\001\350\265\030\001\360\265" +
-      "\030\001\202\267\030K\n\032encrypted_private_material\022\004TEXT" +
-      "Z\'Encrypted private key PEM; STORAGE_ONL" +
-      "Y\212\267\030\006\010\005\020\001\030\003R\030encryptedPrivateMaterial\022\217\001" +
-      "\n\013kms_key_ref\030\006 \001(\tBo\202\267\030k\n\013kms_key_ref\022\014" +
-      "VARCHAR(255)ZNExternal KMS key reference" +
-      "; mutually exclusive with encrypted_priv" +
-      "ate_materialR\tkmsKeyRef\022c\n\005state\030\007 \001(\0162)" +
-      ".udb.core.authn.entity.v1.SigningKeyStat" +
-      "eB\"\202\267\030\036\n\005state\022\013VARCHAR(20)\030\001:\006\'NEXT\'R\005s" +
-      "tate\022X\n\nnot_before\030\010 \001(\0132\032.google.protob" +
-      "uf.TimestampB\035\202\267\030\031\n\nnot_before\022\013TIMESTAM" +
-      "PTZR\tnotBefore\022U\n\tnot_after\030\t \001(\0132\032.goog" +
-      "le.protobuf.TimestampB\034\202\267\030\030\n\tnot_after\022\013" +
-      "TIMESTAMPTZR\010notAfter\022q\n\ncreated_at\030\n \001(" +
-      "\0132\032.google.protobuf.TimestampB6\202\267\0302\n\ncre" +
-      "ated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAM" +
-      "P`\001h\001R\tcreatedAt\022X\n\nretired_at\030\013 \001(\0132\032.g" +
-      "oogle.protobuf.TimestampB\035\202\267\030\031\n\nretired_" +
-      "at\022\013TIMESTAMPTZR\tretiredAt\022=\n\ncreated_by" +
-      "\030\014 \001(\tB\036\202\267\030\032\n\ncreated_by\022\014VARCHAR(160)R\t" +
-      "createdBy\022=\n\nretired_by\030\r \001(\tB\036\202\267\030\032\n\nret" +
-      "ired_by\022\014VARCHAR(160)R\tretiredBy\022L\n\017rota" +
-      "tion_reason\030\016 \001(\tB#\202\267\030\037\n\017rotation_reason" +
-      "\022\014VARCHAR(120)R\016rotationReason:\265\002\372\266\030\325\001\n\014" +
-      "signing_keys\022\tudb_authn\030\024 \001*;JWT signing" +
-      "-key registry for issuance and JWKS veri" +
-      "fication\212\001&\n\026idx_signing_keys_state\022\005BTR" +
-      "EEZ\005state\212\001+\n\027idx_signing_keys_tenant\022\005B" +
-      "TREEZ\ttenant_id\352\001\007primary\372\001\027authn:signin" +
-      "g-keys:read\212\262\031W\n\006tenant\032\ttenant_id2\004none" +
-      ":\016authn.security@\373\023H\002R\006tenantZ\010standardr" +
-      "\025tenant.data_residencyB\372\001\n\034com.udb.core." +
-      "authn.entity.v1B\017SigningKeyProtoP\001ZDgith" +
-      "ub.com/fahara02/udb/sdk/go/gen/udb/core/" +
-      "authn/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.co" +
-      "re.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\Enti" +
-      "ty\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\Entit" +
-      "y\\V1\352\002\034Udb::Core::Authn::Entity::V1b\006pro" +
-      "to3"
+      "lobal key\230\002\001R\010tenantId\022E\n\talgorithm\030\003 \001(" +
+      "\tB\'\202\267\030#\n\talgorithm\022\013VARCHAR(20)\030\001:\007\'RS25" +
+      "6\'R\talgorithm\022c\n\017public_material\030\004 \001(\tB:" +
+      "\202\267\0306\n\017public_material\022\004TEXT\030\001Z\033Public ke" +
+      "y PEM (SPKI/PKCS1)R\016publicMaterial\022\243\001\n\032e" +
+      "ncrypted_private_material\030\005 \001(\tBe\330\265\030\001\350\265\030" +
+      "\001\360\265\030\001\202\267\030K\n\032encrypted_private_material\022\004T" +
+      "EXTZ\'Encrypted private key PEM; STORAGE_" +
+      "ONLY\212\267\030\006\010\005\020\001\030\003R\030encryptedPrivateMaterial" +
+      "\022\217\001\n\013kms_key_ref\030\006 \001(\tBo\202\267\030k\n\013kms_key_re" +
+      "f\022\014VARCHAR(255)ZNExternal KMS key refere" +
+      "nce; mutually exclusive with encrypted_p" +
+      "rivate_materialR\tkmsKeyRef\022c\n\005state\030\007 \001(" +
+      "\0162).udb.core.authn.entity.v1.SigningKeyS" +
+      "tateB\"\202\267\030\036\n\005state\022\013VARCHAR(20)\030\001:\006\'NEXT\'" +
+      "R\005state\022X\n\nnot_before\030\010 \001(\0132\032.google.pro" +
+      "tobuf.TimestampB\035\202\267\030\031\n\nnot_before\022\013TIMES" +
+      "TAMPTZR\tnotBefore\022U\n\tnot_after\030\t \001(\0132\032.g" +
+      "oogle.protobuf.TimestampB\034\202\267\030\030\n\tnot_afte" +
+      "r\022\013TIMESTAMPTZR\010notAfter\022q\n\ncreated_at\030\n" +
+      " \001(\0132\032.google.protobuf.TimestampB6\202\267\0302\n\n" +
+      "created_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMES" +
+      "TAMP`\001h\001R\tcreatedAt\022X\n\nretired_at\030\013 \001(\0132" +
+      "\032.google.protobuf.TimestampB\035\202\267\030\031\n\nretir" +
+      "ed_at\022\013TIMESTAMPTZR\tretiredAt\022=\n\ncreated" +
+      "_by\030\014 \001(\tB\036\202\267\030\032\n\ncreated_by\022\014VARCHAR(160" +
+      ")R\tcreatedBy\022=\n\nretired_by\030\r \001(\tB\036\202\267\030\032\n\n" +
+      "retired_by\022\014VARCHAR(160)R\tretiredBy\022L\n\017r" +
+      "otation_reason\030\016 \001(\tB#\202\267\030\037\n\017rotation_rea" +
+      "son\022\014VARCHAR(120)R\016rotationReason:\265\002\372\266\030\325" +
+      "\001\n\014signing_keys\022\tudb_authn\030\024 \001*;JWT sign" +
+      "ing-key registry for issuance and JWKS v" +
+      "erification\212\001&\n\026idx_signing_keys_state\022\005" +
+      "BTREEZ\005state\212\001+\n\027idx_signing_keys_tenant" +
+      "\022\005BTREEZ\ttenant_id\352\001\007primary\372\001\027authn:sig" +
+      "ning-keys:read\212\262\031W\n\006tenant\032\ttenant_id2\004n" +
+      "one:\016authn.security@\373\023H\002R\006tenantZ\010standa" +
+      "rdr\025tenant.data_residencyB\372\001\n\034com.udb.co" +
+      "re.authn.entity.v1B\017SigningKeyProtoP\001ZDg" +
+      "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
+      "re/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030udb" +
+      ".core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\E" +
+      "ntity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\En" +
+      "tity\\V1\352\002\034Udb::Core::Authn::Entity::V1b\006" +
+      "proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

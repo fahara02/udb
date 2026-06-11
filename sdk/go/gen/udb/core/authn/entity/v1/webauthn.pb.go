@@ -243,7 +243,7 @@ var File_udb_core_authn_entity_v1_webauthn_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_webauthn_proto_rawDesc = "" +
 	"\n" +
-	"'udb/core/authn/entity/v1/webauthn.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xf0\t\n" +
+	"'udb/core/authn/entity/v1/webauthn.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xf3\t\n" +
 	"\x12WebAuthnCredential\x12J\n" +
 	"\rcredential_id\x18\x01 \x01(\tB%\x82\xb7\x18!\n" +
 	"\rcredential_id\x12\fVARCHAR(512)\x18\x01(\x01R\fcredentialId\x12\x96\x01\n" +
@@ -254,10 +254,10 @@ const file_udb_core_authn_entity_v1_webauthn_proto_rawDesc = "" +
 	"\fpasskey_json\x18\x03 \x01(\tBE\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18\x19\n" +
 	"\fpasskey_json\x12\x05JSONB\x18\x01x\x01\x8a\xb7\x18\x1c\b\x03\x10\x01\x18\x03:\x0eauthn-webauthnJ\x04noneR\vpasskeyJson\x12/\n" +
 	"\x05label\x18\x04 \x01(\tB\x19\x82\xb7\x18\x15\n" +
-	"\x05label\x12\fVARCHAR(160)R\x05label\x12f\n" +
-	"\ttenant_id\x18\x05 \x01(\tBI\x82\xb7\x18E\n" +
+	"\x05label\x12\fVARCHAR(160)R\x05label\x12i\n" +
+	"\ttenant_id\x18\x05 \x01(\tBL\x82\xb7\x18H\n" +
 	"\ttenant_id\x12\fVARCHAR(120)\x18\x01R(\n" +
-	"\x1fidx_webauthn_credentials_tenant\x12\x05BTREER\btenantId\x12=\n" +
+	"\x1fidx_webauthn_credentials_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12=\n" +
 	"\n" +
 	"project_id\x18\x06 \x01(\tB\x1e\x82\xb7\x18\x1a\n" +
 	"\n" +
@@ -275,7 +275,7 @@ const file_udb_core_authn_entity_v1_webauthn_proto_rawDesc = "" +
 	"lastUsedAt:\xef\x02\xfa\xb6\x18\xd5\x01\n" +
 	"\x14webauthn_credentials\x12\tudb_authn\x18\x04 \x01*0Server-side WebAuthn passkeys bound to UDB users@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xea\x01\aprimary\xfa\x01\x0fauthn:mfa:write\x8a\xb2\x19\x90\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residency\"\xe4\b\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residency\"\xe7\b\n" +
 	"\x11WebAuthnChallenge\x12R\n" +
 	"\fchallenge_id\x18\x01 \x01(\tB/\x82\xb7\x18+\n" +
 	"\fchallenge_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\vchallengeId\x12U\n" +
@@ -287,10 +287,10 @@ const file_udb_core_authn_entity_v1_webauthn_proto_rawDesc = "" +
 	"\n" +
 	"state_json\x18\x04 \x01(\tBC\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18\x17\n" +
 	"\n" +
-	"state_json\x12\x05JSONB\x18\x01x\x01\x8a\xb7\x18\x1c\b\x04\x10\x01\x18\x03:\x0eauthn-webauthnJ\x04noneR\tstateJson\x12e\n" +
-	"\ttenant_id\x18\x05 \x01(\tBH\x82\xb7\x18D\n" +
+	"state_json\x12\x05JSONB\x18\x01x\x01\x8a\xb7\x18\x1c\b\x04\x10\x01\x18\x03:\x0eauthn-webauthnJ\x04noneR\tstateJson\x12h\n" +
+	"\ttenant_id\x18\x05 \x01(\tBK\x82\xb7\x18G\n" +
 	"\ttenant_id\x12\fVARCHAR(120)\x18\x01R'\n" +
-	"\x1eidx_webauthn_challenges_tenant\x12\x05BTREER\btenantId\x12=\n" +
+	"\x1eidx_webauthn_challenges_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12=\n" +
 	"\n" +
 	"project_id\x18\x06 \x01(\tB\x1e\x82\xb7\x18\x1a\n" +
 	"\n" +

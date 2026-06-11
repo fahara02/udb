@@ -119,12 +119,12 @@ var File_udb_core_idp_entity_v1_saml_replay_entry_proto protoreflect.FileDescrip
 
 const file_udb_core_idp_entity_v1_saml_replay_entry_proto_rawDesc = "" +
 	"\n" +
-	".udb/core/idp/entity/v1/saml_replay_entry.proto\x12\x16udb.core.idp.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x8b\t\n" +
+	".udb/core/idp/entity/v1/saml_replay_entry.proto\x12\x16udb.core.idp.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x8e\t\n" +
 	"\x0fSamlReplayEntry\x12h\n" +
 	"\x14saml_replay_entry_id\x18\x01 \x01(\tB7\x82\xb7\x183\n" +
-	"\x14saml_replay_entry_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x11samlReplayEntryId\x12<\n" +
-	"\ttenant_id\x18\x02 \x01(\tB\x1f\x82\xb7\x18\x1b\n" +
-	"\ttenant_id\x12\fVARCHAR(120)\x18\x01R\btenantId\x12:\n" +
+	"\x14saml_replay_entry_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x11samlReplayEntryId\x12?\n" +
+	"\ttenant_id\x18\x02 \x01(\tB\"\x82\xb7\x18\x1e\n" +
+	"\ttenant_id\x12\fVARCHAR(120)\x18\x01\x98\x02\x01R\btenantId\x12:\n" +
 	"\vprovider_id\x18\x03 \x01(\tB\x19\x82\xb7\x18\x15\n" +
 	"\vprovider_id\x12\x04UUID\x18\x01R\n" +
 	"providerId\x12|\n" +

@@ -46,7 +46,7 @@ message MfaPolicy {
 
   string policy_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "policy_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
 
-  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" not_null: true index: { index_name: "idx_mfa_policies_tenant" index_type: "BTREE" unique: true } }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" not_null: true index: { index_name: "idx_mfa_policies_tenant" index_type: "BTREE" unique: true } }];
 
   bool require_mfa = 3 [(udb.core.common.v1.pg_column) = { column_name: "require_mfa" sql_type: "BOOLEAN" not_null: true default_value: "false" comment: "When true, the tenant's users must enrol MFA before password login succeeds" }];
 

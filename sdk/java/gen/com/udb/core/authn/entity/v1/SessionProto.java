@@ -45,7 +45,7 @@ public final class SessionProto extends com.google.protobuf.GeneratedFile {
       "buf/timestamp.proto\032$udb/core/authn/enti" +
       "ty/v1/enums.proto\032\033udb/core/common/v1/db" +
       ".proto\032!udb/core/common/v1/security.prot" +
-      "o\"\265 \n\007Session\022L\n\nsession_id\030\001 \001(\tB-\202\267\030)\n" +
+      "o\"\270 \n\007Session\022L\n\nsession_id\030\001 \001(\tB-\202\267\030)\n" +
       "\nsession_id\022\004UUID\030\001(\001:\021gen_random_uuid()" +
       "R\tsessionId\022\213\001\n\007user_id\030\002 \001(\tBr\202\267\030n\n\007use" +
       "r_id\022\004UUID\030\001J\035\n\005users\022\007user_id\032\tudb_auth" +
@@ -110,52 +110,52 @@ public final class SessionProto extends com.google.protobuf.GeneratedFile {
       "d | security_eventR\014revokeReason\022q\n\ncrea" +
       "ted_at\030\022 \001(\0132\032.google.protobuf.Timestamp" +
       "B6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CURRE" +
-      "NT_TIMESTAMP`\001h\001R\tcreatedAt\022X\n\ttenant_id" +
-      "\030\023 \001(\tB;\202\267\0307\n\ttenant_id\022\013VARCHAR(64)\030\001R\033" +
-      "\n\022idx_session_tenant\022\005BTREER\010tenantId\022\230\001" +
-      "\n\nproject_id\030\024 \001(\tBy\202\267\030u\n\nproject_id\022\014VA" +
-      "RCHAR(120)R \n\027idx_sessions_project_id\022\005B" +
-      "TREEZ7Optional project/application names" +
-      "pace for this sessionR\tprojectId\022\234\001\n\014pri" +
-      "ncipal_id\030\025 \001(\tBy\202\267\030u\n\014principal_id\022\014VAR" +
-      "CHAR(160)R\"\n\031idx_sessions_principal_id\022\005" +
-      "BTREEZ3Canonical UDB principal id resolv" +
-      "ed for the sessionR\013principalId\022s\n\013provi" +
-      "der_id\030\026 \001(\tBR\202\267\030N\n\013provider_id\022\014VARCHAR" +
-      "(120)Z1Identity provider that authentica" +
-      "ted this sessionR\nproviderId\022\204\001\n\013auth_me" +
-      "thod\030\027 \001(\tBc\202\267\030_\n\013auth_method\022\013VARCHAR(4" +
-      "0)ZCjwt, session, api_key, mtls, oidc, s" +
-      "aml, or provider-defined methodR\nauthMet" +
-      "hod\022r\n\013scopes_json\030\030 \001(\tBQ\202\267\030M\n\013scopes_j" +
-      "son\022\005JSONB\030\001:\013\'[]\'::jsonbZ&Scopes resolv" +
-      "ed at authentication timex\001R\nscopesJson\022" +
-      "\203\001\n\rmetadata_json\030\031 \001(\tB^\202\267\030Z\n\rmetadata_" +
-      "json\022\005JSONB\030\001:\013\'{}\'::jsonbZ1Non-secret s" +
-      "ession metadata for audit and routingx\001R" +
-      "\014metadataJson:\351\004\242\265\030@\010\001\022\030udb:session:{ses" +
-      "sion_id}\030\210\016 \001(\001:\022REDIS_CLUSTER_ADDRB\007ses" +
-      "sion\372\266\030\213\003\n\010sessions\022\tudb_authn\030\002 \001*FActi" +
-      "ve sessions across web, API, workload, a" +
-      "nd external identity flows@\001H\003R\ncreated_" +
-      "atX\264\001b^\n\020tenant_isolation\032H(tenant_id::t" +
-      "ext = current_setting(\'app.current_tenan" +
-      "t_id\', true)::text)(\001\212\001P\n%idx_sessions_t" +
-      "enant_user_session_type\022\005BTREEZ\ttenant_i" +
-      "dZ\007user_idZ\014session_type\232\001\025\n\npg_partman\022" +
-      "\007partman\312\001\007MONTHLY\320\001\003\330\001\001\340\001\006\352\001\007primary\362\001\026" +
-      "udb.authn.sessions.cdc\372\001\023authn:sessions:" +
-      "read\212\262\031\220\001\n\006tenant\032\ttenant_id*4tenant_id " +
-      "= current_setting(\'app.current_tenant_id" +
-      "\')2\004none:\021authn.operational@\373\023H\002R\006tenant" +
-      "Z\010standardr\025tenant.data_residencyB\367\001\n\034co" +
-      "m.udb.core.authn.entity.v1B\014SessionProto" +
-      "P\001ZDgithub.com/fahara02/udb/sdk/go/gen/u" +
-      "db/core/authn/entity/v1;entityv1\242\002\004UCAE\252" +
-      "\002\030udb.core.Authn.Entity.V1\312\002\030Udb\\Core\\Au" +
-      "thn\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Aut" +
-      "hn\\Entity\\V1\352\002\034Udb::Core::Authn::Entity:" +
-      ":V1b\006proto3"
+      "NT_TIMESTAMP`\001h\001R\tcreatedAt\022[\n\ttenant_id" +
+      "\030\023 \001(\tB>\202\267\030:\n\ttenant_id\022\013VARCHAR(64)\030\001R\033" +
+      "\n\022idx_session_tenant\022\005BTREE\230\002\001R\010tenantId" +
+      "\022\230\001\n\nproject_id\030\024 \001(\tBy\202\267\030u\n\nproject_id\022" +
+      "\014VARCHAR(120)R \n\027idx_sessions_project_id" +
+      "\022\005BTREEZ7Optional project/application na" +
+      "mespace for this sessionR\tprojectId\022\234\001\n\014" +
+      "principal_id\030\025 \001(\tBy\202\267\030u\n\014principal_id\022\014" +
+      "VARCHAR(160)R\"\n\031idx_sessions_principal_i" +
+      "d\022\005BTREEZ3Canonical UDB principal id res" +
+      "olved for the sessionR\013principalId\022s\n\013pr" +
+      "ovider_id\030\026 \001(\tBR\202\267\030N\n\013provider_id\022\014VARC" +
+      "HAR(120)Z1Identity provider that authent" +
+      "icated this sessionR\nproviderId\022\204\001\n\013auth" +
+      "_method\030\027 \001(\tBc\202\267\030_\n\013auth_method\022\013VARCHA" +
+      "R(40)ZCjwt, session, api_key, mtls, oidc" +
+      ", saml, or provider-defined methodR\nauth" +
+      "Method\022r\n\013scopes_json\030\030 \001(\tBQ\202\267\030M\n\013scope" +
+      "s_json\022\005JSONB\030\001:\013\'[]\'::jsonbZ&Scopes res" +
+      "olved at authentication timex\001R\nscopesJs" +
+      "on\022\203\001\n\rmetadata_json\030\031 \001(\tB^\202\267\030Z\n\rmetada" +
+      "ta_json\022\005JSONB\030\001:\013\'{}\'::jsonbZ1Non-secre" +
+      "t session metadata for audit and routing" +
+      "x\001R\014metadataJson:\351\004\242\265\030@\010\001\022\030udb:session:{" +
+      "session_id}\030\210\016 \001(\001:\022REDIS_CLUSTER_ADDRB\007" +
+      "session\372\266\030\213\003\n\010sessions\022\tudb_authn\030\002 \001*FA" +
+      "ctive sessions across web, API, workload" +
+      ", and external identity flows@\001H\003R\ncreat" +
+      "ed_atX\264\001b^\n\020tenant_isolation\032H(tenant_id" +
+      "::text = current_setting(\'app.current_te" +
+      "nant_id\', true)::text)(\001\212\001P\n%idx_session" +
+      "s_tenant_user_session_type\022\005BTREEZ\ttenan" +
+      "t_idZ\007user_idZ\014session_type\232\001\025\n\npg_partm" +
+      "an\022\007partman\312\001\007MONTHLY\320\001\003\330\001\001\340\001\006\352\001\007primary" +
+      "\362\001\026udb.authn.sessions.cdc\372\001\023authn:sessio" +
+      "ns:read\212\262\031\220\001\n\006tenant\032\ttenant_id*4tenant_" +
+      "id = current_setting(\'app.current_tenant" +
+      "_id\')2\004none:\021authn.operational@\264\001H\002R\006ten" +
+      "antZ\010standardr\025tenant.data_residencyB\367\001\n" +
+      "\034com.udb.core.authn.entity.v1B\014SessionPr" +
+      "otoP\001ZDgithub.com/fahara02/udb/sdk/go/ge" +
+      "n/udb/core/authn/entity/v1;entityv1\242\002\004UC" +
+      "AE\252\002\030udb.core.Authn.Entity.V1\312\002\030Udb\\Core" +
+      "\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\" +
+      "Authn\\Entity\\V1\352\002\034Udb::Core::Authn::Enti" +
+      "ty::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

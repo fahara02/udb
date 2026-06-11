@@ -76,7 +76,7 @@ message Tenant {
     data_residency_policy_ref: "tenant.data_residency"
   };
 
-  string tenant_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  string tenant_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
   // @inject_tag: gorm:"primaryKey;column:tenant_id;not null"
 
   string code = 2 [(udb.core.common.v1.pg_column) = { column_name: "code" sql_type: "VARCHAR(50)" not_null: true unique: true index: { index_name: "idx_tenants_code_unique" index_type: "BTREE" unique: true } }];

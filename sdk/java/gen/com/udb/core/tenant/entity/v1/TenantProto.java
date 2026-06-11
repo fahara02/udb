@@ -45,61 +45,61 @@ public final class TenantProto extends com.google.protobuf.GeneratedFile {
       "obuf/timestamp.proto\032\033udb/core/common/v1" +
       "/db.proto\032!udb/core/common/v1/security.p" +
       "roto\032\036udb/core/common/v1/types.proto\032%ud" +
-      "b/core/tenant/entity/v1/enums.proto\"\331\016\n\006" +
-      "Tenant\022I\n\ttenant_id\030\001 \001(\tB,\202\267\030(\n\ttenant_" +
-      "id\022\004UUID\030\001(\001:\021gen_random_uuid()R\010tenantI" +
-      "d\022S\n\004code\030\002 \001(\tB?\202\267\030;\n\004code\022\013VARCHAR(50)" +
-      "\030\001 \001R\"\n\027idx_tenants_code_unique\022\005BTREE\030\001" +
-      "R\004code\022.\n\004name\030\003 \001(\tB\032\202\267\030\026\n\004name\022\014VARCHA" +
-      "R(255)\030\001R\004name\022T\n\004type\030\004 \001(\0162%.udb.core." +
-      "tenant.entity.v1.TenantTypeB\031\202\267\030\025\n\004type\022" +
-      "\013VARCHAR(20)\030\001R\004type\022\203\001\n\006status\030\005 \001(\0162\'." +
-      "udb.core.tenant.entity.v1.TenantStatusBB" +
-      "\202\267\030>\n\006status\022\013VARCHAR(20)\030\001:\010\'ACTIVE\'R\033\n" +
-      "\022idx_tenants_status\022\005BTREER\006status\022\204\001\n\020p" +
-      "arent_tenant_id\030\006 \001(\tBZ\202\267\030V\n\020parent_tena" +
-      "nt_id\022\004UUIDJ\"\n\007tenants\022\ttenant_id\032\nudb_t" +
-      "enant \004Z\030For hierarchical tenantsR\016paren" +
-      "tTenantId\022L\n\006config\030\007 \001(\tB4\202\267\0300\n\006config\022" +
-      "\005JSONBZ\035Tenant-specific configurationx\001R" +
-      "\006config\022G\n\010branding\030\010 \001(\tB+\202\267\030\'\n\010brandin" +
-      "g\022\005JSONBZ\022Logo, colors, etc.x\001R\010branding" +
-      "\022\202\001\n\naudit_info\030\t \001(\0132\035.udb.core.common." +
-      "v1.AuditInfoBD\202\267\030@\n\naudit_info\022\005JSONB\030\001:" +
-      "\013\'{}\'::jsonbZ\032Audit trail stored as JSON" +
-      "x\001R\tauditInfo\022o\n\ndeleted_at\030\n \001(\0132\032.goog" +
-      "le.protobuf.TimestampB4\202\267\0300\n\ndeleted_at\022" +
-      "\013TIMESTAMPTZZ\025Soft delete timestampR\tdel" +
-      "etedAt\022H\n\ndeleted_by\030\013 \001(\tB)\202\267\030%\n\ndelete" +
-      "d_by\022\004UUIDZ\021Soft delete actorR\tdeletedBy" +
-      ":\304\006\372\266\030\242\005\n\007tenants\022\nudb_tenant\030\001 \001*KMulti" +
-      "-tenancy support for organizations, work" +
-      "spaces, accounts, and projects0\0018\001@\001b\227\001\n" +
-      "\027tenant_self_or_platform\032z(tenant_id::te" +
-      "xt = current_setting(\'app.current_tenant" +
-      "_id\', true) OR current_setting(\'app.plat" +
-      "form_admin\', true) = \'true\')(\001h\001\212\001<\n\031idx" +
-      "_tenants_parent_status\022\005BTREEZ\020parent_te" +
-      "nant_idZ\006status\252\001R\n\034trg_tenants_touch_up" +
-      "dated_at\022\006BEFORE\032\006UPDATE\"\035udb_tenant.tou" +
-      "ch_updated_at()*\003ROW\302\001\333\001\n\031touch_updated_" +
-      "at_function\022\010postgres\032\017before_triggers\"\242" +
-      "\001CREATE OR REPLACE FUNCTION udb_tenant.t" +
-      "ouch_updated_at()\nRETURNS trigger\nLANGUA" +
-      "GE plpgsql\nAS $$\nBEGIN\n  NEW.updated_at " +
-      "= CURRENT_TIMESTAMP;\n  RETURN NEW;\nEND;\n" +
-      "$$;\362\001\026udb.tenant.tenants.cdc\372\001\013tenant:re" +
-      "ad\212\262\031\230\001\n\006tenant\032\ttenant_id*4tenant_id = " +
-      "current_setting(\'app.current_tenant_id\')" +
-      "2\013soft_delete:\022tenant.operational@\373\023H\002R\006" +
-      "tenantZ\010standardr\025tenant.data_residencyB" +
-      "\374\001\n\035com.udb.core.tenant.entity.v1B\013Tenan" +
-      "tProtoP\001ZEgithub.com/fahara02/udb/sdk/go" +
-      "/gen/udb/core/tenant/entity/v1;entityv1\242" +
-      "\002\004UCTE\252\002\031udb.core.Tenant.Entity.V1\312\002\031Udb" +
-      "\\Core\\Tenant\\Entity\\V1\342\002%Udb\\GPBMetadata" +
-      "\\Core\\Tenant\\Entity\\V1\352\002\035Udb::Core::Tena" +
-      "nt::Entity::V1b\006proto3"
+      "b/core/tenant/entity/v1/enums.proto\"\334\016\n\006" +
+      "Tenant\022L\n\ttenant_id\030\001 \001(\tB/\202\267\030+\n\ttenant_" +
+      "id\022\004UUID\030\001(\001:\021gen_random_uuid()\230\002\001R\010tena" +
+      "ntId\022S\n\004code\030\002 \001(\tB?\202\267\030;\n\004code\022\013VARCHAR(" +
+      "50)\030\001 \001R\"\n\027idx_tenants_code_unique\022\005BTRE" +
+      "E\030\001R\004code\022.\n\004name\030\003 \001(\tB\032\202\267\030\026\n\004name\022\014VAR" +
+      "CHAR(255)\030\001R\004name\022T\n\004type\030\004 \001(\0162%.udb.co" +
+      "re.tenant.entity.v1.TenantTypeB\031\202\267\030\025\n\004ty" +
+      "pe\022\013VARCHAR(20)\030\001R\004type\022\203\001\n\006status\030\005 \001(\016" +
+      "2\'.udb.core.tenant.entity.v1.TenantStatu" +
+      "sBB\202\267\030>\n\006status\022\013VARCHAR(20)\030\001:\010\'ACTIVE\'" +
+      "R\033\n\022idx_tenants_status\022\005BTREER\006status\022\204\001" +
+      "\n\020parent_tenant_id\030\006 \001(\tBZ\202\267\030V\n\020parent_t" +
+      "enant_id\022\004UUIDJ\"\n\007tenants\022\ttenant_id\032\nud" +
+      "b_tenant \004Z\030For hierarchical tenantsR\016pa" +
+      "rentTenantId\022L\n\006config\030\007 \001(\tB4\202\267\0300\n\006conf" +
+      "ig\022\005JSONBZ\035Tenant-specific configuration" +
+      "x\001R\006config\022G\n\010branding\030\010 \001(\tB+\202\267\030\'\n\010bran" +
+      "ding\022\005JSONBZ\022Logo, colors, etc.x\001R\010brand" +
+      "ing\022\202\001\n\naudit_info\030\t \001(\0132\035.udb.core.comm" +
+      "on.v1.AuditInfoBD\202\267\030@\n\naudit_info\022\005JSONB" +
+      "\030\001:\013\'{}\'::jsonbZ\032Audit trail stored as J" +
+      "SONx\001R\tauditInfo\022o\n\ndeleted_at\030\n \001(\0132\032.g" +
+      "oogle.protobuf.TimestampB4\202\267\0300\n\ndeleted_" +
+      "at\022\013TIMESTAMPTZZ\025Soft delete timestampR\t" +
+      "deletedAt\022H\n\ndeleted_by\030\013 \001(\tB)\202\267\030%\n\ndel" +
+      "eted_by\022\004UUIDZ\021Soft delete actorR\tdelete" +
+      "dBy:\304\006\372\266\030\242\005\n\007tenants\022\nudb_tenant\030\001 \001*KMu" +
+      "lti-tenancy support for organizations, w" +
+      "orkspaces, accounts, and projects0\0018\001@\001b" +
+      "\227\001\n\027tenant_self_or_platform\032z(tenant_id:" +
+      ":text = current_setting(\'app.current_ten" +
+      "ant_id\', true) OR current_setting(\'app.p" +
+      "latform_admin\', true) = \'true\')(\001h\001\212\001<\n\031" +
+      "idx_tenants_parent_status\022\005BTREEZ\020parent" +
+      "_tenant_idZ\006status\252\001R\n\034trg_tenants_touch" +
+      "_updated_at\022\006BEFORE\032\006UPDATE\"\035udb_tenant." +
+      "touch_updated_at()*\003ROW\302\001\333\001\n\031touch_updat" +
+      "ed_at_function\022\010postgres\032\017before_trigger" +
+      "s\"\242\001CREATE OR REPLACE FUNCTION udb_tenan" +
+      "t.touch_updated_at()\nRETURNS trigger\nLAN" +
+      "GUAGE plpgsql\nAS $$\nBEGIN\n  NEW.updated_" +
+      "at = CURRENT_TIMESTAMP;\n  RETURN NEW;\nEN" +
+      "D;\n$$;\362\001\026udb.tenant.tenants.cdc\372\001\013tenant" +
+      ":read\212\262\031\230\001\n\006tenant\032\ttenant_id*4tenant_id" +
+      " = current_setting(\'app.current_tenant_i" +
+      "d\')2\013soft_delete:\022tenant.operational@\373\023H" +
+      "\002R\006tenantZ\010standardr\025tenant.data_residen" +
+      "cyB\374\001\n\035com.udb.core.tenant.entity.v1B\013Te" +
+      "nantProtoP\001ZEgithub.com/fahara02/udb/sdk" +
+      "/go/gen/udb/core/tenant/entity/v1;entity" +
+      "v1\242\002\004UCTE\252\002\031udb.core.Tenant.Entity.V1\312\002\031" +
+      "Udb\\Core\\Tenant\\Entity\\V1\342\002%Udb\\GPBMetad" +
+      "ata\\Core\\Tenant\\Entity\\V1\352\002\035Udb::Core::T" +
+      "enant::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

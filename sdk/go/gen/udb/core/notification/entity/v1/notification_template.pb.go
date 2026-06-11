@@ -175,7 +175,7 @@ var File_udb_core_notification_entity_v1_notification_template_proto protoreflec
 
 const file_udb_core_notification_entity_v1_notification_template_proto_rawDesc = "" +
 	"\n" +
-	";udb/core/notification/entity/v1/notification_template.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\x86\x12\n" +
+	";udb/core/notification/entity/v1/notification_template.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\x89\x12\n" +
 	"\x14NotificationTemplate\x12O\n" +
 	"\vtemplate_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vtemplate_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
@@ -217,10 +217,10 @@ const file_udb_core_notification_entity_v1_notification_template_proto_rawDesc =
 	"\n" +
 	"deleted_by\x18\f \x01(\tB)\x82\xb7\x18%\n" +
 	"\n" +
-	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy\x12\xb5\x01\n" +
-	"\ttenant_id\x18\r \x01(\tB\x97\x01\x82\xb7\x18\x92\x01\n" +
+	"deleted_by\x12\x04UUIDZ\x11Soft delete actorR\tdeletedBy\x12\xb8\x01\n" +
+	"\ttenant_id\x18\r \x01(\tB\x9a\x01\x82\xb7\x18\x95\x01\n" +
 	"\ttenant_id\x12\fVARCHAR(120)R&\n" +
-	"\x1didx_notif_templates_tenant_id\x12\x05BTREEZOOwning tenant for per-tenant overrides; NULL = platform-global default templateR\btenantId:\x89\x06\xfa\xb6\x18\xcc\x04\n" +
+	"\x1didx_notif_templates_tenant_id\x12\x05BTREEZOOwning tenant for per-tenant overrides; NULL = platform-global default template\x98\x02\x01R\btenantId:\x89\x06\xfa\xb6\x18\xcc\x04\n" +
 	"\x16notification_templates\x12\x10udb_notification\x18\x01 \x01*8Message templates for each notification type and channel0\x018\x01@\x01bx\n" +
 	"\x10tenant_isolation\x12\x03ALL\x1a](tenant_id IS NULL OR tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xaa\x01g\n" +
 	"+trg_notification_templates_touch_updated_at\x12\x06BEFORE\x1a\x06UPDATE\"#udb_notification.touch_updated_at()*\x03ROW\xc2\x01\xe1\x01\n" +

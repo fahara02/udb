@@ -66,7 +66,7 @@ message PipelineStep {
 
   // Denormalized from the owning pipeline_instance so the tenant RLS policy can
   // filter steps directly (steps are created by the service from the instance).
-  string tenant_id = 12 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "UUID" not_null: true }];
+  string tenant_id = 12 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "UUID" not_null: true }];
   // @inject_tag: gorm:"column:tenant_id;not null"
 
   string step_name = 3 [(udb.core.common.v1.pg_column) = { column_name: "step_name" sql_type: "VARCHAR(160)" not_null: true }];

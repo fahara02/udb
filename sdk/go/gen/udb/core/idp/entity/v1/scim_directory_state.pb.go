@@ -154,12 +154,12 @@ var File_udb_core_idp_entity_v1_scim_directory_state_proto protoreflect.FileDesc
 
 const file_udb_core_idp_entity_v1_scim_directory_state_proto_rawDesc = "" +
 	"\n" +
-	"1udb/core/idp/entity/v1/scim_directory_state.proto\x12\x16udb.core.idp.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\"udb/core/idp/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xa6\r\n" +
+	"1udb/core/idp/entity/v1/scim_directory_state.proto\x12\x16udb.core.idp.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\"udb/core/idp/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xa9\r\n" +
 	"\x12ScimDirectoryState\x12q\n" +
 	"\x17scim_directory_state_id\x18\x01 \x01(\tB:\x82\xb7\x186\n" +
-	"\x17scim_directory_state_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x14scimDirectoryStateId\x12<\n" +
-	"\ttenant_id\x18\x02 \x01(\tB\x1f\x82\xb7\x18\x1b\n" +
-	"\ttenant_id\x12\fVARCHAR(120)\x18\x01R\btenantId\x12\xc4\x01\n" +
+	"\x17scim_directory_state_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x14scimDirectoryStateId\x12?\n" +
+	"\ttenant_id\x18\x02 \x01(\tB\"\x82\xb7\x18\x1e\n" +
+	"\ttenant_id\x12\fVARCHAR(120)\x18\x01\x98\x02\x01R\btenantId\x12\xc4\x01\n" +
 	"\vprovider_id\x18\x03 \x01(\tB\xa2\x01\x82\xb7\x18\x9d\x01\n" +
 	"\vprovider_id\x12\x04UUID\x18\x01J,\n" +
 	"\x12identity_providers\x12\vprovider_id\x1a\audb_idp \x03R*\n" +

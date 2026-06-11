@@ -145,14 +145,14 @@ var File_udb_core_authz_entity_v1_authz_revision_proto protoreflect.FileDescript
 
 const file_udb_core_authz_entity_v1_authz_revision_proto_rawDesc = "" +
 	"\n" +
-	"-udb/core/authz/entity/v1/authz_revision.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a/udb/core/authz/entity/v1/governance_enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb9\v\n" +
+	"-udb/core/authz/entity/v1/authz_revision.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a/udb/core/authz/entity/v1/governance_enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xbc\v\n" +
 	"\rAuthzRevision\x12O\n" +
 	"\vrevision_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vrevision_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
-	"revisionId\x12`\n" +
-	"\ttenant_id\x18\x02 \x01(\tBC\x82\xb7\x18?\n" +
+	"revisionId\x12c\n" +
+	"\ttenant_id\x18\x02 \x01(\tBF\x82\xb7\x18B\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R#\n" +
-	"\x1aidx_authz_revisions_tenant\x12\x05BTREER\btenantId\x12C\n" +
+	"\x1aidx_authz_revisions_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12C\n" +
 	"\n" +
 	"project_id\x18\x03 \x01(\tB$\x82\xb7\x18 \n" +
 	"\n" +

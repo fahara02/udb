@@ -175,7 +175,7 @@ var File_udb_core_control_entity_v1_control_plane_resource_proto protoreflect.Fi
 
 const file_udb_core_control_entity_v1_control_plane_resource_proto_rawDesc = "" +
 	"\n" +
-	"7udb/core/control/entity/v1/control_plane_resource.proto\x12\x1audb.core.control.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a&udb/core/control/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x98\x0e\n" +
+	"7udb/core/control/entity/v1/control_plane_resource.proto\x12\x1audb.core.control.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a&udb/core/control/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x9b\x0e\n" +
 	"\x14ControlPlaneResource\x12O\n" +
 	"\vresource_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vresource_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
@@ -184,9 +184,9 @@ const file_udb_core_control_entity_v1_control_plane_resource_proto_rawDesc = "" 
 	"\rresource_type\x12\vVARCHAR(48)\x18\x01R,\n" +
 	"#idx_control_resources_resource_type\x12\x05BTREER\fresourceType\x12.\n" +
 	"\x04name\x18\x03 \x01(\tB\x1a\x82\xb7\x18\x16\n" +
-	"\x04name\x12\fVARCHAR(200)\x18\x01R\x04name\x12x\n" +
-	"\ttenant_id\x18\x04 \x01(\tB[\x82\xb7\x18W\n" +
-	"\ttenant_id\x12\fVARCHAR(120)Z<NULL means fleet-wide; set scopes the resource to one tenantR\btenantId\x12e\n" +
+	"\x04name\x12\fVARCHAR(200)\x18\x01R\x04name\x12{\n" +
+	"\ttenant_id\x18\x04 \x01(\tB^\x82\xb7\x18Z\n" +
+	"\ttenant_id\x12\fVARCHAR(120)Z<NULL means fleet-wide; set scopes the resource to one tenant\x98\x02\x01R\btenantId\x12e\n" +
 	"\n" +
 	"project_id\x18\x05 \x01(\tBF\x82\xb7\x18B\n" +
 	"\n" +

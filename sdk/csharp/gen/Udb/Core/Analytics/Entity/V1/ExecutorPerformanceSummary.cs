@@ -61,7 +61,7 @@ namespace udb.core.Analytics.Entity.V1 {
             "eGVjdXRvciBwZXJmb3JtYW5jZSByb2xsLXVwIGZvciBwcm9qZWN0LWRlZmlu",
             "ZWQgcHJvY2Vzc2luZyB1bml0c0gDUgxzdW1tYXJ5X2RhdGVY7QLqAQdyZXBs",
             "aWNhirIZUwoGZ2xvYmFsMgRub25lOhVhbmFseXRpY3Mub3BlcmF0aW9uYWxA",
-            "+xNIAlIGdGVuYW50WghzdGFuZGFyZHIVdGVuYW50LmRhdGFfcmVzaWRlbmN5",
+            "7QJIAlIGdGVuYW50WghzdGFuZGFyZHIVdGVuYW50LmRhdGFfcmVzaWRlbmN5",
             "QqICCiBjb20udWRiLmNvcmUuYW5hbHl0aWNzLmVudGl0eS52MUIfRXhlY3V0",
             "b3JQZXJmb3JtYW5jZVN1bW1hcnlQcm90b1ABWkhnaXRodWIuY29tL2ZhaGFy",
             "YTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2FuYWx5dGljcy9lbnRpdHkv",

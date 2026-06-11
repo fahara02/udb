@@ -36,12 +36,12 @@ CANARY_STATE_ROLLED_BACK: CanaryState
 CANARY_STATE_PAUSED: CanaryState
 
 class PolicyCanary(_message.Message):
-    __slots__ = ("canary_id", "policy_set_id", "policy_version_id", "scope_kind", "scope_values_json", "state", "started_at", "success_window_secs", "metric_threshold", "created_by", "tenant_id", "project_id", "min_samples", "rollback_version_id", "outcome_reason", "revision")
+    __slots__ = ("canary_id", "policy_set_id", "policy_version_id", "scope_kind", "scope_values", "state", "started_at", "success_window_secs", "metric_threshold", "created_by", "tenant_id", "project_id", "min_samples", "rollback_version_id", "outcome_reason", "revision")
     CANARY_ID_FIELD_NUMBER: _ClassVar[int]
     POLICY_SET_ID_FIELD_NUMBER: _ClassVar[int]
     POLICY_VERSION_ID_FIELD_NUMBER: _ClassVar[int]
     SCOPE_KIND_FIELD_NUMBER: _ClassVar[int]
-    SCOPE_VALUES_JSON_FIELD_NUMBER: _ClassVar[int]
+    SCOPE_VALUES_FIELD_NUMBER: _ClassVar[int]
     STATE_FIELD_NUMBER: _ClassVar[int]
     STARTED_AT_FIELD_NUMBER: _ClassVar[int]
     SUCCESS_WINDOW_SECS_FIELD_NUMBER: _ClassVar[int]
@@ -57,7 +57,7 @@ class PolicyCanary(_message.Message):
     policy_set_id: str
     policy_version_id: str
     scope_kind: CanaryScopeKind
-    scope_values_json: str
+    scope_values: str
     state: CanaryState
     started_at: _timestamp_pb2.Timestamp
     success_window_secs: int
@@ -69,4 +69,4 @@ class PolicyCanary(_message.Message):
     rollback_version_id: str
     outcome_reason: str
     revision: int
-    def __init__(self, canary_id: _Optional[str] = ..., policy_set_id: _Optional[str] = ..., policy_version_id: _Optional[str] = ..., scope_kind: _Optional[_Union[CanaryScopeKind, str]] = ..., scope_values_json: _Optional[str] = ..., state: _Optional[_Union[CanaryState, str]] = ..., started_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., success_window_secs: _Optional[int] = ..., metric_threshold: _Optional[float] = ..., created_by: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., min_samples: _Optional[int] = ..., rollback_version_id: _Optional[str] = ..., outcome_reason: _Optional[str] = ..., revision: _Optional[int] = ...) -> None: ...
+    def __init__(self, canary_id: _Optional[str] = ..., policy_set_id: _Optional[str] = ..., policy_version_id: _Optional[str] = ..., scope_kind: _Optional[_Union[CanaryScopeKind, str]] = ..., scope_values: _Optional[str] = ..., state: _Optional[_Union[CanaryState, str]] = ..., started_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., success_window_secs: _Optional[int] = ..., metric_threshold: _Optional[float] = ..., created_by: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., min_samples: _Optional[int] = ..., rollback_version_id: _Optional[str] = ..., outcome_reason: _Optional[str] = ..., revision: _Optional[int] = ...) -> None: ...

@@ -87,7 +87,7 @@ impl AuthnServiceImpl {
         if !matches!(existing, Ok(0)) {
             return;
         }
-        let private_plain = self.security.jwt_private_key.clone().unwrap_or_default();
+        let private_plain = self.security.jwt_private_pem().unwrap_or_default();
         // Seal the private material at rest. On error (fail-closed mode with no key
         // configured) we refuse to seed rather than write the PEM in the clear.
         let private = match runtime.encrypt_secret_at_rest(&private_plain) {
@@ -123,16 +123,7 @@ impl AuthnServiceImpl {
 
     /// Public PEM resolved from the configured env public key (inline or path).
     fn env_public_pem(&self) -> Option<String> {
-        let key = self
-            .security
-            .jwt_public_key
-            .as_ref()
-            .filter(|k| !k.trim().is_empty())?;
-        if key.contains("-----BEGIN") {
-            Some(key.clone())
-        } else {
-            std::fs::read_to_string(key).ok()
-        }
+        self.security.jwt_public_pem()
     }
 
     /// ACTIVE + VERIFYING registry keys for JWKS publication.

@@ -170,14 +170,14 @@ var File_udb_core_authn_entity_v1_mfa_challenge_proto protoreflect.FileDescripto
 
 const file_udb_core_authn_entity_v1_mfa_challenge_proto_rawDesc = "" +
 	"\n" +
-	",udb/core/authn/entity/v1/mfa_challenge.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x8e\r\n" +
+	",udb/core/authn/entity/v1/mfa_challenge.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x91\r\n" +
 	"\fMfaChallenge\x12R\n" +
 	"\fchallenge_id\x18\x01 \x01(\tB/\x82\xb7\x18+\n" +
 	"\fchallenge_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\vchallengeId\x126\n" +
 	"\auser_id\x18\x02 \x01(\tB\x1d\x82\xb7\x18\x19\n" +
-	"\auser_id\x12\fVARCHAR(160)\x18\x01R\x06userId\x12;\n" +
-	"\ttenant_id\x18\x03 \x01(\tB\x1e\x82\xb7\x18\x1a\n" +
-	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R\btenantId\x12=\n" +
+	"\auser_id\x12\fVARCHAR(160)\x18\x01R\x06userId\x12>\n" +
+	"\ttenant_id\x18\x03 \x01(\tB!\x82\xb7\x18\x1d\n" +
+	"\ttenant_id\x12\vVARCHAR(64)\x18\x01\x98\x02\x01R\btenantId\x12=\n" +
 	"\n" +
 	"project_id\x18\x04 \x01(\tB\x1e\x82\xb7\x18\x1a\n" +
 	"\n" +

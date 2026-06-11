@@ -152,13 +152,13 @@ var File_udb_core_webrtc_entity_v1_room_proto protoreflect.FileDescriptor
 
 const file_udb_core_webrtc_entity_v1_room_proto_rawDesc = "" +
 	"\n" +
-	"$udb/core/webrtc/entity/v1/room.proto\x12\x19udb.core.webrtc.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/webrtc/entity/v1/enums.proto\"\xf6\n" +
+	"$udb/core/webrtc/entity/v1/room.proto\x12\x19udb.core.webrtc.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/webrtc/entity/v1/enums.proto\"\xf9\n" +
 	"\n" +
 	"\x04Room\x12C\n" +
 	"\aroom_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
-	"\aroom_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06roomId\x124\n" +
-	"\ttenant_id\x18\x02 \x01(\tB\x17\x82\xb7\x18\x13\n" +
-	"\ttenant_id\x12\x04UUID\x18\x01R\btenantId\x12.\n" +
+	"\aroom_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06roomId\x127\n" +
+	"\ttenant_id\x18\x02 \x01(\tB\x1a\x82\xb7\x18\x16\n" +
+	"\ttenant_id\x12\x04UUID\x18\x01\x98\x02\x01R\btenantId\x12.\n" +
 	"\x04name\x18\x03 \x01(\tB\x1a\x82\xb7\x18\x16\n" +
 	"\x04name\x12\fVARCHAR(255)\x18\x01R\x04name\x12z\n" +
 	"\x05state\x18\x04 \x01(\x0e2$.udb.core.webrtc.entity.v1.RoomStateB>\x82\xb7\x18:\n" +

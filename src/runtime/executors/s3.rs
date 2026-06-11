@@ -402,13 +402,23 @@ impl ResourceAdminExecutor for S3Executor {
             .await
             .map(|_| ())
             .or_else(|err| {
-                let msg = err.to_string();
-                // BucketAlreadyOwnedByYou / BucketAlreadyExists are idempotent success.
-                if msg.contains("BucketAlreadyOwnedByYou") || msg.contains("BucketAlreadyExists") {
+                use aws_sdk_s3::error::ProvideErrorMetadata;
+                // BucketAlreadyOwnedByYou / BucketAlreadyExists are idempotent
+                // success. The aws-sdk-s3 v1 `SdkError` `Display` is the opaque
+                // "service error" — the modeled code lives in the structured
+                // ServiceError — so detect the already-exists cases STRUCTURALLY
+                // (the old `to_string().contains(...)` never matched, turning an
+                // existing bucket into a hard failure). For real failures, surface
+                // the actual code + message instead of "service error".
+                if err.as_service_error().is_some_and(|svc| {
+                    svc.is_bucket_already_owned_by_you() || svc.is_bucket_already_exists()
+                }) {
                     Ok(())
                 } else {
                     Err(tonic::Status::internal(format!(
-                        "s3 create_bucket failed: {msg}"
+                        "s3 create_bucket failed: {}: {}",
+                        err.code().unwrap_or("unknown"),
+                        err.message().unwrap_or_default()
                     )))
                 }
             })

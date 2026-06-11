@@ -43,6 +43,8 @@ type Notification struct {
 	RetryCount     int32                  `protobuf:"varint,15,opt,name=retry_count,json=retryCount,proto3" json:"retry_count,omitempty"`
 	ErrorMessage   string                 `protobuf:"bytes,16,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
 	TenantId       string                 `protobuf:"bytes,17,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	DeletedAt      *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
+	DeletedBy      string                 `protobuf:"bytes,19,opt,name=deleted_by,json=deletedBy,proto3" json:"deleted_by,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -196,32 +198,76 @@ func (x *Notification) GetTenantId() string {
 	return ""
 }
 
+func (x *Notification) GetDeletedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DeletedAt
+	}
+	return nil
+}
+
+func (x *Notification) GetDeletedBy() string {
+	if x != nil {
+		return x.DeletedBy
+	}
+	return ""
+}
+
 var File_udb_core_notification_entity_v1_notification_proto protoreflect.FileDescriptor
 
 const file_udb_core_notification_entity_v1_notification_proto_rawDesc = "" +
 	"\n" +
-	"2udb/core/notification/entity/v1/notification.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\xf5\v\n" +
-	"\fNotification\x12'\n" +
-	"\x0fnotification_id\x18\x01 \x01(\tR\x0enotificationId\x12!\n" +
-	"\frecipient_id\x18\x02 \x01(\tR\vrecipientId\x12E\n" +
-	"\x04type\x18\x03 \x01(\x0e21.udb.core.notification.entity.v1.NotificationTypeR\x04type\x12N\n" +
-	"\achannel\x18\x04 \x01(\x0e24.udb.core.notification.entity.v1.NotificationChannelR\achannel\x12\x18\n" +
-	"\asubject\x18\x05 \x01(\tR\asubject\x12\x18\n" +
-	"\amessage\x18\x06 \x01(\tR\amessage\x12d\n" +
-	"\rtemplate_data\x18\a \x03(\v2?.udb.core.notification.entity.v1.Notification.TemplateDataEntryR\ftemplateData\x12Q\n" +
-	"\bpriority\x18\b \x01(\x0e25.udb.core.notification.entity.v1.NotificationPriorityR\bpriority\x12K\n" +
-	"\x06status\x18\t \x01(\x0e23.udb.core.notification.entity.v1.NotificationStatusR\x06status\x12=\n" +
+	"2udb/core/notification/entity/v1/notification.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\xf5\x13\n" +
+	"\fNotification\x12[\n" +
+	"\x0fnotification_id\x18\x01 \x01(\tB2\x82\xb7\x18.\n" +
+	"\x0fnotification_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x0enotificationId\x12f\n" +
+	"\frecipient_id\x18\x02 \x01(\tBC\x82\xb7\x18?\n" +
+	"\frecipient_id\x12\x04UUID\x18\x01R'\n" +
+	"\x1eidx_notifications_recipient_id\x12\x05BTREER\vrecipientId\x12\x81\x01\n" +
+	"\x04type\x18\x03 \x01(\x0e21.udb.core.notification.entity.v1.NotificationTypeB:\x82\xb7\x186\n" +
+	"\x04type\x12\vVARCHAR(40)\x18\x01:\x1f'NOTIFICATION_TYPE_UNSPECIFIED'R\x04type\x12\x90\x01\n" +
+	"\achannel\x18\x04 \x01(\x0e24.udb.core.notification.entity.v1.NotificationChannelB@\x82\xb7\x18<\n" +
+	"\achannel\x12\vVARCHAR(40)\x18\x01:\"'NOTIFICATION_CHANNEL_UNSPECIFIED'R\achannel\x123\n" +
+	"\asubject\x18\x05 \x01(\tB\x19\x82\xb7\x18\x15\n" +
+	"\asubject\x12\x04TEXT\x18\x01:\x02''R\asubject\x123\n" +
+	"\amessage\x18\x06 \x01(\tB\x19\x82\xb7\x18\x15\n" +
+	"\amessage\x12\x04TEXT\x18\x01:\x02''R\amessage\x12\x91\x01\n" +
+	"\rtemplate_data\x18\a \x03(\v2?.udb.core.notification.entity.v1.Notification.TemplateDataEntryB+\x82\xb7\x18'\n" +
+	"\rtemplate_data\x12\x05JSONB\x18\x01:\v'{}'::jsonbx\x01R\ftemplateData\x12\x90\x01\n" +
+	"\bpriority\x18\b \x01(\x0e25.udb.core.notification.entity.v1.NotificationPriorityB=\x82\xb7\x189\n" +
+	"\bpriority\x12\vVARCHAR(40)\x18\x01:\x1e'NOTIFICATION_PRIORITY_NORMAL'R\bpriority\x12\xaa\x01\n" +
+	"\x06status\x18\t \x01(\x0e23.udb.core.notification.entity.v1.NotificationStatusB]\x82\xb7\x18Y\n" +
+	"\x06status\x12\vVARCHAR(40)\x18\x01:\x1d'NOTIFICATION_STATUS_PENDING'R!\n" +
+	"\x18idx_notifications_status\x12\x05BTREER\x06status\x12^\n" +
 	"\fscheduled_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\vscheduledAt\x123\n" +
-	"\asent_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\x06sentAt\x12=\n" +
-	"\fdelivered_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\vdeliveredAt\x123\n" +
-	"\aread_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\x06readAt\x129\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB\x1f\x82\xb7\x18\x1b\n" +
+	"\fscheduled_at\x12\vTIMESTAMPTZR\vscheduledAt\x12O\n" +
+	"\asent_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x1a\x82\xb7\x18\x16\n" +
+	"\asent_at\x12\vTIMESTAMPTZR\x06sentAt\x12^\n" +
+	"\fdelivered_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampB\x1f\x82\xb7\x18\x1b\n" +
+	"\fdelivered_at\x12\vTIMESTAMPTZR\vdeliveredAt\x12O\n" +
+	"\aread_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x1a\x82\xb7\x18\x16\n" +
+	"\aread_at\x12\vTIMESTAMPTZR\x06readAt\x12q\n" +
 	"\n" +
-	"created_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x1f\n" +
-	"\vretry_count\x18\x0f \x01(\x05R\n" +
-	"retryCount\x12#\n" +
-	"\rerror_message\x18\x10 \x01(\tR\ferrorMessage\x12\x1b\n" +
-	"\ttenant_id\x18\x11 \x01(\tR\btenantId\x1a?\n" +
+	"created_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampB6\x82\xb7\x182\n" +
+	"\n" +
+	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt\x12@\n" +
+	"\vretry_count\x18\x0f \x01(\x05B\x1f\x82\xb7\x18\x1b\n" +
+	"\vretry_count\x12\aINTEGER\x18\x01:\x010R\n" +
+	"retryCount\x12D\n" +
+	"\rerror_message\x18\x10 \x01(\tB\x1f\x82\xb7\x18\x1b\n" +
+	"\rerror_message\x12\x04TEXT\x18\x01:\x02''R\ferrorMessage\x12a\n" +
+	"\ttenant_id\x18\x11 \x01(\tBD\x82\xb7\x18@\n" +
+	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R!\n" +
+	"\x18idx_notifications_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12\x8f\x01\n" +
+	"\n" +
+	"deleted_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampBT\x82\xb7\x18P\n" +
+	"\n" +
+	"deleted_at\x12\vTIMESTAMPTZR5\n" +
+	"\x18idx_notifications_active\x12\x05BTREE:\x12deleted_at IS NULLR\tdeletedAt\x125\n" +
+	"\n" +
+	"deleted_by\x18\x13 \x01(\tB\x16\x82\xb7\x18\x12\n" +
+	"\n" +
+	"deleted_by\x12\x04UUIDR\tdeletedBy\x1a?\n" +
 	"\x11TemplateDataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x80\x04\xfa\xb6\x18\xd7\x02\n" +
@@ -265,11 +311,12 @@ var file_udb_core_notification_entity_v1_notification_proto_depIdxs = []int32{
 	6,  // 7: udb.core.notification.entity.v1.Notification.delivered_at:type_name -> google.protobuf.Timestamp
 	6,  // 8: udb.core.notification.entity.v1.Notification.read_at:type_name -> google.protobuf.Timestamp
 	6,  // 9: udb.core.notification.entity.v1.Notification.created_at:type_name -> google.protobuf.Timestamp
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	6,  // 10: udb.core.notification.entity.v1.Notification.deleted_at:type_name -> google.protobuf.Timestamp
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_notification_entity_v1_notification_proto_init() }

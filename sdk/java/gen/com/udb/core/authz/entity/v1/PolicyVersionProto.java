@@ -45,7 +45,7 @@ public final class PolicyVersionProto extends com.google.protobuf.GeneratedFile 
       "e/protobuf/timestamp.proto\032/udb/core/aut" +
       "hz/entity/v1/governance_enums.proto\032\033udb" +
       "/core/common/v1/db.proto\032!udb/core/commo" +
-      "n/v1/security.proto\"\312\024\n\rPolicyVersion\022`\n" +
+      "n/v1/security.proto\"\315\024\n\rPolicyVersion\022`\n" +
       "\021policy_version_id\030\001 \001(\tB4\202\267\0300\n\021policy_v" +
       "ersion_id\022\004UUID\030\001(\001:\021gen_random_uuid()R\017" +
       "policyVersionId\022\307\001\n\rpolicy_set_id\030\002 \001(\tB" +
@@ -83,41 +83,42 @@ public final class PolicyVersionProto extends com.google.protobuf.GeneratedFile 
       "nsR\010revision\022z\n\014content_hash\030\r \001(\tBW\202\267\030S" +
       "\n\014content_hash\022\013VARCHAR(80)\030\001:\002\'\'Z0Conte" +
       "nt hash of payload_json for no-op detect" +
-      "ionR\013contentHash\022`\n\ttenant_id\030\016 \001(\tBC\202\267\030" +
-      "?\n\ttenant_id\022\013VARCHAR(64)\030\001R#\n\032idx_polic" +
-      "y_versions_tenant\022\005BTREER\010tenantId\022C\n\npr" +
-      "oject_id\030\017 \001(\tB$\202\267\030 \n\nproject_id\022\014VARCHA" +
-      "R(120)\030\001:\002\'\'R\tprojectId\022\200\001\n\014payload_json" +
-      "\030\020 \001(\tB]\202\267\030Y\n\014payload_json\022\005JSONB\030\001:\013\'{}" +
-      "\'::jsonbZ1Frozen candidate policy docume" +
-      "nt for this versionx\001R\013payloadJson\022x\n\thi" +
-      "gh_risk\030\021 \001(\010B[\202\267\030W\n\thigh_risk\022\007BOOLEAN\030" +
-      "\001:\005falseZ8Marks changes that require sep" +
-      "aration-of-duties approvalR\010highRisk\022p\n\014" +
-      "submitted_by\030\022 \001(\tBM\202\267\030I\n\014submitted_by\022\014" +
-      "VARCHAR(160)Z+Actor that submitted the v" +
-      "ersion for reviewR\013submittedBy\022\226\001\n\017sourc" +
-      "e_draft_id\030\023 \001(\tBn\202\267\030j\n\017source_draft_id\022" +
-      "\004UUIDR)\n idx_policy_versions_source_draf" +
-      "t\022\005BTREEZ&PolicyDraft promoted into this" +
-      " versionR\rsourceDraftId:\256\003\372\266\030\225\002\n\017policy_" +
-      "versions\022\tudb_authz\030+ \001*EImmutable, numb" +
-      "ered, reviewable policy documents promot" +
-      "ed from drafts8\001@\001b^\n\020tenant_isolation\032H" +
-      "(tenant_id::text = current_setting(\'app." +
-      "current_tenant_id\', true)::text)(\001\212\001G\n\035u" +
-      "q_policy_versions_set_number\022\005BTREE\030\001Z\rp" +
-      "olicy_set_idZ\016version_number\212\262\031\217\001\n\006tenan" +
-      "t\032\ttenant_id*4tenant_id = current_settin" +
-      "g(\'app.current_tenant_id\')2\004none:\020authz." +
-      "governance@\373\023H\002R\006tenantZ\010standardr\025tenan" +
-      "t.data_residencyB\375\001\n\034com.udb.core.authz." +
-      "entity.v1B\022PolicyVersionProtoP\001ZDgithub." +
-      "com/fahara02/udb/sdk/go/gen/udb/core/aut" +
-      "hz/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.core." +
-      "Authz.Entity.V1\312\002\030Udb\\Core\\Authz\\Entity\\" +
-      "V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V" +
-      "1\352\002\034Udb::Core::Authz::Entity::V1b\006proto3"
+      "ionR\013contentHash\022c\n\ttenant_id\030\016 \001(\tBF\202\267\030" +
+      "B\n\ttenant_id\022\013VARCHAR(64)\030\001R#\n\032idx_polic" +
+      "y_versions_tenant\022\005BTREE\230\002\001R\010tenantId\022C\n" +
+      "\nproject_id\030\017 \001(\tB$\202\267\030 \n\nproject_id\022\014VAR" +
+      "CHAR(120)\030\001:\002\'\'R\tprojectId\022\200\001\n\014payload_j" +
+      "son\030\020 \001(\tB]\202\267\030Y\n\014payload_json\022\005JSONB\030\001:\013" +
+      "\'{}\'::jsonbZ1Frozen candidate policy doc" +
+      "ument for this versionx\001R\013payloadJson\022x\n" +
+      "\thigh_risk\030\021 \001(\010B[\202\267\030W\n\thigh_risk\022\007BOOLE" +
+      "AN\030\001:\005falseZ8Marks changes that require " +
+      "separation-of-duties approvalR\010highRisk\022" +
+      "p\n\014submitted_by\030\022 \001(\tBM\202\267\030I\n\014submitted_b" +
+      "y\022\014VARCHAR(160)Z+Actor that submitted th" +
+      "e version for reviewR\013submittedBy\022\226\001\n\017so" +
+      "urce_draft_id\030\023 \001(\tBn\202\267\030j\n\017source_draft_" +
+      "id\022\004UUIDR)\n idx_policy_versions_source_d" +
+      "raft\022\005BTREEZ&PolicyDraft promoted into t" +
+      "his versionR\rsourceDraftId:\256\003\372\266\030\225\002\n\017poli" +
+      "cy_versions\022\tudb_authz\030+ \001*EImmutable, n" +
+      "umbered, reviewable policy documents pro" +
+      "moted from drafts8\001@\001b^\n\020tenant_isolatio" +
+      "n\032H(tenant_id::text = current_setting(\'a" +
+      "pp.current_tenant_id\', true)::text)(\001\212\001G" +
+      "\n\035uq_policy_versions_set_number\022\005BTREE\030\001" +
+      "Z\rpolicy_set_idZ\016version_number\212\262\031\217\001\n\006te" +
+      "nant\032\ttenant_id*4tenant_id = current_set" +
+      "ting(\'app.current_tenant_id\')2\004none:\020aut" +
+      "hz.governance@\373\023H\002R\006tenantZ\010standardr\025te" +
+      "nant.data_residencyB\375\001\n\034com.udb.core.aut" +
+      "hz.entity.v1B\022PolicyVersionProtoP\001ZDgith" +
+      "ub.com/fahara02/udb/sdk/go/gen/udb/core/" +
+      "authz/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.co" +
+      "re.Authz.Entity.V1\312\002\030Udb\\Core\\Authz\\Enti" +
+      "ty\\V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\Entit" +
+      "y\\V1\352\002\034Udb::Core::Authz::Entity::V1b\006pro" +
+      "to3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

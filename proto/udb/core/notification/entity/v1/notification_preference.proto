@@ -74,7 +74,7 @@ message NotificationPreference {
 
   string user_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "user_id" sql_type: "UUID" not_null: true index: { index_name: "idx_notif_prefs_user_channel_event" index_type: "BTREE" columns: "channel,event_type" unique: true } }];
 
-  string tenant_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" not_null: true index: { index_name: "idx_notif_prefs_tenant_id" index_type: "BTREE" } }];
+  string tenant_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" not_null: true index: { index_name: "idx_notif_prefs_tenant_id" index_type: "BTREE" } }];
 
   NotificationChannel channel = 4 [(udb.core.common.v1.pg_column) = { column_name: "channel" sql_type: "VARCHAR(20)" not_null: true }];
 

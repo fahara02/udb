@@ -55,7 +55,7 @@ message NotificationLog {
     rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
     soft_delete_mode: "none"
     retention_class: "notification.operational"
-    retention_days: 2555
+    retention_days: 90
     audit_mode: AUDIT_MODE_MUTATION
     encryption_profile: "tenant"
     pii_profile: "standard"
@@ -72,7 +72,7 @@ message NotificationLog {
 
   string recipient_id = 5 [(udb.core.common.v1.pg_column) = { column_name: "recipient_id" sql_type: "UUID" foreign_key: { references_table: "users" references_schema: "udb_authn" references_column: "user_id" on_delete: REFERENTIAL_ACTION_SET_NULL constraint_name: "fk_notification_logs_recipient_id" } index: { index_name: "idx_notification_logs_recipient_id" index_type: "BTREE" } }];
   string recipient_address = 6 [(udb.core.common.v1.pg_column) = { column_name: "recipient_address" sql_type: "VARCHAR(320)" comment: "Email, phone, or device token" }];
-  string tenant_id = 7 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" }];
+  string tenant_id = 7 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" }];
   string project_id = 8 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" index: { index_name: "idx_notification_logs_project_id" index_type: "BTREE" } }];
   string resource_type = 9 [(udb.core.common.v1.pg_column) = { column_name: "resource_type" sql_type: "VARCHAR(80)" comment: "Project-defined resource type that triggered the notification" index: { index_name: "idx_notification_logs_resource_type" index_type: "BTREE" } }];
   string resource_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "resource_id" sql_type: "VARCHAR(160)" comment: "Project-defined resource id that triggered the notification" index: { index_name: "idx_notification_logs_resource_id" index_type: "BTREE" } }];

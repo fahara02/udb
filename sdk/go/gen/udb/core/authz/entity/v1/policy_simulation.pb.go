@@ -164,7 +164,7 @@ var File_udb_core_authz_entity_v1_policy_simulation_proto protoreflect.FileDescr
 
 const file_udb_core_authz_entity_v1_policy_simulation_proto_rawDesc = "" +
 	"\n" +
-	"0udb/core/authz/entity/v1/policy_simulation.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xd3\v\n" +
+	"0udb/core/authz/entity/v1/policy_simulation.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xd6\v\n" +
 	"\x10PolicySimulation\x12U\n" +
 	"\rsimulation_id\x18\x01 \x01(\tB0\x82\xb7\x18,\n" +
 	"\rsimulation_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\fsimulationId\x12\x7f\n" +
@@ -183,11 +183,11 @@ const file_udb_core_authz_entity_v1_policy_simulation_proto_rawDesc = "" +
 	"\x13draft_decision_json\x18\b \x01(\tB1\x82\xb7\x18-\n" +
 	"\x13draft_decision_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbx\x01R\x11draftDecisionJson\x12D\n" +
 	"\tdiff_json\x18\t \x01(\tB'\x82\xb7\x18#\n" +
-	"\tdiff_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbx\x01R\bdiffJson\x12c\n" +
+	"\tdiff_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbx\x01R\bdiffJson\x12f\n" +
 	"\ttenant_id\x18\n" +
-	" \x01(\tBF\x82\xb7\x18B\n" +
+	" \x01(\tBI\x82\xb7\x18E\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R&\n" +
-	"\x1didx_policy_simulations_tenant\x12\x05BTREER\btenantId\x12C\n" +
+	"\x1didx_policy_simulations_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12C\n" +
 	"\n" +
 	"project_id\x18\v \x01(\tB$\x82\xb7\x18 \n" +
 	"\n" +

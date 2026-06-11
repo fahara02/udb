@@ -50,53 +50,79 @@ public final class NotificationProto extends com.google.protobuf.GeneratedFile {
       "ty.v1\032\037google/protobuf/timestamp.proto\032\033" +
       "udb/core/common/v1/db.proto\032!udb/core/co" +
       "mmon/v1/security.proto\032+udb/core/notific" +
-      "ation/entity/v1/enums.proto\"\365\013\n\014Notifica" +
-      "tion\022\'\n\017notification_id\030\001 \001(\tR\016notificat" +
-      "ionId\022!\n\014recipient_id\030\002 \001(\tR\013recipientId" +
-      "\022E\n\004type\030\003 \001(\01621.udb.core.notification.e" +
-      "ntity.v1.NotificationTypeR\004type\022N\n\007chann" +
-      "el\030\004 \001(\01624.udb.core.notification.entity." +
-      "v1.NotificationChannelR\007channel\022\030\n\007subje" +
-      "ct\030\005 \001(\tR\007subject\022\030\n\007message\030\006 \001(\tR\007mess" +
-      "age\022d\n\rtemplate_data\030\007 \003(\0132?.udb.core.no" +
-      "tification.entity.v1.Notification.Templa" +
-      "teDataEntryR\014templateData\022Q\n\010priority\030\010 " +
-      "\001(\01625.udb.core.notification.entity.v1.No" +
-      "tificationPriorityR\010priority\022K\n\006status\030\t" +
-      " \001(\01623.udb.core.notification.entity.v1.N" +
-      "otificationStatusR\006status\022=\n\014scheduled_a" +
-      "t\030\n \001(\0132\032.google.protobuf.TimestampR\013sch" +
-      "eduledAt\0223\n\007sent_at\030\013 \001(\0132\032.google.proto" +
-      "buf.TimestampR\006sentAt\022=\n\014delivered_at\030\014 " +
-      "\001(\0132\032.google.protobuf.TimestampR\013deliver" +
-      "edAt\0223\n\007read_at\030\r \001(\0132\032.google.protobuf." +
-      "TimestampR\006readAt\0229\n\ncreated_at\030\016 \001(\0132\032." +
-      "google.protobuf.TimestampR\tcreatedAt\022\037\n\013" +
-      "retry_count\030\017 \001(\005R\nretryCount\022#\n\rerror_m" +
-      "essage\030\020 \001(\tR\014errorMessage\022\033\n\ttenant_id\030" +
-      "\021 \001(\tR\010tenantId\032?\n\021TemplateDataEntry\022\020\n\003" +
-      "key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001" +
-      ":\200\004\372\266\030\327\002\n\rnotifications\022\020udb_notificatio" +
-      "n\030\001 \001*8Queued, sent, delivered, and fail" +
-      "ed notification records0\0018\001@\001b^\n\020tenant_" +
-      "isolation\032H(tenant_id::text = current_se" +
-      "tting(\'app.current_tenant_id\', true)::te" +
-      "xt)(\001\212\001;\n\037idx_notifications_tenant_statu" +
-      "s\022\005BTREEZ\ttenant_idZ\006status\212\0012\n\033idx_noti" +
-      "fications_recipient\022\005BTREEZ\014recipient_id" +
-      "\352\001\007primary\372\001\022notification:write\212\262\031\237\001\n\006te" +
-      "nant\032\ttenant_id*4tenant_id = current_set" +
-      "ting(\'app.current_tenant_id\')2\013soft_dele" +
-      "te:\030notification.operational@\373\023H\002R\006tenan" +
-      "tZ\trecipientr\025tenant.data_residencyB\246\002\n#" +
-      "com.udb.core.notification.entity.v1B\021Not" +
-      "ificationProtoP\001ZKgithub.com/fahara02/ud" +
-      "b/sdk/go/gen/udb/core/notification/entit" +
-      "y/v1;entityv1\242\002\004UCNE\252\002\037udb.core.Notifica" +
-      "tion.Entity.V1\312\002\037Udb\\Core\\Notification\\E" +
-      "ntity\\V1\342\002+Udb\\GPBMetadata\\Core\\Notifica" +
-      "tion\\Entity\\V1\352\002#Udb::Core::Notification" +
-      "::Entity::V1b\006proto3"
+      "ation/entity/v1/enums.proto\"\365\023\n\014Notifica" +
+      "tion\022[\n\017notification_id\030\001 \001(\tB2\202\267\030.\n\017not" +
+      "ification_id\022\004UUID\030\001(\001:\021gen_random_uuid(" +
+      ")R\016notificationId\022f\n\014recipient_id\030\002 \001(\tB" +
+      "C\202\267\030?\n\014recipient_id\022\004UUID\030\001R\'\n\036idx_notif" +
+      "ications_recipient_id\022\005BTREER\013recipientI" +
+      "d\022\201\001\n\004type\030\003 \001(\01621.udb.core.notification" +
+      ".entity.v1.NotificationTypeB:\202\267\0306\n\004type\022" +
+      "\013VARCHAR(40)\030\001:\037\'NOTIFICATION_TYPE_UNSPE" +
+      "CIFIED\'R\004type\022\220\001\n\007channel\030\004 \001(\01624.udb.co" +
+      "re.notification.entity.v1.NotificationCh" +
+      "annelB@\202\267\030<\n\007channel\022\013VARCHAR(40)\030\001:\"\'NO" +
+      "TIFICATION_CHANNEL_UNSPECIFIED\'R\007channel" +
+      "\0223\n\007subject\030\005 \001(\tB\031\202\267\030\025\n\007subject\022\004TEXT\030\001" +
+      ":\002\'\'R\007subject\0223\n\007message\030\006 \001(\tB\031\202\267\030\025\n\007me" +
+      "ssage\022\004TEXT\030\001:\002\'\'R\007message\022\221\001\n\rtemplate_" +
+      "data\030\007 \003(\0132?.udb.core.notification.entit" +
+      "y.v1.Notification.TemplateDataEntryB+\202\267\030" +
+      "\'\n\rtemplate_data\022\005JSONB\030\001:\013\'{}\'::jsonbx\001" +
+      "R\014templateData\022\220\001\n\010priority\030\010 \001(\01625.udb." +
+      "core.notification.entity.v1.Notification" +
+      "PriorityB=\202\267\0309\n\010priority\022\013VARCHAR(40)\030\001:" +
+      "\036\'NOTIFICATION_PRIORITY_NORMAL\'R\010priorit" +
+      "y\022\252\001\n\006status\030\t \001(\01623.udb.core.notificati" +
+      "on.entity.v1.NotificationStatusB]\202\267\030Y\n\006s" +
+      "tatus\022\013VARCHAR(40)\030\001:\035\'NOTIFICATION_STAT" +
+      "US_PENDING\'R!\n\030idx_notifications_status\022" +
+      "\005BTREER\006status\022^\n\014scheduled_at\030\n \001(\0132\032.g" +
+      "oogle.protobuf.TimestampB\037\202\267\030\033\n\014schedule" +
+      "d_at\022\013TIMESTAMPTZR\013scheduledAt\022O\n\007sent_a" +
+      "t\030\013 \001(\0132\032.google.protobuf.TimestampB\032\202\267\030" +
+      "\026\n\007sent_at\022\013TIMESTAMPTZR\006sentAt\022^\n\014deliv" +
+      "ered_at\030\014 \001(\0132\032.google.protobuf.Timestam" +
+      "pB\037\202\267\030\033\n\014delivered_at\022\013TIMESTAMPTZR\013deli" +
+      "veredAt\022O\n\007read_at\030\r \001(\0132\032.google.protob" +
+      "uf.TimestampB\032\202\267\030\026\n\007read_at\022\013TIMESTAMPTZ" +
+      "R\006readAt\022q\n\ncreated_at\030\016 \001(\0132\032.google.pr" +
+      "otobuf.TimestampB6\202\267\0302\n\ncreated_at\022\013TIME" +
+      "STAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001R\tcreate" +
+      "dAt\022@\n\013retry_count\030\017 \001(\005B\037\202\267\030\033\n\013retry_co" +
+      "unt\022\007INTEGER\030\001:\0010R\nretryCount\022D\n\rerror_m" +
+      "essage\030\020 \001(\tB\037\202\267\030\033\n\rerror_message\022\004TEXT\030" +
+      "\001:\002\'\'R\014errorMessage\022a\n\ttenant_id\030\021 \001(\tBD" +
+      "\202\267\030@\n\ttenant_id\022\013VARCHAR(64)\030\001R!\n\030idx_no" +
+      "tifications_tenant\022\005BTREE\230\002\001R\010tenantId\022\217" +
+      "\001\n\ndeleted_at\030\022 \001(\0132\032.google.protobuf.Ti" +
+      "mestampBT\202\267\030P\n\ndeleted_at\022\013TIMESTAMPTZR5" +
+      "\n\030idx_notifications_active\022\005BTREE:\022delet" +
+      "ed_at IS NULLR\tdeletedAt\0225\n\ndeleted_by\030\023" +
+      " \001(\tB\026\202\267\030\022\n\ndeleted_by\022\004UUIDR\tdeletedBy\032" +
+      "?\n\021TemplateDataEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024" +
+      "\n\005value\030\002 \001(\tR\005value:\0028\001:\200\004\372\266\030\327\002\n\rnotifi" +
+      "cations\022\020udb_notification\030\001 \001*8Queued, s" +
+      "ent, delivered, and failed notification " +
+      "records0\0018\001@\001b^\n\020tenant_isolation\032H(tena" +
+      "nt_id::text = current_setting(\'app.curre" +
+      "nt_tenant_id\', true)::text)(\001\212\001;\n\037idx_no" +
+      "tifications_tenant_status\022\005BTREEZ\ttenant" +
+      "_idZ\006status\212\0012\n\033idx_notifications_recipi" +
+      "ent\022\005BTREEZ\014recipient_id\352\001\007primary\372\001\022not" +
+      "ification:write\212\262\031\237\001\n\006tenant\032\ttenant_id*" +
+      "4tenant_id = current_setting(\'app.curren" +
+      "t_tenant_id\')2\013soft_delete:\030notification" +
+      ".operational@\373\023H\002R\006tenantZ\trecipientr\025te" +
+      "nant.data_residencyB\246\002\n#com.udb.core.not" +
+      "ification.entity.v1B\021NotificationProtoP\001" +
+      "ZKgithub.com/fahara02/udb/sdk/go/gen/udb" +
+      "/core/notification/entity/v1;entityv1\242\002\004" +
+      "UCNE\252\002\037udb.core.Notification.Entity.V1\312\002" +
+      "\037Udb\\Core\\Notification\\Entity\\V1\342\002+Udb\\G" +
+      "PBMetadata\\Core\\Notification\\Entity\\V1\352\002" +
+      "#Udb::Core::Notification::Entity::V1b\006pr" +
+      "oto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -111,7 +137,7 @@ public final class NotificationProto extends com.google.protobuf.GeneratedFile {
     internal_static_udb_core_notification_entity_v1_Notification_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_notification_entity_v1_Notification_descriptor,
-        new java.lang.String[] { "NotificationId", "RecipientId", "Type", "Channel", "Subject", "Message", "TemplateData", "Priority", "Status", "ScheduledAt", "SentAt", "DeliveredAt", "ReadAt", "CreatedAt", "RetryCount", "ErrorMessage", "TenantId", });
+        new java.lang.String[] { "NotificationId", "RecipientId", "Type", "Channel", "Subject", "Message", "TemplateData", "Priority", "Status", "ScheduledAt", "SentAt", "DeliveredAt", "ReadAt", "CreatedAt", "RetryCount", "ErrorMessage", "TenantId", "DeletedAt", "DeletedBy", });
     internal_static_udb_core_notification_entity_v1_Notification_TemplateDataEntry_descriptor =
       internal_static_udb_core_notification_entity_v1_Notification_descriptor.getNestedType(0);
     internal_static_udb_core_notification_entity_v1_Notification_TemplateDataEntry_fieldAccessorTable = new
@@ -126,6 +152,7 @@ public final class NotificationProto extends com.google.protobuf.GeneratedFile {
     com.google.protobuf.ExtensionRegistry registry =
         com.google.protobuf.ExtensionRegistry.newInstance();
     registry.add(com.udb.core.common.v1.SecurityProto.dbTableSecurity);
+    registry.add(com.udb.core.common.v1.DbProto.pgColumn);
     registry.add(com.udb.core.common.v1.DbProto.pgTable);
     com.google.protobuf.Descriptors.FileDescriptor
         .internalUpdateFileDescriptor(descriptor, registry);

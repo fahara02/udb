@@ -114,6 +114,162 @@ for (const [name, file, re] of protoConsts) {
   processTriple(name, file, PROTOCOL, re);
 }
 
+// Like processTriple but replaces ALL matches of the pattern (global replace).
+function processAll(name, file, expected, re) {
+  if (!fileExists(file)) {
+    record(name, file, expected, "(file missing)", false);
+    return;
+  }
+  const content = readFile(file);
+  const gre = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
+  const matches = [...content.matchAll(gre)];
+  if (matches.length === 0) {
+    record(name, file, expected, "(pattern not found)", false);
+    return;
+  }
+  const actuals = [...new Set(matches.map((m) => m[2]))];
+  const ok = actuals.every((a) => a === expected);
+  if (FIX && !ok) {
+    writeFile(file, content.replace(gre, `$1${expected}$3`));
+    record(name, file, expected, `${actuals.join(",")} → ${expected}`, true, "fixed");
+  } else {
+    record(name, file, expected, actuals.length === 1 ? actuals[0] : actuals.join(","), ok);
+  }
+}
+
+// ── Brand sub-headers (HTML <sub> line in README / top-of-doc headers) ───────
+// Pattern: crate v0.x.y | protocol v1.0.0</sub>
+const subHeaderFiles = [
+  ["README.md", "readme"],
+  ["TESTING.md", "testing"],
+  ["sdk-conformance/README.md", "sdk-conformance"],
+  ["sdk/go/README.md", "sdk-go readme"],
+  ["sdk/python/README.md", "sdk-python readme"],
+  ["sdk/typescript/README.md", "sdk-typescript readme"],
+  ["sdk/java/README.md", "sdk-java readme"],
+  ["sdk/csharp/README.md", "sdk-csharp readme"],
+  ["sdk/php/README.md", "sdk-php readme"],
+];
+for (const [file, label] of subHeaderFiles) {
+  processTriple(`brand header (${label})`, file, C.udb.version,
+    /(crate v)(\d+\.\d+\.\d+)( \| protocol v[\d.]+<\/sub>)/);
+}
+
+// ── ASCII-art box headers in docs/ and sdk/ ───────────────────────────────────
+// Pattern: │    crate v0.x.y | protocol v1.0.0
+const asciiHeaderFiles = [
+  ["docs/annotations.md", "docs-annotations"],
+  ["docs/architecture.md", "docs-architecture"],
+  ["docs/integration.md", "docs-integration"],
+  ["docs/security.md", "docs-security"],
+  ["docs/testing.md", "docs-testing"],
+  ["docs/native-services.md", "docs-native-services"],
+  ["docs/operations.md", "docs-operations"],
+  ["docs/README.md", "docs-readme"],
+  ["docs/assets/udb_markdown_logo.md", "docs-logo"],
+  ["sdk/README.md", "sdk-readme"],
+];
+for (const [file, label] of asciiHeaderFiles) {
+  processTriple(`ascii header (${label})`, file, C.udb.version,
+    /(│    crate v)(\d+\.\d+\.\d+)( \| protocol v[\d.]+)/);
+}
+
+// ── Additional prose / badge version refs ─────────────────────────────────────
+processTriple("docs-logo badge line", "docs/assets/udb_markdown_logo.md", C.udb.version,
+  /(UDB \| crate v)(\d+\.\d+\.\d+)( \| protocol v[\d.]+ \| policy-aware)/);
+processTriple("docs-native-services version", "docs/native-services.md", C.udb.version,
+  /(UDB )(\d+\.\d+\.\d+)( exposes \d+ native services)/);
+processTriple("docs-readme intro", "docs/README.md", C.udb.version,
+  /(public documentation for UDB )(\d+\.\d+\.\d+)(\. The guides)/);
+processTriple("readme release row", "README.md", C.udb.version,
+  /(crate\/SDK version `)(\d+\.\d+\.\d+)(`, wire protocol)/);
+processTriple("sdk-readme current release", "sdk/README.md", C.udb.version,
+  /(Current SDK release: `)(\d+\.\d+\.\d+)(`)/);
+processTriple("sdk-readme generated code comment", "sdk/README.md", C.udb.version,
+  /(crate\/package version `)(\d+\.\d+\.\d+)(`;)/);
+processTriple("ops bench label", "docs/operations.md", C.udb.version,
+  /(bench_snapshot\.py --label "release-)(\d+\.\d+\.\d+)(")/);
+
+// ── README.md install table ───────────────────────────────────────────────────
+processTriple("readme install go", "README.md", C["sdk-go"].version,
+  /(go get github\.com\/fahara02\/udb\/sdk\/go@v)(\d+\.\d+\.\d+)(` \|)/);
+processTriple("readme install python", "README.md", C["sdk-python"].version,
+  /(pip install udb-client==)(\d+\.\d+\.\d+)(` \|)/);
+processTriple("readme install typescript", "README.md", C["sdk-typescript"].version,
+  /(npm i @udb_plus\/sdk@)(\d+\.\d+\.\d+)(` \|)/);
+processTriple("readme install php", "README.md", C["sdk-php"].version,
+  /(composer require fahara02\/udb-laravel:\^)(\d+\.\d+\.\d+)(` \|)/);
+processTriple("readme install csharp", "README.md", C["sdk-csharp"].version,
+  /(dotnet add package Udb\.Client --version )(\d+\.\d+\.\d+)(` \|)/);
+processTriple("readme install java", "README.md", C["sdk-java"].version,
+  /(`dev\.udb:udb-java-client` \(`)(\d+\.\d+\.\d+)(` target)/);
+
+// ── sdk/README.md install table + PHP consumer block ─────────────────────────
+processTriple("sdk-readme install go", "sdk/README.md", C["sdk-go"].version,
+  /(go get github\.com\/fahara02\/udb\/sdk\/go@v)(\d+\.\d+\.\d+)(` \|)/);
+processTriple("sdk-readme install python", "sdk/README.md", C["sdk-python"].version,
+  /(pip install udb-client==)(\d+\.\d+\.\d+)(` \|)/);
+processTriple("sdk-readme install typescript", "sdk/README.md", C["sdk-typescript"].version,
+  /(npm i @udb_plus\/sdk@)(\d+\.\d+\.\d+)(` \|)/);
+processTriple("sdk-readme install php", "sdk/README.md", C["sdk-php"].version,
+  /(composer require fahara02\/udb-laravel:\^)(\d+\.\d+\.\d+)(` \|)/);
+processTriple("sdk-readme install csharp", "sdk/README.md", C["sdk-csharp"].version,
+  /(dotnet add package Udb\.Client --version )(\d+\.\d+\.\d+)(` \|)/);
+processTriple("sdk-readme php consumer block", "sdk/README.md", C["sdk-php"].version,
+  /(^composer require fahara02\/udb-laravel:\^)(\d+\.\d+\.\d+)(\n)/m);
+
+// ── Per-SDK README install commands ───────────────────────────────────────────
+processTriple("sdk-go install get", "sdk/go/README.md", C["sdk-go"].version,
+  /(go get github\.com\/fahara02\/udb\/sdk\/go@v)(\d+\.\d+\.\d+)(\n)/);
+processTriple("sdk-go install cli", "sdk/go/README.md", C["sdk-go"].version,
+  /(go install github\.com\/fahara02\/udb\/sdk\/go\/cmd\/udb@v)(\d+\.\d+\.\d+)(\n)/);
+processTriple("sdk-python install", "sdk/python/README.md", C["sdk-python"].version,
+  /(pip install udb-client==)(\d+\.\d+\.\d+)(\n)/);
+processTriple("sdk-python pydantic install", "sdk/python/README.md", C["sdk-python"].version,
+  /(pip install "udb-client\[pydantic\]==)(\d+\.\d+\.\d+)(")/);
+processTriple("sdk-typescript install", "sdk/typescript/README.md", C["sdk-typescript"].version,
+  /(npm i @udb_plus\/sdk@)(\d+\.\d+\.\d+)(\n)/);
+processTriple("sdk-csharp install client", "sdk/csharp/README.md", C["sdk-csharp"].version,
+  /(dotnet add package Udb\.Client --version )(\d+\.\d+\.\d+)(\n)/);
+processTriple("sdk-csharp install cli", "sdk/csharp/README.md", C["sdk-csharp"].version,
+  /(dotnet tool install --global Udb\.Cli --version )(\d+\.\d+\.\d+)(\n)/);
+processTriple("sdk-java readme manifest", "sdk/java/README.md", C["sdk-java"].version,
+  /(Current manifest version: `)(\d+\.\d+\.\d+)(-SNAPSHOT`)/);
+processTriple("sdk-java readme target", "sdk/java/README.md", C["sdk-java"].version,
+  /(Release target: `)(\d+\.\d+\.\d+)(`)/);
+processTriple("sdk-php install list item", "sdk/php/README.md", C["sdk-php"].version,
+  /(- `composer require fahara02\/udb-laravel:\^)(\d+\.\d+\.\d+)(`)/);
+processTriple("sdk-php install block", "sdk/php/README.md", C["sdk-php"].version,
+  /(^composer require fahara02\/udb-laravel:\^)(\d+\.\d+\.\d+)(\n)/m);
+
+// ── Generated artefacts and binaries ─────────────────────────────────────────
+processTriple("ts generated client comment", "sdk/typescript/generatedClient.ts", C["sdk-typescript"].version,
+  /(\/\/ UDB v)(\d+\.\d+\.\d+)( · protocol v[\d.]+ · \d+ service\(s\))/);
+processTriple("ts generated client version", "sdk/typescript/generatedClient.ts", C["sdk-typescript"].version,
+  /(export const UDB_SDK_VERSION = ")(\d+\.\d+\.\d+)(")/);
+processTriple("ts bin launcher comment", "sdk/typescript/bin/udb.js", C["sdk-typescript"].version,
+  /(bundled with @udb_plus\/sdk v)(\d+\.\d+\.\d+)(\.)/);
+processTriple("ts bin udb version", "sdk/typescript/bin/udb.js", C["sdk-typescript"].version,
+  /(const UDB_VERSION = ")(\d+\.\d+\.\d+)(")/);
+// package-lock.json has two "version" entries for @udb_plus/sdk – update both.
+processAll("ts package-lock", "sdk/typescript/package-lock.json", C["sdk-typescript"].version,
+  /("name": "@udb_plus\/sdk",\n\s*"version": ")(\d+\.\d+\.\d+)(")/);
+processTriple("cargo-lock udb", "Cargo.lock", C.udb.version,
+  /(name = "udb"\nversion = ")(\d+\.\d+\.\d+)(")/);
+processTriple("native contract json", "docs/generated/udb-native-contract.json", C.udb.version,
+  /("udb_version": ")(\d+\.\d+\.\d+)(")/);
+
+// ── CI workflow descriptions ──────────────────────────────────────────────────
+processTriple("ci release-csharp description", ".github/workflows/release-csharp-sdk.yml", C.udb.version,
+  /(Expected UDB release version, for example )(\d+\.\d+\.\d+)(")/);
+
+// ── SDK launcher templates (example text) ─────────────────────────────────────
+processTriple("java tmpl version example", "sdk-templates/java/src/main/java/dev/udb/cli/Launcher.java.tmpl", C.udb.version,
+  /(prints e\.g\. "udb )(\d+\.\d+\.\d+)("; accept)/);
+processTriple("java tmpl asset example", "sdk-templates/java/src/main/java/dev/udb/cli/Launcher.java.tmpl", C.udb.version,
+  /(\{@code udb-v)(\d+\.\d+\.\d+)(-x86_64-unknown-linux-gnu\})/);
+
+
 // ── Report ───────────────────────────────────────────────────────────────────
 const failures = results.filter((r) => !r.ok);
 

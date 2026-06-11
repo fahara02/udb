@@ -1116,7 +1116,7 @@ impl CanaryMetricSource for NackRateMetricSource {
         let kind = authz_entity_pb::CanaryScopeKind::try_from(canary.scope_kind)
             .unwrap_or(authz_entity_pb::CanaryScopeKind::Unspecified);
         let values: Vec<String> =
-            serde_json::from_str(canary.scope_values_json.trim()).unwrap_or_default();
+            serde_json::from_str(canary.scope_values.trim()).unwrap_or_default();
         let scope = CanaryScope::from_row(kind, &values);
 
         // Pull the node-state ledger (admin view) and project onto in-scope nodes.
@@ -1194,7 +1194,7 @@ fn canary_from_row(row: &sqlx::postgres::PgRow) -> authz_entity_pb::PolicyCanary
         scope_kind: canary_scope_kind_from_db(
             &row.try_get::<String, _>("scope_kind").unwrap_or_default(),
         ),
-        scope_values_json: row
+        scope_values: row
             .try_get("scope_values")
             .unwrap_or_else(|_| "[]".to_string()),
         state: canary_state_from_db(&row.try_get::<String, _>("state").unwrap_or_default()),

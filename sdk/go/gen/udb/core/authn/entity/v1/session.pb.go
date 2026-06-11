@@ -28,9 +28,8 @@ const (
 // external identity mapped into UDB.
 //
 // Hybrid model:
-//
-//	SERVER_SIDE: cookie-based; session_token_lookup (keyed HMAC) → hash verify
-//	JWT:         access_token_jti + refresh_token_jti tracked for revocation
+//   SERVER_SIDE: cookie-based; session_token_lookup (keyed HMAC) → hash verify
+//   JWT:         access_token_jti + refresh_token_jti tracked for revocation
 //
 // Migration order 2. RLS scopes rows to the current tenant.
 // ---------------------------------------------------------------------------
@@ -281,7 +280,7 @@ var File_udb_core_authn_entity_v1_session_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_session_proto_rawDesc = "" +
 	"\n" +
-	"&udb/core/authn/entity/v1/session.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb5 \n" +
+	"&udb/core/authn/entity/v1/session.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb8 \n" +
 	"\aSession\x12L\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tB-\x82\xb7\x18)\n" +
@@ -343,10 +342,10 @@ const file_udb_core_authn_entity_v1_session_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampB6\x82\xb7\x182\n" +
 	"\n" +
-	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt\x12X\n" +
-	"\ttenant_id\x18\x13 \x01(\tB;\x82\xb7\x187\n" +
+	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt\x12[\n" +
+	"\ttenant_id\x18\x13 \x01(\tB>\x82\xb7\x18:\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R\x1b\n" +
-	"\x12idx_session_tenant\x12\x05BTREER\btenantId\x12\x98\x01\n" +
+	"\x12idx_session_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12\x98\x01\n" +
 	"\n" +
 	"project_id\x18\x14 \x01(\tBy\x82\xb7\x18u\n" +
 	"\n" +
@@ -372,7 +371,7 @@ const file_udb_core_authn_entity_v1_session_proto_rawDesc = "" +
 	"%idx_sessions_tenant_user_session_type\x12\x05BTREEZ\ttenant_idZ\auser_idZ\fsession_type\x9a\x01\x15\n" +
 	"\n" +
 	"pg_partman\x12\apartman\xca\x01\aMONTHLY\xd0\x01\x03\xd8\x01\x01\xe0\x01\x06\xea\x01\aprimary\xf2\x01\x16udb.authn.sessions.cdc\xfa\x01\x13authn:sessions:read\x8a\xb2\x19\x90\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf7\x01\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authn.operational@\xb4\x01H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf7\x01\n" +
 	"\x1ccom.udb.core.authn.entity.v1B\fSessionProtoP\x01ZDgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x18udb.core.Authn.Entity.V1\xca\x02\x18Udb\\Core\\Authn\\Entity\\V1\xe2\x02$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\xea\x02\x1cUdb::Core::Authn::Entity::V1b\x06proto3"
 
 var (

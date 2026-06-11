@@ -1467,9 +1467,32 @@ pub async fn serve(
     let _ = crate::runtime::service::method_security::method_security_registry();
 
     if !runtime.postgres_configured() {
-        return Err(
-            "PostgreSQL startup health gate failed: UDB_PG_DSN/DATABASE_URL is required".into(),
-        );
+        // Distinguish "no PostgreSQL config supplied at all" from "config was
+        // supplied (URL or libpq-style PGHOST/… components) but the server was
+        // unreachable". `postgres_configured()` only flips true once the pool
+        // actually connects, so a misleading "UDB_PG_DSN is required" used to be
+        // emitted even when a perfectly valid DSN had been resolved.
+        let primary = &runtime.config().primary;
+        match crate::runtime::core::postgres_dsn_from_config(primary) {
+            Some(resolved_dsn) => {
+                return Err(format!(
+                    "PostgreSQL startup health gate failed: a connection string was resolved \
+                     ({}) but the database could not be reached. Verify the host/port, \
+                     credentials and TLS settings.",
+                    crate::generation::dsn::redact_dsn(&resolved_dsn)
+                )
+                .into());
+            }
+            None => {
+                return Err(
+                    "PostgreSQL startup health gate failed: no PostgreSQL configuration found. \
+                     Provide a connection URL via UDB_PG_DSN / DATABASE_URL, or libpq-style \
+                     component variables (PGHOST + PGDATABASE [+ PGUSER/PGPASSWORD/PGPORT/\
+                     PGSSLMODE])."
+                        .into(),
+                );
+            }
+        }
     }
     // Fail fast on a malformed operator-supplied Casbin model (UDB_AUTHZ_CASBIN_MODEL[_PATH])
     // rather than denying every authorization at runtime.
@@ -1558,6 +1581,20 @@ pub async fn serve(
             );
             if let Ok(mut state) = lifecycle_state.write() {
                 *state = FsmState::Completed;
+            }
+            // Block 1 (auth_fix.md, change-point 1): seed the system authz
+            // defaults the bootstrap admin path depends on — the global
+            // `organization_owner` role + the `org_owner ⇒ allow(*, *)` policy.
+            // Post-DDL so the tables exist, idempotent, every startup; skipped on
+            // dry-run (it must not write). Non-fatal.
+            if !startup_dry_run {
+                if let Ok(pool) = runtime.pg_pool() {
+                    if let Err(err) =
+                        auth_service::seed_system_authz_defaults(pool).await
+                    {
+                        tracing::warn!(error = %err, "seed system authz defaults failed (non-fatal)");
+                    }
+                }
             }
         }
         Err(err) => {
@@ -1926,6 +1963,27 @@ pub async fn serve(
     // Phase 9: spawn the canary evaluator (metric-based auto-rollback of bad
     // policy canaries before fleet-wide promotion). Detached background task.
     let _canary_evaluator = authz_service.spawn_canary_evaluator();
+
+    // Block 1 (auth_fix.md, Decision A): eager-warm the SHARED authz snapshot
+    // from Postgres before serving, then keep it warm on an interval. The cell is
+    // built from ABAC at boot and otherwise only reloads lazily on an authz RPC,
+    // so the FIRST login on a cold broker would see no role bindings. The authn
+    // login path reads this same shared cell to project roles→scopes.
+    // `warm_shared_snapshot` retains the last good snapshot on a reload error
+    // (GAP-36 posture).
+    if service.runtime_snapshot().pg_pool_clone().is_some() {
+        authz_service.warm_shared_snapshot().await;
+        let warmer = authz_service.clone();
+        let warm_interval = warmer.snapshot_ttl().max(std::time::Duration::from_secs(5));
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(warm_interval);
+            interval.tick().await; // consume the immediate first tick (eager warm already ran)
+            loop {
+                interval.tick().await;
+                warmer.warm_shared_snapshot().await;
+            }
+        });
+    }
 
     // Phase 3 (I2.1): seed the DB-backed JWT signing-key registry from the env
     // key when the registry is empty, so existing single-key deployments keep

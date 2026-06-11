@@ -152,12 +152,12 @@ var File_udb_core_idp_entity_v1_external_identity_proto protoreflect.FileDescrip
 
 const file_udb_core_idp_entity_v1_external_identity_proto_rawDesc = "" +
 	"\n" +
-	".udb/core/idp/entity/v1/external_identity.proto\x12\x16udb.core.idp.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb0\r\n" +
+	".udb/core/idp/entity/v1/external_identity.proto\x12\x16udb.core.idp.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb3\r\n" +
 	"\x10ExternalIdentity\x12i\n" +
 	"\x14external_identity_id\x18\x01 \x01(\tB7\x82\xb7\x183\n" +
-	"\x14external_identity_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x12externalIdentityId\x12<\n" +
-	"\ttenant_id\x18\x02 \x01(\tB\x1f\x82\xb7\x18\x1b\n" +
-	"\ttenant_id\x12\fVARCHAR(120)\x18\x01R\btenantId\x12\x96\x01\n" +
+	"\x14external_identity_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x12externalIdentityId\x12?\n" +
+	"\ttenant_id\x18\x02 \x01(\tB\"\x82\xb7\x18\x1e\n" +
+	"\ttenant_id\x12\fVARCHAR(120)\x18\x01\x98\x02\x01R\btenantId\x12\x96\x01\n" +
 	"\vprovider_id\x18\x03 \x01(\tBu\x82\xb7\x18q\n" +
 	"\vprovider_id\x12\x04UUID\x18\x01J,\n" +
 	"\x12identity_providers\x12\vprovider_id\x1a\audb_idp \x03Z,FK to udb_idp.identity_providers.provider_idR\n" +

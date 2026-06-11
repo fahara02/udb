@@ -427,10 +427,17 @@ impl AuthnServiceImpl {
                 return Err(Status::unauthenticated("invalid second factor"));
             }
         }
+        // Block 1 (auth_fix.md, Decision E): resolve the user's role-derived
+        // grants ONCE from the warm authz snapshot and thread them into both the
+        // session record (the refresh carrier) and the issued JWT below.
+        let (scopes, roles) =
+            self.resolve_effective_grants(&user.user_id, &user.tenant_id, &user.project_id);
         let (session_id, _expires) = self
             .create_login_session(
                 &user,
                 format!("{}|{}|{}", req.device_name, req.ip_address, req.user_agent),
+                scopes.clone(),
+                roles.clone(),
                 now,
             )
             .await?;
@@ -465,13 +472,15 @@ impl AuthnServiceImpl {
         )
         .await;
         // Issue a short-lived signed access token when JWT signing is configured;
-        // the server-side session id doubles as the refresh credential.
+        // the server-side session id doubles as the refresh credential. The token
+        // carries the grants resolved above so the coarse `udb:admin` gate sees
+        // the admin's projected scope.
         let (access_token, access_exp) = self.issue_access_token(
             &user.user_id,
             &user.tenant_id,
             &user.project_id,
-            &[],
-            &[],
+            &scopes,
+            &roles,
             "",
             &session_id,
             "pwd",

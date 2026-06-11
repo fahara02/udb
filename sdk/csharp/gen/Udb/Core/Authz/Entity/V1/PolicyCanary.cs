@@ -27,7 +27,7 @@ namespace udb.core.Authz.Entity.V1 {
             "Cix1ZGIvY29yZS9hdXRoei9lbnRpdHkvdjEvcG9saWN5X2NhbmFyeS5wcm90",
             "bxIYdWRiLmNvcmUuYXV0aHouZW50aXR5LnYxGh9nb29nbGUvcHJvdG9idWYv",
             "dGltZXN0YW1wLnByb3RvGht1ZGIvY29yZS9jb21tb24vdjEvZGIucHJvdG8a",
-            "IXVkYi9jb3JlL2NvbW1vbi92MS9zZWN1cml0eS5wcm90byK4EQoMUG9saWN5",
+            "IXVkYi9jb3JlL2NvbW1vbi92MS9zZWN1cml0eS5wcm90byKxEQoMUG9saWN5",
             "Q2FuYXJ5EkkKCWNhbmFyeV9pZBgBIAEoCUIsgrcYKAoJY2FuYXJ5X2lkEgRV",
             "VUlEGAEoAToRZ2VuX3JhbmRvbV91dWlkKClSCGNhbmFyeUlkEqMBCg1wb2xp",
             "Y3lfc2V0X2lkGAIgASgJQn+Ctxh7Cg1wb2xpY3lfc2V0X2lkEgRVVUlEGAFK",
@@ -41,59 +41,59 @@ namespace udb.core.Authz.Entity.V1 {
             "Y29wZV9raW5kGAQgASgOMikudWRiLmNvcmUuYXV0aHouZW50aXR5LnYxLkNh",
             "bmFyeVNjb3BlS2luZEJAgrcYPAoKc2NvcGVfa2luZBILVkFSQ0hBUig0MCkY",
             "ATofJ0NBTkFSWV9TQ09QRV9LSU5EX1VOU1BFQ0lGSUVEJ1IJc2NvcGVLaW5k",
-            "EogBChFzY29wZV92YWx1ZXNfanNvbhgFIAEoCUJcgrcYWAoMc2NvcGVfdmFs",
-            "dWVzEgVKU09OQhgBOgsnW10nOjpqc29uYlowTk9ERS9URU5BTlQgaWQgbGlz",
-            "dCwgb3IgW3BlcmNlbnRhZ2VdIGZvciBQRVJDRU5UeAFSD3Njb3BlVmFsdWVz",
-            "SnNvbhJuCgVzdGF0ZRgGIAEoDjIlLnVkYi5jb3JlLmF1dGh6LmVudGl0eS52",
-            "MS5DYW5hcnlTdGF0ZUIxgrcYLQoFc3RhdGUSC1ZBUkNIQVIoNDApGAE6FSdD",
-            "QU5BUllfU1RBVEVfQUNUSVZFJ1IFc3RhdGUScQoKc3RhcnRlZF9hdBgHIAEo",
-            "CzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCNoK3GDIKCnN0YXJ0ZWRf",
-            "YXQSC1RJTUVTVEFNUFRaGAE6EUNVUlJFTlRfVElNRVNUQU1QYAFoAVIJc3Rh",
-            "cnRlZEF0ElgKE3N1Y2Nlc3Nfd2luZG93X3NlY3MYCCABKANCKIK3GCQKE3N1",
-            "Y2Nlc3Nfd2luZG93X3NlY3MSBkJJR0lOVBgBOgMzMDBSEXN1Y2Nlc3NXaW5k",
-            "b3dTZWNzElsKEG1ldHJpY190aHJlc2hvbGQYCSABKAFCMIK3GCwKEG1ldHJp",
-            "Y190aHJlc2hvbGQSEERPVUJMRSBQUkVDSVNJT04YAToEMC4wNVIPbWV0cmlj",
-            "VGhyZXNob2xkEkMKCmNyZWF0ZWRfYnkYCiABKAlCJIK3GCAKCmNyZWF0ZWRf",
-            "YnkSDFZBUkNIQVIoMTYwKRgBOgInJ1IJY3JlYXRlZEJ5EmAKCXRlbmFudF9p",
-            "ZBgLIAEoCUJDgrcYPwoJdGVuYW50X2lkEgtWQVJDSEFSKDY0KRgBUiMKGmlk",
-            "eF9wb2xpY3lfY2FuYXJpZXNfdGVuYW50EgVCVFJFRVIIdGVuYW50SWQSQwoK",
-            "cHJvamVjdF9pZBgMIAEoCUIkgrcYIAoKcHJvamVjdF9pZBIMVkFSQ0hBUigx",
-            "MjApGAE6AicnUglwcm9qZWN0SWQSPwoLbWluX3NhbXBsZXMYDSABKANCHoK3",
-            "GBoKC21pbl9zYW1wbGVzEgZCSUdJTlQYAToBMVIKbWluU2FtcGxlcxKBAQoT",
-            "cm9sbGJhY2tfdmVyc2lvbl9pZBgOIAEoCUJRgrcYTQoTcm9sbGJhY2tfdmVy",
-            "c2lvbl9pZBIEVVVJRFowVmVyc2lvbiByZXN0b3JlZCBvbiBhdXRvLXJvbGxi",
-            "YWNrIChwcmlvciBhY3RpdmUpUhFyb2xsYmFja1ZlcnNpb25JZBJHCg5vdXRj",
-            "b21lX3JlYXNvbhgPIAEoCUIggrcYHAoOb3V0Y29tZV9yZWFzb24SBFRFWFQY",
-            "AToCJydSDW91dGNvbWVSZWFzb24SawoIcmV2aXNpb24YECABKANCT4K3GEsK",
-            "CHJldmlzaW9uEgZCSUdJTlQYAToBMVoyT3B0aW1pc3RpYy1jb25jdXJyZW5j",
-            "eSB0b2tlbiBmb3Igc3RhdGUgdHJhbnNpdGlvbnNSCHJldmlzaW9uOtgD+rYY",
-            "vwIKD3BvbGljeV9jYW5hcmllcxIJdWRiX2F1dGh6GCwgASpbUHJvZ3Jlc3Np",
-            "dmUtcm9sbG91dCBjYW5hcmllczogc3Vic2V0LXNjb3BlZCBwb2xpY3kgdmVy",
-            "c2lvbnMgd2l0aCBtZXRyaWMtYmFzZWQgYXV0by1yb2xsYmFjazgBQAFiXgoQ",
-            "dGVuYW50X2lzb2xhdGlvbhpIKHRlbmFudF9pZDo6dGV4dCA9IGN1cnJlbnRf",
-            "c2V0dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lkJywgdHJ1ZSk6OnRleHQp",
-            "KAGKAS8KF2lkeF9wb2xpY3lfY2FuYXJpZXNfc2V0EgVCVFJFRVoNcG9saWN5",
-            "X3NldF9pZIoBKQoZaWR4X3BvbGljeV9jYW5hcmllc19zdGF0ZRIFQlRSRUVa",
-            "BXN0YXRlirIZjwEKBnRlbmFudBoJdGVuYW50X2lkKjR0ZW5hbnRfaWQgPSBj",
-            "dXJyZW50X3NldHRpbmcoJ2FwcC5jdXJyZW50X3RlbmFudF9pZCcpMgRub25l",
-            "OhBhdXRoei5nb3Zlcm5hbmNlQPsTSAJSBnRlbmFudFoIc3RhbmRhcmRyFXRl",
-            "bmFudC5kYXRhX3Jlc2lkZW5jeSqNAQoPQ2FuYXJ5U2NvcGVLaW5kEiEKHUNB",
-            "TkFSWV9TQ09QRV9LSU5EX1VOU1BFQ0lGSUVEEAASGgoWQ0FOQVJZX1NDT1BF",
-            "X0tJTkRfTk9ERRABEhwKGENBTkFSWV9TQ09QRV9LSU5EX1RFTkFOVBACEh0K",
-            "GUNBTkFSWV9TQ09QRV9LSU5EX1BFUkNFTlQQAyqWAQoLQ2FuYXJ5U3RhdGUS",
-            "HAoYQ0FOQVJZX1NUQVRFX1VOU1BFQ0lGSUVEEAASFwoTQ0FOQVJZX1NUQVRF",
-            "X0FDVElWRRABEhkKFUNBTkFSWV9TVEFURV9QUk9NT1RFRBACEhwKGENBTkFS",
-            "WV9TVEFURV9ST0xMRURfQkFDSxADEhcKE0NBTkFSWV9TVEFURV9QQVVTRUQQ",
-            "BEL8AQocY29tLnVkYi5jb3JlLmF1dGh6LmVudGl0eS52MUIRUG9saWN5Q2Fu",
-            "YXJ5UHJvdG9QAVpEZ2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dl",
-            "bi91ZGIvY29yZS9hdXRoei9lbnRpdHkvdjE7ZW50aXR5djGiAgRVQ0FFqgIY",
-            "dWRiLmNvcmUuQXV0aHouRW50aXR5LlYxygIYVWRiXENvcmVcQXV0aHpcRW50",
-            "aXR5XFYx4gIkVWRiXEdQQk1ldGFkYXRhXENvcmVcQXV0aHpcRW50aXR5XFYx",
-            "6gIcVWRiOjpDb3JlOjpBdXRoejo6RW50aXR5OjpWMWIGcHJvdG8z"));
+            "En8KDHNjb3BlX3ZhbHVlcxgFIAEoCUJcgrcYWAoMc2NvcGVfdmFsdWVzEgVK",
+            "U09OQhgBOgsnW10nOjpqc29uYlowTk9ERS9URU5BTlQgaWQgbGlzdCwgb3Ig",
+            "W3BlcmNlbnRhZ2VdIGZvciBQRVJDRU5UeAFSC3Njb3BlVmFsdWVzEm4KBXN0",
+            "YXRlGAYgASgOMiUudWRiLmNvcmUuYXV0aHouZW50aXR5LnYxLkNhbmFyeVN0",
+            "YXRlQjGCtxgtCgVzdGF0ZRILVkFSQ0hBUig0MCkYAToVJ0NBTkFSWV9TVEFU",
+            "RV9BQ1RJVkUnUgVzdGF0ZRJxCgpzdGFydGVkX2F0GAcgASgLMhouZ29vZ2xl",
+            "LnByb3RvYnVmLlRpbWVzdGFtcEI2grcYMgoKc3RhcnRlZF9hdBILVElNRVNU",
+            "QU1QVFoYAToRQ1VSUkVOVF9USU1FU1RBTVBgAWgBUglzdGFydGVkQXQSWAoT",
+            "c3VjY2Vzc193aW5kb3dfc2VjcxgIIAEoA0IogrcYJAoTc3VjY2Vzc193aW5k",
+            "b3dfc2VjcxIGQklHSU5UGAE6AzMwMFIRc3VjY2Vzc1dpbmRvd1NlY3MSWwoQ",
+            "bWV0cmljX3RocmVzaG9sZBgJIAEoAUIwgrcYLAoQbWV0cmljX3RocmVzaG9s",
+            "ZBIQRE9VQkxFIFBSRUNJU0lPThgBOgQwLjA1Ug9tZXRyaWNUaHJlc2hvbGQS",
+            "QwoKY3JlYXRlZF9ieRgKIAEoCUIkgrcYIAoKY3JlYXRlZF9ieRIMVkFSQ0hB",
+            "UigxNjApGAE6AicnUgljcmVhdGVkQnkSYwoJdGVuYW50X2lkGAsgASgJQkaC",
+            "txhCCgl0ZW5hbnRfaWQSC1ZBUkNIQVIoNjQpGAFSIwoaaWR4X3BvbGljeV9j",
+            "YW5hcmllc190ZW5hbnQSBUJUUkVFmAIBUgh0ZW5hbnRJZBJDCgpwcm9qZWN0",
+            "X2lkGAwgASgJQiSCtxggCgpwcm9qZWN0X2lkEgxWQVJDSEFSKDEyMCkYAToC",
+            "JydSCXByb2plY3RJZBI/CgttaW5fc2FtcGxlcxgNIAEoA0IegrcYGgoLbWlu",
+            "X3NhbXBsZXMSBkJJR0lOVBgBOgExUgptaW5TYW1wbGVzEoEBChNyb2xsYmFj",
+            "a192ZXJzaW9uX2lkGA4gASgJQlGCtxhNChNyb2xsYmFja192ZXJzaW9uX2lk",
+            "EgRVVUlEWjBWZXJzaW9uIHJlc3RvcmVkIG9uIGF1dG8tcm9sbGJhY2sgKHBy",
+            "aW9yIGFjdGl2ZSlSEXJvbGxiYWNrVmVyc2lvbklkEkcKDm91dGNvbWVfcmVh",
+            "c29uGA8gASgJQiCCtxgcCg5vdXRjb21lX3JlYXNvbhIEVEVYVBgBOgInJ1IN",
+            "b3V0Y29tZVJlYXNvbhJrCghyZXZpc2lvbhgQIAEoA0JPgrcYSwoIcmV2aXNp",
+            "b24SBkJJR0lOVBgBOgExWjJPcHRpbWlzdGljLWNvbmN1cnJlbmN5IHRva2Vu",
+            "IGZvciBzdGF0ZSB0cmFuc2l0aW9uc1IIcmV2aXNpb2462AP6thi/AgoPcG9s",
+            "aWN5X2NhbmFyaWVzEgl1ZGJfYXV0aHoYLCABKltQcm9ncmVzc2l2ZS1yb2xs",
+            "b3V0IGNhbmFyaWVzOiBzdWJzZXQtc2NvcGVkIHBvbGljeSB2ZXJzaW9ucyB3",
+            "aXRoIG1ldHJpYy1iYXNlZCBhdXRvLXJvbGxiYWNrOAFAAWJeChB0ZW5hbnRf",
+            "aXNvbGF0aW9uGkgodGVuYW50X2lkOjp0ZXh0ID0gY3VycmVudF9zZXR0aW5n",
+            "KCdhcHAuY3VycmVudF90ZW5hbnRfaWQnLCB0cnVlKTo6dGV4dCkoAYoBLwoX",
+            "aWR4X3BvbGljeV9jYW5hcmllc19zZXQSBUJUUkVFWg1wb2xpY3lfc2V0X2lk",
+            "igEpChlpZHhfcG9saWN5X2NhbmFyaWVzX3N0YXRlEgVCVFJFRVoFc3RhdGWK",
+            "shmPAQoGdGVuYW50Ggl0ZW5hbnRfaWQqNHRlbmFudF9pZCA9IGN1cnJlbnRf",
+            "c2V0dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lkJykyBG5vbmU6EGF1dGh6",
+            "LmdvdmVybmFuY2VA+xNIAlIGdGVuYW50WghzdGFuZGFyZHIVdGVuYW50LmRh",
+            "dGFfcmVzaWRlbmN5Ko0BCg9DYW5hcnlTY29wZUtpbmQSIQodQ0FOQVJZX1ND",
+            "T1BFX0tJTkRfVU5TUEVDSUZJRUQQABIaChZDQU5BUllfU0NPUEVfS0lORF9O",
+            "T0RFEAESHAoYQ0FOQVJZX1NDT1BFX0tJTkRfVEVOQU5UEAISHQoZQ0FOQVJZ",
+            "X1NDT1BFX0tJTkRfUEVSQ0VOVBADKpYBCgtDYW5hcnlTdGF0ZRIcChhDQU5B",
+            "UllfU1RBVEVfVU5TUEVDSUZJRUQQABIXChNDQU5BUllfU1RBVEVfQUNUSVZF",
+            "EAESGQoVQ0FOQVJZX1NUQVRFX1BST01PVEVEEAISHAoYQ0FOQVJZX1NUQVRF",
+            "X1JPTExFRF9CQUNLEAMSFwoTQ0FOQVJZX1NUQVRFX1BBVVNFRBAEQvwBChxj",
+            "b20udWRiLmNvcmUuYXV0aHouZW50aXR5LnYxQhFQb2xpY3lDYW5hcnlQcm90",
+            "b1ABWkRnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9j",
+            "b3JlL2F1dGh6L2VudGl0eS92MTtlbnRpdHl2MaICBFVDQUWqAhh1ZGIuY29y",
+            "ZS5BdXRoei5FbnRpdHkuVjHKAhhVZGJcQ29yZVxBdXRoelxFbnRpdHlcVjHi",
+            "AiRVZGJcR1BCTWV0YWRhdGFcQ29yZVxBdXRoelxFbnRpdHlcVjHqAhxVZGI6",
+            "OkNvcmU6OkF1dGh6OjpFbnRpdHk6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Common.V1.DbReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::udb.core.Authz.Entity.V1.CanaryScopeKind), typeof(global::udb.core.Authz.Entity.V1.CanaryState), }, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authz.Entity.V1.PolicyCanary), global::udb.core.Authz.Entity.V1.PolicyCanary.Parser, new[]{ "CanaryId", "PolicySetId", "PolicyVersionId", "ScopeKind", "ScopeValuesJson", "State", "StartedAt", "SuccessWindowSecs", "MetricThreshold", "CreatedBy", "TenantId", "ProjectId", "MinSamples", "RollbackVersionId", "OutcomeReason", "Revision" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Authz.Entity.V1.PolicyCanary), global::udb.core.Authz.Entity.V1.PolicyCanary.Parser, new[]{ "CanaryId", "PolicySetId", "PolicyVersionId", "ScopeKind", "ScopeValues", "State", "StartedAt", "SuccessWindowSecs", "MetricThreshold", "CreatedBy", "TenantId", "ProjectId", "MinSamples", "RollbackVersionId", "OutcomeReason", "Revision" }, null, null, null, null)
           }));
     }
     #endregion
@@ -201,7 +201,7 @@ namespace udb.core.Authz.Entity.V1 {
       policySetId_ = other.policySetId_;
       policyVersionId_ = other.policyVersionId_;
       scopeKind_ = other.scopeKind_;
-      scopeValuesJson_ = other.scopeValuesJson_;
+      scopeValues_ = other.scopeValues_;
       state_ = other.state_;
       startedAt_ = other.startedAt_ != null ? other.startedAt_.Clone() : null;
       successWindowSecs_ = other.successWindowSecs_;
@@ -270,19 +270,19 @@ namespace udb.core.Authz.Entity.V1 {
       }
     }
 
-    /// <summary>Field number for the "scope_values_json" field.</summary>
-    public const int ScopeValuesJsonFieldNumber = 5;
-    private string scopeValuesJson_ = "";
+    /// <summary>Field number for the "scope_values" field.</summary>
+    public const int ScopeValuesFieldNumber = 5;
+    private string scopeValues_ = "";
     /// <summary>
     /// For NODE/TENANT: the list of in-scope ids. For PERCENT: a single-element
     /// list whose value is the integer percentage (1..=100).
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string ScopeValuesJson {
-      get { return scopeValuesJson_; }
+    public string ScopeValues {
+      get { return scopeValues_; }
       set {
-        scopeValuesJson_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+        scopeValues_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
       }
     }
 
@@ -455,7 +455,7 @@ namespace udb.core.Authz.Entity.V1 {
       if (PolicySetId != other.PolicySetId) return false;
       if (PolicyVersionId != other.PolicyVersionId) return false;
       if (ScopeKind != other.ScopeKind) return false;
-      if (ScopeValuesJson != other.ScopeValuesJson) return false;
+      if (ScopeValues != other.ScopeValues) return false;
       if (State != other.State) return false;
       if (!object.Equals(StartedAt, other.StartedAt)) return false;
       if (SuccessWindowSecs != other.SuccessWindowSecs) return false;
@@ -478,7 +478,7 @@ namespace udb.core.Authz.Entity.V1 {
       if (PolicySetId.Length != 0) hash ^= PolicySetId.GetHashCode();
       if (PolicyVersionId.Length != 0) hash ^= PolicyVersionId.GetHashCode();
       if (ScopeKind != global::udb.core.Authz.Entity.V1.CanaryScopeKind.Unspecified) hash ^= ScopeKind.GetHashCode();
-      if (ScopeValuesJson.Length != 0) hash ^= ScopeValuesJson.GetHashCode();
+      if (ScopeValues.Length != 0) hash ^= ScopeValues.GetHashCode();
       if (State != global::udb.core.Authz.Entity.V1.CanaryState.Unspecified) hash ^= State.GetHashCode();
       if (startedAt_ != null) hash ^= StartedAt.GetHashCode();
       if (SuccessWindowSecs != 0L) hash ^= SuccessWindowSecs.GetHashCode();
@@ -524,9 +524,9 @@ namespace udb.core.Authz.Entity.V1 {
         output.WriteRawTag(32);
         output.WriteEnum((int) ScopeKind);
       }
-      if (ScopeValuesJson.Length != 0) {
+      if (ScopeValues.Length != 0) {
         output.WriteRawTag(42);
-        output.WriteString(ScopeValuesJson);
+        output.WriteString(ScopeValues);
       }
       if (State != global::udb.core.Authz.Entity.V1.CanaryState.Unspecified) {
         output.WriteRawTag(48);
@@ -598,9 +598,9 @@ namespace udb.core.Authz.Entity.V1 {
         output.WriteRawTag(32);
         output.WriteEnum((int) ScopeKind);
       }
-      if (ScopeValuesJson.Length != 0) {
+      if (ScopeValues.Length != 0) {
         output.WriteRawTag(42);
-        output.WriteString(ScopeValuesJson);
+        output.WriteString(ScopeValues);
       }
       if (State != global::udb.core.Authz.Entity.V1.CanaryState.Unspecified) {
         output.WriteRawTag(48);
@@ -668,8 +668,8 @@ namespace udb.core.Authz.Entity.V1 {
       if (ScopeKind != global::udb.core.Authz.Entity.V1.CanaryScopeKind.Unspecified) {
         size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) ScopeKind);
       }
-      if (ScopeValuesJson.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(ScopeValuesJson);
+      if (ScopeValues.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ScopeValues);
       }
       if (State != global::udb.core.Authz.Entity.V1.CanaryState.Unspecified) {
         size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) State);
@@ -728,8 +728,8 @@ namespace udb.core.Authz.Entity.V1 {
       if (other.ScopeKind != global::udb.core.Authz.Entity.V1.CanaryScopeKind.Unspecified) {
         ScopeKind = other.ScopeKind;
       }
-      if (other.ScopeValuesJson.Length != 0) {
-        ScopeValuesJson = other.ScopeValuesJson;
+      if (other.ScopeValues.Length != 0) {
+        ScopeValues = other.ScopeValues;
       }
       if (other.State != global::udb.core.Authz.Entity.V1.CanaryState.Unspecified) {
         State = other.State;
@@ -803,7 +803,7 @@ namespace udb.core.Authz.Entity.V1 {
             break;
           }
           case 42: {
-            ScopeValuesJson = input.ReadString();
+            ScopeValues = input.ReadString();
             break;
           }
           case 48: {
@@ -889,7 +889,7 @@ namespace udb.core.Authz.Entity.V1 {
             break;
           }
           case 42: {
-            ScopeValuesJson = input.ReadString();
+            ScopeValues = input.ReadString();
             break;
           }
           case 48: {

@@ -186,7 +186,7 @@ var File_udb_core_authn_entity_v1_otp_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_otp_proto_rawDesc = "" +
 	"\n" +
-	"\"udb/core/authn/entity/v1/otp.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xba\x11\n" +
+	"\"udb/core/authn/entity/v1/otp.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xbd\x11\n" +
 	"\x03OTP\x12@\n" +
 	"\x06otp_id\x18\x01 \x01(\tB)\x82\xb7\x18%\n" +
 	"\x06otp_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x05otpId\x12\xaa\x01\n" +
@@ -225,10 +225,10 @@ const file_udb_core_authn_entity_v1_otp_proto_rawDesc = "" +
 	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt\x12\xa4\x01\n" +
 	"\x0ecorrelation_id\x18\r \x01(\tB}\x82\xb7\x18y\n" +
 	"\x0ecorrelation_id\x12\fVARCHAR(120)R \n" +
-	"\x17idx_otps_correlation_id\x12\x05BTREEZ7Request or workflow correlation id that issued this OTPR\rcorrelationId\x12\x8c\x01\n" +
-	"\ttenant_id\x18\x0e \x01(\tBo\x82\xb7\x18k\n" +
+	"\x17idx_otps_correlation_id\x12\x05BTREEZ7Request or workflow correlation id that issued this OTPR\rcorrelationId\x12\x8f\x01\n" +
+	"\ttenant_id\x18\x0e \x01(\tBr\x82\xb7\x18n\n" +
 	"\ttenant_id\x12\fVARCHAR(120)R\x1b\n" +
-	"\x12idx_otps_tenant_id\x12\x05BTREEZ3Tenant boundary (denormalized from the owning user)R\btenantId:\x83\x03\xfa\xb6\x18\xe9\x01\n" +
+	"\x12idx_otps_tenant_id\x12\x05BTREEZ3Tenant boundary (denormalized from the owning user)\x98\x02\x01R\btenantId:\x83\x03\xfa\xb6\x18\xe9\x01\n" +
 	"\x04otps\x12\tudb_authn\x18\x03 \x01*QEmail OTP records for 2FA, verification, password reset, and sensitive operations@\x01bs\n" +
 	"\x10tenant_isolation\x1a](tenant_id IS NULL OR tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xea\x01\aprimary\x8a\xb2\x19\x90\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xf3\x01\n" +

@@ -46,51 +46,51 @@ public final class PipelineStepProto extends com.google.protobuf.GeneratedFile {
       "on/v1/db.proto\032!udb/core/common/v1/secur" +
       "ity.proto\032\036udb/core/common/v1/types.prot" +
       "o\032$udb/core/asset/entity/v1/enums.proto\"" +
-      "\342\013\n\014PipelineStep\022C\n\007step_id\030\001 \001(\tB*\202\267\030&\n" +
+      "\345\013\n\014PipelineStep\022C\n\007step_id\030\001 \001(\tB*\202\267\030&\n" +
       "\007step_id\022\004UUID\030\001(\001:\021gen_random_uuid()R\006s" +
       "tepId\022:\n\013instance_id\030\002 \001(\tB\031\202\267\030\025\n\013instan" +
-      "ce_id\022\004UUID\030\001R\ninstanceId\0224\n\ttenant_id\030\014" +
-      " \001(\tB\027\202\267\030\023\n\ttenant_id\022\004UUID\030\001R\010tenantId\022" +
-      "<\n\tstep_name\030\003 \001(\tB\037\202\267\030\033\n\tstep_name\022\014VAR" +
-      "CHAR(160)\030\001R\010stepName\022_\n\tstep_type\030\004 \001(\016" +
-      "2\".udb.core.asset.entity.v1.StepTypeB\036\202\267" +
-      "\030\032\n\tstep_type\022\013VARCHAR(20)\030\001R\010stepType\022d" +
-      "\n\006status\030\005 \001(\0162$.udb.core.asset.entity.v" +
-      "1.StepStatusB&\202\267\030\"\n\006status\022\013VARCHAR(20)\030" +
-      "\001:\t\'PENDING\'R\006status\022B\n\006result\030\006 \001(\tB*\202\267" +
-      "\030&\n\006result\022\005JSONBZ\023Step result payloadx\001" +
-      "R\006result\022\'\n\005error\030\007 \001(\tB\021\202\267\030\r\n\005error\022\004TE" +
-      "XTR\005error\022@\n\013retry_count\030\010 \001(\005B\037\202\267\030\033\n\013re" +
-      "try_count\022\007INTEGER\030\001:\0010R\nretryCount\022X\n\ns" +
-      "tarted_at\030\t \001(\0132\032.google.protobuf.Timest" +
-      "ampB\035\202\267\030\031\n\nstarted_at\022\013TIMESTAMPTZR\tstar" +
-      "tedAt\022^\n\014completed_at\030\n \001(\0132\032.google.pro" +
-      "tobuf.TimestampB\037\202\267\030\033\n\014completed_at\022\013TIM" +
-      "ESTAMPTZR\013completedAt\022\202\001\n\naudit_info\030\013 \001" +
-      "(\0132\035.udb.core.common.v1.AuditInfoBD\202\267\030@\n" +
-      "\naudit_info\022\005JSONB\030\001:\013\'{}\'::jsonbZ\032Audit" +
-      " trail stored as JSONx\001R\tauditInfo:\247\004\372\266\030" +
-      "\215\003\n\016pipeline_steps\022\tudb_asset\030\004 \001*6Indiv" +
-      "idual executable steps within a pipeline" +
-      " instance8\001@\001b\237\001\n\037pipeline_steps_tenant_" +
-      "isolation\032z(tenant_id::text = current_se" +
-      "tting(\'app.current_tenant_id\', true) OR " +
-      "current_setting(\'app.platform_admin\', tr" +
-      "ue) = \'true\')(\001h\001\212\0010\n\032idx_pipeline_step_" +
-      "instance\022\005BTREEZ\013instance_id\212\001,\n\030idx_pip" +
-      "eline_step_tenant\022\005BTREEZ\ttenant_id\362\001\034ud" +
-      "b.asset.pipeline_steps.cdc\372\001\nasset:read\212" +
-      "\262\031\220\001\n\006tenant\032\ttenant_id*4tenant_id = cur" +
-      "rent_setting(\'app.current_tenant_id\')2\004n" +
-      "one:\021asset.operational@\373\023H\002R\006tenantZ\010sta" +
-      "ndardr\025tenant.data_residencyB\374\001\n\034com.udb" +
-      ".core.asset.entity.v1B\021PipelineStepProto" +
-      "P\001ZDgithub.com/fahara02/udb/sdk/go/gen/u" +
-      "db/core/asset/entity/v1;entityv1\242\002\004UCAE\252" +
-      "\002\030udb.core.Asset.Entity.V1\312\002\030Udb\\Core\\As" +
-      "set\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Ass" +
-      "et\\Entity\\V1\352\002\034Udb::Core::Asset::Entity:" +
-      ":V1b\006proto3"
+      "ce_id\022\004UUID\030\001R\ninstanceId\0227\n\ttenant_id\030\014" +
+      " \001(\tB\032\202\267\030\026\n\ttenant_id\022\004UUID\030\001\230\002\001R\010tenant" +
+      "Id\022<\n\tstep_name\030\003 \001(\tB\037\202\267\030\033\n\tstep_name\022\014" +
+      "VARCHAR(160)\030\001R\010stepName\022_\n\tstep_type\030\004 " +
+      "\001(\0162\".udb.core.asset.entity.v1.StepTypeB" +
+      "\036\202\267\030\032\n\tstep_type\022\013VARCHAR(20)\030\001R\010stepTyp" +
+      "e\022d\n\006status\030\005 \001(\0162$.udb.core.asset.entit" +
+      "y.v1.StepStatusB&\202\267\030\"\n\006status\022\013VARCHAR(2" +
+      "0)\030\001:\t\'PENDING\'R\006status\022B\n\006result\030\006 \001(\tB" +
+      "*\202\267\030&\n\006result\022\005JSONBZ\023Step result payloa" +
+      "dx\001R\006result\022\'\n\005error\030\007 \001(\tB\021\202\267\030\r\n\005error\022" +
+      "\004TEXTR\005error\022@\n\013retry_count\030\010 \001(\005B\037\202\267\030\033\n" +
+      "\013retry_count\022\007INTEGER\030\001:\0010R\nretryCount\022X" +
+      "\n\nstarted_at\030\t \001(\0132\032.google.protobuf.Tim" +
+      "estampB\035\202\267\030\031\n\nstarted_at\022\013TIMESTAMPTZR\ts" +
+      "tartedAt\022^\n\014completed_at\030\n \001(\0132\032.google." +
+      "protobuf.TimestampB\037\202\267\030\033\n\014completed_at\022\013" +
+      "TIMESTAMPTZR\013completedAt\022\202\001\n\naudit_info\030" +
+      "\013 \001(\0132\035.udb.core.common.v1.AuditInfoBD\202\267" +
+      "\030@\n\naudit_info\022\005JSONB\030\001:\013\'{}\'::jsonbZ\032Au" +
+      "dit trail stored as JSONx\001R\tauditInfo:\247\004" +
+      "\372\266\030\215\003\n\016pipeline_steps\022\tudb_asset\030\004 \001*6In" +
+      "dividual executable steps within a pipel" +
+      "ine instance8\001@\001b\237\001\n\037pipeline_steps_tena" +
+      "nt_isolation\032z(tenant_id::text = current" +
+      "_setting(\'app.current_tenant_id\', true) " +
+      "OR current_setting(\'app.platform_admin\'," +
+      " true) = \'true\')(\001h\001\212\0010\n\032idx_pipeline_st" +
+      "ep_instance\022\005BTREEZ\013instance_id\212\001,\n\030idx_" +
+      "pipeline_step_tenant\022\005BTREEZ\ttenant_id\362\001" +
+      "\034udb.asset.pipeline_steps.cdc\372\001\nasset:re" +
+      "ad\212\262\031\220\001\n\006tenant\032\ttenant_id*4tenant_id = " +
+      "current_setting(\'app.current_tenant_id\')" +
+      "2\004none:\021asset.operational@\373\023H\002R\006tenantZ\010" +
+      "standardr\025tenant.data_residencyB\374\001\n\034com." +
+      "udb.core.asset.entity.v1B\021PipelineStepPr" +
+      "otoP\001ZDgithub.com/fahara02/udb/sdk/go/ge" +
+      "n/udb/core/asset/entity/v1;entityv1\242\002\004UC" +
+      "AE\252\002\030udb.core.Asset.Entity.V1\312\002\030Udb\\Core" +
+      "\\Asset\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\" +
+      "Asset\\Entity\\V1\352\002\034Udb::Core::Asset::Enti" +
+      "ty::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

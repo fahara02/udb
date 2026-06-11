@@ -84,7 +84,7 @@ message ControlPlaneResource {
   string name = 3 [(udb.core.common.v1.pg_column) = { column_name: "name" sql_type: "VARCHAR(200)" not_null: true }];
 
   // Nullable: NULL == fleet-wide; set == tenant-scoped (on-demand fetch).
-  string tenant_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" comment: "NULL means fleet-wide; set scopes the resource to one tenant" }];
+  string tenant_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" comment: "NULL means fleet-wide; set scopes the resource to one tenant" }];
 
   // Nullable project/application namespace.
   string project_id = 5 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(160)" comment: "Optional project/application namespace" }];

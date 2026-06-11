@@ -649,6 +649,29 @@ impl AuthzServiceImpl {
         }
     }
 
+    /// The shared-snapshot reload TTL (used by the broker's boot/interval warmer
+    /// to pace its reloads — auth_fix.md Block 1, Decision A).
+    pub(crate) fn snapshot_ttl(&self) -> Duration {
+        self.snapshot_ttl
+    }
+
+    /// Force a Postgres reload of the SHARED authz snapshot cell. The broker's
+    /// startup eager-warm + interval warmer call this so the authn login path
+    /// (which only reads the shared cell, never triggers a reload) sees role
+    /// bindings on the very first login instead of the cold ABAC-only snapshot
+    /// (auth_fix.md Block 1, Decision A). GAP-36 posture: `current_snapshot`
+    /// only `store()`s on a successful load, so a reload error leaves the last
+    /// good snapshot in place — we just log it, never blank the cell.
+    pub(crate) async fn warm_shared_snapshot(&self) {
+        self.invalidate_snapshot_cache();
+        if let Err(err) = self.current_snapshot().await {
+            tracing::warn!(
+                error = %err,
+                "authz snapshot warm reload failed; retaining last good snapshot"
+            );
+        }
+    }
+
     pub(crate) fn with_event_sink(mut self, sink: Arc<dyn AuthEventSink>) -> Self {
         self.event_sink = sink;
         self

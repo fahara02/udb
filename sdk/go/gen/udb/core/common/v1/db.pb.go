@@ -1582,7 +1582,13 @@ type ColumnOptions struct {
 	OnUpdate              ReferentialAction `protobuf:"varint,33,opt,name=on_update,json=onUpdate,proto3,enum=udb.core.common.v1.ReferentialAction" json:"on_update,omitempty"`
 	// nullable is the SQL-facing inverse of not_null. UDB's parser accepts both
 	// styles; keep not_null for existing schemas and nullable for SQL-like ones.
-	Nullable      bool `protobuf:"varint,34,opt,name=nullable,proto3" json:"nullable,omitempty"`
+	Nullable bool `protobuf:"varint,34,opt,name=nullable,proto3" json:"nullable,omitempty"`
+	// Marks this column as the tenant-isolation key referenced by
+	// db_table_security.tenant_column.
+	TenantColumn bool `protobuf:"varint,35,opt,name=tenant_column,json=tenantColumn,proto3" json:"tenant_column,omitempty"`
+	// Marks this column as the project-isolation key referenced by
+	// db_table_security.project_column.
+	ProjectColumn bool `protobuf:"varint,36,opt,name=project_column,json=projectColumn,proto3" json:"project_column,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1851,6 +1857,20 @@ func (x *ColumnOptions) GetOnUpdate() ReferentialAction {
 func (x *ColumnOptions) GetNullable() bool {
 	if x != nil {
 		return x.Nullable
+	}
+	return false
+}
+
+func (x *ColumnOptions) GetTenantColumn() bool {
+	if x != nil {
+		return x.TenantColumn
+	}
+	return false
+}
+
+func (x *ColumnOptions) GetProjectColumn() bool {
+	if x != nil {
+		return x.ProjectColumn
 	}
 	return false
 }
@@ -3466,7 +3486,7 @@ const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"\x03sql\x18\x04 \x01(\tR\x03sql\x12\x12\n" +
 	"\x04file\x18\x05 \x01(\tR\x04file\x12'\n" +
 	"\x0fchecksum_sha256\x18\x06 \x01(\tR\x0echecksumSha256\x12'\n" +
-	"\x0frequires_review\x18\a \x01(\bR\x0erequiresReview\"\xad\n" +
+	"\x0frequires_review\x18\a \x01(\bR\x0erequiresReview\"\xf9\n" +
 	"\n" +
 	"\rColumnOptions\x12\x1f\n" +
 	"\vcolumn_name\x18\x01 \x01(\tR\n" +
@@ -3511,7 +3531,9 @@ const file_udb_core_common_v1_db_proto_rawDesc = "" +
 	"references\x12B\n" +
 	"\ton_delete\x18  \x01(\x0e2%.udb.core.common.v1.ReferentialActionR\bonDelete\x12B\n" +
 	"\ton_update\x18! \x01(\x0e2%.udb.core.common.v1.ReferentialActionR\bonUpdate\x12\x1a\n" +
-	"\bnullable\x18\" \x01(\bR\bnullable\"\xc2\x02\n" +
+	"\bnullable\x18\" \x01(\bR\bnullable\x12#\n" +
+	"\rtenant_column\x18# \x01(\bR\ftenantColumn\x12%\n" +
+	"\x0eproject_column\x18$ \x01(\bR\rprojectColumn\"\xc2\x02\n" +
 	"\n" +
 	"ForeignKey\x12)\n" +
 	"\x10references_table\x18\x01 \x01(\tR\x0freferencesTable\x12+\n" +

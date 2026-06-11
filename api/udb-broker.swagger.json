@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "UDB Control-Plane API",
-    "version": "0.3.2",
+    "version": "0.3.3",
     "description": "HTTP/JSON (gRPC-gateway) surface for UDB control-plane services. The core DataBroker data-plane RPCs are gRPC-native and are not represented here."
   },
   "tags": [
@@ -5254,7 +5254,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "`GetNativeAccess` runs the same `Authorize` decision and, when allowed,\nmints a short-lived contract for the caller to talk to the backend\ndirectly: a restricted role, a scoped DSN, and the exact set of\n`app.current_*` session variables the SDK must `SET LOCAL` so the\nbroker-generated RLS policies still apply. UDB stays the source of the\nauthorization decision; the native grant only carries it forward.",
+            "description": "── Stage 2: native database fast-path access ──────────────────────────────\n\n`GetNativeAccess` runs the same `Authorize` decision and, when allowed,\nmints a short-lived contract for the caller to talk to the backend\ndirectly: a restricted role, a scoped DSN, and the exact set of\n`app.current_*` session variables the SDK must `SET LOCAL` so the\nbroker-generated RLS policies still apply. UDB stays the source of the\nauthorization decision; the native grant only carries it forward.",
             "in": "body",
             "required": true,
             "schema": {
@@ -5515,7 +5515,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "`GetPolicyBundle` serializes the live authorization snapshot (policies,\nrole bindings, relationship tuples) and signs it so an SDK can cache it\nand answer `can()` locally without a round-trip, while still being able\nto verify the bundle was issued by UDB and has not expired.",
+            "description": "── Stage 2: signed policy bundles for local SDK authorization caches ───────\n\n`GetPolicyBundle` serializes the live authorization snapshot (policies,\nrole bindings, relationship tuples) and signs it so an SDK can cache it\nand answer `can()` locally without a round-trip, while still being able\nto verify the bundle was issued by UDB and has not expired.",
             "in": "body",
             "required": true,
             "schema": {
@@ -14778,8 +14778,7 @@
           }
         }
       },
-      "description": "`GetNativeAccess` runs the same `Authorize` decision and, when allowed,\nmints a short-lived contract for the caller to talk to the backend\ndirectly: a restricted role, a scoped DSN, and the exact set of\n`app.current_*` session variables the SDK must `SET LOCAL` so the\nbroker-generated RLS policies still apply. UDB stays the source of the\nauthorization decision; the native grant only carries it forward.",
-      "title": "── Stage 2: native database fast-path access ──────────────────────────────"
+      "description": "── Stage 2: native database fast-path access ──────────────────────────────\n\n`GetNativeAccess` runs the same `Authorize` decision and, when allowed,\nmints a short-lived contract for the caller to talk to the backend\ndirectly: a restricted role, a scoped DSN, and the exact set of\n`app.current_*` session variables the SDK must `SET LOCAL` so the\nbroker-generated RLS policies still apply. UDB stays the source of the\nauthorization decision; the native grant only carries it forward."
     },
     "v1NativeAccessResponse": {
       "type": "object",
@@ -15427,8 +15426,7 @@
           "type": "string"
         }
       },
-      "description": "`GetPolicyBundle` serializes the live authorization snapshot (policies,\nrole bindings, relationship tuples) and signs it so an SDK can cache it\nand answer `can()` locally without a round-trip, while still being able\nto verify the bundle was issued by UDB and has not expired.",
-      "title": "── Stage 2: signed policy bundles for local SDK authorization caches ───────"
+      "description": "── Stage 2: signed policy bundles for local SDK authorization caches ───────\n\n`GetPolicyBundle` serializes the live authorization snapshot (policies,\nrole bindings, relationship tuples) and signs it so an SDK can cache it\nand answer `can()` locally without a round-trip, while still being able\nto verify the bundle was issued by UDB and has not expired."
     },
     "v1PolicyBundleResponse": {
       "type": "object",
@@ -15453,7 +15451,7 @@
         "scopeKind": {
           "$ref": "#/definitions/v1CanaryScopeKind"
         },
-        "scopeValuesJson": {
+        "scopeValues": {
           "type": "string",
           "description": "For NODE/TENANT: the list of in-scope ids. For PERCENT: a single-element\nlist whose value is the integer percentage (1..=100)."
         },
@@ -17161,7 +17159,7 @@
           "type": "string"
         }
       },
-      "description": "---------------------------------------------------------------------------\nSession — Authenticated session for a user, service account, workload, or\nexternal identity mapped into UDB.\n\nHybrid model:\n  SERVER_SIDE: cookie-based; session_token_lookup (keyed HMAC) → hash verify\n  JWT:         access_token_jti + refresh_token_jti tracked for revocation\n\nMigration order 2. RLS scopes rows to the current tenant.\n---------------------------------------------------------------------------"
+      "title": "---------------------------------------------------------------------------\nSession — Authenticated session for a user, service account, workload, or\nexternal identity mapped into UDB.\n\nHybrid model:\n  SERVER_SIDE: cookie-based; session_token_lookup (keyed HMAC) → hash verify\n  JWT:         access_token_jti + refresh_token_jti tracked for revocation\n\nMigration order 2. RLS scopes rows to the current tenant.\n---------------------------------------------------------------------------"
     },
     "v1SessionType": {
       "type": "string",
@@ -18009,7 +18007,7 @@
           "format": "date-time"
         }
       },
-      "description": "---------------------------------------------------------------------------\nUser — a human, service, workload, or externally-mapped account that can be\nauthenticated by UDB and authorized by the UDB policy engine.\n\nMigration order 1 in schema udb_authn.\nThe password_hash uses Argon2id PHC strings; legacy keyed-HMAC values are upgraded on login.\nAll PII fields are masked in application logs via (pii) + (log_masked).\n---------------------------------------------------------------------------"
+      "title": "---------------------------------------------------------------------------\nUser — a human, service, workload, or externally-mapped account that can be\nauthenticated by UDB and authorized by the UDB policy engine.\n\nMigration order 1 in schema udb_authn.\nThe password_hash uses Argon2id PHC strings; legacy keyed-HMAC values are upgraded on login.\nAll PII fields are masked in application logs via (pii) + (log_masked).\n---------------------------------------------------------------------------"
     },
     "v1UserRole": {
       "type": "object",

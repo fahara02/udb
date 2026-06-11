@@ -2,6 +2,28 @@
 
 use super::*;
 
+/// Named role→scope projection (auth_fix.md Block 1, Decisions D/E): the coarse
+/// control-plane scopes a role confers in the issued token. The role binding is
+/// the single source of truth; the scope is a derived claim. Extend this ONE map
+/// (e.g. add `tenant_admin`) — never scatter role→scope knowledge elsewhere.
+const ROLE_SCOPE_PROJECTIONS: &[(&str, &[&str])] =
+    // `organization_owner` is the tenant superuser, so it projects to BOTH the
+    // coarse control-plane admin scope (`udb:admin`, matched literally by
+    // method-security ADMIN_SCOPES) AND the broad `udb:*` wildcard, which
+    // `has_scope` expands to satisfy every data-plane scope gate (udb:write,
+    // udb:read, udb:stream, udb:dispatch, udb:vector:*, udb:object:*, …). Without
+    // `udb:*` the admin passes the admin gates but fails the per-op data scopes.
+    &[("organization_owner", &["udb:admin", "udb:*"])];
+
+/// Tenant/project domain match mirroring the authz snapshot's private
+/// `domain_match` (empty or `*` is a wildcard, else exact) without reaching into
+/// the authz module. Role bindings loaded from `user_roles` carry a concrete
+/// tenant and (usually) an empty project, so this stays exact-or-wildcard.
+fn domain_allows(pattern: &str, value: &str) -> bool {
+    let pattern = pattern.trim();
+    pattern.is_empty() || pattern == "*" || pattern == value
+}
+
 impl AuthnServiceImpl {
     pub(super) fn issue_access_token(
         &self,
@@ -63,6 +85,52 @@ impl AuthnServiceImpl {
         }
     }
 
+    /// Resolve a user's effective control-plane grants from the WARM shared
+    /// authz snapshot (auth_fix.md Block 1, Decision E): the role codes bound to
+    /// the user — read straight off the pub `role_bindings` the central plane
+    /// loads (the same source `list_user_permissions` uses), NOT the private
+    /// `effective_roles`, and with NO parallel `user_roles` query — and the
+    /// scopes those roles project to via [`ROLE_SCOPE_PROJECTIONS`].
+    ///
+    /// Returns `(scopes, roles)`. Fail-closed: no snapshot wired ⇒ no grants
+    /// (never empty-as-admin). `empty ⇒ empty`, so revoking a user's last role
+    /// drops the projected admin scope at the next issue/refresh.
+    pub(super) fn resolve_effective_grants(
+        &self,
+        user_id: &str,
+        tenant_id: &str,
+        project_id: &str,
+    ) -> (Vec<String>, Vec<String>) {
+        let Some(cell) = self.authz_snapshot.as_ref() else {
+            return (Vec::new(), Vec::new());
+        };
+        let snapshot = cell.load();
+        let mut roles: Vec<String> = Vec::new();
+        for binding in &snapshot.role_bindings {
+            if binding.subject.as_str() == user_id
+                && domain_allows(&binding.tenant, tenant_id)
+                && domain_allows(&binding.project, project_id)
+                && !roles.contains(&binding.role)
+            {
+                roles.push(binding.role.clone());
+            }
+        }
+        let mut scopes: Vec<String> = Vec::new();
+        for role in &roles {
+            for &(code, projected) in ROLE_SCOPE_PROJECTIONS {
+                if code == role.as_str() {
+                    for &scope in projected {
+                        let scope = scope.to_string();
+                        if !scopes.contains(&scope) {
+                            scopes.push(scope);
+                        }
+                    }
+                }
+            }
+        }
+        (scopes, roles)
+    }
+
     /// Build the JWK Set for verifying UDB-issued JWTs. Order of preference:
     ///   1. The DB-backed signing-key registry (ACTIVE + VERIFYING public keys),
     ///      so a just-rotated key is still verifiable during the overlap window.
@@ -113,20 +181,7 @@ impl AuthnServiceImpl {
             }
             return Ok(EMPTY.to_string());
         }
-        if let Some(key) = self
-            .security
-            .jwt_public_key
-            .as_ref()
-            .filter(|k| !k.trim().is_empty())
-        {
-            let pem = if key.contains("-----BEGIN") {
-                key.clone()
-            } else {
-                match std::fs::read_to_string(key) {
-                    Ok(s) => s,
-                    Err(_) => return Ok(EMPTY.to_string()),
-                }
-            };
+        if let Some(pem) = self.security.jwt_public_pem() {
             if let Some(jwk) = rsa_jwk_from_pem(&pem) {
                 return Ok(jwk);
             }

@@ -44,44 +44,44 @@ public final class PipelineDefinitionProto extends com.google.protobuf.Generated
       "nition.proto\022\030udb.core.asset.entity.v1\032\033" +
       "udb/core/common/v1/db.proto\032!udb/core/co" +
       "mmon/v1/security.proto\032\036udb/core/common/" +
-      "v1/types.proto\"\271\t\n\022PipelineDefinition\022U\n" +
+      "v1/types.proto\"\274\t\n\022PipelineDefinition\022U\n" +
       "\rdefinition_id\030\001 \001(\tB0\202\267\030,\n\rdefinition_i" +
       "d\022\004UUID\030\001(\001:\021gen_random_uuid()R\014definiti" +
-      "onId\0224\n\ttenant_id\030\002 \001(\tB\027\202\267\030\023\n\ttenant_id" +
-      "\022\004UUID\030\001R\010tenantId\022.\n\004name\030\003 \001(\tB\032\202\267\030\026\n\004" +
-      "name\022\014VARCHAR(255)\030\001R\004name\0229\n\013descriptio" +
-      "n\030\004 \001(\tB\027\202\267\030\023\n\013description\022\004TEXTR\013descri" +
-      "ption\022<\n\nmedia_type\030\005 \001(\tB\035\202\267\030\031\n\nmedia_t" +
-      "ype\022\013VARCHAR(40)R\tmediaType\022a\n\005steps\030\006 \001" +
-      "(\tBK\202\267\030G\n\005steps\022\005JSONB\030\001:\013\'[]\'::jsonbZ&A" +
-      "rray of {name,type,params,depends_on}x\001R" +
-      "\005steps\0225\n\007version\030\007 \001(\005B\033\202\267\030\027\n\007version\022\007" +
-      "INTEGER\030\001:\0011R\007version\022=\n\006status\030\010 \001(\tB%\202" +
-      "\267\030!\n\006status\022\013VARCHAR(20)\030\001:\010\'ACTIVE\'R\006st" +
-      "atus\022\202\001\n\naudit_info\030\t \001(\0132\035.udb.core.com" +
-      "mon.v1.AuditInfoBD\202\267\030@\n\naudit_info\022\005JSON" +
-      "B\030\001:\013\'{}\'::jsonbZ\032Audit trail stored as " +
-      "JSONx\001R\tauditInfo:\216\004\372\266\030\364\002\n\024pipeline_defi" +
-      "nitions\022\tudb_asset\030\002 \001*2Reusable version" +
-      "ed processing-pipeline definitions8\001@\001b\245" +
-      "\001\n%pipeline_definitions_tenant_isolation" +
-      "\032z(tenant_id::text = current_setting(\'ap" +
-      "p.current_tenant_id\', true) OR current_s" +
-      "etting(\'app.platform_admin\', true) = \'tr" +
-      "ue\')(\001h\001\212\0018\n\034idx_pipeline_def_name_uniqu" +
-      "e\022\005BTREE\030\001Z\ttenant_idZ\004name\362\001\"udb.asset." +
-      "pipeline_definitions.cdc\372\001\nasset:read\212\262\031" +
-      "\220\001\n\006tenant\032\ttenant_id*4tenant_id = curre" +
-      "nt_setting(\'app.current_tenant_id\')2\004non" +
-      "e:\021asset.operational@\373\023H\002R\006tenantZ\010stand" +
-      "ardr\025tenant.data_residencyB\202\002\n\034com.udb.c" +
-      "ore.asset.entity.v1B\027PipelineDefinitionP" +
-      "rotoP\001ZDgithub.com/fahara02/udb/sdk/go/g" +
-      "en/udb/core/asset/entity/v1;entityv1\242\002\004U" +
-      "CAE\252\002\030udb.core.Asset.Entity.V1\312\002\030Udb\\Cor" +
-      "e\\Asset\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core" +
-      "\\Asset\\Entity\\V1\352\002\034Udb::Core::Asset::Ent" +
-      "ity::V1b\006proto3"
+      "onId\0227\n\ttenant_id\030\002 \001(\tB\032\202\267\030\026\n\ttenant_id" +
+      "\022\004UUID\030\001\230\002\001R\010tenantId\022.\n\004name\030\003 \001(\tB\032\202\267\030" +
+      "\026\n\004name\022\014VARCHAR(255)\030\001R\004name\0229\n\013descrip" +
+      "tion\030\004 \001(\tB\027\202\267\030\023\n\013description\022\004TEXTR\013des" +
+      "cription\022<\n\nmedia_type\030\005 \001(\tB\035\202\267\030\031\n\nmedi" +
+      "a_type\022\013VARCHAR(40)R\tmediaType\022a\n\005steps\030" +
+      "\006 \001(\tBK\202\267\030G\n\005steps\022\005JSONB\030\001:\013\'[]\'::jsonb" +
+      "Z&Array of {name,type,params,depends_on}" +
+      "x\001R\005steps\0225\n\007version\030\007 \001(\005B\033\202\267\030\027\n\007versio" +
+      "n\022\007INTEGER\030\001:\0011R\007version\022=\n\006status\030\010 \001(\t" +
+      "B%\202\267\030!\n\006status\022\013VARCHAR(20)\030\001:\010\'ACTIVE\'R" +
+      "\006status\022\202\001\n\naudit_info\030\t \001(\0132\035.udb.core." +
+      "common.v1.AuditInfoBD\202\267\030@\n\naudit_info\022\005J" +
+      "SONB\030\001:\013\'{}\'::jsonbZ\032Audit trail stored " +
+      "as JSONx\001R\tauditInfo:\216\004\372\266\030\364\002\n\024pipeline_d" +
+      "efinitions\022\tudb_asset\030\002 \001*2Reusable vers" +
+      "ioned processing-pipeline definitions8\001@" +
+      "\001b\245\001\n%pipeline_definitions_tenant_isolat" +
+      "ion\032z(tenant_id::text = current_setting(" +
+      "\'app.current_tenant_id\', true) OR curren" +
+      "t_setting(\'app.platform_admin\', true) = " +
+      "\'true\')(\001h\001\212\0018\n\034idx_pipeline_def_name_un" +
+      "ique\022\005BTREE\030\001Z\ttenant_idZ\004name\362\001\"udb.ass" +
+      "et.pipeline_definitions.cdc\372\001\nasset:read" +
+      "\212\262\031\220\001\n\006tenant\032\ttenant_id*4tenant_id = cu" +
+      "rrent_setting(\'app.current_tenant_id\')2\004" +
+      "none:\021asset.operational@\373\023H\002R\006tenantZ\010st" +
+      "andardr\025tenant.data_residencyB\202\002\n\034com.ud" +
+      "b.core.asset.entity.v1B\027PipelineDefiniti" +
+      "onProtoP\001ZDgithub.com/fahara02/udb/sdk/g" +
+      "o/gen/udb/core/asset/entity/v1;entityv1\242" +
+      "\002\004UCAE\252\002\030udb.core.Asset.Entity.V1\312\002\030Udb\\" +
+      "Core\\Asset\\Entity\\V1\342\002$Udb\\GPBMetadata\\C" +
+      "ore\\Asset\\Entity\\V1\352\002\034Udb::Core::Asset::" +
+      "Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

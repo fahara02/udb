@@ -13,7 +13,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Notification(_message.Message):
-    __slots__ = ("notification_id", "recipient_id", "type", "channel", "subject", "message", "template_data", "priority", "status", "scheduled_at", "sent_at", "delivered_at", "read_at", "created_at", "retry_count", "error_message", "tenant_id")
+    __slots__ = ("notification_id", "recipient_id", "type", "channel", "subject", "message", "template_data", "priority", "status", "scheduled_at", "sent_at", "delivered_at", "read_at", "created_at", "retry_count", "error_message", "tenant_id", "deleted_at", "deleted_by")
     class TemplateDataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -38,6 +38,8 @@ class Notification(_message.Message):
     RETRY_COUNT_FIELD_NUMBER: _ClassVar[int]
     ERROR_MESSAGE_FIELD_NUMBER: _ClassVar[int]
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    DELETED_AT_FIELD_NUMBER: _ClassVar[int]
+    DELETED_BY_FIELD_NUMBER: _ClassVar[int]
     notification_id: str
     recipient_id: str
     type: _enums_pb2.NotificationType
@@ -55,4 +57,6 @@ class Notification(_message.Message):
     retry_count: int
     error_message: str
     tenant_id: str
-    def __init__(self, notification_id: _Optional[str] = ..., recipient_id: _Optional[str] = ..., type: _Optional[_Union[_enums_pb2.NotificationType, str]] = ..., channel: _Optional[_Union[_enums_pb2.NotificationChannel, str]] = ..., subject: _Optional[str] = ..., message: _Optional[str] = ..., template_data: _Optional[_Mapping[str, str]] = ..., priority: _Optional[_Union[_enums_pb2.NotificationPriority, str]] = ..., status: _Optional[_Union[_enums_pb2.NotificationStatus, str]] = ..., scheduled_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., sent_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., delivered_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., read_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., retry_count: _Optional[int] = ..., error_message: _Optional[str] = ..., tenant_id: _Optional[str] = ...) -> None: ...
+    deleted_at: _timestamp_pb2.Timestamp
+    deleted_by: str
+    def __init__(self, notification_id: _Optional[str] = ..., recipient_id: _Optional[str] = ..., type: _Optional[_Union[_enums_pb2.NotificationType, str]] = ..., channel: _Optional[_Union[_enums_pb2.NotificationChannel, str]] = ..., subject: _Optional[str] = ..., message: _Optional[str] = ..., template_data: _Optional[_Mapping[str, str]] = ..., priority: _Optional[_Union[_enums_pb2.NotificationPriority, str]] = ..., status: _Optional[_Union[_enums_pb2.NotificationStatus, str]] = ..., scheduled_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., sent_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., delivered_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., read_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., retry_count: _Optional[int] = ..., error_message: _Optional[str] = ..., tenant_id: _Optional[str] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_by: _Optional[str] = ...) -> None: ...

@@ -76,7 +76,7 @@ public final class ReconciliationAnalyticsSummaryProto extends com.google.protob
       " \001*CDaily reconciliation and conflict ro" +
       "ll-up for UDB-managed workflowsH\003R\014summa" +
       "ry_dateX\355\002\352\001\007replica\212\262\031S\n\006global2\004none:\025" +
-      "analytics.operational@\373\023H\002R\006tenantZ\010stan" +
+      "analytics.operational@\355\002H\002R\006tenantZ\010stan" +
       "dardr\025tenant.data_residencyB\246\002\n com.udb." +
       "core.analytics.entity.v1B#Reconciliation" +
       "AnalyticsSummaryProtoP\001ZHgithub.com/faha" +

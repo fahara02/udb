@@ -45,7 +45,7 @@ public final class NotificationLogProto extends com.google.protobuf.GeneratedFil
       "entity.v1\032\037google/protobuf/timestamp.pro" +
       "to\032\033udb/core/common/v1/db.proto\032!udb/cor" +
       "e/common/v1/security.proto\032+udb/core/not" +
-      "ification/entity/v1/enums.proto\"\206\025\n\017Noti" +
+      "ification/entity/v1/enums.proto\"\210\025\n\017Noti" +
       "ficationLog\022@\n\006log_id\030\001 \001(\tB)\202\267\030%\n\006log_i" +
       "d\022\004UUID\030\001(\001:\021gen_random_uuid()R\005logId\022\303\001" +
       "\n\013template_id\030\002 \001(\tB\241\001\202\267\030\234\001\n\013template_id" +
@@ -64,63 +64,63 @@ public final class NotificationLogProto extends com.google.protobuf.GeneratedFil
       "t_id\022\005BTREER\013recipientId\022q\n\021recipient_ad" +
       "dress\030\006 \001(\tBD\202\267\030@\n\021recipient_address\022\014VA" +
       "RCHAR(320)Z\035Email, phone, or device toke" +
-      "nR\020recipientAddress\022:\n\ttenant_id\030\007 \001(\tB\035" +
-      "\202\267\030\031\n\ttenant_id\022\014VARCHAR(120)R\010tenantId\022" +
-      "h\n\nproject_id\030\010 \001(\tBI\202\267\030E\n\nproject_id\022\014V" +
-      "ARCHAR(120)R)\n idx_notification_logs_pro" +
-      "ject_id\022\005BTREER\tprojectId\022\264\001\n\rresource_t" +
-      "ype\030\t \001(\tB\216\001\202\267\030\211\001\n\rresource_type\022\013VARCHA" +
-      "R(80)R,\n#idx_notification_logs_resource_" +
-      "type\022\005BTREEZ=Project-defined resource ty" +
-      "pe that triggered the notificationR\014reso" +
-      "urceType\022\253\001\n\013resource_id\030\n \001(\tB\211\001\202\267\030\204\001\n\013" +
-      "resource_id\022\014VARCHAR(160)R*\n!idx_notific" +
-      "ation_logs_resource_id\022\005BTREEZ;Project-d" +
-      "efined resource id that triggered the no" +
-      "tificationR\nresourceId\022{\n\rresource_name\030" +
-      "\013 \001(\tBV\202\267\030R\n\rresource_name\022\014VARCHAR(255)" +
-      "Z3Optional display name for the notifica" +
-      "tion resourceR\014resourceName\022I\n\016correlati" +
-      "on_id\030\014 \001(\tB\"\202\267\030\036\n\016correlation_id\022\014VARCH" +
-      "AR(120)R\rcorrelationId\022\223\001\n\006status\030\r \001(\0162" +
-      "3.udb.core.notification.entity.v1.Notifi" +
-      "cationStatusBF\202\267\030B\n\006status\022\013VARCHAR(20)\030" +
-      "\001:\t\'PENDING\'R\036\n\025idx_notif_logs_status\022\005B" +
-      "TREER\006status\022>\n\rerror_message\030\016 \001(\tB\031\202\267\030" +
-      "\025\n\rerror_message\022\004TEXTR\014errorMessage\022\213\001\n" +
-      "\023provider_message_id\030\017 \001(\tB[\202\267\030W\n\023provid" +
-      "er_message_id\022\014VARCHAR(255)Z2Delivery pr" +
-      "ovider\'s message ID (SES, Twilio, etc.)R" +
-      "\021providerMessageId\022@\n\013retry_count\030\020 \001(\005B" +
-      "\037\202\267\030\033\n\013retry_count\022\007INTEGER\030\001:\0010R\nretryC" +
-      "ount\022O\n\007sent_at\030\021 \001(\0132\032.google.protobuf." +
-      "TimestampB\032\202\267\030\026\n\007sent_at\022\013TIMESTAMPTZR\006s" +
-      "entAt\022^\n\014delivered_at\030\022 \001(\0132\032.google.pro" +
-      "tobuf.TimestampB\037\202\267\030\033\n\014delivered_at\022\013TIM" +
-      "ESTAMPTZR\013deliveredAt\022q\n\ncreated_at\030\023 \001(" +
-      "\0132\032.google.protobuf.TimestampB6\202\267\0302\n\ncre" +
-      "ated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAM" +
-      "P`\001h\001R\tcreatedAt:\375\003\372\266\030\334\002\n\021notification_l" +
-      "ogs\022\020udb_notification\030\002 \001*<Delivery audi" +
-      "t log for every notification sent by the" +
-      " system@\001H\003R\ncreated_atXZb^\n\020tenant_isol" +
-      "ation\032H(tenant_id::text = current_settin" +
-      "g(\'app.current_tenant_id\', true)::text)(" +
-      "\001\212\001C\n\036idx_nlog_tenant_channel_status\022\005BT" +
-      "REEZ\ttenant_idZ\007channelZ\006status\212\001!\n\020idx_" +
-      "nlog_sent_at\022\004BRINZ\007sent_at\362\001\026notificati" +
-      "on.failed.v1\212\262\031\227\001\n\006tenant\032\ttenant_id*4te" +
-      "nant_id = current_setting(\'app.current_t" +
-      "enant_id\')2\004none:\030notification.operation" +
-      "al@\373\023H\002R\006tenantZ\010standardr\025tenant.data_r" +
-      "esidencyB\251\002\n#com.udb.core.notification.e" +
-      "ntity.v1B\024NotificationLogProtoP\001ZKgithub" +
-      ".com/fahara02/udb/sdk/go/gen/udb/core/no" +
-      "tification/entity/v1;entityv1\242\002\004UCNE\252\002\037u" +
-      "db.core.Notification.Entity.V1\312\002\037Udb\\Cor" +
-      "e\\Notification\\Entity\\V1\342\002+Udb\\GPBMetada" +
-      "ta\\Core\\Notification\\Entity\\V1\352\002#Udb::Co" +
-      "re::Notification::Entity::V1b\006proto3"
+      "nR\020recipientAddress\022=\n\ttenant_id\030\007 \001(\tB " +
+      "\202\267\030\034\n\ttenant_id\022\014VARCHAR(120)\230\002\001R\010tenant" +
+      "Id\022h\n\nproject_id\030\010 \001(\tBI\202\267\030E\n\nproject_id" +
+      "\022\014VARCHAR(120)R)\n idx_notification_logs_" +
+      "project_id\022\005BTREER\tprojectId\022\264\001\n\rresourc" +
+      "e_type\030\t \001(\tB\216\001\202\267\030\211\001\n\rresource_type\022\013VAR" +
+      "CHAR(80)R,\n#idx_notification_logs_resour" +
+      "ce_type\022\005BTREEZ=Project-defined resource" +
+      " type that triggered the notificationR\014r" +
+      "esourceType\022\253\001\n\013resource_id\030\n \001(\tB\211\001\202\267\030\204" +
+      "\001\n\013resource_id\022\014VARCHAR(160)R*\n!idx_noti" +
+      "fication_logs_resource_id\022\005BTREEZ;Projec" +
+      "t-defined resource id that triggered the" +
+      " notificationR\nresourceId\022{\n\rresource_na" +
+      "me\030\013 \001(\tBV\202\267\030R\n\rresource_name\022\014VARCHAR(2" +
+      "55)Z3Optional display name for the notif" +
+      "ication resourceR\014resourceName\022I\n\016correl" +
+      "ation_id\030\014 \001(\tB\"\202\267\030\036\n\016correlation_id\022\014VA" +
+      "RCHAR(120)R\rcorrelationId\022\223\001\n\006status\030\r \001" +
+      "(\01623.udb.core.notification.entity.v1.Not" +
+      "ificationStatusBF\202\267\030B\n\006status\022\013VARCHAR(2" +
+      "0)\030\001:\t\'PENDING\'R\036\n\025idx_notif_logs_status" +
+      "\022\005BTREER\006status\022>\n\rerror_message\030\016 \001(\tB\031" +
+      "\202\267\030\025\n\rerror_message\022\004TEXTR\014errorMessage\022" +
+      "\213\001\n\023provider_message_id\030\017 \001(\tB[\202\267\030W\n\023pro" +
+      "vider_message_id\022\014VARCHAR(255)Z2Delivery" +
+      " provider\'s message ID (SES, Twilio, etc" +
+      ".)R\021providerMessageId\022@\n\013retry_count\030\020 \001" +
+      "(\005B\037\202\267\030\033\n\013retry_count\022\007INTEGER\030\001:\0010R\nret" +
+      "ryCount\022O\n\007sent_at\030\021 \001(\0132\032.google.protob" +
+      "uf.TimestampB\032\202\267\030\026\n\007sent_at\022\013TIMESTAMPTZ" +
+      "R\006sentAt\022^\n\014delivered_at\030\022 \001(\0132\032.google." +
+      "protobuf.TimestampB\037\202\267\030\033\n\014delivered_at\022\013" +
+      "TIMESTAMPTZR\013deliveredAt\022q\n\ncreated_at\030\023" +
+      " \001(\0132\032.google.protobuf.TimestampB6\202\267\0302\n\n" +
+      "created_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMES" +
+      "TAMP`\001h\001R\tcreatedAt:\374\003\372\266\030\334\002\n\021notificatio" +
+      "n_logs\022\020udb_notification\030\002 \001*<Delivery a" +
+      "udit log for every notification sent by " +
+      "the system@\001H\003R\ncreated_atXZb^\n\020tenant_i" +
+      "solation\032H(tenant_id::text = current_set" +
+      "ting(\'app.current_tenant_id\', true)::tex" +
+      "t)(\001\212\001C\n\036idx_nlog_tenant_channel_status\022" +
+      "\005BTREEZ\ttenant_idZ\007channelZ\006status\212\001!\n\020i" +
+      "dx_nlog_sent_at\022\004BRINZ\007sent_at\362\001\026notific" +
+      "ation.failed.v1\212\262\031\226\001\n\006tenant\032\ttenant_id*" +
+      "4tenant_id = current_setting(\'app.curren" +
+      "t_tenant_id\')2\004none:\030notification.operat" +
+      "ional@ZH\002R\006tenantZ\010standardr\025tenant.data" +
+      "_residencyB\251\002\n#com.udb.core.notification" +
+      ".entity.v1B\024NotificationLogProtoP\001ZKgith" +
+      "ub.com/fahara02/udb/sdk/go/gen/udb/core/" +
+      "notification/entity/v1;entityv1\242\002\004UCNE\252\002" +
+      "\037udb.core.Notification.Entity.V1\312\002\037Udb\\C" +
+      "ore\\Notification\\Entity\\V1\342\002+Udb\\GPBMeta" +
+      "data\\Core\\Notification\\Entity\\V1\352\002#Udb::" +
+      "Core::Notification::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

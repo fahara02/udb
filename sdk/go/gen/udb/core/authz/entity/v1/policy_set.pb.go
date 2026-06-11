@@ -156,13 +156,13 @@ var File_udb_core_authz_entity_v1_policy_set_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_entity_v1_policy_set_proto_rawDesc = "" +
 	"\n" +
-	")udb/core/authz/entity/v1/policy_set.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xce\f\n" +
+	")udb/core/authz/entity/v1/policy_set.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xd1\f\n" +
 	"\tPolicySet\x12T\n" +
 	"\rpolicy_set_id\x18\x01 \x01(\tB0\x82\xb7\x18,\n" +
-	"\rpolicy_set_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\vpolicySetId\x12\\\n" +
-	"\ttenant_id\x18\x02 \x01(\tB?\x82\xb7\x18;\n" +
+	"\rpolicy_set_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\vpolicySetId\x12_\n" +
+	"\ttenant_id\x18\x02 \x01(\tBB\x82\xb7\x18>\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R\x1f\n" +
-	"\x16idx_policy_sets_tenant\x12\x05BTREER\btenantId\x12\x94\x01\n" +
+	"\x16idx_policy_sets_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12\x94\x01\n" +
 	"\n" +
 	"project_id\x18\x03 \x01(\tBu\x82\xb7\x18q\n" +
 	"\n" +

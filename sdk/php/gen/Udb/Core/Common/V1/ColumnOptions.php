@@ -163,6 +163,20 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>bool nullable = 34 [json_name = "nullable"];</code>
      */
     protected $nullable = false;
+    /**
+     * Marks this column as the tenant-isolation key referenced by
+     * db_table_security.tenant_column.
+     *
+     * Generated from protobuf field <code>bool tenant_column = 35 [json_name = "tenantColumn"];</code>
+     */
+    protected $tenant_column = false;
+    /**
+     * Marks this column as the project-isolation key referenced by
+     * db_table_security.project_column.
+     *
+     * Generated from protobuf field <code>bool project_column = 36 [json_name = "projectColumn"];</code>
+     */
+    protected $project_column = false;
 
     /**
      * Constructor.
@@ -212,6 +226,12 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      *     @type bool $nullable
      *           nullable is the SQL-facing inverse of not_null. UDB's parser accepts both
      *           styles; keep not_null for existing schemas and nullable for SQL-like ones.
+     *     @type bool $tenant_column
+     *           Marks this column as the tenant-isolation key referenced by
+     *           db_table_security.tenant_column.
+     *     @type bool $project_column
+     *           Marks this column as the project-isolation key referenced by
+     *           db_table_security.project_column.
      * }
      */
     public function __construct($data = NULL) {
@@ -991,6 +1011,60 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
     public function setNullable(bool $var)
     {
         $this->nullable = $var;
+
+        return $this;
+    }
+
+    /**
+     * Marks this column as the tenant-isolation key referenced by
+     * db_table_security.tenant_column.
+     *
+     * Generated from protobuf field <code>bool tenant_column = 35 [json_name = "tenantColumn"];</code>
+     * @return bool
+     */
+    public function getTenantColumn()
+    {
+        return $this->tenant_column;
+    }
+
+    /**
+     * Marks this column as the tenant-isolation key referenced by
+     * db_table_security.tenant_column.
+     *
+     * Generated from protobuf field <code>bool tenant_column = 35 [json_name = "tenantColumn"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setTenantColumn(bool $var)
+    {
+        $this->tenant_column = $var;
+
+        return $this;
+    }
+
+    /**
+     * Marks this column as the project-isolation key referenced by
+     * db_table_security.project_column.
+     *
+     * Generated from protobuf field <code>bool project_column = 36 [json_name = "projectColumn"];</code>
+     * @return bool
+     */
+    public function getProjectColumn()
+    {
+        return $this->project_column;
+    }
+
+    /**
+     * Marks this column as the project-isolation key referenced by
+     * db_table_security.project_column.
+     *
+     * Generated from protobuf field <code>bool project_column = 36 [json_name = "projectColumn"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setProjectColumn(bool $var)
+    {
+        $this->project_column = $var;
 
         return $this;
     }

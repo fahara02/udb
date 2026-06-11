@@ -59,7 +59,7 @@ message PolicyApproval {
 
   string approval_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "approval_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
   string draft_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "draft_id" sql_type: "UUID" not_null: true comment: "FK to policy_drafts.draft_id" foreign_key: { references_table: "policy_drafts" references_schema: "udb_authz" references_column: "draft_id" on_delete: REFERENTIAL_ACTION_CASCADE constraint_name: "fk_policy_approvals_draft_id" } index: { index_name: "idx_policy_approvals_draft" index_type: "BTREE" columns: "draft_id" } }];
-  string tenant_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policy_approvals_tenant" index_type: "BTREE" } }];
+  string tenant_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policy_approvals_tenant" index_type: "BTREE" } }];
   string actor = 4 [(udb.core.common.v1.pg_column) = { column_name: "actor" sql_type: "VARCHAR(160)" not_null: true comment: "Reviewer/approver principal" }];
   string role = 5 [(udb.core.common.v1.pg_column) = { column_name: "role" sql_type: "VARCHAR(20)" not_null: true comment: "REVIEWER/APPROVER" }];
   string decision = 6 [(udb.core.common.v1.pg_column) = { column_name: "decision" sql_type: "VARCHAR(20)" not_null: true comment: "APPROVE/REJECT/REQUEST_CHANGES" }];

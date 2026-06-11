@@ -134,6 +134,8 @@ class Metadata:
             max_replica_lag_ms=self.max_replica_lag_ms,
             eventual_consistency_allowed=self.eventual_consistency_allowed,
             read_fence_json=self.read_fence_json,
+            project_id=self.project_id,
+            client_catalog_version=self.client_catalog_version,
         )
 
     def with_purpose(self, purpose: str) -> "Metadata":

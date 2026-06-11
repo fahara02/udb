@@ -56,7 +56,7 @@ message Room {
   string room_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "room_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
   // @inject_tag: gorm:"primaryKey;column:room_id;not null"
 
-  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "UUID" not_null: true }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "UUID" not_null: true }];
   // @inject_tag: gorm:"column:tenant_id;not null"
 
   string name = 3 [(udb.core.common.v1.pg_column) = { column_name: "name" sql_type: "VARCHAR(255)" not_null: true }];

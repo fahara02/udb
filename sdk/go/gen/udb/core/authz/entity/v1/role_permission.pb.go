@@ -111,7 +111,7 @@ var File_udb_core_authz_entity_v1_role_permission_proto protoreflect.FileDescrip
 
 const file_udb_core_authz_entity_v1_role_permission_proto_rawDesc = "" +
 	"\n" +
-	".udb/core/authz/entity/v1/role_permission.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x8d\n" +
+	".udb/core/authz/entity/v1/role_permission.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x90\n" +
 	"\n" +
 	"\x0eRolePermission\x12c\n" +
 	"\x12role_permission_id\x18\x01 \x01(\tB5\x82\xb7\x181\n" +
@@ -127,10 +127,10 @@ const file_udb_core_authz_entity_v1_role_permission_proto_rawDesc = "" +
 	"\n" +
 	"granted_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB6\x82\xb7\x182\n" +
 	"\n" +
-	"granted_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tgrantedAt\x12_\n" +
-	"\ttenant_id\x18\x06 \x01(\tBB\x82\xb7\x18>\n" +
+	"granted_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tgrantedAt\x12b\n" +
+	"\ttenant_id\x18\x06 \x01(\tBE\x82\xb7\x18A\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R\"\n" +
-	"\x19idx_rolepermission_tenant\x12\x05BTREER\btenantId:\x8a\x06\xfa\xb6\x18\xf0\x04\n" +
+	"\x19idx_rolepermission_tenant\x12\x05BTREE\x98\x02\x01R\btenantId:\x8a\x06\xfa\xb6\x18\xf0\x04\n" +
 	"\x10role_permissions\x12\tudb_authz\x18\x06 \x01*QMany-to-many map from roles to permission codes used by ABAC and UI authorization@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01@\n" +
 	"\x1bidx_role_permissions_unique\x12\x05BTREE\x18\x01Z\arole_idZ\x0fpermission_code\x92\x01C\n" +

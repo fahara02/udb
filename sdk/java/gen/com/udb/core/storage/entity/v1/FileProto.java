@@ -45,71 +45,71 @@ public final class FileProto extends com.google.protobuf.GeneratedFile {
       "obuf/timestamp.proto\032\033udb/core/common/v1" +
       "/db.proto\032!udb/core/common/v1/security.p" +
       "roto\032\036udb/core/common/v1/types.proto\032&ud" +
-      "b/core/storage/entity/v1/enums.proto\"\327\021\n" +
+      "b/core/storage/entity/v1/enums.proto\"\332\021\n" +
       "\004File\022C\n\007file_id\030\001 \001(\tB*\202\267\030&\n\007file_id\022\004U" +
-      "UID\030\001(\001:\021gen_random_uuid()R\006fileId\0224\n\tte" +
-      "nant_id\030\002 \001(\tB\027\202\267\030\023\n\ttenant_id\022\004UUID\030\001R\010" +
-      "tenantId\0225\n\nproject_id\030\003 \001(\tB\026\202\267\030\022\n\nproj" +
-      "ect_id\022\004UUIDR\tprojectId\022:\n\010filename\030\004 \001(" +
-      "\tB\036\202\267\030\032\n\010filename\022\014VARCHAR(512)\030\001R\010filen" +
-      "ame\022C\n\014content_type\030\005 \001(\tB \202\267\030\034\n\014content" +
-      "_type\022\014VARCHAR(160)R\013contentType\022<\n\nsize" +
-      "_bytes\030\006 \001(\003B\035\202\267\030\031\n\nsize_bytes\022\006BIGINT\030\001" +
-      ":\0010R\tsizeBytes\022^\n\007backend\030\007 \001(\tBD\202\267\030@\n\007b" +
-      "ackend\022\013VARCHAR(40)Z(Object store backen" +
-      "d: s3/minio/gcs/azureR\007backend\0222\n\006bucket" +
-      "\030\010 \001(\tB\032\202\267\030\026\n\006bucket\022\014VARCHAR(160)R\006buck" +
-      "et\022a\n\nobject_key\030\t \001(\tBB\202\267\030>\n\nobject_key" +
-      "\022\004TEXT\030\001 \001R&\n\033idx_files_object_key_uniqu" +
-      "e\022\005BTREE\030\001R\tobjectKey\022!\n\003url\030\n \001(\tB\017\202\267\030\013" +
-      "\n\003url\022\004TEXTR\003url\022,\n\007cdn_url\030\013 \001(\tB\023\202\267\030\017\n" +
-      "\007cdn_url\022\004TEXTR\006cdnUrl\022_\n\tfile_type\030\014 \001(" +
-      "\0162$.udb.core.storage.entity.v1.FileTypeB" +
-      "\034\202\267\030\030\n\tfile_type\022\013VARCHAR(20)R\010fileType\022" +
-      ";\n\014reference_id\030\r \001(\tB\030\202\267\030\024\n\014reference_i" +
-      "d\022\004UUIDR\013referenceId\022H\n\016reference_type\030\016" +
-      " \001(\tB!\202\267\030\035\n\016reference_type\022\013VARCHAR(80)R" +
-      "\rreferenceType\022>\n\tis_public\030\017 \001(\010B!\202\267\030\035\n" +
-      "\tis_public\022\007BOOLEAN\030\001:\005falseR\010isPublic\022\201" +
-      "\001\n\006status\030\020 \001(\0162&.udb.core.storage.entit" +
-      "y.v1.FileStatusBA\202\267\030=\n\006status\022\013VARCHAR(2" +
-      "0)\030\001:\t\'PENDING\'R\031\n\020idx_files_status\022\005BTR" +
-      "EER\006status\0228\n\010checksum\030\021 \001(\tB\034\202\267\030\030\n\010chec" +
-      "ksum\022\014VARCHAR(160)R\010checksum\022X\n\nexpires_" +
-      "at\030\022 \001(\0132\032.google.protobuf.TimestampB\035\202\267" +
-      "\030\031\n\nexpires_at\022\013TIMESTAMPTZR\texpiresAt\0228" +
-      "\n\013uploaded_by\030\023 \001(\tB\027\202\267\030\023\n\013uploaded_by\022\004" +
-      "UUIDR\nuploadedBy\022\202\001\n\naudit_info\030\024 \001(\0132\035." +
-      "udb.core.common.v1.AuditInfoBD\202\267\030@\n\naudi" +
-      "t_info\022\005JSONB\030\001:\013\'{}\'::jsonbZ\032Audit trai" +
-      "l stored as JSONx\001R\tauditInfo\022o\n\ndeleted" +
-      "_at\030\025 \001(\0132\032.google.protobuf.TimestampB4\202" +
-      "\267\0300\n\ndeleted_at\022\013TIMESTAMPTZZ\025Soft delet" +
-      "e timestampR\tdeletedAt\022H\n\ndeleted_by\030\026 \001" +
-      "(\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Soft delete " +
-      "actorR\tdeletedBy:\333\004\372\266\030\270\003\n\005files\022\013udb_sto" +
-      "rage\030\001 \001*BObject-storage file metadata f" +
-      "or uploads, downloads, and lifecycle0\0018\001" +
-      "@\001b\230\001\n\030storage_tenant_isolation\032z(tenant" +
-      "_id::text = current_setting(\'app.current" +
-      "_tenant_id\', true) OR current_setting(\'a" +
-      "pp.platform_admin\', true) = \'true\')(\001h\001\212" +
-      "\001$\n\020idx_files_tenant\022\005BTREEZ\ttenant_id\212\001" +
-      ":\n\023idx_files_reference\022\005BTREEZ\014reference" +
-      "_idZ\016reference_type\212\001+\n\025idx_files_upload" +
-      "ed_by\022\005BTREEZ\013uploaded_by\362\001\025udb.storage." +
-      "files.cdc\372\001\014storage:read\212\262\031\231\001\n\006tenant\032\tt" +
-      "enant_id*4tenant_id = current_setting(\'a" +
-      "pp.current_tenant_id\')2\013soft_delete:\023sto" +
-      "rage.operational@\373\023H\002R\006tenantZ\010standardr" +
-      "\025tenant.data_residencyB\200\002\n\036com.udb.core." +
-      "storage.entity.v1B\tFileProtoP\001ZFgithub.c" +
-      "om/fahara02/udb/sdk/go/gen/udb/core/stor" +
-      "age/entity/v1;entityv1\242\002\004UCSE\252\002\032udb.core" +
-      ".Storage.Entity.V1\312\002\032Udb\\Core\\Storage\\En" +
-      "tity\\V1\342\002&Udb\\GPBMetadata\\Core\\Storage\\E" +
-      "ntity\\V1\352\002\036Udb::Core::Storage::Entity::V" +
-      "1b\006proto3"
+      "UID\030\001(\001:\021gen_random_uuid()R\006fileId\0227\n\tte" +
+      "nant_id\030\002 \001(\tB\032\202\267\030\026\n\ttenant_id\022\004UUID\030\001\230\002" +
+      "\001R\010tenantId\0225\n\nproject_id\030\003 \001(\tB\026\202\267\030\022\n\np" +
+      "roject_id\022\004UUIDR\tprojectId\022:\n\010filename\030\004" +
+      " \001(\tB\036\202\267\030\032\n\010filename\022\014VARCHAR(512)\030\001R\010fi" +
+      "lename\022C\n\014content_type\030\005 \001(\tB \202\267\030\034\n\014cont" +
+      "ent_type\022\014VARCHAR(160)R\013contentType\022<\n\ns" +
+      "ize_bytes\030\006 \001(\003B\035\202\267\030\031\n\nsize_bytes\022\006BIGIN" +
+      "T\030\001:\0010R\tsizeBytes\022^\n\007backend\030\007 \001(\tBD\202\267\030@" +
+      "\n\007backend\022\013VARCHAR(40)Z(Object store bac" +
+      "kend: s3/minio/gcs/azureR\007backend\0222\n\006buc" +
+      "ket\030\010 \001(\tB\032\202\267\030\026\n\006bucket\022\014VARCHAR(160)R\006b" +
+      "ucket\022a\n\nobject_key\030\t \001(\tBB\202\267\030>\n\nobject_" +
+      "key\022\004TEXT\030\001 \001R&\n\033idx_files_object_key_un" +
+      "ique\022\005BTREE\030\001R\tobjectKey\022!\n\003url\030\n \001(\tB\017\202" +
+      "\267\030\013\n\003url\022\004TEXTR\003url\022,\n\007cdn_url\030\013 \001(\tB\023\202\267" +
+      "\030\017\n\007cdn_url\022\004TEXTR\006cdnUrl\022_\n\tfile_type\030\014" +
+      " \001(\0162$.udb.core.storage.entity.v1.FileTy" +
+      "peB\034\202\267\030\030\n\tfile_type\022\013VARCHAR(20)R\010fileTy" +
+      "pe\022;\n\014reference_id\030\r \001(\tB\030\202\267\030\024\n\014referenc" +
+      "e_id\022\004UUIDR\013referenceId\022H\n\016reference_typ" +
+      "e\030\016 \001(\tB!\202\267\030\035\n\016reference_type\022\013VARCHAR(8" +
+      "0)R\rreferenceType\022>\n\tis_public\030\017 \001(\010B!\202\267" +
+      "\030\035\n\tis_public\022\007BOOLEAN\030\001:\005falseR\010isPubli" +
+      "c\022\201\001\n\006status\030\020 \001(\0162&.udb.core.storage.en" +
+      "tity.v1.FileStatusBA\202\267\030=\n\006status\022\013VARCHA" +
+      "R(20)\030\001:\t\'PENDING\'R\031\n\020idx_files_status\022\005" +
+      "BTREER\006status\0228\n\010checksum\030\021 \001(\tB\034\202\267\030\030\n\010c" +
+      "hecksum\022\014VARCHAR(160)R\010checksum\022X\n\nexpir" +
+      "es_at\030\022 \001(\0132\032.google.protobuf.TimestampB" +
+      "\035\202\267\030\031\n\nexpires_at\022\013TIMESTAMPTZR\texpiresA" +
+      "t\0228\n\013uploaded_by\030\023 \001(\tB\027\202\267\030\023\n\013uploaded_b" +
+      "y\022\004UUIDR\nuploadedBy\022\202\001\n\naudit_info\030\024 \001(\013" +
+      "2\035.udb.core.common.v1.AuditInfoBD\202\267\030@\n\na" +
+      "udit_info\022\005JSONB\030\001:\013\'{}\'::jsonbZ\032Audit t" +
+      "rail stored as JSONx\001R\tauditInfo\022o\n\ndele" +
+      "ted_at\030\025 \001(\0132\032.google.protobuf.Timestamp" +
+      "B4\202\267\0300\n\ndeleted_at\022\013TIMESTAMPTZZ\025Soft de" +
+      "lete timestampR\tdeletedAt\022H\n\ndeleted_by\030" +
+      "\026 \001(\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Soft dele" +
+      "te actorR\tdeletedBy:\333\004\372\266\030\270\003\n\005files\022\013udb_" +
+      "storage\030\001 \001*BObject-storage file metadat" +
+      "a for uploads, downloads, and lifecycle0" +
+      "\0018\001@\001b\230\001\n\030storage_tenant_isolation\032z(ten" +
+      "ant_id::text = current_setting(\'app.curr" +
+      "ent_tenant_id\', true) OR current_setting" +
+      "(\'app.platform_admin\', true) = \'true\')(\001" +
+      "h\001\212\001$\n\020idx_files_tenant\022\005BTREEZ\ttenant_i" +
+      "d\212\001:\n\023idx_files_reference\022\005BTREEZ\014refere" +
+      "nce_idZ\016reference_type\212\001+\n\025idx_files_upl" +
+      "oaded_by\022\005BTREEZ\013uploaded_by\362\001\025udb.stora" +
+      "ge.files.cdc\372\001\014storage:read\212\262\031\231\001\n\006tenant" +
+      "\032\ttenant_id*4tenant_id = current_setting" +
+      "(\'app.current_tenant_id\')2\013soft_delete:\023" +
+      "storage.operational@\373\023H\002R\006tenantZ\010standa" +
+      "rdr\025tenant.data_residencyB\200\002\n\036com.udb.co" +
+      "re.storage.entity.v1B\tFileProtoP\001ZFgithu" +
+      "b.com/fahara02/udb/sdk/go/gen/udb/core/s" +
+      "torage/entity/v1;entityv1\242\002\004UCSE\252\002\032udb.c" +
+      "ore.Storage.Entity.V1\312\002\032Udb\\Core\\Storage" +
+      "\\Entity\\V1\342\002&Udb\\GPBMetadata\\Core\\Storag" +
+      "e\\Entity\\V1\352\002\036Udb::Core::Storage::Entity" +
+      "::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

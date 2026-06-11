@@ -208,7 +208,7 @@ var File_udb_core_authz_entity_v1_policy_rule_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_entity_v1_policy_rule_proto_rawDesc = "" +
 	"\n" +
-	"*udb/core/authz/entity/v1/policy_rule.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xfb\x16\n" +
+	"*udb/core/authz/entity/v1/policy_rule.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xfe\x16\n" +
 	"\n" +
 	"PolicyRule\x12I\n" +
 	"\tpolicy_id\x18\x01 \x01(\tB,\x82\xb7\x18(\n" +
@@ -246,10 +246,10 @@ const file_udb_core_authz_entity_v1_policy_rule_proto_rawDesc = "" +
 	"\n" +
 	"deleted_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampBb\x82\xb7\x18^\n" +
 	"\n" +
-	"deleted_at\x12\vTIMESTAMPTZZCSoft-delete tombstone. Non-NULL means the row is logically deleted.R\tdeletedAt\x12\x98\x01\n" +
-	"\ttenant_id\x18\x0e \x01(\tB{\x82\xb7\x18w\n" +
+	"deleted_at\x12\vTIMESTAMPTZZCSoft-delete tombstone. Non-NULL means the row is logically deleted.R\tdeletedAt\x12\x9b\x01\n" +
+	"\ttenant_id\x18\x0e \x01(\tB~\x82\xb7\x18z\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R \n" +
-	"\x17idx_policy_rules_tenant\x12\x05BTREE\xca\x018COALESCE(NULLIF(split_part(domain, ':', 2), ''), domain)R\btenantId\x12H\n" +
+	"\x17idx_policy_rules_tenant\x12\x05BTREE\xca\x018COALESCE(NULLIF(split_part(domain, ':', 2), ''), domain)\x98\x02\x01R\btenantId\x12H\n" +
 	"\n" +
 	"deleted_by\x18\x0f \x01(\tB)\x82\xb7\x18%\n" +
 	"\n" +

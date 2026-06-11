@@ -44,42 +44,42 @@ public final class SamlReplayEntryProto extends com.google.protobuf.GeneratedFil
       "ry.proto\022\026udb.core.idp.entity.v1\032\037google" +
       "/protobuf/timestamp.proto\032\033udb/core/comm" +
       "on/v1/db.proto\032!udb/core/common/v1/secur" +
-      "ity.proto\"\213\t\n\017SamlReplayEntry\022h\n\024saml_re" +
+      "ity.proto\"\216\t\n\017SamlReplayEntry\022h\n\024saml_re" +
       "play_entry_id\030\001 \001(\tB7\202\267\0303\n\024saml_replay_e" +
       "ntry_id\022\004UUID\030\001(\001:\021gen_random_uuid()R\021sa" +
-      "mlReplayEntryId\022<\n\ttenant_id\030\002 \001(\tB\037\202\267\030\033" +
-      "\n\ttenant_id\022\014VARCHAR(120)\030\001R\010tenantId\022:\n" +
-      "\013provider_id\030\003 \001(\tB\031\202\267\030\025\n\013provider_id\022\004U" +
-      "UID\030\001R\nproviderId\022|\n\014assertion_id\030\004 \001(\tB" +
-      "Y\202\267\030U\n\014assertion_id\022\014VARCHAR(255)\030\001Z5SAM" +
-      "L assertion ID (xs:ID), unique per tenan" +
-      "t+providerR\013assertionId\022\242\001\n\017not_on_or_af" +
-      "ter\030\005 \001(\0132\032.google.protobuf.TimestampB_\202" +
-      "\267\030[\n\017not_on_or_after\022\013TIMESTAMPTZ\030\001Z9Ass" +
-      "ertion validity bound; entries are pruna" +
-      "ble after thisR\014notOnOrAfter\022t\n\013consumed" +
-      "_at\030\006 \001(\0132\032.google.protobuf.TimestampB7\202" +
-      "\267\0303\n\013consumed_at\022\013TIMESTAMPTZ\030\001:\021CURRENT" +
-      "_TIMESTAMP`\001h\001R\nconsumedAt:\372\003\372\266\030\343\002\n\023saml" +
-      "_replay_entries\022\007udb_idp\030\r \001*DSingle-use" +
-      " guard for consumed SAML assertion IDs (" +
-      "replay protection)@\001b^\n\020tenant_isolation" +
-      "\032H(tenant_id::text = current_setting(\'ap" +
-      "p.current_tenant_id\', true)::text)(\001\212\001Y\n" +
-      "(uq_saml_replay_tenant_provider_assertio" +
-      "n\022\005BTREE\030\001Z\ttenant_idZ\013provider_idZ\014asse" +
-      "rtion_id\212\0010\n\026idx_saml_replay_expiry\022\005BTR" +
-      "EEZ\017not_on_or_after\352\001\007primary\212\262\031\215\001\n\006tena" +
-      "nt\032\ttenant_id*4tenant_id = current_setti" +
-      "ng(\'app.current_tenant_id\')2\004none:\017idp.o" +
-      "perational@\036H\001R\006tenantZ\010standardr\025tenant" +
-      ".data_residencyB\363\001\n\032com.udb.core.idp.ent" +
-      "ity.v1B\024SamlReplayEntryProtoP\001ZBgithub.c" +
-      "om/fahara02/udb/sdk/go/gen/udb/core/idp/" +
-      "entity/v1;entityv1\242\002\004UCIE\252\002\026udb.core.Idp" +
-      ".Entity.V1\312\002\026Udb\\Core\\Idp\\Entity\\V1\342\002\"Ud" +
-      "b\\GPBMetadata\\Core\\Idp\\Entity\\V1\352\002\032Udb::" +
-      "Core::Idp::Entity::V1b\006proto3"
+      "mlReplayEntryId\022?\n\ttenant_id\030\002 \001(\tB\"\202\267\030\036" +
+      "\n\ttenant_id\022\014VARCHAR(120)\030\001\230\002\001R\010tenantId" +
+      "\022:\n\013provider_id\030\003 \001(\tB\031\202\267\030\025\n\013provider_id" +
+      "\022\004UUID\030\001R\nproviderId\022|\n\014assertion_id\030\004 \001" +
+      "(\tBY\202\267\030U\n\014assertion_id\022\014VARCHAR(255)\030\001Z5" +
+      "SAML assertion ID (xs:ID), unique per te" +
+      "nant+providerR\013assertionId\022\242\001\n\017not_on_or" +
+      "_after\030\005 \001(\0132\032.google.protobuf.Timestamp" +
+      "B_\202\267\030[\n\017not_on_or_after\022\013TIMESTAMPTZ\030\001Z9" +
+      "Assertion validity bound; entries are pr" +
+      "unable after thisR\014notOnOrAfter\022t\n\013consu" +
+      "med_at\030\006 \001(\0132\032.google.protobuf.Timestamp" +
+      "B7\202\267\0303\n\013consumed_at\022\013TIMESTAMPTZ\030\001:\021CURR" +
+      "ENT_TIMESTAMP`\001h\001R\nconsumedAt:\372\003\372\266\030\343\002\n\023s" +
+      "aml_replay_entries\022\007udb_idp\030\r \001*DSingle-" +
+      "use guard for consumed SAML assertion ID" +
+      "s (replay protection)@\001b^\n\020tenant_isolat" +
+      "ion\032H(tenant_id::text = current_setting(" +
+      "\'app.current_tenant_id\', true)::text)(\001\212" +
+      "\001Y\n(uq_saml_replay_tenant_provider_asser" +
+      "tion\022\005BTREE\030\001Z\ttenant_idZ\013provider_idZ\014a" +
+      "ssertion_id\212\0010\n\026idx_saml_replay_expiry\022\005" +
+      "BTREEZ\017not_on_or_after\352\001\007primary\212\262\031\215\001\n\006t" +
+      "enant\032\ttenant_id*4tenant_id = current_se" +
+      "tting(\'app.current_tenant_id\')2\004none:\017id" +
+      "p.operational@\036H\001R\006tenantZ\010standardr\025ten" +
+      "ant.data_residencyB\363\001\n\032com.udb.core.idp." +
+      "entity.v1B\024SamlReplayEntryProtoP\001ZBgithu" +
+      "b.com/fahara02/udb/sdk/go/gen/udb/core/i" +
+      "dp/entity/v1;entityv1\242\002\004UCIE\252\002\026udb.core." +
+      "Idp.Entity.V1\312\002\026Udb\\Core\\Idp\\Entity\\V1\342\002" +
+      "\"Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1\352\002\032Ud" +
+      "b::Core::Idp::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

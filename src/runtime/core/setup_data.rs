@@ -754,7 +754,13 @@ impl DataBrokerRuntime {
                     object_key: first.object_key.clone(),
                     method: "PUT".to_string(),
                     chunk_count: 1,
-                    final_chunk_seen: first.final_chunk,
+                    // Pre-flight only sees the FIRST chunk, so it cannot know
+                    // whether the whole stream ends with `final_chunk=true` — a
+                    // multi-chunk PUT (first chunk non-final) would wrongly fail
+                    // here. The real terminator is the gRPC stream closing, which
+                    // `stream_put_object` consumes; so the whole-stream invariant
+                    // is satisfied by construction and must not gate the pre-flight.
+                    final_chunk_seen: true,
                     content_type: first.content_type.clone(),
                 },
             );

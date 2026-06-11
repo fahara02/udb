@@ -45,7 +45,7 @@ public final class ApiKeyProto extends com.google.protobuf.GeneratedFile {
       "tobuf/timestamp.proto\032%udb/core/apikey/e" +
       "ntity/v1/enums.proto\032\033udb/core/common/v1" +
       "/db.proto\032!udb/core/common/v1/security.p" +
-      "roto\"\332\036\n\006ApiKey\022@\n\006key_id\030\001 \001(\tB)\202\267\030%\n\006k" +
+      "roto\"\335\036\n\006ApiKey\022@\n\006key_id\030\001 \001(\tB)\202\267\030%\n\006k" +
       "ey_id\022\004UUID\030\001(\001:\021gen_random_uuid()R\005keyI" +
       "d\022\204\001\n\nkey_prefix\030\002 \001(\tBe\202\267\030a\n\nkey_prefix" +
       "\022\013VARCHAR(20)\030\001ZAFirst 8 chars of plain " +
@@ -101,55 +101,56 @@ public final class ApiKeyProto extends com.google.protobuf.GeneratedFile {
       "eys_active\022\005BTREE:(deleted_at IS NULL AN" +
       "D status = \'ACTIVE\'R\tdeletedAt\022P\n\ndelete" +
       "d_by\030\025 \001(\tB1\202\267\030-\n\ndeleted_by\022\014VARCHAR(16" +
-      "0)Z\021Soft delete actorR\tdeletedBy\022\202\001\n\tten" +
-      "ant_id\030\026 \001(\tBe\202\267\030a\n\ttenant_id\022\014VARCHAR(1" +
+      "0)Z\021Soft delete actorR\tdeletedBy\022\205\001\n\tten" +
+      "ant_id\030\026 \001(\tBh\202\267\030d\n\ttenant_id\022\014VARCHAR(1" +
       "20)R\037\n\026idx_api_keys_tenant_id\022\005BTREEZ%Op" +
-      "tional tenant boundary for this keyR\010ten" +
-      "antId\022\224\001\n\nproject_id\030\027 \001(\tBu\202\267\030q\n\nprojec" +
-      "t_id\022\014VARCHAR(120)R \n\027idx_api_keys_proje" +
-      "ct_id\022\005BTREEZ3Optional project/applicati" +
-      "on namespace for this keyR\tprojectId\022\256\001\n" +
-      "\026allowed_resources_json\030\030 \001(\tBx\202\267\030t\n\026all" +
-      "owed_resources_json\022\005JSONB\030\001:\013\'[]\'::json" +
-      "bZBOptional resource allowlist; empty de" +
-      "legates to policy engine onlyx\001R\024allowed" +
-      "ResourcesJson\022i\n\rmetadata_json\030\031 \001(\tBD\202\267" +
-      "\030@\n\rmetadata_json\022\005JSONB\030\001:\013\'{}\'::jsonbZ" +
-      "\027Non-secret key metadatax\001R\014metadataJson" +
-      ":\306\010\372\266\030\244\007\n\010api_keys\022\tudb_authn\030\004 \001*4Machi" +
-      "ne-to-machine API keys for integration a" +
-      "ccounts0\0018\001\212\0016\n\017idx_apikey_hash\022\005BTREE:\022" +
-      "deleted_at IS NULLZ\010key_hash\232\001\021\n\007pg_trgm" +
-      "\022\006public\252\001R\n\035trg_api_keys_touch_updated_" +
-      "at\022\006BEFORE\032\006UPDATE\"\034udb_authn.touch_upda" +
-      "ted_at()*\003ROW\252\001P\n\030trg_apikey_hash_requir" +
-      "ed\022\006BEFORE\032\006INSERT\"\037udb_authn.assert_api" +
-      "_key_hash()*\003ROW\302\001\332\001\n\031touch_updated_at_f" +
-      "unction\022\010postgres\032\017before_triggers\"\241\001CRE" +
-      "ATE OR REPLACE FUNCTION udb_authn.touch_" +
-      "updated_at()\nRETURNS trigger\nLANGUAGE pl" +
-      "pgsql\nAS $$\nBEGIN\n  NEW.updated_at = CUR" +
-      "RENT_TIMESTAMP;\n  RETURN NEW;\nEND;\n$$;\302\001" +
-      "\340\002\n\035apikey_hash_required_function\022\010postg" +
-      "res\032\017before_triggers\"\243\002CREATE OR REPLACE" +
-      " FUNCTION udb_authn.assert_api_key_hash(" +
-      ")\nRETURNS trigger\nLANGUAGE plpgsql\nAS $$" +
-      "\nBEGIN\n  IF NEW.key_hash IS NULL OR leng" +
-      "th(NEW.key_hash) > 128 THEN\n    RAISE EX" +
-      "CEPTION \'api_keys.key_hash must be a key" +
-      "ed digest no longer than 128 characters\'" +
-      ";\n  END IF;\n  RETURN NEW;\nEND;\n$$;\352\001\007pri" +
-      "mary\372\001\rapikey:revoke\212\262\031\230\001\n\006tenant\032\ttenan" +
-      "t_id*4tenant_id = current_setting(\'app.c" +
-      "urrent_tenant_id\')2\013soft_delete:\022apikey." +
-      "operational@\373\023H\002R\006tenantZ\010standardr\025tena" +
-      "nt.data_residencyB\374\001\n\035com.udb.core.apike" +
-      "y.entity.v1B\013ApiKeyProtoP\001ZEgithub.com/f" +
-      "ahara02/udb/sdk/go/gen/udb/core/apikey/e" +
-      "ntity/v1;entityv1\242\002\004UCAE\252\002\031udb.core.Apik" +
-      "ey.Entity.V1\312\002\031Udb\\Core\\Apikey\\Entity\\V1" +
-      "\342\002%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1" +
-      "\352\002\035Udb::Core::Apikey::Entity::V1b\006proto3"
+      "tional tenant boundary for this key\230\002\001R\010" +
+      "tenantId\022\224\001\n\nproject_id\030\027 \001(\tBu\202\267\030q\n\npro" +
+      "ject_id\022\014VARCHAR(120)R \n\027idx_api_keys_pr" +
+      "oject_id\022\005BTREEZ3Optional project/applic" +
+      "ation namespace for this keyR\tprojectId\022" +
+      "\256\001\n\026allowed_resources_json\030\030 \001(\tBx\202\267\030t\n\026" +
+      "allowed_resources_json\022\005JSONB\030\001:\013\'[]\'::j" +
+      "sonbZBOptional resource allowlist; empty" +
+      " delegates to policy engine onlyx\001R\024allo" +
+      "wedResourcesJson\022i\n\rmetadata_json\030\031 \001(\tB" +
+      "D\202\267\030@\n\rmetadata_json\022\005JSONB\030\001:\013\'{}\'::jso" +
+      "nbZ\027Non-secret key metadatax\001R\014metadataJ" +
+      "son:\306\010\372\266\030\244\007\n\010api_keys\022\tudb_authn\030\004 \001*4Ma" +
+      "chine-to-machine API keys for integratio" +
+      "n accounts0\0018\001\212\0016\n\017idx_apikey_hash\022\005BTRE" +
+      "E:\022deleted_at IS NULLZ\010key_hash\232\001\021\n\007pg_t" +
+      "rgm\022\006public\252\001R\n\035trg_api_keys_touch_updat" +
+      "ed_at\022\006BEFORE\032\006UPDATE\"\034udb_authn.touch_u" +
+      "pdated_at()*\003ROW\252\001P\n\030trg_apikey_hash_req" +
+      "uired\022\006BEFORE\032\006INSERT\"\037udb_authn.assert_" +
+      "api_key_hash()*\003ROW\302\001\332\001\n\031touch_updated_a" +
+      "t_function\022\010postgres\032\017before_triggers\"\241\001" +
+      "CREATE OR REPLACE FUNCTION udb_authn.tou" +
+      "ch_updated_at()\nRETURNS trigger\nLANGUAGE" +
+      " plpgsql\nAS $$\nBEGIN\n  NEW.updated_at = " +
+      "CURRENT_TIMESTAMP;\n  RETURN NEW;\nEND;\n$$" +
+      ";\302\001\340\002\n\035apikey_hash_required_function\022\010po" +
+      "stgres\032\017before_triggers\"\243\002CREATE OR REPL" +
+      "ACE FUNCTION udb_authn.assert_api_key_ha" +
+      "sh()\nRETURNS trigger\nLANGUAGE plpgsql\nAS" +
+      " $$\nBEGIN\n  IF NEW.key_hash IS NULL OR l" +
+      "ength(NEW.key_hash) > 128 THEN\n    RAISE" +
+      " EXCEPTION \'api_keys.key_hash must be a " +
+      "keyed digest no longer than 128 characte" +
+      "rs\';\n  END IF;\n  RETURN NEW;\nEND;\n$$;\352\001\007" +
+      "primary\372\001\rapikey:revoke\212\262\031\230\001\n\006tenant\032\tte" +
+      "nant_id*4tenant_id = current_setting(\'ap" +
+      "p.current_tenant_id\')2\013soft_delete:\022apik" +
+      "ey.operational@\373\023H\002R\006tenantZ\010standardr\025t" +
+      "enant.data_residencyB\374\001\n\035com.udb.core.ap" +
+      "ikey.entity.v1B\013ApiKeyProtoP\001ZEgithub.co" +
+      "m/fahara02/udb/sdk/go/gen/udb/core/apike" +
+      "y/entity/v1;entityv1\242\002\004UCAE\252\002\031udb.core.A" +
+      "pikey.Entity.V1\312\002\031Udb\\Core\\Apikey\\Entity" +
+      "\\V1\342\002%Udb\\GPBMetadata\\Core\\Apikey\\Entity" +
+      "\\V1\352\002\035Udb::Core::Apikey::Entity::V1b\006pro" +
+      "to3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

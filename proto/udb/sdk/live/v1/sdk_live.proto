@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package udb.sdk.live.v1;
+
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.sdk.Live.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/sdk/live/v1;livev1";
+option java_package = "com.udb.sdk.live.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Sdk\\Live\\V1";
+option php_namespace = "Udb\\Sdk\\Live\\V1";
+
+// SdkLiveRecord is intentionally tiny and operational: the live SDK
+// conformance suite uses it to prove DataBroker relational CRUD end to end.
+message SdkLiveRecord {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "sdk_live_records"
+    schema_name: "udb_sdk_live"
+    migration_order: 1
+    is_table: true
+    enable_rls: false
+    force_rls: false
+    audit_fields: false
+    soft_delete: false
+    required_scope: "udb:admin"
+    cdc_topic: "udb.sdk.live.records.cdc"
+    comment: "Ephemeral rows used by SDK live end-to-end conformance tests"
+    indexes: {
+      index_name: "idx_sdk_live_records_lookup"
+      index_type: "BTREE"
+      columns: "lookup_key"
+      unique: true
+    }
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "none"
+    project_isolation_mode: "none"
+    soft_delete_mode: "none"
+    retention_class: "test.ephemeral"
+    audit_mode: AUDIT_MODE_NONE
+    encryption_profile: "none"
+    pii_profile: "none"
+    export_eligible: false
+  };
+
+  string record_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "record_id" sql_type: "VARCHAR(80)" primary_key: true not_null: true }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" not_null: true }];
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" project_column: true sql_type: "VARCHAR(120)" not_null: true }];
+  string lookup_key = 4 [(udb.core.common.v1.pg_column) = { column_name: "lookup_key" sql_type: "VARCHAR(160)" not_null: true unique: true }];
+  string payload = 5 [(udb.core.common.v1.pg_column) = { column_name: "payload" sql_type: "TEXT" not_null: true }];
+  int64 revision = 6 [(udb.core.common.v1.pg_column) = { column_name: "revision" sql_type: "BIGINT" not_null: true default_value: "0" }];
+
+  // Object-store backing for the live SDK conformance object path. The `storage`
+  // annotation declares a `udb-live-sdk` MinIO object store (store_kind=object)
+  // that the broker's object plane requires before it will serve
+  // PutObject / GetObject / GeneratePresignedUrl against that bucket. The column
+  // itself is a nullable object-key reference; the relational CRUD path ignores it.
+  string blob_ref = 7 [
+    (udb.core.common.v1.pg_column) = { column_name: "blob_ref" sql_type: "TEXT" },
+    (udb.core.common.v1.storage) = {
+      backend: STORAGE_BACKEND_MINIO
+      bucket_env_key: "udb-live-sdk"
+      key_prefix: "go/"
+      presigned_read: true
+      presigned_write: true
+      presigned_ttl_seconds: 60
+    }
+  ];
+}

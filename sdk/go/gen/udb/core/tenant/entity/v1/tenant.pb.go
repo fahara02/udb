@@ -153,10 +153,10 @@ var File_udb_core_tenant_entity_v1_tenant_proto protoreflect.FileDescriptor
 
 const file_udb_core_tenant_entity_v1_tenant_proto_rawDesc = "" +
 	"\n" +
-	"&udb/core/tenant/entity/v1/tenant.proto\x12\x19udb.core.tenant.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/tenant/entity/v1/enums.proto\"\xd9\x0e\n" +
-	"\x06Tenant\x12I\n" +
-	"\ttenant_id\x18\x01 \x01(\tB,\x82\xb7\x18(\n" +
-	"\ttenant_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\btenantId\x12S\n" +
+	"&udb/core/tenant/entity/v1/tenant.proto\x12\x19udb.core.tenant.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a%udb/core/tenant/entity/v1/enums.proto\"\xdc\x0e\n" +
+	"\x06Tenant\x12L\n" +
+	"\ttenant_id\x18\x01 \x01(\tB/\x82\xb7\x18+\n" +
+	"\ttenant_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()\x98\x02\x01R\btenantId\x12S\n" +
 	"\x04code\x18\x02 \x01(\tB?\x82\xb7\x18;\n" +
 	"\x04code\x12\vVARCHAR(50)\x18\x01 \x01R\"\n" +
 	"\x17idx_tenants_code_unique\x12\x05BTREE\x18\x01R\x04code\x12.\n" +

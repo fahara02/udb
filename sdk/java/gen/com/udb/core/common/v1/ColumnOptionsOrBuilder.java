@@ -383,4 +383,26 @@ public interface ColumnOptionsOrBuilder extends
    * @return The nullable.
    */
   boolean getNullable();
+
+  /**
+   * <pre>
+   * Marks this column as the tenant-isolation key referenced by
+   * db_table_security.tenant_column.
+   * </pre>
+   *
+   * <code>bool tenant_column = 35 [json_name = "tenantColumn"];</code>
+   * @return The tenantColumn.
+   */
+  boolean getTenantColumn();
+
+  /**
+   * <pre>
+   * Marks this column as the project-isolation key referenced by
+   * db_table_security.project_column.
+   * </pre>
+   *
+   * <code>bool project_column = 36 [json_name = "projectColumn"];</code>
+   * @return The projectColumn.
+   */
+  boolean getProjectColumn();
 }

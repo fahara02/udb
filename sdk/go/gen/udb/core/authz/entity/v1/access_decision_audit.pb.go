@@ -284,7 +284,7 @@ var File_udb_core_authz_entity_v1_access_decision_audit_proto protoreflect.FileD
 
 const file_udb_core_authz_entity_v1_access_decision_audit_proto_rawDesc = "" +
 	"\n" +
-	"4udb/core/authz/entity/v1/access_decision_audit.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb9\x12\n" +
+	"4udb/core/authz/entity/v1/access_decision_audit.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xbc\x12\n" +
 	"\x13AccessDecisionAudit\x12`\n" +
 	"\x11decision_audit_id\x18\x01 \x01(\tB4\x82\xb7\x180\n" +
 	"\x11decision_audit_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x0fdecisionAuditId\x12[\n" +
@@ -316,10 +316,10 @@ const file_udb_core_authz_entity_v1_access_decision_audit_proto_rawDesc = "" +
 	"\n" +
 	"decided_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampB2\x82\xb7\x18.\n" +
 	"\n" +
-	"decided_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMPR\tdecidedAt\x12d\n" +
-	"\ttenant_id\x18\r \x01(\tBG\x82\xb7\x18C\n" +
+	"decided_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMPR\tdecidedAt\x12g\n" +
+	"\ttenant_id\x18\r \x01(\tBJ\x82\xb7\x18F\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R'\n" +
-	"\x1eidx_accessdecisionaudit_tenant\x12\x05BTREER\btenantId\x12k\n" +
+	"\x1eidx_accessdecisionaudit_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12k\n" +
 	"\vdecision_id\x18\x0e \x01(\tBJ\x82\xb7\x18F\n" +
 	"\vdecision_id\x12\fVARCHAR(120)R)\n" +
 	" idx_accessdecisionaudit_decision\x12\x05BTREER\n" +

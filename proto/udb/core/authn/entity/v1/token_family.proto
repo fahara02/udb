@@ -77,7 +77,7 @@ message TokenFamily {
 
   string principal_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "principal_id" sql_type: "VARCHAR(160)" not_null: true }];
 
-  string tenant_id = 5 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true }];
+  string tenant_id = 5 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true }];
 
   string project_id = 6 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" }];
 

@@ -44,7 +44,7 @@ public final class RecoveryCodeProto extends com.google.protobuf.GeneratedFile {
       ".proto\022\030udb.core.authn.entity.v1\032\037google" +
       "/protobuf/timestamp.proto\032\033udb/core/comm" +
       "on/v1/db.proto\032!udb/core/common/v1/secur" +
-      "ity.proto\"\256\t\n\014RecoveryCode\022]\n\020recovery_c" +
+      "ity.proto\"\261\t\n\014RecoveryCode\022]\n\020recovery_c" +
       "ode_id\030\001 \001(\tB3\202\267\030/\n\020recovery_code_id\022\004UU" +
       "ID\030\001(\001:\021gen_random_uuid()R\016recoveryCodeI" +
       "d\022\264\001\n\007user_id\030\002 \001(\tB\232\001\202\267\030\225\001\n\007user_id\022\004UU" +
@@ -61,26 +61,26 @@ public final class RecoveryCodeProto extends com.google.protobuf.GeneratedFile {
       "while unusedR\006usedAt\022q\n\ncreated_at\030\005 \001(\013" +
       "2\032.google.protobuf.TimestampB6\202\267\0302\n\ncrea" +
       "ted_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP" +
-      "`\001h\001R\tcreatedAt\022\226\001\n\ttenant_id\030\006 \001(\tBy\202\267\030" +
-      "u\n\ttenant_id\022\014VARCHAR(120)R%\n\034idx_recove" +
+      "`\001h\001R\tcreatedAt\022\231\001\n\ttenant_id\030\006 \001(\tB|\202\267\030" +
+      "x\n\ttenant_id\022\014VARCHAR(120)R%\n\034idx_recove" +
       "ry_codes_tenant_id\022\005BTREEZ3Tenant bounda" +
-      "ry (denormalized from the owning user)R\010" +
-      "tenantId:\347\002\372\266\030\315\001\n\016recovery_codes\022\tudb_au" +
-      "thn\030\006 \001*+Hashed single-use MFA recovery/" +
-      "backup codes@\001bs\n\020tenant_isolation\032](ten" +
-      "ant_id IS NULL OR tenant_id::text = curr" +
-      "ent_setting(\'app.current_tenant_id\', tru" +
-      "e)::text)(\001\352\001\007primary\212\262\031\220\001\n\006tenant\032\ttena" +
-      "nt_id*4tenant_id = current_setting(\'app." +
-      "current_tenant_id\')2\004none:\021authn.operati" +
-      "onal@\373\023H\002R\006tenantZ\010standardr\025tenant.data" +
-      "_residencyB\374\001\n\034com.udb.core.authn.entity" +
-      ".v1B\021RecoveryCodeProtoP\001ZDgithub.com/fah" +
-      "ara02/udb/sdk/go/gen/udb/core/authn/enti" +
-      "ty/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Authn.E" +
-      "ntity.V1\312\002\030Udb\\Core\\Authn\\Entity\\V1\342\002$Ud" +
-      "b\\GPBMetadata\\Core\\Authn\\Entity\\V1\352\002\034Udb" +
-      "::Core::Authn::Entity::V1b\006proto3"
+      "ry (denormalized from the owning user)\230\002" +
+      "\001R\010tenantId:\347\002\372\266\030\315\001\n\016recovery_codes\022\tudb" +
+      "_authn\030\006 \001*+Hashed single-use MFA recove" +
+      "ry/backup codes@\001bs\n\020tenant_isolation\032](" +
+      "tenant_id IS NULL OR tenant_id::text = c" +
+      "urrent_setting(\'app.current_tenant_id\', " +
+      "true)::text)(\001\352\001\007primary\212\262\031\220\001\n\006tenant\032\tt" +
+      "enant_id*4tenant_id = current_setting(\'a" +
+      "pp.current_tenant_id\')2\004none:\021authn.oper" +
+      "ational@\373\023H\002R\006tenantZ\010standardr\025tenant.d" +
+      "ata_residencyB\374\001\n\034com.udb.core.authn.ent" +
+      "ity.v1B\021RecoveryCodeProtoP\001ZDgithub.com/" +
+      "fahara02/udb/sdk/go/gen/udb/core/authn/e" +
+      "ntity/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Auth" +
+      "n.Entity.V1\312\002\030Udb\\Core\\Authn\\Entity\\V1\342\002" +
+      "$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1\352\002\034" +
+      "Udb::Core::Authn::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

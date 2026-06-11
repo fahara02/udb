@@ -136,7 +136,7 @@ var File_udb_core_authz_entity_v1_policy_approval_proto protoreflect.FileDescrip
 
 const file_udb_core_authz_entity_v1_policy_approval_proto_rawDesc = "" +
 	"\n" +
-	".udb/core/authz/entity/v1/policy_approval.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xe0\t\n" +
+	".udb/core/authz/entity/v1/policy_approval.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xe3\t\n" +
 	"\x0ePolicyApproval\x12O\n" +
 	"\vapproval_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vapproval_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
@@ -144,10 +144,10 @@ const file_udb_core_authz_entity_v1_policy_approval_proto_rawDesc = "" +
 	"\bdraft_id\x18\x02 \x01(\tB\xaa\x01\x82\xb7\x18\xa5\x01\n" +
 	"\bdraft_id\x12\x04UUID\x18\x01JD\n" +
 	"\rpolicy_drafts\x12\bdraft_id\x1a\tudb_authz \x032\x1cfk_policy_approvals_draft_idR-\n" +
-	"\x1aidx_policy_approvals_draft\x12\x05BTREEZ\bdraft_idZ\x1cFK to policy_drafts.draft_idR\adraftId\x12a\n" +
-	"\ttenant_id\x18\x03 \x01(\tBD\x82\xb7\x18@\n" +
+	"\x1aidx_policy_approvals_draft\x12\x05BTREEZ\bdraft_idZ\x1cFK to policy_drafts.draft_idR\adraftId\x12d\n" +
+	"\ttenant_id\x18\x03 \x01(\tBG\x82\xb7\x18C\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R$\n" +
-	"\x1bidx_policy_approvals_tenant\x12\x05BTREER\btenantId\x12N\n" +
+	"\x1bidx_policy_approvals_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12N\n" +
 	"\x05actor\x18\x04 \x01(\tB8\x82\xb7\x184\n" +
 	"\x05actor\x12\fVARCHAR(160)\x18\x01Z\x1bReviewer/approver principalR\x05actor\x12@\n" +
 	"\x04role\x18\x05 \x01(\tB,\x82\xb7\x18(\n" +

@@ -29,51 +29,74 @@ namespace udb.core.Notification.Entity.V1 {
             "Z2xlL3Byb3RvYnVmL3RpbWVzdGFtcC5wcm90bxobdWRiL2NvcmUvY29tbW9u",
             "L3YxL2RiLnByb3RvGiF1ZGIvY29yZS9jb21tb24vdjEvc2VjdXJpdHkucHJv",
             "dG8aK3VkYi9jb3JlL25vdGlmaWNhdGlvbi9lbnRpdHkvdjEvZW51bXMucHJv",
-            "dG8i9QsKDE5vdGlmaWNhdGlvbhInCg9ub3RpZmljYXRpb25faWQYASABKAlS",
-            "Dm5vdGlmaWNhdGlvbklkEiEKDHJlY2lwaWVudF9pZBgCIAEoCVILcmVjaXBp",
-            "ZW50SWQSRQoEdHlwZRgDIAEoDjIxLnVkYi5jb3JlLm5vdGlmaWNhdGlvbi5l",
-            "bnRpdHkudjEuTm90aWZpY2F0aW9uVHlwZVIEdHlwZRJOCgdjaGFubmVsGAQg",
-            "ASgOMjQudWRiLmNvcmUubm90aWZpY2F0aW9uLmVudGl0eS52MS5Ob3RpZmlj",
-            "YXRpb25DaGFubmVsUgdjaGFubmVsEhgKB3N1YmplY3QYBSABKAlSB3N1Ympl",
-            "Y3QSGAoHbWVzc2FnZRgGIAEoCVIHbWVzc2FnZRJkCg10ZW1wbGF0ZV9kYXRh",
-            "GAcgAygLMj8udWRiLmNvcmUubm90aWZpY2F0aW9uLmVudGl0eS52MS5Ob3Rp",
-            "ZmljYXRpb24uVGVtcGxhdGVEYXRhRW50cnlSDHRlbXBsYXRlRGF0YRJRCghw",
-            "cmlvcml0eRgIIAEoDjI1LnVkYi5jb3JlLm5vdGlmaWNhdGlvbi5lbnRpdHku",
-            "djEuTm90aWZpY2F0aW9uUHJpb3JpdHlSCHByaW9yaXR5EksKBnN0YXR1cxgJ",
-            "IAEoDjIzLnVkYi5jb3JlLm5vdGlmaWNhdGlvbi5lbnRpdHkudjEuTm90aWZp",
-            "Y2F0aW9uU3RhdHVzUgZzdGF0dXMSPQoMc2NoZWR1bGVkX2F0GAogASgLMhou",
-            "Z29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcFILc2NoZWR1bGVkQXQSMwoHc2Vu",
-            "dF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBSBnNlbnRB",
-            "dBI9CgxkZWxpdmVyZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGlt",
-            "ZXN0YW1wUgtkZWxpdmVyZWRBdBIzCgdyZWFkX2F0GA0gASgLMhouZ29vZ2xl",
-            "LnByb3RvYnVmLlRpbWVzdGFtcFIGcmVhZEF0EjkKCmNyZWF0ZWRfYXQYDiAB",
-            "KAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wUgljcmVhdGVkQXQSHwoL",
-            "cmV0cnlfY291bnQYDyABKAVSCnJldHJ5Q291bnQSIwoNZXJyb3JfbWVzc2Fn",
-            "ZRgQIAEoCVIMZXJyb3JNZXNzYWdlEhsKCXRlbmFudF9pZBgRIAEoCVIIdGVu",
-            "YW50SWQaPwoRVGVtcGxhdGVEYXRhRW50cnkSEAoDa2V5GAEgASgJUgNrZXkS",
-            "FAoFdmFsdWUYAiABKAlSBXZhbHVlOgI4ATqABPq2GNcCCg1ub3RpZmljYXRp",
-            "b25zEhB1ZGJfbm90aWZpY2F0aW9uGAEgASo4UXVldWVkLCBzZW50LCBkZWxp",
-            "dmVyZWQsIGFuZCBmYWlsZWQgbm90aWZpY2F0aW9uIHJlY29yZHMwATgBQAFi",
-            "XgoQdGVuYW50X2lzb2xhdGlvbhpIKHRlbmFudF9pZDo6dGV4dCA9IGN1cnJl",
-            "bnRfc2V0dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lkJywgdHJ1ZSk6OnRl",
-            "eHQpKAGKATsKH2lkeF9ub3RpZmljYXRpb25zX3RlbmFudF9zdGF0dXMSBUJU",
-            "UkVFWgl0ZW5hbnRfaWRaBnN0YXR1c4oBMgobaWR4X25vdGlmaWNhdGlvbnNf",
-            "cmVjaXBpZW50EgVCVFJFRVoMcmVjaXBpZW50X2lk6gEHcHJpbWFyefoBEm5v",
-            "dGlmaWNhdGlvbjp3cml0ZYqyGZ8BCgZ0ZW5hbnQaCXRlbmFudF9pZCo0dGVu",
-            "YW50X2lkID0gY3VycmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF90ZW5hbnRf",
-            "aWQnKTILc29mdF9kZWxldGU6GG5vdGlmaWNhdGlvbi5vcGVyYXRpb25hbED7",
-            "E0gCUgZ0ZW5hbnRaCXJlY2lwaWVudHIVdGVuYW50LmRhdGFfcmVzaWRlbmN5",
-            "QqYCCiNjb20udWRiLmNvcmUubm90aWZpY2F0aW9uLmVudGl0eS52MUIRTm90",
-            "aWZpY2F0aW9uUHJvdG9QAVpLZ2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2Rr",
-            "L2dvL2dlbi91ZGIvY29yZS9ub3RpZmljYXRpb24vZW50aXR5L3YxO2VudGl0",
-            "eXYxogIEVUNORaoCH3VkYi5jb3JlLk5vdGlmaWNhdGlvbi5FbnRpdHkuVjHK",
-            "Ah9VZGJcQ29yZVxOb3RpZmljYXRpb25cRW50aXR5XFYx4gIrVWRiXEdQQk1l",
-            "dGFkYXRhXENvcmVcTm90aWZpY2F0aW9uXEVudGl0eVxWMeoCI1VkYjo6Q29y",
-            "ZTo6Tm90aWZpY2F0aW9uOjpFbnRpdHk6OlYxYgZwcm90bzM="));
+            "dG8i9RMKDE5vdGlmaWNhdGlvbhJbCg9ub3RpZmljYXRpb25faWQYASABKAlC",
+            "MoK3GC4KD25vdGlmaWNhdGlvbl9pZBIEVVVJRBgBKAE6EWdlbl9yYW5kb21f",
+            "dXVpZCgpUg5ub3RpZmljYXRpb25JZBJmCgxyZWNpcGllbnRfaWQYAiABKAlC",
+            "Q4K3GD8KDHJlY2lwaWVudF9pZBIEVVVJRBgBUicKHmlkeF9ub3RpZmljYXRp",
+            "b25zX3JlY2lwaWVudF9pZBIFQlRSRUVSC3JlY2lwaWVudElkEoEBCgR0eXBl",
+            "GAMgASgOMjEudWRiLmNvcmUubm90aWZpY2F0aW9uLmVudGl0eS52MS5Ob3Rp",
+            "ZmljYXRpb25UeXBlQjqCtxg2CgR0eXBlEgtWQVJDSEFSKDQwKRgBOh8nTk9U",
+            "SUZJQ0FUSU9OX1RZUEVfVU5TUEVDSUZJRUQnUgR0eXBlEpABCgdjaGFubmVs",
+            "GAQgASgOMjQudWRiLmNvcmUubm90aWZpY2F0aW9uLmVudGl0eS52MS5Ob3Rp",
+            "ZmljYXRpb25DaGFubmVsQkCCtxg8CgdjaGFubmVsEgtWQVJDSEFSKDQwKRgB",
+            "OiInTk9USUZJQ0FUSU9OX0NIQU5ORUxfVU5TUEVDSUZJRUQnUgdjaGFubmVs",
+            "EjMKB3N1YmplY3QYBSABKAlCGYK3GBUKB3N1YmplY3QSBFRFWFQYAToCJydS",
+            "B3N1YmplY3QSMwoHbWVzc2FnZRgGIAEoCUIZgrcYFQoHbWVzc2FnZRIEVEVY",
+            "VBgBOgInJ1IHbWVzc2FnZRKRAQoNdGVtcGxhdGVfZGF0YRgHIAMoCzI/LnVk",
+            "Yi5jb3JlLm5vdGlmaWNhdGlvbi5lbnRpdHkudjEuTm90aWZpY2F0aW9uLlRl",
+            "bXBsYXRlRGF0YUVudHJ5QiuCtxgnCg10ZW1wbGF0ZV9kYXRhEgVKU09OQhgB",
+            "Ogsne30nOjpqc29uYngBUgx0ZW1wbGF0ZURhdGESkAEKCHByaW9yaXR5GAgg",
+            "ASgOMjUudWRiLmNvcmUubm90aWZpY2F0aW9uLmVudGl0eS52MS5Ob3RpZmlj",
+            "YXRpb25Qcmlvcml0eUI9grcYOQoIcHJpb3JpdHkSC1ZBUkNIQVIoNDApGAE6",
+            "HidOT1RJRklDQVRJT05fUFJJT1JJVFlfTk9STUFMJ1IIcHJpb3JpdHkSqgEK",
+            "BnN0YXR1cxgJIAEoDjIzLnVkYi5jb3JlLm5vdGlmaWNhdGlvbi5lbnRpdHku",
+            "djEuTm90aWZpY2F0aW9uU3RhdHVzQl2CtxhZCgZzdGF0dXMSC1ZBUkNIQVIo",
+            "NDApGAE6HSdOT1RJRklDQVRJT05fU1RBVFVTX1BFTkRJTkcnUiEKGGlkeF9u",
+            "b3RpZmljYXRpb25zX3N0YXR1cxIFQlRSRUVSBnN0YXR1cxJeCgxzY2hlZHVs",
+            "ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQh+Ctxgb",
+            "CgxzY2hlZHVsZWRfYXQSC1RJTUVTVEFNUFRaUgtzY2hlZHVsZWRBdBJPCgdz",
+            "ZW50X2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIagrcY",
+            "FgoHc2VudF9hdBILVElNRVNUQU1QVFpSBnNlbnRBdBJeCgxkZWxpdmVyZWRf",
+            "YXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQh+CtxgbCgxk",
+            "ZWxpdmVyZWRfYXQSC1RJTUVTVEFNUFRaUgtkZWxpdmVyZWRBdBJPCgdyZWFk",
+            "X2F0GA0gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIagrcYFgoH",
+            "cmVhZF9hdBILVElNRVNUQU1QVFpSBnJlYWRBdBJxCgpjcmVhdGVkX2F0GA4g",
+            "ASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEI2grcYMgoKY3JlYXRl",
+            "ZF9hdBILVElNRVNUQU1QVFoYAToRQ1VSUkVOVF9USU1FU1RBTVBgAWgBUglj",
+            "cmVhdGVkQXQSQAoLcmV0cnlfY291bnQYDyABKAVCH4K3GBsKC3JldHJ5X2Nv",
+            "dW50EgdJTlRFR0VSGAE6ATBSCnJldHJ5Q291bnQSRAoNZXJyb3JfbWVzc2Fn",
+            "ZRgQIAEoCUIfgrcYGwoNZXJyb3JfbWVzc2FnZRIEVEVYVBgBOgInJ1IMZXJy",
+            "b3JNZXNzYWdlEmEKCXRlbmFudF9pZBgRIAEoCUJEgrcYQAoJdGVuYW50X2lk",
+            "EgtWQVJDSEFSKDY0KRgBUiEKGGlkeF9ub3RpZmljYXRpb25zX3RlbmFudBIF",
+            "QlRSRUWYAgFSCHRlbmFudElkEo8BCgpkZWxldGVkX2F0GBIgASgLMhouZ29v",
+            "Z2xlLnByb3RvYnVmLlRpbWVzdGFtcEJUgrcYUAoKZGVsZXRlZF9hdBILVElN",
+            "RVNUQU1QVFpSNQoYaWR4X25vdGlmaWNhdGlvbnNfYWN0aXZlEgVCVFJFRToS",
+            "ZGVsZXRlZF9hdCBJUyBOVUxMUglkZWxldGVkQXQSNQoKZGVsZXRlZF9ieRgT",
+            "IAEoCUIWgrcYEgoKZGVsZXRlZF9ieRIEVVVJRFIJZGVsZXRlZEJ5Gj8KEVRl",
+            "bXBsYXRlRGF0YUVudHJ5EhAKA2tleRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIg",
+            "ASgJUgV2YWx1ZToCOAE6gAT6thjXAgoNbm90aWZpY2F0aW9ucxIQdWRiX25v",
+            "dGlmaWNhdGlvbhgBIAEqOFF1ZXVlZCwgc2VudCwgZGVsaXZlcmVkLCBhbmQg",
+            "ZmFpbGVkIG5vdGlmaWNhdGlvbiByZWNvcmRzMAE4AUABYl4KEHRlbmFudF9p",
+            "c29sYXRpb24aSCh0ZW5hbnRfaWQ6OnRleHQgPSBjdXJyZW50X3NldHRpbmco",
+            "J2FwcC5jdXJyZW50X3RlbmFudF9pZCcsIHRydWUpOjp0ZXh0KSgBigE7Ch9p",
+            "ZHhfbm90aWZpY2F0aW9uc190ZW5hbnRfc3RhdHVzEgVCVFJFRVoJdGVuYW50",
+            "X2lkWgZzdGF0dXOKATIKG2lkeF9ub3RpZmljYXRpb25zX3JlY2lwaWVudBIF",
+            "QlRSRUVaDHJlY2lwaWVudF9pZOoBB3ByaW1hcnn6ARJub3RpZmljYXRpb246",
+            "d3JpdGWKshmfAQoGdGVuYW50Ggl0ZW5hbnRfaWQqNHRlbmFudF9pZCA9IGN1",
+            "cnJlbnRfc2V0dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lkJykyC3NvZnRf",
+            "ZGVsZXRlOhhub3RpZmljYXRpb24ub3BlcmF0aW9uYWxA+xNIAlIGdGVuYW50",
+            "WglyZWNpcGllbnRyFXRlbmFudC5kYXRhX3Jlc2lkZW5jeUKmAgojY29tLnVk",
+            "Yi5jb3JlLm5vdGlmaWNhdGlvbi5lbnRpdHkudjFCEU5vdGlmaWNhdGlvblBy",
+            "b3RvUAFaS2dpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRi",
+            "L2NvcmUvbm90aWZpY2F0aW9uL2VudGl0eS92MTtlbnRpdHl2MaICBFVDTkWq",
+            "Ah91ZGIuY29yZS5Ob3RpZmljYXRpb24uRW50aXR5LlYxygIfVWRiXENvcmVc",
+            "Tm90aWZpY2F0aW9uXEVudGl0eVxWMeICK1VkYlxHUEJNZXRhZGF0YVxDb3Jl",
+            "XE5vdGlmaWNhdGlvblxFbnRpdHlcVjHqAiNVZGI6OkNvcmU6Ok5vdGlmaWNh",
+            "dGlvbjo6RW50aXR5OjpWMWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::udb.core.Common.V1.DbReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, global::udb.core.Notification.Entity.V1.EnumsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Entity.V1.Notification), global::udb.core.Notification.Entity.V1.Notification.Parser, new[]{ "NotificationId", "RecipientId", "Type", "Channel", "Subject", "Message", "TemplateData", "Priority", "Status", "ScheduledAt", "SentAt", "DeliveredAt", "ReadAt", "CreatedAt", "RetryCount", "ErrorMessage", "TenantId" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Notification.Entity.V1.Notification), global::udb.core.Notification.Entity.V1.Notification.Parser, new[]{ "NotificationId", "RecipientId", "Type", "Channel", "Subject", "Message", "TemplateData", "Priority", "Status", "ScheduledAt", "SentAt", "DeliveredAt", "ReadAt", "CreatedAt", "RetryCount", "ErrorMessage", "TenantId", "DeletedAt", "DeletedBy" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
           }));
     }
     #endregion
@@ -135,6 +158,8 @@ namespace udb.core.Notification.Entity.V1 {
       retryCount_ = other.retryCount_;
       errorMessage_ = other.errorMessage_;
       tenantId_ = other.tenantId_;
+      deletedAt_ = other.deletedAt_ != null ? other.deletedAt_.Clone() : null;
+      deletedBy_ = other.deletedBy_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -347,6 +372,30 @@ namespace udb.core.Notification.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "deleted_at" field.</summary>
+    public const int DeletedAtFieldNumber = 18;
+    private global::Google.Protobuf.WellKnownTypes.Timestamp deletedAt_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Timestamp DeletedAt {
+      get { return deletedAt_; }
+      set {
+        deletedAt_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "deleted_by" field.</summary>
+    public const int DeletedByFieldNumber = 19;
+    private string deletedBy_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string DeletedBy {
+      get { return deletedBy_; }
+      set {
+        deletedBy_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -379,6 +428,8 @@ namespace udb.core.Notification.Entity.V1 {
       if (RetryCount != other.RetryCount) return false;
       if (ErrorMessage != other.ErrorMessage) return false;
       if (TenantId != other.TenantId) return false;
+      if (!object.Equals(DeletedAt, other.DeletedAt)) return false;
+      if (DeletedBy != other.DeletedBy) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -403,6 +454,8 @@ namespace udb.core.Notification.Entity.V1 {
       if (RetryCount != 0) hash ^= RetryCount.GetHashCode();
       if (ErrorMessage.Length != 0) hash ^= ErrorMessage.GetHashCode();
       if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (deletedAt_ != null) hash ^= DeletedAt.GetHashCode();
+      if (DeletedBy.Length != 0) hash ^= DeletedBy.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -486,6 +539,14 @@ namespace udb.core.Notification.Entity.V1 {
         output.WriteRawTag(138, 1);
         output.WriteString(TenantId);
       }
+      if (deletedAt_ != null) {
+        output.WriteRawTag(146, 1);
+        output.WriteMessage(DeletedAt);
+      }
+      if (DeletedBy.Length != 0) {
+        output.WriteRawTag(154, 1);
+        output.WriteString(DeletedBy);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -561,6 +622,14 @@ namespace udb.core.Notification.Entity.V1 {
         output.WriteRawTag(138, 1);
         output.WriteString(TenantId);
       }
+      if (deletedAt_ != null) {
+        output.WriteRawTag(146, 1);
+        output.WriteMessage(DeletedAt);
+      }
+      if (DeletedBy.Length != 0) {
+        output.WriteRawTag(154, 1);
+        output.WriteString(DeletedBy);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -619,6 +688,12 @@ namespace udb.core.Notification.Entity.V1 {
       }
       if (TenantId.Length != 0) {
         size += 2 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (deletedAt_ != null) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(DeletedAt);
+      }
+      if (DeletedBy.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(DeletedBy);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -695,6 +770,15 @@ namespace udb.core.Notification.Entity.V1 {
       }
       if (other.TenantId.Length != 0) {
         TenantId = other.TenantId;
+      }
+      if (other.deletedAt_ != null) {
+        if (deletedAt_ == null) {
+          DeletedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+        }
+        DeletedAt.MergeFrom(other.DeletedAt);
+      }
+      if (other.DeletedBy.Length != 0) {
+        DeletedBy = other.DeletedBy;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -798,6 +882,17 @@ namespace udb.core.Notification.Entity.V1 {
             TenantId = input.ReadString();
             break;
           }
+          case 146: {
+            if (deletedAt_ == null) {
+              DeletedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(DeletedAt);
+            break;
+          }
+          case 154: {
+            DeletedBy = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -898,6 +993,17 @@ namespace udb.core.Notification.Entity.V1 {
           }
           case 138: {
             TenantId = input.ReadString();
+            break;
+          }
+          case 146: {
+            if (deletedAt_ == null) {
+              DeletedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
+            }
+            input.ReadMessage(DeletedAt);
+            break;
+          }
+          case 154: {
+            DeletedBy = input.ReadString();
             break;
           }
         }

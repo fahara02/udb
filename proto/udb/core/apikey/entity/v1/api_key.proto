@@ -142,7 +142,7 @@ message ApiKey {
 
   google.protobuf.Timestamp deleted_at = 20 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" index: { index_name: "idx_api_keys_active" index_type: "BTREE" where_clause: "deleted_at IS NULL AND status = 'ACTIVE'" } }];
   string deleted_by = 21 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "VARCHAR(160)" comment: "Soft delete actor" }];
-  string tenant_id = 22 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" comment: "Optional tenant boundary for this key" index: { index_name: "idx_api_keys_tenant_id" index_type: "BTREE" } }];
+  string tenant_id = 22 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" comment: "Optional tenant boundary for this key" index: { index_name: "idx_api_keys_tenant_id" index_type: "BTREE" } }];
   string project_id = 23 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" comment: "Optional project/application namespace for this key" index: { index_name: "idx_api_keys_project_id" index_type: "BTREE" } }];
   string allowed_resources_json = 24 [(udb.core.common.v1.pg_column) = { column_name: "allowed_resources_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" comment: "Optional resource allowlist; empty delegates to policy engine only" }];
   string metadata_json = 25 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Non-secret key metadata" }];

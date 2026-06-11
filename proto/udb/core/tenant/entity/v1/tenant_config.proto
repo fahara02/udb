@@ -79,7 +79,7 @@ message TenantConfig {
   string id = 1 [(udb.core.common.v1.pg_column) = { column_name: "config_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
   // @inject_tag: gorm:"primaryKey;column:config_id;not null"
 
-  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "UUID" not_null: true foreign_key: { references_table: "tenants" references_column: "tenant_id" references_schema: "udb_tenant" on_delete: REFERENTIAL_ACTION_CASCADE } index: { index_name: "idx_tenant_configs_tenant_id" index_type: "BTREE" } }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "UUID" not_null: true foreign_key: { references_table: "tenants" references_column: "tenant_id" references_schema: "udb_tenant" on_delete: REFERENTIAL_ACTION_CASCADE } index: { index_name: "idx_tenant_configs_tenant_id" index_type: "BTREE" } }];
   // @inject_tag: gorm:"column:tenant_id;not null"
 
   string config_key = 3 [(udb.core.common.v1.pg_column) = { column_name: "config_key" sql_type: "VARCHAR(100)" not_null: true }];

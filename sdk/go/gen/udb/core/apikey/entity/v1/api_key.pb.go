@@ -269,7 +269,7 @@ var File_udb_core_apikey_entity_v1_api_key_proto protoreflect.FileDescriptor
 
 const file_udb_core_apikey_entity_v1_api_key_proto_rawDesc = "" +
 	"\n" +
-	"'udb/core/apikey/entity/v1/api_key.proto\x12\x19udb.core.apikey.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a%udb/core/apikey/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xda\x1e\n" +
+	"'udb/core/apikey/entity/v1/api_key.proto\x12\x19udb.core.apikey.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a%udb/core/apikey/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xdd\x1e\n" +
 	"\x06ApiKey\x12@\n" +
 	"\x06key_id\x18\x01 \x01(\tB)\x82\xb7\x18%\n" +
 	"\x06key_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x05keyId\x12\x84\x01\n" +
@@ -339,10 +339,10 @@ const file_udb_core_apikey_entity_v1_api_key_proto_rawDesc = "" +
 	"\n" +
 	"deleted_by\x18\x15 \x01(\tB1\x82\xb7\x18-\n" +
 	"\n" +
-	"deleted_by\x12\fVARCHAR(160)Z\x11Soft delete actorR\tdeletedBy\x12\x82\x01\n" +
-	"\ttenant_id\x18\x16 \x01(\tBe\x82\xb7\x18a\n" +
+	"deleted_by\x12\fVARCHAR(160)Z\x11Soft delete actorR\tdeletedBy\x12\x85\x01\n" +
+	"\ttenant_id\x18\x16 \x01(\tBh\x82\xb7\x18d\n" +
 	"\ttenant_id\x12\fVARCHAR(120)R\x1f\n" +
-	"\x16idx_api_keys_tenant_id\x12\x05BTREEZ%Optional tenant boundary for this keyR\btenantId\x12\x94\x01\n" +
+	"\x16idx_api_keys_tenant_id\x12\x05BTREEZ%Optional tenant boundary for this key\x98\x02\x01R\btenantId\x12\x94\x01\n" +
 	"\n" +
 	"project_id\x18\x17 \x01(\tBu\x82\xb7\x18q\n" +
 	"\n" +

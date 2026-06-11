@@ -93,5 +93,5 @@ message UserRole {
   google.protobuf.Timestamp updated_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true }];
 
   string created_by = 10 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "VARCHAR(120)" comment: "Identity that created this record." }];
-  string tenant_id = 11 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_userrole_tenant" index_type: "BTREE" } }];
+  string tenant_id = 11 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_userrole_tenant" index_type: "BTREE" } }];
 }

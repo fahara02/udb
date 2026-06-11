@@ -73,6 +73,6 @@ message PolicyTuple {
   string action = 6 [(udb.core.common.v1.pg_column) = { column_name: "action" sql_type: "TEXT" not_null: true default_value: "''" comment: "Action, relation, or matcher verb" }];
   string effect = 7 [(udb.core.common.v1.pg_column) = { column_name: "effect" sql_type: "TEXT" not_null: true default_value: "''" comment: "allow, deny, or tuple-specific effect" }];
   string condition = 8 [(udb.core.common.v1.pg_column) = { column_name: "condition" sql_type: "TEXT" not_null: true default_value: "''" comment: "Reserved condition or ABAC matcher expression" }];
-  string tenant_id = 9 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policytuple_tenant" index_type: "BTREE" } }];
+  string tenant_id = 9 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policytuple_tenant" index_type: "BTREE" } }];
   string project_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" index: { index_name: "idx_policytuple_project" index_type: "BTREE" } }];
 }

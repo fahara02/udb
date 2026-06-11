@@ -193,13 +193,13 @@ var File_udb_core_authn_entity_v1_signing_key_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_signing_key_proto_rawDesc = "" +
 	"\n" +
-	"*udb/core/authn/entity/v1/signing_key.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xf6\f\n" +
+	"*udb/core/authn/entity/v1/signing_key.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xf9\f\n" +
 	"\n" +
 	"SigningKey\x124\n" +
 	"\x06key_id\x18\x01 \x01(\tB\x1d\x82\xb7\x18\x19\n" +
-	"\x06key_id\x12\vVARCHAR(80)\x18\x01(\x01R\x05keyId\x12g\n" +
-	"\ttenant_id\x18\x02 \x01(\tBJ\x82\xb7\x18F\n" +
-	"\ttenant_id\x12\vVARCHAR(64)Z,Optional tenant boundary; empty = global keyR\btenantId\x12E\n" +
+	"\x06key_id\x12\vVARCHAR(80)\x18\x01(\x01R\x05keyId\x12j\n" +
+	"\ttenant_id\x18\x02 \x01(\tBM\x82\xb7\x18I\n" +
+	"\ttenant_id\x12\vVARCHAR(64)Z,Optional tenant boundary; empty = global key\x98\x02\x01R\btenantId\x12E\n" +
 	"\talgorithm\x18\x03 \x01(\tB'\x82\xb7\x18#\n" +
 	"\talgorithm\x12\vVARCHAR(20)\x18\x01:\a'RS256'R\talgorithm\x12c\n" +
 	"\x0fpublic_material\x18\x04 \x01(\tB:\x82\xb7\x186\n" +

@@ -56,7 +56,7 @@ message PolicySet {
   };
 
   string policy_set_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "policy_set_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
-  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policy_sets_tenant" index_type: "BTREE" } }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policy_sets_tenant" index_type: "BTREE" } }];
   string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" not_null: true default_value: "''" comment: "Optional project namespace ('' = tenant-wide)" index: { index_name: "idx_policy_sets_project" index_type: "BTREE" } }];
   string name = 4 [(udb.core.common.v1.pg_column) = { column_name: "name" sql_type: "VARCHAR(160)" not_null: true comment: "Human-readable policy-set name, unique within tenant/project" }];
   string active_version_id = 5 [(udb.core.common.v1.pg_column) = { column_name: "active_version_id" sql_type: "UUID" comment: "Currently-enforced PolicyVersion (NULL until first activation)" }];

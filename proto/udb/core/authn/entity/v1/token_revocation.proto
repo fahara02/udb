@@ -69,7 +69,7 @@ message TokenRevocation {
 
   TokenType token_type = 2 [(udb.core.common.v1.pg_column) = { column_name: "token_type" sql_type: "VARCHAR(20)" not_null: true default_value: "'TOKEN_TYPE_UNSPECIFIED'" }];
 
-  string tenant_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" }];
+  string tenant_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" }];
 
   // After this instant the row may be GC'd: an expired token is rejected anyway.
   google.protobuf.Timestamp expires_at = 4 [(udb.core.common.v1.pg_column) = { column_name: "expires_at" sql_type: "TIMESTAMPTZ" }];

@@ -8,7 +8,7 @@ from udb.core.notification.services.v1 import core_pb2 as udb_dot_core_dot_notif
 class NotificationServiceStub(object):
     """---------------------------------------------------------------------------
     NotificationService — Template-based multi-channel notification delivery.
-
+    
     HTTP prefix: /v1/notifications
     ---------------------------------------------------------------------------
 
@@ -80,7 +80,7 @@ class NotificationServiceStub(object):
 class NotificationServiceServicer(object):
     """---------------------------------------------------------------------------
     NotificationService — Template-based multi-channel notification delivery.
-
+    
     HTTP prefix: /v1/notifications
     ---------------------------------------------------------------------------
 
@@ -236,7 +236,7 @@ def add_NotificationServiceServicer_to_server(servicer, server):
 class NotificationService(object):
     """---------------------------------------------------------------------------
     NotificationService — Template-based multi-channel notification delivery.
-
+    
     HTTP prefix: /v1/notifications
     ---------------------------------------------------------------------------
 

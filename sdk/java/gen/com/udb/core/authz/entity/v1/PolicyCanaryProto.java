@@ -44,7 +44,7 @@ public final class PolicyCanaryProto extends com.google.protobuf.GeneratedFile {
       ".proto\022\030udb.core.authz.entity.v1\032\037google" +
       "/protobuf/timestamp.proto\032\033udb/core/comm" +
       "on/v1/db.proto\032!udb/core/common/v1/secur" +
-      "ity.proto\"\270\021\n\014PolicyCanary\022I\n\tcanary_id\030" +
+      "ity.proto\"\261\021\n\014PolicyCanary\022I\n\tcanary_id\030" +
       "\001 \001(\tB,\202\267\030(\n\tcanary_id\022\004UUID\030\001(\001:\021gen_ra" +
       "ndom_uuid()R\010canaryId\022\243\001\n\rpolicy_set_id\030" +
       "\002 \001(\tB\177\202\267\030{\n\rpolicy_set_id\022\004UUID\030\001JA\n\013po" +
@@ -59,62 +59,61 @@ public final class PolicyCanaryProto extends com.google.protobuf.GeneratedFile {
       "\004 \001(\0162).udb.core.authz.entity.v1.CanaryS" +
       "copeKindB@\202\267\030<\n\nscope_kind\022\013VARCHAR(40)\030" +
       "\001:\037\'CANARY_SCOPE_KIND_UNSPECIFIED\'R\tscop" +
-      "eKind\022\210\001\n\021scope_values_json\030\005 \001(\tB\\\202\267\030X\n" +
-      "\014scope_values\022\005JSONB\030\001:\013\'[]\'::jsonbZ0NOD" +
-      "E/TENANT id list, or [percentage] for PE" +
-      "RCENTx\001R\017scopeValuesJson\022n\n\005state\030\006 \001(\0162" +
-      "%.udb.core.authz.entity.v1.CanaryStateB1" +
-      "\202\267\030-\n\005state\022\013VARCHAR(40)\030\001:\025\'CANARY_STAT" +
-      "E_ACTIVE\'R\005state\022q\n\nstarted_at\030\007 \001(\0132\032.g" +
-      "oogle.protobuf.TimestampB6\202\267\0302\n\nstarted_" +
-      "at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001" +
-      "R\tstartedAt\022X\n\023success_window_secs\030\010 \001(\003" +
-      "B(\202\267\030$\n\023success_window_secs\022\006BIGINT\030\001:\0033" +
-      "00R\021successWindowSecs\022[\n\020metric_threshol" +
-      "d\030\t \001(\001B0\202\267\030,\n\020metric_threshold\022\020DOUBLE " +
-      "PRECISION\030\001:\0040.05R\017metricThreshold\022C\n\ncr" +
-      "eated_by\030\n \001(\tB$\202\267\030 \n\ncreated_by\022\014VARCHA" +
-      "R(160)\030\001:\002\'\'R\tcreatedBy\022`\n\ttenant_id\030\013 \001" +
-      "(\tBC\202\267\030?\n\ttenant_id\022\013VARCHAR(64)\030\001R#\n\032id" +
-      "x_policy_canaries_tenant\022\005BTREER\010tenantI" +
-      "d\022C\n\nproject_id\030\014 \001(\tB$\202\267\030 \n\nproject_id\022" +
-      "\014VARCHAR(120)\030\001:\002\'\'R\tprojectId\022?\n\013min_sa" +
-      "mples\030\r \001(\003B\036\202\267\030\032\n\013min_samples\022\006BIGINT\030\001" +
-      ":\0011R\nminSamples\022\201\001\n\023rollback_version_id\030" +
-      "\016 \001(\tBQ\202\267\030M\n\023rollback_version_id\022\004UUIDZ0" +
-      "Version restored on auto-rollback (prior" +
-      " active)R\021rollbackVersionId\022G\n\016outcome_r" +
-      "eason\030\017 \001(\tB \202\267\030\034\n\016outcome_reason\022\004TEXT\030" +
-      "\001:\002\'\'R\routcomeReason\022k\n\010revision\030\020 \001(\003BO" +
-      "\202\267\030K\n\010revision\022\006BIGINT\030\001:\0011Z2Optimistic-" +
-      "concurrency token for state transitionsR" +
-      "\010revision:\330\003\372\266\030\277\002\n\017policy_canaries\022\tudb_" +
-      "authz\030, \001*[Progressive-rollout canaries:" +
-      " subset-scoped policy versions with metr" +
-      "ic-based auto-rollback8\001@\001b^\n\020tenant_iso" +
-      "lation\032H(tenant_id::text = current_setti" +
-      "ng(\'app.current_tenant_id\', true)::text)" +
-      "(\001\212\001/\n\027idx_policy_canaries_set\022\005BTREEZ\rp" +
-      "olicy_set_id\212\001)\n\031idx_policy_canaries_sta" +
-      "te\022\005BTREEZ\005state\212\262\031\217\001\n\006tenant\032\ttenant_id" +
-      "*4tenant_id = current_setting(\'app.curre" +
-      "nt_tenant_id\')2\004none:\020authz.governance@\373" +
-      "\023H\002R\006tenantZ\010standardr\025tenant.data_resid" +
-      "ency*\215\001\n\017CanaryScopeKind\022!\n\035CANARY_SCOPE" +
-      "_KIND_UNSPECIFIED\020\000\022\032\n\026CANARY_SCOPE_KIND" +
-      "_NODE\020\001\022\034\n\030CANARY_SCOPE_KIND_TENANT\020\002\022\035\n" +
-      "\031CANARY_SCOPE_KIND_PERCENT\020\003*\226\001\n\013CanaryS" +
-      "tate\022\034\n\030CANARY_STATE_UNSPECIFIED\020\000\022\027\n\023CA" +
-      "NARY_STATE_ACTIVE\020\001\022\031\n\025CANARY_STATE_PROM" +
-      "OTED\020\002\022\034\n\030CANARY_STATE_ROLLED_BACK\020\003\022\027\n\023" +
-      "CANARY_STATE_PAUSED\020\004B\374\001\n\034com.udb.core.a" +
-      "uthz.entity.v1B\021PolicyCanaryProtoP\001ZDgit" +
-      "hub.com/fahara02/udb/sdk/go/gen/udb/core" +
-      "/authz/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.c" +
-      "ore.Authz.Entity.V1\312\002\030Udb\\Core\\Authz\\Ent" +
-      "ity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\Enti" +
-      "ty\\V1\352\002\034Udb::Core::Authz::Entity::V1b\006pr" +
-      "oto3"
+      "eKind\022\177\n\014scope_values\030\005 \001(\tB\\\202\267\030X\n\014scope" +
+      "_values\022\005JSONB\030\001:\013\'[]\'::jsonbZ0NODE/TENA" +
+      "NT id list, or [percentage] for PERCENTx" +
+      "\001R\013scopeValues\022n\n\005state\030\006 \001(\0162%.udb.core" +
+      ".authz.entity.v1.CanaryStateB1\202\267\030-\n\005stat" +
+      "e\022\013VARCHAR(40)\030\001:\025\'CANARY_STATE_ACTIVE\'R" +
+      "\005state\022q\n\nstarted_at\030\007 \001(\0132\032.google.prot" +
+      "obuf.TimestampB6\202\267\0302\n\nstarted_at\022\013TIMEST" +
+      "AMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001R\tstartedA" +
+      "t\022X\n\023success_window_secs\030\010 \001(\003B(\202\267\030$\n\023su" +
+      "ccess_window_secs\022\006BIGINT\030\001:\003300R\021succes" +
+      "sWindowSecs\022[\n\020metric_threshold\030\t \001(\001B0\202" +
+      "\267\030,\n\020metric_threshold\022\020DOUBLE PRECISION\030" +
+      "\001:\0040.05R\017metricThreshold\022C\n\ncreated_by\030\n" +
+      " \001(\tB$\202\267\030 \n\ncreated_by\022\014VARCHAR(160)\030\001:\002" +
+      "\'\'R\tcreatedBy\022c\n\ttenant_id\030\013 \001(\tBF\202\267\030B\n\t" +
+      "tenant_id\022\013VARCHAR(64)\030\001R#\n\032idx_policy_c" +
+      "anaries_tenant\022\005BTREE\230\002\001R\010tenantId\022C\n\npr" +
+      "oject_id\030\014 \001(\tB$\202\267\030 \n\nproject_id\022\014VARCHA" +
+      "R(120)\030\001:\002\'\'R\tprojectId\022?\n\013min_samples\030\r" +
+      " \001(\003B\036\202\267\030\032\n\013min_samples\022\006BIGINT\030\001:\0011R\nmi" +
+      "nSamples\022\201\001\n\023rollback_version_id\030\016 \001(\tBQ" +
+      "\202\267\030M\n\023rollback_version_id\022\004UUIDZ0Version" +
+      " restored on auto-rollback (prior active" +
+      ")R\021rollbackVersionId\022G\n\016outcome_reason\030\017" +
+      " \001(\tB \202\267\030\034\n\016outcome_reason\022\004TEXT\030\001:\002\'\'R\r" +
+      "outcomeReason\022k\n\010revision\030\020 \001(\003BO\202\267\030K\n\010r" +
+      "evision\022\006BIGINT\030\001:\0011Z2Optimistic-concurr" +
+      "ency token for state transitionsR\010revisi" +
+      "on:\330\003\372\266\030\277\002\n\017policy_canaries\022\tudb_authz\030," +
+      " \001*[Progressive-rollout canaries: subset" +
+      "-scoped policy versions with metric-base" +
+      "d auto-rollback8\001@\001b^\n\020tenant_isolation\032" +
+      "H(tenant_id::text = current_setting(\'app" +
+      ".current_tenant_id\', true)::text)(\001\212\001/\n\027" +
+      "idx_policy_canaries_set\022\005BTREEZ\rpolicy_s" +
+      "et_id\212\001)\n\031idx_policy_canaries_state\022\005BTR" +
+      "EEZ\005state\212\262\031\217\001\n\006tenant\032\ttenant_id*4tenan" +
+      "t_id = current_setting(\'app.current_tena" +
+      "nt_id\')2\004none:\020authz.governance@\373\023H\002R\006te" +
+      "nantZ\010standardr\025tenant.data_residency*\215\001" +
+      "\n\017CanaryScopeKind\022!\n\035CANARY_SCOPE_KIND_U" +
+      "NSPECIFIED\020\000\022\032\n\026CANARY_SCOPE_KIND_NODE\020\001" +
+      "\022\034\n\030CANARY_SCOPE_KIND_TENANT\020\002\022\035\n\031CANARY" +
+      "_SCOPE_KIND_PERCENT\020\003*\226\001\n\013CanaryState\022\034\n" +
+      "\030CANARY_STATE_UNSPECIFIED\020\000\022\027\n\023CANARY_ST" +
+      "ATE_ACTIVE\020\001\022\031\n\025CANARY_STATE_PROMOTED\020\002\022" +
+      "\034\n\030CANARY_STATE_ROLLED_BACK\020\003\022\027\n\023CANARY_" +
+      "STATE_PAUSED\020\004B\374\001\n\034com.udb.core.authz.en" +
+      "tity.v1B\021PolicyCanaryProtoP\001ZDgithub.com" +
+      "/fahara02/udb/sdk/go/gen/udb/core/authz/" +
+      "entity/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Aut" +
+      "hz.Entity.V1\312\002\030Udb\\Core\\Authz\\Entity\\V1\342" +
+      "\002$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\352\002" +
+      "\034Udb::Core::Authz::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -128,7 +127,7 @@ public final class PolicyCanaryProto extends com.google.protobuf.GeneratedFile {
     internal_static_udb_core_authz_entity_v1_PolicyCanary_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authz_entity_v1_PolicyCanary_descriptor,
-        new java.lang.String[] { "CanaryId", "PolicySetId", "PolicyVersionId", "ScopeKind", "ScopeValuesJson", "State", "StartedAt", "SuccessWindowSecs", "MetricThreshold", "CreatedBy", "TenantId", "ProjectId", "MinSamples", "RollbackVersionId", "OutcomeReason", "Revision", });
+        new java.lang.String[] { "CanaryId", "PolicySetId", "PolicyVersionId", "ScopeKind", "ScopeValues", "State", "StartedAt", "SuccessWindowSecs", "MetricThreshold", "CreatedBy", "TenantId", "ProjectId", "MinSamples", "RollbackVersionId", "OutcomeReason", "Revision", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();

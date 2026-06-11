@@ -64,7 +64,7 @@ message ScimDirectoryState {
 
   string scim_directory_state_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "scim_directory_state_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
 
-  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" not_null: true }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" not_null: true }];
 
   string provider_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "provider_id" sql_type: "UUID" not_null: true comment: "FK to udb_idp.identity_providers.provider_id" foreign_key: { references_table: "identity_providers" references_column: "provider_id" references_schema: "udb_idp" on_delete: REFERENTIAL_ACTION_CASCADE } index: { index_name: "idx_scim_directory_state_provider" index_type: "BTREE" } }];
 

@@ -199,7 +199,7 @@ var File_udb_core_authz_entity_v1_role_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_entity_v1_role_proto_rawDesc = "" +
 	"\n" +
-	"#udb/core/authz/entity/v1/role.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xd3\x12\n" +
+	"#udb/core/authz/entity/v1/role.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xd6\x12\n" +
 	"\x04Role\x12C\n" +
 	"\arole_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
 	"\arole_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06roleId\x12r\n" +
@@ -227,11 +227,11 @@ const file_udb_core_authz_entity_v1_role_proto_rawDesc = "" +
 	"\n" +
 	"deleted_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampB4\x82\xb7\x180\n" +
 	"\n" +
-	"deleted_at\x12\vTIMESTAMPTZZ\x15Soft delete timestampR\tdeletedAt\x12U\n" +
+	"deleted_at\x12\vTIMESTAMPTZZ\x15Soft delete timestampR\tdeletedAt\x12X\n" +
 	"\ttenant_id\x18\n" +
-	" \x01(\tB8\x82\xb7\x184\n" +
+	" \x01(\tB;\x82\xb7\x187\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R\x18\n" +
-	"\x0fidx_role_tenant\x12\x05BTREER\btenantId\x12H\n" +
+	"\x0fidx_role_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12H\n" +
 	"\n" +
 	"deleted_by\x18\v \x01(\tB)\x82\xb7\x18%\n" +
 	"\n" +

@@ -1209,15 +1209,19 @@ impl AuthnServiceImpl {
             .await?;
         self.consume_webauthn_challenge(&req.challenge_id).await?;
         let now = now_unix();
+        // Block 1 (auth_fix.md, Decision E): resolve role-derived grants once,
+        // thread into the session record and the JWT.
+        let (scopes, roles) =
+            self.resolve_effective_grants(&user.user_id, &user.tenant_id, &user.project_id);
         let (session_id, session_expires) = self
-            .create_login_session(&user, "webauthn".to_string(), now)
+            .create_login_session(&user, "webauthn".to_string(), scopes.clone(), roles.clone(), now)
             .await?;
         let (access_token, access_exp) = self.issue_access_token(
             &user.user_id,
             &user.tenant_id,
             &user.project_id,
-            &[],
-            &[],
+            &scopes,
+            &roles,
             "",
             &session_id,
             "webauthn",

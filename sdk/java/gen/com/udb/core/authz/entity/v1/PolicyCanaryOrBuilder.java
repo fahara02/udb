@@ -63,21 +63,21 @@ public interface PolicyCanaryOrBuilder extends
    * list whose value is the integer percentage (1..=100).
    * </pre>
    *
-   * <code>string scope_values_json = 5 [json_name = "scopeValuesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
-   * @return The scopeValuesJson.
+   * <code>string scope_values = 5 [json_name = "scopeValues", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The scopeValues.
    */
-  java.lang.String getScopeValuesJson();
+  java.lang.String getScopeValues();
   /**
    * <pre>
    * For NODE/TENANT: the list of in-scope ids. For PERCENT: a single-element
    * list whose value is the integer percentage (1..=100).
    * </pre>
    *
-   * <code>string scope_values_json = 5 [json_name = "scopeValuesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
-   * @return The bytes for scopeValuesJson.
+   * <code>string scope_values = 5 [json_name = "scopeValues", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for scopeValues.
    */
   com.google.protobuf.ByteString
-      getScopeValuesJsonBytes();
+      getScopeValuesBytes();
 
   /**
    * <code>.udb.core.authz.entity.v1.CanaryState state = 6 [json_name = "state", (.udb.core.common.v1.pg_column) = { ... }</code>

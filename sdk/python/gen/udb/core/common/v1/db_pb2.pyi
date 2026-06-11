@@ -377,7 +377,7 @@ class SqlArtifact(_message.Message):
     def __init__(self, name: _Optional[str] = ..., backend: _Optional[str] = ..., phase: _Optional[str] = ..., sql: _Optional[str] = ..., file: _Optional[str] = ..., checksum_sha256: _Optional[str] = ..., requires_review: bool = ...) -> None: ...
 
 class ColumnOptions(_message.Message):
-    __slots__ = ("column_name", "sql_type", "not_null", "unique", "primary_key", "auto_increment", "default_value", "check_constraint", "foreign_key", "index", "comment", "exclude_from_insert", "exclude_from_update", "encrypted", "is_json", "is_jsonb", "json_path_ops", "is_tsvector", "tsvector_language", "tsvector_source_columns", "trigram_index", "collation", "enum_values", "previous_column_name", "backfill_sql", "using_expression", "allow_drop", "generated", "generated_expr", "identity", "references", "on_delete", "on_update", "nullable")
+    __slots__ = ("column_name", "sql_type", "not_null", "unique", "primary_key", "auto_increment", "default_value", "check_constraint", "foreign_key", "index", "comment", "exclude_from_insert", "exclude_from_update", "encrypted", "is_json", "is_jsonb", "json_path_ops", "is_tsvector", "tsvector_language", "tsvector_source_columns", "trigram_index", "collation", "enum_values", "previous_column_name", "backfill_sql", "using_expression", "allow_drop", "generated", "generated_expr", "identity", "references", "on_delete", "on_update", "nullable", "tenant_column", "project_column")
     COLUMN_NAME_FIELD_NUMBER: _ClassVar[int]
     SQL_TYPE_FIELD_NUMBER: _ClassVar[int]
     NOT_NULL_FIELD_NUMBER: _ClassVar[int]
@@ -412,6 +412,8 @@ class ColumnOptions(_message.Message):
     ON_DELETE_FIELD_NUMBER: _ClassVar[int]
     ON_UPDATE_FIELD_NUMBER: _ClassVar[int]
     NULLABLE_FIELD_NUMBER: _ClassVar[int]
+    TENANT_COLUMN_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_COLUMN_FIELD_NUMBER: _ClassVar[int]
     column_name: str
     sql_type: str
     not_null: bool
@@ -446,7 +448,9 @@ class ColumnOptions(_message.Message):
     on_delete: ReferentialAction
     on_update: ReferentialAction
     nullable: bool
-    def __init__(self, column_name: _Optional[str] = ..., sql_type: _Optional[str] = ..., not_null: bool = ..., unique: bool = ..., primary_key: bool = ..., auto_increment: bool = ..., default_value: _Optional[str] = ..., check_constraint: _Optional[str] = ..., foreign_key: _Optional[_Union[ForeignKey, _Mapping]] = ..., index: _Optional[_Union[IndexOptions, _Mapping]] = ..., comment: _Optional[str] = ..., exclude_from_insert: bool = ..., exclude_from_update: bool = ..., encrypted: bool = ..., is_json: bool = ..., is_jsonb: bool = ..., json_path_ops: bool = ..., is_tsvector: bool = ..., tsvector_language: _Optional[str] = ..., tsvector_source_columns: _Optional[_Iterable[str]] = ..., trigram_index: bool = ..., collation: _Optional[str] = ..., enum_values: _Optional[_Iterable[str]] = ..., previous_column_name: _Optional[str] = ..., backfill_sql: _Optional[str] = ..., using_expression: _Optional[str] = ..., allow_drop: bool = ..., generated: bool = ..., generated_expr: _Optional[str] = ..., identity: bool = ..., references: _Optional[str] = ..., on_delete: _Optional[_Union[ReferentialAction, str]] = ..., on_update: _Optional[_Union[ReferentialAction, str]] = ..., nullable: bool = ...) -> None: ...
+    tenant_column: bool
+    project_column: bool
+    def __init__(self, column_name: _Optional[str] = ..., sql_type: _Optional[str] = ..., not_null: bool = ..., unique: bool = ..., primary_key: bool = ..., auto_increment: bool = ..., default_value: _Optional[str] = ..., check_constraint: _Optional[str] = ..., foreign_key: _Optional[_Union[ForeignKey, _Mapping]] = ..., index: _Optional[_Union[IndexOptions, _Mapping]] = ..., comment: _Optional[str] = ..., exclude_from_insert: bool = ..., exclude_from_update: bool = ..., encrypted: bool = ..., is_json: bool = ..., is_jsonb: bool = ..., json_path_ops: bool = ..., is_tsvector: bool = ..., tsvector_language: _Optional[str] = ..., tsvector_source_columns: _Optional[_Iterable[str]] = ..., trigram_index: bool = ..., collation: _Optional[str] = ..., enum_values: _Optional[_Iterable[str]] = ..., previous_column_name: _Optional[str] = ..., backfill_sql: _Optional[str] = ..., using_expression: _Optional[str] = ..., allow_drop: bool = ..., generated: bool = ..., generated_expr: _Optional[str] = ..., identity: bool = ..., references: _Optional[str] = ..., on_delete: _Optional[_Union[ReferentialAction, str]] = ..., on_update: _Optional[_Union[ReferentialAction, str]] = ..., nullable: bool = ..., tenant_column: bool = ..., project_column: bool = ...) -> None: ...
 
 class ForeignKey(_message.Message):
     __slots__ = ("references_table", "references_column", "references_schema", "on_delete", "on_update", "constraint_name")

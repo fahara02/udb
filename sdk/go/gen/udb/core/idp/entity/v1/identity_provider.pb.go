@@ -308,14 +308,14 @@ var File_udb_core_idp_entity_v1_identity_provider_proto protoreflect.FileDescrip
 
 const file_udb_core_idp_entity_v1_identity_provider_proto_rawDesc = "" +
 	"\n" +
-	".udb/core/idp/entity/v1/identity_provider.proto\x12\x16udb.core.idp.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\"udb/core/idp/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xf4\x1d\n" +
+	".udb/core/idp/entity/v1/identity_provider.proto\x12\x16udb.core.idp.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\"udb/core/idp/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xf7\x1d\n" +
 	"\x10IdentityProvider\x12O\n" +
 	"\vprovider_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vprovider_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
-	"providerId\x12g\n" +
-	"\ttenant_id\x18\x02 \x01(\tBJ\x82\xb7\x18F\n" +
+	"providerId\x12j\n" +
+	"\ttenant_id\x18\x02 \x01(\tBM\x82\xb7\x18I\n" +
 	"\ttenant_id\x12\fVARCHAR(120)\x18\x01R)\n" +
-	" idx_identity_providers_tenant_id\x12\x05BTREER\btenantId\x12t\n" +
+	" idx_identity_providers_tenant_id\x12\x05BTREE\x98\x02\x01R\btenantId\x12t\n" +
 	"\x04kind\x18\x03 \x01(\x0e2\x1f.udb.core.idp.entity.v1.IdpKindB?\x82\xb7\x18;\n" +
 	"\x04kind\x12\vVARCHAR(24)\x18\x01R$\n" +
 	"\x1bidx_identity_providers_kind\x12\x05BTREER\x04kind\x12x\n" +

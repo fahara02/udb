@@ -152,7 +152,7 @@ var File_udb_core_asset_entity_v1_pipeline_instance_proto protoreflect.FileDescr
 
 const file_udb_core_asset_entity_v1_pipeline_instance_proto_rawDesc = "" +
 	"\n" +
-	"0udb/core/asset/entity/v1/pipeline_instance.proto\x12\x18udb.core.asset.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a$udb/core/asset/entity/v1/enums.proto\"\xd1\f\n" +
+	"0udb/core/asset/entity/v1/pipeline_instance.proto\x12\x18udb.core.asset.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a$udb/core/asset/entity/v1/enums.proto\"\xd4\f\n" +
 	"\x10PipelineInstance\x12O\n" +
 	"\vinstance_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vinstance_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
@@ -160,9 +160,9 @@ const file_udb_core_asset_entity_v1_pipeline_instance_proto_rawDesc = "" +
 	"\rdefinition_id\x18\x02 \x01(\tB\x1b\x82\xb7\x18\x17\n" +
 	"\rdefinition_id\x12\x04UUID\x18\x01R\fdefinitionId\x121\n" +
 	"\basset_id\x18\x03 \x01(\tB\x16\x82\xb7\x18\x12\n" +
-	"\basset_id\x12\x04UUID\x18\x01R\aassetId\x124\n" +
-	"\ttenant_id\x18\x04 \x01(\tB\x17\x82\xb7\x18\x13\n" +
-	"\ttenant_id\x12\x04UUID\x18\x01R\btenantId\x12\x8f\x01\n" +
+	"\basset_id\x12\x04UUID\x18\x01R\aassetId\x127\n" +
+	"\ttenant_id\x18\x04 \x01(\tB\x1a\x82\xb7\x18\x16\n" +
+	"\ttenant_id\x12\x04UUID\x18\x01\x98\x02\x01R\btenantId\x12\x8f\x01\n" +
 	"\x06status\x18\x05 \x01(\x0e2(.udb.core.asset.entity.v1.PipelineStatusBM\x82\xb7\x18I\n" +
 	"\x06status\x12\vVARCHAR(20)\x18\x01:\t'PENDING'R%\n" +
 	"\x1cidx_pipeline_instance_status\x12\x05BTREER\x06status\x12C\n" +

@@ -42,6 +42,7 @@ exports.dataBrokerClient = dataBrokerClient;
 const grpc = __importStar(require("@grpc/grpc-js"));
 const protoLoader = __importStar(require("@grpc/proto-loader"));
 const path_1 = __importDefault(require("path"));
+require("./wkt"); // registers the google.protobuf.Struct serializer (must precede any loadSync)
 const protoRoot_1 = require("./protoRoot");
 exports.UDB_PROTOCOL_VERSION = "1.0.0";
 function metadata(meta) {

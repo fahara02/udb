@@ -45,54 +45,55 @@ public final class DeviceProto extends com.google.protobuf.GeneratedFile {
       "uf/timestamp.proto\032$udb/core/authn/entit" +
       "y/v1/enums.proto\032\033udb/core/common/v1/db." +
       "proto\032!udb/core/common/v1/security.proto" +
-      "\"\374\014\n\006Device\022I\n\tdevice_id\030\001 \001(\tB,\202\267\030(\n\tde" +
+      "\"\377\014\n\006Device\022I\n\tdevice_id\030\001 \001(\tB,\202\267\030(\n\tde" +
       "vice_id\022\004UUID\030\001(\001:\021gen_random_uuid()R\010de" +
       "viceId\0226\n\007user_id\030\002 \001(\tB\035\202\267\030\031\n\007user_id\022\014" +
-      "VARCHAR(160)\030\001R\006userId\022;\n\ttenant_id\030\003 \001(" +
-      "\tB\036\202\267\030\032\n\ttenant_id\022\013VARCHAR(64)\030\001R\010tenan" +
-      "tId\022=\n\nproject_id\030\004 \001(\tB\036\202\267\030\032\n\nproject_i" +
-      "d\022\014VARCHAR(120)R\tprojectId\022]\n\013device_nam" +
-      "e\030\005 \001(\tB<\202\267\0308\n\013device_name\022\014VARCHAR(150)" +
-      "Z\033Human-readable device labelR\ndeviceNam" +
-      "e\022n\n\013device_type\030\006 \001(\0162$.udb.core.authn." +
-      "entity.v1.DeviceTypeB\'\202\267\030#\n\013device_type\022" +
-      "\013VARCHAR(20)\030\001:\005\'WEB\'R\ndeviceType\022\226\001\n\020fi" +
-      "ngerprint_hash\030\007 \001(\tBk\350\265\030\001\360\265\030\001\202\267\030H\n\020fing" +
-      "erprint_hash\022\014VARCHAR(128)Z&Keyed digest" +
-      " of the device fingerprint\212\267\030\023\010\004\020\001\030\0032\013hm" +
-      "ac-sha256R\017fingerprintHash\022h\n\016last_ip_ma" +
-      "sked\030\010 \001(\tBB\320\265\030\001\340\265\030\001\202\267\0306\n\016last_ip_masked" +
-      "\022\013VARCHAR(64)Z\027Masked source IP prefixR\014" +
-      "lastIpMasked\022{\n\024last_user_agent_hash\030\t \001" +
-      "(\tBJ\202\267\030F\n\024last_user_agent_hash\022\014VARCHAR(" +
-      "128)Z Digest of last user-agent stringR\021" +
-      "lastUserAgentHash\022]\n\014last_seen_at\030\n \001(\0132" +
-      "\032.google.protobuf.TimestampB\037\202\267\030\033\n\014last_" +
-      "seen_at\022\013TIMESTAMPTZR\nlastSeenAt\022q\n\ncrea" +
-      "ted_at\030\013 \001(\0132\032.google.protobuf.Timestamp" +
-      "B6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CURRE" +
-      "NT_TIMESTAMP`\001h\001R\tcreatedAt\022X\n\nrevoked_a" +
-      "t\030\014 \001(\0132\032.google.protobuf.TimestampB\035\202\267\030" +
-      "\031\n\nrevoked_at\022\013TIMESTAMPTZR\trevokedAt\022=\n" +
-      "\nrevoked_by\030\r \001(\tB\036\202\267\030\032\n\nrevoked_by\022\014VAR" +
-      "CHAR(160)R\trevokedBy:\270\003\372\266\030\266\002\n\007devices\022\tu" +
-      "db_authn\030\027 \001*BRegistered user devices fo" +
-      "r session/refresh binding and revocation" +
-      "@\001b^\n\020tenant_isolation\032H(tenant_id::text" +
-      " = current_setting(\'app.current_tenant_i" +
-      "d\', true)::text)(\001\212\001\"\n\020idx_devices_user\022" +
-      "\005BTREEZ\007user_id\212\0011\n\027idx_devices_fingerpr" +
-      "int\022\004HASHZ\020fingerprint_hash\352\001\007primary\372\001\022" +
-      "authn:devices:read\212\262\031y\n\006tenant\032\ttenant_i" +
-      "d*4tenant_id = current_setting(\'app.curr" +
-      "ent_tenant_id\')2\004none:\021authn.operational" +
-      "@\355\002H\002R\006tenantZ\010standardB\366\001\n\034com.udb.core" +
-      ".authn.entity.v1B\013DeviceProtoP\001ZDgithub." +
-      "com/fahara02/udb/sdk/go/gen/udb/core/aut" +
-      "hn/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.core." +
-      "Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\Entity\\" +
-      "V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\Entity\\V" +
-      "1\352\002\034Udb::Core::Authn::Entity::V1b\006proto3"
+      "VARCHAR(160)\030\001R\006userId\022>\n\ttenant_id\030\003 \001(" +
+      "\tB!\202\267\030\035\n\ttenant_id\022\013VARCHAR(64)\030\001\230\002\001R\010te" +
+      "nantId\022=\n\nproject_id\030\004 \001(\tB\036\202\267\030\032\n\nprojec" +
+      "t_id\022\014VARCHAR(120)R\tprojectId\022]\n\013device_" +
+      "name\030\005 \001(\tB<\202\267\0308\n\013device_name\022\014VARCHAR(1" +
+      "50)Z\033Human-readable device labelR\ndevice" +
+      "Name\022n\n\013device_type\030\006 \001(\0162$.udb.core.aut" +
+      "hn.entity.v1.DeviceTypeB\'\202\267\030#\n\013device_ty" +
+      "pe\022\013VARCHAR(20)\030\001:\005\'WEB\'R\ndeviceType\022\226\001\n" +
+      "\020fingerprint_hash\030\007 \001(\tBk\350\265\030\001\360\265\030\001\202\267\030H\n\020f" +
+      "ingerprint_hash\022\014VARCHAR(128)Z&Keyed dig" +
+      "est of the device fingerprint\212\267\030\023\010\004\020\001\030\0032" +
+      "\013hmac-sha256R\017fingerprintHash\022h\n\016last_ip" +
+      "_masked\030\010 \001(\tBB\320\265\030\001\340\265\030\001\202\267\0306\n\016last_ip_mas" +
+      "ked\022\013VARCHAR(64)Z\027Masked source IP prefi" +
+      "xR\014lastIpMasked\022{\n\024last_user_agent_hash\030" +
+      "\t \001(\tBJ\202\267\030F\n\024last_user_agent_hash\022\014VARCH" +
+      "AR(128)Z Digest of last user-agent strin" +
+      "gR\021lastUserAgentHash\022]\n\014last_seen_at\030\n \001" +
+      "(\0132\032.google.protobuf.TimestampB\037\202\267\030\033\n\014la" +
+      "st_seen_at\022\013TIMESTAMPTZR\nlastSeenAt\022q\n\nc" +
+      "reated_at\030\013 \001(\0132\032.google.protobuf.Timest" +
+      "ampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CU" +
+      "RRENT_TIMESTAMP`\001h\001R\tcreatedAt\022X\n\nrevoke" +
+      "d_at\030\014 \001(\0132\032.google.protobuf.TimestampB\035" +
+      "\202\267\030\031\n\nrevoked_at\022\013TIMESTAMPTZR\trevokedAt" +
+      "\022=\n\nrevoked_by\030\r \001(\tB\036\202\267\030\032\n\nrevoked_by\022\014" +
+      "VARCHAR(160)R\trevokedBy:\270\003\372\266\030\266\002\n\007devices" +
+      "\022\tudb_authn\030\027 \001*BRegistered user devices" +
+      " for session/refresh binding and revocat" +
+      "ion@\001b^\n\020tenant_isolation\032H(tenant_id::t" +
+      "ext = current_setting(\'app.current_tenan" +
+      "t_id\', true)::text)(\001\212\001\"\n\020idx_devices_us" +
+      "er\022\005BTREEZ\007user_id\212\0011\n\027idx_devices_finge" +
+      "rprint\022\004HASHZ\020fingerprint_hash\352\001\007primary" +
+      "\372\001\022authn:devices:read\212\262\031y\n\006tenant\032\ttenan" +
+      "t_id*4tenant_id = current_setting(\'app.c" +
+      "urrent_tenant_id\')2\004none:\021authn.operatio" +
+      "nal@\355\002H\002R\006tenantZ\010standardB\366\001\n\034com.udb.c" +
+      "ore.authn.entity.v1B\013DeviceProtoP\001ZDgith" +
+      "ub.com/fahara02/udb/sdk/go/gen/udb/core/" +
+      "authn/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.co" +
+      "re.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\Enti" +
+      "ty\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\Entit" +
+      "y\\V1\352\002\034Udb::Core::Authn::Entity::V1b\006pro" +
+      "to3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

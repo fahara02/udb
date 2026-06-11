@@ -240,12 +240,12 @@ var File_udb_core_storage_entity_v1_file_proto protoreflect.FileDescriptor
 
 const file_udb_core_storage_entity_v1_file_proto_rawDesc = "" +
 	"\n" +
-	"%udb/core/storage/entity/v1/file.proto\x12\x1audb.core.storage.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a&udb/core/storage/entity/v1/enums.proto\"\xd7\x11\n" +
+	"%udb/core/storage/entity/v1/file.proto\x12\x1audb.core.storage.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a&udb/core/storage/entity/v1/enums.proto\"\xda\x11\n" +
 	"\x04File\x12C\n" +
 	"\afile_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
-	"\afile_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06fileId\x124\n" +
-	"\ttenant_id\x18\x02 \x01(\tB\x17\x82\xb7\x18\x13\n" +
-	"\ttenant_id\x12\x04UUID\x18\x01R\btenantId\x125\n" +
+	"\afile_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06fileId\x127\n" +
+	"\ttenant_id\x18\x02 \x01(\tB\x1a\x82\xb7\x18\x16\n" +
+	"\ttenant_id\x12\x04UUID\x18\x01\x98\x02\x01R\btenantId\x125\n" +
 	"\n" +
 	"project_id\x18\x03 \x01(\tB\x16\x82\xb7\x18\x12\n" +
 	"\n" +

@@ -144,7 +144,7 @@ var File_udb_core_authz_entity_v1_policy_tuple_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_entity_v1_policy_tuple_proto_rawDesc = "" +
 	"\n" +
-	"+udb/core/authz/entity/v1/policy_tuple.proto\x12\x18udb.core.authz.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x9c\f\n" +
+	"+udb/core/authz/entity/v1/policy_tuple.proto\x12\x18udb.core.authz.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x9f\f\n" +
 	"\vPolicyTuple\x12L\n" +
 	"\x0fpolicy_tuple_id\x18\x01 \x01(\x03B$\x82\xb7\x18 \n" +
 	"\x0fpolicy_tuple_id\x12\tBIGSERIAL\x18\x01(\x01R\rpolicyTupleId\x12\x8c\x01\n" +
@@ -164,10 +164,10 @@ const file_udb_core_authz_entity_v1_policy_tuple_proto_rawDesc = "" +
 	"\x06effect\x18\a \x01(\tB?\x82\xb7\x18;\n" +
 	"\x06effect\x12\x04TEXT\x18\x01:\x02''Z%allow, deny, or tuple-specific effectR\x06effect\x12h\n" +
 	"\tcondition\x18\b \x01(\tBJ\x82\xb7\x18F\n" +
-	"\tcondition\x12\x04TEXT\x18\x01:\x02''Z-Reserved condition or ABAC matcher expressionR\tcondition\x12\\\n" +
-	"\ttenant_id\x18\t \x01(\tB?\x82\xb7\x18;\n" +
+	"\tcondition\x12\x04TEXT\x18\x01:\x02''Z-Reserved condition or ABAC matcher expressionR\tcondition\x12_\n" +
+	"\ttenant_id\x18\t \x01(\tBB\x82\xb7\x18>\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R\x1f\n" +
-	"\x16idx_policytuple_tenant\x12\x05BTREER\btenantId\x12_\n" +
+	"\x16idx_policytuple_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12_\n" +
 	"\n" +
 	"project_id\x18\n" +
 	" \x01(\tB@\x82\xb7\x18<\n" +

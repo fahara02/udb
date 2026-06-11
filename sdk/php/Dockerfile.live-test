@@ -1,0 +1,36 @@
+FROM php:8.3-cli
+
+# Cap the grpc C++ compile parallelism. The default (all cores) spikes memory
+# building abseil/boringssl and can OOM the Docker VM; -j2 keeps peak RAM low
+# (slower, but it completes instead of crashing the engine).
+ENV MAKEFLAGS="-j2"
+
+# Install build tools + grpc and protobuf extensions via pecl.
+# - Check-Valid-Until=false bypasses the expired Debian trixie release date.
+# - `update || true`: the debian-security mirror periodically desyncs (index size
+#   mismatch / 404), which aborts the && chain even though `main` (where the
+#   needed packages live) succeeded. Tolerate it and proceed with the good index.
+RUN apt-get -o Acquire::Check-Valid-Until=false update || true \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        zlib1g-dev \
+        libssl-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && pecl install grpc protobuf \
+    && docker-php-ext-enable grpc protobuf
+
+WORKDIR /sdk
+COPY . /sdk
+
+# Test-env accommodations (kept after COPY so the grpc layer above stays cached):
+#  1. The pecl protobuf C extension mishandles `import public` descriptors
+#     ("Unable to load descriptor: public_dep N is out of range"). The pure-PHP
+#     google/protobuf shipped in vendor/ handles public imports correctly, so
+#     disable the C extension — gRPC transport keeps working without it.
+#  2. Neutralize composer's platform check: the dev deps were resolved on the
+#     host's PHP 8.5 and declare >=8.4.1, but they ship symfony/polyfill-php84 so
+#     they run on this 8.3 image; the conservative check would otherwise abort.
+RUN rm -f /usr/local/etc/php/conf.d/*protobuf*.ini \
+    && printf '<?php\n' > /sdk/vendor/composer/platform_check.php
+
+CMD ["php", "vendor/bin/pest", "tests/Live"]

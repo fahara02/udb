@@ -57,21 +57,23 @@ message Notification {
     data_residency_policy_ref: "tenant.data_residency"
   };
 
-  string notification_id = 1;
-  string recipient_id = 2;
-  NotificationType type = 3;
-  NotificationChannel channel = 4;
-  string subject = 5;
-  string message = 6;
-  map<string, string> template_data = 7;
-  NotificationPriority priority = 8;
-  NotificationStatus status = 9;
-  google.protobuf.Timestamp scheduled_at = 10;
-  google.protobuf.Timestamp sent_at = 11;
-  google.protobuf.Timestamp delivered_at = 12;
-  google.protobuf.Timestamp read_at = 13;
-  google.protobuf.Timestamp created_at = 14;
-  int32 retry_count = 15;
-  string error_message = 16;
-  string tenant_id = 17;
+  string notification_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "notification_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  string recipient_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "recipient_id" sql_type: "UUID" not_null: true index: { index_name: "idx_notifications_recipient_id" index_type: "BTREE" } }];
+  NotificationType type = 3 [(udb.core.common.v1.pg_column) = { column_name: "type" sql_type: "VARCHAR(40)" not_null: true default_value: "'NOTIFICATION_TYPE_UNSPECIFIED'" }];
+  NotificationChannel channel = 4 [(udb.core.common.v1.pg_column) = { column_name: "channel" sql_type: "VARCHAR(40)" not_null: true default_value: "'NOTIFICATION_CHANNEL_UNSPECIFIED'" }];
+  string subject = 5 [(udb.core.common.v1.pg_column) = { column_name: "subject" sql_type: "TEXT" not_null: true default_value: "''" }];
+  string message = 6 [(udb.core.common.v1.pg_column) = { column_name: "message" sql_type: "TEXT" not_null: true default_value: "''" }];
+  map<string, string> template_data = 7 [(udb.core.common.v1.pg_column) = { column_name: "template_data" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" }];
+  NotificationPriority priority = 8 [(udb.core.common.v1.pg_column) = { column_name: "priority" sql_type: "VARCHAR(40)" not_null: true default_value: "'NOTIFICATION_PRIORITY_NORMAL'" }];
+  NotificationStatus status = 9 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(40)" not_null: true default_value: "'NOTIFICATION_STATUS_PENDING'" index: { index_name: "idx_notifications_status" index_type: "BTREE" } }];
+  google.protobuf.Timestamp scheduled_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "scheduled_at" sql_type: "TIMESTAMPTZ" }];
+  google.protobuf.Timestamp sent_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "sent_at" sql_type: "TIMESTAMPTZ" }];
+  google.protobuf.Timestamp delivered_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "delivered_at" sql_type: "TIMESTAMPTZ" }];
+  google.protobuf.Timestamp read_at = 13 [(udb.core.common.v1.pg_column) = { column_name: "read_at" sql_type: "TIMESTAMPTZ" }];
+  google.protobuf.Timestamp created_at = 14 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  int32 retry_count = 15 [(udb.core.common.v1.pg_column) = { column_name: "retry_count" sql_type: "INTEGER" not_null: true default_value: "0" }];
+  string error_message = 16 [(udb.core.common.v1.pg_column) = { column_name: "error_message" sql_type: "TEXT" not_null: true default_value: "''" }];
+  string tenant_id = 17 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_notifications_tenant" index_type: "BTREE" } }];
+  google.protobuf.Timestamp deleted_at = 18 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" index: { index_name: "idx_notifications_active" index_type: "BTREE" where_clause: "deleted_at IS NULL" } }];
+  string deleted_by = 19 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" }];
 }

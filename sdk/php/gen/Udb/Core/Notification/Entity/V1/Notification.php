@@ -17,73 +17,81 @@ use Google\Protobuf\RepeatedField;
 class Notification extends \Google\Protobuf\Internal\Message
 {
     /**
-     * Generated from protobuf field <code>string notification_id = 1 [json_name = "notificationId"];</code>
+     * Generated from protobuf field <code>string notification_id = 1 [json_name = "notificationId", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $notification_id = '';
     /**
-     * Generated from protobuf field <code>string recipient_id = 2 [json_name = "recipientId"];</code>
+     * Generated from protobuf field <code>string recipient_id = 2 [json_name = "recipientId", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $recipient_id = '';
     /**
-     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type"];</code>
+     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $type = 0;
     /**
-     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel"];</code>
+     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $channel = 0;
     /**
-     * Generated from protobuf field <code>string subject = 5 [json_name = "subject"];</code>
+     * Generated from protobuf field <code>string subject = 5 [json_name = "subject", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $subject = '';
     /**
-     * Generated from protobuf field <code>string message = 6 [json_name = "message"];</code>
+     * Generated from protobuf field <code>string message = 6 [json_name = "message", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $message = '';
     /**
-     * Generated from protobuf field <code>map<string, string> template_data = 7 [json_name = "templateData"];</code>
+     * Generated from protobuf field <code>map<string, string> template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = {</code>
      */
     private $template_data;
     /**
-     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority"];</code>
+     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $priority = 0;
     /**
-     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status"];</code>
+     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $status = 0;
     /**
-     * Generated from protobuf field <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+     * Generated from protobuf field <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $scheduled_at = null;
     /**
-     * Generated from protobuf field <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+     * Generated from protobuf field <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $sent_at = null;
     /**
-     * Generated from protobuf field <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+     * Generated from protobuf field <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $delivered_at = null;
     /**
-     * Generated from protobuf field <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+     * Generated from protobuf field <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $read_at = null;
     /**
-     * Generated from protobuf field <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+     * Generated from protobuf field <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $created_at = null;
     /**
-     * Generated from protobuf field <code>int32 retry_count = 15 [json_name = "retryCount"];</code>
+     * Generated from protobuf field <code>int32 retry_count = 15 [json_name = "retryCount", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $retry_count = 0;
     /**
-     * Generated from protobuf field <code>string error_message = 16 [json_name = "errorMessage"];</code>
+     * Generated from protobuf field <code>string error_message = 16 [json_name = "errorMessage", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $error_message = '';
     /**
-     * Generated from protobuf field <code>string tenant_id = 17 [json_name = "tenantId"];</code>
+     * Generated from protobuf field <code>string tenant_id = 17 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $tenant_id = '';
+    /**
+     * Generated from protobuf field <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $deleted_at = null;
+    /**
+     * Generated from protobuf field <code>string deleted_by = 19 [json_name = "deletedBy", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $deleted_by = '';
 
     /**
      * Constructor.
@@ -108,6 +116,8 @@ class Notification extends \Google\Protobuf\Internal\Message
      *     @type int $retry_count
      *     @type string $error_message
      *     @type string $tenant_id
+     *     @type \Google\Protobuf\Timestamp $deleted_at
+     *     @type string $deleted_by
      * }
      */
     public function __construct($data = NULL) {
@@ -116,7 +126,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string notification_id = 1 [json_name = "notificationId"];</code>
+     * Generated from protobuf field <code>string notification_id = 1 [json_name = "notificationId", (.udb.core.common.v1.pg_column) = {</code>
      * @return string
      */
     public function getNotificationId()
@@ -125,7 +135,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string notification_id = 1 [json_name = "notificationId"];</code>
+     * Generated from protobuf field <code>string notification_id = 1 [json_name = "notificationId", (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var
      * @return $this
      */
@@ -138,7 +148,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string recipient_id = 2 [json_name = "recipientId"];</code>
+     * Generated from protobuf field <code>string recipient_id = 2 [json_name = "recipientId", (.udb.core.common.v1.pg_column) = {</code>
      * @return string
      */
     public function getRecipientId()
@@ -147,7 +157,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string recipient_id = 2 [json_name = "recipientId"];</code>
+     * Generated from protobuf field <code>string recipient_id = 2 [json_name = "recipientId", (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var
      * @return $this
      */
@@ -160,7 +170,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type"];</code>
+     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type", (.udb.core.common.v1.pg_column) = {</code>
      * @return int one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationType}
      */
     public function getType()
@@ -169,7 +179,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type"];</code>
+     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type", (.udb.core.common.v1.pg_column) = {</code>
      * @param int $var one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationType}
      * @return $this
      */
@@ -182,7 +192,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel"];</code>
+     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel", (.udb.core.common.v1.pg_column) = {</code>
      * @return int one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationChannel}
      */
     public function getChannel()
@@ -191,7 +201,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel"];</code>
+     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel", (.udb.core.common.v1.pg_column) = {</code>
      * @param int $var one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationChannel}
      * @return $this
      */
@@ -204,7 +214,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string subject = 5 [json_name = "subject"];</code>
+     * Generated from protobuf field <code>string subject = 5 [json_name = "subject", (.udb.core.common.v1.pg_column) = {</code>
      * @return string
      */
     public function getSubject()
@@ -213,7 +223,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string subject = 5 [json_name = "subject"];</code>
+     * Generated from protobuf field <code>string subject = 5 [json_name = "subject", (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var
      * @return $this
      */
@@ -226,7 +236,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string message = 6 [json_name = "message"];</code>
+     * Generated from protobuf field <code>string message = 6 [json_name = "message", (.udb.core.common.v1.pg_column) = {</code>
      * @return string
      */
     public function getMessage()
@@ -235,7 +245,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string message = 6 [json_name = "message"];</code>
+     * Generated from protobuf field <code>string message = 6 [json_name = "message", (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var
      * @return $this
      */
@@ -248,7 +258,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>map<string, string> template_data = 7 [json_name = "templateData"];</code>
+     * Generated from protobuf field <code>map<string, string> template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = {</code>
      * @return \Google\Protobuf\Internal\MapField
      */
     public function getTemplateData()
@@ -257,7 +267,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>map<string, string> template_data = 7 [json_name = "templateData"];</code>
+     * Generated from protobuf field <code>map<string, string> template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = {</code>
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
@@ -270,7 +280,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority"];</code>
+     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority", (.udb.core.common.v1.pg_column) = {</code>
      * @return int one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationPriority}
      */
     public function getPriority()
@@ -279,7 +289,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority"];</code>
+     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority", (.udb.core.common.v1.pg_column) = {</code>
      * @param int $var one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationPriority}
      * @return $this
      */
@@ -292,7 +302,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status"];</code>
+     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
      * @return int one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationStatus}
      */
     public function getStatus()
@@ -301,7 +311,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status"];</code>
+     * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
      * @param int $var one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationStatus}
      * @return $this
      */
@@ -314,7 +324,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+     * Generated from protobuf field <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = {</code>
      * @return \Google\Protobuf\Timestamp|null
      */
     public function getScheduledAt()
@@ -333,7 +343,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+     * Generated from protobuf field <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = {</code>
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
@@ -345,7 +355,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+     * Generated from protobuf field <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = {</code>
      * @return \Google\Protobuf\Timestamp|null
      */
     public function getSentAt()
@@ -364,7 +374,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+     * Generated from protobuf field <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = {</code>
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
@@ -376,7 +386,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+     * Generated from protobuf field <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = {</code>
      * @return \Google\Protobuf\Timestamp|null
      */
     public function getDeliveredAt()
@@ -395,7 +405,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+     * Generated from protobuf field <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = {</code>
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
@@ -407,7 +417,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+     * Generated from protobuf field <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = {</code>
      * @return \Google\Protobuf\Timestamp|null
      */
     public function getReadAt()
@@ -426,7 +436,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+     * Generated from protobuf field <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = {</code>
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
@@ -438,7 +448,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+     * Generated from protobuf field <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = {</code>
      * @return \Google\Protobuf\Timestamp|null
      */
     public function getCreatedAt()
@@ -457,7 +467,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+     * Generated from protobuf field <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = {</code>
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
@@ -469,7 +479,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>int32 retry_count = 15 [json_name = "retryCount"];</code>
+     * Generated from protobuf field <code>int32 retry_count = 15 [json_name = "retryCount", (.udb.core.common.v1.pg_column) = {</code>
      * @return int
      */
     public function getRetryCount()
@@ -478,7 +488,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>int32 retry_count = 15 [json_name = "retryCount"];</code>
+     * Generated from protobuf field <code>int32 retry_count = 15 [json_name = "retryCount", (.udb.core.common.v1.pg_column) = {</code>
      * @param int $var
      * @return $this
      */
@@ -491,7 +501,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string error_message = 16 [json_name = "errorMessage"];</code>
+     * Generated from protobuf field <code>string error_message = 16 [json_name = "errorMessage", (.udb.core.common.v1.pg_column) = {</code>
      * @return string
      */
     public function getErrorMessage()
@@ -500,7 +510,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string error_message = 16 [json_name = "errorMessage"];</code>
+     * Generated from protobuf field <code>string error_message = 16 [json_name = "errorMessage", (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var
      * @return $this
      */
@@ -513,7 +523,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string tenant_id = 17 [json_name = "tenantId"];</code>
+     * Generated from protobuf field <code>string tenant_id = 17 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = {</code>
      * @return string
      */
     public function getTenantId()
@@ -522,7 +532,7 @@ class Notification extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string tenant_id = 17 [json_name = "tenantId"];</code>
+     * Generated from protobuf field <code>string tenant_id = 17 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var
      * @return $this
      */
@@ -530,6 +540,59 @@ class Notification extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, true);
         $this->tenant_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = {</code>
+     * @return \Google\Protobuf\Timestamp|null
+     */
+    public function getDeletedAt()
+    {
+        return $this->deleted_at;
+    }
+
+    public function hasDeletedAt()
+    {
+        return isset($this->deleted_at);
+    }
+
+    public function clearDeletedAt()
+    {
+        unset($this->deleted_at);
+    }
+
+    /**
+     * Generated from protobuf field <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = {</code>
+     * @param \Google\Protobuf\Timestamp $var
+     * @return $this
+     */
+    public function setDeletedAt(\Google\Protobuf\Timestamp|null $var)
+    {
+        $this->deleted_at = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string deleted_by = 19 [json_name = "deletedBy", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getDeletedBy()
+    {
+        return $this->deleted_by;
+    }
+
+    /**
+     * Generated from protobuf field <code>string deleted_by = 19 [json_name = "deletedBy", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setDeletedBy(string $var)
+    {
+        GPBUtil::checkString($var, true);
+        $this->deleted_by = $var;
 
         return $this;
     }

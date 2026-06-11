@@ -109,13 +109,13 @@ var File_udb_core_authn_entity_v1_mfa_policy_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_mfa_policy_proto_rawDesc = "" +
 	"\n" +
-	")udb/core/authn/entity/v1/mfa_policy.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x94\x06\n" +
+	")udb/core/authn/entity/v1/mfa_policy.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x97\x06\n" +
 	"\tMfaPolicy\x12I\n" +
 	"\tpolicy_id\x18\x01 \x01(\tB,\x82\xb7\x18(\n" +
-	"\tpolicy_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\bpolicyId\x12`\n" +
-	"\ttenant_id\x18\x02 \x01(\tBC\x82\xb7\x18?\n" +
+	"\tpolicy_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\bpolicyId\x12c\n" +
+	"\ttenant_id\x18\x02 \x01(\tBF\x82\xb7\x18B\n" +
 	"\ttenant_id\x12\fVARCHAR(120)\x18\x01R\"\n" +
-	"\x17idx_mfa_policies_tenant\x12\x05BTREE\x18\x01R\btenantId\x12\x91\x01\n" +
+	"\x17idx_mfa_policies_tenant\x12\x05BTREE\x18\x01\x98\x02\x01R\btenantId\x12\x91\x01\n" +
 	"\vrequire_mfa\x18\x03 \x01(\bBp\x82\xb7\x18l\n" +
 	"\vrequire_mfa\x12\aBOOLEAN\x18\x01:\x05falseZKWhen true, the tenant's users must enrol MFA before password login succeedsR\n" +
 	"requireMfa\x12q\n" +

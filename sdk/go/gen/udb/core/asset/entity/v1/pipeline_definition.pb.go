@@ -135,12 +135,12 @@ var File_udb_core_asset_entity_v1_pipeline_definition_proto protoreflect.FileDes
 
 const file_udb_core_asset_entity_v1_pipeline_definition_proto_rawDesc = "" +
 	"\n" +
-	"2udb/core/asset/entity/v1/pipeline_definition.proto\x12\x18udb.core.asset.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\"\xb9\t\n" +
+	"2udb/core/asset/entity/v1/pipeline_definition.proto\x12\x18udb.core.asset.entity.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\"\xbc\t\n" +
 	"\x12PipelineDefinition\x12U\n" +
 	"\rdefinition_id\x18\x01 \x01(\tB0\x82\xb7\x18,\n" +
-	"\rdefinition_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\fdefinitionId\x124\n" +
-	"\ttenant_id\x18\x02 \x01(\tB\x17\x82\xb7\x18\x13\n" +
-	"\ttenant_id\x12\x04UUID\x18\x01R\btenantId\x12.\n" +
+	"\rdefinition_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\fdefinitionId\x127\n" +
+	"\ttenant_id\x18\x02 \x01(\tB\x1a\x82\xb7\x18\x16\n" +
+	"\ttenant_id\x12\x04UUID\x18\x01\x98\x02\x01R\btenantId\x12.\n" +
 	"\x04name\x18\x03 \x01(\tB\x1a\x82\xb7\x18\x16\n" +
 	"\x04name\x12\fVARCHAR(255)\x18\x01R\x04name\x129\n" +
 	"\vdescription\x18\x04 \x01(\tB\x17\x82\xb7\x18\x13\n" +

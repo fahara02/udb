@@ -11,81 +11,81 @@ public interface NotificationOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>string notification_id = 1 [json_name = "notificationId"];</code>
+   * <code>string notification_id = 1 [json_name = "notificationId", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The notificationId.
    */
   java.lang.String getNotificationId();
   /**
-   * <code>string notification_id = 1 [json_name = "notificationId"];</code>
+   * <code>string notification_id = 1 [json_name = "notificationId", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The bytes for notificationId.
    */
   com.google.protobuf.ByteString
       getNotificationIdBytes();
 
   /**
-   * <code>string recipient_id = 2 [json_name = "recipientId"];</code>
+   * <code>string recipient_id = 2 [json_name = "recipientId", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The recipientId.
    */
   java.lang.String getRecipientId();
   /**
-   * <code>string recipient_id = 2 [json_name = "recipientId"];</code>
+   * <code>string recipient_id = 2 [json_name = "recipientId", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The bytes for recipientId.
    */
   com.google.protobuf.ByteString
       getRecipientIdBytes();
 
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The enum numeric value on the wire for type.
    */
   int getTypeValue();
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The type.
    */
   com.udb.core.notification.entity.v1.NotificationType getType();
 
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The enum numeric value on the wire for channel.
    */
   int getChannelValue();
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The channel.
    */
   com.udb.core.notification.entity.v1.NotificationChannel getChannel();
 
   /**
-   * <code>string subject = 5 [json_name = "subject"];</code>
+   * <code>string subject = 5 [json_name = "subject", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The subject.
    */
   java.lang.String getSubject();
   /**
-   * <code>string subject = 5 [json_name = "subject"];</code>
+   * <code>string subject = 5 [json_name = "subject", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The bytes for subject.
    */
   com.google.protobuf.ByteString
       getSubjectBytes();
 
   /**
-   * <code>string message = 6 [json_name = "message"];</code>
+   * <code>string message = 6 [json_name = "message", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The message.
    */
   java.lang.String getMessage();
   /**
-   * <code>string message = 6 [json_name = "message"];</code>
+   * <code>string message = 6 [json_name = "message", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The bytes for message.
    */
   com.google.protobuf.ByteString
       getMessageBytes();
 
   /**
-   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   int getTemplateDataCount();
   /**
-   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   boolean containsTemplateData(
       java.lang.String key);
@@ -96,12 +96,12 @@ public interface NotificationOrBuilder extends
   java.util.Map<java.lang.String, java.lang.String>
   getTemplateData();
   /**
-   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   java.util.Map<java.lang.String, java.lang.String>
   getTemplateDataMap();
   /**
-   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   /* nullable */
 java.lang.String getTemplateDataOrDefault(
@@ -109,135 +109,162 @@ java.lang.String getTemplateDataOrDefault(
       /* nullable */
 java.lang.String defaultValue);
   /**
-   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   java.lang.String getTemplateDataOrThrow(
       java.lang.String key);
 
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The enum numeric value on the wire for priority.
    */
   int getPriorityValue();
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The priority.
    */
   com.udb.core.notification.entity.v1.NotificationPriority getPriority();
 
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The enum numeric value on the wire for status.
    */
   int getStatusValue();
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The status.
    */
   com.udb.core.notification.entity.v1.NotificationStatus getStatus();
 
   /**
-   * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+   * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return Whether the scheduledAt field is set.
    */
   boolean hasScheduledAt();
   /**
-   * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+   * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The scheduledAt.
    */
   com.google.protobuf.Timestamp getScheduledAt();
   /**
-   * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+   * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   com.google.protobuf.TimestampOrBuilder getScheduledAtOrBuilder();
 
   /**
-   * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+   * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return Whether the sentAt field is set.
    */
   boolean hasSentAt();
   /**
-   * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+   * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The sentAt.
    */
   com.google.protobuf.Timestamp getSentAt();
   /**
-   * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+   * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   com.google.protobuf.TimestampOrBuilder getSentAtOrBuilder();
 
   /**
-   * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+   * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return Whether the deliveredAt field is set.
    */
   boolean hasDeliveredAt();
   /**
-   * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+   * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The deliveredAt.
    */
   com.google.protobuf.Timestamp getDeliveredAt();
   /**
-   * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+   * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   com.google.protobuf.TimestampOrBuilder getDeliveredAtOrBuilder();
 
   /**
-   * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+   * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return Whether the readAt field is set.
    */
   boolean hasReadAt();
   /**
-   * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+   * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The readAt.
    */
   com.google.protobuf.Timestamp getReadAt();
   /**
-   * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+   * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   com.google.protobuf.TimestampOrBuilder getReadAtOrBuilder();
 
   /**
-   * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+   * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return Whether the createdAt field is set.
    */
   boolean hasCreatedAt();
   /**
-   * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+   * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The createdAt.
    */
   com.google.protobuf.Timestamp getCreatedAt();
   /**
-   * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+   * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   com.google.protobuf.TimestampOrBuilder getCreatedAtOrBuilder();
 
   /**
-   * <code>int32 retry_count = 15 [json_name = "retryCount"];</code>
+   * <code>int32 retry_count = 15 [json_name = "retryCount", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The retryCount.
    */
   int getRetryCount();
 
   /**
-   * <code>string error_message = 16 [json_name = "errorMessage"];</code>
+   * <code>string error_message = 16 [json_name = "errorMessage", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The errorMessage.
    */
   java.lang.String getErrorMessage();
   /**
-   * <code>string error_message = 16 [json_name = "errorMessage"];</code>
+   * <code>string error_message = 16 [json_name = "errorMessage", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The bytes for errorMessage.
    */
   com.google.protobuf.ByteString
       getErrorMessageBytes();
 
   /**
-   * <code>string tenant_id = 17 [json_name = "tenantId"];</code>
+   * <code>string tenant_id = 17 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The tenantId.
    */
   java.lang.String getTenantId();
   /**
-   * <code>string tenant_id = 17 [json_name = "tenantId"];</code>
+   * <code>string tenant_id = 17 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The bytes for tenantId.
    */
   com.google.protobuf.ByteString
       getTenantIdBytes();
+
+  /**
+   * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return Whether the deletedAt field is set.
+   */
+  boolean hasDeletedAt();
+  /**
+   * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The deletedAt.
+   */
+  com.google.protobuf.Timestamp getDeletedAt();
+  /**
+   * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   */
+  com.google.protobuf.TimestampOrBuilder getDeletedAtOrBuilder();
+
+  /**
+   * <code>string deleted_by = 19 [json_name = "deletedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The deletedBy.
+   */
+  java.lang.String getDeletedBy();
+  /**
+   * <code>string deleted_by = 19 [json_name = "deletedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for deletedBy.
+   */
+  com.google.protobuf.ByteString
+      getDeletedByBytes();
 }

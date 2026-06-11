@@ -97,7 +97,7 @@ message PolicyCanary {
   CanaryScopeKind scope_kind = 4 [(udb.core.common.v1.pg_column) = { column_name: "scope_kind" sql_type: "VARCHAR(40)" not_null: true default_value: "'CANARY_SCOPE_KIND_UNSPECIFIED'" }];
   // For NODE/TENANT: the list of in-scope ids. For PERCENT: a single-element
   // list whose value is the integer percentage (1..=100).
-  string scope_values_json = 5 [(udb.core.common.v1.pg_column) = { column_name: "scope_values" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" comment: "NODE/TENANT id list, or [percentage] for PERCENT" }];
+  string scope_values = 5 [(udb.core.common.v1.pg_column) = { column_name: "scope_values" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" comment: "NODE/TENANT id list, or [percentage] for PERCENT" }];
   CanaryState state = 6 [(udb.core.common.v1.pg_column) = { column_name: "state" sql_type: "VARCHAR(40)" not_null: true default_value: "'CANARY_STATE_ACTIVE'" }];
   google.protobuf.Timestamp started_at = 7 [(udb.core.common.v1.pg_column) = { column_name: "started_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
   // The evaluator waits at least this long before declaring success.
@@ -106,7 +106,7 @@ message PolicyCanary {
   // A measured value strictly greater than this inside the window auto-rolls back.
   double metric_threshold = 9 [(udb.core.common.v1.pg_column) = { column_name: "metric_threshold" sql_type: "DOUBLE PRECISION" not_null: true default_value: "0.05" }];
   string created_by = 10 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "VARCHAR(160)" not_null: true default_value: "''" }];
-  string tenant_id = 11 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policy_canaries_tenant" index_type: "BTREE" } }];
+  string tenant_id = 11 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policy_canaries_tenant" index_type: "BTREE" } }];
   string project_id = 12 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" not_null: true default_value: "''" }];
   // Minimum sample count required for a conclusive evaluation. Below this the
   // canary PAUSES instead of promoting or rolling back.

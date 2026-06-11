@@ -104,7 +104,7 @@ message User {
 
   UserStatus status = 6 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(30)" not_null: true default_value: "'PENDING_VERIFICATION'" }];
 
-  string tenant_id = 7 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" not_null: true comment: "Tenant/account boundary for this principal" index: { index_name: "idx_users_tenant_id" index_type: "BTREE" } }];
+  string tenant_id = 7 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" not_null: true comment: "Tenant/account boundary for this principal" index: { index_name: "idx_users_tenant_id" index_type: "BTREE" } }];
 
   string full_name = 8 [(udb.core.common.v1.pg_column) = { column_name: "full_name" sql_type: "VARCHAR(255)" not_null: true }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.data_purpose) = "Display and audit trail"];
 

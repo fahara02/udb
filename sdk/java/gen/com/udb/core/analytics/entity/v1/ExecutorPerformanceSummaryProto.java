@@ -81,7 +81,7 @@ public final class ExecutorPerformanceSummaryProto extends com.google.protobuf.G
       "\001*GDaily executor performance roll-up fo" +
       "r project-defined processing unitsH\003R\014su" +
       "mmary_dateX\355\002\352\001\007replica\212\262\031S\n\006global2\004non" +
-      "e:\025analytics.operational@\373\023H\002R\006tenantZ\010s" +
+      "e:\025analytics.operational@\355\002H\002R\006tenantZ\010s" +
       "tandardr\025tenant.data_residencyB\242\002\n com.u" +
       "db.core.analytics.entity.v1B\037ExecutorPer" +
       "formanceSummaryProtoP\001ZHgithub.com/fahar" +

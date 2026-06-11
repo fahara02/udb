@@ -44,33 +44,33 @@ public final class MfaPolicyProto extends com.google.protobuf.GeneratedFile {
       "oto\022\030udb.core.authn.entity.v1\032\037google/pr" +
       "otobuf/timestamp.proto\032\033udb/core/common/" +
       "v1/db.proto\032!udb/core/common/v1/security" +
-      ".proto\"\224\006\n\tMfaPolicy\022I\n\tpolicy_id\030\001 \001(\tB" +
+      ".proto\"\227\006\n\tMfaPolicy\022I\n\tpolicy_id\030\001 \001(\tB" +
       ",\202\267\030(\n\tpolicy_id\022\004UUID\030\001(\001:\021gen_random_u" +
-      "uid()R\010policyId\022`\n\ttenant_id\030\002 \001(\tBC\202\267\030?" +
+      "uid()R\010policyId\022c\n\ttenant_id\030\002 \001(\tBF\202\267\030B" +
       "\n\ttenant_id\022\014VARCHAR(120)\030\001R\"\n\027idx_mfa_p" +
-      "olicies_tenant\022\005BTREE\030\001R\010tenantId\022\221\001\n\013re" +
-      "quire_mfa\030\003 \001(\010Bp\202\267\030l\n\013require_mfa\022\007BOOL" +
-      "EAN\030\001:\005falseZKWhen true, the tenant\'s us" +
-      "ers must enrol MFA before password login" +
-      " succeedsR\nrequireMfa\022q\n\ncreated_at\030\004 \001(" +
-      "\0132\032.google.protobuf.TimestampB6\202\267\0302\n\ncre" +
-      "ated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAM" +
-      "P`\001h\001R\tcreatedAt\022m\n\nupdated_at\030\005 \001(\0132\032.g" +
-      "oogle.protobuf.TimestampB2\202\267\030.\n\nupdated_" +
-      "at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMPR\tup" +
-      "datedAt:\343\001\372\266\030J\n\014mfa_policies\022\tudb_authn\030" +
-      "\007 \001*!Per-tenant MFA enforcement policy\352\001" +
-      "\007primary\212\262\031\220\001\n\006tenant\032\ttenant_id*4tenant" +
-      "_id = current_setting(\'app.current_tenan" +
-      "t_id\')2\004none:\021authn.operational@\373\023H\002R\006te" +
-      "nantZ\010standardr\025tenant.data_residencyB\371\001" +
-      "\n\034com.udb.core.authn.entity.v1B\016MfaPolic" +
-      "yProtoP\001ZDgithub.com/fahara02/udb/sdk/go" +
-      "/gen/udb/core/authn/entity/v1;entityv1\242\002" +
-      "\004UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030Udb\\C" +
-      "ore\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadata\\Co" +
-      "re\\Authn\\Entity\\V1\352\002\034Udb::Core::Authn::E" +
-      "ntity::V1b\006proto3"
+      "olicies_tenant\022\005BTREE\030\001\230\002\001R\010tenantId\022\221\001\n" +
+      "\013require_mfa\030\003 \001(\010Bp\202\267\030l\n\013require_mfa\022\007B" +
+      "OOLEAN\030\001:\005falseZKWhen true, the tenant\'s" +
+      " users must enrol MFA before password lo" +
+      "gin succeedsR\nrequireMfa\022q\n\ncreated_at\030\004" +
+      " \001(\0132\032.google.protobuf.TimestampB6\202\267\0302\n\n" +
+      "created_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMES" +
+      "TAMP`\001h\001R\tcreatedAt\022m\n\nupdated_at\030\005 \001(\0132" +
+      "\032.google.protobuf.TimestampB2\202\267\030.\n\nupdat" +
+      "ed_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMPR" +
+      "\tupdatedAt:\343\001\372\266\030J\n\014mfa_policies\022\tudb_aut" +
+      "hn\030\007 \001*!Per-tenant MFA enforcement polic" +
+      "y\352\001\007primary\212\262\031\220\001\n\006tenant\032\ttenant_id*4ten" +
+      "ant_id = current_setting(\'app.current_te" +
+      "nant_id\')2\004none:\021authn.operational@\373\023H\002R" +
+      "\006tenantZ\010standardr\025tenant.data_residency" +
+      "B\371\001\n\034com.udb.core.authn.entity.v1B\016MfaPo" +
+      "licyProtoP\001ZDgithub.com/fahara02/udb/sdk" +
+      "/go/gen/udb/core/authn/entity/v1;entityv" +
+      "1\242\002\004UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030Ud" +
+      "b\\Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadata" +
+      "\\Core\\Authn\\Entity\\V1\352\002\034Udb::Core::Authn" +
+      "::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

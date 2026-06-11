@@ -34,7 +34,7 @@ message ReconciliationAnalyticsSummary {
     rls_policy_template: ""
     soft_delete_mode: "none"
     retention_class: "analytics.operational"
-    retention_days: 2555
+    retention_days: 365
     audit_mode: AUDIT_MODE_MUTATION
     encryption_profile: "tenant"
     pii_profile: "standard"

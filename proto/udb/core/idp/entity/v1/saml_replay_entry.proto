@@ -66,7 +66,7 @@ message SamlReplayEntry {
 
   string saml_replay_entry_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "saml_replay_entry_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
 
-  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" not_null: true }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" not_null: true }];
 
   string provider_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "provider_id" sql_type: "UUID" not_null: true }];
 

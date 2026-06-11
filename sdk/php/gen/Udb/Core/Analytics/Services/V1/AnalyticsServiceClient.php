@@ -7,7 +7,7 @@ namespace Udb\Core\Analytics\Services\V1;
  * ---------------------------------------------------------------------------
  * AnalyticsService - pipeline statistics, performance dashboards, Prometheus
  * metric backing, SLA compliance reporting, and executor/reconciliation analytics.
- *
+ * 
  * HTTP prefix: /v1/analytics
  * ---------------------------------------------------------------------------
  *

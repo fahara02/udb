@@ -82,7 +82,7 @@ message Role {
   google.protobuf.Timestamp updated_at = 8 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true }];
 
   google.protobuf.Timestamp deleted_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" comment: "Soft delete timestamp" }];
-  string tenant_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_role_tenant" index_type: "BTREE" } }];
+  string tenant_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_role_tenant" index_type: "BTREE" } }];
   string deleted_by = 11 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" comment: "Soft delete actor" }];
   string role_code = 12 [(udb.core.common.v1.pg_column) = { column_name: "role_code" sql_type: "VARCHAR(120)" comment: "Stable machine-readable role code" index: { index_name: "idx_roles_role_code" index_type: "BTREE" } }];
   string domain = 13 [(udb.core.common.v1.pg_column) = { column_name: "domain" sql_type: "VARCHAR(200)" comment: "Authorization domain such as tenant:<id>, project:<id>, or resource:<type>/<id>" index: { index_name: "idx_roles_domain" index_type: "BTREE" } }];

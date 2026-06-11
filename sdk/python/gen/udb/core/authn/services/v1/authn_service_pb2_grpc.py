@@ -8,10 +8,10 @@ from udb.core.authn.services.v1 import core_pb2 as udb_dot_core_dot_authn_dot_se
 class AuthnServiceStub(object):
     """---------------------------------------------------------------------------
     AuthnService — native and hybrid authentication for UDB-backed projects.
-
+    
     HTTP prefix: /v1/auth
     URL conventions (Rule 07): snake_case paths, :<verb> custom method suffix, kebab-case query params.
-
+    
     Auth method routing is policy-driven. Typical deployments use server-side
     sessions for browser clients, JWT for APIs/desktop/mobile clients, API keys
     for service integrations, and external OIDC/SAML/JWT proofs for hybrid auth.
@@ -279,10 +279,10 @@ class AuthnServiceStub(object):
 class AuthnServiceServicer(object):
     """---------------------------------------------------------------------------
     AuthnService — native and hybrid authentication for UDB-backed projects.
-
+    
     HTTP prefix: /v1/auth
     URL conventions (Rule 07): snake_case paths, :<verb> custom method suffix, kebab-case query params.
-
+    
     Auth method routing is policy-driven. Typical deployments use server-side
     sessions for browser clients, JWT for APIs/desktop/mobile clients, API keys
     for service integrations, and external OIDC/SAML/JWT proofs for hybrid auth.
@@ -879,10 +879,10 @@ def add_AuthnServiceServicer_to_server(servicer, server):
 class AuthnService(object):
     """---------------------------------------------------------------------------
     AuthnService — native and hybrid authentication for UDB-backed projects.
-
+    
     HTTP prefix: /v1/auth
     URL conventions (Rule 07): snake_case paths, :<verb> custom method suffix, kebab-case query params.
-
+    
     Auth method routing is policy-driven. Typical deployments use server-side
     sessions for browser clients, JWT for APIs/desktop/mobile clients, API keys
     for service integrations, and external OIDC/SAML/JWT proofs for hybrid auth.

@@ -162,9 +162,9 @@ type PolicyCanary struct {
 	ScopeKind       CanaryScopeKind        `protobuf:"varint,4,opt,name=scope_kind,json=scopeKind,proto3,enum=udb.core.authz.entity.v1.CanaryScopeKind" json:"scope_kind,omitempty"`
 	// For NODE/TENANT: the list of in-scope ids. For PERCENT: a single-element
 	// list whose value is the integer percentage (1..=100).
-	ScopeValuesJson string                 `protobuf:"bytes,5,opt,name=scope_values_json,json=scopeValuesJson,proto3" json:"scope_values_json,omitempty"`
-	State           CanaryState            `protobuf:"varint,6,opt,name=state,proto3,enum=udb.core.authz.entity.v1.CanaryState" json:"state,omitempty"`
-	StartedAt       *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	ScopeValues string                 `protobuf:"bytes,5,opt,name=scope_values,json=scopeValues,proto3" json:"scope_values,omitempty"`
+	State       CanaryState            `protobuf:"varint,6,opt,name=state,proto3,enum=udb.core.authz.entity.v1.CanaryState" json:"state,omitempty"`
+	StartedAt   *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
 	// The evaluator waits at least this long before declaring success.
 	SuccessWindowSecs int64 `protobuf:"varint,8,opt,name=success_window_secs,json=successWindowSecs,proto3" json:"success_window_secs,omitempty"`
 	// The success metric breach threshold (e.g. fractional authz deny/error rate).
@@ -244,9 +244,9 @@ func (x *PolicyCanary) GetScopeKind() CanaryScopeKind {
 	return CanaryScopeKind_CANARY_SCOPE_KIND_UNSPECIFIED
 }
 
-func (x *PolicyCanary) GetScopeValuesJson() string {
+func (x *PolicyCanary) GetScopeValues() string {
 	if x != nil {
-		return x.ScopeValuesJson
+		return x.ScopeValues
 	}
 	return ""
 }
@@ -332,7 +332,7 @@ var File_udb_core_authz_entity_v1_policy_canary_proto protoreflect.FileDescripto
 
 const file_udb_core_authz_entity_v1_policy_canary_proto_rawDesc = "" +
 	"\n" +
-	",udb/core/authz/entity/v1/policy_canary.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb8\x11\n" +
+	",udb/core/authz/entity/v1/policy_canary.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb1\x11\n" +
 	"\fPolicyCanary\x12I\n" +
 	"\tcanary_id\x18\x01 \x01(\tB,\x82\xb7\x18(\n" +
 	"\tcanary_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\bcanaryId\x12\xa3\x01\n" +
@@ -345,9 +345,9 @@ const file_udb_core_authz_entity_v1_policy_canary_proto_rawDesc = "" +
 	"\n" +
 	"scope_kind\x18\x04 \x01(\x0e2).udb.core.authz.entity.v1.CanaryScopeKindB@\x82\xb7\x18<\n" +
 	"\n" +
-	"scope_kind\x12\vVARCHAR(40)\x18\x01:\x1f'CANARY_SCOPE_KIND_UNSPECIFIED'R\tscopeKind\x12\x88\x01\n" +
-	"\x11scope_values_json\x18\x05 \x01(\tB\\\x82\xb7\x18X\n" +
-	"\fscope_values\x12\x05JSONB\x18\x01:\v'[]'::jsonbZ0NODE/TENANT id list, or [percentage] for PERCENTx\x01R\x0fscopeValuesJson\x12n\n" +
+	"scope_kind\x12\vVARCHAR(40)\x18\x01:\x1f'CANARY_SCOPE_KIND_UNSPECIFIED'R\tscopeKind\x12\x7f\n" +
+	"\fscope_values\x18\x05 \x01(\tB\\\x82\xb7\x18X\n" +
+	"\fscope_values\x12\x05JSONB\x18\x01:\v'[]'::jsonbZ0NODE/TENANT id list, or [percentage] for PERCENTx\x01R\vscopeValues\x12n\n" +
 	"\x05state\x18\x06 \x01(\x0e2%.udb.core.authz.entity.v1.CanaryStateB1\x82\xb7\x18-\n" +
 	"\x05state\x12\vVARCHAR(40)\x18\x01:\x15'CANARY_STATE_ACTIVE'R\x05state\x12q\n" +
 	"\n" +
@@ -362,10 +362,10 @@ const file_udb_core_authz_entity_v1_policy_canary_proto_rawDesc = "" +
 	"created_by\x18\n" +
 	" \x01(\tB$\x82\xb7\x18 \n" +
 	"\n" +
-	"created_by\x12\fVARCHAR(160)\x18\x01:\x02''R\tcreatedBy\x12`\n" +
-	"\ttenant_id\x18\v \x01(\tBC\x82\xb7\x18?\n" +
+	"created_by\x12\fVARCHAR(160)\x18\x01:\x02''R\tcreatedBy\x12c\n" +
+	"\ttenant_id\x18\v \x01(\tBF\x82\xb7\x18B\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R#\n" +
-	"\x1aidx_policy_canaries_tenant\x12\x05BTREER\btenantId\x12C\n" +
+	"\x1aidx_policy_canaries_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12C\n" +
 	"\n" +
 	"project_id\x18\f \x01(\tB$\x82\xb7\x18 \n" +
 	"\n" +

@@ -297,7 +297,7 @@ var File_udb_core_authn_entity_v1_user_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"#udb/core/authn/entity/v1/user.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x8f$\n" +
+	"#udb/core/authn/entity/v1/user.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x92$\n" +
 	"\x04User\x12C\n" +
 	"\auser_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
 	"\auser_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06userId\x12\xbc\x01\n" +
@@ -313,10 +313,10 @@ const file_udb_core_authn_entity_v1_user_proto_rawDesc = "" +
 	"\faccount_kind\x12\vVARCHAR(40)\x18\x01:\b'PERSON'R\x1f\n" +
 	"\x16idx_users_account_kind\x12\x05BTREER\vaccountKind\x12q\n" +
 	"\x06status\x18\x06 \x01(\x0e2$.udb.core.authn.entity.v1.UserStatusB3\x82\xb7\x18/\n" +
-	"\x06status\x12\vVARCHAR(30)\x18\x01:\x16'PENDING_VERIFICATION'R\x06status\x12\x86\x01\n" +
-	"\ttenant_id\x18\a \x01(\tBi\x82\xb7\x18e\n" +
+	"\x06status\x12\vVARCHAR(30)\x18\x01:\x16'PENDING_VERIFICATION'R\x06status\x12\x89\x01\n" +
+	"\ttenant_id\x18\a \x01(\tBl\x82\xb7\x18h\n" +
 	"\ttenant_id\x12\fVARCHAR(120)\x18\x01R\x1c\n" +
-	"\x13idx_users_tenant_id\x12\x05BTREEZ*Tenant/account boundary for this principalR\btenantId\x12_\n" +
+	"\x13idx_users_tenant_id\x12\x05BTREEZ*Tenant/account boundary for this principal\x98\x02\x01R\btenantId\x12_\n" +
 	"\tfull_name\x18\b \x01(\tBBе\x18\x01\xe0\xb5\x18\x01\x82\xb6\x18\x17Display and audit trail\x82\xb7\x18\x1b\n" +
 	"\tfull_name\x12\fVARCHAR(255)\x18\x01R\bfullName\x12\xa3\x01\n" +
 	"\x0ftotp_secret_enc\x18\t \x01(\tB{\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x82\xb7\x18T\n" +

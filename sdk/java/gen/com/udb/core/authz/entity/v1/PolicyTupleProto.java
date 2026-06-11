@@ -43,7 +43,7 @@ public final class PolicyTupleProto extends com.google.protobuf.GeneratedFile {
       "\n+udb/core/authz/entity/v1/policy_tuple." +
       "proto\022\030udb.core.authz.entity.v1\032\033udb/cor" +
       "e/common/v1/db.proto\032!udb/core/common/v1" +
-      "/security.proto\"\234\014\n\013PolicyTuple\022L\n\017polic" +
+      "/security.proto\"\237\014\n\013PolicyTuple\022L\n\017polic" +
       "y_tuple_id\030\001 \001(\003B$\202\267\030 \n\017policy_tuple_id\022" +
       "\tBIGSERIAL\030\001(\001R\rpolicyTupleId\022\214\001\n\ntuple_" +
       "kind\030\002 \001(\tBm\202\267\030i\n\ntuple_kind\022\013VARCHAR(32" +
@@ -63,33 +63,33 @@ public final class PolicyTupleProto extends com.google.protobuf.GeneratedFile {
       "low, deny, or tuple-specific effectR\006eff" +
       "ect\022h\n\tcondition\030\010 \001(\tBJ\202\267\030F\n\tcondition\022" +
       "\004TEXT\030\001:\002\'\'Z-Reserved condition or ABAC " +
-      "matcher expressionR\tcondition\022\\\n\ttenant_" +
-      "id\030\t \001(\tB?\202\267\030;\n\ttenant_id\022\013VARCHAR(64)\030\001" +
-      "R\037\n\026idx_policytuple_tenant\022\005BTREER\010tenan" +
-      "tId\022_\n\nproject_id\030\n \001(\tB@\202\267\030<\n\nproject_i" +
-      "d\022\014VARCHAR(120)R \n\027idx_policytuple_proje" +
-      "ct\022\005BTREER\tprojectId:\257\004\242\265\030\\\010\001\022/udb:authz" +
-      ":tuple:{tuple_kind}:{subject}:{domain}\030\254" +
-      "\002 \001(\001:\022REDIS_CLUSTER_ADDRB\014authz_policy\372" +
-      "\266\030\265\002\n\rpolicy_tuples\022\tudb_authz\030\001 \001*BNorm" +
-      "alized authorization policy, grouping, a" +
-      "nd relationship tuples@\001b^\n\020tenant_isola" +
-      "tion\032H(tenant_id::text = current_setting" +
-      "(\'app.current_tenant_id\', true)::text)(\001" +
-      "\212\001V\n\026uq_policy_tuples_tuple\022\005BTREE\030\001Z\ntu" +
-      "ple_kindZ\007subjectZ\006domainZ\006objectZ\006actio" +
-      "nZ\006effect\352\001\007primary\372\001\013authz:admin\212\262\031\220\001\n\006" +
-      "tenant\032\ttenant_id*4tenant_id = current_s" +
-      "etting(\'app.current_tenant_id\')2\004none:\021a" +
-      "uthz.operational@\373\023H\002R\006tenantZ\010standardr" +
-      "\025tenant.data_residencyB\373\001\n\034com.udb.core." +
-      "authz.entity.v1B\020PolicyTupleProtoP\001ZDgit" +
-      "hub.com/fahara02/udb/sdk/go/gen/udb/core" +
-      "/authz/entity/v1;entityv1\242\002\004UCAE\252\002\030udb.c" +
-      "ore.Authz.Entity.V1\312\002\030Udb\\Core\\Authz\\Ent" +
-      "ity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\Enti" +
-      "ty\\V1\352\002\034Udb::Core::Authz::Entity::V1b\006pr" +
-      "oto3"
+      "matcher expressionR\tcondition\022_\n\ttenant_" +
+      "id\030\t \001(\tBB\202\267\030>\n\ttenant_id\022\013VARCHAR(64)\030\001" +
+      "R\037\n\026idx_policytuple_tenant\022\005BTREE\230\002\001R\010te" +
+      "nantId\022_\n\nproject_id\030\n \001(\tB@\202\267\030<\n\nprojec" +
+      "t_id\022\014VARCHAR(120)R \n\027idx_policytuple_pr" +
+      "oject\022\005BTREER\tprojectId:\257\004\242\265\030\\\010\001\022/udb:au" +
+      "thz:tuple:{tuple_kind}:{subject}:{domain" +
+      "}\030\254\002 \001(\001:\022REDIS_CLUSTER_ADDRB\014authz_poli" +
+      "cy\372\266\030\265\002\n\rpolicy_tuples\022\tudb_authz\030\001 \001*BN" +
+      "ormalized authorization policy, grouping" +
+      ", and relationship tuples@\001b^\n\020tenant_is" +
+      "olation\032H(tenant_id::text = current_sett" +
+      "ing(\'app.current_tenant_id\', true)::text" +
+      ")(\001\212\001V\n\026uq_policy_tuples_tuple\022\005BTREE\030\001Z" +
+      "\ntuple_kindZ\007subjectZ\006domainZ\006objectZ\006ac" +
+      "tionZ\006effect\352\001\007primary\372\001\013authz:admin\212\262\031\220" +
+      "\001\n\006tenant\032\ttenant_id*4tenant_id = curren" +
+      "t_setting(\'app.current_tenant_id\')2\004none" +
+      ":\021authz.operational@\373\023H\002R\006tenantZ\010standa" +
+      "rdr\025tenant.data_residencyB\373\001\n\034com.udb.co" +
+      "re.authz.entity.v1B\020PolicyTupleProtoP\001ZD" +
+      "github.com/fahara02/udb/sdk/go/gen/udb/c" +
+      "ore/authz/entity/v1;entityv1\242\002\004UCAE\252\002\030ud" +
+      "b.core.Authz.Entity.V1\312\002\030Udb\\Core\\Authz\\" +
+      "Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\E" +
+      "ntity\\V1\352\002\034Udb::Core::Authz::Entity::V1b" +
+      "\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

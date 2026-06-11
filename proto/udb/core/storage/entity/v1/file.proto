@@ -67,7 +67,7 @@ message File {
   string file_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "file_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
   // @inject_tag: gorm:"primaryKey;column:file_id;not null"
 
-  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "UUID" not_null: true }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "UUID" not_null: true }];
   // @inject_tag: gorm:"column:tenant_id;not null"
 
   string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "UUID" }];

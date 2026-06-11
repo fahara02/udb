@@ -45,109 +45,109 @@ public final class IdentityProviderProto extends com.google.protobuf.GeneratedFi
       "/protobuf/timestamp.proto\032\"udb/core/idp/" +
       "entity/v1/enums.proto\032\033udb/core/common/v" +
       "1/db.proto\032!udb/core/common/v1/security." +
-      "proto\"\364\035\n\020IdentityProvider\022O\n\013provider_i" +
+      "proto\"\367\035\n\020IdentityProvider\022O\n\013provider_i" +
       "d\030\001 \001(\tB.\202\267\030*\n\013provider_id\022\004UUID\030\001(\001:\021ge" +
-      "n_random_uuid()R\nproviderId\022g\n\ttenant_id" +
-      "\030\002 \001(\tBJ\202\267\030F\n\ttenant_id\022\014VARCHAR(120)\030\001R" +
+      "n_random_uuid()R\nproviderId\022j\n\ttenant_id" +
+      "\030\002 \001(\tBM\202\267\030I\n\ttenant_id\022\014VARCHAR(120)\030\001R" +
       ")\n idx_identity_providers_tenant_id\022\005BTR" +
-      "EER\010tenantId\022t\n\004kind\030\003 \001(\0162\037.udb.core.id" +
-      "p.entity.v1.IdpKindB?\202\267\030;\n\004kind\022\013VARCHAR" +
-      "(24)\030\001R$\n\033idx_identity_providers_kind\022\005B" +
-      "TREER\004kind\022x\n\014display_name\030\004 \001(\tBU\202\267\030Q\n\014" +
-      "display_name\022\014VARCHAR(150)\030\001Z1Operator-f" +
-      "acing provider name (unique per tenant)R" +
-      "\013displayName\022Z\n\006issuer\030\005 \001(\tBB\202\267\030>\n\006issu" +
-      "er\022\014VARCHAR(512)Z&OIDC issuer URL (kind=" +
-      "OIDC/CUSTOM_JWT)R\006issuer\022Y\n\tentity_id\030\006 " +
-      "\001(\tB<\202\267\0308\n\tentity_id\022\014VARCHAR(512)Z\035SAML" +
-      " IdP entityID (kind=SAML)R\010entityId\022h\n\010j" +
-      "wks_url\030\007 \001(\tBM\202\267\030I\n\010jwks_url\022\014VARCHAR(5" +
-      "12)Z/JWKS endpoint for OIDC/custom-JWT k" +
-      "ey discoveryR\007jwksUrl\022t\n\021saml_metadata_u" +
-      "rl\030\010 \001(\tBH\202\267\030D\n\021saml_metadata_url\022\014VARCH" +
-      "AR(512)Z!SAML IdP metadata URL (kind=SAM" +
-      "L)R\017samlMetadataUrl\022o\n\017client_ids_json\030\t" +
-      " \001(\tBG\202\267\030C\n\017client_ids_json\022\005JSONB\030\001:\013\'[" +
-      "]\'::jsonbZ\030Accepted OIDC client_idsx\001R\rc" +
-      "lientIdsJson\022y\n\016audiences_json\030\n \001(\tBR\202\267" +
-      "\030N\n\016audiences_json\022\005JSONB\030\001:\013\'[]\'::jsonb" +
-      "Z$Accepted token audiences (aud claim)x\001" +
-      "R\raudiencesJson\022\211\001\n\022claim_mapping_json\030\013" +
-      " \001(\tB[\202\267\030W\n\022claim_mapping_json\022\005JSONB\030\001:" +
-      "\013\'{}\'::jsonbZ)IdP claim \342\206\222 UDB principa" +
-      "l field mappingx\001R\020claimMappingJson\022\216\001\n\022" +
-      "group_mapping_json\030\014 \001(\tB`\202\267\030\\\n\022group_ma" +
-      "pping_json\022\005JSONB\030\001:\013\'{}\'::jsonbZ.IdP gr" +
-      "oup \342\206\222 UDB role mapping (explicit only)" +
-      "x\001R\020groupMappingJson\022w\n\017jit_policy_json\030" +
-      "\r \001(\tBO\202\267\030K\n\017jit_policy_json\022\005JSONB\030\001:\013\'" +
-      "{}\'::jsonbZ Just-in-time provisioning po" +
-      "licyx\001R\rjitPolicyJson\022\216\001\n\026account_linkin" +
-      "g_policy\030\016 \001(\tBX\202\267\030T\n\026account_linking_po" +
-      "licy\022\013VARCHAR(40)\030\001:\n\'explicit\'Z\037explici" +
-      "t | auto_verified | denyR\024accountLinking" +
-      "Policy\022a\n\007enabled\030\017 \001(\010BG\202\267\030C\n\007enabled\022\007" +
-      "BOOLEAN\030\001:\004TRUER\'\n\036idx_identity_provider" +
-      "s_enabled\022\005BTREER\007enabled\022\242\001\n\rclient_sec" +
-      "ret\030\020 \001(\tB}\330\265\030\001\350\265\030\001\360\265\030\001\202\267\030[\n\rclient_secr" +
-      "et\022\014VARCHAR(512)Z<OIDC confidential-clie" +
-      "nt secret / SCIM bearer (storage-only)\212\267" +
-      "\030\016\010\003\020\001\030\003:\006tenantR\014clientSecret\022\257\001\n\024saml_" +
-      "signing_key_pem\030\021 \001(\tB~\330\265\030\001\350\265\030\001\360\265\030\001\202\267\030\\\n" +
-      "\024saml_signing_key_pem\022\004TEXTZ>SP signing " +
-      "private key for SAML request signing (st" +
-      "orage-only)\212\267\030\016\010\005\020\001\030\003:\006tenantR\021samlSigni" +
-      "ngKeyPem\022\223\001\n\023saml_idp_certs_json\030\022 \001(\tBd" +
-      "\202\267\030`\n\023saml_idp_certs_json\022\005JSONB\030\001:\013\'[]\'" +
-      "::jsonbZ1IdP signing certificates (PEM) " +
-      "from SAML metadatax\001R\020samlIdpCertsJson\022]" +
-      "\n\014saml_sso_url\030\023 \001(\tB;\202\267\0307\n\014saml_sso_url" +
-      "\022\014VARCHAR(512)Z\031SAML IdP SSO endpoint UR" +
-      "LR\nsamlSsoUrl\022z\n\006health\030\024 \001(\0162&.udb.core" +
-      ".idp.entity.v1.ProviderHealthB:\202\267\0306\n\006hea" +
-      "lth\022\013VARCHAR(24)\030\001:\035\'PROVIDER_HEALTH_UNS" +
-      "PECIFIED\'R\006health\022\234\001\n\024last_jwks_refresh_" +
-      "at\030\025 \001(\0132\032.google.protobuf.TimestampBO\202\267" +
-      "\030K\n\024last_jwks_refresh_at\022\013TIMESTAMPTZZ&L" +
-      "ast successful JWKS/discovery refreshR\021l" +
-      "astJwksRefreshAt\022\226\001\n\030last_jwks_refresh_s" +
-      "tatus\030\026 \001(\tB]\202\267\030Y\n\030last_jwks_refresh_sta" +
-      "tus\022\014VARCHAR(255)Z/Outcome of the most r" +
-      "ecent JWKS refresh attemptR\025lastJwksRefr" +
-      "eshStatus\022c\n\ncreated_by\030\027 \001(\tBD\202\267\030@\n\ncre" +
-      "ated_by\022\014VARCHAR(160)Z$Principal that cr" +
-      "eated this providerR\tcreatedBy\022h\n\nupdate" +
-      "d_by\030\030 \001(\tBI\202\267\030E\n\nupdated_by\022\014VARCHAR(16" +
-      "0)Z)Principal that last updated this pro" +
-      "viderR\tupdatedBy\022q\n\ncreated_at\030\031 \001(\0132\032.g" +
-      "oogle.protobuf.TimestampB6\202\267\0302\n\ncreated_" +
-      "at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001" +
-      "R\tcreatedAt\022o\n\nupdated_at\030\032 \001(\0132\032.google" +
-      ".protobuf.TimestampB4\202\267\0300\n\nupdated_at\022\013T" +
-      "IMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001R\tupdat" +
-      "edAt\022o\n\ndeleted_at\030\033 \001(\0132\032.google.protob" +
-      "uf.TimestampB4\202\267\0300\n\ndeleted_at\022\013TIMESTAM" +
-      "PTZZ\025Soft-delete timestampR\tdeletedAt:\204\004" +
-      "\372\266\030\343\002\n\022identity_providers\022\007udb_idp\030\n \001*G" +
-      "Tenant-scoped enterprise identity provid" +
-      "ers (OIDC/SAML/LDAP/custom JWT)0\0018\001@\001b^\n" +
-      "\020tenant_isolation\032H(tenant_id::text = cu" +
-      "rrent_setting(\'app.current_tenant_id\', t" +
-      "rue)::text)(\001\212\001Y\n!uq_identity_providers_" +
-      "tenant_name\022\005BTREE\030\001:\022deleted_at IS NULL" +
-      "Z\ttenant_idZ\014display_name\352\001\007primary\362\001\025ud" +
-      "b.idp.providers.cdc\372\001\022idp:providers:read" +
-      "\212\262\031\227\001\n\006tenant\032\ttenant_id*4tenant_id = cu" +
-      "rrent_setting(\'app.current_tenant_id\')2\013" +
-      "soft_delete:\021idp.configuration@\373\023H\002R\006ten" +
-      "antZ\010standardr\025tenant.data_residencyB\364\001\n" +
-      "\032com.udb.core.idp.entity.v1B\025IdentityPro" +
-      "viderProtoP\001ZBgithub.com/fahara02/udb/sd" +
-      "k/go/gen/udb/core/idp/entity/v1;entityv1" +
-      "\242\002\004UCIE\252\002\026udb.core.Idp.Entity.V1\312\002\026Udb\\C" +
-      "ore\\Idp\\Entity\\V1\342\002\"Udb\\GPBMetadata\\Core" +
-      "\\Idp\\Entity\\V1\352\002\032Udb::Core::Idp::Entity:" +
-      ":V1b\006proto3"
+      "EE\230\002\001R\010tenantId\022t\n\004kind\030\003 \001(\0162\037.udb.core" +
+      ".idp.entity.v1.IdpKindB?\202\267\030;\n\004kind\022\013VARC" +
+      "HAR(24)\030\001R$\n\033idx_identity_providers_kind" +
+      "\022\005BTREER\004kind\022x\n\014display_name\030\004 \001(\tBU\202\267\030" +
+      "Q\n\014display_name\022\014VARCHAR(150)\030\001Z1Operato" +
+      "r-facing provider name (unique per tenan" +
+      "t)R\013displayName\022Z\n\006issuer\030\005 \001(\tBB\202\267\030>\n\006i" +
+      "ssuer\022\014VARCHAR(512)Z&OIDC issuer URL (ki" +
+      "nd=OIDC/CUSTOM_JWT)R\006issuer\022Y\n\tentity_id" +
+      "\030\006 \001(\tB<\202\267\0308\n\tentity_id\022\014VARCHAR(512)Z\035S" +
+      "AML IdP entityID (kind=SAML)R\010entityId\022h" +
+      "\n\010jwks_url\030\007 \001(\tBM\202\267\030I\n\010jwks_url\022\014VARCHA" +
+      "R(512)Z/JWKS endpoint for OIDC/custom-JW" +
+      "T key discoveryR\007jwksUrl\022t\n\021saml_metadat" +
+      "a_url\030\010 \001(\tBH\202\267\030D\n\021saml_metadata_url\022\014VA" +
+      "RCHAR(512)Z!SAML IdP metadata URL (kind=" +
+      "SAML)R\017samlMetadataUrl\022o\n\017client_ids_jso" +
+      "n\030\t \001(\tBG\202\267\030C\n\017client_ids_json\022\005JSONB\030\001:" +
+      "\013\'[]\'::jsonbZ\030Accepted OIDC client_idsx\001" +
+      "R\rclientIdsJson\022y\n\016audiences_json\030\n \001(\tB" +
+      "R\202\267\030N\n\016audiences_json\022\005JSONB\030\001:\013\'[]\'::js" +
+      "onbZ$Accepted token audiences (aud claim" +
+      ")x\001R\raudiencesJson\022\211\001\n\022claim_mapping_jso" +
+      "n\030\013 \001(\tB[\202\267\030W\n\022claim_mapping_json\022\005JSONB" +
+      "\030\001:\013\'{}\'::jsonbZ)IdP claim \342\206\222 UDB princ" +
+      "ipal field mappingx\001R\020claimMappingJson\022\216" +
+      "\001\n\022group_mapping_json\030\014 \001(\tB`\202\267\030\\\n\022group" +
+      "_mapping_json\022\005JSONB\030\001:\013\'{}\'::jsonbZ.IdP" +
+      " group \342\206\222 UDB role mapping (explicit on" +
+      "ly)x\001R\020groupMappingJson\022w\n\017jit_policy_js" +
+      "on\030\r \001(\tBO\202\267\030K\n\017jit_policy_json\022\005JSONB\030\001" +
+      ":\013\'{}\'::jsonbZ Just-in-time provisioning" +
+      " policyx\001R\rjitPolicyJson\022\216\001\n\026account_lin" +
+      "king_policy\030\016 \001(\tBX\202\267\030T\n\026account_linking" +
+      "_policy\022\013VARCHAR(40)\030\001:\n\'explicit\'Z\037expl" +
+      "icit | auto_verified | denyR\024accountLink" +
+      "ingPolicy\022a\n\007enabled\030\017 \001(\010BG\202\267\030C\n\007enable" +
+      "d\022\007BOOLEAN\030\001:\004TRUER\'\n\036idx_identity_provi" +
+      "ders_enabled\022\005BTREER\007enabled\022\242\001\n\rclient_" +
+      "secret\030\020 \001(\tB}\330\265\030\001\350\265\030\001\360\265\030\001\202\267\030[\n\rclient_s" +
+      "ecret\022\014VARCHAR(512)Z<OIDC confidential-c" +
+      "lient secret / SCIM bearer (storage-only" +
+      ")\212\267\030\016\010\003\020\001\030\003:\006tenantR\014clientSecret\022\257\001\n\024sa" +
+      "ml_signing_key_pem\030\021 \001(\tB~\330\265\030\001\350\265\030\001\360\265\030\001\202\267" +
+      "\030\\\n\024saml_signing_key_pem\022\004TEXTZ>SP signi" +
+      "ng private key for SAML request signing " +
+      "(storage-only)\212\267\030\016\010\005\020\001\030\003:\006tenantR\021samlSi" +
+      "gningKeyPem\022\223\001\n\023saml_idp_certs_json\030\022 \001(" +
+      "\tBd\202\267\030`\n\023saml_idp_certs_json\022\005JSONB\030\001:\013\'" +
+      "[]\'::jsonbZ1IdP signing certificates (PE" +
+      "M) from SAML metadatax\001R\020samlIdpCertsJso" +
+      "n\022]\n\014saml_sso_url\030\023 \001(\tB;\202\267\0307\n\014saml_sso_" +
+      "url\022\014VARCHAR(512)Z\031SAML IdP SSO endpoint" +
+      " URLR\nsamlSsoUrl\022z\n\006health\030\024 \001(\0162&.udb.c" +
+      "ore.idp.entity.v1.ProviderHealthB:\202\267\0306\n\006" +
+      "health\022\013VARCHAR(24)\030\001:\035\'PROVIDER_HEALTH_" +
+      "UNSPECIFIED\'R\006health\022\234\001\n\024last_jwks_refre" +
+      "sh_at\030\025 \001(\0132\032.google.protobuf.TimestampB" +
+      "O\202\267\030K\n\024last_jwks_refresh_at\022\013TIMESTAMPTZ" +
+      "Z&Last successful JWKS/discovery refresh" +
+      "R\021lastJwksRefreshAt\022\226\001\n\030last_jwks_refres" +
+      "h_status\030\026 \001(\tB]\202\267\030Y\n\030last_jwks_refresh_" +
+      "status\022\014VARCHAR(255)Z/Outcome of the mos" +
+      "t recent JWKS refresh attemptR\025lastJwksR" +
+      "efreshStatus\022c\n\ncreated_by\030\027 \001(\tBD\202\267\030@\n\n" +
+      "created_by\022\014VARCHAR(160)Z$Principal that" +
+      " created this providerR\tcreatedBy\022h\n\nupd" +
+      "ated_by\030\030 \001(\tBI\202\267\030E\n\nupdated_by\022\014VARCHAR" +
+      "(160)Z)Principal that last updated this " +
+      "providerR\tupdatedBy\022q\n\ncreated_at\030\031 \001(\0132" +
+      "\032.google.protobuf.TimestampB6\202\267\0302\n\ncreat" +
+      "ed_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`" +
+      "\001h\001R\tcreatedAt\022o\n\nupdated_at\030\032 \001(\0132\032.goo" +
+      "gle.protobuf.TimestampB4\202\267\0300\n\nupdated_at" +
+      "\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001R\tup" +
+      "datedAt\022o\n\ndeleted_at\030\033 \001(\0132\032.google.pro" +
+      "tobuf.TimestampB4\202\267\0300\n\ndeleted_at\022\013TIMES" +
+      "TAMPTZZ\025Soft-delete timestampR\tdeletedAt" +
+      ":\204\004\372\266\030\343\002\n\022identity_providers\022\007udb_idp\030\n " +
+      "\001*GTenant-scoped enterprise identity pro" +
+      "viders (OIDC/SAML/LDAP/custom JWT)0\0018\001@\001" +
+      "b^\n\020tenant_isolation\032H(tenant_id::text =" +
+      " current_setting(\'app.current_tenant_id\'" +
+      ", true)::text)(\001\212\001Y\n!uq_identity_provide" +
+      "rs_tenant_name\022\005BTREE\030\001:\022deleted_at IS N" +
+      "ULLZ\ttenant_idZ\014display_name\352\001\007primary\362\001" +
+      "\025udb.idp.providers.cdc\372\001\022idp:providers:r" +
+      "ead\212\262\031\227\001\n\006tenant\032\ttenant_id*4tenant_id =" +
+      " current_setting(\'app.current_tenant_id\'" +
+      ")2\013soft_delete:\021idp.configuration@\373\023H\002R\006" +
+      "tenantZ\010standardr\025tenant.data_residencyB" +
+      "\364\001\n\032com.udb.core.idp.entity.v1B\025Identity" +
+      "ProviderProtoP\001ZBgithub.com/fahara02/udb" +
+      "/sdk/go/gen/udb/core/idp/entity/v1;entit" +
+      "yv1\242\002\004UCIE\252\002\026udb.core.Idp.Entity.V1\312\002\026Ud" +
+      "b\\Core\\Idp\\Entity\\V1\342\002\"Udb\\GPBMetadata\\C" +
+      "ore\\Idp\\Entity\\V1\352\002\032Udb::Core::Idp::Enti" +
+      "ty::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

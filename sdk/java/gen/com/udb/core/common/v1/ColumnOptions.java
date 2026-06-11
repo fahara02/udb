@@ -905,6 +905,38 @@ private static final long serialVersionUID = 0L;
     return nullable_;
   }
 
+  public static final int TENANT_COLUMN_FIELD_NUMBER = 35;
+  private boolean tenantColumn_ = false;
+  /**
+   * <pre>
+   * Marks this column as the tenant-isolation key referenced by
+   * db_table_security.tenant_column.
+   * </pre>
+   *
+   * <code>bool tenant_column = 35 [json_name = "tenantColumn"];</code>
+   * @return The tenantColumn.
+   */
+  @java.lang.Override
+  public boolean getTenantColumn() {
+    return tenantColumn_;
+  }
+
+  public static final int PROJECT_COLUMN_FIELD_NUMBER = 36;
+  private boolean projectColumn_ = false;
+  /**
+   * <pre>
+   * Marks this column as the project-isolation key referenced by
+   * db_table_security.project_column.
+   * </pre>
+   *
+   * <code>bool project_column = 36 [json_name = "projectColumn"];</code>
+   * @return The projectColumn.
+   */
+  @java.lang.Override
+  public boolean getProjectColumn() {
+    return projectColumn_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -1020,6 +1052,12 @@ private static final long serialVersionUID = 0L;
     }
     if (nullable_ != false) {
       output.writeBool(34, nullable_);
+    }
+    if (tenantColumn_ != false) {
+      output.writeBool(35, tenantColumn_);
+    }
+    if (projectColumn_ != false) {
+      output.writeBool(36, projectColumn_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -1161,6 +1199,14 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(34, nullable_);
     }
+    if (tenantColumn_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(35, tenantColumn_);
+    }
+    if (projectColumn_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(36, projectColumn_);
+    }
     return size;
   }
   @java.lang.Override
@@ -1258,6 +1304,10 @@ private static final long serialVersionUID = 0L;
     if (onUpdate_ != other.onUpdate_) return false;
     if (getNullable()
         != other.getNullable()) return false;
+    if (getTenantColumn()
+        != other.getTenantColumn()) return false;
+    if (getProjectColumn()
+        != other.getProjectColumn()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -1361,6 +1411,12 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + NULLABLE_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getNullable());
+    hash = (37 * hash) + TENANT_COLUMN_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getTenantColumn());
+    hash = (37 * hash) + PROJECT_COLUMN_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getProjectColumn());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1544,6 +1600,8 @@ private static final long serialVersionUID = 0L;
       onDelete_ = 0;
       onUpdate_ = 0;
       nullable_ = false;
+      tenantColumn_ = false;
+      projectColumn_ = false;
       return this;
     }
 
@@ -1693,6 +1751,12 @@ private static final long serialVersionUID = 0L;
       }
       if (((from_bitField1_ & 0x00000002) != 0)) {
         result.nullable_ = nullable_;
+      }
+      if (((from_bitField1_ & 0x00000004) != 0)) {
+        result.tenantColumn_ = tenantColumn_;
+      }
+      if (((from_bitField1_ & 0x00000008) != 0)) {
+        result.projectColumn_ = projectColumn_;
       }
     }
 
@@ -1847,6 +1911,12 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getNullable() != false) {
         setNullable(other.getNullable());
+      }
+      if (other.getTenantColumn() != false) {
+        setTenantColumn(other.getTenantColumn());
+      }
+      if (other.getProjectColumn() != false) {
+        setProjectColumn(other.getProjectColumn());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -2048,6 +2118,16 @@ private static final long serialVersionUID = 0L;
               bitField1_ |= 0x00000002;
               break;
             } // case 272
+            case 280: {
+              tenantColumn_ = input.readBool();
+              bitField1_ |= 0x00000004;
+              break;
+            } // case 280
+            case 288: {
+              projectColumn_ = input.readBool();
+              bitField1_ |= 0x00000008;
+              break;
+            } // case 288
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -4093,6 +4173,100 @@ private static final long serialVersionUID = 0L;
     public Builder clearNullable() {
       bitField1_ = (bitField1_ & ~0x00000002);
       nullable_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean tenantColumn_ ;
+    /**
+     * <pre>
+     * Marks this column as the tenant-isolation key referenced by
+     * db_table_security.tenant_column.
+     * </pre>
+     *
+     * <code>bool tenant_column = 35 [json_name = "tenantColumn"];</code>
+     * @return The tenantColumn.
+     */
+    @java.lang.Override
+    public boolean getTenantColumn() {
+      return tenantColumn_;
+    }
+    /**
+     * <pre>
+     * Marks this column as the tenant-isolation key referenced by
+     * db_table_security.tenant_column.
+     * </pre>
+     *
+     * <code>bool tenant_column = 35 [json_name = "tenantColumn"];</code>
+     * @param value The tenantColumn to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTenantColumn(boolean value) {
+
+      tenantColumn_ = value;
+      bitField1_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Marks this column as the tenant-isolation key referenced by
+     * db_table_security.tenant_column.
+     * </pre>
+     *
+     * <code>bool tenant_column = 35 [json_name = "tenantColumn"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTenantColumn() {
+      bitField1_ = (bitField1_ & ~0x00000004);
+      tenantColumn_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean projectColumn_ ;
+    /**
+     * <pre>
+     * Marks this column as the project-isolation key referenced by
+     * db_table_security.project_column.
+     * </pre>
+     *
+     * <code>bool project_column = 36 [json_name = "projectColumn"];</code>
+     * @return The projectColumn.
+     */
+    @java.lang.Override
+    public boolean getProjectColumn() {
+      return projectColumn_;
+    }
+    /**
+     * <pre>
+     * Marks this column as the project-isolation key referenced by
+     * db_table_security.project_column.
+     * </pre>
+     *
+     * <code>bool project_column = 36 [json_name = "projectColumn"];</code>
+     * @param value The projectColumn to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProjectColumn(boolean value) {
+
+      projectColumn_ = value;
+      bitField1_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Marks this column as the project-isolation key referenced by
+     * db_table_security.project_column.
+     * </pre>
+     *
+     * <code>bool project_column = 36 [json_name = "projectColumn"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearProjectColumn() {
+      bitField1_ = (bitField1_ & ~0x00000008);
+      projectColumn_ = false;
       onChanged();
       return this;
     }

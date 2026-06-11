@@ -194,6 +194,12 @@ message ColumnOptions {
   // nullable is the SQL-facing inverse of not_null. UDB's parser accepts both
   // styles; keep not_null for existing schemas and nullable for SQL-like ones.
   bool nullable = 34;
+  // Marks this column as the tenant-isolation key referenced by
+  // db_table_security.tenant_column.
+  bool tenant_column = 35;
+  // Marks this column as the project-isolation key referenced by
+  // db_table_security.project_column.
+  bool project_column = 36;
 }
 
 message ForeignKey {

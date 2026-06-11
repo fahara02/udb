@@ -250,10 +250,25 @@ pub(crate) fn merge_native_with_settings(
     // internal `.clone()`); the manifest is only cloned on the fallback paths,
     // never on the success path where it is replaced by `merged` (#98).
     let mut all = schemas.to_vec();
+    // Idempotent merge: skip native schemas that are ALREADY present in the
+    // parsed input. When the proto root being served is the full UDB tree (it
+    // contains the native-service protos), re-appending the embedded copies
+    // would duplicate every native message — each duplicate yields a second
+    // write-owner projection, tripping the `ambiguous_projection_write_owner`
+    // lint for the whole native catalog. Deduplicating on message identity
+    // (`proto_package` + `message_name`) keeps the merge a no-op for those
+    // already-present schemas while still adding native ones the user omitted.
+    let existing: std::collections::HashSet<(String, String)> = all
+        .iter()
+        .map(|schema| (schema.proto_package.clone(), schema.message_name.clone()))
+        .collect();
     all.extend(
         native_schemas()
             .iter()
             .filter(|schema| native_schema_migration_enabled(schema, &enabled_ids))
+            .filter(|schema| {
+                !existing.contains(&(schema.proto_package.clone(), schema.message_name.clone()))
+            })
             .cloned(),
     );
     match CatalogManifest::from_schemas(&all) {

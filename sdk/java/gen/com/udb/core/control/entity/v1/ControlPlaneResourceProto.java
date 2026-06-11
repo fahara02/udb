@@ -45,7 +45,7 @@ public final class ControlPlaneResourceProto extends com.google.protobuf.Generat
       "ty.v1\032\037google/protobuf/timestamp.proto\032&" +
       "udb/core/control/entity/v1/enums.proto\032\033" +
       "udb/core/common/v1/db.proto\032!udb/core/co" +
-      "mmon/v1/security.proto\"\230\016\n\024ControlPlaneR" +
+      "mmon/v1/security.proto\"\233\016\n\024ControlPlaneR" +
       "esource\022O\n\013resource_id\030\001 \001(\tB.\202\267\030*\n\013reso" +
       "urce_id\022\004UUID\030\001(\001:\021gen_random_uuid()R\nre" +
       "sourceId\022\237\001\n\rresource_type\030\002 \001(\0162(.udb.c" +
@@ -53,52 +53,52 @@ public final class ControlPlaneResourceProto extends com.google.protobuf.Generat
       "\n\rresource_type\022\013VARCHAR(48)\030\001R,\n#idx_co" +
       "ntrol_resources_resource_type\022\005BTREER\014re" +
       "sourceType\022.\n\004name\030\003 \001(\tB\032\202\267\030\026\n\004name\022\014VA" +
-      "RCHAR(200)\030\001R\004name\022x\n\ttenant_id\030\004 \001(\tB[\202" +
-      "\267\030W\n\ttenant_id\022\014VARCHAR(120)Z<NULL means" +
+      "RCHAR(200)\030\001R\004name\022{\n\ttenant_id\030\004 \001(\tB^\202" +
+      "\267\030Z\n\ttenant_id\022\014VARCHAR(120)Z<NULL means" +
       " fleet-wide; set scopes the resource to " +
-      "one tenantR\010tenantId\022e\n\nproject_id\030\005 \001(\t" +
-      "BF\202\267\030B\n\nproject_id\022\014VARCHAR(160)Z&Option" +
-      "al project/application namespaceR\tprojec" +
-      "tId\022\203\001\n\007version\030\006 \001(\tBi\202\267\030e\n\007version\022\013VA" +
-      "RCHAR(96)\030\001ZKContent-addressed version (" +
-      "== content_hash); stable under identical" +
-      " contentR\007version\022D\n\014content_hash\030\007 \001(\tB" +
-      "!\202\267\030\035\n\014content_hash\022\013VARCHAR(96)\030\001R\013cont" +
-      "entHash\022{\n\014payload_json\030\010 \001(\tBX\202\267\030T\n\014pay" +
-      "load_json\022\005JSONB\030\001:\013\'{}\'::jsonbZ,Opaque " +
-      "resource payload distributed to nodesx\001R" +
-      "\013payloadJson\022i\n\nupdated_by\030\t \001(\tBJ\202\267\030F\n\n" +
-      "updated_by\022\014VARCHAR(200)Z*Principal that" +
-      " last upserted this resourceR\tupdatedBy\022" +
-      "q\n\ncreated_at\030\n \001(\0132\032.google.protobuf.Ti" +
-      "mestampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001" +
-      ":\021CURRENT_TIMESTAMP`\001h\001R\tcreatedAt\022m\n\nup" +
-      "dated_at\030\013 \001(\0132\032.google.protobuf.Timesta" +
-      "mpB2\202\267\030.\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021CUR" +
-      "RENT_TIMESTAMPR\tupdatedAt:\345\004\372\266\030\270\003\n\027contr" +
-      "ol_plane_resources\022\013udb_control\030< \001*@Ver" +
-      "sioned control-plane resources distribut" +
-      "ed xDS-style to nodes@\001bs\n\020tenant_isolat" +
-      "ion\032](tenant_id IS NULL OR tenant_id::te" +
-      "xt = current_setting(\'app.current_tenant" +
-      "_id\', true)::text)(\001\212\001P\n%uq_control_reso" +
-      "urces_type_name_tenant\022\005BTREE\030\001Z\rresourc" +
-      "e_typeZ\004nameZ\ttenant_id\212\0012\n\032idx_control_" +
-      "resources_type\022\005BTREEZ\rresource_type\352\001\007p" +
-      "rimary\362\001\'udb.control.control_plane_resou" +
-      "rces.cdc\372\001\026control:resources:read\212\262\031\243\001\n\006" +
-      "tenant\032\ttenant_id*Itenant_id IS NULL OR " +
-      "tenant_id = current_setting(\'app.current" +
-      "_tenant_id\')2\004none:\023control.operational@" +
-      "\373\023H\002R\006tenantZ\004noner\025tenant.data_residenc" +
-      "yB\220\002\n\036com.udb.core.control.entity.v1B\031Co" +
-      "ntrolPlaneResourceProtoP\001ZFgithub.com/fa" +
-      "hara02/udb/sdk/go/gen/udb/core/control/e" +
-      "ntity/v1;entityv1\242\002\004UCCE\252\002\032udb.core.Cont" +
-      "rol.Entity.V1\312\002\032Udb\\Core\\Control\\Entity\\" +
-      "V1\342\002&Udb\\GPBMetadata\\Core\\Control\\Entity" +
-      "\\V1\352\002\036Udb::Core::Control::Entity::V1b\006pr" +
-      "oto3"
+      "one tenant\230\002\001R\010tenantId\022e\n\nproject_id\030\005 " +
+      "\001(\tBF\202\267\030B\n\nproject_id\022\014VARCHAR(160)Z&Opt" +
+      "ional project/application namespaceR\tpro" +
+      "jectId\022\203\001\n\007version\030\006 \001(\tBi\202\267\030e\n\007version\022" +
+      "\013VARCHAR(96)\030\001ZKContent-addressed versio" +
+      "n (== content_hash); stable under identi" +
+      "cal contentR\007version\022D\n\014content_hash\030\007 \001" +
+      "(\tB!\202\267\030\035\n\014content_hash\022\013VARCHAR(96)\030\001R\013c" +
+      "ontentHash\022{\n\014payload_json\030\010 \001(\tBX\202\267\030T\n\014" +
+      "payload_json\022\005JSONB\030\001:\013\'{}\'::jsonbZ,Opaq" +
+      "ue resource payload distributed to nodes" +
+      "x\001R\013payloadJson\022i\n\nupdated_by\030\t \001(\tBJ\202\267\030" +
+      "F\n\nupdated_by\022\014VARCHAR(200)Z*Principal t" +
+      "hat last upserted this resourceR\tupdated" +
+      "By\022q\n\ncreated_at\030\n \001(\0132\032.google.protobuf" +
+      ".TimestampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPT" +
+      "Z\030\001:\021CURRENT_TIMESTAMP`\001h\001R\tcreatedAt\022m\n" +
+      "\nupdated_at\030\013 \001(\0132\032.google.protobuf.Time" +
+      "stampB2\202\267\030.\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021" +
+      "CURRENT_TIMESTAMPR\tupdatedAt:\345\004\372\266\030\270\003\n\027co" +
+      "ntrol_plane_resources\022\013udb_control\030< \001*@" +
+      "Versioned control-plane resources distri" +
+      "buted xDS-style to nodes@\001bs\n\020tenant_iso" +
+      "lation\032](tenant_id IS NULL OR tenant_id:" +
+      ":text = current_setting(\'app.current_ten" +
+      "ant_id\', true)::text)(\001\212\001P\n%uq_control_r" +
+      "esources_type_name_tenant\022\005BTREE\030\001Z\rreso" +
+      "urce_typeZ\004nameZ\ttenant_id\212\0012\n\032idx_contr" +
+      "ol_resources_type\022\005BTREEZ\rresource_type\352" +
+      "\001\007primary\362\001\'udb.control.control_plane_re" +
+      "sources.cdc\372\001\026control:resources:read\212\262\031\243" +
+      "\001\n\006tenant\032\ttenant_id*Itenant_id IS NULL " +
+      "OR tenant_id = current_setting(\'app.curr" +
+      "ent_tenant_id\')2\004none:\023control.operation" +
+      "al@\373\023H\002R\006tenantZ\004noner\025tenant.data_resid" +
+      "encyB\220\002\n\036com.udb.core.control.entity.v1B" +
+      "\031ControlPlaneResourceProtoP\001ZFgithub.com" +
+      "/fahara02/udb/sdk/go/gen/udb/core/contro" +
+      "l/entity/v1;entityv1\242\002\004UCCE\252\002\032udb.core.C" +
+      "ontrol.Entity.V1\312\002\032Udb\\Core\\Control\\Enti" +
+      "ty\\V1\342\002&Udb\\GPBMetadata\\Core\\Control\\Ent" +
+      "ity\\V1\352\002\036Udb::Core::Control::Entity::V1b" +
+      "\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

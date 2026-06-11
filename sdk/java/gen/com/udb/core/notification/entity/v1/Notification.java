@@ -42,6 +42,7 @@ private static final long serialVersionUID = 0L;
     status_ = 0;
     errorMessage_ = "";
     tenantId_ = "";
+    deletedBy_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -79,7 +80,7 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object notificationId_ = "";
   /**
-   * <code>string notification_id = 1 [json_name = "notificationId"];</code>
+   * <code>string notification_id = 1 [json_name = "notificationId", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The notificationId.
    */
   @java.lang.Override
@@ -96,7 +97,7 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <code>string notification_id = 1 [json_name = "notificationId"];</code>
+   * <code>string notification_id = 1 [json_name = "notificationId", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The bytes for notificationId.
    */
   @java.lang.Override
@@ -118,7 +119,7 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object recipientId_ = "";
   /**
-   * <code>string recipient_id = 2 [json_name = "recipientId"];</code>
+   * <code>string recipient_id = 2 [json_name = "recipientId", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The recipientId.
    */
   @java.lang.Override
@@ -135,7 +136,7 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <code>string recipient_id = 2 [json_name = "recipientId"];</code>
+   * <code>string recipient_id = 2 [json_name = "recipientId", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The bytes for recipientId.
    */
   @java.lang.Override
@@ -156,14 +157,14 @@ private static final long serialVersionUID = 0L;
   public static final int TYPE_FIELD_NUMBER = 3;
   private int type_ = 0;
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The enum numeric value on the wire for type.
    */
   @java.lang.Override public int getTypeValue() {
     return type_;
   }
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The type.
    */
   @java.lang.Override public com.udb.core.notification.entity.v1.NotificationType getType() {
@@ -174,14 +175,14 @@ private static final long serialVersionUID = 0L;
   public static final int CHANNEL_FIELD_NUMBER = 4;
   private int channel_ = 0;
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The enum numeric value on the wire for channel.
    */
   @java.lang.Override public int getChannelValue() {
     return channel_;
   }
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The channel.
    */
   @java.lang.Override public com.udb.core.notification.entity.v1.NotificationChannel getChannel() {
@@ -193,7 +194,7 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object subject_ = "";
   /**
-   * <code>string subject = 5 [json_name = "subject"];</code>
+   * <code>string subject = 5 [json_name = "subject", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The subject.
    */
   @java.lang.Override
@@ -210,7 +211,7 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <code>string subject = 5 [json_name = "subject"];</code>
+   * <code>string subject = 5 [json_name = "subject", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The bytes for subject.
    */
   @java.lang.Override
@@ -232,7 +233,7 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object message_ = "";
   /**
-   * <code>string message = 6 [json_name = "message"];</code>
+   * <code>string message = 6 [json_name = "message", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The message.
    */
   @java.lang.Override
@@ -249,7 +250,7 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
-   * <code>string message = 6 [json_name = "message"];</code>
+   * <code>string message = 6 [json_name = "message", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The bytes for message.
    */
   @java.lang.Override
@@ -294,7 +295,7 @@ private static final long serialVersionUID = 0L;
     return internalGetTemplateData().getMap().size();
   }
   /**
-   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   @java.lang.Override
   public boolean containsTemplateData(
@@ -311,14 +312,14 @@ private static final long serialVersionUID = 0L;
     return getTemplateDataMap();
   }
   /**
-   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   @java.lang.Override
   public java.util.Map<java.lang.String, java.lang.String> getTemplateDataMap() {
     return internalGetTemplateData().getMap();
   }
   /**
-   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   @java.lang.Override
   public /* nullable */
@@ -332,7 +333,7 @@ java.lang.String defaultValue) {
     return map.containsKey(key) ? map.get(key) : defaultValue;
   }
   /**
-   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+   * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   @java.lang.Override
   public java.lang.String getTemplateDataOrThrow(
@@ -349,14 +350,14 @@ java.lang.String defaultValue) {
   public static final int PRIORITY_FIELD_NUMBER = 8;
   private int priority_ = 0;
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The enum numeric value on the wire for priority.
    */
   @java.lang.Override public int getPriorityValue() {
     return priority_;
   }
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The priority.
    */
   @java.lang.Override public com.udb.core.notification.entity.v1.NotificationPriority getPriority() {
@@ -367,14 +368,14 @@ java.lang.String defaultValue) {
   public static final int STATUS_FIELD_NUMBER = 9;
   private int status_ = 0;
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The enum numeric value on the wire for status.
    */
   @java.lang.Override public int getStatusValue() {
     return status_;
   }
   /**
-   * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status"];</code>
+   * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The status.
    */
   @java.lang.Override public com.udb.core.notification.entity.v1.NotificationStatus getStatus() {
@@ -385,7 +386,7 @@ java.lang.String defaultValue) {
   public static final int SCHEDULED_AT_FIELD_NUMBER = 10;
   private com.google.protobuf.Timestamp scheduledAt_;
   /**
-   * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+   * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return Whether the scheduledAt field is set.
    */
   @java.lang.Override
@@ -393,7 +394,7 @@ java.lang.String defaultValue) {
     return ((bitField0_ & 0x00000001) != 0);
   }
   /**
-   * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+   * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The scheduledAt.
    */
   @java.lang.Override
@@ -401,7 +402,7 @@ java.lang.String defaultValue) {
     return scheduledAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : scheduledAt_;
   }
   /**
-   * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+   * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   @java.lang.Override
   public com.google.protobuf.TimestampOrBuilder getScheduledAtOrBuilder() {
@@ -411,7 +412,7 @@ java.lang.String defaultValue) {
   public static final int SENT_AT_FIELD_NUMBER = 11;
   private com.google.protobuf.Timestamp sentAt_;
   /**
-   * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+   * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return Whether the sentAt field is set.
    */
   @java.lang.Override
@@ -419,7 +420,7 @@ java.lang.String defaultValue) {
     return ((bitField0_ & 0x00000002) != 0);
   }
   /**
-   * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+   * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The sentAt.
    */
   @java.lang.Override
@@ -427,7 +428,7 @@ java.lang.String defaultValue) {
     return sentAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : sentAt_;
   }
   /**
-   * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+   * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   @java.lang.Override
   public com.google.protobuf.TimestampOrBuilder getSentAtOrBuilder() {
@@ -437,7 +438,7 @@ java.lang.String defaultValue) {
   public static final int DELIVERED_AT_FIELD_NUMBER = 12;
   private com.google.protobuf.Timestamp deliveredAt_;
   /**
-   * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+   * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return Whether the deliveredAt field is set.
    */
   @java.lang.Override
@@ -445,7 +446,7 @@ java.lang.String defaultValue) {
     return ((bitField0_ & 0x00000004) != 0);
   }
   /**
-   * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+   * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The deliveredAt.
    */
   @java.lang.Override
@@ -453,7 +454,7 @@ java.lang.String defaultValue) {
     return deliveredAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : deliveredAt_;
   }
   /**
-   * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+   * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   @java.lang.Override
   public com.google.protobuf.TimestampOrBuilder getDeliveredAtOrBuilder() {
@@ -463,7 +464,7 @@ java.lang.String defaultValue) {
   public static final int READ_AT_FIELD_NUMBER = 13;
   private com.google.protobuf.Timestamp readAt_;
   /**
-   * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+   * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return Whether the readAt field is set.
    */
   @java.lang.Override
@@ -471,7 +472,7 @@ java.lang.String defaultValue) {
     return ((bitField0_ & 0x00000008) != 0);
   }
   /**
-   * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+   * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The readAt.
    */
   @java.lang.Override
@@ -479,7 +480,7 @@ java.lang.String defaultValue) {
     return readAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : readAt_;
   }
   /**
-   * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+   * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   @java.lang.Override
   public com.google.protobuf.TimestampOrBuilder getReadAtOrBuilder() {
@@ -489,7 +490,7 @@ java.lang.String defaultValue) {
   public static final int CREATED_AT_FIELD_NUMBER = 14;
   private com.google.protobuf.Timestamp createdAt_;
   /**
-   * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+   * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return Whether the createdAt field is set.
    */
   @java.lang.Override
@@ -497,7 +498,7 @@ java.lang.String defaultValue) {
     return ((bitField0_ & 0x00000010) != 0);
   }
   /**
-   * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+   * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The createdAt.
    */
   @java.lang.Override
@@ -505,7 +506,7 @@ java.lang.String defaultValue) {
     return createdAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : createdAt_;
   }
   /**
-   * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+   * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   @java.lang.Override
   public com.google.protobuf.TimestampOrBuilder getCreatedAtOrBuilder() {
@@ -515,7 +516,7 @@ java.lang.String defaultValue) {
   public static final int RETRY_COUNT_FIELD_NUMBER = 15;
   private int retryCount_ = 0;
   /**
-   * <code>int32 retry_count = 15 [json_name = "retryCount"];</code>
+   * <code>int32 retry_count = 15 [json_name = "retryCount", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The retryCount.
    */
   @java.lang.Override
@@ -527,7 +528,7 @@ java.lang.String defaultValue) {
   @SuppressWarnings("serial")
   private volatile java.lang.Object errorMessage_ = "";
   /**
-   * <code>string error_message = 16 [json_name = "errorMessage"];</code>
+   * <code>string error_message = 16 [json_name = "errorMessage", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The errorMessage.
    */
   @java.lang.Override
@@ -544,7 +545,7 @@ java.lang.String defaultValue) {
     }
   }
   /**
-   * <code>string error_message = 16 [json_name = "errorMessage"];</code>
+   * <code>string error_message = 16 [json_name = "errorMessage", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The bytes for errorMessage.
    */
   @java.lang.Override
@@ -566,7 +567,7 @@ java.lang.String defaultValue) {
   @SuppressWarnings("serial")
   private volatile java.lang.Object tenantId_ = "";
   /**
-   * <code>string tenant_id = 17 [json_name = "tenantId"];</code>
+   * <code>string tenant_id = 17 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The tenantId.
    */
   @java.lang.Override
@@ -583,7 +584,7 @@ java.lang.String defaultValue) {
     }
   }
   /**
-   * <code>string tenant_id = 17 [json_name = "tenantId"];</code>
+   * <code>string tenant_id = 17 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
    * @return The bytes for tenantId.
    */
   @java.lang.Override
@@ -595,6 +596,71 @@ java.lang.String defaultValue) {
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
       tenantId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int DELETED_AT_FIELD_NUMBER = 18;
+  private com.google.protobuf.Timestamp deletedAt_;
+  /**
+   * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return Whether the deletedAt field is set.
+   */
+  @java.lang.Override
+  public boolean hasDeletedAt() {
+    return ((bitField0_ & 0x00000020) != 0);
+  }
+  /**
+   * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The deletedAt.
+   */
+  @java.lang.Override
+  public com.google.protobuf.Timestamp getDeletedAt() {
+    return deletedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : deletedAt_;
+  }
+  /**
+   * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+   */
+  @java.lang.Override
+  public com.google.protobuf.TimestampOrBuilder getDeletedAtOrBuilder() {
+    return deletedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : deletedAt_;
+  }
+
+  public static final int DELETED_BY_FIELD_NUMBER = 19;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object deletedBy_ = "";
+  /**
+   * <code>string deleted_by = 19 [json_name = "deletedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The deletedBy.
+   */
+  @java.lang.Override
+  public java.lang.String getDeletedBy() {
+    java.lang.Object ref = deletedBy_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      deletedBy_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string deleted_by = 19 [json_name = "deletedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for deletedBy.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDeletedByBytes() {
+    java.lang.Object ref = deletedBy_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      deletedBy_ = b;
       return b;
     } else {
       return (com.google.protobuf.ByteString) ref;
@@ -669,6 +735,12 @@ java.lang.String defaultValue) {
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tenantId_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 17, tenantId_);
     }
+    if (((bitField0_ & 0x00000020) != 0)) {
+      output.writeMessage(18, getDeletedAt());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deletedBy_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 19, deletedBy_);
+    }
     getUnknownFields().writeTo(output);
   }
   private int computeSerializedSize_0() {
@@ -741,6 +813,13 @@ java.lang.String defaultValue) {
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tenantId_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(17, tenantId_);
     }
+    if (((bitField0_ & 0x00000020) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(18, getDeletedAt());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deletedBy_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(19, deletedBy_);
+    }
     return size;
   }
   @java.lang.Override
@@ -810,6 +889,13 @@ java.lang.String defaultValue) {
         .equals(other.getErrorMessage())) return false;
     if (!getTenantId()
         .equals(other.getTenantId())) return false;
+    if (hasDeletedAt() != other.hasDeletedAt()) return false;
+    if (hasDeletedAt()) {
+      if (!getDeletedAt()
+          .equals(other.getDeletedAt())) return false;
+    }
+    if (!getDeletedBy()
+        .equals(other.getDeletedBy())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -867,6 +953,12 @@ java.lang.String defaultValue) {
     hash = (53 * hash) + getErrorMessage().hashCode();
     hash = (37 * hash) + TENANT_ID_FIELD_NUMBER;
     hash = (53 * hash) + getTenantId().hashCode();
+    if (hasDeletedAt()) {
+      hash = (37 * hash) + DELETED_AT_FIELD_NUMBER;
+      hash = (53 * hash) + getDeletedAt().hashCode();
+    }
+    hash = (37 * hash) + DELETED_BY_FIELD_NUMBER;
+    hash = (53 * hash) + getDeletedBy().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1028,6 +1120,7 @@ java.lang.String defaultValue) {
         internalGetDeliveredAtFieldBuilder();
         internalGetReadAtFieldBuilder();
         internalGetCreatedAtFieldBuilder();
+        internalGetDeletedAtFieldBuilder();
       }
     }
     @java.lang.Override
@@ -1071,6 +1164,12 @@ java.lang.String defaultValue) {
       retryCount_ = 0;
       errorMessage_ = "";
       tenantId_ = "";
+      deletedAt_ = null;
+      if (deletedAtBuilder_ != null) {
+        deletedAtBuilder_.dispose();
+        deletedAtBuilder_ = null;
+      }
+      deletedBy_ = "";
       return this;
     }
 
@@ -1172,6 +1271,15 @@ java.lang.String defaultValue) {
       if (((from_bitField0_ & 0x00010000) != 0)) {
         result.tenantId_ = tenantId_;
       }
+      if (((from_bitField0_ & 0x00020000) != 0)) {
+        result.deletedAt_ = deletedAtBuilder_ == null
+            ? deletedAt_
+            : deletedAtBuilder_.build();
+        to_bitField0_ |= 0x00000020;
+      }
+      if (((from_bitField0_ & 0x00040000) != 0)) {
+        result.deletedBy_ = deletedBy_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1248,6 +1356,14 @@ java.lang.String defaultValue) {
       if (!other.getTenantId().isEmpty()) {
         tenantId_ = other.tenantId_;
         bitField0_ |= 0x00010000;
+        onChanged();
+      }
+      if (other.hasDeletedAt()) {
+        mergeDeletedAt(other.getDeletedAt());
+      }
+      if (!other.getDeletedBy().isEmpty()) {
+        deletedBy_ = other.deletedBy_;
+        bitField0_ |= 0x00040000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1375,6 +1491,18 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00010000;
               break;
             } // case 138
+            case 146: {
+              input.readMessage(
+                  internalGetDeletedAtFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00020000;
+              break;
+            } // case 146
+            case 154: {
+              deletedBy_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00040000;
+              break;
+            } // case 154
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1394,7 +1522,7 @@ java.lang.String defaultValue) {
 
     private java.lang.Object notificationId_ = "";
     /**
-     * <code>string notification_id = 1 [json_name = "notificationId"];</code>
+     * <code>string notification_id = 1 [json_name = "notificationId", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The notificationId.
      */
     public java.lang.String getNotificationId() {
@@ -1410,7 +1538,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>string notification_id = 1 [json_name = "notificationId"];</code>
+     * <code>string notification_id = 1 [json_name = "notificationId", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The bytes for notificationId.
      */
     public com.google.protobuf.ByteString
@@ -1427,7 +1555,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>string notification_id = 1 [json_name = "notificationId"];</code>
+     * <code>string notification_id = 1 [json_name = "notificationId", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The notificationId to set.
      * @return This builder for chaining.
      */
@@ -1440,7 +1568,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>string notification_id = 1 [json_name = "notificationId"];</code>
+     * <code>string notification_id = 1 [json_name = "notificationId", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return This builder for chaining.
      */
     public Builder clearNotificationId() {
@@ -1450,7 +1578,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>string notification_id = 1 [json_name = "notificationId"];</code>
+     * <code>string notification_id = 1 [json_name = "notificationId", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The bytes for notificationId to set.
      * @return This builder for chaining.
      */
@@ -1466,7 +1594,7 @@ java.lang.String defaultValue) {
 
     private java.lang.Object recipientId_ = "";
     /**
-     * <code>string recipient_id = 2 [json_name = "recipientId"];</code>
+     * <code>string recipient_id = 2 [json_name = "recipientId", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The recipientId.
      */
     public java.lang.String getRecipientId() {
@@ -1482,7 +1610,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>string recipient_id = 2 [json_name = "recipientId"];</code>
+     * <code>string recipient_id = 2 [json_name = "recipientId", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The bytes for recipientId.
      */
     public com.google.protobuf.ByteString
@@ -1499,7 +1627,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>string recipient_id = 2 [json_name = "recipientId"];</code>
+     * <code>string recipient_id = 2 [json_name = "recipientId", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The recipientId to set.
      * @return This builder for chaining.
      */
@@ -1512,7 +1640,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>string recipient_id = 2 [json_name = "recipientId"];</code>
+     * <code>string recipient_id = 2 [json_name = "recipientId", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return This builder for chaining.
      */
     public Builder clearRecipientId() {
@@ -1522,7 +1650,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>string recipient_id = 2 [json_name = "recipientId"];</code>
+     * <code>string recipient_id = 2 [json_name = "recipientId", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The bytes for recipientId to set.
      * @return This builder for chaining.
      */
@@ -1538,14 +1666,14 @@ java.lang.String defaultValue) {
 
     private int type_ = 0;
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The enum numeric value on the wire for type.
      */
     @java.lang.Override public int getTypeValue() {
       return type_;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The enum numeric value on the wire for type to set.
      * @return This builder for chaining.
      */
@@ -1556,7 +1684,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The type.
      */
     @java.lang.Override
@@ -1565,7 +1693,7 @@ java.lang.String defaultValue) {
       return result == null ? com.udb.core.notification.entity.v1.NotificationType.UNRECOGNIZED : result;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The type to set.
      * @throws IllegalArgumentException if UNRECOGNIZED is provided.
      * @return This builder for chaining.
@@ -1578,7 +1706,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationType type = 3 [json_name = "type", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return This builder for chaining.
      */
     public Builder clearType() {
@@ -1590,14 +1718,14 @@ java.lang.String defaultValue) {
 
     private int channel_ = 0;
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The enum numeric value on the wire for channel.
      */
     @java.lang.Override public int getChannelValue() {
       return channel_;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The enum numeric value on the wire for channel to set.
      * @return This builder for chaining.
      */
@@ -1608,7 +1736,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The channel.
      */
     @java.lang.Override
@@ -1617,7 +1745,7 @@ java.lang.String defaultValue) {
       return result == null ? com.udb.core.notification.entity.v1.NotificationChannel.UNRECOGNIZED : result;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The channel to set.
      * @throws IllegalArgumentException if UNRECOGNIZED is provided.
      * @return This builder for chaining.
@@ -1630,7 +1758,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return This builder for chaining.
      */
     public Builder clearChannel() {
@@ -1642,7 +1770,7 @@ java.lang.String defaultValue) {
 
     private java.lang.Object subject_ = "";
     /**
-     * <code>string subject = 5 [json_name = "subject"];</code>
+     * <code>string subject = 5 [json_name = "subject", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The subject.
      */
     public java.lang.String getSubject() {
@@ -1658,7 +1786,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>string subject = 5 [json_name = "subject"];</code>
+     * <code>string subject = 5 [json_name = "subject", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The bytes for subject.
      */
     public com.google.protobuf.ByteString
@@ -1675,7 +1803,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>string subject = 5 [json_name = "subject"];</code>
+     * <code>string subject = 5 [json_name = "subject", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The subject to set.
      * @return This builder for chaining.
      */
@@ -1688,7 +1816,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>string subject = 5 [json_name = "subject"];</code>
+     * <code>string subject = 5 [json_name = "subject", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return This builder for chaining.
      */
     public Builder clearSubject() {
@@ -1698,7 +1826,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>string subject = 5 [json_name = "subject"];</code>
+     * <code>string subject = 5 [json_name = "subject", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The bytes for subject to set.
      * @return This builder for chaining.
      */
@@ -1714,7 +1842,7 @@ java.lang.String defaultValue) {
 
     private java.lang.Object message_ = "";
     /**
-     * <code>string message = 6 [json_name = "message"];</code>
+     * <code>string message = 6 [json_name = "message", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The message.
      */
     public java.lang.String getMessage() {
@@ -1730,7 +1858,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>string message = 6 [json_name = "message"];</code>
+     * <code>string message = 6 [json_name = "message", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The bytes for message.
      */
     public com.google.protobuf.ByteString
@@ -1747,7 +1875,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>string message = 6 [json_name = "message"];</code>
+     * <code>string message = 6 [json_name = "message", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The message to set.
      * @return This builder for chaining.
      */
@@ -1760,7 +1888,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>string message = 6 [json_name = "message"];</code>
+     * <code>string message = 6 [json_name = "message", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return This builder for chaining.
      */
     public Builder clearMessage() {
@@ -1770,7 +1898,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>string message = 6 [json_name = "message"];</code>
+     * <code>string message = 6 [json_name = "message", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The bytes for message to set.
      * @return This builder for chaining.
      */
@@ -1811,7 +1939,7 @@ java.lang.String defaultValue) {
       return internalGetTemplateData().getMap().size();
     }
     /**
-     * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+     * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     @java.lang.Override
     public boolean containsTemplateData(
@@ -1828,14 +1956,14 @@ java.lang.String defaultValue) {
       return getTemplateDataMap();
     }
     /**
-     * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+     * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     @java.lang.Override
     public java.util.Map<java.lang.String, java.lang.String> getTemplateDataMap() {
       return internalGetTemplateData().getMap();
     }
     /**
-     * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+     * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     @java.lang.Override
     public /* nullable */
@@ -1849,7 +1977,7 @@ java.lang.String defaultValue) {
       return map.containsKey(key) ? map.get(key) : defaultValue;
     }
     /**
-     * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+     * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     @java.lang.Override
     public java.lang.String getTemplateDataOrThrow(
@@ -1869,7 +1997,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+     * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder removeTemplateData(
         java.lang.String key) {
@@ -1888,7 +2016,7 @@ java.lang.String defaultValue) {
       return internalGetMutableTemplateData().getMutableMap();
     }
     /**
-     * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+     * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder putTemplateData(
         java.lang.String key,
@@ -1901,7 +2029,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData"];</code>
+     * <code>map&lt;string, string&gt; template_data = 7 [json_name = "templateData", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder putAllTemplateData(
         java.util.Map<java.lang.String, java.lang.String> values) {
@@ -1913,14 +2041,14 @@ java.lang.String defaultValue) {
 
     private int priority_ = 0;
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The enum numeric value on the wire for priority.
      */
     @java.lang.Override public int getPriorityValue() {
       return priority_;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The enum numeric value on the wire for priority to set.
      * @return This builder for chaining.
      */
@@ -1931,7 +2059,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The priority.
      */
     @java.lang.Override
@@ -1940,7 +2068,7 @@ java.lang.String defaultValue) {
       return result == null ? com.udb.core.notification.entity.v1.NotificationPriority.UNRECOGNIZED : result;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The priority to set.
      * @throws IllegalArgumentException if UNRECOGNIZED is provided.
      * @return This builder for chaining.
@@ -1953,7 +2081,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationPriority priority = 8 [json_name = "priority", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return This builder for chaining.
      */
     public Builder clearPriority() {
@@ -1965,14 +2093,14 @@ java.lang.String defaultValue) {
 
     private int status_ = 0;
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The enum numeric value on the wire for status.
      */
     @java.lang.Override public int getStatusValue() {
       return status_;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The enum numeric value on the wire for status to set.
      * @return This builder for chaining.
      */
@@ -1983,7 +2111,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The status.
      */
     @java.lang.Override
@@ -1992,7 +2120,7 @@ java.lang.String defaultValue) {
       return result == null ? com.udb.core.notification.entity.v1.NotificationStatus.UNRECOGNIZED : result;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The status to set.
      * @throws IllegalArgumentException if UNRECOGNIZED is provided.
      * @return This builder for chaining.
@@ -2005,7 +2133,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status"];</code>
+     * <code>.udb.core.notification.entity.v1.NotificationStatus status = 9 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return This builder for chaining.
      */
     public Builder clearStatus() {
@@ -2019,14 +2147,14 @@ java.lang.String defaultValue) {
     private com.google.protobuf.SingleFieldBuilder<
         com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> scheduledAtBuilder_;
     /**
-     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return Whether the scheduledAt field is set.
      */
     public boolean hasScheduledAt() {
       return ((bitField0_ & 0x00000200) != 0);
     }
     /**
-     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The scheduledAt.
      */
     public com.google.protobuf.Timestamp getScheduledAt() {
@@ -2037,7 +2165,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder setScheduledAt(com.google.protobuf.Timestamp value) {
       if (scheduledAtBuilder_ == null) {
@@ -2053,7 +2181,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder setScheduledAt(
         com.google.protobuf.Timestamp.Builder builderForValue) {
@@ -2067,7 +2195,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder mergeScheduledAt(com.google.protobuf.Timestamp value) {
       if (scheduledAtBuilder_ == null) {
@@ -2088,7 +2216,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder clearScheduledAt() {
       bitField0_ = (bitField0_ & ~0x00000200);
@@ -2101,7 +2229,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public com.google.protobuf.Timestamp.Builder getScheduledAtBuilder() {
       bitField0_ |= 0x00000200;
@@ -2109,7 +2237,7 @@ java.lang.String defaultValue) {
       return internalGetScheduledAtFieldBuilder().getBuilder();
     }
     /**
-     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public com.google.protobuf.TimestampOrBuilder getScheduledAtOrBuilder() {
       if (scheduledAtBuilder_ != null) {
@@ -2120,7 +2248,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt"];</code>
+     * <code>.google.protobuf.Timestamp scheduled_at = 10 [json_name = "scheduledAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
         com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
@@ -2140,14 +2268,14 @@ java.lang.String defaultValue) {
     private com.google.protobuf.SingleFieldBuilder<
         com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> sentAtBuilder_;
     /**
-     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return Whether the sentAt field is set.
      */
     public boolean hasSentAt() {
       return ((bitField0_ & 0x00000400) != 0);
     }
     /**
-     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The sentAt.
      */
     public com.google.protobuf.Timestamp getSentAt() {
@@ -2158,7 +2286,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder setSentAt(com.google.protobuf.Timestamp value) {
       if (sentAtBuilder_ == null) {
@@ -2174,7 +2302,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder setSentAt(
         com.google.protobuf.Timestamp.Builder builderForValue) {
@@ -2188,7 +2316,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder mergeSentAt(com.google.protobuf.Timestamp value) {
       if (sentAtBuilder_ == null) {
@@ -2209,7 +2337,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder clearSentAt() {
       bitField0_ = (bitField0_ & ~0x00000400);
@@ -2222,7 +2350,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public com.google.protobuf.Timestamp.Builder getSentAtBuilder() {
       bitField0_ |= 0x00000400;
@@ -2230,7 +2358,7 @@ java.lang.String defaultValue) {
       return internalGetSentAtFieldBuilder().getBuilder();
     }
     /**
-     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public com.google.protobuf.TimestampOrBuilder getSentAtOrBuilder() {
       if (sentAtBuilder_ != null) {
@@ -2241,7 +2369,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt"];</code>
+     * <code>.google.protobuf.Timestamp sent_at = 11 [json_name = "sentAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
         com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
@@ -2261,14 +2389,14 @@ java.lang.String defaultValue) {
     private com.google.protobuf.SingleFieldBuilder<
         com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> deliveredAtBuilder_;
     /**
-     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return Whether the deliveredAt field is set.
      */
     public boolean hasDeliveredAt() {
       return ((bitField0_ & 0x00000800) != 0);
     }
     /**
-     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The deliveredAt.
      */
     public com.google.protobuf.Timestamp getDeliveredAt() {
@@ -2279,7 +2407,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder setDeliveredAt(com.google.protobuf.Timestamp value) {
       if (deliveredAtBuilder_ == null) {
@@ -2295,7 +2423,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder setDeliveredAt(
         com.google.protobuf.Timestamp.Builder builderForValue) {
@@ -2309,7 +2437,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder mergeDeliveredAt(com.google.protobuf.Timestamp value) {
       if (deliveredAtBuilder_ == null) {
@@ -2330,7 +2458,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder clearDeliveredAt() {
       bitField0_ = (bitField0_ & ~0x00000800);
@@ -2343,7 +2471,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public com.google.protobuf.Timestamp.Builder getDeliveredAtBuilder() {
       bitField0_ |= 0x00000800;
@@ -2351,7 +2479,7 @@ java.lang.String defaultValue) {
       return internalGetDeliveredAtFieldBuilder().getBuilder();
     }
     /**
-     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public com.google.protobuf.TimestampOrBuilder getDeliveredAtOrBuilder() {
       if (deliveredAtBuilder_ != null) {
@@ -2362,7 +2490,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt"];</code>
+     * <code>.google.protobuf.Timestamp delivered_at = 12 [json_name = "deliveredAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
         com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
@@ -2382,14 +2510,14 @@ java.lang.String defaultValue) {
     private com.google.protobuf.SingleFieldBuilder<
         com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> readAtBuilder_;
     /**
-     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return Whether the readAt field is set.
      */
     public boolean hasReadAt() {
       return ((bitField0_ & 0x00001000) != 0);
     }
     /**
-     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The readAt.
      */
     public com.google.protobuf.Timestamp getReadAt() {
@@ -2400,7 +2528,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder setReadAt(com.google.protobuf.Timestamp value) {
       if (readAtBuilder_ == null) {
@@ -2416,7 +2544,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder setReadAt(
         com.google.protobuf.Timestamp.Builder builderForValue) {
@@ -2430,7 +2558,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder mergeReadAt(com.google.protobuf.Timestamp value) {
       if (readAtBuilder_ == null) {
@@ -2451,7 +2579,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder clearReadAt() {
       bitField0_ = (bitField0_ & ~0x00001000);
@@ -2464,7 +2592,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public com.google.protobuf.Timestamp.Builder getReadAtBuilder() {
       bitField0_ |= 0x00001000;
@@ -2472,7 +2600,7 @@ java.lang.String defaultValue) {
       return internalGetReadAtFieldBuilder().getBuilder();
     }
     /**
-     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public com.google.protobuf.TimestampOrBuilder getReadAtOrBuilder() {
       if (readAtBuilder_ != null) {
@@ -2483,7 +2611,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt"];</code>
+     * <code>.google.protobuf.Timestamp read_at = 13 [json_name = "readAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
         com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
@@ -2503,14 +2631,14 @@ java.lang.String defaultValue) {
     private com.google.protobuf.SingleFieldBuilder<
         com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> createdAtBuilder_;
     /**
-     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return Whether the createdAt field is set.
      */
     public boolean hasCreatedAt() {
       return ((bitField0_ & 0x00002000) != 0);
     }
     /**
-     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The createdAt.
      */
     public com.google.protobuf.Timestamp getCreatedAt() {
@@ -2521,7 +2649,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder setCreatedAt(com.google.protobuf.Timestamp value) {
       if (createdAtBuilder_ == null) {
@@ -2537,7 +2665,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder setCreatedAt(
         com.google.protobuf.Timestamp.Builder builderForValue) {
@@ -2551,7 +2679,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder mergeCreatedAt(com.google.protobuf.Timestamp value) {
       if (createdAtBuilder_ == null) {
@@ -2572,7 +2700,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public Builder clearCreatedAt() {
       bitField0_ = (bitField0_ & ~0x00002000);
@@ -2585,7 +2713,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public com.google.protobuf.Timestamp.Builder getCreatedAtBuilder() {
       bitField0_ |= 0x00002000;
@@ -2593,7 +2721,7 @@ java.lang.String defaultValue) {
       return internalGetCreatedAtFieldBuilder().getBuilder();
     }
     /**
-     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     public com.google.protobuf.TimestampOrBuilder getCreatedAtOrBuilder() {
       if (createdAtBuilder_ != null) {
@@ -2604,7 +2732,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt"];</code>
+     * <code>.google.protobuf.Timestamp created_at = 14 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
         com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
@@ -2622,7 +2750,7 @@ java.lang.String defaultValue) {
 
     private int retryCount_ ;
     /**
-     * <code>int32 retry_count = 15 [json_name = "retryCount"];</code>
+     * <code>int32 retry_count = 15 [json_name = "retryCount", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The retryCount.
      */
     @java.lang.Override
@@ -2630,7 +2758,7 @@ java.lang.String defaultValue) {
       return retryCount_;
     }
     /**
-     * <code>int32 retry_count = 15 [json_name = "retryCount"];</code>
+     * <code>int32 retry_count = 15 [json_name = "retryCount", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The retryCount to set.
      * @return This builder for chaining.
      */
@@ -2642,7 +2770,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>int32 retry_count = 15 [json_name = "retryCount"];</code>
+     * <code>int32 retry_count = 15 [json_name = "retryCount", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return This builder for chaining.
      */
     public Builder clearRetryCount() {
@@ -2654,7 +2782,7 @@ java.lang.String defaultValue) {
 
     private java.lang.Object errorMessage_ = "";
     /**
-     * <code>string error_message = 16 [json_name = "errorMessage"];</code>
+     * <code>string error_message = 16 [json_name = "errorMessage", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The errorMessage.
      */
     public java.lang.String getErrorMessage() {
@@ -2670,7 +2798,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>string error_message = 16 [json_name = "errorMessage"];</code>
+     * <code>string error_message = 16 [json_name = "errorMessage", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The bytes for errorMessage.
      */
     public com.google.protobuf.ByteString
@@ -2687,7 +2815,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>string error_message = 16 [json_name = "errorMessage"];</code>
+     * <code>string error_message = 16 [json_name = "errorMessage", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The errorMessage to set.
      * @return This builder for chaining.
      */
@@ -2700,7 +2828,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>string error_message = 16 [json_name = "errorMessage"];</code>
+     * <code>string error_message = 16 [json_name = "errorMessage", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return This builder for chaining.
      */
     public Builder clearErrorMessage() {
@@ -2710,7 +2838,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>string error_message = 16 [json_name = "errorMessage"];</code>
+     * <code>string error_message = 16 [json_name = "errorMessage", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The bytes for errorMessage to set.
      * @return This builder for chaining.
      */
@@ -2726,7 +2854,7 @@ java.lang.String defaultValue) {
 
     private java.lang.Object tenantId_ = "";
     /**
-     * <code>string tenant_id = 17 [json_name = "tenantId"];</code>
+     * <code>string tenant_id = 17 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The tenantId.
      */
     public java.lang.String getTenantId() {
@@ -2742,7 +2870,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>string tenant_id = 17 [json_name = "tenantId"];</code>
+     * <code>string tenant_id = 17 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return The bytes for tenantId.
      */
     public com.google.protobuf.ByteString
@@ -2759,7 +2887,7 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <code>string tenant_id = 17 [json_name = "tenantId"];</code>
+     * <code>string tenant_id = 17 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The tenantId to set.
      * @return This builder for chaining.
      */
@@ -2772,7 +2900,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>string tenant_id = 17 [json_name = "tenantId"];</code>
+     * <code>string tenant_id = 17 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return This builder for chaining.
      */
     public Builder clearTenantId() {
@@ -2782,7 +2910,7 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
-     * <code>string tenant_id = 17 [json_name = "tenantId"];</code>
+     * <code>string tenant_id = 17 [json_name = "tenantId", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @param value The bytes for tenantId to set.
      * @return This builder for chaining.
      */
@@ -2792,6 +2920,199 @@ java.lang.String defaultValue) {
       checkByteStringIsUtf8(value);
       tenantId_ = value;
       bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.Timestamp deletedAt_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> deletedAtBuilder_;
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return Whether the deletedAt field is set.
+     */
+    public boolean hasDeletedAt() {
+      return ((bitField0_ & 0x00020000) != 0);
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The deletedAt.
+     */
+    public com.google.protobuf.Timestamp getDeletedAt() {
+      if (deletedAtBuilder_ == null) {
+        return deletedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : deletedAt_;
+      } else {
+        return deletedAtBuilder_.getMessage();
+      }
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder setDeletedAt(com.google.protobuf.Timestamp value) {
+      if (deletedAtBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        deletedAt_ = value;
+      } else {
+        deletedAtBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder setDeletedAt(
+        com.google.protobuf.Timestamp.Builder builderForValue) {
+      if (deletedAtBuilder_ == null) {
+        deletedAt_ = builderForValue.build();
+      } else {
+        deletedAtBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder mergeDeletedAt(com.google.protobuf.Timestamp value) {
+      if (deletedAtBuilder_ == null) {
+        if (((bitField0_ & 0x00020000) != 0) &&
+          deletedAt_ != null &&
+          deletedAt_ != com.google.protobuf.Timestamp.getDefaultInstance()) {
+          getDeletedAtBuilder().mergeFrom(value);
+        } else {
+          deletedAt_ = value;
+        }
+      } else {
+        deletedAtBuilder_.mergeFrom(value);
+      }
+      if (deletedAt_ != null) {
+        bitField0_ |= 0x00020000;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public Builder clearDeletedAt() {
+      bitField0_ = (bitField0_ & ~0x00020000);
+      deletedAt_ = null;
+      if (deletedAtBuilder_ != null) {
+        deletedAtBuilder_.dispose();
+        deletedAtBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public com.google.protobuf.Timestamp.Builder getDeletedAtBuilder() {
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return internalGetDeletedAtFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    public com.google.protobuf.TimestampOrBuilder getDeletedAtOrBuilder() {
+      if (deletedAtBuilder_ != null) {
+        return deletedAtBuilder_.getMessageOrBuilder();
+      } else {
+        return deletedAt_ == null ?
+            com.google.protobuf.Timestamp.getDefaultInstance() : deletedAt_;
+      }
+    }
+    /**
+     * <code>.google.protobuf.Timestamp deleted_at = 18 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder> 
+        internalGetDeletedAtFieldBuilder() {
+      if (deletedAtBuilder_ == null) {
+        deletedAtBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Timestamp, com.google.protobuf.Timestamp.Builder, com.google.protobuf.TimestampOrBuilder>(
+                getDeletedAt(),
+                getParentForChildren(),
+                isClean());
+        deletedAt_ = null;
+      }
+      return deletedAtBuilder_;
+    }
+
+    private java.lang.Object deletedBy_ = "";
+    /**
+     * <code>string deleted_by = 19 [json_name = "deletedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The deletedBy.
+     */
+    public java.lang.String getDeletedBy() {
+      java.lang.Object ref = deletedBy_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        deletedBy_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string deleted_by = 19 [json_name = "deletedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for deletedBy.
+     */
+    public com.google.protobuf.ByteString
+        getDeletedByBytes() {
+      java.lang.Object ref = deletedBy_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        deletedBy_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string deleted_by = 19 [json_name = "deletedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The deletedBy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeletedBy(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      deletedBy_ = value;
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string deleted_by = 19 [json_name = "deletedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDeletedBy() {
+      deletedBy_ = getDefaultInstance().getDeletedBy();
+      bitField0_ = (bitField0_ & ~0x00040000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string deleted_by = 19 [json_name = "deletedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for deletedBy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeletedByBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      deletedBy_ = value;
+      bitField0_ |= 0x00040000;
       onChanged();
       return this;
     }

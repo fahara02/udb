@@ -44,57 +44,57 @@ public final class PolicyDraftProto extends com.google.protobuf.GeneratedFile {
       "proto\022\030udb.core.authz.entity.v1\032\037google/" +
       "protobuf/timestamp.proto\032\033udb/core/commo" +
       "n/v1/db.proto\032!udb/core/common/v1/securi" +
-      "ty.proto\"\334\r\n\013PolicyDraft\022F\n\010draft_id\030\001 \001" +
+      "ty.proto\"\337\r\n\013PolicyDraft\022F\n\010draft_id\030\001 \001" +
       "(\tB+\202\267\030\'\n\010draft_id\022\004UUID\030\001(\001:\021gen_random" +
-      "_uuid()R\007draftId\022^\n\ttenant_id\030\002 \001(\tBA\202\267\030" +
-      "=\n\ttenant_id\022\013VARCHAR(64)\030\001R!\n\030idx_polic" +
-      "y_drafts_tenant\022\005BTREER\010tenantId\022X\n\nproj" +
-      "ect_id\030\003 \001(\tB9\202\267\0305\n\nproject_id\022\014VARCHAR(" +
-      "120)Z\031Optional project boundaryR\tproject" +
-      "Id\0225\n\005title\030\004 \001(\tB\037\202\267\030\033\n\005title\022\014VARCHAR(" +
-      "200)\030\001:\002\'\'R\005title\022l\n\013description\030\005 \001(\tBJ" +
-      "\202\267\030F\n\013description\022\rVARCHAR(1000)Z(Human " +
-      "description of the proposed changeR\013desc" +
-      "ription\022\207\001\n\026proposed_policies_json\030\006 \001(\t" +
-      "BQ\202\267\030M\n\026proposed_policies_json\022\004TEXT\030\001:\004" +
-      "\'[]\'Z%Candidate policy rules for this dr" +
-      "aftR\024proposedPoliciesJson\022|\n\024proposed_tu" +
-      "ples_json\030\007 \001(\tBJ\202\267\030F\n\024proposed_tuples_j" +
-      "son\022\004TEXTZ(Candidate relationship tuples" +
-      " (optional)R\022proposedTuplesJson\022v\n\017base_" +
-      "version_id\030\010 \001(\tBN\202\267\030J\n\017base_version_id\022" +
-      "\004UUIDZ1Active PolicyVersion this draft i" +
-      "s diffed againstR\rbaseVersionId\022n\n\006statu" +
-      "s\030\t \001(\tBV\202\267\030R\n\006status\022\013VARCHAR(20)\030\001:\006\'O" +
-      "PEN\'Z1OPEN/IN_REVIEW/APPROVED/REJECTED/M" +
-      "ERGED/ABANDONEDR\006status\022j\n\006author\030\n \001(\tB" +
-      "R\202\267\030N\n\006author\022\014VARCHAR(160)\030\001:\002\'\'Z0Draft" +
-      " creator (separation-of-duties vs approv" +
-      "er)R\006author\022f\n\thigh_risk\030\013 \001(\010BI\202\267\030E\n\thi" +
-      "gh_risk\022\007BOOLEAN\030\001:\005falseZ&Triggers sepa" +
-      "ration-of-duties approvalR\010highRisk\022q\n\nc" +
-      "reated_at\030\014 \001(\0132\032.google.protobuf.Timest" +
-      "ampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CU" +
-      "RRENT_TIMESTAMP`\001h\001R\tcreatedAt\022X\n\nupdate" +
-      "d_at\030\r \001(\0132\032.google.protobuf.TimestampB\035" +
-      "\202\267\030\031\n\nupdated_at\022\013TIMESTAMPTZR\tupdatedAt" +
-      ":\224\003\372\266\030\373\001\n\rpolicy_drafts\022\tudb_authz\030\037 \001*9" +
-      "Editable draft policy change sets pendin" +
-      "g review/approval8\001@\001b^\n\020tenant_isolatio" +
-      "n\032H(tenant_id::text = current_setting(\'a" +
-      "pp.current_tenant_id\', true)::text)(\001\212\001;" +
-      "\n\037idx_policy_drafts_tenant_status\022\005BTREE" +
-      "Z\ttenant_idZ\006status\212\262\031\217\001\n\006tenant\032\ttenant" +
-      "_id*4tenant_id = current_setting(\'app.cu" +
-      "rrent_tenant_id\')2\004none:\020authz.governanc" +
-      "e@\373\023H\002R\006tenantZ\010standardr\025tenant.data_re" +
-      "sidencyB\373\001\n\034com.udb.core.authz.entity.v1" +
-      "B\020PolicyDraftProtoP\001ZDgithub.com/fahara0" +
-      "2/udb/sdk/go/gen/udb/core/authz/entity/v" +
-      "1;entityv1\242\002\004UCAE\252\002\030udb.core.Authz.Entit" +
-      "y.V1\312\002\030Udb\\Core\\Authz\\Entity\\V1\342\002$Udb\\GP" +
-      "BMetadata\\Core\\Authz\\Entity\\V1\352\002\034Udb::Co" +
-      "re::Authz::Entity::V1b\006proto3"
+      "_uuid()R\007draftId\022a\n\ttenant_id\030\002 \001(\tBD\202\267\030" +
+      "@\n\ttenant_id\022\013VARCHAR(64)\030\001R!\n\030idx_polic" +
+      "y_drafts_tenant\022\005BTREE\230\002\001R\010tenantId\022X\n\np" +
+      "roject_id\030\003 \001(\tB9\202\267\0305\n\nproject_id\022\014VARCH" +
+      "AR(120)Z\031Optional project boundaryR\tproj" +
+      "ectId\0225\n\005title\030\004 \001(\tB\037\202\267\030\033\n\005title\022\014VARCH" +
+      "AR(200)\030\001:\002\'\'R\005title\022l\n\013description\030\005 \001(" +
+      "\tBJ\202\267\030F\n\013description\022\rVARCHAR(1000)Z(Hum" +
+      "an description of the proposed changeR\013d" +
+      "escription\022\207\001\n\026proposed_policies_json\030\006 " +
+      "\001(\tBQ\202\267\030M\n\026proposed_policies_json\022\004TEXT\030" +
+      "\001:\004\'[]\'Z%Candidate policy rules for this" +
+      " draftR\024proposedPoliciesJson\022|\n\024proposed" +
+      "_tuples_json\030\007 \001(\tBJ\202\267\030F\n\024proposed_tuple" +
+      "s_json\022\004TEXTZ(Candidate relationship tup" +
+      "les (optional)R\022proposedTuplesJson\022v\n\017ba" +
+      "se_version_id\030\010 \001(\tBN\202\267\030J\n\017base_version_" +
+      "id\022\004UUIDZ1Active PolicyVersion this draf" +
+      "t is diffed againstR\rbaseVersionId\022n\n\006st" +
+      "atus\030\t \001(\tBV\202\267\030R\n\006status\022\013VARCHAR(20)\030\001:" +
+      "\006\'OPEN\'Z1OPEN/IN_REVIEW/APPROVED/REJECTE" +
+      "D/MERGED/ABANDONEDR\006status\022j\n\006author\030\n \001" +
+      "(\tBR\202\267\030N\n\006author\022\014VARCHAR(160)\030\001:\002\'\'Z0Dr" +
+      "aft creator (separation-of-duties vs app" +
+      "rover)R\006author\022f\n\thigh_risk\030\013 \001(\010BI\202\267\030E\n" +
+      "\thigh_risk\022\007BOOLEAN\030\001:\005falseZ&Triggers s" +
+      "eparation-of-duties approvalR\010highRisk\022q" +
+      "\n\ncreated_at\030\014 \001(\0132\032.google.protobuf.Tim" +
+      "estampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:" +
+      "\021CURRENT_TIMESTAMP`\001h\001R\tcreatedAt\022X\n\nupd" +
+      "ated_at\030\r \001(\0132\032.google.protobuf.Timestam" +
+      "pB\035\202\267\030\031\n\nupdated_at\022\013TIMESTAMPTZR\tupdate" +
+      "dAt:\224\003\372\266\030\373\001\n\rpolicy_drafts\022\tudb_authz\030\037 " +
+      "\001*9Editable draft policy change sets pen" +
+      "ding review/approval8\001@\001b^\n\020tenant_isola" +
+      "tion\032H(tenant_id::text = current_setting" +
+      "(\'app.current_tenant_id\', true)::text)(\001" +
+      "\212\001;\n\037idx_policy_drafts_tenant_status\022\005BT" +
+      "REEZ\ttenant_idZ\006status\212\262\031\217\001\n\006tenant\032\tten" +
+      "ant_id*4tenant_id = current_setting(\'app" +
+      ".current_tenant_id\')2\004none:\020authz.govern" +
+      "ance@\373\023H\002R\006tenantZ\010standardr\025tenant.data" +
+      "_residencyB\373\001\n\034com.udb.core.authz.entity" +
+      ".v1B\020PolicyDraftProtoP\001ZDgithub.com/faha" +
+      "ra02/udb/sdk/go/gen/udb/core/authz/entit" +
+      "y/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Authz.En" +
+      "tity.V1\312\002\030Udb\\Core\\Authz\\Entity\\V1\342\002$Udb" +
+      "\\GPBMetadata\\Core\\Authz\\Entity\\V1\352\002\034Udb:" +
+      ":Core::Authz::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

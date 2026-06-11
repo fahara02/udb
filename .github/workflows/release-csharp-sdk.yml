@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Expected UDB release version, for example 0.3.2"
+        description: "Expected UDB release version, for example 0.3.3"
         required: true
   push:
     tags:

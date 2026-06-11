@@ -42,9 +42,9 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * For NODE/TENANT: the list of in-scope ids. For PERCENT: a single-element
      * list whose value is the integer percentage (1..=100).
      *
-     * Generated from protobuf field <code>string scope_values_json = 5 [json_name = "scopeValuesJson", (.udb.core.common.v1.pg_column) = {</code>
+     * Generated from protobuf field <code>string scope_values = 5 [json_name = "scopeValues", (.udb.core.common.v1.pg_column) = {</code>
      */
-    protected $scope_values_json = '';
+    protected $scope_values = '';
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.CanaryState state = 6 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
      */
@@ -113,7 +113,7 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      *     @type string $policy_set_id
      *     @type string $policy_version_id
      *     @type int $scope_kind
-     *     @type string $scope_values_json
+     *     @type string $scope_values
      *           For NODE/TENANT: the list of in-scope ids. For PERCENT: a single-element
      *           list whose value is the integer percentage (1..=100).
      *     @type int $state
@@ -234,26 +234,26 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * For NODE/TENANT: the list of in-scope ids. For PERCENT: a single-element
      * list whose value is the integer percentage (1..=100).
      *
-     * Generated from protobuf field <code>string scope_values_json = 5 [json_name = "scopeValuesJson", (.udb.core.common.v1.pg_column) = {</code>
+     * Generated from protobuf field <code>string scope_values = 5 [json_name = "scopeValues", (.udb.core.common.v1.pg_column) = {</code>
      * @return string
      */
-    public function getScopeValuesJson()
+    public function getScopeValues()
     {
-        return $this->scope_values_json;
+        return $this->scope_values;
     }
 
     /**
      * For NODE/TENANT: the list of in-scope ids. For PERCENT: a single-element
      * list whose value is the integer percentage (1..=100).
      *
-     * Generated from protobuf field <code>string scope_values_json = 5 [json_name = "scopeValuesJson", (.udb.core.common.v1.pg_column) = {</code>
+     * Generated from protobuf field <code>string scope_values = 5 [json_name = "scopeValues", (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var
      * @return $this
      */
-    public function setScopeValuesJson(string $var)
+    public function setScopeValues(string $var)
     {
         GPBUtil::checkString($var, true);
-        $this->scope_values_json = $var;
+        $this->scope_values = $var;
 
         return $this;
     }

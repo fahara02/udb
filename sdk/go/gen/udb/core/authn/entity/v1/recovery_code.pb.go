@@ -120,7 +120,7 @@ var File_udb_core_authn_entity_v1_recovery_code_proto protoreflect.FileDescripto
 
 const file_udb_core_authn_entity_v1_recovery_code_proto_rawDesc = "" +
 	"\n" +
-	",udb/core/authn/entity/v1/recovery_code.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xae\t\n" +
+	",udb/core/authn/entity/v1/recovery_code.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xb1\t\n" +
 	"\fRecoveryCode\x12]\n" +
 	"\x10recovery_code_id\x18\x01 \x01(\tB3\x82\xb7\x18/\n" +
 	"\x10recovery_code_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x0erecoveryCodeId\x12\xb4\x01\n" +
@@ -135,10 +135,10 @@ const file_udb_core_authn_entity_v1_recovery_code_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB6\x82\xb7\x182\n" +
 	"\n" +
-	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt\x12\x96\x01\n" +
-	"\ttenant_id\x18\x06 \x01(\tBy\x82\xb7\x18u\n" +
+	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt\x12\x99\x01\n" +
+	"\ttenant_id\x18\x06 \x01(\tB|\x82\xb7\x18x\n" +
 	"\ttenant_id\x12\fVARCHAR(120)R%\n" +
-	"\x1cidx_recovery_codes_tenant_id\x12\x05BTREEZ3Tenant boundary (denormalized from the owning user)R\btenantId:\xe7\x02\xfa\xb6\x18\xcd\x01\n" +
+	"\x1cidx_recovery_codes_tenant_id\x12\x05BTREEZ3Tenant boundary (denormalized from the owning user)\x98\x02\x01R\btenantId:\xe7\x02\xfa\xb6\x18\xcd\x01\n" +
 	"\x0erecovery_codes\x12\tudb_authn\x18\x06 \x01*+Hashed single-use MFA recovery/backup codes@\x01bs\n" +
 	"\x10tenant_isolation\x1a](tenant_id IS NULL OR tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xea\x01\aprimary\x8a\xb2\x19\x90\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x11authn.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\xfc\x01\n" +

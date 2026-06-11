@@ -2,6 +2,7 @@ import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 import path from "path";
 
+import "./wkt"; // registers the google.protobuf.Struct serializer (must precede any loadSync)
 import { defaultProtoRoot } from "./protoRoot";
 
 export const UDB_PROTOCOL_VERSION = "1.0.0";

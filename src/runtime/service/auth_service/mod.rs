@@ -64,7 +64,8 @@ pub use authz::AuthzServiceImpl;
 #[cfg(feature = "redis")]
 use crate::runtime::authn::RedisSessionStore;
 use crate::runtime::authn::{
-    AuthnConfig, PostgresApiKeyStore, PostgresSessionStore, PostgresUserStore, SessionStore,
+    AccountStatus, AuthnConfig, PostgresApiKeyStore, PostgresSessionStore, PostgresUserStore,
+    SessionStore, UserStore,
 };
 use crate::runtime::authz::AuthzSnapshot;
 use crate::runtime::security::SecurityConfig;
@@ -251,41 +252,208 @@ pub async fn bootstrap_admin_user(
 
     let session_store: Arc<dyn SessionStore> =
         Arc::new(PostgresSessionStore::new(pool.clone(), ""));
+    let user_store: Arc<dyn UserStore> = Arc::new(PostgresUserStore::new(pool.clone(), ""));
     let svc = AuthnServiceImpl::with_stores(
         AuthnConfig::from_env(),
         SecurityConfig::current(),
         session_store,
         Arc::new(PostgresApiKeyStore::new(pool.clone(), "")),
-        Arc::new(PostgresUserStore::new(pool.clone(), "")),
+        user_store.clone(),
     )
     .with_postgres(Some(pool.clone()));
 
-    let created = svc
-        .create_user(Request::new(authn_pb::CreateUserRequest {
-            username: username.to_string(),
-            email: email.to_string(),
-            password: password.to_string(),
-            tenant_id: tenant.to_string(),
-            project_id: project.to_string(),
-            full_name: "Bootstrap Admin".to_string(),
+    // Idempotent: reuse an existing admin with the same username instead of
+    // colliding on the unique username index. This lets a re-run bind an admin
+    // that was created before the role-binding step existed (Block 1), rather
+    // than failing at `create_user`. Usernames are stored lowercased.
+    let login_name = username.trim().to_ascii_lowercase();
+    let (user_id, needs_activation) = match user_store
+        .get_user_by_username(&login_name)
+        .await
+        .map_err(|err| format!("lookup user failed: {err}"))?
+    {
+        Some(existing) => (existing.user_id, existing.status != AccountStatus::Active),
+        None => {
+            let created = svc
+                .create_user(Request::new(authn_pb::CreateUserRequest {
+                    username: username.to_string(),
+                    email: email.to_string(),
+                    password: password.to_string(),
+                    tenant_id: tenant.to_string(),
+                    project_id: project.to_string(),
+                    full_name: "Bootstrap Admin".to_string(),
+                    ..Default::default()
+                }))
+                .await
+                .map_err(|err| format!("create_user failed: {err}"))?
+                .into_inner();
+            let new_id = created
+                .user
+                .ok_or_else(|| "create_user returned no user".to_string())?
+                .user_id;
+            (new_id, true)
+        }
+    };
+
+    // Admin-provisioned bootstrap has no OTP delivery channel, so activate
+    // directly — but only when not already ACTIVE (the status FSM rejects a
+    // no-op self-transition).
+    if needs_activation {
+        svc.change_user_status(Request::new(authn_pb::ChangeUserStatusRequest {
+            user_id: user_id.clone(),
+            new_status: authn_entity_pb::UserStatus::Active as i32,
+            reason: "offline bootstrap".to_string(),
             ..Default::default()
         }))
         .await
-        .map_err(|err| format!("create_user failed: {err}"))?
-        .into_inner();
-    let user = created
-        .user
-        .ok_or_else(|| "create_user returned no user".to_string())?;
+        .map_err(|err| format!("activate user failed: {err}"))?;
+    }
 
-    // Admin-provisioned bootstrap has no OTP delivery channel, so activate directly.
-    svc.change_user_status(Request::new(authn_pb::ChangeUserStatusRequest {
-        user_id: user.user_id.clone(),
-        new_status: authn_entity_pb::UserStatus::Active as i32,
-        reason: "offline bootstrap".to_string(),
-        ..Default::default()
-    }))
-    .await
-    .map_err(|err| format!("activate user failed: {err}"))?;
+    // Block 1 (auth_fix.md, Decision C): bootstrap writes only the user + the
+    // role BINDING — it never authors policy. Ensure the system defaults exist
+    // first (the broker's startup seed may not have run yet if this is an
+    // offline-first bootstrap), then bind the user to `organization_owner` via
+    // the authz central-plane `assign_role` path (idempotent ON CONFLICT).
+    seed_system_authz_defaults(&pool)
+        .await
+        .map_err(|err| format!("seed system authz defaults failed: {err}"))?;
+    {
+        use crate::proto::udb::core::authz::services::v1 as authz_pb;
+        use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
+        let authz = AuthzServiceImpl::shared(Arc::new(arc_swap::ArcSwap::from_pointee(
+            AuthzSnapshot::default(),
+        )))
+        .with_postgres(Some(pool.clone()));
+        authz
+            .assign_role(Request::new(authz_pb::AssignRoleRequest {
+                user_id: user_id.clone(),
+                role_id: SYSTEM_ORG_OWNER_ROLE_ID.to_string(),
+                assigned_by: user_id.clone(),
+                tenant_id: tenant.to_string(),
+                ..Default::default()
+            }))
+            .await
+            .map_err(|err| format!("assign organization_owner role failed: {err}"))?;
+    }
 
-    Ok(user.user_id)
+    Ok(user_id)
+}
+
+/// Well-known id of the system `organization_owner` role row seeded by
+/// [`seed_system_authz_defaults`]. Fixed so the bootstrap binding can target it
+/// directly and re-seeding is a no-op.
+pub(crate) const SYSTEM_ORG_OWNER_ROLE_ID: &str = "00000000-0000-0000-0000-0000000a0001";
+/// Well-known id of the system `organization_owner ⇒ allow(*, *)` policy row.
+pub(crate) const SYSTEM_ORG_OWNER_POLICY_ID: &str = "00000000-0000-0000-0000-0000000a0002";
+/// Role code the bootstrap binding and the login role→scope projection share.
+pub(crate) const ORG_OWNER_ROLE_CODE: &str = "organization_owner";
+
+/// Idempotently seed the system authz defaults the bootstrap admin path depends
+/// on (auth_fix.md Block 1, Decision C / change-point 1):
+///
+/// 1. a global `organization_owner` **role row** (`tenant = '*'`, well-known id)
+///    so a `user_roles` binding has a real FK target and the snapshot loader
+///    resolves its `role_code` (else the binding join falls back to `role_id`
+///    text and the role→scope projection never matches);
+/// 2. the `organization_owner ⇒ allow(*, *)` **policy row** so the Casbin /
+///    data-plane decision path authorizes the owner. The policy is role-gated
+///    (subject empty, `role` carried in `attributes_json`, which the snapshot
+///    loader reads and strips from conditions), so it never self-blocks and does
+///    not trip the `broad_wildcard` lint (role is concrete, not a wildcard).
+///
+/// Both rows are global (`tenant = '*'`); per-tenant scoping comes from the
+/// binding. `ON CONFLICT DO NOTHING` makes this safe to run on every broker
+/// startup and again from `bootstrap_admin_user`.
+pub(crate) async fn seed_system_authz_defaults(pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
+    use crate::runtime::native_catalog::native_model;
+
+    let role = native_model(
+        "udb.core.authz.entity.v1.Role",
+        &[
+            "role_id",
+            "name",
+            "description",
+            "is_system",
+            "is_active",
+            "tenant_id",
+            "project_id",
+            "role_code",
+            "scope_type",
+        ],
+    );
+    sqlx::query(&format!(
+        "INSERT INTO {rel} \
+           ({role_id}, {name}, {description}, {is_system}, {is_active}, {tenant_id}, {project_id}, {role_code}, {scope_type}) \
+         VALUES ($1::UUID, 'Organization Owner', 'Full control across the organization', TRUE, TRUE, '*', '', $2, 'TENANT') \
+         ON CONFLICT DO NOTHING",
+        rel = role.relation,
+        role_id = role.q("role_id"),
+        name = role.q("name"),
+        description = role.q("description"),
+        is_system = role.q("is_system"),
+        is_active = role.q("is_active"),
+        tenant_id = role.q("tenant_id"),
+        project_id = role.q("project_id"),
+        role_code = role.q("role_code"),
+        scope_type = role.q("scope_type"),
+    ))
+    .bind(SYSTEM_ORG_OWNER_ROLE_ID)
+    .bind(ORG_OWNER_ROLE_CODE)
+    .execute(pool)
+    .await?;
+
+    // Role-gated allow policy. Column shape mirrors `put_authz_policy`: subject
+    // empty, `role`/reserved keys live in `attributes_json` (the loader reads
+    // `role` from there and removes the reserved keys from `conditions`), effect
+    // is the canonical uppercase `ALLOW`, tenant `*` = any.
+    let policy = native_model(
+        "udb.core.authz.entity.v1.PolicyRule",
+        &[
+            "policy_id",
+            "subject",
+            "domain",
+            "object",
+            "action",
+            "effect",
+            "condition",
+            "description",
+            "is_active",
+            "tenant_id",
+            "project_id",
+            "attributes_json",
+        ],
+    );
+    let attributes = serde_json::json!({
+        "role": ORG_OWNER_ROLE_CODE,
+        "priority": "0",
+        "purpose": "",
+        "relationship": "",
+        "required_scopes": "",
+    })
+    .to_string();
+    sqlx::query(&format!(
+        "INSERT INTO {rel} \
+           ({policy_id}, {subject}, {domain}, {object}, {action}, {effect}, {condition}, {description}, {is_active}, {tenant_id}, {project_id}, {attributes_json}) \
+         VALUES ($1::UUID, '', '*', '*', '*', 'ALLOW', '', 'system: organization_owner full control', TRUE, '*', '', $2::JSONB) \
+         ON CONFLICT DO NOTHING",
+        rel = policy.relation,
+        policy_id = policy.q("policy_id"),
+        subject = policy.q("subject"),
+        domain = policy.q("domain"),
+        object = policy.q("object"),
+        action = policy.q("action"),
+        effect = policy.q("effect"),
+        condition = policy.q("condition"),
+        description = policy.q("description"),
+        is_active = policy.q("is_active"),
+        tenant_id = policy.q("tenant_id"),
+        project_id = policy.q("project_id"),
+        attributes_json = policy.q("attributes_json"),
+    ))
+    .bind(SYSTEM_ORG_OWNER_POLICY_ID)
+    .bind(attributes)
+    .execute(pool)
+    .await?;
+
+    Ok(())
 }

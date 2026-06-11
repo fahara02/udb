@@ -285,8 +285,8 @@ impl DataBrokerService {
         let spec = serde_json::json!({
             "collection": collection_of(&req.resource),
             "operation": if req.replace { "update" } else { "upsert" },
-            "document_id": req.document_id,
-            "document": struct_field(&req.document),
+            "filter": { "_id": req.document_id },
+            "update": struct_field(&req.document),
         });
         let out = self
             .run_store_op(&security, req.resource.as_ref(), true, "mutate", spec)

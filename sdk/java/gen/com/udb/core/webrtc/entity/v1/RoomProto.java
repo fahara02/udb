@@ -45,49 +45,49 @@ public final class RoomProto extends com.google.protobuf.GeneratedFile {
       "uf/timestamp.proto\032\033udb/core/common/v1/d" +
       "b.proto\032!udb/core/common/v1/security.pro" +
       "to\032\036udb/core/common/v1/types.proto\032%udb/" +
-      "core/webrtc/entity/v1/enums.proto\"\366\n\n\004Ro" +
+      "core/webrtc/entity/v1/enums.proto\"\371\n\n\004Ro" +
       "om\022C\n\007room_id\030\001 \001(\tB*\202\267\030&\n\007room_id\022\004UUID" +
-      "\030\001(\001:\021gen_random_uuid()R\006roomId\0224\n\ttenan" +
-      "t_id\030\002 \001(\tB\027\202\267\030\023\n\ttenant_id\022\004UUID\030\001R\010ten" +
-      "antId\022.\n\004name\030\003 \001(\tB\032\202\267\030\026\n\004name\022\014VARCHAR" +
-      "(255)\030\001R\004name\022z\n\005state\030\004 \001(\0162$.udb.core." +
-      "webrtc.entity.v1.RoomStateB>\202\267\030:\n\005state\022" +
-      "\013VARCHAR(20)\030\001:\010\'ACTIVE\'R\030\n\017idx_rooms_st" +
-      "ate\022\005BTREER\005state\022O\n\020max_participants\030\005 " +
-      "\001(\005B$\202\267\030 \n\020max_participants\022\007INTEGER\030\001:\001" +
-      "0R\017maxParticipants\022R\n\021participant_count\030" +
-      "\006 \001(\005B%\202\267\030!\n\021participant_count\022\007INTEGER\030" +
-      "\001:\0010R\020participantCount\022J\n\006config\030\007 \001(\tB2" +
-      "\202\267\030.\n\006config\022\005JSONBZ\033Room-specific confi" +
-      "gurationx\001R\006config\022R\n\ncreated_by\030\010 \001(\tB3" +
-      "\202\267\030/\n\ncreated_by\022\004UUIDZ\033Actor that creat" +
-      "ed the roomR\tcreatedBy\022\202\001\n\naudit_info\030\t " +
-      "\001(\0132\035.udb.core.common.v1.AuditInfoBD\202\267\030@" +
-      "\n\naudit_info\022\005JSONB\030\001:\013\'{}\'::jsonbZ\032Audi" +
-      "t trail stored as JSONx\001R\tauditInfo\022o\n\nd" +
-      "eleted_at\030\n \001(\0132\032.google.protobuf.Timest" +
-      "ampB4\202\267\0300\n\ndeleted_at\022\013TIMESTAMPTZZ\025Soft" +
-      " delete timestampR\tdeletedAt\022H\n\ndeleted_" +
-      "by\030\013 \001(\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Soft d" +
-      "elete actorR\tdeletedBy:\301\003\372\266\030\237\002\n\005rooms\022\nu" +
-      "db_webrtc\030\001 \001*\031WebRTC conferencing rooms" +
-      "0\0018\001@\001b\226\001\n\026rooms_tenant_isolation\032z(tena" +
-      "nt_id::text = current_setting(\'app.curre" +
-      "nt_tenant_id\', true) OR current_setting(" +
-      "\'app.platform_admin\', true) = \'true\')(\001h" +
-      "\001\212\001$\n\020idx_rooms_tenant\022\005BTREEZ\ttenant_id" +
-      "\362\001\024udb.webrtc.rooms.cdc\372\001\013webrtc:read\212\262\031" +
-      "\230\001\n\006tenant\032\ttenant_id*4tenant_id = curre" +
-      "nt_setting(\'app.current_tenant_id\')2\013sof" +
-      "t_delete:\022webrtc.operational@\373\023H\002R\006tenan" +
-      "tZ\010standardr\025tenant.data_residencyB\372\001\n\035c" +
-      "om.udb.core.webrtc.entity.v1B\tRoomProtoP" +
-      "\001ZEgithub.com/fahara02/udb/sdk/go/gen/ud" +
-      "b/core/webrtc/entity/v1;entityv1\242\002\004UCWE\252" +
-      "\002\031udb.core.Webrtc.Entity.V1\312\002\031Udb\\Core\\W" +
-      "ebrtc\\Entity\\V1\342\002%Udb\\GPBMetadata\\Core\\W" +
-      "ebrtc\\Entity\\V1\352\002\035Udb::Core::Webrtc::Ent" +
-      "ity::V1b\006proto3"
+      "\030\001(\001:\021gen_random_uuid()R\006roomId\0227\n\ttenan" +
+      "t_id\030\002 \001(\tB\032\202\267\030\026\n\ttenant_id\022\004UUID\030\001\230\002\001R\010" +
+      "tenantId\022.\n\004name\030\003 \001(\tB\032\202\267\030\026\n\004name\022\014VARC" +
+      "HAR(255)\030\001R\004name\022z\n\005state\030\004 \001(\0162$.udb.co" +
+      "re.webrtc.entity.v1.RoomStateB>\202\267\030:\n\005sta" +
+      "te\022\013VARCHAR(20)\030\001:\010\'ACTIVE\'R\030\n\017idx_rooms" +
+      "_state\022\005BTREER\005state\022O\n\020max_participants" +
+      "\030\005 \001(\005B$\202\267\030 \n\020max_participants\022\007INTEGER\030" +
+      "\001:\0010R\017maxParticipants\022R\n\021participant_cou" +
+      "nt\030\006 \001(\005B%\202\267\030!\n\021participant_count\022\007INTEG" +
+      "ER\030\001:\0010R\020participantCount\022J\n\006config\030\007 \001(" +
+      "\tB2\202\267\030.\n\006config\022\005JSONBZ\033Room-specific co" +
+      "nfigurationx\001R\006config\022R\n\ncreated_by\030\010 \001(" +
+      "\tB3\202\267\030/\n\ncreated_by\022\004UUIDZ\033Actor that cr" +
+      "eated the roomR\tcreatedBy\022\202\001\n\naudit_info" +
+      "\030\t \001(\0132\035.udb.core.common.v1.AuditInfoBD\202" +
+      "\267\030@\n\naudit_info\022\005JSONB\030\001:\013\'{}\'::jsonbZ\032A" +
+      "udit trail stored as JSONx\001R\tauditInfo\022o" +
+      "\n\ndeleted_at\030\n \001(\0132\032.google.protobuf.Tim" +
+      "estampB4\202\267\0300\n\ndeleted_at\022\013TIMESTAMPTZZ\025S" +
+      "oft delete timestampR\tdeletedAt\022H\n\ndelet" +
+      "ed_by\030\013 \001(\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Sof" +
+      "t delete actorR\tdeletedBy:\301\003\372\266\030\237\002\n\005rooms" +
+      "\022\nudb_webrtc\030\001 \001*\031WebRTC conferencing ro" +
+      "oms0\0018\001@\001b\226\001\n\026rooms_tenant_isolation\032z(t" +
+      "enant_id::text = current_setting(\'app.cu" +
+      "rrent_tenant_id\', true) OR current_setti" +
+      "ng(\'app.platform_admin\', true) = \'true\')" +
+      "(\001h\001\212\001$\n\020idx_rooms_tenant\022\005BTREEZ\ttenant" +
+      "_id\362\001\024udb.webrtc.rooms.cdc\372\001\013webrtc:read" +
+      "\212\262\031\230\001\n\006tenant\032\ttenant_id*4tenant_id = cu" +
+      "rrent_setting(\'app.current_tenant_id\')2\013" +
+      "soft_delete:\022webrtc.operational@\373\023H\002R\006te" +
+      "nantZ\010standardr\025tenant.data_residencyB\372\001" +
+      "\n\035com.udb.core.webrtc.entity.v1B\tRoomPro" +
+      "toP\001ZEgithub.com/fahara02/udb/sdk/go/gen" +
+      "/udb/core/webrtc/entity/v1;entityv1\242\002\004UC" +
+      "WE\252\002\031udb.core.Webrtc.Entity.V1\312\002\031Udb\\Cor" +
+      "e\\Webrtc\\Entity\\V1\342\002%Udb\\GPBMetadata\\Cor" +
+      "e\\Webrtc\\Entity\\V1\352\002\035Udb::Core::Webrtc::" +
+      "Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

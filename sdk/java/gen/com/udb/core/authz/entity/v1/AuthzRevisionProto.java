@@ -45,50 +45,50 @@ public final class AuthzRevisionProto extends com.google.protobuf.GeneratedFile 
       "e/protobuf/timestamp.proto\032/udb/core/aut" +
       "hz/entity/v1/governance_enums.proto\032\033udb" +
       "/core/common/v1/db.proto\032!udb/core/commo" +
-      "n/v1/security.proto\"\271\013\n\rAuthzRevision\022O\n" +
+      "n/v1/security.proto\"\274\013\n\rAuthzRevision\022O\n" +
       "\013revision_id\030\001 \001(\tB.\202\267\030*\n\013revision_id\022\004U" +
-      "UID\030\001(\001:\021gen_random_uuid()R\nrevisionId\022`" +
-      "\n\ttenant_id\030\002 \001(\tBC\202\267\030?\n\ttenant_id\022\013VARC" +
+      "UID\030\001(\001:\021gen_random_uuid()R\nrevisionId\022c" +
+      "\n\ttenant_id\030\002 \001(\tBF\202\267\030B\n\ttenant_id\022\013VARC" +
       "HAR(64)\030\001R#\n\032idx_authz_revisions_tenant\022" +
-      "\005BTREER\010tenantId\022C\n\nproject_id\030\003 \001(\tB$\202\267" +
-      "\030 \n\nproject_id\022\014VARCHAR(120)\030\001:\002\'\'R\tproj" +
-      "ectId\022\205\001\n\017policy_revision\030\004 \001(\003B\\\202\267\030X\n\017p" +
-      "olicy_revision\022\006BIGINT\030\001:\0010Z8Monotonic c" +
-      "ounter for policy + role + assignment ch" +
-      "angesR\016policyRevision\022\230\001\n\025relationship_r" +
-      "evision\030\005 \001(\003Bc\202\267\030_\n\025relationship_revisi" +
-      "on\022\006BIGINT\030\001:\0010Z9Monotonic counter for r" +
-      "elationship/grouping tuple changesR\024rela" +
-      "tionshipRevision\022\201\001\n\014content_hash\030\006 \001(\tB" +
-      "^\202\267\030Z\n\014content_hash\022\013VARCHAR(80)\030\001:\002\'\'Z7" +
-      "Content hash of the effective snapshot a" +
-      "t this revisionR\013contentHash\022C\n\nchanged_" +
-      "by\030\007 \001(\tB$\202\267\030 \n\nchanged_by\022\014VARCHAR(160)" +
-      "\030\001:\002\'\'R\tchangedBy\022q\n\nchanged_at\030\010 \001(\0132\032." +
-      "google.protobuf.TimestampB6\202\267\0302\n\nchanged" +
-      "_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h" +
-      "\001R\tchangedAt\022\215\001\n\013change_type\030\t \001(\0162).udb" +
-      ".core.authz.entity.v1.AuthzChangeTypeBA\202" +
-      "\267\030=\n\013change_type\022\013VARCHAR(40)\030\001:\037\'AUTHZ_" +
-      "CHANGE_TYPE_UNSPECIFIED\'R\nchangeType:\300\003\372" +
-      "\266\030\247\002\n\017authz_revisions\022\tudb_authz\030) \001*SDu" +
-      "rable monotonic authz revisions spanning" +
-      " policies, roles, assignments, and tuple" +
-      "s@\001b^\n\020tenant_isolation\032H(tenant_id::tex" +
-      "t = current_setting(\'app.current_tenant_" +
-      "id\', true)::text)(\001\212\001M\n!idx_authz_revisi" +
-      "ons_scope_changed\022\005BTREEZ\ttenant_idZ\npro" +
-      "ject_idZ\nchanged_at\212\262\031\217\001\n\006tenant\032\ttenant" +
-      "_id*4tenant_id = current_setting(\'app.cu" +
-      "rrent_tenant_id\')2\004none:\020authz.governanc" +
-      "e@\373\023H\002R\006tenantZ\010standardr\025tenant.data_re" +
-      "sidencyB\375\001\n\034com.udb.core.authz.entity.v1" +
-      "B\022AuthzRevisionProtoP\001ZDgithub.com/fahar" +
-      "a02/udb/sdk/go/gen/udb/core/authz/entity" +
-      "/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Authz.Ent" +
-      "ity.V1\312\002\030Udb\\Core\\Authz\\Entity\\V1\342\002$Udb\\" +
-      "GPBMetadata\\Core\\Authz\\Entity\\V1\352\002\034Udb::" +
-      "Core::Authz::Entity::V1b\006proto3"
+      "\005BTREE\230\002\001R\010tenantId\022C\n\nproject_id\030\003 \001(\tB" +
+      "$\202\267\030 \n\nproject_id\022\014VARCHAR(120)\030\001:\002\'\'R\tp" +
+      "rojectId\022\205\001\n\017policy_revision\030\004 \001(\003B\\\202\267\030X" +
+      "\n\017policy_revision\022\006BIGINT\030\001:\0010Z8Monotoni" +
+      "c counter for policy + role + assignment" +
+      " changesR\016policyRevision\022\230\001\n\025relationshi" +
+      "p_revision\030\005 \001(\003Bc\202\267\030_\n\025relationship_rev" +
+      "ision\022\006BIGINT\030\001:\0010Z9Monotonic counter fo" +
+      "r relationship/grouping tuple changesR\024r" +
+      "elationshipRevision\022\201\001\n\014content_hash\030\006 \001" +
+      "(\tB^\202\267\030Z\n\014content_hash\022\013VARCHAR(80)\030\001:\002\'" +
+      "\'Z7Content hash of the effective snapsho" +
+      "t at this revisionR\013contentHash\022C\n\nchang" +
+      "ed_by\030\007 \001(\tB$\202\267\030 \n\nchanged_by\022\014VARCHAR(1" +
+      "60)\030\001:\002\'\'R\tchangedBy\022q\n\nchanged_at\030\010 \001(\013" +
+      "2\032.google.protobuf.TimestampB6\202\267\0302\n\nchan" +
+      "ged_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMESTAMP" +
+      "`\001h\001R\tchangedAt\022\215\001\n\013change_type\030\t \001(\0162)." +
+      "udb.core.authz.entity.v1.AuthzChangeType" +
+      "BA\202\267\030=\n\013change_type\022\013VARCHAR(40)\030\001:\037\'AUT" +
+      "HZ_CHANGE_TYPE_UNSPECIFIED\'R\nchangeType:" +
+      "\300\003\372\266\030\247\002\n\017authz_revisions\022\tudb_authz\030) \001*" +
+      "SDurable monotonic authz revisions spann" +
+      "ing policies, roles, assignments, and tu" +
+      "ples@\001b^\n\020tenant_isolation\032H(tenant_id::" +
+      "text = current_setting(\'app.current_tena" +
+      "nt_id\', true)::text)(\001\212\001M\n!idx_authz_rev" +
+      "isions_scope_changed\022\005BTREEZ\ttenant_idZ\n" +
+      "project_idZ\nchanged_at\212\262\031\217\001\n\006tenant\032\tten" +
+      "ant_id*4tenant_id = current_setting(\'app" +
+      ".current_tenant_id\')2\004none:\020authz.govern" +
+      "ance@\373\023H\002R\006tenantZ\010standardr\025tenant.data" +
+      "_residencyB\375\001\n\034com.udb.core.authz.entity" +
+      ".v1B\022AuthzRevisionProtoP\001ZDgithub.com/fa" +
+      "hara02/udb/sdk/go/gen/udb/core/authz/ent" +
+      "ity/v1;entityv1\242\002\004UCAE\252\002\030udb.core.Authz." +
+      "Entity.V1\312\002\030Udb\\Core\\Authz\\Entity\\V1\342\002$U" +
+      "db\\GPBMetadata\\Core\\Authz\\Entity\\V1\352\002\034Ud" +
+      "b::Core::Authz::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

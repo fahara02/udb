@@ -45,56 +45,56 @@ public final class ScimDirectoryStateProto extends com.google.protobuf.Generated
       "gle/protobuf/timestamp.proto\032\"udb/core/i" +
       "dp/entity/v1/enums.proto\032\033udb/core/commo" +
       "n/v1/db.proto\032!udb/core/common/v1/securi" +
-      "ty.proto\"\246\r\n\022ScimDirectoryState\022q\n\027scim_" +
+      "ty.proto\"\251\r\n\022ScimDirectoryState\022q\n\027scim_" +
       "directory_state_id\030\001 \001(\tB:\202\267\0306\n\027scim_dir" +
       "ectory_state_id\022\004UUID\030\001(\001:\021gen_random_uu" +
-      "id()R\024scimDirectoryStateId\022<\n\ttenant_id\030" +
-      "\002 \001(\tB\037\202\267\030\033\n\ttenant_id\022\014VARCHAR(120)\030\001R\010" +
-      "tenantId\022\304\001\n\013provider_id\030\003 \001(\tB\242\001\202\267\030\235\001\n\013" +
-      "provider_id\022\004UUID\030\001J,\n\022identity_provider" +
-      "s\022\013provider_id\032\007udb_idp \003R*\n!idx_scim_di" +
-      "rectory_state_provider\022\005BTREEZ,FK to udb" +
-      "_idp.identity_providers.provider_idR\npro" +
-      "viderId\022Z\n\006cursor\030\004 \001(\tBB\202\267\030>\n\006cursor\022\014V" +
-      "ARCHAR(512)Z&Opaque SCIM sync cursor / c" +
-      "hange tokenR\006cursor\022\210\001\n\014last_sync_at\030\005 \001" +
-      "(\0132\032.google.protobuf.TimestampBJ\202\267\030F\n\014la" +
-      "st_sync_at\022\013TIMESTAMPTZZ)Timestamp of th" +
-      "e last completed SCIM syncR\nlastSyncAt\022f" +
-      "\n\rfailure_count\030\006 \001(\005BA\202\267\030=\n\rfailure_cou" +
-      "nt\022\007INTEGER\030\001:\0010Z\036Consecutive SCIM sync " +
-      "failuresR\014failureCount\022S\n\nlast_error\030\007 \001" +
-      "(\tB4\202\267\0300\n\nlast_error\022\004TEXTZ\034Last SCIM sy" +
-      "nc error messageR\tlastError\022\242\001\n\022deprovis" +
-      "ion_policy\030\010 \001(\0162).udb.core.idp.entity.v" +
-      "1.DeprovisionPolicyBH\202\267\030D\n\022deprovision_p" +
-      "olicy\022\013VARCHAR(40)\030\001:\037\'DEPROVISION_POLIC" +
-      "Y_DEACTIVATE\'R\021deprovisionPolicy\022q\n\ncrea" +
-      "ted_at\030\t \001(\0132\032.google.protobuf.Timestamp" +
-      "B6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CURRE" +
-      "NT_TIMESTAMP`\001h\001R\tcreatedAt\022o\n\nupdated_a" +
-      "t\030\n \001(\0132\032.google.protobuf.TimestampB4\202\267\030" +
-      "0\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TI" +
-      "MESTAMP`\001R\tupdatedAt:\352\003\372\266\030\322\002\n\024scim_direc" +
-      "tory_state\022\007udb_idp\030\014 \001*KSCIM 2.0 direct" +
-      "ory sync cursor, health, and deprovision" +
-      " policy per provider@\001b^\n\020tenant_isolati" +
-      "on\032H(tenant_id::text = current_setting(\'" +
-      "app.current_tenant_id\', true)::text)(\001\212\001" +
-      "J\n\'uq_scim_directory_state_tenant_provid" +
-      "er\022\005BTREE\030\001Z\ttenant_idZ\013provider_id\352\001\007pr" +
-      "imary\362\001\026udb.idp.scim_state.cdc\372\001\ridp:sci" +
-      "m:read\212\262\031\216\001\n\006tenant\032\ttenant_id*4tenant_i" +
-      "d = current_setting(\'app.current_tenant_" +
-      "id\')2\004none:\017idp.operational@\373\023H\002R\006tenant" +
-      "Z\010standardr\025tenant.data_residencyB\366\001\n\032co" +
-      "m.udb.core.idp.entity.v1B\027ScimDirectoryS" +
-      "tateProtoP\001ZBgithub.com/fahara02/udb/sdk" +
-      "/go/gen/udb/core/idp/entity/v1;entityv1\242" +
-      "\002\004UCIE\252\002\026udb.core.Idp.Entity.V1\312\002\026Udb\\Co" +
-      "re\\Idp\\Entity\\V1\342\002\"Udb\\GPBMetadata\\Core\\" +
-      "Idp\\Entity\\V1\352\002\032Udb::Core::Idp::Entity::" +
-      "V1b\006proto3"
+      "id()R\024scimDirectoryStateId\022?\n\ttenant_id\030" +
+      "\002 \001(\tB\"\202\267\030\036\n\ttenant_id\022\014VARCHAR(120)\030\001\230\002" +
+      "\001R\010tenantId\022\304\001\n\013provider_id\030\003 \001(\tB\242\001\202\267\030\235" +
+      "\001\n\013provider_id\022\004UUID\030\001J,\n\022identity_provi" +
+      "ders\022\013provider_id\032\007udb_idp \003R*\n!idx_scim" +
+      "_directory_state_provider\022\005BTREEZ,FK to " +
+      "udb_idp.identity_providers.provider_idR\n" +
+      "providerId\022Z\n\006cursor\030\004 \001(\tBB\202\267\030>\n\006cursor" +
+      "\022\014VARCHAR(512)Z&Opaque SCIM sync cursor " +
+      "/ change tokenR\006cursor\022\210\001\n\014last_sync_at\030" +
+      "\005 \001(\0132\032.google.protobuf.TimestampBJ\202\267\030F\n" +
+      "\014last_sync_at\022\013TIMESTAMPTZZ)Timestamp of" +
+      " the last completed SCIM syncR\nlastSyncA" +
+      "t\022f\n\rfailure_count\030\006 \001(\005BA\202\267\030=\n\rfailure_" +
+      "count\022\007INTEGER\030\001:\0010Z\036Consecutive SCIM sy" +
+      "nc failuresR\014failureCount\022S\n\nlast_error\030" +
+      "\007 \001(\tB4\202\267\0300\n\nlast_error\022\004TEXTZ\034Last SCIM" +
+      " sync error messageR\tlastError\022\242\001\n\022depro" +
+      "vision_policy\030\010 \001(\0162).udb.core.idp.entit" +
+      "y.v1.DeprovisionPolicyBH\202\267\030D\n\022deprovisio" +
+      "n_policy\022\013VARCHAR(40)\030\001:\037\'DEPROVISION_PO" +
+      "LICY_DEACTIVATE\'R\021deprovisionPolicy\022q\n\nc" +
+      "reated_at\030\t \001(\0132\032.google.protobuf.Timest" +
+      "ampB6\202\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CU" +
+      "RRENT_TIMESTAMP`\001h\001R\tcreatedAt\022o\n\nupdate" +
+      "d_at\030\n \001(\0132\032.google.protobuf.TimestampB4" +
+      "\202\267\0300\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT" +
+      "_TIMESTAMP`\001R\tupdatedAt:\352\003\372\266\030\322\002\n\024scim_di" +
+      "rectory_state\022\007udb_idp\030\014 \001*KSCIM 2.0 dir" +
+      "ectory sync cursor, health, and deprovis" +
+      "ion policy per provider@\001b^\n\020tenant_isol" +
+      "ation\032H(tenant_id::text = current_settin" +
+      "g(\'app.current_tenant_id\', true)::text)(" +
+      "\001\212\001J\n\'uq_scim_directory_state_tenant_pro" +
+      "vider\022\005BTREE\030\001Z\ttenant_idZ\013provider_id\352\001" +
+      "\007primary\362\001\026udb.idp.scim_state.cdc\372\001\ridp:" +
+      "scim:read\212\262\031\216\001\n\006tenant\032\ttenant_id*4tenan" +
+      "t_id = current_setting(\'app.current_tena" +
+      "nt_id\')2\004none:\017idp.operational@\373\023H\002R\006ten" +
+      "antZ\010standardr\025tenant.data_residencyB\366\001\n" +
+      "\032com.udb.core.idp.entity.v1B\027ScimDirecto" +
+      "ryStateProtoP\001ZBgithub.com/fahara02/udb/" +
+      "sdk/go/gen/udb/core/idp/entity/v1;entity" +
+      "v1\242\002\004UCIE\252\002\026udb.core.Idp.Entity.V1\312\002\026Udb" +
+      "\\Core\\Idp\\Entity\\V1\342\002\"Udb\\GPBMetadata\\Co" +
+      "re\\Idp\\Entity\\V1\352\002\032Udb::Core::Idp::Entit" +
+      "y::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

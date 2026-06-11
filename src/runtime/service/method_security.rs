@@ -1209,7 +1209,14 @@ mod tests {
             "endpoint_security must decode from the embedded descriptor"
         );
         // Public bootstrap RPCs.
-        for method in ["Authenticate", "GetJwks", "ForgotPassword", "ResetPassword"] {
+        for method in [
+            "Authenticate",
+            "Login",
+            "RefreshToken",
+            "GetJwks",
+            "ForgotPassword",
+            "ResetPassword",
+        ] {
             let path = format!("{AUTHN}/{method}");
             let sec = reg
                 .get(&path)
@@ -1292,16 +1299,18 @@ mod tests {
     fn public_methods_need_no_bearer() {
         let security = SecurityConfig::current();
         let headers = http::HeaderMap::new();
-        assert!(
-            enforce(
-                &security,
-                &format!("{AUTHN}/Authenticate"),
-                &headers,
-                &peer_from("198.51.100.7"),
-            )
-            .is_ok(),
-            "public Authenticate must be reachable without a bearer"
-        );
+        for method in ["Login", "RefreshToken"] {
+            assert!(
+                enforce(
+                    &security,
+                    &format!("{AUTHN}/{method}"),
+                    &headers,
+                    &peer_from("198.51.100.7"),
+                )
+                .is_ok(),
+                "public {method} must be reachable without a bearer"
+            );
+        }
     }
 
     #[test]

@@ -26,7 +26,7 @@ var File_udb_core_authn_services_v1_authn_service_proto protoreflect.FileDescrip
 
 const file_udb_core_authn_services_v1_authn_service_proto_rawDesc = "" +
 	"\n" +
-	".udb/core/authn/services/v1/authn_service.proto\x12\x1audb.core.authn.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a%udb/core/authn/services/v1/core.proto\x1a!udb/core/common/v1/security.proto2\x8f\xd7\x01\n" +
+	".udb/core/authn/services/v1/authn_service.proto\x12\x1audb.core.authn.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a%udb/core/authn/services/v1/core.proto\x1a!udb/core/common/v1/security.proto2\xd9\xd7\x01\n" +
 	"\fAuthnService\x12\xb4\x04\n" +
 	"\n" +
 	"CreateUser\x12-.udb.core.authn.services.v1.CreateUserRequest\x1a..udb.core.authn.services.v1.CreateUserResponse\"\xc6\x03\xca\xf3\x184\b\x02\x1a\x15udb:authn:create-user \x01J\x02\x01\x02j\x10authn.CreateUser\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18$\b\x01\x12\vcreate_user\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\xab\x01\n" +
@@ -75,12 +75,12 @@ const file_udb_core_authn_services_v1_authn_service_proto_rawDesc = "" +
 	"\fAuthenticate\x12(.udb.core.authn.services.v1.AuthnRequest\x1a).udb.core.authn.services.v1.AuthnResponse\"\xec\x03\xca\xf3\x18N\b\x01R\x19authn.authenticate.publicZ\x18authn.authenticate.abuseb\x12authn.authenticate\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18%\b\x01\x12\fauthenticate\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\xad\x01\n" +
 	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"(udb.native.auth.authenticate.boilerplate*\fauthenticate2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18N\n" +
 	"\x12authn.Authenticate\x12\fauthn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
-	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x1a:\x01*\"\x15/v1/auth/authenticate\x12\x83\x04\n" +
-	"\x05Login\x12(.udb.core.authn.services.v1.LoginRequest\x1a).udb.core.authn.services.v1.LoginResponse\"\xa4\x03\xca\xf3\x18)\b\x02\x1a\x0fudb:authn:login \x01J\x02\x01\x02j\vauthn.Login\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18\x1e\b\x01\x12\x05login\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\x9f\x01\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x1a:\x01*\"\x15/v1/auth/authenticate\x12\xa0\x04\n" +
+	"\x05Login\x12(.udb.core.authn.services.v1.LoginRequest\x1a).udb.core.authn.services.v1.LoginResponse\"\xc1\x03\xca\xf3\x18F\b\x01R\x12authn.login.publicZ\x11authn.login.abuseb\vauthn.loginj\vauthn.Login\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18\x1e\b\x01\x12\x05login\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\x9f\x01\n" +
 	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"!udb.native.auth.login.boilerplate*\x05login2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18G\n" +
 	"\vauthn.Login\x12\fauthn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
-	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x13:\x01*\"\x0e/v1/auth/login\x12\xce\x04\n" +
-	"\fRefreshToken\x12/.udb.core.authn.services.v1.RefreshTokenRequest\x1a0.udb.core.authn.services.v1.RefreshTokenResponse\"\xda\x03\xca\xf3\x188\b\x02\x1a\x17udb:authn:refresh-token \x01J\x02\x01\x02j\x12authn.RefreshToken\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18&\b\x01\x12\rrefresh_token\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\xaf\x01\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x13:\x01*\"\x0e/v1/auth/login\x12\xfb\x04\n" +
+	"\fRefreshToken\x12/.udb.core.authn.services.v1.RefreshTokenRequest\x1a0.udb.core.authn.services.v1.RefreshTokenResponse\"\x87\x04\xca\xf3\x18e\b\x01R\x1aauthn.refresh_token.publicZ\x19authn.refresh_token.abuseb\x13authn.refresh_tokenj\x12authn.RefreshToken\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18&\b\x01\x12\rrefresh_token\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xe2\xf3\x18\xaf\x01\n" +
 	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\")udb.native.auth.refresh_token.boilerplate*\rrefresh_token2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18N\n" +
 	"\x12authn.RefreshToken\x12\fauthn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
 	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/v1/auth/token:refresh\x12\x8d\x04\n" +

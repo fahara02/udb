@@ -152,12 +152,12 @@ var File_udb_core_asset_entity_v1_asset_proto protoreflect.FileDescriptor
 
 const file_udb_core_asset_entity_v1_asset_proto_rawDesc = "" +
 	"\n" +
-	"$udb/core/asset/entity/v1/asset.proto\x12\x18udb.core.asset.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a$udb/core/asset/entity/v1/enums.proto\"\x9c\v\n" +
+	"$udb/core/asset/entity/v1/asset.proto\x12\x18udb.core.asset.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a\x1eudb/core/common/v1/types.proto\x1a$udb/core/asset/entity/v1/enums.proto\"\x9f\v\n" +
 	"\x05Asset\x12F\n" +
 	"\basset_id\x18\x01 \x01(\tB+\x82\xb7\x18'\n" +
-	"\basset_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\aassetId\x124\n" +
-	"\ttenant_id\x18\x02 \x01(\tB\x17\x82\xb7\x18\x13\n" +
-	"\ttenant_id\x12\x04UUID\x18\x01R\btenantId\x125\n" +
+	"\basset_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\aassetId\x127\n" +
+	"\ttenant_id\x18\x02 \x01(\tB\x1a\x82\xb7\x18\x16\n" +
+	"\ttenant_id\x12\x04UUID\x18\x01\x98\x02\x01R\btenantId\x125\n" +
 	"\n" +
 	"project_id\x18\x03 \x01(\tB\x16\x82\xb7\x18\x12\n" +
 	"\n" +

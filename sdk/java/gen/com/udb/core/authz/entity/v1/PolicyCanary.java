@@ -42,7 +42,7 @@ private static final long serialVersionUID = 0L;
     policySetId_ = "";
     policyVersionId_ = "";
     scopeKind_ = 0;
-    scopeValuesJson_ = "";
+    scopeValues_ = "";
     state_ = 0;
     createdBy_ = "";
     tenantId_ = "";
@@ -205,28 +205,28 @@ private static final long serialVersionUID = 0L;
     return result == null ? com.udb.core.authz.entity.v1.CanaryScopeKind.UNRECOGNIZED : result;
   }
 
-  public static final int SCOPE_VALUES_JSON_FIELD_NUMBER = 5;
+  public static final int SCOPE_VALUES_FIELD_NUMBER = 5;
   @SuppressWarnings("serial")
-  private volatile java.lang.Object scopeValuesJson_ = "";
+  private volatile java.lang.Object scopeValues_ = "";
   /**
    * <pre>
    * For NODE/TENANT: the list of in-scope ids. For PERCENT: a single-element
    * list whose value is the integer percentage (1..=100).
    * </pre>
    *
-   * <code>string scope_values_json = 5 [json_name = "scopeValuesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
-   * @return The scopeValuesJson.
+   * <code>string scope_values = 5 [json_name = "scopeValues", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The scopeValues.
    */
   @java.lang.Override
-  public java.lang.String getScopeValuesJson() {
-    java.lang.Object ref = scopeValuesJson_;
+  public java.lang.String getScopeValues() {
+    java.lang.Object ref = scopeValues_;
     if (ref instanceof java.lang.String) {
       return (java.lang.String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
       java.lang.String s = bs.toStringUtf8();
-      scopeValuesJson_ = s;
+      scopeValues_ = s;
       return s;
     }
   }
@@ -236,18 +236,18 @@ private static final long serialVersionUID = 0L;
    * list whose value is the integer percentage (1..=100).
    * </pre>
    *
-   * <code>string scope_values_json = 5 [json_name = "scopeValuesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
-   * @return The bytes for scopeValuesJson.
+   * <code>string scope_values = 5 [json_name = "scopeValues", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for scopeValues.
    */
   @java.lang.Override
   public com.google.protobuf.ByteString
-      getScopeValuesJsonBytes() {
-    java.lang.Object ref = scopeValuesJson_;
+      getScopeValuesBytes() {
+    java.lang.Object ref = scopeValues_;
     if (ref instanceof java.lang.String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
               (java.lang.String) ref);
-      scopeValuesJson_ = b;
+      scopeValues_ = b;
       return b;
     } else {
       return (com.google.protobuf.ByteString) ref;
@@ -595,8 +595,8 @@ private static final long serialVersionUID = 0L;
     if (scopeKind_ != com.udb.core.authz.entity.v1.CanaryScopeKind.CANARY_SCOPE_KIND_UNSPECIFIED.getNumber()) {
       output.writeEnum(4, scopeKind_);
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(scopeValuesJson_)) {
-      com.google.protobuf.GeneratedMessage.writeString(output, 5, scopeValuesJson_);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(scopeValues_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 5, scopeValues_);
     }
     if (state_ != com.udb.core.authz.entity.v1.CanaryState.CANARY_STATE_UNSPECIFIED.getNumber()) {
       output.writeEnum(6, state_);
@@ -648,8 +648,8 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeEnumSize(4, scopeKind_);
     }
-    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(scopeValuesJson_)) {
-      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, scopeValuesJson_);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(scopeValues_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, scopeValues_);
     }
     if (state_ != com.udb.core.authz.entity.v1.CanaryState.CANARY_STATE_UNSPECIFIED.getNumber()) {
       size += com.google.protobuf.CodedOutputStream
@@ -721,8 +721,8 @@ private static final long serialVersionUID = 0L;
     if (!getPolicyVersionId()
         .equals(other.getPolicyVersionId())) return false;
     if (scopeKind_ != other.scopeKind_) return false;
-    if (!getScopeValuesJson()
-        .equals(other.getScopeValuesJson())) return false;
+    if (!getScopeValues()
+        .equals(other.getScopeValues())) return false;
     if (state_ != other.state_) return false;
     if (hasStartedAt() != other.hasStartedAt()) return false;
     if (hasStartedAt()) {
@@ -767,8 +767,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getPolicyVersionId().hashCode();
     hash = (37 * hash) + SCOPE_KIND_FIELD_NUMBER;
     hash = (53 * hash) + scopeKind_;
-    hash = (37 * hash) + SCOPE_VALUES_JSON_FIELD_NUMBER;
-    hash = (53 * hash) + getScopeValuesJson().hashCode();
+    hash = (37 * hash) + SCOPE_VALUES_FIELD_NUMBER;
+    hash = (53 * hash) + getScopeValues().hashCode();
     hash = (37 * hash) + STATE_FIELD_NUMBER;
     hash = (53 * hash) + state_;
     if (hasStartedAt()) {
@@ -948,7 +948,7 @@ private static final long serialVersionUID = 0L;
       policySetId_ = "";
       policyVersionId_ = "";
       scopeKind_ = 0;
-      scopeValuesJson_ = "";
+      scopeValues_ = "";
       state_ = 0;
       startedAt_ = null;
       if (startedAtBuilder_ != null) {
@@ -1010,7 +1010,7 @@ private static final long serialVersionUID = 0L;
         result.scopeKind_ = scopeKind_;
       }
       if (((from_bitField0_ & 0x00000010) != 0)) {
-        result.scopeValuesJson_ = scopeValuesJson_;
+        result.scopeValues_ = scopeValues_;
       }
       if (((from_bitField0_ & 0x00000020) != 0)) {
         result.state_ = state_;
@@ -1082,8 +1082,8 @@ private static final long serialVersionUID = 0L;
       if (other.scopeKind_ != 0) {
         setScopeKindValue(other.getScopeKindValue());
       }
-      if (!other.getScopeValuesJson().isEmpty()) {
-        scopeValuesJson_ = other.scopeValuesJson_;
+      if (!other.getScopeValues().isEmpty()) {
+        scopeValues_ = other.scopeValues_;
         bitField0_ |= 0x00000010;
         onChanged();
       }
@@ -1177,7 +1177,7 @@ private static final long serialVersionUID = 0L;
               break;
             } // case 32
             case 42: {
-              scopeValuesJson_ = input.readStringRequireUtf8();
+              scopeValues_ = input.readStringRequireUtf8();
               bitField0_ |= 0x00000010;
               break;
             } // case 42
@@ -1523,23 +1523,23 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.lang.Object scopeValuesJson_ = "";
+    private java.lang.Object scopeValues_ = "";
     /**
      * <pre>
      * For NODE/TENANT: the list of in-scope ids. For PERCENT: a single-element
      * list whose value is the integer percentage (1..=100).
      * </pre>
      *
-     * <code>string scope_values_json = 5 [json_name = "scopeValuesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
-     * @return The scopeValuesJson.
+     * <code>string scope_values = 5 [json_name = "scopeValues", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The scopeValues.
      */
-    public java.lang.String getScopeValuesJson() {
-      java.lang.Object ref = scopeValuesJson_;
+    public java.lang.String getScopeValues() {
+      java.lang.Object ref = scopeValues_;
       if (!(ref instanceof java.lang.String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
-        scopeValuesJson_ = s;
+        scopeValues_ = s;
         return s;
       } else {
         return (java.lang.String) ref;
@@ -1551,17 +1551,17 @@ private static final long serialVersionUID = 0L;
      * list whose value is the integer percentage (1..=100).
      * </pre>
      *
-     * <code>string scope_values_json = 5 [json_name = "scopeValuesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
-     * @return The bytes for scopeValuesJson.
+     * <code>string scope_values = 5 [json_name = "scopeValues", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for scopeValues.
      */
     public com.google.protobuf.ByteString
-        getScopeValuesJsonBytes() {
-      java.lang.Object ref = scopeValuesJson_;
+        getScopeValuesBytes() {
+      java.lang.Object ref = scopeValues_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
-        scopeValuesJson_ = b;
+        scopeValues_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
@@ -1573,14 +1573,14 @@ private static final long serialVersionUID = 0L;
      * list whose value is the integer percentage (1..=100).
      * </pre>
      *
-     * <code>string scope_values_json = 5 [json_name = "scopeValuesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
-     * @param value The scopeValuesJson to set.
+     * <code>string scope_values = 5 [json_name = "scopeValues", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The scopeValues to set.
      * @return This builder for chaining.
      */
-    public Builder setScopeValuesJson(
+    public Builder setScopeValues(
         java.lang.String value) {
       if (value == null) { throw new NullPointerException(); }
-      scopeValuesJson_ = value;
+      scopeValues_ = value;
       bitField0_ |= 0x00000010;
       onChanged();
       return this;
@@ -1591,11 +1591,11 @@ private static final long serialVersionUID = 0L;
      * list whose value is the integer percentage (1..=100).
      * </pre>
      *
-     * <code>string scope_values_json = 5 [json_name = "scopeValuesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * <code>string scope_values = 5 [json_name = "scopeValues", (.udb.core.common.v1.pg_column) = { ... }</code>
      * @return This builder for chaining.
      */
-    public Builder clearScopeValuesJson() {
-      scopeValuesJson_ = getDefaultInstance().getScopeValuesJson();
+    public Builder clearScopeValues() {
+      scopeValues_ = getDefaultInstance().getScopeValues();
       bitField0_ = (bitField0_ & ~0x00000010);
       onChanged();
       return this;
@@ -1606,15 +1606,15 @@ private static final long serialVersionUID = 0L;
      * list whose value is the integer percentage (1..=100).
      * </pre>
      *
-     * <code>string scope_values_json = 5 [json_name = "scopeValuesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
-     * @param value The bytes for scopeValuesJson to set.
+     * <code>string scope_values = 5 [json_name = "scopeValues", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for scopeValues to set.
      * @return This builder for chaining.
      */
-    public Builder setScopeValuesJsonBytes(
+    public Builder setScopeValuesBytes(
         com.google.protobuf.ByteString value) {
       if (value == null) { throw new NullPointerException(); }
       checkByteStringIsUtf8(value);
-      scopeValuesJson_ = value;
+      scopeValues_ = value;
       bitField0_ |= 0x00000010;
       onChanged();
       return this;

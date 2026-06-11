@@ -44,7 +44,7 @@ public final class OtpProto extends com.google.protobuf.GeneratedFile {
       "b.core.authn.entity.v1\032\037google/protobuf/" +
       "timestamp.proto\032$udb/core/authn/entity/v" +
       "1/enums.proto\032\033udb/core/common/v1/db.pro" +
-      "to\032!udb/core/common/v1/security.proto\"\272\021" +
+      "to\032!udb/core/common/v1/security.proto\"\275\021" +
       "\n\003OTP\022@\n\006otp_id\030\001 \001(\tB)\202\267\030%\n\006otp_id\022\004UUI" +
       "D\030\001(\001:\021gen_random_uuid()R\005otpId\022\252\001\n\007user" +
       "_id\030\002 \001(\tB\220\001\202\267\030\213\001\n\007user_id\022\004UUID\030\001J.\n\005us" +
@@ -87,27 +87,27 @@ public final class OtpProto extends com.google.protobuf.GeneratedFile {
       "}\202\267\030y\n\016correlation_id\022\014VARCHAR(120)R \n\027i" +
       "dx_otps_correlation_id\022\005BTREEZ7Request o" +
       "r workflow correlation id that issued th" +
-      "is OTPR\rcorrelationId\022\214\001\n\ttenant_id\030\016 \001(" +
-      "\tBo\202\267\030k\n\ttenant_id\022\014VARCHAR(120)R\033\n\022idx_" +
+      "is OTPR\rcorrelationId\022\217\001\n\ttenant_id\030\016 \001(" +
+      "\tBr\202\267\030n\n\ttenant_id\022\014VARCHAR(120)R\033\n\022idx_" +
       "otps_tenant_id\022\005BTREEZ3Tenant boundary (" +
-      "denormalized from the owning user)R\010tena" +
-      "ntId:\203\003\372\266\030\351\001\n\004otps\022\tudb_authn\030\003 \001*QEmail" +
-      " OTP records for 2FA, verification, pass" +
-      "word reset, and sensitive operations@\001bs" +
-      "\n\020tenant_isolation\032](tenant_id IS NULL O" +
-      "R tenant_id::text = current_setting(\'app" +
-      ".current_tenant_id\', true)::text)(\001\352\001\007pr" +
-      "imary\212\262\031\220\001\n\006tenant\032\ttenant_id*4tenant_id" +
-      " = current_setting(\'app.current_tenant_i" +
-      "d\')2\004none:\021authn.operational@\373\023H\002R\006tenan" +
-      "tZ\010standardr\025tenant.data_residencyB\363\001\n\034c" +
-      "om.udb.core.authn.entity.v1B\010OtpProtoP\001Z" +
-      "Dgithub.com/fahara02/udb/sdk/go/gen/udb/" +
-      "core/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030u" +
-      "db.core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn" +
-      "\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\" +
-      "Entity\\V1\352\002\034Udb::Core::Authn::Entity::V1" +
-      "b\006proto3"
+      "denormalized from the owning user)\230\002\001R\010t" +
+      "enantId:\203\003\372\266\030\351\001\n\004otps\022\tudb_authn\030\003 \001*QEm" +
+      "ail OTP records for 2FA, verification, p" +
+      "assword reset, and sensitive operations@" +
+      "\001bs\n\020tenant_isolation\032](tenant_id IS NUL" +
+      "L OR tenant_id::text = current_setting(\'" +
+      "app.current_tenant_id\', true)::text)(\001\352\001" +
+      "\007primary\212\262\031\220\001\n\006tenant\032\ttenant_id*4tenant" +
+      "_id = current_setting(\'app.current_tenan" +
+      "t_id\')2\004none:\021authn.operational@\373\023H\002R\006te" +
+      "nantZ\010standardr\025tenant.data_residencyB\363\001" +
+      "\n\034com.udb.core.authn.entity.v1B\010OtpProto" +
+      "P\001ZDgithub.com/fahara02/udb/sdk/go/gen/u" +
+      "db/core/authn/entity/v1;entityv1\242\002\004UCAE\252" +
+      "\002\030udb.core.Authn.Entity.V1\312\002\030Udb\\Core\\Au" +
+      "thn\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Aut" +
+      "hn\\Entity\\V1\352\002\034Udb::Core::Authn::Entity:" +
+      ":V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

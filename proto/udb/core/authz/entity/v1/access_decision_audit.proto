@@ -69,7 +69,7 @@ message AccessDecisionAudit {
   string correlation_id = 11 [(udb.core.common.v1.pg_column) = { column_name: "correlation_id" sql_type: "VARCHAR(120)" index: { index_name: "idx_access_decision_audits_correlation_id" index_type: "BTREE" } }];
 
   google.protobuf.Timestamp decided_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "decided_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" }];
-  string tenant_id = 13 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_accessdecisionaudit_tenant" index_type: "BTREE" } }];
+  string tenant_id = 13 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_accessdecisionaudit_tenant" index_type: "BTREE" } }];
 
   // ── Phase L3 task4: expanded compliance columns ───────────────────────────
   // Stable decision id linking this audit row to the gRPC Decision returned to

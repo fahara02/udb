@@ -61,7 +61,7 @@ message PolicySimulation {
   string active_decision_json = 7 [(udb.core.common.v1.pg_column) = { column_name: "active_decision_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" }];
   string draft_decision_json = 8 [(udb.core.common.v1.pg_column) = { column_name: "draft_decision_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" }];
   string diff_json = 9 [(udb.core.common.v1.pg_column) = { column_name: "diff_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" }];
-  string tenant_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policy_simulations_tenant" index_type: "BTREE" } }];
+  string tenant_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policy_simulations_tenant" index_type: "BTREE" } }];
   string project_id = 11 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" not_null: true default_value: "''" }];
   google.protobuf.Timestamp created_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
 }

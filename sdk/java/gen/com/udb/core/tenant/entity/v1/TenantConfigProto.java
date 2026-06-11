@@ -45,50 +45,50 @@ public final class TenantConfigProto extends com.google.protobuf.GeneratedFile {
       "core/common/v1/db.proto\032!udb/core/common" +
       "/v1/security.proto\032\036udb/core/common/v1/t" +
       "ypes.proto\032%udb/core/tenant/entity/v1/en" +
-      "ums.proto\"\251\013\n\014TenantConfig\022<\n\002id\030\001 \001(\tB," +
+      "ums.proto\"\255\013\n\014TenantConfig\022<\n\002id\030\001 \001(\tB," +
       "\202\267\030(\n\tconfig_id\022\004UUID\030\001(\001:\021gen_random_uu" +
-      "id()R\002id\022\177\n\ttenant_id\030\002 \001(\tBb\202\267\030^\n\ttenan" +
-      "t_id\022\004UUID\030\001J\"\n\007tenants\022\ttenant_id\032\nudb_" +
-      "tenant \003R%\n\034idx_tenant_configs_tenant_id" +
-      "\022\005BTREER\010tenantId\022?\n\nconfig_key\030\003 \001(\tB \202" +
-      "\267\030\034\n\nconfig_key\022\014VARCHAR(100)\030\001R\tconfigK" +
-      "ey\022=\n\014config_value\030\004 \001(\tB\032\202\267\030\026\n\014config_v" +
-      "alue\022\004TEXT\030\001R\013configValue\022s\n\004type\030\005 \001(\0162" +
-      "%.udb.core.tenant.entity.v1.ConfigTypeB8" +
-      "\202\267\0304\n\004type\022\013VARCHAR(20)\030\001Z\035STRING, NUMBE" +
-      "R, BOOLEAN, JSONR\004type\0229\n\013description\030\006 " +
-      "\001(\tB\027\202\267\030\023\n\013description\022\004TEXTR\013descriptio" +
-      "n\022\202\001\n\naudit_info\030\007 \001(\0132\035.udb.core.common" +
-      ".v1.AuditInfoBD\202\267\030@\n\naudit_info\022\005JSONB\030\001" +
-      ":\013\'{}\'::jsonbZ\032Audit trail stored as JSO" +
-      "Nx\001R\tauditInfo:\244\006\372\266\030\211\005\n\016tenant_configs\022\n" +
-      "udb_tenant\030\002 \001*\036Tenant-specific configur" +
-      "ations8\001@\001b\234\001\n\020tenant_isolation\032B(tenant" +
-      "_id::text = current_setting(\'app.current" +
-      "_tenant_id\', true))\"B(tenant_id::text = " +
-      "current_setting(\'app.current_tenant_id\'," +
-      " true))(\001h\001\212\0018\n\026idx_tenant_configs_key\022\005" +
-      "BTREE\030\001Z\ttenant_idZ\nconfig_key\252\001Y\n#trg_t" +
-      "enant_configs_touch_updated_at\022\006BEFORE\032\006" +
-      "UPDATE\"\035udb_tenant.touch_updated_at()*\003R" +
-      "OW\302\001\333\001\n\031touch_updated_at_function\022\010postg" +
-      "res\032\017before_triggers\"\242\001CREATE OR REPLACE" +
-      " FUNCTION udb_tenant.touch_updated_at()\n" +
-      "RETURNS trigger\nLANGUAGE plpgsql\nAS $$\nB" +
-      "EGIN\n  NEW.updated_at = CURRENT_TIMESTAM" +
-      "P;\n  RETURN NEW;\nEND;\n$$;\362\001\026udb.tenant.c" +
-      "onfigs.cdc\372\001\022tenant:config:read\212\262\031\221\001\n\006te" +
-      "nant\032\ttenant_id*4tenant_id = current_set" +
-      "ting(\'app.current_tenant_id\')2\004none:\022ten" +
-      "ant.operational@\373\023H\002R\006tenantZ\010standardr\025" +
-      "tenant.data_residencyB\202\002\n\035com.udb.core.t" +
-      "enant.entity.v1B\021TenantConfigProtoP\001ZEgi" +
-      "thub.com/fahara02/udb/sdk/go/gen/udb/cor" +
-      "e/tenant/entity/v1;entityv1\242\002\004UCTE\252\002\031udb" +
-      ".core.Tenant.Entity.V1\312\002\031Udb\\Core\\Tenant" +
-      "\\Entity\\V1\342\002%Udb\\GPBMetadata\\Core\\Tenant" +
-      "\\Entity\\V1\352\002\035Udb::Core::Tenant::Entity::" +
-      "V1b\006proto3"
+      "id()R\002id\022\202\001\n\ttenant_id\030\002 \001(\tBe\202\267\030a\n\ttena" +
+      "nt_id\022\004UUID\030\001J\"\n\007tenants\022\ttenant_id\032\nudb" +
+      "_tenant \003R%\n\034idx_tenant_configs_tenant_i" +
+      "d\022\005BTREE\230\002\001R\010tenantId\022?\n\nconfig_key\030\003 \001(" +
+      "\tB \202\267\030\034\n\nconfig_key\022\014VARCHAR(100)\030\001R\tcon" +
+      "figKey\022=\n\014config_value\030\004 \001(\tB\032\202\267\030\026\n\014conf" +
+      "ig_value\022\004TEXT\030\001R\013configValue\022s\n\004type\030\005 " +
+      "\001(\0162%.udb.core.tenant.entity.v1.ConfigTy" +
+      "peB8\202\267\0304\n\004type\022\013VARCHAR(20)\030\001Z\035STRING, N" +
+      "UMBER, BOOLEAN, JSONR\004type\0229\n\013descriptio" +
+      "n\030\006 \001(\tB\027\202\267\030\023\n\013description\022\004TEXTR\013descri" +
+      "ption\022\202\001\n\naudit_info\030\007 \001(\0132\035.udb.core.co" +
+      "mmon.v1.AuditInfoBD\202\267\030@\n\naudit_info\022\005JSO" +
+      "NB\030\001:\013\'{}\'::jsonbZ\032Audit trail stored as" +
+      " JSONx\001R\tauditInfo:\244\006\372\266\030\211\005\n\016tenant_confi" +
+      "gs\022\nudb_tenant\030\002 \001*\036Tenant-specific conf" +
+      "igurations8\001@\001b\234\001\n\020tenant_isolation\032B(te" +
+      "nant_id::text = current_setting(\'app.cur" +
+      "rent_tenant_id\', true))\"B(tenant_id::tex" +
+      "t = current_setting(\'app.current_tenant_" +
+      "id\', true))(\001h\001\212\0018\n\026idx_tenant_configs_k" +
+      "ey\022\005BTREE\030\001Z\ttenant_idZ\nconfig_key\252\001Y\n#t" +
+      "rg_tenant_configs_touch_updated_at\022\006BEFO" +
+      "RE\032\006UPDATE\"\035udb_tenant.touch_updated_at(" +
+      ")*\003ROW\302\001\333\001\n\031touch_updated_at_function\022\010p" +
+      "ostgres\032\017before_triggers\"\242\001CREATE OR REP" +
+      "LACE FUNCTION udb_tenant.touch_updated_a" +
+      "t()\nRETURNS trigger\nLANGUAGE plpgsql\nAS " +
+      "$$\nBEGIN\n  NEW.updated_at = CURRENT_TIME" +
+      "STAMP;\n  RETURN NEW;\nEND;\n$$;\362\001\026udb.tena" +
+      "nt.configs.cdc\372\001\022tenant:config:read\212\262\031\221\001" +
+      "\n\006tenant\032\ttenant_id*4tenant_id = current" +
+      "_setting(\'app.current_tenant_id\')2\004none:" +
+      "\022tenant.operational@\373\023H\002R\006tenantZ\010standa" +
+      "rdr\025tenant.data_residencyB\202\002\n\035com.udb.co" +
+      "re.tenant.entity.v1B\021TenantConfigProtoP\001" +
+      "ZEgithub.com/fahara02/udb/sdk/go/gen/udb" +
+      "/core/tenant/entity/v1;entityv1\242\002\004UCTE\252\002" +
+      "\031udb.core.Tenant.Entity.V1\312\002\031Udb\\Core\\Te" +
+      "nant\\Entity\\V1\342\002%Udb\\GPBMetadata\\Core\\Te" +
+      "nant\\Entity\\V1\352\002\035Udb::Core::Tenant::Enti" +
+      "ty::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

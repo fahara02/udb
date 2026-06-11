@@ -31,6 +31,7 @@ import * as protoLoader from "@grpc/proto-loader";
 import fs from "fs";
 import path from "path";
 
+import "./wkt"; // registers the google.protobuf.Struct serializer (must precede any loadSync)
 import { UDB_PROTOCOL_VERSION, UdbMetadata, metadata as buildMetadata } from "./client";
 import { defaultProtoRoot } from "./protoRoot";
 

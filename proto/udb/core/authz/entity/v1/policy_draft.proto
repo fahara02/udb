@@ -58,7 +58,7 @@ message PolicyDraft {
   };
 
   string draft_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "draft_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
-  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policy_drafts_tenant" index_type: "BTREE" } }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_policy_drafts_tenant" index_type: "BTREE" } }];
   string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" comment: "Optional project boundary" }];
   string title = 4 [(udb.core.common.v1.pg_column) = { column_name: "title" sql_type: "VARCHAR(200)" not_null: true default_value: "''" }];
   string description = 5 [(udb.core.common.v1.pg_column) = { column_name: "description" sql_type: "VARCHAR(1000)" comment: "Human description of the proposed change" }];

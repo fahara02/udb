@@ -139,7 +139,7 @@ var File_udb_core_apikey_entity_v1_api_key_usage_proto protoreflect.FileDescript
 
 const file_udb_core_apikey_entity_v1_api_key_usage_proto_rawDesc = "" +
 	"\n" +
-	"-udb/core/apikey/entity/v1/api_key_usage.proto\x12\x19udb.core.apikey.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xcb\t\n" +
+	"-udb/core/apikey/entity/v1/api_key_usage.proto\x12\x19udb.core.apikey.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xce\t\n" +
 	"\vApiKeyUsage\x12F\n" +
 	"\busage_id\x18\x01 \x01(\tB+\x82\xb7\x18'\n" +
 	"\busage_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\ausageId\x12\xb4\x01\n" +
@@ -163,13 +163,13 @@ const file_udb_core_apikey_entity_v1_api_key_usage_proto_rawDesc = "" +
 	"\frate_limited\x18\a \x01(\bB$\x82\xb7\x18 \n" +
 	"\frate_limited\x12\aBOOLEAN\x18\x01:\x05FALSER\vrateLimited\x12w\n" +
 	"\frequested_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampB8\x82\xb7\x184\n" +
-	"\frequested_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\vrequestedAt\x12\\\n" +
-	"\ttenant_id\x18\t \x01(\tB?\x82\xb7\x18;\n" +
+	"\frequested_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\vrequestedAt\x12_\n" +
+	"\ttenant_id\x18\t \x01(\tBB\x82\xb7\x18>\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R\x1f\n" +
-	"\x16idx_apikeyusage_tenant\x12\x05BTREER\btenantId:\xea\x02\xfa\xb6\x18\xcf\x01\n" +
+	"\x16idx_apikeyusage_tenant\x12\x05BTREE\x98\x02\x01R\btenantId:\xea\x02\xfa\xb6\x18\xcf\x01\n" +
 	"\x0eapi_key_usages\x12\tudb_authn\x18\x05 \x01*9Per-request API key usage log for rate limiting and audit@\x01H\x03R\frequested_atX\xed\x02b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\xb2\x19\x91\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x12apikey.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x81\x02\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x12apikey.operational@\xed\x02H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x81\x02\n" +
 	"\x1dcom.udb.core.apikey.entity.v1B\x10ApiKeyUsageProtoP\x01ZEgithub.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x19udb.core.Apikey.Entity.V1\xca\x02\x19Udb\\Core\\Apikey\\Entity\\V1\xe2\x02%Udb\\GPBMetadata\\Core\\Apikey\\Entity\\V1\xea\x02\x1dUdb::Core::Apikey::Entity::V1b\x06proto3"
 
 var (

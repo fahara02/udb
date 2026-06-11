@@ -153,7 +153,7 @@ var File_udb_core_authz_entity_v1_user_role_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_entity_v1_user_role_proto_rawDesc = "" +
 	"\n" +
-	"(udb/core/authz/entity/v1/user_role.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xbc\x0f\n" +
+	"(udb/core/authz/entity/v1/user_role.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xbf\x0f\n" +
 	"\bUserRole\x12Q\n" +
 	"\fuser_role_id\x18\x01 \x01(\tB/\x82\xb7\x18+\n" +
 	"\fuser_role_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
@@ -191,10 +191,10 @@ const file_udb_core_authz_entity_v1_user_role_proto_rawDesc = "" +
 	"created_by\x18\n" +
 	" \x01(\tBB\x82\xb7\x18>\n" +
 	"\n" +
-	"created_by\x12\fVARCHAR(120)Z\"Identity that created this record.R\tcreatedBy\x12Y\n" +
-	"\ttenant_id\x18\v \x01(\tB<\x82\xb7\x188\n" +
+	"created_by\x12\fVARCHAR(120)Z\"Identity that created this record.R\tcreatedBy\x12\\\n" +
+	"\ttenant_id\x18\v \x01(\tB?\x82\xb7\x18;\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R\x1c\n" +
-	"\x13idx_userrole_tenant\x12\x05BTREER\btenantId:\xc5\x05\xfa\xb6\x18\xab\x04\n" +
+	"\x13idx_userrole_tenant\x12\x05BTREE\x98\x02\x01R\btenantId:\xc5\x05\xfa\xb6\x18\xab\x04\n" +
 	"\n" +
 	"user_roles\x12\tudb_authz\x18\x03 \x01*/Role assignments scoped by authorization domain8\x01@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01C\n" +

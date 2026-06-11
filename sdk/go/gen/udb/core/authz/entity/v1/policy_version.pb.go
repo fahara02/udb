@@ -225,7 +225,7 @@ var File_udb_core_authz_entity_v1_policy_version_proto protoreflect.FileDescript
 
 const file_udb_core_authz_entity_v1_policy_version_proto_rawDesc = "" +
 	"\n" +
-	"-udb/core/authz/entity/v1/policy_version.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a/udb/core/authz/entity/v1/governance_enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xca\x14\n" +
+	"-udb/core/authz/entity/v1/policy_version.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a/udb/core/authz/entity/v1/governance_enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xcd\x14\n" +
 	"\rPolicyVersion\x12`\n" +
 	"\x11policy_version_id\x18\x01 \x01(\tB4\x82\xb7\x180\n" +
 	"\x11policy_version_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x0fpolicyVersionId\x12\xc7\x01\n" +
@@ -261,10 +261,10 @@ const file_udb_core_authz_entity_v1_policy_version_proto_rawDesc = "" +
 	"\brevision\x18\f \x01(\x03BO\x82\xb7\x18K\n" +
 	"\brevision\x12\x06BIGINT\x18\x01:\x011Z2Optimistic-concurrency token for state transitionsR\brevision\x12z\n" +
 	"\fcontent_hash\x18\r \x01(\tBW\x82\xb7\x18S\n" +
-	"\fcontent_hash\x12\vVARCHAR(80)\x18\x01:\x02''Z0Content hash of payload_json for no-op detectionR\vcontentHash\x12`\n" +
-	"\ttenant_id\x18\x0e \x01(\tBC\x82\xb7\x18?\n" +
+	"\fcontent_hash\x12\vVARCHAR(80)\x18\x01:\x02''Z0Content hash of payload_json for no-op detectionR\vcontentHash\x12c\n" +
+	"\ttenant_id\x18\x0e \x01(\tBF\x82\xb7\x18B\n" +
 	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R#\n" +
-	"\x1aidx_policy_versions_tenant\x12\x05BTREER\btenantId\x12C\n" +
+	"\x1aidx_policy_versions_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12C\n" +
 	"\n" +
 	"project_id\x18\x0f \x01(\tB$\x82\xb7\x18 \n" +
 	"\n" +

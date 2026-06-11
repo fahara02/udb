@@ -176,7 +176,7 @@ var File_udb_core_analytics_entity_v1_pipeline_metric_snapshot_proto protoreflec
 
 const file_udb_core_analytics_entity_v1_pipeline_metric_snapshot_proto_rawDesc = "" +
 	"\n" +
-	";udb/core/analytics/entity/v1/pipeline_metric_snapshot.proto\x12\x1cudb.core.analytics.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x95\x10\n" +
+	";udb/core/analytics/entity/v1/pipeline_metric_snapshot.proto\x12\x1cudb.core.analytics.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x98\x10\n" +
 	"\x16PipelineMetricSnapshot\x12O\n" +
 	"\vsnapshot_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vsnapshot_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
@@ -188,9 +188,9 @@ const file_udb_core_analytics_entity_v1_pipeline_metric_snapshot_proto_rawDesc =
 	"\n" +
 	"stage_name\x18\x03 \x01(\tBc\x82\xb7\x18_\n" +
 	"\n" +
-	"stage_name\x12\vVARCHAR(80)\x18\x01ZBingest | validate | route | execute | reconcile | project | notifyR\tstageName\x12X\n" +
-	"\ttenant_id\x18\x04 \x01(\tB;\x82\xb7\x187\n" +
-	"\ttenant_id\x12\fVARCHAR(120)Z\x1cnull = system-wide aggregateR\btenantId\x12H\n" +
+	"stage_name\x12\vVARCHAR(80)\x18\x01ZBingest | validate | route | execute | reconcile | project | notifyR\tstageName\x12[\n" +
+	"\ttenant_id\x18\x04 \x01(\tB>\x82\xb7\x18:\n" +
+	"\ttenant_id\x12\fVARCHAR(120)Z\x1cnull = system-wide aggregate\x98\x02\x01R\btenantId\x12H\n" +
 	"\x0etotal_requests\x18\x05 \x01(\x03B!\x82\xb7\x18\x1d\n" +
 	"\x0etotal_requests\x12\x06BIGINT\x18\x01:\x010R\rtotalRequests\x12=\n" +
 	"\n" +
@@ -223,7 +223,7 @@ const file_udb_core_analytics_entity_v1_pipeline_metric_snapshot_proto_rawDesc =
 	"stage_nameZ\rsnapshot_hour\x9a\x01\x13\n" +
 	"\tbtree_gin\x12\x06public\xa2\x01\xe4\x02\n" +
 	"\x13mv_daily_throughput\x12\rudb_analytics\x1a\xbb\x02SELECT date_trunc('day', snapshot_hour) AS day, stage_name, tenant_id, SUM(total_requests) AS total_requests, SUM(successful) AS successful, SUM(failed) AS failed, AVG(throughput_rps) AS avg_throughput_rps FROM udb_analytics.pipeline_metric_snapshots GROUP BY date_trunc('day', snapshot_hour), stage_name, tenant_id \x01\xea\x01\areplica\x8a\xb2\x19\x94\x01\n" +
-	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x15analytics.operational@\xfb\x13H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x9e\x02\n" +
+	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x15analytics.operational@\xed\x02H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x9e\x02\n" +
 	" com.udb.core.analytics.entity.v1B\x1bPipelineMetricSnapshotProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/analytics/entity/v1;entityv1\xa2\x02\x04UCAE\xaa\x02\x1cudb.core.Analytics.Entity.V1\xca\x02\x1cUdb\\Core\\Analytics\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Analytics\\Entity\\V1\xea\x02 Udb::Core::Analytics::Entity::V1b\x06proto3"
 
 var (

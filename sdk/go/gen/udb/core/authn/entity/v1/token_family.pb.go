@@ -188,7 +188,7 @@ var File_udb_core_authn_entity_v1_token_family_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_token_family_proto_rawDesc = "" +
 	"\n" +
-	"+udb/core/authn/entity/v1/token_family.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x99\x0f\n" +
+	"+udb/core/authn/entity/v1/token_family.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x9c\x0f\n" +
 	"\vTokenFamily\x12I\n" +
 	"\tfamily_id\x18\x01 \x01(\tB,\x82\xb7\x18(\n" +
 	"\tfamily_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\bfamilyId\x12^\n" +
@@ -199,9 +199,9 @@ const file_udb_core_authn_entity_v1_token_family_proto_rawDesc = "" +
 	"\auser_id\x18\x03 \x01(\tB\x1b\x82\xb7\x18\x17\n" +
 	"\auser_id\x12\fVARCHAR(160)R\x06userId\x12E\n" +
 	"\fprincipal_id\x18\x04 \x01(\tB\"\x82\xb7\x18\x1e\n" +
-	"\fprincipal_id\x12\fVARCHAR(160)\x18\x01R\vprincipalId\x12;\n" +
-	"\ttenant_id\x18\x05 \x01(\tB\x1e\x82\xb7\x18\x1a\n" +
-	"\ttenant_id\x12\vVARCHAR(64)\x18\x01R\btenantId\x12=\n" +
+	"\fprincipal_id\x12\fVARCHAR(160)\x18\x01R\vprincipalId\x12>\n" +
+	"\ttenant_id\x18\x05 \x01(\tB!\x82\xb7\x18\x1d\n" +
+	"\ttenant_id\x12\vVARCHAR(64)\x18\x01\x98\x02\x01R\btenantId\x12=\n" +
 	"\n" +
 	"project_id\x18\x06 \x01(\tB\x1e\x82\xb7\x18\x1a\n" +
 	"\n" +

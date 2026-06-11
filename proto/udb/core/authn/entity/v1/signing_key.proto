@@ -63,7 +63,7 @@ message SigningKey {
   string key_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "key_id" sql_type: "VARCHAR(80)" primary_key: true not_null: true }];
 
   // Empty = global key; otherwise a tenant-scoped signing key.
-  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" comment: "Optional tenant boundary; empty = global key" }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" comment: "Optional tenant boundary; empty = global key" }];
 
   // JWA algorithm name (e.g. RS256, EdDSA).
   string algorithm = 3 [(udb.core.common.v1.pg_column) = { column_name: "algorithm" sql_type: "VARCHAR(20)" not_null: true default_value: "'RS256'" }];

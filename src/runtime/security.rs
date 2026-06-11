@@ -125,6 +125,38 @@ impl SecurityConfig {
         }
     }
 
+    /// Central resolver for a PEM value that may be supplied either inline
+    /// (starts with `-----BEGIN`) or as a filesystem path. Returns `None` for an
+    /// empty/whitespace value; surfaces a read error for a non-empty path that
+    /// cannot be read. Single source of truth so signing, JWKS publication and
+    /// the registry seed all interpret `UDB_JWT_*` keys identically.
+    pub fn resolve_pem(key_src: &str) -> Result<Option<String>, String> {
+        let trimmed = key_src.trim();
+        if trimmed.is_empty() {
+            return Ok(None);
+        }
+        if trimmed.contains("-----BEGIN") {
+            return Ok(Some(key_src.to_string()));
+        }
+        std::fs::read_to_string(trimmed)
+            .map(Some)
+            .map_err(|e| format!("failed to read PEM from path '{trimmed}': {e}"))
+    }
+
+    /// Private signing PEM (`UDB_JWT_PRIVATE_KEY`), resolved inline-or-path.
+    pub fn jwt_private_pem(&self) -> Option<String> {
+        self.jwt_private_key
+            .as_deref()
+            .and_then(|src| Self::resolve_pem(src).ok().flatten())
+    }
+
+    /// Public verification PEM (`UDB_JWT_PUBLIC_KEY`), resolved inline-or-path.
+    pub fn jwt_public_pem(&self) -> Option<String> {
+        self.jwt_public_key
+            .as_deref()
+            .and_then(|src| Self::resolve_pem(src).ok().flatten())
+    }
+
     pub fn current() -> Self {
         INSTALLED_SECURITY_CONFIG
             .get()
@@ -854,11 +886,8 @@ pub fn sign_access_token(
     let Some(key_src) = config.jwt_private_key.clone() else {
         return Ok(None);
     };
-    let private_pem = if key_src.contains("-----BEGIN") {
-        key_src
-    } else {
-        std::fs::read_to_string(&key_src)
-            .map_err(|e| format!("failed to read JWT private key: {e}"))?
+    let Some(private_pem) = SecurityConfig::resolve_pem(&key_src)? else {
+        return Ok(None);
     };
     sign_access_token_with_key(
         config,
@@ -1004,12 +1033,12 @@ pub fn validate_bearer_token(
                     .to_string(),
             );
         };
-        let key_bytes = if jwt_key_env.contains("-----BEGIN") {
-            jwt_key_env.into_bytes()
-        } else {
-            std::fs::read(&jwt_key_env)
-                .map_err(|e| format!("failed to read JWT public key: {e}"))?
-        };
+        let key_bytes = SecurityConfig::resolve_pem(&jwt_key_env)?
+            .ok_or_else(|| {
+                "JWT validation is not configured (set UDB_JWT_PUBLIC_KEY or UDB_JWT_JWKS_URL)"
+                    .to_string()
+            })?
+            .into_bytes();
         match header.alg {
             Algorithm::RS256
             | Algorithm::RS384

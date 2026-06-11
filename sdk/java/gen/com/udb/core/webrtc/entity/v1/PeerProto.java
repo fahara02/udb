@@ -45,53 +45,53 @@ public final class PeerProto extends com.google.protobuf.GeneratedFile {
       "uf/timestamp.proto\032\033udb/core/common/v1/d" +
       "b.proto\032!udb/core/common/v1/security.pro" +
       "to\032\036udb/core/common/v1/types.proto\032%udb/" +
-      "core/webrtc/entity/v1/enums.proto\"\211\014\n\004Pe" +
+      "core/webrtc/entity/v1/enums.proto\"\214\014\n\004Pe" +
       "er\022C\n\007peer_id\030\001 \001(\tB*\202\267\030&\n\007peer_id\022\004UUID" +
       "\030\001(\001:\021gen_random_uuid()R\006peerId\022.\n\007room_" +
       "id\030\002 \001(\tB\025\202\267\030\021\n\007room_id\022\004UUID\030\001R\006roomId\022" +
-      "4\n\ttenant_id\030\003 \001(\tB\027\202\267\030\023\n\ttenant_id\022\004UUI" +
-      "D\030\001R\010tenantId\022C\n\014display_name\030\004 \001(\tB \202\267\030" +
-      "\034\n\014display_name\022\014VARCHAR(255)R\013displayNa" +
-      "me\022]\n\005state\030\005 \001(\0162$.udb.core.webrtc.enti" +
-      "ty.v1.PeerStateB!\202\267\030\035\n\005state\022\013VARCHAR(20" +
-      ")\030\001:\005\'NEW\'R\005state\022K\n\010metadata\030\006 \001(\tB/\202\267\030" +
-      "+\n\010metadata\022\005JSONBZ\026Peer-specific metada" +
-      "tax\001R\010metadata\022H\n\nuser_agent\030\007 \001(\tB)\202\267\030%" +
-      "\n\nuser_agent\022\004TEXTZ\021Client user agentR\tu" +
-      "serAgent\022t\n\tjoined_at\030\010 \001(\0132\032.google.pro" +
-      "tobuf.TimestampB;\202\267\0307\n\tjoined_at\022\013TIMEST" +
-      "AMPTZZ\035When the peer joined the roomR\010jo" +
-      "inedAt\022l\n\007left_at\030\t \001(\0132\032.google.protobu" +
-      "f.TimestampB7\202\267\0303\n\007left_at\022\013TIMESTAMPTZZ" +
-      "\033When the peer left the roomR\006leftAt\022\202\001\n" +
-      "\naudit_info\030\n \001(\0132\035.udb.core.common.v1.A" +
-      "uditInfoBD\202\267\030@\n\naudit_info\022\005JSONB\030\001:\013\'{}" +
-      "\'::jsonbZ\032Audit trail stored as JSONx\001R\t" +
-      "auditInfo\022o\n\ndeleted_at\030\013 \001(\0132\032.google.p" +
-      "rotobuf.TimestampB4\202\267\0300\n\ndeleted_at\022\013TIM" +
-      "ESTAMPTZZ\025Soft delete timestampR\tdeleted" +
-      "At\022H\n\ndeleted_by\030\014 \001(\tB)\202\267\030%\n\ndeleted_by" +
-      "\022\004UUIDZ\021Soft delete actorR\tdeletedBy:\366\003\372" +
-      "\266\030\324\002\n\005peers\022\nudb_webrtc\030\002 \001*+WebRTC peer" +
-      " connections (room participants)0\0018\001@\001b\226" +
-      "\001\n\026peers_tenant_isolation\032z(tenant_id::t" +
-      "ext = current_setting(\'app.current_tenan" +
-      "t_id\', true) OR current_setting(\'app.pla" +
-      "tform_admin\', true) = \'true\')(\001h\001\212\001 \n\016id" +
-      "x_peers_room\022\005BTREEZ\007room_id\212\001$\n\020idx_pee" +
-      "rs_tenant\022\005BTREEZ\ttenant_id\362\001\024udb.webrtc" +
-      ".peers.cdc\372\001\013webrtc:read\212\262\031\230\001\n\006tenant\032\tt" +
-      "enant_id*4tenant_id = current_setting(\'a" +
-      "pp.current_tenant_id\')2\013soft_delete:\022web" +
-      "rtc.operational@\373\023H\002R\006tenantZ\010standardr\025" +
-      "tenant.data_residencyB\372\001\n\035com.udb.core.w" +
-      "ebrtc.entity.v1B\tPeerProtoP\001ZEgithub.com" +
-      "/fahara02/udb/sdk/go/gen/udb/core/webrtc" +
-      "/entity/v1;entityv1\242\002\004UCWE\252\002\031udb.core.We" +
-      "brtc.Entity.V1\312\002\031Udb\\Core\\Webrtc\\Entity\\" +
-      "V1\342\002%Udb\\GPBMetadata\\Core\\Webrtc\\Entity\\" +
-      "V1\352\002\035Udb::Core::Webrtc::Entity::V1b\006prot" +
-      "o3"
+      "7\n\ttenant_id\030\003 \001(\tB\032\202\267\030\026\n\ttenant_id\022\004UUI" +
+      "D\030\001\230\002\001R\010tenantId\022C\n\014display_name\030\004 \001(\tB " +
+      "\202\267\030\034\n\014display_name\022\014VARCHAR(255)R\013displa" +
+      "yName\022]\n\005state\030\005 \001(\0162$.udb.core.webrtc.e" +
+      "ntity.v1.PeerStateB!\202\267\030\035\n\005state\022\013VARCHAR" +
+      "(20)\030\001:\005\'NEW\'R\005state\022K\n\010metadata\030\006 \001(\tB/" +
+      "\202\267\030+\n\010metadata\022\005JSONBZ\026Peer-specific met" +
+      "adatax\001R\010metadata\022H\n\nuser_agent\030\007 \001(\tB)\202" +
+      "\267\030%\n\nuser_agent\022\004TEXTZ\021Client user agent" +
+      "R\tuserAgent\022t\n\tjoined_at\030\010 \001(\0132\032.google." +
+      "protobuf.TimestampB;\202\267\0307\n\tjoined_at\022\013TIM" +
+      "ESTAMPTZZ\035When the peer joined the roomR" +
+      "\010joinedAt\022l\n\007left_at\030\t \001(\0132\032.google.prot" +
+      "obuf.TimestampB7\202\267\0303\n\007left_at\022\013TIMESTAMP" +
+      "TZZ\033When the peer left the roomR\006leftAt\022" +
+      "\202\001\n\naudit_info\030\n \001(\0132\035.udb.core.common.v" +
+      "1.AuditInfoBD\202\267\030@\n\naudit_info\022\005JSONB\030\001:\013" +
+      "\'{}\'::jsonbZ\032Audit trail stored as JSONx" +
+      "\001R\tauditInfo\022o\n\ndeleted_at\030\013 \001(\0132\032.googl" +
+      "e.protobuf.TimestampB4\202\267\0300\n\ndeleted_at\022\013" +
+      "TIMESTAMPTZZ\025Soft delete timestampR\tdele" +
+      "tedAt\022H\n\ndeleted_by\030\014 \001(\tB)\202\267\030%\n\ndeleted" +
+      "_by\022\004UUIDZ\021Soft delete actorR\tdeletedBy:" +
+      "\366\003\372\266\030\324\002\n\005peers\022\nudb_webrtc\030\002 \001*+WebRTC p" +
+      "eer connections (room participants)0\0018\001@" +
+      "\001b\226\001\n\026peers_tenant_isolation\032z(tenant_id" +
+      "::text = current_setting(\'app.current_te" +
+      "nant_id\', true) OR current_setting(\'app." +
+      "platform_admin\', true) = \'true\')(\001h\001\212\001 \n" +
+      "\016idx_peers_room\022\005BTREEZ\007room_id\212\001$\n\020idx_" +
+      "peers_tenant\022\005BTREEZ\ttenant_id\362\001\024udb.web" +
+      "rtc.peers.cdc\372\001\013webrtc:read\212\262\031\230\001\n\006tenant" +
+      "\032\ttenant_id*4tenant_id = current_setting" +
+      "(\'app.current_tenant_id\')2\013soft_delete:\022" +
+      "webrtc.operational@\373\023H\002R\006tenantZ\010standar" +
+      "dr\025tenant.data_residencyB\372\001\n\035com.udb.cor" +
+      "e.webrtc.entity.v1B\tPeerProtoP\001ZEgithub." +
+      "com/fahara02/udb/sdk/go/gen/udb/core/web" +
+      "rtc/entity/v1;entityv1\242\002\004UCWE\252\002\031udb.core" +
+      ".Webrtc.Entity.V1\312\002\031Udb\\Core\\Webrtc\\Enti" +
+      "ty\\V1\342\002%Udb\\GPBMetadata\\Core\\Webrtc\\Enti" +
+      "ty\\V1\352\002\035Udb::Core::Webrtc::Entity::V1b\006p" +
+      "roto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

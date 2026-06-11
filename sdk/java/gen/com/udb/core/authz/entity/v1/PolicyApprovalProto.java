@@ -44,45 +44,45 @@ public final class PolicyApprovalProto extends com.google.protobuf.GeneratedFile
       "al.proto\022\030udb.core.authz.entity.v1\032\037goog" +
       "le/protobuf/timestamp.proto\032\033udb/core/co" +
       "mmon/v1/db.proto\032!udb/core/common/v1/sec" +
-      "urity.proto\"\340\t\n\016PolicyApproval\022O\n\013approv" +
+      "urity.proto\"\343\t\n\016PolicyApproval\022O\n\013approv" +
       "al_id\030\001 \001(\tB.\202\267\030*\n\013approval_id\022\004UUID\030\001(\001" +
       ":\021gen_random_uuid()R\napprovalId\022\306\001\n\010draf" +
       "t_id\030\002 \001(\tB\252\001\202\267\030\245\001\n\010draft_id\022\004UUID\030\001JD\n\r" +
       "policy_drafts\022\010draft_id\032\tudb_authz \0032\034fk" +
       "_policy_approvals_draft_idR-\n\032idx_policy" +
       "_approvals_draft\022\005BTREEZ\010draft_idZ\034FK to" +
-      " policy_drafts.draft_idR\007draftId\022a\n\ttena" +
-      "nt_id\030\003 \001(\tBD\202\267\030@\n\ttenant_id\022\013VARCHAR(64" +
+      " policy_drafts.draft_idR\007draftId\022d\n\ttena" +
+      "nt_id\030\003 \001(\tBG\202\267\030C\n\ttenant_id\022\013VARCHAR(64" +
       ")\030\001R$\n\033idx_policy_approvals_tenant\022\005BTRE" +
-      "ER\010tenantId\022N\n\005actor\030\004 \001(\tB8\202\267\0304\n\005actor\022" +
-      "\014VARCHAR(160)\030\001Z\033Reviewer/approver princ" +
-      "ipalR\005actor\022@\n\004role\030\005 \001(\tB,\202\267\030(\n\004role\022\013V" +
-      "ARCHAR(20)\030\001Z\021REVIEWER/APPROVERR\004role\022Y\n" +
-      "\010decision\030\006 \001(\tB=\202\267\0309\n\010decision\022\013VARCHAR" +
-      "(20)\030\001Z\036APPROVE/REJECT/REQUEST_CHANGESR\010" +
-      "decision\022^\n\006reason\030\007 \001(\tBF\202\267\030B\n\006reason\022\014" +
-      "VARCHAR(500)\030\001Z(Mandatory justification " +
-      "for the decisionR\006reason\022q\n\ncreated_at\030\010" +
-      " \001(\0132\032.google.protobuf.TimestampB6\202\267\0302\n\n" +
-      "created_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMES" +
-      "TAMP`\001h\001R\tcreatedAt:\220\003\372\266\030\367\001\n\020policy_appr" +
-      "ovals\022\tudb_authz\030  \001*.Reviewer/approver " +
-      "decisions over policy drafts8\001@\001b^\n\020tena" +
-      "nt_isolation\032H(tenant_id::text = current" +
-      "_setting(\'app.current_tenant_id\', true):" +
-      ":text)(\001\212\001?\n!idx_policy_approvals_tenant" +
-      "_draft\022\005BTREEZ\ttenant_idZ\010draft_id\212\262\031\217\001\n" +
-      "\006tenant\032\ttenant_id*4tenant_id = current_" +
-      "setting(\'app.current_tenant_id\')2\004none:\020" +
-      "authz.governance@\373\023H\002R\006tenantZ\010standardr" +
-      "\025tenant.data_residencyB\376\001\n\034com.udb.core." +
-      "authz.entity.v1B\023PolicyApprovalProtoP\001ZD" +
-      "github.com/fahara02/udb/sdk/go/gen/udb/c" +
-      "ore/authz/entity/v1;entityv1\242\002\004UCAE\252\002\030ud" +
-      "b.core.Authz.Entity.V1\312\002\030Udb\\Core\\Authz\\" +
-      "Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\E" +
-      "ntity\\V1\352\002\034Udb::Core::Authz::Entity::V1b" +
-      "\006proto3"
+      "E\230\002\001R\010tenantId\022N\n\005actor\030\004 \001(\tB8\202\267\0304\n\005act" +
+      "or\022\014VARCHAR(160)\030\001Z\033Reviewer/approver pr" +
+      "incipalR\005actor\022@\n\004role\030\005 \001(\tB,\202\267\030(\n\004role" +
+      "\022\013VARCHAR(20)\030\001Z\021REVIEWER/APPROVERR\004role" +
+      "\022Y\n\010decision\030\006 \001(\tB=\202\267\0309\n\010decision\022\013VARC" +
+      "HAR(20)\030\001Z\036APPROVE/REJECT/REQUEST_CHANGE" +
+      "SR\010decision\022^\n\006reason\030\007 \001(\tBF\202\267\030B\n\006reaso" +
+      "n\022\014VARCHAR(500)\030\001Z(Mandatory justificati" +
+      "on for the decisionR\006reason\022q\n\ncreated_a" +
+      "t\030\010 \001(\0132\032.google.protobuf.TimestampB6\202\267\030" +
+      "2\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TI" +
+      "MESTAMP`\001h\001R\tcreatedAt:\220\003\372\266\030\367\001\n\020policy_a" +
+      "pprovals\022\tudb_authz\030  \001*.Reviewer/approv" +
+      "er decisions over policy drafts8\001@\001b^\n\020t" +
+      "enant_isolation\032H(tenant_id::text = curr" +
+      "ent_setting(\'app.current_tenant_id\', tru" +
+      "e)::text)(\001\212\001?\n!idx_policy_approvals_ten" +
+      "ant_draft\022\005BTREEZ\ttenant_idZ\010draft_id\212\262\031" +
+      "\217\001\n\006tenant\032\ttenant_id*4tenant_id = curre" +
+      "nt_setting(\'app.current_tenant_id\')2\004non" +
+      "e:\020authz.governance@\373\023H\002R\006tenantZ\010standa" +
+      "rdr\025tenant.data_residencyB\376\001\n\034com.udb.co" +
+      "re.authz.entity.v1B\023PolicyApprovalProtoP" +
+      "\001ZDgithub.com/fahara02/udb/sdk/go/gen/ud" +
+      "b/core/authz/entity/v1;entityv1\242\002\004UCAE\252\002" +
+      "\030udb.core.Authz.Entity.V1\312\002\030Udb\\Core\\Aut" +
+      "hz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Auth" +
+      "z\\Entity\\V1\352\002\034Udb::Core::Authz::Entity::" +
+      "V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

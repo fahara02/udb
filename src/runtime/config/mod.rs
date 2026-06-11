@@ -232,6 +232,7 @@ fn pg_dsn_from_libpq_env() -> Option<String> {
     Some(dsn)
 }
 
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TlsSettings {

@@ -136,16 +136,16 @@ var File_udb_core_notification_entity_v1_notification_preference_proto protorefl
 
 const file_udb_core_notification_entity_v1_notification_preference_proto_rawDesc = "" +
 	"\n" +
-	"=udb/core/notification/entity/v1/notification_preference.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\x91\r\n" +
+	"=udb/core/notification/entity/v1/notification_preference.proto\x12\x1fudb.core.notification.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\x1a+udb/core/notification/entity/v1/enums.proto\"\x94\r\n" +
 	"\x16NotificationPreference\x12U\n" +
 	"\rpreference_id\x18\x01 \x01(\tB0\x82\xb7\x18,\n" +
 	"\rpreference_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\fpreferenceId\x12q\n" +
 	"\auser_id\x18\x02 \x01(\tBX\x82\xb7\x18T\n" +
 	"\auser_id\x12\x04UUID\x18\x01RA\n" +
-	"\"idx_notif_prefs_user_channel_event\x12\x05BTREE\x18\x01Z\x12channel,event_typeR\x06userId\x12`\n" +
-	"\ttenant_id\x18\x03 \x01(\tBC\x82\xb7\x18?\n" +
+	"\"idx_notif_prefs_user_channel_event\x12\x05BTREE\x18\x01Z\x12channel,event_typeR\x06userId\x12c\n" +
+	"\ttenant_id\x18\x03 \x01(\tBF\x82\xb7\x18B\n" +
 	"\ttenant_id\x12\fVARCHAR(120)\x18\x01R\"\n" +
-	"\x19idx_notif_prefs_tenant_id\x12\x05BTREER\btenantId\x12l\n" +
+	"\x19idx_notif_prefs_tenant_id\x12\x05BTREE\x98\x02\x01R\btenantId\x12l\n" +
 	"\achannel\x18\x04 \x01(\x0e24.udb.core.notification.entity.v1.NotificationChannelB\x1c\x82\xb7\x18\x18\n" +
 	"\achannel\x12\vVARCHAR(20)\x18\x01R\achannel\x12\x81\x01\n" +
 	"\n" +
