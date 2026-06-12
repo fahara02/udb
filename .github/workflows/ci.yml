@@ -677,8 +677,20 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     env:
       UDB_PG_DSN: postgres://udb:udb@localhost:5432/udb_ci
+      UDB_NOSQL_DSN: mongodb://localhost:27017/udb_live_sdk?directConnection=true
+      UDB_MONGODB_DSN: mongodb://localhost:27017/udb_live_sdk?directConnection=true
+      UDB_NOSQL_DATABASE: udb_live_sdk
       UDB_MINIO_ENDPOINT: http://localhost:9000
       UDB_MINIO_ACCESS_KEY: minio
       UDB_MINIO_SECRET_KEY: minio123
@@ -739,7 +751,7 @@ jobs:
         working-directory: sdk/typescript
         run: npm ci --no-audit --no-fund
       - name: Build UDB broker
-        run: cargo build --locked --bin udb --no-default-features --features "postgres,mongodb,s3,runtime-logging"
+        run: cargo build --locked --bin udb --no-default-features --features "postgres,mongodb-native,s3,runtime-logging"
       - name: Create live-sdk MinIO bucket
         shell: bash
         run: |
