@@ -87,8 +87,9 @@ class ProjectionDriftScanRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -108,9 +109,9 @@ class ProjectionDriftScanRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -130,9 +131,9 @@ class ProjectionDriftScanRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMessageType(string $var)
+    public function setMessageType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->message_type = $var;
 
         return $this;
@@ -152,9 +153,9 @@ class ProjectionDriftScanRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setScanMode(string $var)
+    public function setScanMode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->scan_mode = $var;
 
         return $this;
@@ -174,7 +175,7 @@ class ProjectionDriftScanRequest extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRowsPerTarget(int $var)
+    public function setRowsPerTarget($var)
     {
         GPBUtil::checkInt32($var);
         $this->rows_per_target = $var;
@@ -196,8 +197,9 @@ class ProjectionDriftScanRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRepair(bool $var)
+    public function setRepair($var)
     {
+        GPBUtil::checkBool($var);
         $this->repair = $var;
 
         return $this;
@@ -217,7 +219,7 @@ class ProjectionDriftScanRequest extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setLimit(int $var)
+    public function setLimit($var)
     {
         GPBUtil::checkInt32($var);
         $this->limit = $var;

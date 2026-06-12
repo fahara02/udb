@@ -137,9 +137,9 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setServiceId(string $var)
+    public function setServiceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->service_id = $var;
 
         return $this;
@@ -159,7 +159,7 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setProtoServiceNames(array|RepeatedField $var)
+    public function setProtoServiceNames($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->proto_service_names = $arr;
@@ -181,8 +181,9 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setEnabled(bool $var)
+    public function setEnabled($var)
     {
+        GPBUtil::checkBool($var);
         $this->enabled = $var;
 
         return $this;
@@ -202,8 +203,9 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setConfigured(bool $var)
+    public function setConfigured($var)
     {
+        GPBUtil::checkBool($var);
         $this->configured = $var;
 
         return $this;
@@ -223,8 +225,9 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setMounted(bool $var)
+    public function setMounted($var)
     {
+        GPBUtil::checkBool($var);
         $this->mounted = $var;
 
         return $this;
@@ -244,8 +247,9 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setHealthy(bool $var)
+    public function setHealthy($var)
     {
+        GPBUtil::checkBool($var);
         $this->healthy = $var;
 
         return $this;
@@ -265,8 +269,9 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setDegraded(bool $var)
+    public function setDegraded($var)
     {
+        GPBUtil::checkBool($var);
         $this->degraded = $var;
 
         return $this;
@@ -286,9 +291,9 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSurface(string $var)
+    public function setSurface($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->surface = $var;
 
         return $this;
@@ -308,9 +313,9 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setListenerKind(string $var)
+    public function setListenerKind($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->listener_kind = $var;
 
         return $this;
@@ -330,7 +335,7 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setSupportedRpcs(array|RepeatedField $var)
+    public function setSupportedRpcs($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->supported_rpcs = $arr;
@@ -352,7 +357,7 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setCapabilities(array|RepeatedField $var)
+    public function setCapabilities($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->capabilities = $arr;
@@ -374,7 +379,7 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRequiredBackends(array|RepeatedField $var)
+    public function setRequiredBackends($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->required_backends = $arr;
@@ -396,7 +401,7 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setMissingDependencies(array|RepeatedField $var)
+    public function setMissingDependencies($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->missing_dependencies = $arr;
@@ -418,9 +423,9 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDisabledReason(string $var)
+    public function setDisabledReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->disabled_reason = $var;
 
         return $this;
@@ -440,9 +445,9 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMigrationStatus(string $var)
+    public function setMigrationStatus($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->migration_status = $var;
 
         return $this;
@@ -462,9 +467,9 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDescriptorVersion(string $var)
+    public function setDescriptorVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->descriptor_version = $var;
 
         return $this;
@@ -484,8 +489,9 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setOwnsBackgroundWorkers(bool $var)
+    public function setOwnsBackgroundWorkers($var)
     {
+        GPBUtil::checkBool($var);
         $this->owns_background_workers = $var;
 
         return $this;
@@ -505,8 +511,9 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setBackgroundWorkerEnabled(bool $var)
+    public function setBackgroundWorkerEnabled($var)
     {
+        GPBUtil::checkBool($var);
         $this->background_worker_enabled = $var;
 
         return $this;
@@ -526,7 +533,7 @@ class NativeServiceStatus extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setBackgroundWorkers(array|RepeatedField $var)
+    public function setBackgroundWorkers($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->background_workers = $arr;

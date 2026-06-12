@@ -52,9 +52,9 @@ class DateRangeFilter extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFrom(string $var)
+    public function setFrom($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->from = $var;
 
         return $this;
@@ -74,9 +74,9 @@ class DateRangeFilter extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTo(string $var)
+    public function setTo($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->to = $var;
 
         return $this;

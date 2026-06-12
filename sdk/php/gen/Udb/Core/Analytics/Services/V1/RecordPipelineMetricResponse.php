@@ -47,8 +47,9 @@ class RecordPipelineMetricResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setAccepted(bool $var)
+    public function setAccepted($var)
     {
+        GPBUtil::checkBool($var);
         $this->accepted = $var;
 
         return $this;

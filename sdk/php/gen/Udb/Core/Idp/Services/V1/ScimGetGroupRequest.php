@@ -57,9 +57,9 @@ class ScimGetGroupRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -79,9 +79,9 @@ class ScimGetGroupRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProviderId(string $var)
+    public function setProviderId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->provider_id = $var;
 
         return $this;
@@ -101,9 +101,9 @@ class ScimGetGroupRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setScimGroupId(string $var)
+    public function setScimGroupId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->scim_group_id = $var;
 
         return $this;

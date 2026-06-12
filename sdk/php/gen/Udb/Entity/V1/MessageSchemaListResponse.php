@@ -62,9 +62,9 @@ class MessageSchemaListResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -84,9 +84,9 @@ class MessageSchemaListResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCatalogVersion(string $var)
+    public function setCatalogVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->catalog_version = $var;
 
         return $this;
@@ -106,9 +106,9 @@ class MessageSchemaListResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setManifestChecksum(string $var)
+    public function setManifestChecksum($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->manifest_checksum = $var;
 
         return $this;
@@ -128,7 +128,7 @@ class MessageSchemaListResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setMessageTypes(array|RepeatedField $var)
+    public function setMessageTypes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->message_types = $arr;

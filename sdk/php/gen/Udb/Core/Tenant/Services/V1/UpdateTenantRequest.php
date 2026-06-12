@@ -73,9 +73,9 @@ class UpdateTenantRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -95,9 +95,9 @@ class UpdateTenantRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -117,9 +117,9 @@ class UpdateTenantRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStatus(string $var)
+    public function setStatus($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->status = $var;
 
         return $this;
@@ -143,9 +143,9 @@ class UpdateTenantRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setConfig(string $var)
+    public function setConfig($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->config = $var;
 
         return $this;
@@ -169,9 +169,9 @@ class UpdateTenantRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBranding(string $var)
+    public function setBranding($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->branding = $var;
 
         return $this;

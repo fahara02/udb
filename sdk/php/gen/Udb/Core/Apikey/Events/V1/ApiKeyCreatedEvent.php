@@ -99,9 +99,9 @@ class ApiKeyCreatedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventId(string $var)
+    public function setEventId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_id = $var;
 
         return $this;
@@ -121,9 +121,9 @@ class ApiKeyCreatedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKeyId(string $var)
+    public function setKeyId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->key_id = $var;
 
         return $this;
@@ -143,9 +143,9 @@ class ApiKeyCreatedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKeyPrefix(string $var)
+    public function setKeyPrefix($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->key_prefix = $var;
 
         return $this;
@@ -165,9 +165,9 @@ class ApiKeyCreatedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -175,7 +175,7 @@ class ApiKeyCreatedEvent extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.apikey.entity.v1.ApiKeyOwnerType owner_type = 5 [json_name = "ownerType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Apikey\Entity\V1\ApiKeyOwnerType}
+     * @return int
      */
     public function getOwnerType()
     {
@@ -184,10 +184,10 @@ class ApiKeyCreatedEvent extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.apikey.entity.v1.ApiKeyOwnerType owner_type = 5 [json_name = "ownerType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Apikey\Entity\V1\ApiKeyOwnerType}
+     * @param int $var
      * @return $this
      */
-    public function setOwnerType(int $var)
+    public function setOwnerType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Apikey\Entity\V1\ApiKeyOwnerType::class);
         $this->owner_type = $var;
@@ -209,9 +209,9 @@ class ApiKeyCreatedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOwnerId(string $var)
+    public function setOwnerId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->owner_id = $var;
 
         return $this;
@@ -231,7 +231,7 @@ class ApiKeyCreatedEvent extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setScopes(array|RepeatedField $var)
+    public function setScopes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->scopes = $arr;
@@ -253,9 +253,9 @@ class ApiKeyCreatedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCreatedBy(string $var)
+    public function setCreatedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->created_by = $var;
 
         return $this;
@@ -275,9 +275,9 @@ class ApiKeyCreatedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -307,8 +307,9 @@ class ApiKeyCreatedEvent extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setOccurredAt(\Google\Protobuf\Timestamp|null $var)
+    public function setOccurredAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->occurred_at = $var;
 
         return $this;
@@ -328,9 +329,9 @@ class ApiKeyCreatedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;

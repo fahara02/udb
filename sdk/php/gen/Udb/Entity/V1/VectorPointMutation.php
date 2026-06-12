@@ -57,9 +57,9 @@ class VectorPointMutation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setId(string $var)
+    public function setId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->id = $var;
 
         return $this;
@@ -79,7 +79,7 @@ class VectorPointMutation extends \Google\Protobuf\Internal\Message
      * @param float[] $var
      * @return $this
      */
-    public function setVector(array|RepeatedField $var)
+    public function setVector($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::FLOAT);
         $this->vector = $arr;
@@ -111,8 +111,9 @@ class VectorPointMutation extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Struct $var
      * @return $this
      */
-    public function setPayload(\Google\Protobuf\Struct|null $var)
+    public function setPayload($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->payload = $var;
 
         return $this;

@@ -52,9 +52,9 @@ class ResourceListResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -74,7 +74,7 @@ class ResourceListResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setResources(array|RepeatedField $var)
+    public function setResources($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->resources = $arr;

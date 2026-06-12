@@ -82,8 +82,9 @@ class AuthnResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authn\Services\V1\Principal $var
      * @return $this
      */
-    public function setPrincipal(\Udb\Core\Authn\Services\V1\Principal|null $var)
+    public function setPrincipal($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authn\Services\V1\Principal::class);
         $this->principal = $var;
 
         return $this;
@@ -103,9 +104,9 @@ class AuthnResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSessionId(string $var)
+    public function setSessionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->session_id = $var;
 
         return $this;
@@ -125,9 +126,9 @@ class AuthnResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAccessToken(string $var)
+    public function setAccessToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->access_token = $var;
 
         return $this;
@@ -147,7 +148,7 @@ class AuthnResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setExpiresAtUnix(int|string $var)
+    public function setExpiresAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->expires_at_unix = $var;
@@ -169,9 +170,9 @@ class AuthnResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRelationshipVersion(string $var)
+    public function setRelationshipVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->relationship_version = $var;
 
         return $this;
@@ -191,7 +192,7 @@ class AuthnResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setWarnings(array|RepeatedField $var)
+    public function setWarnings($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->warnings = $arr;

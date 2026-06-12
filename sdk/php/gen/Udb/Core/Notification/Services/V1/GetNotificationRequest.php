@@ -47,9 +47,9 @@ class GetNotificationRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLogId(string $var)
+    public function setLogId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->log_id = $var;
 
         return $this;

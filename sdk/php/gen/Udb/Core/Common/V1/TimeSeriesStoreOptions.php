@@ -75,7 +75,7 @@ class TimeSeriesStoreOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.TimeSeriesBackendType backend = 1 [json_name = "backend"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\TimeSeriesBackendType}
+     * @return int
      */
     public function getBackend()
     {
@@ -84,10 +84,10 @@ class TimeSeriesStoreOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.TimeSeriesBackendType backend = 1 [json_name = "backend"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\TimeSeriesBackendType}
+     * @param int $var
      * @return $this
      */
-    public function setBackend(int $var)
+    public function setBackend($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\TimeSeriesBackendType::class);
         $this->backend = $var;
@@ -109,9 +109,9 @@ class TimeSeriesStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDatabaseName(string $var)
+    public function setDatabaseName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->database_name = $var;
 
         return $this;
@@ -131,9 +131,9 @@ class TimeSeriesStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMeasurementName(string $var)
+    public function setMeasurementName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->measurement_name = $var;
 
         return $this;
@@ -153,9 +153,9 @@ class TimeSeriesStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTimeField(string $var)
+    public function setTimeField($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->time_field = $var;
 
         return $this;
@@ -175,9 +175,9 @@ class TimeSeriesStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantField(string $var)
+    public function setTenantField($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_field = $var;
 
         return $this;
@@ -197,7 +197,7 @@ class TimeSeriesStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setTagFields(array|RepeatedField $var)
+    public function setTagFields($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->tag_fields = $arr;
@@ -219,7 +219,7 @@ class TimeSeriesStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setValueFields(array|RepeatedField $var)
+    public function setValueFields($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->value_fields = $arr;
@@ -241,7 +241,7 @@ class TimeSeriesStoreOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRetentionDays(int $var)
+    public function setRetentionDays($var)
     {
         GPBUtil::checkInt32($var);
         $this->retention_days = $var;
@@ -263,9 +263,9 @@ class TimeSeriesStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDownsamplePolicy(string $var)
+    public function setDownsamplePolicy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->downsample_policy = $var;
 
         return $this;

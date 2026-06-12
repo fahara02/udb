@@ -57,7 +57,7 @@ class GetReconciliationAnalyticsResponse extends \Google\Protobuf\Internal\Messa
      * @param \Udb\Core\Analytics\Entity\V1\ReconciliationAnalyticsSummary[] $var
      * @return $this
      */
-    public function setSummaries(array|RepeatedField $var)
+    public function setSummaries($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Analytics\Entity\V1\ReconciliationAnalyticsSummary::class);
         $this->summaries = $arr;
@@ -79,8 +79,9 @@ class GetReconciliationAnalyticsResponse extends \Google\Protobuf\Internal\Messa
      * @param float $var
      * @return $this
      */
-    public function setOverallResolutionRate(float $var)
+    public function setOverallResolutionRate($var)
     {
+        GPBUtil::checkDouble($var);
         $this->overall_resolution_rate = $var;
 
         return $this;
@@ -100,8 +101,9 @@ class GetReconciliationAnalyticsResponse extends \Google\Protobuf\Internal\Messa
      * @param float $var
      * @return $this
      */
-    public function setAvgReconciliationMs(float $var)
+    public function setAvgReconciliationMs($var)
     {
+        GPBUtil::checkDouble($var);
         $this->avg_reconciliation_ms = $var;
 
         return $this;

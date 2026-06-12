@@ -82,9 +82,9 @@ class BackendCapabilityDescriptor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -104,9 +104,9 @@ class BackendCapabilityDescriptor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTier(string $var)
+    public function setTier($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tier = $var;
 
         return $this;
@@ -126,7 +126,7 @@ class BackendCapabilityDescriptor extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setOperations(array|RepeatedField $var)
+    public function setOperations($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->operations = $arr;
@@ -148,9 +148,9 @@ class BackendCapabilityDescriptor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUnsupportedErrorCode(string $var)
+    public function setUnsupportedErrorCode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->unsupported_error_code = $var;
 
         return $this;
@@ -170,9 +170,9 @@ class BackendCapabilityDescriptor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setConsistencyModel(string $var)
+    public function setConsistencyModel($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->consistency_model = $var;
 
         return $this;
@@ -192,7 +192,7 @@ class BackendCapabilityDescriptor extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setMaxPayloadBytes(int|string $var)
+    public function setMaxPayloadBytes($var)
     {
         GPBUtil::checkInt64($var);
         $this->max_payload_bytes = $var;
@@ -214,8 +214,9 @@ class BackendCapabilityDescriptor extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setSupportsXa(bool $var)
+    public function setSupportsXa($var)
     {
+        GPBUtil::checkBool($var);
         $this->supports_xa = $var;
 
         return $this;
@@ -235,8 +236,9 @@ class BackendCapabilityDescriptor extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setSupportsTwoPhaseCommit(bool $var)
+    public function setSupportsTwoPhaseCommit($var)
     {
+        GPBUtil::checkBool($var);
         $this->supports_two_phase_commit = $var;
 
         return $this;

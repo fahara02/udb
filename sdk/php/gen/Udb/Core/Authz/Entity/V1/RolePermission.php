@@ -72,9 +72,9 @@ class RolePermission extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRolePermissionId(string $var)
+    public function setRolePermissionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->role_permission_id = $var;
 
         return $this;
@@ -94,9 +94,9 @@ class RolePermission extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRoleId(string $var)
+    public function setRoleId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->role_id = $var;
 
         return $this;
@@ -116,9 +116,9 @@ class RolePermission extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPermissionCode(string $var)
+    public function setPermissionCode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->permission_code = $var;
 
         return $this;
@@ -138,9 +138,9 @@ class RolePermission extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setGrantedBy(string $var)
+    public function setGrantedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->granted_by = $var;
 
         return $this;
@@ -170,8 +170,9 @@ class RolePermission extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setGrantedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setGrantedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->granted_at = $var;
 
         return $this;
@@ -191,9 +192,9 @@ class RolePermission extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;

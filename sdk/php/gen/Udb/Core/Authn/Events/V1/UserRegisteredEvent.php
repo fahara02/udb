@@ -115,9 +115,9 @@ class UserRegisteredEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventId(string $var)
+    public function setEventId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_id = $var;
 
         return $this;
@@ -137,9 +137,9 @@ class UserRegisteredEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -159,9 +159,9 @@ class UserRegisteredEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUsername(string $var)
+    public function setUsername($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->username = $var;
 
         return $this;
@@ -185,9 +185,9 @@ class UserRegisteredEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEmail(string $var)
+    public function setEmail($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->email = $var;
 
         return $this;
@@ -207,9 +207,9 @@ class UserRegisteredEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -229,9 +229,9 @@ class UserRegisteredEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCreatedBy(string $var)
+    public function setCreatedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->created_by = $var;
 
         return $this;
@@ -251,9 +251,9 @@ class UserRegisteredEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -283,8 +283,9 @@ class UserRegisteredEvent extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setOccurredAt(\Google\Protobuf\Timestamp|null $var)
+    public function setOccurredAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->occurred_at = $var;
 
         return $this;
@@ -304,9 +305,9 @@ class UserRegisteredEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAccessSurface(string $var)
+    public function setAccessSurface($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->access_surface = $var;
 
         return $this;
@@ -326,9 +327,9 @@ class UserRegisteredEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -336,7 +337,7 @@ class UserRegisteredEvent extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AccountKind account_kind = 11 [json_name = "accountKind"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\AccountKind}
+     * @return int
      */
     public function getAccountKind()
     {
@@ -345,10 +346,10 @@ class UserRegisteredEvent extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AccountKind account_kind = 11 [json_name = "accountKind"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\AccountKind}
+     * @param int $var
      * @return $this
      */
-    public function setAccountKind(int $var)
+    public function setAccountKind($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\AccountKind::class);
         $this->account_kind = $var;
@@ -374,9 +375,9 @@ class UserRegisteredEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setContactAddress(string $var)
+    public function setContactAddress($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->contact_address = $var;
 
         return $this;
@@ -396,9 +397,9 @@ class UserRegisteredEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProviderId(string $var)
+    public function setProviderId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->provider_id = $var;
 
         return $this;

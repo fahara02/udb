@@ -65,8 +65,9 @@ class GetFileResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Storage\Entity\V1\File $var
      * @return $this
      */
-    public function setFile(\Udb\Core\Storage\Entity\V1\File|null $var)
+    public function setFile($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Storage\Entity\V1\File::class);
         $this->file = $var;
 
         return $this;
@@ -100,8 +101,9 @@ class GetFileResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ApiError $var
      * @return $this
      */
-    public function setError(\Udb\Core\Common\V1\ApiError|null $var)
+    public function setError($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
 
         return $this;

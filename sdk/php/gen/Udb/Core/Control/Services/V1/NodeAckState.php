@@ -92,9 +92,9 @@ class NodeAckState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNodeId(string $var)
+    public function setNodeId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->node_id = $var;
 
         return $this;
@@ -102,7 +102,7 @@ class NodeAckState extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.control.entity.v1.ResourceType resource_type = 2 [json_name = "resourceType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Control\Entity\V1\ResourceType}
+     * @return int
      */
     public function getResourceType()
     {
@@ -111,10 +111,10 @@ class NodeAckState extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.control.entity.v1.ResourceType resource_type = 2 [json_name = "resourceType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Control\Entity\V1\ResourceType}
+     * @param int $var
      * @return $this
      */
-    public function setResourceType(int $var)
+    public function setResourceType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Control\Entity\V1\ResourceType::class);
         $this->resource_type = $var;
@@ -136,7 +136,7 @@ class NodeAckState extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setSubscribedNames(array|RepeatedField $var)
+    public function setSubscribedNames($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->subscribed_names = $arr;
@@ -158,9 +158,9 @@ class NodeAckState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAcceptedVersion(string $var)
+    public function setAcceptedVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->accepted_version = $var;
 
         return $this;
@@ -180,9 +180,9 @@ class NodeAckState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLastGoodVersion(string $var)
+    public function setLastGoodVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->last_good_version = $var;
 
         return $this;
@@ -202,9 +202,9 @@ class NodeAckState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLastResponseNonce(string $var)
+    public function setLastResponseNonce($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->last_response_nonce = $var;
 
         return $this;
@@ -224,9 +224,9 @@ class NodeAckState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNackErrorDetail(string $var)
+    public function setNackErrorDetail($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->nack_error_detail = $var;
 
         return $this;
@@ -250,8 +250,9 @@ class NodeAckState extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setInSync(bool $var)
+    public function setInSync($var)
     {
+        GPBUtil::checkBool($var);
         $this->in_sync = $var;
 
         return $this;
@@ -281,8 +282,9 @@ class NodeAckState extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setUpdatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setUpdatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->updated_at = $var;
 
         return $this;

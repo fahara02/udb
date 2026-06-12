@@ -89,9 +89,9 @@ class UserStatusChangedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventId(string $var)
+    public function setEventId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_id = $var;
 
         return $this;
@@ -111,9 +111,9 @@ class UserStatusChangedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -121,7 +121,7 @@ class UserStatusChangedEvent extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.UserStatus old_status = 3 [json_name = "oldStatus"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\UserStatus}
+     * @return int
      */
     public function getOldStatus()
     {
@@ -130,10 +130,10 @@ class UserStatusChangedEvent extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.UserStatus old_status = 3 [json_name = "oldStatus"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\UserStatus}
+     * @param int $var
      * @return $this
      */
-    public function setOldStatus(int $var)
+    public function setOldStatus($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\UserStatus::class);
         $this->old_status = $var;
@@ -143,7 +143,7 @@ class UserStatusChangedEvent extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.UserStatus new_status = 4 [json_name = "newStatus"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\UserStatus}
+     * @return int
      */
     public function getNewStatus()
     {
@@ -152,10 +152,10 @@ class UserStatusChangedEvent extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.UserStatus new_status = 4 [json_name = "newStatus"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\UserStatus}
+     * @param int $var
      * @return $this
      */
-    public function setNewStatus(int $var)
+    public function setNewStatus($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\UserStatus::class);
         $this->new_status = $var;
@@ -177,9 +177,9 @@ class UserStatusChangedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setChangedBy(string $var)
+    public function setChangedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->changed_by = $var;
 
         return $this;
@@ -199,9 +199,9 @@ class UserStatusChangedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReason(string $var)
+    public function setReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reason = $var;
 
         return $this;
@@ -221,9 +221,9 @@ class UserStatusChangedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -253,8 +253,9 @@ class UserStatusChangedEvent extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setOccurredAt(\Google\Protobuf\Timestamp|null $var)
+    public function setOccurredAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->occurred_at = $var;
 
         return $this;
@@ -274,9 +275,9 @@ class UserStatusChangedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;

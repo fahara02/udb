@@ -99,7 +99,7 @@ class AdminSummaryResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\AdminCatalogSummary[] $var
      * @return $this
      */
-    public function setCatalog(array|RepeatedField $var)
+    public function setCatalog($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\AdminCatalogSummary::class);
         $this->catalog = $arr;
@@ -135,8 +135,9 @@ class AdminSummaryResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\AdminCdcSummary $var
      * @return $this
      */
-    public function setCdc(\Udb\Entity\V1\AdminCdcSummary|null $var)
+    public function setCdc($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\AdminCdcSummary::class);
         $this->cdc = $var;
 
         return $this;
@@ -170,8 +171,9 @@ class AdminSummaryResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\AdminSagaSummary $var
      * @return $this
      */
-    public function setSagas(\Udb\Entity\V1\AdminSagaSummary|null $var)
+    public function setSagas($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\AdminSagaSummary::class);
         $this->sagas = $var;
 
         return $this;
@@ -195,7 +197,7 @@ class AdminSummaryResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\AdminBackendSummary[] $var
      * @return $this
      */
-    public function setBackends(array|RepeatedField $var)
+    public function setBackends($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\AdminBackendSummary::class);
         $this->backends = $arr;
@@ -221,7 +223,7 @@ class AdminSummaryResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setActivePolicyCount(int $var)
+    public function setActivePolicyCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->active_policy_count = $var;
@@ -247,7 +249,7 @@ class AdminSummaryResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setSnapshotAtUnixMs(int|string $var)
+    public function setSnapshotAtUnixMs($var)
     {
         GPBUtil::checkInt64($var);
         $this->snapshot_at_unix_ms = $var;
@@ -269,7 +271,7 @@ class AdminSummaryResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setWarnings(array|RepeatedField $var)
+    public function setWarnings($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->warnings = $arr;

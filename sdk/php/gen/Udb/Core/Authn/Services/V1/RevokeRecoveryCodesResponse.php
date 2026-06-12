@@ -47,7 +47,7 @@ class RevokeRecoveryCodesResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setRevokedCount(int|string $var)
+    public function setRevokedCount($var)
     {
         GPBUtil::checkInt64($var);
         $this->revoked_count = $var;

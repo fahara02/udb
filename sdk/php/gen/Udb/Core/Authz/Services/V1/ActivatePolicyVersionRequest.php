@@ -80,8 +80,9 @@ class ActivatePolicyVersionRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\GovernanceActor $var
      * @return $this
      */
-    public function setActor(\Udb\Core\Authz\Services\V1\GovernanceActor|null $var)
+    public function setActor($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\GovernanceActor::class);
         $this->actor = $var;
 
         return $this;
@@ -101,9 +102,9 @@ class ActivatePolicyVersionRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicyVersionId(string $var)
+    public function setPolicyVersionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_version_id = $var;
 
         return $this;
@@ -123,7 +124,7 @@ class ActivatePolicyVersionRequest extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setExpectedRevision(int|string $var)
+    public function setExpectedRevision($var)
     {
         GPBUtil::checkInt64($var);
         $this->expected_revision = $var;
@@ -149,7 +150,7 @@ class ActivatePolicyVersionRequest extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setExpectedPolicyRevision(int|string $var)
+    public function setExpectedPolicyRevision($var)
     {
         GPBUtil::checkInt64($var);
         $this->expected_policy_revision = $var;
@@ -171,7 +172,7 @@ class ActivatePolicyVersionRequest extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setExpectedRelationshipRevision(int|string $var)
+    public function setExpectedRelationshipRevision($var)
     {
         GPBUtil::checkInt64($var);
         $this->expected_relationship_revision = $var;

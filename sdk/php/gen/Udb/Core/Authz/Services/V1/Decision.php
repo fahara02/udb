@@ -92,9 +92,9 @@ class Decision extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDecisionId(string $var)
+    public function setDecisionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->decision_id = $var;
 
         return $this;
@@ -114,8 +114,9 @@ class Decision extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setAllowed(bool $var)
+    public function setAllowed($var)
     {
+        GPBUtil::checkBool($var);
         $this->allowed = $var;
 
         return $this;
@@ -135,9 +136,9 @@ class Decision extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEffect(string $var)
+    public function setEffect($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->effect = $var;
 
         return $this;
@@ -157,9 +158,9 @@ class Decision extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDenyReason(string $var)
+    public function setDenyReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->deny_reason = $var;
 
         return $this;
@@ -179,7 +180,7 @@ class Decision extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setMatchedPolicyIds(array|RepeatedField $var)
+    public function setMatchedPolicyIds($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->matched_policy_ids = $arr;
@@ -201,7 +202,7 @@ class Decision extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRequiredScopes(array|RepeatedField $var)
+    public function setRequiredScopes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->required_scopes = $arr;
@@ -223,9 +224,9 @@ class Decision extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicyVersion(string $var)
+    public function setPolicyVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_version = $var;
 
         return $this;
@@ -245,9 +246,9 @@ class Decision extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRelationshipVersion(string $var)
+    public function setRelationshipVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->relationship_version = $var;
 
         return $this;
@@ -267,7 +268,7 @@ class Decision extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setCacheTtlSeconds(int|string $var)
+    public function setCacheTtlSeconds($var)
     {
         GPBUtil::checkUint64($var);
         $this->cache_ttl_seconds = $var;
@@ -289,8 +290,9 @@ class Decision extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setAuditRequired(bool $var)
+    public function setAuditRequired($var)
     {
+        GPBUtil::checkBool($var);
         $this->audit_required = $var;
 
         return $this;

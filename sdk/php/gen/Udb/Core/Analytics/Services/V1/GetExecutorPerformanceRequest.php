@@ -69,9 +69,9 @@ class GetExecutorPerformanceRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setExecutorIdentity(string $var)
+    public function setExecutorIdentity($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->executor_identity = $var;
 
         return $this;
@@ -91,9 +91,9 @@ class GetExecutorPerformanceRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setWorkloadKind(string $var)
+    public function setWorkloadKind($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->workload_kind = $var;
 
         return $this;
@@ -113,9 +113,9 @@ class GetExecutorPerformanceRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDateFrom(string $var)
+    public function setDateFrom($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->date_from = $var;
 
         return $this;
@@ -135,9 +135,9 @@ class GetExecutorPerformanceRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDateTo(string $var)
+    public function setDateTo($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->date_to = $var;
 
         return $this;

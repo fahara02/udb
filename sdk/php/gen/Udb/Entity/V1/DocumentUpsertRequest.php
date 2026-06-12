@@ -87,8 +87,9 @@ class DocumentUpsertRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -118,8 +119,9 @@ class DocumentUpsertRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\StoreResource $var
      * @return $this
      */
-    public function setResource(\Udb\Entity\V1\StoreResource|null $var)
+    public function setResource($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\StoreResource::class);
         $this->resource = $var;
 
         return $this;
@@ -139,9 +141,9 @@ class DocumentUpsertRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDocumentId(string $var)
+    public function setDocumentId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->document_id = $var;
 
         return $this;
@@ -171,8 +173,9 @@ class DocumentUpsertRequest extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Struct $var
      * @return $this
      */
-    public function setDocument(\Google\Protobuf\Struct|null $var)
+    public function setDocument($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->document = $var;
 
         return $this;
@@ -192,7 +195,7 @@ class DocumentUpsertRequest extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setMergeFields(array|RepeatedField $var)
+    public function setMergeFields($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->merge_fields = $arr;
@@ -214,8 +217,9 @@ class DocumentUpsertRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setReplace(bool $var)
+    public function setReplace($var)
     {
+        GPBUtil::checkBool($var);
         $this->replace = $var;
 
         return $this;
@@ -235,9 +239,9 @@ class DocumentUpsertRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIdempotencyKey(string $var)
+    public function setIdempotencyKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->idempotency_key = $var;
 
         return $this;

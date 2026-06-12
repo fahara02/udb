@@ -57,7 +57,7 @@ class SeedBuiltinRolesResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setSeededRoleCodes(array|RepeatedField $var)
+    public function setSeededRoleCodes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->seeded_role_codes = $arr;
@@ -79,7 +79,7 @@ class SeedBuiltinRolesResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setCreated(int $var)
+    public function setCreated($var)
     {
         GPBUtil::checkInt32($var);
         $this->created = $var;
@@ -101,7 +101,7 @@ class SeedBuiltinRolesResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setExisting(int $var)
+    public function setExisting($var)
     {
         GPBUtil::checkInt32($var);
         $this->existing = $var;

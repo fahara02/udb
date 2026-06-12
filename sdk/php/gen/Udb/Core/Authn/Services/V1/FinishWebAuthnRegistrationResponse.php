@@ -57,8 +57,9 @@ class FinishWebAuthnRegistrationResponse extends \Google\Protobuf\Internal\Messa
      * @param bool $var
      * @return $this
      */
-    public function setRegistered(bool $var)
+    public function setRegistered($var)
     {
+        GPBUtil::checkBool($var);
         $this->registered = $var;
 
         return $this;
@@ -78,9 +79,9 @@ class FinishWebAuthnRegistrationResponse extends \Google\Protobuf\Internal\Messa
      * @param string $var
      * @return $this
      */
-    public function setCredentialId(string $var)
+    public function setCredentialId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->credential_id = $var;
 
         return $this;
@@ -100,9 +101,9 @@ class FinishWebAuthnRegistrationResponse extends \Google\Protobuf\Internal\Messa
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;

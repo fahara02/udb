@@ -5254,7 +5254,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "── Stage 2: native database fast-path access ──────────────────────────────\n\n`GetNativeAccess` runs the same `Authorize` decision and, when allowed,\nmints a short-lived contract for the caller to talk to the backend\ndirectly: a restricted role, a scoped DSN, and the exact set of\n`app.current_*` session variables the SDK must `SET LOCAL` so the\nbroker-generated RLS policies still apply. UDB stays the source of the\nauthorization decision; the native grant only carries it forward.",
+            "description": "`GetNativeAccess` runs the same `Authorize` decision and, when allowed,\nmints a short-lived contract for the caller to talk to the backend\ndirectly: a restricted role, a scoped DSN, and the exact set of\n`app.current_*` session variables the SDK must `SET LOCAL` so the\nbroker-generated RLS policies still apply. UDB stays the source of the\nauthorization decision; the native grant only carries it forward.",
             "in": "body",
             "required": true,
             "schema": {
@@ -5515,7 +5515,7 @@
         "parameters": [
           {
             "name": "body",
-            "description": "── Stage 2: signed policy bundles for local SDK authorization caches ───────\n\n`GetPolicyBundle` serializes the live authorization snapshot (policies,\nrole bindings, relationship tuples) and signs it so an SDK can cache it\nand answer `can()` locally without a round-trip, while still being able\nto verify the bundle was issued by UDB and has not expired.",
+            "description": "`GetPolicyBundle` serializes the live authorization snapshot (policies,\nrole bindings, relationship tuples) and signs it so an SDK can cache it\nand answer `can()` locally without a round-trip, while still being able\nto verify the bundle was issued by UDB and has not expired.",
             "in": "body",
             "required": true,
             "schema": {
@@ -14778,7 +14778,7 @@
           }
         }
       },
-      "description": "── Stage 2: native database fast-path access ──────────────────────────────\n\n`GetNativeAccess` runs the same `Authorize` decision and, when allowed,\nmints a short-lived contract for the caller to talk to the backend\ndirectly: a restricted role, a scoped DSN, and the exact set of\n`app.current_*` session variables the SDK must `SET LOCAL` so the\nbroker-generated RLS policies still apply. UDB stays the source of the\nauthorization decision; the native grant only carries it forward."
+      "description": "`GetNativeAccess` runs the same `Authorize` decision and, when allowed,\nmints a short-lived contract for the caller to talk to the backend\ndirectly: a restricted role, a scoped DSN, and the exact set of\n`app.current_*` session variables the SDK must `SET LOCAL` so the\nbroker-generated RLS policies still apply. UDB stays the source of the\nauthorization decision; the native grant only carries it forward."
     },
     "v1NativeAccessResponse": {
       "type": "object",
@@ -15426,7 +15426,7 @@
           "type": "string"
         }
       },
-      "description": "── Stage 2: signed policy bundles for local SDK authorization caches ───────\n\n`GetPolicyBundle` serializes the live authorization snapshot (policies,\nrole bindings, relationship tuples) and signs it so an SDK can cache it\nand answer `can()` locally without a round-trip, while still being able\nto verify the bundle was issued by UDB and has not expired."
+      "description": "`GetPolicyBundle` serializes the live authorization snapshot (policies,\nrole bindings, relationship tuples) and signs it so an SDK can cache it\nand answer `can()` locally without a round-trip, while still being able\nto verify the bundle was issued by UDB and has not expired."
     },
     "v1PolicyBundleResponse": {
       "type": "object",

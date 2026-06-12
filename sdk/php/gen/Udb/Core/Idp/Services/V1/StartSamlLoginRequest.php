@@ -59,9 +59,9 @@ class StartSamlLoginRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProviderId(string $var)
+    public function setProviderId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->provider_id = $var;
 
         return $this;
@@ -81,9 +81,9 @@ class StartSamlLoginRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -103,9 +103,9 @@ class StartSamlLoginRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRelayState(string $var)
+    public function setRelayState($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->relay_state = $var;
 
         return $this;

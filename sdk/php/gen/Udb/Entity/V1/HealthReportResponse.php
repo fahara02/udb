@@ -103,8 +103,9 @@ class HealthReportResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPassed(bool $var)
+    public function setPassed($var)
     {
+        GPBUtil::checkBool($var);
         $this->passed = $var;
 
         return $this;
@@ -124,8 +125,9 @@ class HealthReportResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPostgresConfigured(bool $var)
+    public function setPostgresConfigured($var)
     {
+        GPBUtil::checkBool($var);
         $this->postgres_configured = $var;
 
         return $this;
@@ -145,8 +147,9 @@ class HealthReportResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRedisConfigured(bool $var)
+    public function setRedisConfigured($var)
     {
+        GPBUtil::checkBool($var);
         $this->redis_configured = $var;
 
         return $this;
@@ -166,8 +169,9 @@ class HealthReportResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setQdrantConfigured(bool $var)
+    public function setQdrantConfigured($var)
     {
+        GPBUtil::checkBool($var);
         $this->qdrant_configured = $var;
 
         return $this;
@@ -187,8 +191,9 @@ class HealthReportResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setS3Configured(bool $var)
+    public function setS3Configured($var)
     {
+        GPBUtil::checkBool($var);
         $this->s3_configured = $var;
 
         return $this;
@@ -208,7 +213,7 @@ class HealthReportResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setErrors(array|RepeatedField $var)
+    public function setErrors($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->errors = $arr;
@@ -230,7 +235,7 @@ class HealthReportResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setWarnings(array|RepeatedField $var)
+    public function setWarnings($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->warnings = $arr;
@@ -256,9 +261,9 @@ class HealthReportResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPrivilegesJson(string $var)
+    public function setPrivilegesJson($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->privileges_json = $var;
 
         return $this;
@@ -282,9 +287,9 @@ class HealthReportResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProbesJson(string $var)
+    public function setProbesJson($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->probes_json = $var;
 
         return $this;
@@ -304,7 +309,7 @@ class HealthReportResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\BackendInstanceStatus[] $var
      * @return $this
      */
-    public function setBackendInstances(array|RepeatedField $var)
+    public function setBackendInstances($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\BackendInstanceStatus::class);
         $this->backend_instances = $arr;
@@ -326,7 +331,7 @@ class HealthReportResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\NativeServiceStatus[] $var
      * @return $this
      */
-    public function setNativeServices(array|RepeatedField $var)
+    public function setNativeServices($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\NativeServiceStatus::class);
         $this->native_services = $arr;

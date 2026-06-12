@@ -52,7 +52,7 @@ class ListRolesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Entity\V1\Role[] $var
      * @return $this
      */
-    public function setRoles(array|RepeatedField $var)
+    public function setRoles($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authz\Entity\V1\Role::class);
         $this->roles = $arr;
@@ -84,8 +84,9 @@ class ListRolesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\PageResponse $var
      * @return $this
      */
-    public function setPage(\Udb\Core\Common\V1\PageResponse|null $var)
+    public function setPage($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\PageResponse::class);
         $this->page = $var;
 
         return $this;

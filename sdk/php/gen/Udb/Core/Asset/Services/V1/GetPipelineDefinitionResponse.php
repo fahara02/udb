@@ -65,8 +65,9 @@ class GetPipelineDefinitionResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Asset\Entity\V1\PipelineDefinition $var
      * @return $this
      */
-    public function setDefinition(\Udb\Core\Asset\Entity\V1\PipelineDefinition|null $var)
+    public function setDefinition($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Asset\Entity\V1\PipelineDefinition::class);
         $this->definition = $var;
 
         return $this;
@@ -100,8 +101,9 @@ class GetPipelineDefinitionResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ApiError $var
      * @return $this
      */
-    public function setError(\Udb\Core\Common\V1\ApiError|null $var)
+    public function setError($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
 
         return $this;

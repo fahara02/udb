@@ -116,9 +116,9 @@ class PolicyDraft extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDraftId(string $var)
+    public function setDraftId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->draft_id = $var;
 
         return $this;
@@ -138,9 +138,9 @@ class PolicyDraft extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -160,9 +160,9 @@ class PolicyDraft extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -182,9 +182,9 @@ class PolicyDraft extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTitle(string $var)
+    public function setTitle($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->title = $var;
 
         return $this;
@@ -204,9 +204,9 @@ class PolicyDraft extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDescription(string $var)
+    public function setDescription($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->description = $var;
 
         return $this;
@@ -226,9 +226,9 @@ class PolicyDraft extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProposedPoliciesJson(string $var)
+    public function setProposedPoliciesJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->proposed_policies_json = $var;
 
         return $this;
@@ -248,9 +248,9 @@ class PolicyDraft extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProposedTuplesJson(string $var)
+    public function setProposedTuplesJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->proposed_tuples_json = $var;
 
         return $this;
@@ -270,9 +270,9 @@ class PolicyDraft extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBaseVersionId(string $var)
+    public function setBaseVersionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->base_version_id = $var;
 
         return $this;
@@ -292,9 +292,9 @@ class PolicyDraft extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStatus(string $var)
+    public function setStatus($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->status = $var;
 
         return $this;
@@ -314,9 +314,9 @@ class PolicyDraft extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAuthor(string $var)
+    public function setAuthor($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->author = $var;
 
         return $this;
@@ -336,8 +336,9 @@ class PolicyDraft extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setHighRisk(bool $var)
+    public function setHighRisk($var)
     {
+        GPBUtil::checkBool($var);
         $this->high_risk = $var;
 
         return $this;
@@ -367,8 +368,9 @@ class PolicyDraft extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;
@@ -398,8 +400,9 @@ class PolicyDraft extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setUpdatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setUpdatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->updated_at = $var;
 
         return $this;

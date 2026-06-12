@@ -114,9 +114,9 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setChallengeId(string $var)
+    public function setChallengeId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->challenge_id = $var;
 
         return $this;
@@ -136,9 +136,9 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -158,9 +158,9 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -180,9 +180,9 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -190,7 +190,7 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 5 [json_name = "factorKind", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\AuthFactorKind}
+     * @return int
      */
     public function getFactorKind()
     {
@@ -199,10 +199,10 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 5 [json_name = "factorKind", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\AuthFactorKind}
+     * @param int $var
      * @return $this
      */
-    public function setFactorKind(int $var)
+    public function setFactorKind($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\AuthFactorKind::class);
         $this->factor_kind = $var;
@@ -212,7 +212,7 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.MfaChallengePurpose purpose = 6 [json_name = "purpose", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\MfaChallengePurpose}
+     * @return int
      */
     public function getPurpose()
     {
@@ -221,10 +221,10 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.MfaChallengePurpose purpose = 6 [json_name = "purpose", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\MfaChallengePurpose}
+     * @param int $var
      * @return $this
      */
-    public function setPurpose(int $var)
+    public function setPurpose($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\MfaChallengePurpose::class);
         $this->purpose = $var;
@@ -250,9 +250,9 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeviceFingerprintHash(string $var)
+    public function setDeviceFingerprintHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->device_fingerprint_hash = $var;
 
         return $this;
@@ -272,9 +272,9 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIpAddressMasked(string $var)
+    public function setIpAddressMasked($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->ip_address_masked = $var;
 
         return $this;
@@ -294,7 +294,7 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setAttemptCount(int $var)
+    public function setAttemptCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->attempt_count = $var;
@@ -326,8 +326,9 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setExpiresAt(\Google\Protobuf\Timestamp|null $var)
+    public function setExpiresAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->expires_at = $var;
 
         return $this;
@@ -357,8 +358,9 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setConsumedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setConsumedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->consumed_at = $var;
 
         return $this;
@@ -388,8 +390,9 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;

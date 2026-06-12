@@ -67,9 +67,9 @@ class UpdateRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRoleId(string $var)
+    public function setRoleId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->role_id = $var;
 
         return $this;
@@ -89,9 +89,9 @@ class UpdateRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -111,9 +111,9 @@ class UpdateRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDescription(string $var)
+    public function setDescription($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->description = $var;
 
         return $this;
@@ -143,8 +143,9 @@ class UpdateRoleRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsActive(bool $var)
+    public function setIsActive($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_active = $var;
 
         return $this;
@@ -164,9 +165,9 @@ class UpdateRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUpdatedBy(string $var)
+    public function setUpdatedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->updated_by = $var;
 
         return $this;

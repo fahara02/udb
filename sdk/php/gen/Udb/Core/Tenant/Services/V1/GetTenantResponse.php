@@ -65,8 +65,9 @@ class GetTenantResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Tenant\Entity\V1\Tenant $var
      * @return $this
      */
-    public function setTenant(\Udb\Core\Tenant\Entity\V1\Tenant|null $var)
+    public function setTenant($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Tenant\Entity\V1\Tenant::class);
         $this->tenant = $var;
 
         return $this;
@@ -100,8 +101,9 @@ class GetTenantResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ApiError $var
      * @return $this
      */
-    public function setError(\Udb\Core\Common\V1\ApiError|null $var)
+    public function setError($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
 
         return $this;

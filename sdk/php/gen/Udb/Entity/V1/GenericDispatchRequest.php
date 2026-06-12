@@ -106,8 +106,9 @@ class GenericDispatchRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -131,9 +132,9 @@ class GenericDispatchRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -157,9 +158,9 @@ class GenericDispatchRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOperation(string $var)
+    public function setOperation($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->operation = $var;
 
         return $this;
@@ -179,9 +180,9 @@ class GenericDispatchRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceKind(string $var)
+    public function setResourceKind($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_kind = $var;
 
         return $this;
@@ -201,9 +202,9 @@ class GenericDispatchRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceName(string $var)
+    public function setResourceName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_name = $var;
 
         return $this;
@@ -223,9 +224,9 @@ class GenericDispatchRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceUri(string $var)
+    public function setResourceUri($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_uri = $var;
 
         return $this;
@@ -249,9 +250,9 @@ class GenericDispatchRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSpecJson(string $var)
+    public function setSpecJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->spec_json = $var;
 
         return $this;
@@ -271,9 +272,9 @@ class GenericDispatchRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIdempotencyKey(string $var)
+    public function setIdempotencyKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->idempotency_key = $var;
 
         return $this;
@@ -293,8 +294,9 @@ class GenericDispatchRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setDryRun(bool $var)
+    public function setDryRun($var)
     {
+        GPBUtil::checkBool($var);
         $this->dry_run = $var;
 
         return $this;

@@ -152,9 +152,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicyVersionId(string $var)
+    public function setPolicyVersionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_version_id = $var;
 
         return $this;
@@ -174,9 +174,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicySetId(string $var)
+    public function setPolicySetId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_set_id = $var;
 
         return $this;
@@ -196,7 +196,7 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setVersionNumber(int|string $var)
+    public function setVersionNumber($var)
     {
         GPBUtil::checkInt64($var);
         $this->version_number = $var;
@@ -206,7 +206,7 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.PolicyVersionState state = 4 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authz\Entity\V1\PolicyVersionState}
+     * @return int
      */
     public function getState()
     {
@@ -215,10 +215,10 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.PolicyVersionState state = 4 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authz\Entity\V1\PolicyVersionState}
+     * @param int $var
      * @return $this
      */
-    public function setState(int $var)
+    public function setState($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authz\Entity\V1\PolicyVersionState::class);
         $this->state = $var;
@@ -240,9 +240,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSnapshotHash(string $var)
+    public function setSnapshotHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->snapshot_hash = $var;
 
         return $this;
@@ -262,9 +262,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCreatedBy(string $var)
+    public function setCreatedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->created_by = $var;
 
         return $this;
@@ -294,8 +294,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;
@@ -315,9 +316,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setActivatedBy(string $var)
+    public function setActivatedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->activated_by = $var;
 
         return $this;
@@ -347,8 +348,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setActivatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setActivatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->activated_at = $var;
 
         return $this;
@@ -368,9 +370,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRollbackOf(string $var)
+    public function setRollbackOf($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->rollback_of = $var;
 
         return $this;
@@ -390,9 +392,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setChangeReason(string $var)
+    public function setChangeReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->change_reason = $var;
 
         return $this;
@@ -412,7 +414,7 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setRevision(int|string $var)
+    public function setRevision($var)
     {
         GPBUtil::checkInt64($var);
         $this->revision = $var;
@@ -434,9 +436,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setContentHash(string $var)
+    public function setContentHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->content_hash = $var;
 
         return $this;
@@ -456,9 +458,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -478,9 +480,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -504,9 +506,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPayloadJson(string $var)
+    public function setPayloadJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->payload_json = $var;
 
         return $this;
@@ -526,8 +528,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setHighRisk(bool $var)
+    public function setHighRisk($var)
     {
+        GPBUtil::checkBool($var);
         $this->high_risk = $var;
 
         return $this;
@@ -547,9 +550,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSubmittedBy(string $var)
+    public function setSubmittedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->submitted_by = $var;
 
         return $this;
@@ -573,9 +576,9 @@ class PolicyVersion extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSourceDraftId(string $var)
+    public function setSourceDraftId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->source_draft_id = $var;
 
         return $this;

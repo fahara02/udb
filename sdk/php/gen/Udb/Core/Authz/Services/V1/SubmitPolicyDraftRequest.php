@@ -67,8 +67,9 @@ class SubmitPolicyDraftRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\GovernanceActor $var
      * @return $this
      */
-    public function setActor(\Udb\Core\Authz\Services\V1\GovernanceActor|null $var)
+    public function setActor($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\GovernanceActor::class);
         $this->actor = $var;
 
         return $this;
@@ -88,9 +89,9 @@ class SubmitPolicyDraftRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDraftId(string $var)
+    public function setDraftId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->draft_id = $var;
 
         return $this;
@@ -110,7 +111,7 @@ class SubmitPolicyDraftRequest extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setExpectedUpdatedAtUnix(int|string $var)
+    public function setExpectedUpdatedAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->expected_updated_at_unix = $var;

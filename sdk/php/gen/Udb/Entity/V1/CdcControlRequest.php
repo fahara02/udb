@@ -67,8 +67,9 @@ class CdcControlRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -88,9 +89,9 @@ class CdcControlRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSlotName(string $var)
+    public function setSlotName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->slot_name = $var;
 
         return $this;
@@ -110,9 +111,9 @@ class CdcControlRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReason(string $var)
+    public function setReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reason = $var;
 
         return $this;

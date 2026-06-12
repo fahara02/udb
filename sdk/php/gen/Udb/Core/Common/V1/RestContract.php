@@ -62,8 +62,9 @@ class RestContract extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setResponseEnvelope(bool $var)
+    public function setResponseEnvelope($var)
     {
+        GPBUtil::checkBool($var);
         $this->response_envelope = $var;
 
         return $this;
@@ -83,8 +84,9 @@ class RestContract extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setApiError(bool $var)
+    public function setApiError($var)
     {
+        GPBUtil::checkBool($var);
         $this->api_error = $var;
 
         return $this;
@@ -104,8 +106,9 @@ class RestContract extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPaginationMeta(bool $var)
+    public function setPaginationMeta($var)
     {
+        GPBUtil::checkBool($var);
         $this->pagination_meta = $var;
 
         return $this;
@@ -125,8 +128,9 @@ class RestContract extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setExplicitNulls(bool $var)
+    public function setExplicitNulls($var)
     {
+        GPBUtil::checkBool($var);
         $this->explicit_nulls = $var;
 
         return $this;

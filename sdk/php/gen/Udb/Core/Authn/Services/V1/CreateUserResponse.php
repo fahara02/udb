@@ -65,8 +65,9 @@ class CreateUserResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authn\Entity\V1\User $var
      * @return $this
      */
-    public function setUser(\Udb\Core\Authn\Entity\V1\User|null $var)
+    public function setUser($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authn\Entity\V1\User::class);
         $this->user = $var;
 
         return $this;
@@ -90,9 +91,9 @@ class CreateUserResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOtpId(string $var)
+    public function setOtpId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->otp_id = $var;
 
         return $this;

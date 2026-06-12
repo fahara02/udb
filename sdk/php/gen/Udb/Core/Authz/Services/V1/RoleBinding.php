@@ -74,9 +74,9 @@ class RoleBinding extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSubject(string $var)
+    public function setSubject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->subject = $var;
 
         return $this;
@@ -96,9 +96,9 @@ class RoleBinding extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRole(string $var)
+    public function setRole($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->role = $var;
 
         return $this;
@@ -118,9 +118,9 @@ class RoleBinding extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenant(string $var)
+    public function setTenant($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant = $var;
 
         return $this;
@@ -140,9 +140,9 @@ class RoleBinding extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProject(string $var)
+    public function setProject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project = $var;
 
         return $this;
@@ -162,7 +162,7 @@ class RoleBinding extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setExpiresAtUnix(int|string $var)
+    public function setExpiresAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->expires_at_unix = $var;
@@ -184,9 +184,9 @@ class RoleBinding extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSource(string $var)
+    public function setSource($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->source = $var;
 
         return $this;

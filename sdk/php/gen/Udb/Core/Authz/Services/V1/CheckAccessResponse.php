@@ -67,8 +67,9 @@ class CheckAccessResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setAllowed(bool $var)
+    public function setAllowed($var)
     {
+        GPBUtil::checkBool($var);
         $this->allowed = $var;
 
         return $this;
@@ -76,7 +77,7 @@ class CheckAccessResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.PolicyEffect effect = 2 [json_name = "effect"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authz\Entity\V1\PolicyEffect}
+     * @return int
      */
     public function getEffect()
     {
@@ -85,10 +86,10 @@ class CheckAccessResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.PolicyEffect effect = 2 [json_name = "effect"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authz\Entity\V1\PolicyEffect}
+     * @param int $var
      * @return $this
      */
-    public function setEffect(int $var)
+    public function setEffect($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authz\Entity\V1\PolicyEffect::class);
         $this->effect = $var;
@@ -110,9 +111,9 @@ class CheckAccessResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMatchedRule(string $var)
+    public function setMatchedRule($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->matched_rule = $var;
 
         return $this;
@@ -132,9 +133,9 @@ class CheckAccessResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReason(string $var)
+    public function setReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reason = $var;
 
         return $this;
@@ -164,8 +165,9 @@ class CheckAccessResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\Decision $var
      * @return $this
      */
-    public function setDecision(\Udb\Core\Authz\Services\V1\Decision|null $var)
+    public function setDecision($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\Decision::class);
         $this->decision = $var;
 
         return $this;

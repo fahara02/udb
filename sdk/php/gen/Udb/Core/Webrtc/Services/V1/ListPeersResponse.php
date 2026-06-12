@@ -55,7 +55,7 @@ class ListPeersResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Webrtc\Entity\V1\Peer[] $var
      * @return $this
      */
-    public function setPeers(array|RepeatedField $var)
+    public function setPeers($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Webrtc\Entity\V1\Peer::class);
         $this->peers = $arr;
@@ -91,8 +91,9 @@ class ListPeersResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ApiError $var
      * @return $this
      */
-    public function setError(\Udb\Core\Common\V1\ApiError|null $var)
+    public function setError($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
 
         return $this;

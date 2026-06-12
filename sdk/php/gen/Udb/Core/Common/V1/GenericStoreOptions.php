@@ -92,9 +92,9 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStoreKind(string $var)
+    public function setStoreKind($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->store_kind = $var;
 
         return $this;
@@ -114,9 +114,9 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -136,9 +136,9 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLogicalName(string $var)
+    public function setLogicalName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->logical_name = $var;
 
         return $this;
@@ -158,9 +158,9 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDatabaseName(string $var)
+    public function setDatabaseName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->database_name = $var;
 
         return $this;
@@ -180,9 +180,9 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNamespace(string $var)
+    public function setNamespace($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->namespace = $var;
 
         return $this;
@@ -202,9 +202,9 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceName(string $var)
+    public function setResourceName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_name = $var;
 
         return $this;
@@ -224,9 +224,9 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDsnEnvKey(string $var)
+    public function setDsnEnvKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->dsn_env_key = $var;
 
         return $this;
@@ -246,9 +246,9 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDsn(string $var)
+    public function setDsn($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->dsn = $var;
 
         return $this;
@@ -268,9 +268,9 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPayloadSchemaJson(string $var)
+    public function setPayloadSchemaJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->payload_schema_json = $var;
 
         return $this;
@@ -290,7 +290,7 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setOptions(array|\Google\Protobuf\Internal\MapField $var)
+    public function setOptions($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->options = $arr;

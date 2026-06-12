@@ -95,9 +95,9 @@ class SqlArtifact extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -121,9 +121,9 @@ class SqlArtifact extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -147,9 +147,9 @@ class SqlArtifact extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPhase(string $var)
+    public function setPhase($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->phase = $var;
 
         return $this;
@@ -173,9 +173,9 @@ class SqlArtifact extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSql(string $var)
+    public function setSql($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->sql = $var;
 
         return $this;
@@ -199,9 +199,9 @@ class SqlArtifact extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFile(string $var)
+    public function setFile($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->file = $var;
 
         return $this;
@@ -225,9 +225,9 @@ class SqlArtifact extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setChecksumSha256(string $var)
+    public function setChecksumSha256($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->checksum_sha256 = $var;
 
         return $this;
@@ -251,8 +251,9 @@ class SqlArtifact extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRequiresReview(bool $var)
+    public function setRequiresReview($var)
     {
+        GPBUtil::checkBool($var);
         $this->requires_review = $var;
 
         return $this;

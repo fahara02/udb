@@ -62,7 +62,7 @@ class AnalyticalQueryResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\Row[] $var
      * @return $this
      */
-    public function setRows(array|RepeatedField $var)
+    public function setRows($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\Row::class);
         $this->rows = $arr;
@@ -84,9 +84,9 @@ class AnalyticalQueryResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNextPageToken(string $var)
+    public function setNextPageToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->next_page_token = $var;
 
         return $this;
@@ -116,8 +116,9 @@ class AnalyticalQueryResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\OperationStats $var
      * @return $this
      */
-    public function setStats(\Udb\Entity\V1\OperationStats|null $var)
+    public function setStats($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\OperationStats::class);
         $this->stats = $var;
 
         return $this;
@@ -137,7 +138,7 @@ class AnalyticalQueryResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\OperationWarning[] $var
      * @return $this
      */
-    public function setWarnings(array|RepeatedField $var)
+    public function setWarnings($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\OperationWarning::class);
         $this->warnings = $arr;

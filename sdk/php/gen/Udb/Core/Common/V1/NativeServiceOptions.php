@@ -146,9 +146,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setServiceId(string $var)
+    public function setServiceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->service_id = $var;
 
         return $this;
@@ -168,9 +168,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLogicalServiceId(string $var)
+    public function setLogicalServiceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->logical_service_id = $var;
 
         return $this;
@@ -190,9 +190,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProtoServiceId(string $var)
+    public function setProtoServiceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->proto_service_id = $var;
 
         return $this;
@@ -212,9 +212,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDisplayName(string $var)
+    public function setDisplayName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->display_name = $var;
 
         return $this;
@@ -234,9 +234,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCategory(string $var)
+    public function setCategory($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->category = $var;
 
         return $this;
@@ -256,8 +256,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setDefaultEnabled(bool $var)
+    public function setDefaultEnabled($var)
     {
+        GPBUtil::checkBool($var);
         $this->default_enabled = $var;
 
         return $this;
@@ -277,8 +278,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRequiresPostgres(bool $var)
+    public function setRequiresPostgres($var)
     {
+        GPBUtil::checkBool($var);
         $this->requires_postgres = $var;
 
         return $this;
@@ -298,8 +300,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRequiresRedis(bool $var)
+    public function setRequiresRedis($var)
     {
+        GPBUtil::checkBool($var);
         $this->requires_redis = $var;
 
         return $this;
@@ -319,8 +322,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRequiresObjectStore(bool $var)
+    public function setRequiresObjectStore($var)
     {
+        GPBUtil::checkBool($var);
         $this->requires_object_store = $var;
 
         return $this;
@@ -340,8 +344,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRequiresKafka(bool $var)
+    public function setRequiresKafka($var)
     {
+        GPBUtil::checkBool($var);
         $this->requires_kafka = $var;
 
         return $this;
@@ -361,9 +366,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRequiresFeature(string $var)
+    public function setRequiresFeature($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->requires_feature = $var;
 
         return $this;
@@ -383,8 +388,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPublicListenerAllowed(bool $var)
+    public function setPublicListenerAllowed($var)
     {
+        GPBUtil::checkBool($var);
         $this->public_listener_allowed = $var;
 
         return $this;
@@ -404,8 +410,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setControlPlaneListenerAllowed(bool $var)
+    public function setControlPlaneListenerAllowed($var)
     {
+        GPBUtil::checkBool($var);
         $this->control_plane_listener_allowed = $var;
 
         return $this;
@@ -425,8 +432,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPeerListenerAllowed(bool $var)
+    public function setPeerListenerAllowed($var)
     {
+        GPBUtil::checkBool($var);
         $this->peer_listener_allowed = $var;
 
         return $this;
@@ -446,9 +454,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSdkFacadeName(string $var)
+    public function setSdkFacadeName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->sdk_facade_name = $var;
 
         return $this;
@@ -468,9 +476,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCliScaffoldGroup(string $var)
+    public function setCliScaffoldGroup($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->cli_scaffold_group = $var;
 
         return $this;
@@ -490,9 +498,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setHealthCheckRef(string $var)
+    public function setHealthCheckRef($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->health_check_ref = $var;
 
         return $this;
@@ -512,9 +520,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCapabilityRef(string $var)
+    public function setCapabilityRef($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->capability_ref = $var;
 
         return $this;
@@ -544,8 +552,9 @@ class NativeServiceOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setOwnsBackgroundWorkers(bool $var)
+    public function setOwnsBackgroundWorkers($var)
     {
+        GPBUtil::checkBool($var);
         $this->owns_background_workers = $var;
 
         return $this;

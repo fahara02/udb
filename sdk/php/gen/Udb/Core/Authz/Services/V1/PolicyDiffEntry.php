@@ -77,9 +77,9 @@ class PolicyDiffEntry extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setChange(string $var)
+    public function setChange($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->change = $var;
 
         return $this;
@@ -103,9 +103,9 @@ class PolicyDiffEntry extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKind(string $var)
+    public function setKind($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->kind = $var;
 
         return $this;
@@ -125,9 +125,9 @@ class PolicyDiffEntry extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setId(string $var)
+    public function setId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->id = $var;
 
         return $this;
@@ -147,9 +147,9 @@ class PolicyDiffEntry extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBeforeJson(string $var)
+    public function setBeforeJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->before_json = $var;
 
         return $this;
@@ -169,9 +169,9 @@ class PolicyDiffEntry extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAfterJson(string $var)
+    public function setAfterJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->after_json = $var;
 
         return $this;

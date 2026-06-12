@@ -70,8 +70,9 @@ class PolicyDraftResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Entity\V1\PolicyDraft $var
      * @return $this
      */
-    public function setDraft(\Udb\Core\Authz\Entity\V1\PolicyDraft|null $var)
+    public function setDraft($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Entity\V1\PolicyDraft::class);
         $this->draft = $var;
 
         return $this;
@@ -101,8 +102,9 @@ class PolicyDraftResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Entity\V1\PolicySet $var
      * @return $this
      */
-    public function setPolicySet(\Udb\Core\Authz\Entity\V1\PolicySet|null $var)
+    public function setPolicySet($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Entity\V1\PolicySet::class);
         $this->policy_set = $var;
 
         return $this;
@@ -136,8 +138,9 @@ class PolicyDraftResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\PolicyDocument $var
      * @return $this
      */
-    public function setDocument(\Udb\Core\Authz\Services\V1\PolicyDocument|null $var)
+    public function setDocument($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\PolicyDocument::class);
         $this->document = $var;
 
         return $this;

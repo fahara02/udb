@@ -67,8 +67,9 @@ class CanaryResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Entity\V1\PolicyCanary $var
      * @return $this
      */
-    public function setCanary(\Udb\Core\Authz\Entity\V1\PolicyCanary|null $var)
+    public function setCanary($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Entity\V1\PolicyCanary::class);
         $this->canary = $var;
 
         return $this;
@@ -98,8 +99,9 @@ class CanaryResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Entity\V1\PolicyVersion $var
      * @return $this
      */
-    public function setVersion(\Udb\Core\Authz\Entity\V1\PolicyVersion|null $var)
+    public function setVersion($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Entity\V1\PolicyVersion::class);
         $this->version = $var;
 
         return $this;
@@ -129,8 +131,9 @@ class CanaryResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Entity\V1\PolicySet $var
      * @return $this
      */
-    public function setPolicySet(\Udb\Core\Authz\Entity\V1\PolicySet|null $var)
+    public function setPolicySet($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Entity\V1\PolicySet::class);
         $this->policy_set = $var;
 
         return $this;

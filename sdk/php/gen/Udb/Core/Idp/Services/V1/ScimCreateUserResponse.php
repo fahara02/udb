@@ -57,8 +57,9 @@ class ScimCreateUserResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Idp\Services\V1\ScimUser $var
      * @return $this
      */
-    public function setUser(\Udb\Core\Idp\Services\V1\ScimUser|null $var)
+    public function setUser($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Idp\Services\V1\ScimUser::class);
         $this->user = $var;
 
         return $this;

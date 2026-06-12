@@ -90,8 +90,9 @@ class UpdatePolicyDraftRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\GovernanceActor $var
      * @return $this
      */
-    public function setActor(\Udb\Core\Authz\Services\V1\GovernanceActor|null $var)
+    public function setActor($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\GovernanceActor::class);
         $this->actor = $var;
 
         return $this;
@@ -111,9 +112,9 @@ class UpdatePolicyDraftRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDraftId(string $var)
+    public function setDraftId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->draft_id = $var;
 
         return $this;
@@ -143,8 +144,9 @@ class UpdatePolicyDraftRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\PolicyDocument $var
      * @return $this
      */
-    public function setDocument(\Udb\Core\Authz\Services\V1\PolicyDocument|null $var)
+    public function setDocument($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\PolicyDocument::class);
         $this->document = $var;
 
         return $this;
@@ -164,9 +166,9 @@ class UpdatePolicyDraftRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setChangeReason(string $var)
+    public function setChangeReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->change_reason = $var;
 
         return $this;
@@ -190,7 +192,7 @@ class UpdatePolicyDraftRequest extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setExpectedUpdatedAtUnix(int|string $var)
+    public function setExpectedUpdatedAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->expected_updated_at_unix = $var;
@@ -212,8 +214,9 @@ class UpdatePolicyDraftRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setHighRisk(bool $var)
+    public function setHighRisk($var)
     {
+        GPBUtil::checkBool($var);
         $this->high_risk = $var;
 
         return $this;
@@ -233,9 +236,9 @@ class UpdatePolicyDraftRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTitle(string $var)
+    public function setTitle($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->title = $var;
 
         return $this;

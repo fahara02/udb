@@ -65,8 +65,9 @@ class RawJsonResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setSuccess(bool $var)
+    public function setSuccess($var)
     {
+        GPBUtil::checkBool($var);
         $this->success = $var;
 
         return $this;
@@ -86,9 +87,9 @@ class RawJsonResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDataJson(string $var)
+    public function setDataJson($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->data_json = $var;
 
         return $this;
@@ -118,8 +119,9 @@ class RawJsonResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ApiError $var
      * @return $this
      */
-    public function setError(\Udb\Core\Common\V1\ApiError|null $var)
+    public function setError($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
 
         return $this;
@@ -149,8 +151,9 @@ class RawJsonResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ResponseMeta $var
      * @return $this
      */
-    public function setMeta(\Udb\Core\Common\V1\ResponseMeta|null $var)
+    public function setMeta($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ResponseMeta::class);
         $this->meta = $var;
 
         return $this;

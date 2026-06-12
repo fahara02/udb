@@ -104,7 +104,7 @@ class StorageFieldOptions extends \Google\Protobuf\Internal\Message
      * Which backend owns this key
      *
      * Generated from protobuf field <code>.udb.core.common.v1.StorageBackendType backend = 1 [json_name = "backend"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\StorageBackendType}
+     * @return int
      */
     public function getBackend()
     {
@@ -115,10 +115,10 @@ class StorageFieldOptions extends \Google\Protobuf\Internal\Message
      * Which backend owns this key
      *
      * Generated from protobuf field <code>.udb.core.common.v1.StorageBackendType backend = 1 [json_name = "backend"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\StorageBackendType}
+     * @param int $var
      * @return $this
      */
-    public function setBackend(int $var)
+    public function setBackend($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\StorageBackendType::class);
         $this->backend = $var;
@@ -144,9 +144,9 @@ class StorageFieldOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBucketEnvKey(string $var)
+    public function setBucketEnvKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->bucket_env_key = $var;
 
         return $this;
@@ -170,9 +170,9 @@ class StorageFieldOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKeyPrefix(string $var)
+    public function setKeyPrefix($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->key_prefix = $var;
 
         return $this;
@@ -196,8 +196,9 @@ class StorageFieldOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPresignedRead(bool $var)
+    public function setPresignedRead($var)
     {
+        GPBUtil::checkBool($var);
         $this->presigned_read = $var;
 
         return $this;
@@ -221,8 +222,9 @@ class StorageFieldOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPresignedWrite(bool $var)
+    public function setPresignedWrite($var)
     {
+        GPBUtil::checkBool($var);
         $this->presigned_write = $var;
 
         return $this;
@@ -246,7 +248,7 @@ class StorageFieldOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setPresignedTtlSeconds(int $var)
+    public function setPresignedTtlSeconds($var)
     {
         GPBUtil::checkInt32($var);
         $this->presigned_ttl_seconds = $var;
@@ -272,8 +274,9 @@ class StorageFieldOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setServerSideEncryption(bool $var)
+    public function setServerSideEncryption($var)
     {
+        GPBUtil::checkBool($var);
         $this->server_side_encryption = $var;
 
         return $this;
@@ -297,9 +300,9 @@ class StorageFieldOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKmsKeyId(string $var)
+    public function setKmsKeyId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->kms_key_id = $var;
 
         return $this;
@@ -323,9 +326,9 @@ class StorageFieldOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAcl(string $var)
+    public function setAcl($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->acl = $var;
 
         return $this;

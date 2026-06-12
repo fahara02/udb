@@ -119,9 +119,9 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -141,9 +141,9 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSessionId(string $var)
+    public function setSessionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->session_id = $var;
 
         return $this;
@@ -167,9 +167,9 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAccessToken(string $var)
+    public function setAccessToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->access_token = $var;
 
         return $this;
@@ -189,9 +189,9 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRefreshToken(string $var)
+    public function setRefreshToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->refresh_token = $var;
 
         return $this;
@@ -215,7 +215,7 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setAccessTokenExpiresIn(int $var)
+    public function setAccessTokenExpiresIn($var)
     {
         GPBUtil::checkInt32($var);
         $this->access_token_expires_in = $var;
@@ -243,9 +243,9 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSessionToken(string $var)
+    public function setSessionToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->session_token = $var;
 
         return $this;
@@ -269,9 +269,9 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCsrfToken(string $var)
+    public function setCsrfToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->csrf_token = $var;
 
         return $this;
@@ -295,8 +295,9 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setMfaRequired(bool $var)
+    public function setMfaRequired($var)
     {
+        GPBUtil::checkBool($var);
         $this->mfa_required = $var;
 
         return $this;
@@ -320,9 +321,9 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMfaOtpId(string $var)
+    public function setMfaOtpId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->mfa_otp_id = $var;
 
         return $this;
@@ -350,7 +351,7 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRefreshTokenExpiresIn(int $var)
+    public function setRefreshTokenExpiresIn($var)
     {
         GPBUtil::checkInt32($var);
         $this->refresh_token_expires_in = $var;

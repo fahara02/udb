@@ -52,9 +52,9 @@ class DeleteRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRoleId(string $var)
+    public function setRoleId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->role_id = $var;
 
         return $this;
@@ -74,9 +74,9 @@ class DeleteRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeletedBy(string $var)
+    public function setDeletedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->deleted_by = $var;
 
         return $this;

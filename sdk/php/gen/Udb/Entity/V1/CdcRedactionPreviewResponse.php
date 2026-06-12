@@ -67,9 +67,9 @@ class CdcRedactionPreviewResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPayloadJson(string $var)
+    public function setPayloadJson($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->payload_json = $var;
 
         return $this;
@@ -89,7 +89,7 @@ class CdcRedactionPreviewResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRedactedFields(array|RepeatedField $var)
+    public function setRedactedFields($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->redacted_fields = $arr;
@@ -111,9 +111,9 @@ class CdcRedactionPreviewResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRedactionMode(string $var)
+    public function setRedactionMode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->redaction_mode = $var;
 
         return $this;
@@ -133,7 +133,7 @@ class CdcRedactionPreviewResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRedactionVersion(int $var)
+    public function setRedactionVersion($var)
     {
         GPBUtil::checkInt32($var);
         $this->redaction_version = $var;
@@ -155,8 +155,9 @@ class CdcRedactionPreviewResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setWouldRedact(bool $var)
+    public function setWouldRedact($var)
     {
+        GPBUtil::checkBool($var);
         $this->would_redact = $var;
 
         return $this;

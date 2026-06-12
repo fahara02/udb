@@ -77,9 +77,9 @@ class ListFilesRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -99,9 +99,9 @@ class ListFilesRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFileType(string $var)
+    public function setFileType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->file_type = $var;
 
         return $this;
@@ -121,9 +121,9 @@ class ListFilesRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReferenceId(string $var)
+    public function setReferenceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reference_id = $var;
 
         return $this;
@@ -143,9 +143,9 @@ class ListFilesRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReferenceType(string $var)
+    public function setReferenceType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reference_type = $var;
 
         return $this;
@@ -165,9 +165,9 @@ class ListFilesRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUploadedBy(string $var)
+    public function setUploadedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->uploaded_by = $var;
 
         return $this;
@@ -187,7 +187,7 @@ class ListFilesRequest extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setPage(int $var)
+    public function setPage($var)
     {
         GPBUtil::checkInt32($var);
         $this->page = $var;
@@ -209,7 +209,7 @@ class ListFilesRequest extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setPageSize(int $var)
+    public function setPageSize($var)
     {
         GPBUtil::checkInt32($var);
         $this->page_size = $var;

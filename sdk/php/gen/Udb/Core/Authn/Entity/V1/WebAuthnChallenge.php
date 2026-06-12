@@ -87,9 +87,9 @@ class WebAuthnChallenge extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setChallengeId(string $var)
+    public function setChallengeId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->challenge_id = $var;
 
         return $this;
@@ -109,9 +109,9 @@ class WebAuthnChallenge extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -131,9 +131,9 @@ class WebAuthnChallenge extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCeremony(string $var)
+    public function setCeremony($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->ceremony = $var;
 
         return $this;
@@ -153,9 +153,9 @@ class WebAuthnChallenge extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStateJson(string $var)
+    public function setStateJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->state_json = $var;
 
         return $this;
@@ -175,9 +175,9 @@ class WebAuthnChallenge extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -197,9 +197,9 @@ class WebAuthnChallenge extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -229,8 +229,9 @@ class WebAuthnChallenge extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setExpiresAt(\Google\Protobuf\Timestamp|null $var)
+    public function setExpiresAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->expires_at = $var;
 
         return $this;
@@ -260,8 +261,9 @@ class WebAuthnChallenge extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setConsumedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setConsumedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->consumed_at = $var;
 
         return $this;
@@ -291,8 +293,9 @@ class WebAuthnChallenge extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;

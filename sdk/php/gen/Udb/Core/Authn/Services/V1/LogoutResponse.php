@@ -47,7 +47,7 @@ class LogoutResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setSessionsRevoked(int $var)
+    public function setSessionsRevoked($var)
     {
         GPBUtil::checkInt32($var);
         $this->sessions_revoked = $var;

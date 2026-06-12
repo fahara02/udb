@@ -75,7 +75,7 @@ class MigrationOperationStatus extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setIndex(int $var)
+    public function setIndex($var)
     {
         GPBUtil::checkInt32($var);
         $this->index = $var;
@@ -97,9 +97,9 @@ class MigrationOperationStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -119,9 +119,9 @@ class MigrationOperationStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceUri(string $var)
+    public function setResourceUri($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_uri = $var;
 
         return $this;
@@ -141,9 +141,9 @@ class MigrationOperationStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOperationKind(string $var)
+    public function setOperationKind($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->operation_kind = $var;
 
         return $this;
@@ -167,9 +167,9 @@ class MigrationOperationStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStatus(string $var)
+    public function setStatus($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->status = $var;
 
         return $this;
@@ -189,9 +189,9 @@ class MigrationOperationStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setError(string $var)
+    public function setError($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->error = $var;
 
         return $this;

@@ -52,7 +52,7 @@ class GetPipelineSummaryResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Analytics\Entity\V1\PipelineMetricSnapshot[] $var
      * @return $this
      */
-    public function setSnapshots(array|RepeatedField $var)
+    public function setSnapshots($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Analytics\Entity\V1\PipelineMetricSnapshot::class);
         $this->snapshots = $arr;
@@ -84,8 +84,9 @@ class GetPipelineSummaryResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\PageResponse $var
      * @return $this
      */
-    public function setPage(\Udb\Core\Common\V1\PageResponse|null $var)
+    public function setPage($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\PageResponse::class);
         $this->page = $var;
 
         return $this;

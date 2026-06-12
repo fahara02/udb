@@ -59,9 +59,9 @@ class ResponseMeta extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRequestId(string $var)
+    public function setRequestId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->request_id = $var;
 
         return $this;
@@ -81,9 +81,9 @@ class ResponseMeta extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTimestamp(string $var)
+    public function setTimestamp($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->timestamp = $var;
 
         return $this;
@@ -113,8 +113,9 @@ class ResponseMeta extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\PaginationMeta $var
      * @return $this
      */
-    public function setPagination(\Udb\Core\Common\V1\PaginationMeta|null $var)
+    public function setPagination($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\PaginationMeta::class);
         $this->pagination = $var;
 
         return $this;

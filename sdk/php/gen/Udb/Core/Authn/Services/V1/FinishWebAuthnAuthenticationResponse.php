@@ -77,8 +77,9 @@ class FinishWebAuthnAuthenticationResponse extends \Google\Protobuf\Internal\Mes
      * @param \Udb\Core\Authn\Services\V1\Principal $var
      * @return $this
      */
-    public function setPrincipal(\Udb\Core\Authn\Services\V1\Principal|null $var)
+    public function setPrincipal($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authn\Services\V1\Principal::class);
         $this->principal = $var;
 
         return $this;
@@ -98,9 +99,9 @@ class FinishWebAuthnAuthenticationResponse extends \Google\Protobuf\Internal\Mes
      * @param string $var
      * @return $this
      */
-    public function setSessionId(string $var)
+    public function setSessionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->session_id = $var;
 
         return $this;
@@ -120,9 +121,9 @@ class FinishWebAuthnAuthenticationResponse extends \Google\Protobuf\Internal\Mes
      * @param string $var
      * @return $this
      */
-    public function setAccessToken(string $var)
+    public function setAccessToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->access_token = $var;
 
         return $this;
@@ -142,7 +143,7 @@ class FinishWebAuthnAuthenticationResponse extends \Google\Protobuf\Internal\Mes
      * @param int|string $var
      * @return $this
      */
-    public function setExpiresAtUnix(int|string $var)
+    public function setExpiresAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->expires_at_unix = $var;
@@ -164,9 +165,9 @@ class FinishWebAuthnAuthenticationResponse extends \Google\Protobuf\Internal\Mes
      * @param string $var
      * @return $this
      */
-    public function setCredentialId(string $var)
+    public function setCredentialId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->credential_id = $var;
 
         return $this;

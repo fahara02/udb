@@ -59,9 +59,9 @@ class ValidateTokenRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setToken(string $var)
+    public function setToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->token = $var;
 
         return $this;
@@ -69,7 +69,7 @@ class ValidateTokenRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.TokenType token_type = 2 [json_name = "tokenType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\TokenType}
+     * @return int
      */
     public function getTokenType()
     {
@@ -78,10 +78,10 @@ class ValidateTokenRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.TokenType token_type = 2 [json_name = "tokenType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\TokenType}
+     * @param int $var
      * @return $this
      */
-    public function setTokenType(int $var)
+    public function setTokenType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\TokenType::class);
         $this->token_type = $var;

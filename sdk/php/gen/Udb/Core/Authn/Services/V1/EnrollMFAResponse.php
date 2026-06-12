@@ -70,9 +70,9 @@ class EnrollMFAResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTotpSecret(string $var)
+    public function setTotpSecret($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->totp_secret = $var;
 
         return $this;
@@ -96,9 +96,9 @@ class EnrollMFAResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTotpQrUri(string $var)
+    public function setTotpQrUri($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->totp_qr_uri = $var;
 
         return $this;
@@ -122,9 +122,9 @@ class EnrollMFAResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setVerifyOtpId(string $var)
+    public function setVerifyOtpId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->verify_otp_id = $var;
 
         return $this;

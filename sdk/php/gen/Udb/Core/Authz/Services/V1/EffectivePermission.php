@@ -67,9 +67,9 @@ class EffectivePermission extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setObject(string $var)
+    public function setObject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->object = $var;
 
         return $this;
@@ -89,9 +89,9 @@ class EffectivePermission extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAction(string $var)
+    public function setAction($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->action = $var;
 
         return $this;
@@ -111,9 +111,9 @@ class EffectivePermission extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setViaRole(string $var)
+    public function setViaRole($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->via_role = $var;
 
         return $this;
@@ -133,9 +133,9 @@ class EffectivePermission extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceType(string $var)
+    public function setResourceType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_type = $var;
 
         return $this;
@@ -155,9 +155,9 @@ class EffectivePermission extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDomain(string $var)
+    public function setDomain($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->domain = $var;
 
         return $this;

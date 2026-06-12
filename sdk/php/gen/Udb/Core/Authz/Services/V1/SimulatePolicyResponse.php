@@ -55,7 +55,7 @@ class SimulatePolicyResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\SimulationResult[] $var
      * @return $this
      */
-    public function setResults(array|RepeatedField $var)
+    public function setResults($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authz\Services\V1\SimulationResult::class);
         $this->results = $arr;
@@ -81,9 +81,9 @@ class SimulatePolicyResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDiffJson(string $var)
+    public function setDiffJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->diff_json = $var;
 
         return $this;

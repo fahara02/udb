@@ -74,9 +74,9 @@ class TenantStatusChangedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventId(string $var)
+    public function setEventId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_id = $var;
 
         return $this;
@@ -96,9 +96,9 @@ class TenantStatusChangedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -118,9 +118,9 @@ class TenantStatusChangedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOldStatus(string $var)
+    public function setOldStatus($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->old_status = $var;
 
         return $this;
@@ -140,9 +140,9 @@ class TenantStatusChangedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNewStatus(string $var)
+    public function setNewStatus($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->new_status = $var;
 
         return $this;
@@ -162,9 +162,9 @@ class TenantStatusChangedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -194,8 +194,9 @@ class TenantStatusChangedEvent extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setTimestamp(\Google\Protobuf\Timestamp|null $var)
+    public function setTimestamp($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->timestamp = $var;
 
         return $this;

@@ -72,8 +72,9 @@ class TimeSeriesPoint extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setTimestamp(\Google\Protobuf\Timestamp|null $var)
+    public function setTimestamp($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->timestamp = $var;
 
         return $this;
@@ -93,7 +94,7 @@ class TimeSeriesPoint extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setTags(array|\Google\Protobuf\Internal\MapField $var)
+    public function setTags($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->tags = $arr;
@@ -115,7 +116,7 @@ class TimeSeriesPoint extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setValues(array|\Google\Protobuf\Internal\MapField $var)
+    public function setValues($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::DOUBLE);
         $this->values = $arr;
@@ -147,8 +148,9 @@ class TimeSeriesPoint extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Struct $var
      * @return $this
      */
-    public function setFields(\Google\Protobuf\Struct|null $var)
+    public function setFields($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->fields = $var;
 
         return $this;

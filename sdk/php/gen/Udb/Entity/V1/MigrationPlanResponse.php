@@ -82,9 +82,9 @@ class MigrationPlanResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRunId(string $var)
+    public function setRunId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->run_id = $var;
 
         return $this;
@@ -104,9 +104,9 @@ class MigrationPlanResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -126,9 +126,9 @@ class MigrationPlanResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCatalogVersion(string $var)
+    public function setCatalogVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->catalog_version = $var;
 
         return $this;
@@ -148,9 +148,9 @@ class MigrationPlanResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setState(string $var)
+    public function setState($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->state = $var;
 
         return $this;
@@ -170,7 +170,7 @@ class MigrationPlanResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setOperations(array|RepeatedField $var)
+    public function setOperations($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->operations = $arr;
@@ -192,7 +192,7 @@ class MigrationPlanResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRequiresReview(array|RepeatedField $var)
+    public function setRequiresReview($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->requires_review = $arr;
@@ -214,7 +214,7 @@ class MigrationPlanResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setBlocked(array|RepeatedField $var)
+    public function setBlocked($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->blocked = $arr;
@@ -236,9 +236,9 @@ class MigrationPlanResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOperationsHash(string $var)
+    public function setOperationsHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->operations_hash = $var;
 
         return $this;

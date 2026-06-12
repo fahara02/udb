@@ -109,8 +109,9 @@ class SimulatePolicyRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\GovernanceActor $var
      * @return $this
      */
-    public function setActor(\Udb\Core\Authz\Services\V1\GovernanceActor|null $var)
+    public function setActor($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\GovernanceActor::class);
         $this->actor = $var;
 
         return $this;
@@ -130,9 +131,9 @@ class SimulatePolicyRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -152,9 +153,9 @@ class SimulatePolicyRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -180,9 +181,9 @@ class SimulatePolicyRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDraftId(string $var)
+    public function setDraftId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->draft_id = $var;
 
         return $this;
@@ -216,8 +217,9 @@ class SimulatePolicyRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\PolicyDocument $var
      * @return $this
      */
-    public function setCandidate(\Udb\Core\Authz\Services\V1\PolicyDocument|null $var)
+    public function setCandidate($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\PolicyDocument::class);
         $this->candidate = $var;
 
         return $this;
@@ -241,7 +243,7 @@ class SimulatePolicyRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\SimulationCase[] $var
      * @return $this
      */
-    public function setCases(array|RepeatedField $var)
+    public function setCases($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authz\Services\V1\SimulationCase::class);
         $this->cases = $arr;
@@ -267,8 +269,9 @@ class SimulatePolicyRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPersist(bool $var)
+    public function setPersist($var)
     {
+        GPBUtil::checkBool($var);
         $this->persist = $var;
 
         return $this;
@@ -292,9 +295,9 @@ class SimulatePolicyRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicyVersionId(string $var)
+    public function setPolicyVersionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_version_id = $var;
 
         return $this;

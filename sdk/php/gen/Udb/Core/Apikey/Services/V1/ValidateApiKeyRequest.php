@@ -78,9 +78,9 @@ class ValidateApiKeyRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPlainKey(string $var)
+    public function setPlainKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->plain_key = $var;
 
         return $this;
@@ -104,9 +104,9 @@ class ValidateApiKeyRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEndpoint(string $var)
+    public function setEndpoint($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->endpoint = $var;
 
         return $this;
@@ -130,9 +130,9 @@ class ValidateApiKeyRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRequiredScope(string $var)
+    public function setRequiredScope($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->required_scope = $var;
 
         return $this;
@@ -156,9 +156,9 @@ class ValidateApiKeyRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIpAddress(string $var)
+    public function setIpAddress($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->ip_address = $var;
 
         return $this;

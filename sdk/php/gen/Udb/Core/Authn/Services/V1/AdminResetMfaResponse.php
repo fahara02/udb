@@ -47,8 +47,9 @@ class AdminResetMfaResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setReset(bool $var)
+    public function setReset($var)
     {
+        GPBUtil::checkBool($var);
         $this->reset = $var;
 
         return $this;

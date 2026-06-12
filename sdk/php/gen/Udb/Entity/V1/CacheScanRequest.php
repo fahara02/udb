@@ -77,8 +77,9 @@ class CacheScanRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -108,8 +109,9 @@ class CacheScanRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\StoreResource $var
      * @return $this
      */
-    public function setResource(\Udb\Entity\V1\StoreResource|null $var)
+    public function setResource($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\StoreResource::class);
         $this->resource = $var;
 
         return $this;
@@ -129,9 +131,9 @@ class CacheScanRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKeyPattern(string $var)
+    public function setKeyPattern($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->key_pattern = $var;
 
         return $this;
@@ -151,7 +153,7 @@ class CacheScanRequest extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setLimit(int $var)
+    public function setLimit($var)
     {
         GPBUtil::checkInt32($var);
         $this->limit = $var;
@@ -173,9 +175,9 @@ class CacheScanRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPageToken(string $var)
+    public function setPageToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->page_token = $var;
 
         return $this;

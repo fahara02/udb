@@ -57,8 +57,9 @@ class SetPreferenceResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Notification\Entity\V1\NotificationPreference $var
      * @return $this
      */
-    public function setPreference(\Udb\Core\Notification\Entity\V1\NotificationPreference|null $var)
+    public function setPreference($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Notification\Entity\V1\NotificationPreference::class);
         $this->preference = $var;
 
         return $this;

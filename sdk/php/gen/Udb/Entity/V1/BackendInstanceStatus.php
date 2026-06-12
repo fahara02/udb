@@ -107,9 +107,9 @@ class BackendInstanceStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -129,9 +129,9 @@ class BackendInstanceStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setInstanceName(string $var)
+    public function setInstanceName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->instance_name = $var;
 
         return $this;
@@ -151,9 +151,9 @@ class BackendInstanceStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRole(string $var)
+    public function setRole($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->role = $var;
 
         return $this;
@@ -173,8 +173,9 @@ class BackendInstanceStatus extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setEnabled(bool $var)
+    public function setEnabled($var)
     {
+        GPBUtil::checkBool($var);
         $this->enabled = $var;
 
         return $this;
@@ -194,8 +195,9 @@ class BackendInstanceStatus extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setConfigured(bool $var)
+    public function setConfigured($var)
     {
+        GPBUtil::checkBool($var);
         $this->configured = $var;
 
         return $this;
@@ -215,8 +217,9 @@ class BackendInstanceStatus extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setConnected(bool $var)
+    public function setConnected($var)
     {
+        GPBUtil::checkBool($var);
         $this->connected = $var;
 
         return $this;
@@ -236,7 +239,7 @@ class BackendInstanceStatus extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setReadWeight(int $var)
+    public function setReadWeight($var)
     {
         GPBUtil::checkUint32($var);
         $this->read_weight = $var;
@@ -258,7 +261,7 @@ class BackendInstanceStatus extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setWriteWeight(int $var)
+    public function setWriteWeight($var)
     {
         GPBUtil::checkUint32($var);
         $this->write_weight = $var;
@@ -280,7 +283,7 @@ class BackendInstanceStatus extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setLabels(array|\Google\Protobuf\Internal\MapField $var)
+    public function setLabels($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->labels = $arr;
@@ -302,7 +305,7 @@ class BackendInstanceStatus extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setCapabilities(array|RepeatedField $var)
+    public function setCapabilities($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->capabilities = $arr;
@@ -324,9 +327,9 @@ class BackendInstanceStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRoutingStatus(string $var)
+    public function setRoutingStatus($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->routing_status = $var;
 
         return $this;
@@ -346,8 +349,9 @@ class BackendInstanceStatus extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setHealthy(bool $var)
+    public function setHealthy($var)
     {
+        GPBUtil::checkBool($var);
         $this->healthy = $var;
 
         return $this;
@@ -367,8 +371,9 @@ class BackendInstanceStatus extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setCircuitOpen(bool $var)
+    public function setCircuitOpen($var)
     {
+        GPBUtil::checkBool($var);
         $this->circuit_open = $var;
 
         return $this;

@@ -57,8 +57,9 @@ class GetJwksRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Core\Common\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;

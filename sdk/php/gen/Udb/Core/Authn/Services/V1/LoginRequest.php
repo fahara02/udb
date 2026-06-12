@@ -133,9 +133,9 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUsername(string $var)
+    public function setUsername($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->username = $var;
 
         return $this;
@@ -155,9 +155,9 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPassword(string $var)
+    public function setPassword($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->password = $var;
 
         return $this;
@@ -165,7 +165,7 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.DeviceType device_type = 3 [json_name = "deviceType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\DeviceType}
+     * @return int
      */
     public function getDeviceType()
     {
@@ -174,10 +174,10 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.DeviceType device_type = 3 [json_name = "deviceType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\DeviceType}
+     * @param int $var
      * @return $this
      */
-    public function setDeviceType(int $var)
+    public function setDeviceType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\DeviceType::class);
         $this->device_type = $var;
@@ -203,9 +203,9 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeviceName(string $var)
+    public function setDeviceName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->device_name = $var;
 
         return $this;
@@ -229,9 +229,9 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIpAddress(string $var)
+    public function setIpAddress($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->ip_address = $var;
 
         return $this;
@@ -251,9 +251,9 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserAgent(string $var)
+    public function setUserAgent($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_agent = $var;
 
         return $this;
@@ -277,9 +277,9 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeviceId(string $var)
+    public function setDeviceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->device_id = $var;
 
         return $this;
@@ -311,9 +311,9 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMfaOtpId(string $var)
+    public function setMfaOtpId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->mfa_otp_id = $var;
 
         return $this;
@@ -337,9 +337,9 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTotpCode(string $var)
+    public function setTotpCode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->totp_code = $var;
 
         return $this;
@@ -359,9 +359,9 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantHint(string $var)
+    public function setTenantHint($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_hint = $var;
 
         return $this;
@@ -381,9 +381,9 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectHint(string $var)
+    public function setProjectHint($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_hint = $var;
 
         return $this;
@@ -403,9 +403,9 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAccessSurface(string $var)
+    public function setAccessSurface($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->access_surface = $var;
 
         return $this;
@@ -429,9 +429,9 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRecoveryCode(string $var)
+    public function setRecoveryCode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->recovery_code = $var;
 
         return $this;

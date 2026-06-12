@@ -57,8 +57,9 @@ class PolicyBundleResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\SignedPolicyBundle $var
      * @return $this
      */
-    public function setBundle(\Udb\Core\Authz\Services\V1\SignedPolicyBundle|null $var)
+    public function setBundle($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\SignedPolicyBundle::class);
         $this->bundle = $var;
 
         return $this;

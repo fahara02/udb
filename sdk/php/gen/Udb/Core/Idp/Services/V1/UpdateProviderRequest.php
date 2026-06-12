@@ -133,9 +133,9 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProviderId(string $var)
+    public function setProviderId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->provider_id = $var;
 
         return $this;
@@ -155,9 +155,9 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -177,9 +177,9 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDisplayName(string $var)
+    public function setDisplayName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->display_name = $var;
 
         return $this;
@@ -199,9 +199,9 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIssuer(string $var)
+    public function setIssuer($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->issuer = $var;
 
         return $this;
@@ -221,9 +221,9 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEntityId(string $var)
+    public function setEntityId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->entity_id = $var;
 
         return $this;
@@ -243,9 +243,9 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setJwksUrl(string $var)
+    public function setJwksUrl($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->jwks_url = $var;
 
         return $this;
@@ -265,9 +265,9 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSamlMetadataUrl(string $var)
+    public function setSamlMetadataUrl($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->saml_metadata_url = $var;
 
         return $this;
@@ -287,7 +287,7 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setClientIds(array|RepeatedField $var)
+    public function setClientIds($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->client_ids = $arr;
@@ -309,7 +309,7 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setAudiences(array|RepeatedField $var)
+    public function setAudiences($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->audiences = $arr;
@@ -331,9 +331,9 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setClaimMappingJson(string $var)
+    public function setClaimMappingJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->claim_mapping_json = $var;
 
         return $this;
@@ -353,9 +353,9 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setGroupMappingJson(string $var)
+    public function setGroupMappingJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->group_mapping_json = $var;
 
         return $this;
@@ -375,9 +375,9 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setJitPolicyJson(string $var)
+    public function setJitPolicyJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->jit_policy_json = $var;
 
         return $this;
@@ -397,9 +397,9 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAccountLinkingPolicy(string $var)
+    public function setAccountLinkingPolicy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->account_linking_policy = $var;
 
         return $this;
@@ -423,9 +423,9 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setClientSecret(string $var)
+    public function setClientSecret($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->client_secret = $var;
 
         return $this;
@@ -449,9 +449,9 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSamlSigningKeyPem(string $var)
+    public function setSamlSigningKeyPem($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->saml_signing_key_pem = $var;
 
         return $this;
@@ -471,9 +471,9 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUpdatedBy(string $var)
+    public function setUpdatedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->updated_by = $var;
 
         return $this;
@@ -503,8 +503,9 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Core\Common\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;

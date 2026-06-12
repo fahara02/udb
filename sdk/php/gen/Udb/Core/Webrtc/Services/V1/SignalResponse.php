@@ -55,9 +55,9 @@ class SignalResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOfferSdp(string $var)
+    public function setOfferSdp($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->writeOneof(1, $var);
 
         return $this;
@@ -82,9 +82,9 @@ class SignalResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAnswerSdp(string $var)
+    public function setAnswerSdp($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->writeOneof(2, $var);
 
         return $this;
@@ -109,9 +109,9 @@ class SignalResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIceCandidate(string $var)
+    public function setIceCandidate($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->writeOneof(3, $var);
 
         return $this;
@@ -136,9 +136,9 @@ class SignalResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPeerJoined(string $var)
+    public function setPeerJoined($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->writeOneof(4, $var);
 
         return $this;
@@ -163,9 +163,9 @@ class SignalResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPeerLeft(string $var)
+    public function setPeerLeft($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->writeOneof(5, $var);
 
         return $this;
@@ -190,9 +190,9 @@ class SignalResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTrackPublished(string $var)
+    public function setTrackPublished($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->writeOneof(6, $var);
 
         return $this;
@@ -217,8 +217,9 @@ class SignalResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPong(bool $var)
+    public function setPong($var)
     {
+        GPBUtil::checkBool($var);
         $this->writeOneof(7, $var);
 
         return $this;

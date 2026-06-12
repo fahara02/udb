@@ -80,8 +80,9 @@ class ActivationResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Entity\V1\PolicyVersion $var
      * @return $this
      */
-    public function setVersion(\Udb\Core\Authz\Entity\V1\PolicyVersion|null $var)
+    public function setVersion($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Entity\V1\PolicyVersion::class);
         $this->version = $var;
 
         return $this;
@@ -111,8 +112,9 @@ class ActivationResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Entity\V1\PolicySet $var
      * @return $this
      */
-    public function setPolicySet(\Udb\Core\Authz\Entity\V1\PolicySet|null $var)
+    public function setPolicySet($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Entity\V1\PolicySet::class);
         $this->policy_set = $var;
 
         return $this;
@@ -136,7 +138,7 @@ class ActivationResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setPolicyRevision(int|string $var)
+    public function setPolicyRevision($var)
     {
         GPBUtil::checkInt64($var);
         $this->policy_revision = $var;
@@ -158,7 +160,7 @@ class ActivationResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setRelationshipRevision(int|string $var)
+    public function setRelationshipRevision($var)
     {
         GPBUtil::checkInt64($var);
         $this->relationship_revision = $var;
@@ -180,9 +182,9 @@ class ActivationResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setContentHash(string $var)
+    public function setContentHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->content_hash = $var;
 
         return $this;

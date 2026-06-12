@@ -110,9 +110,9 @@ class TenantContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -136,9 +136,9 @@ class TenantContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOrganizationId(string $var)
+    public function setOrganizationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->organization_id = $var;
 
         return $this;
@@ -162,9 +162,9 @@ class TenantContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -188,9 +188,9 @@ class TenantContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEnvironment(string $var)
+    public function setEnvironment($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->environment = $var;
 
         return $this;
@@ -214,9 +214,9 @@ class TenantContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRegion(string $var)
+    public function setRegion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->region = $var;
 
         return $this;
@@ -240,9 +240,9 @@ class TenantContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPartitionId(string $var)
+    public function setPartitionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->partition_id = $var;
 
         return $this;
@@ -266,9 +266,9 @@ class TenantContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAccessSurface(string $var)
+    public function setAccessSurface($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->access_surface = $var;
 
         return $this;
@@ -292,7 +292,7 @@ class TenantContext extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setAttributes(array|\Google\Protobuf\Internal\MapField $var)
+    public function setAttributes($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->attributes = $arr;

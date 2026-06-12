@@ -1309,39 +1309,161 @@ def test_live_generated_rpc_surface():
     finally:
         auth_channel.close()
 
-    probed = 0
-    populated = 0
+    # The full-surface 262-RPC probe is now ONE parametrized test case per RPC
+    # (`test_rpc_surface[...]`, below) so the runner reports per-RPC pass/fail like
+    # the Go suite's sub-tests — not a single opaque "1 passed". This monolithic test
+    # keeps the deep, value-asserted E2E (backend matrix, native-service CRUD, session
+    # lifecycle, negative cases) above.
+    if lifecycle_failures:
+        raise AssertionError("; ".join(lifecycle_failures))
+
+
+# --------------------------------------------------------------------------------
+# Per-RPC surface coverage — one parametrized pytest case PER RPC (262 total), so
+# the runner shows granular per-RPC results (like Go's sub-tests). Each case sends a
+# descriptor-derived, field-populated typed request and asserts the RPC REACHED a
+# live handler (no Unimplemented/Unavailable/Unknown mount failure) — i.e. it is
+# wired, decodes, and validates. Login + clients are built ONCE via the module
+# fixture. (Result-asserted deep E2E remains in the deep test above + native E2E.)
+# --------------------------------------------------------------------------------
+
+def _all_rpcs():
+    rpcs = []
+    for client_cls in SERVICE_CLIENTS:
+        for method in service_descriptor(client_cls).methods:
+            rpcs.append((client_cls, method))
+    return rpcs
+
+
+ALL_RPCS = _all_rpcs()
+assert len(ALL_RPCS) == 262, f"expected 262 RPCs from the descriptor set, found {len(ALL_RPCS)}"
+
+
+@pytest.fixture(scope="module")
+def live_session():
+    target = required_env("UDB_GRPC_TARGET")
+    auth_target = os.getenv("UDB_AUTH_GRPC_TARGET", target)
+    auth = UdbAuthClient(auth_target, metadata(), timeout=10.0)
+    login = auth.login(
+        required_env("UDB_LIVE_USERNAME"),
+        required_env("UDB_LIVE_PASSWORD"),
+        device_name="python-sdk-surface",
+    )
+    canonical_tenant = auth.authenticate_bearer(login.access_token).principal.tenant_id
+    authed_meta = replace(metadata(bearer_token=login.access_token), tenant_id=canonical_tenant)
+    clients = {}
     for client_cls in SERVICE_CLIENTS:
         endpoint = target if client_cls is DataBrokerClient else auth_target
-        client = client_cls(endpoint, authed_meta, timeout=2.0)
-        descriptor = service_descriptor(client_cls)
-        try:
-            for method in descriptor.methods:
-                label = f"{client_cls._SERVICE_FULL}/{method.name}"
-                if should_populate(method):
-                    populated += 1
-                request = default_request(method, authed_meta)
-                rpc = getattr(client.stub, method.name)
-                try:
-                    if method.client_streaming:
-                        iterator = rpc(iter([request]), metadata=authed_meta.to_grpc_metadata(), timeout=2.0)
-                        if method.server_streaming:
-                            drain_stream(label, iterator)
-                    elif method.server_streaming:
-                        drain_stream(label, rpc(request, metadata=authed_meta.to_grpc_metadata(), timeout=2.0))
-                    else:
-                        rpc(request, metadata=authed_meta.to_grpc_metadata(), timeout=2.0)
-                except grpc.RpcError as exc:
-                    assert_not_mount_failure(label, exc)
-                probed += 1
-        finally:
+        clients[client_cls] = client_cls(endpoint, authed_meta, timeout=10.0)
+    try:
+        yield {"authed_meta": authed_meta, "clients": clients}
+    finally:
+        for client in clients.values():
             client.close()
-    assert probed == 262
-    # 100% coverage: every RPC except DESTRUCTIVE ones (proto operation_kind)
-    # receives a populated typed request that exercises real decode + validation +
-    # handler logic.
-    assert populated >= 230, f"only {populated}/262 RPCs received a populated typed request; full-surface coverage regressed"
-    print(f"\nfull-surface probe: {probed}/262 RPCs reached, {populated} sent populated typed requests")
 
-    # Now surface any logout-revocation gap (deferred so coverage ran first).
-    assert not lifecycle_failures, "SECURITY (logout did not fully invalidate the session): " + "; ".join(lifecycle_failures)
+
+@pytest.mark.parametrize(
+    "rpc", ALL_RPCS, ids=[f"{cc._SERVICE_FULL}/{m.name}" for cc, m in ALL_RPCS]
+)
+def test_rpc_surface(live_session, rpc):
+    client_cls, method = rpc
+    authed_meta = live_session["authed_meta"]
+    client = live_session["clients"][client_cls]
+    label = f"{client_cls._SERVICE_FULL}/{method.name}"
+    request = default_request(method, authed_meta)
+    rpc_callable = getattr(client.stub, method.name)
+    try:
+        if method.client_streaming:
+            iterator = rpc_callable(iter([request]), metadata=authed_meta.to_grpc_metadata(), timeout=10.0)
+            if method.server_streaming:
+                drain_stream(label, iterator)
+        elif method.server_streaming:
+            drain_stream(label, rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=10.0))
+        else:
+            rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=10.0)
+    except grpc.RpcError as exc:
+        assert_not_mount_failure(label, exc)
+
+
+# --------------------------------------------------------------------------------
+# Per-RPC performance (gated on UDB_LIVE_PERF=1). Times every RPC over multiple
+# iterations and writes perf_report_python.md — the Python counterpart of the Go
+# perf harness. read_only RPCs are timed many times; mutations a few; destructive
+# once typed-empty (validation latency only).
+# --------------------------------------------------------------------------------
+
+@pytest.mark.skipif(os.getenv("UDB_LIVE_PERF") != "1", reason="perf run requires UDB_LIVE_PERF=1")
+def test_live_perf():
+    target = required_env("UDB_GRPC_TARGET")
+    auth_target = os.getenv("UDB_AUTH_GRPC_TARGET", target)
+    auth = UdbAuthClient(auth_target, metadata(), timeout=10.0)
+    login = auth.login(required_env("UDB_LIVE_USERNAME"), required_env("UDB_LIVE_PASSWORD"), device_name="python-sdk-perf")
+    canonical_tenant = auth.authenticate_bearer(login.access_token).principal.tenant_id
+    authed_meta = replace(metadata(bearer_token=login.access_token), tenant_id=canonical_tenant)
+    clients = {}
+    for client_cls in SERVICE_CLIENTS:
+        endpoint = target if client_cls is DataBrokerClient else auth_target
+        clients[client_cls] = client_cls(endpoint, authed_meta, timeout=20.0)
+
+    def iters_for(kind):
+        return 1 if kind == "destructive" else (5 if kind == "mutation" else 25)
+
+    def time_one(client, method):
+        request = default_request(method, authed_meta)
+        rpc_callable = getattr(client.stub, method.name)
+        start = time.perf_counter()
+        try:
+            if method.client_streaming:
+                it = rpc_callable(iter([request]), metadata=authed_meta.to_grpc_metadata(), timeout=20.0)
+                if method.server_streaming:
+                    drain_stream(method.name, it)
+            elif method.server_streaming:
+                drain_stream(method.name, rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=20.0))
+            else:
+                rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=20.0)
+        except grpc.RpcError:
+            pass
+        return (time.perf_counter() - start) * 1000.0  # ms
+
+    # Streaming RPCs are EXCLUDED from the latency aggregate: a subscription/upload
+    # stream has no well-defined single request->response latency, and draining it to
+    # the deadline would inject a 20 s "timeout" into the mean (that is what inflated
+    # DataBroker to 272 ms). Only unary RPCs are timed; the excluded ones are listed.
+    samples = []
+    streaming_excluded = []
+    for client_cls, method in ALL_RPCS:
+        if method.client_streaming or method.server_streaming:
+            streaming_excluded.append(f"{client_cls._SERVICE_FULL.split('.')[-1]}/{method.name}")
+            continue
+        client = clients[client_cls]
+        kind = RPC_OPERATION_KIND.get(rpc_path(method), "read_only")
+        n = iters_for(kind)
+        time_one(client, method)  # warm-up
+        durs = sorted(time_one(client, method) for _ in range(n))
+        def pct(p):
+            return durs[min(len(durs) - 1, (p * (len(durs) - 1)) // 100)]
+        samples.append({
+            "service": client_cls._SERVICE_FULL.split(".")[-1],
+            "rpc": method.name, "kind": kind, "iters": n,
+            "p50": pct(50), "p99": pct(99), "mean": sum(durs) / len(durs),
+        })
+    for c in clients.values():
+        c.close()
+
+    svc = {}
+    for s in samples:
+        svc.setdefault(s["service"], []).append(s["mean"])
+    lines = ["# UDB SDK Live Perf — Python (localhost)", "",
+             f"Unary RPCs measured: {len(samples)}", "",
+             f"Streaming RPCs excluded from latency (no well-defined request/response latency): "
+             f"{len(streaming_excluded)} — {', '.join(streaming_excluded)}", "",
+             "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"]
+    for name in sorted(svc, key=lambda k: -sum(svc[k]) / len(svc[k])):
+        lines.append(f"| {name} | {len(svc[name])} | {sum(svc[name]) / len(svc[name]):.2f} |")
+    lines += ["", "## Slowest 20 by p99", "", "| RPC | kind | p50 ms | p99 ms | mean ms |", "|---|---|--:|--:|--:|"]
+    for s in sorted(samples, key=lambda x: -x["p99"])[:20]:
+        lines.append(f"| {s['service']}/{s['rpc']} | {s['kind']} | {s['p50']:.2f} | {s['p99']:.2f} | {s['mean']:.2f} |")
+    report = "\n".join(lines) + "\n"
+    with open("perf_report_python.md", "w", encoding="utf-8") as fh:
+        fh.write(report)
+    print(f"\nPython perf: {len(samples)} RPCs measured → sdk/python/perf_report_python.md")

@@ -52,9 +52,9 @@ class CreateSessionResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSessionId(string $var)
+    public function setSessionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->session_id = $var;
 
         return $this;
@@ -74,7 +74,7 @@ class CreateSessionResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setExpiresAtUnix(int|string $var)
+    public function setExpiresAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->expires_at_unix = $var;

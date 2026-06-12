@@ -57,9 +57,9 @@ class StartWebAuthnRegistrationResponse extends \Google\Protobuf\Internal\Messag
      * @param string $var
      * @return $this
      */
-    public function setChallengeId(string $var)
+    public function setChallengeId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->challenge_id = $var;
 
         return $this;
@@ -79,9 +79,9 @@ class StartWebAuthnRegistrationResponse extends \Google\Protobuf\Internal\Messag
      * @param string $var
      * @return $this
      */
-    public function setPublicKeyCredentialCreationOptionsJson(string $var)
+    public function setPublicKeyCredentialCreationOptionsJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->public_key_credential_creation_options_json = $var;
 
         return $this;
@@ -101,7 +101,7 @@ class StartWebAuthnRegistrationResponse extends \Google\Protobuf\Internal\Messag
      * @param int|string $var
      * @return $this
      */
-    public function setExpiresAtUnix(int|string $var)
+    public function setExpiresAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->expires_at_unix = $var;

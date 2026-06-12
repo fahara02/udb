@@ -185,9 +185,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKeyId(string $var)
+    public function setKeyId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->key_id = $var;
 
         return $this;
@@ -211,9 +211,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKeyPrefix(string $var)
+    public function setKeyPrefix($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->key_prefix = $var;
 
         return $this;
@@ -237,9 +237,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKeyHash(string $var)
+    public function setKeyHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->key_hash = $var;
 
         return $this;
@@ -259,9 +259,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -281,9 +281,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDescription(string $var)
+    public function setDescription($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->description = $var;
 
         return $this;
@@ -291,7 +291,7 @@ class ApiKey extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.apikey.entity.v1.ApiKeyOwnerType owner_type = 6 [json_name = "ownerType", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Apikey\Entity\V1\ApiKeyOwnerType}
+     * @return int
      */
     public function getOwnerType()
     {
@@ -300,10 +300,10 @@ class ApiKey extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.apikey.entity.v1.ApiKeyOwnerType owner_type = 6 [json_name = "ownerType", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Apikey\Entity\V1\ApiKeyOwnerType}
+     * @param int $var
      * @return $this
      */
-    public function setOwnerType(int $var)
+    public function setOwnerType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Apikey\Entity\V1\ApiKeyOwnerType::class);
         $this->owner_type = $var;
@@ -329,9 +329,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOwnerId(string $var)
+    public function setOwnerId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->owner_id = $var;
 
         return $this;
@@ -355,9 +355,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setScopesJson(string $var)
+    public function setScopesJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->scopes_json = $var;
 
         return $this;
@@ -365,7 +365,7 @@ class ApiKey extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.apikey.entity.v1.ApiKeyStatus status = 9 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Apikey\Entity\V1\ApiKeyStatus}
+     * @return int
      */
     public function getStatus()
     {
@@ -374,10 +374,10 @@ class ApiKey extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.apikey.entity.v1.ApiKeyStatus status = 9 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Apikey\Entity\V1\ApiKeyStatus}
+     * @param int $var
      * @return $this
      */
-    public function setStatus(int $var)
+    public function setStatus($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Apikey\Entity\V1\ApiKeyStatus::class);
         $this->status = $var;
@@ -403,9 +403,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIpAllowlistJson(string $var)
+    public function setIpAllowlistJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->ip_allowlist_json = $var;
 
         return $this;
@@ -429,7 +429,7 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRateLimitPerMinute(int $var)
+    public function setRateLimitPerMinute($var)
     {
         GPBUtil::checkInt32($var);
         $this->rate_limit_per_minute = $var;
@@ -451,7 +451,7 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setRateLimitPerDay(int|string $var)
+    public function setRateLimitPerDay($var)
     {
         GPBUtil::checkInt64($var);
         $this->rate_limit_per_day = $var;
@@ -473,9 +473,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCreatedBy(string $var)
+    public function setCreatedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->created_by = $var;
 
         return $this;
@@ -495,9 +495,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRevokedBy(string $var)
+    public function setRevokedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->revoked_by = $var;
 
         return $this;
@@ -517,9 +517,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRevokeReason(string $var)
+    public function setRevokeReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->revoke_reason = $var;
 
         return $this;
@@ -549,8 +549,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setExpiresAt(\Google\Protobuf\Timestamp|null $var)
+    public function setExpiresAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->expires_at = $var;
 
         return $this;
@@ -580,8 +581,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setLastUsedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setLastUsedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->last_used_at = $var;
 
         return $this;
@@ -611,8 +613,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;
@@ -642,8 +645,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setUpdatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setUpdatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->updated_at = $var;
 
         return $this;
@@ -673,8 +677,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setDeletedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setDeletedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->deleted_at = $var;
 
         return $this;
@@ -694,9 +699,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeletedBy(string $var)
+    public function setDeletedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->deleted_by = $var;
 
         return $this;
@@ -716,9 +721,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -738,9 +743,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -760,9 +765,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAllowedResourcesJson(string $var)
+    public function setAllowedResourcesJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->allowed_resources_json = $var;
 
         return $this;
@@ -782,9 +787,9 @@ class ApiKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMetadataJson(string $var)
+    public function setMetadataJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->metadata_json = $var;
 
         return $this;

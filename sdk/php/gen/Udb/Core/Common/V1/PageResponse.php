@@ -82,7 +82,7 @@ class PageResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setPage(int $var)
+    public function setPage($var)
     {
         GPBUtil::checkInt32($var);
         $this->page = $var;
@@ -104,7 +104,7 @@ class PageResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setPageSize(int $var)
+    public function setPageSize($var)
     {
         GPBUtil::checkInt32($var);
         $this->page_size = $var;
@@ -126,7 +126,7 @@ class PageResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTotalItems(int|string $var)
+    public function setTotalItems($var)
     {
         GPBUtil::checkInt64($var);
         $this->total_items = $var;
@@ -148,7 +148,7 @@ class PageResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setTotalPages(int $var)
+    public function setTotalPages($var)
     {
         GPBUtil::checkInt32($var);
         $this->total_pages = $var;
@@ -170,9 +170,9 @@ class PageResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNextPageToken(string $var)
+    public function setNextPageToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->next_page_token = $var;
 
         return $this;
@@ -192,7 +192,7 @@ class PageResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTotalCount(int|string $var)
+    public function setTotalCount($var)
     {
         GPBUtil::checkInt64($var);
         $this->total_count = $var;
@@ -214,8 +214,9 @@ class PageResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setHasNext(bool $var)
+    public function setHasNext($var)
     {
+        GPBUtil::checkBool($var);
         $this->has_next = $var;
 
         return $this;
@@ -235,8 +236,9 @@ class PageResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setHasPrevious(bool $var)
+    public function setHasPrevious($var)
     {
+        GPBUtil::checkBool($var);
         $this->has_previous = $var;
 
         return $this;

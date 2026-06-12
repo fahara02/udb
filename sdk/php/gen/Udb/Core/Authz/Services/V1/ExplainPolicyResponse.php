@@ -81,8 +81,9 @@ class ExplainPolicyResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\Decision $var
      * @return $this
      */
-    public function setDecision(\Udb\Core\Authz\Services\V1\Decision|null $var)
+    public function setDecision($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\Decision::class);
         $this->decision = $var;
 
         return $this;
@@ -106,7 +107,7 @@ class ExplainPolicyResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setMatchedPolicyIds(array|RepeatedField $var)
+    public function setMatchedPolicyIds($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->matched_policy_ids = $arr;
@@ -132,9 +133,9 @@ class ExplainPolicyResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDenyReason(string $var)
+    public function setDenyReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->deny_reason = $var;
 
         return $this;
@@ -158,7 +159,7 @@ class ExplainPolicyResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setExplanation(array|RepeatedField $var)
+    public function setExplanation($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->explanation = $arr;

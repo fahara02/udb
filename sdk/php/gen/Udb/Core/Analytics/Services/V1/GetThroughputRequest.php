@@ -57,9 +57,9 @@ class GetThroughputRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -79,9 +79,9 @@ class GetThroughputRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setHourFrom(string $var)
+    public function setHourFrom($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->hour_from = $var;
 
         return $this;
@@ -101,9 +101,9 @@ class GetThroughputRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setHourTo(string $var)
+    public function setHourTo($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->hour_to = $var;
 
         return $this;

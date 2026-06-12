@@ -57,7 +57,7 @@ class EmergencyRevokeApiKeysResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setRevokedCount(int|string $var)
+    public function setRevokedCount($var)
     {
         GPBUtil::checkInt64($var);
         $this->revoked_count = $var;
@@ -79,7 +79,7 @@ class EmergencyRevokeApiKeysResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRevokedKeyIds(array|RepeatedField $var)
+    public function setRevokedKeyIds($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->revoked_key_ids = $arr;
@@ -101,9 +101,9 @@ class EmergencyRevokeApiKeysResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOperationId(string $var)
+    public function setOperationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->operation_id = $var;
 
         return $this;

@@ -85,8 +85,9 @@ class ExplainPolicyRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\GovernanceActor $var
      * @return $this
      */
-    public function setActor(\Udb\Core\Authz\Services\V1\GovernanceActor|null $var)
+    public function setActor($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\GovernanceActor::class);
         $this->actor = $var;
 
         return $this;
@@ -106,9 +107,9 @@ class ExplainPolicyRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -128,9 +129,9 @@ class ExplainPolicyRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -154,9 +155,9 @@ class ExplainPolicyRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDraftId(string $var)
+    public function setDraftId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->draft_id = $var;
 
         return $this;
@@ -186,8 +187,9 @@ class ExplainPolicyRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\PolicyDocument $var
      * @return $this
      */
-    public function setCandidate(\Udb\Core\Authz\Services\V1\PolicyDocument|null $var)
+    public function setCandidate($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\PolicyDocument::class);
         $this->candidate = $var;
 
         return $this;
@@ -217,8 +219,9 @@ class ExplainPolicyRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\SimulationCase $var
      * @return $this
      */
-    public function setTestCase(\Udb\Core\Authz\Services\V1\SimulationCase|null $var)
+    public function setTestCase($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\SimulationCase::class);
         $this->test_case = $var;
 
         return $this;

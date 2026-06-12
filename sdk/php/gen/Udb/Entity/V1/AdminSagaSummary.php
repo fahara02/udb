@@ -67,7 +67,7 @@ class AdminSagaSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setActive(int|string $var)
+    public function setActive($var)
     {
         GPBUtil::checkInt64($var);
         $this->active = $var;
@@ -89,7 +89,7 @@ class AdminSagaSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setCompensated(int|string $var)
+    public function setCompensated($var)
     {
         GPBUtil::checkInt64($var);
         $this->compensated = $var;
@@ -111,7 +111,7 @@ class AdminSagaSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setFailedCompensation(int|string $var)
+    public function setFailedCompensation($var)
     {
         GPBUtil::checkInt64($var);
         $this->failed_compensation = $var;
@@ -133,7 +133,7 @@ class AdminSagaSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setManualReview(int|string $var)
+    public function setManualReview($var)
     {
         GPBUtil::checkInt64($var);
         $this->manual_review = $var;
@@ -155,7 +155,7 @@ class AdminSagaSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setIndeterminate(int|string $var)
+    public function setIndeterminate($var)
     {
         GPBUtil::checkInt64($var);
         $this->indeterminate = $var;

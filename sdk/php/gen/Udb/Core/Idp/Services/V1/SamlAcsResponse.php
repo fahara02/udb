@@ -111,8 +111,9 @@ class SamlAcsResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setAuthenticated(bool $var)
+    public function setAuthenticated($var)
     {
+        GPBUtil::checkBool($var);
         $this->authenticated = $var;
 
         return $this;
@@ -136,9 +137,9 @@ class SamlAcsResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSubject(string $var)
+    public function setSubject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->subject = $var;
 
         return $this;
@@ -158,9 +159,9 @@ class SamlAcsResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -180,9 +181,9 @@ class SamlAcsResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEmail(string $var)
+    public function setEmail($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->email = $var;
 
         return $this;
@@ -202,8 +203,9 @@ class SamlAcsResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setEmailVerified(bool $var)
+    public function setEmailVerified($var)
     {
+        GPBUtil::checkBool($var);
         $this->email_verified = $var;
 
         return $this;
@@ -223,7 +225,7 @@ class SamlAcsResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setGroups(array|RepeatedField $var)
+    public function setGroups($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->groups = $arr;
@@ -249,7 +251,7 @@ class SamlAcsResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRoles(array|RepeatedField $var)
+    public function setRoles($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->roles = $arr;
@@ -259,7 +261,7 @@ class SamlAcsResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.AssuranceLevel assurance = 8 [json_name = "assurance"];</code>
-     * @return int one of the values in {@see \Udb\Core\Idp\Entity\V1\AssuranceLevel}
+     * @return int
      */
     public function getAssurance()
     {
@@ -268,10 +270,10 @@ class SamlAcsResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.AssuranceLevel assurance = 8 [json_name = "assurance"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Idp\Entity\V1\AssuranceLevel}
+     * @param int $var
      * @return $this
      */
-    public function setAssurance(int $var)
+    public function setAssurance($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Idp\Entity\V1\AssuranceLevel::class);
         $this->assurance = $var;
@@ -299,8 +301,9 @@ class SamlAcsResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setSignatureVerified(bool $var)
+    public function setSignatureVerified($var)
     {
+        GPBUtil::checkBool($var);
         $this->signature_verified = $var;
 
         return $this;
@@ -320,9 +323,9 @@ class SamlAcsResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDetail(string $var)
+    public function setDetail($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->detail = $var;
 
         return $this;
@@ -346,9 +349,9 @@ class SamlAcsResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAttributesJson(string $var)
+    public function setAttributesJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->attributes_json = $var;
 
         return $this;

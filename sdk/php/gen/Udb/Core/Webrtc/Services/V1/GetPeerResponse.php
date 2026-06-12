@@ -65,8 +65,9 @@ class GetPeerResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Webrtc\Entity\V1\Peer $var
      * @return $this
      */
-    public function setPeer(\Udb\Core\Webrtc\Entity\V1\Peer|null $var)
+    public function setPeer($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Webrtc\Entity\V1\Peer::class);
         $this->peer = $var;
 
         return $this;
@@ -100,8 +101,9 @@ class GetPeerResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ApiError $var
      * @return $this
      */
-    public function setError(\Udb\Core\Common\V1\ApiError|null $var)
+    public function setError($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
 
         return $this;

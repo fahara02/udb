@@ -677,18 +677,6 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
-      minio:
-        image: bitnami/minio:latest
-        env:
-          MINIO_ROOT_USER: minio
-          MINIO_ROOT_PASSWORD: minio123
-        ports:
-          - 9000:9000
-        options: >-
-          --health-cmd "curl -f http://localhost:9000/minio/health/live"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
     env:
       UDB_PG_DSN: postgres://udb:udb@localhost:5432/udb_ci
       UDB_MINIO_ENDPOINT: http://localhost:9000
@@ -725,6 +713,28 @@ jobs:
           node-version: '20'
           cache: npm
           cache-dependency-path: sdk/typescript/package-lock.json
+      - name: Start MinIO
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name udb-sdk-live-minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minio \
+            -e MINIO_ROOT_PASSWORD=minio123 \
+            minio/minio:RELEASE.2025-01-20T14-49-07Z \
+            server /data --console-address ":9001"
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:9000/minio/health/live >/dev/null; then
+              exit 0
+            fi
+            docker ps --filter name=udb-sdk-live-minio --filter status=running --quiet | grep -q . || {
+              docker logs udb-sdk-live-minio
+              exit 1
+            }
+            sleep 2
+          done
+          docker logs udb-sdk-live-minio
+          exit 1
       - name: Install TypeScript SDK dependencies
         working-directory: sdk/typescript
         run: npm ci --no-audit --no-fund
@@ -780,6 +790,7 @@ jobs:
           if [ -f /tmp/udb-sdk-live.pid ]; then
             kill "$(cat /tmp/udb-sdk-live.pid)" 2>/dev/null || true
           fi
+          docker rm -f udb-sdk-live-minio 2>/dev/null || true
 
   # ── Version consistency: every manifest + protocol constant matches ──
   # versions.json (the single source of truth). Fails the PR on drift so a

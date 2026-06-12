@@ -107,8 +107,9 @@ class TimeSeriesQueryRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -138,8 +139,9 @@ class TimeSeriesQueryRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\StoreResource $var
      * @return $this
      */
-    public function setResource(\Udb\Entity\V1\StoreResource|null $var)
+    public function setResource($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\StoreResource::class);
         $this->resource = $var;
 
         return $this;
@@ -169,8 +171,9 @@ class TimeSeriesQueryRequest extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setFrom(\Google\Protobuf\Timestamp|null $var)
+    public function setFrom($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->from = $var;
 
         return $this;
@@ -200,8 +203,9 @@ class TimeSeriesQueryRequest extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setTo(\Google\Protobuf\Timestamp|null $var)
+    public function setTo($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->to = $var;
 
         return $this;
@@ -231,8 +235,9 @@ class TimeSeriesQueryRequest extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Struct $var
      * @return $this
      */
-    public function setFilter(\Google\Protobuf\Struct|null $var)
+    public function setFilter($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->filter = $var;
 
         return $this;
@@ -252,7 +257,7 @@ class TimeSeriesQueryRequest extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setFields(array|RepeatedField $var)
+    public function setFields($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->fields = $arr;
@@ -274,9 +279,9 @@ class TimeSeriesQueryRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setGroupBy(string $var)
+    public function setGroupBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->group_by = $var;
 
         return $this;
@@ -296,9 +301,9 @@ class TimeSeriesQueryRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAggregate(string $var)
+    public function setAggregate($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->aggregate = $var;
 
         return $this;
@@ -318,9 +323,9 @@ class TimeSeriesQueryRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setWindow(string $var)
+    public function setWindow($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->window = $var;
 
         return $this;
@@ -340,7 +345,7 @@ class TimeSeriesQueryRequest extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setLimit(int $var)
+    public function setLimit($var)
     {
         GPBUtil::checkInt32($var);
         $this->limit = $var;
@@ -362,9 +367,9 @@ class TimeSeriesQueryRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPageToken(string $var)
+    public function setPageToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->page_token = $var;
 
         return $this;

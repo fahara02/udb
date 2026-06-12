@@ -156,9 +156,9 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCanaryId(string $var)
+    public function setCanaryId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->canary_id = $var;
 
         return $this;
@@ -178,9 +178,9 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicySetId(string $var)
+    public function setPolicySetId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_set_id = $var;
 
         return $this;
@@ -200,9 +200,9 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicyVersionId(string $var)
+    public function setPolicyVersionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_version_id = $var;
 
         return $this;
@@ -210,7 +210,7 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.CanaryScopeKind scope_kind = 4 [json_name = "scopeKind", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authz\Entity\V1\CanaryScopeKind}
+     * @return int
      */
     public function getScopeKind()
     {
@@ -219,10 +219,10 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.CanaryScopeKind scope_kind = 4 [json_name = "scopeKind", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authz\Entity\V1\CanaryScopeKind}
+     * @param int $var
      * @return $this
      */
-    public function setScopeKind(int $var)
+    public function setScopeKind($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authz\Entity\V1\CanaryScopeKind::class);
         $this->scope_kind = $var;
@@ -250,9 +250,9 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setScopeValues(string $var)
+    public function setScopeValues($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->scope_values = $var;
 
         return $this;
@@ -260,7 +260,7 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.CanaryState state = 6 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authz\Entity\V1\CanaryState}
+     * @return int
      */
     public function getState()
     {
@@ -269,10 +269,10 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.CanaryState state = 6 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authz\Entity\V1\CanaryState}
+     * @param int $var
      * @return $this
      */
-    public function setState(int $var)
+    public function setState($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authz\Entity\V1\CanaryState::class);
         $this->state = $var;
@@ -304,8 +304,9 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setStartedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setStartedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->started_at = $var;
 
         return $this;
@@ -329,7 +330,7 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setSuccessWindowSecs(int|string $var)
+    public function setSuccessWindowSecs($var)
     {
         GPBUtil::checkInt64($var);
         $this->success_window_secs = $var;
@@ -357,8 +358,9 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setMetricThreshold(float $var)
+    public function setMetricThreshold($var)
     {
+        GPBUtil::checkDouble($var);
         $this->metric_threshold = $var;
 
         return $this;
@@ -378,9 +380,9 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCreatedBy(string $var)
+    public function setCreatedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->created_by = $var;
 
         return $this;
@@ -400,9 +402,9 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -422,9 +424,9 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -450,7 +452,7 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setMinSamples(int|string $var)
+    public function setMinSamples($var)
     {
         GPBUtil::checkInt64($var);
         $this->min_samples = $var;
@@ -478,9 +480,9 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRollbackVersionId(string $var)
+    public function setRollbackVersionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->rollback_version_id = $var;
 
         return $this;
@@ -504,9 +506,9 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOutcomeReason(string $var)
+    public function setOutcomeReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->outcome_reason = $var;
 
         return $this;
@@ -526,7 +528,7 @@ class PolicyCanary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setRevision(int|string $var)
+    public function setRevision($var)
     {
         GPBUtil::checkInt64($var);
         $this->revision = $var;

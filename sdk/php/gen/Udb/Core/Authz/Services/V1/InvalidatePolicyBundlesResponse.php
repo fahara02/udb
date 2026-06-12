@@ -57,8 +57,9 @@ class InvalidatePolicyBundlesResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setOk(bool $var)
+    public function setOk($var)
     {
+        GPBUtil::checkBool($var);
         $this->ok = $var;
 
         return $this;
@@ -78,7 +79,7 @@ class InvalidatePolicyBundlesResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setPolicyRevision(int|string $var)
+    public function setPolicyRevision($var)
     {
         GPBUtil::checkInt64($var);
         $this->policy_revision = $var;
@@ -100,7 +101,7 @@ class InvalidatePolicyBundlesResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setRelationshipRevision(int|string $var)
+    public function setRelationshipRevision($var)
     {
         GPBUtil::checkInt64($var);
         $this->relationship_revision = $var;

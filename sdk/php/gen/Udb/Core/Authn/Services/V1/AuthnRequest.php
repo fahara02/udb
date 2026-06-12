@@ -107,9 +107,9 @@ class AuthnRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBearerToken(string $var)
+    public function setBearerToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->bearer_token = $var;
 
         return $this;
@@ -129,9 +129,9 @@ class AuthnRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSessionId(string $var)
+    public function setSessionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->session_id = $var;
 
         return $this;
@@ -151,9 +151,9 @@ class AuthnRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setApiKey(string $var)
+    public function setApiKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->api_key = $var;
 
         return $this;
@@ -173,9 +173,9 @@ class AuthnRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setExternalProviderId(string $var)
+    public function setExternalProviderId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->external_provider_id = $var;
 
         return $this;
@@ -195,9 +195,9 @@ class AuthnRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setExternalToken(string $var)
+    public function setExternalToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->external_token = $var;
 
         return $this;
@@ -217,9 +217,9 @@ class AuthnRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantHint(string $var)
+    public function setTenantHint($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_hint = $var;
 
         return $this;
@@ -239,9 +239,9 @@ class AuthnRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectHint(string $var)
+    public function setProjectHint($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_hint = $var;
 
         return $this;
@@ -261,7 +261,7 @@ class AuthnRequest extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRequestedScopes(array|RepeatedField $var)
+    public function setRequestedScopes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->requested_scopes = $arr;
@@ -283,7 +283,7 @@ class AuthnRequest extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setAttributes(array|\Google\Protobuf\Internal\MapField $var)
+    public function setAttributes($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->attributes = $arr;
@@ -293,7 +293,7 @@ class AuthnRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AuthCredentialType credential_type = 10 [json_name = "credentialType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\AuthCredentialType}
+     * @return int
      */
     public function getCredentialType()
     {
@@ -302,10 +302,10 @@ class AuthnRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AuthCredentialType credential_type = 10 [json_name = "credentialType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\AuthCredentialType}
+     * @param int $var
      * @return $this
      */
-    public function setCredentialType(int $var)
+    public function setCredentialType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\AuthCredentialType::class);
         $this->credential_type = $var;
@@ -327,9 +327,9 @@ class AuthnRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setClientId(string $var)
+    public function setClientId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->client_id = $var;
 
         return $this;
@@ -349,9 +349,9 @@ class AuthnRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAudience(string $var)
+    public function setAudience($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->audience = $var;
 
         return $this;
@@ -371,9 +371,9 @@ class AuthnRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIssuer(string $var)
+    public function setIssuer($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->issuer = $var;
 
         return $this;

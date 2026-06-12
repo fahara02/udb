@@ -70,9 +70,9 @@ class RecordPipelineMetricRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStageName(string $var)
+    public function setStageName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->stage_name = $var;
 
         return $this;
@@ -92,9 +92,9 @@ class RecordPipelineMetricRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -118,8 +118,9 @@ class RecordPipelineMetricRequest extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setLatencyMs(float $var)
+    public function setLatencyMs($var)
     {
+        GPBUtil::checkDouble($var);
         $this->latency_ms = $var;
 
         return $this;
@@ -139,8 +140,9 @@ class RecordPipelineMetricRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsSuccess(bool $var)
+    public function setIsSuccess($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_success = $var;
 
         return $this;
@@ -170,8 +172,9 @@ class RecordPipelineMetricRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Core\Common\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;

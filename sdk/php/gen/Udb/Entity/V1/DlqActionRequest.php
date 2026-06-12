@@ -75,8 +75,9 @@ class DlqActionRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -96,9 +97,9 @@ class DlqActionRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDlqId(string $var)
+    public function setDlqId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->dlq_id = $var;
 
         return $this;
@@ -122,8 +123,9 @@ class DlqActionRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPreserveEventId(bool $var)
+    public function setPreserveEventId($var)
     {
+        GPBUtil::checkBool($var);
         $this->preserve_event_id = $var;
 
         return $this;
@@ -143,9 +145,9 @@ class DlqActionRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReason(string $var)
+    public function setReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reason = $var;
 
         return $this;

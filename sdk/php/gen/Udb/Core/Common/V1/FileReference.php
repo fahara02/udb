@@ -72,9 +72,9 @@ class FileReference extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFileId(string $var)
+    public function setFileId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->file_id = $var;
 
         return $this;
@@ -94,9 +94,9 @@ class FileReference extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFileName(string $var)
+    public function setFileName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->file_name = $var;
 
         return $this;
@@ -116,9 +116,9 @@ class FileReference extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStorageUri(string $var)
+    public function setStorageUri($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->storage_uri = $var;
 
         return $this;
@@ -138,9 +138,9 @@ class FileReference extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMimeType(string $var)
+    public function setMimeType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->mime_type = $var;
 
         return $this;
@@ -160,7 +160,7 @@ class FileReference extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setFileSize(int|string $var)
+    public function setFileSize($var)
     {
         GPBUtil::checkInt64($var);
         $this->file_size = $var;
@@ -182,9 +182,9 @@ class FileReference extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setChecksum(string $var)
+    public function setChecksum($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->checksum = $var;
 
         return $this;

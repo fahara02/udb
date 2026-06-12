@@ -87,8 +87,9 @@ class Chunk extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -108,9 +109,9 @@ class Chunk extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBucket(string $var)
+    public function setBucket($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->bucket = $var;
 
         return $this;
@@ -130,9 +131,9 @@ class Chunk extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setObjectKey(string $var)
+    public function setObjectKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->object_key = $var;
 
         return $this;
@@ -152,9 +153,9 @@ class Chunk extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setData(string $var)
+    public function setData($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->data = $var;
 
         return $this;
@@ -174,8 +175,9 @@ class Chunk extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setFinalChunk(bool $var)
+    public function setFinalChunk($var)
     {
+        GPBUtil::checkBool($var);
         $this->final_chunk = $var;
 
         return $this;
@@ -195,9 +197,9 @@ class Chunk extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setContentType(string $var)
+    public function setContentType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->content_type = $var;
 
         return $this;
@@ -217,9 +219,9 @@ class Chunk extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIdempotencyKey(string $var)
+    public function setIdempotencyKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->idempotency_key = $var;
 
         return $this;

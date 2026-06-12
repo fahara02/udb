@@ -67,7 +67,7 @@ class GetDeliveryStatsResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTotalSent(int|string $var)
+    public function setTotalSent($var)
     {
         GPBUtil::checkInt64($var);
         $this->total_sent = $var;
@@ -89,7 +89,7 @@ class GetDeliveryStatsResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTotalDelivered(int|string $var)
+    public function setTotalDelivered($var)
     {
         GPBUtil::checkInt64($var);
         $this->total_delivered = $var;
@@ -111,7 +111,7 @@ class GetDeliveryStatsResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTotalFailed(int|string $var)
+    public function setTotalFailed($var)
     {
         GPBUtil::checkInt64($var);
         $this->total_failed = $var;
@@ -133,8 +133,9 @@ class GetDeliveryStatsResponse extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setOverallDeliveryRate(float $var)
+    public function setOverallDeliveryRate($var)
     {
+        GPBUtil::checkDouble($var);
         $this->overall_delivery_rate = $var;
 
         return $this;
@@ -154,7 +155,7 @@ class GetDeliveryStatsResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Notification\Services\V1\ChannelStats[] $var
      * @return $this
      */
-    public function setByChannel(array|RepeatedField $var)
+    public function setByChannel($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Notification\Services\V1\ChannelStats::class);
         $this->by_channel = $arr;

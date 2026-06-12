@@ -47,8 +47,9 @@ class RenamePasskeyResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRenamed(bool $var)
+    public function setRenamed($var)
     {
+        GPBUtil::checkBool($var);
         $this->renamed = $var;
 
         return $this;

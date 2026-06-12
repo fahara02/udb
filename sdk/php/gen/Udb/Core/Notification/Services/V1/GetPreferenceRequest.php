@@ -62,9 +62,9 @@ class GetPreferenceRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -84,9 +84,9 @@ class GetPreferenceRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -94,7 +94,7 @@ class GetPreferenceRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationChannel channel = 3 [json_name = "channel"];</code>
-     * @return int one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationChannel}
+     * @return int
      */
     public function getChannel()
     {
@@ -103,10 +103,10 @@ class GetPreferenceRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationChannel channel = 3 [json_name = "channel"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationChannel}
+     * @param int $var
      * @return $this
      */
-    public function setChannel(int $var)
+    public function setChannel($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Notification\Entity\V1\NotificationChannel::class);
         $this->channel = $var;
@@ -128,9 +128,9 @@ class GetPreferenceRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventType(string $var)
+    public function setEventType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_type = $var;
 
         return $this;

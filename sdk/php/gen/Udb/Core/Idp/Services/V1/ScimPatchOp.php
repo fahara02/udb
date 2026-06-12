@@ -72,9 +72,9 @@ class ScimPatchOp extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOp(string $var)
+    public function setOp($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->op = $var;
 
         return $this;
@@ -98,9 +98,9 @@ class ScimPatchOp extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPath(string $var)
+    public function setPath($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->path = $var;
 
         return $this;
@@ -124,9 +124,9 @@ class ScimPatchOp extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setValueJson(string $var)
+    public function setValueJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->value_json = $var;
 
         return $this;

@@ -52,8 +52,9 @@ class VerifyMfaChallengeResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setVerified(bool $var)
+    public function setVerified($var)
     {
+        GPBUtil::checkBool($var);
         $this->verified = $var;
 
         return $this;
@@ -73,9 +74,9 @@ class VerifyMfaChallengeResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;

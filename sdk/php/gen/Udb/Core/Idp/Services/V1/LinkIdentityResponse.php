@@ -57,8 +57,9 @@ class LinkIdentityResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Idp\Entity\V1\ExternalIdentity $var
      * @return $this
      */
-    public function setIdentity(\Udb\Core\Idp\Entity\V1\ExternalIdentity|null $var)
+    public function setIdentity($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Idp\Entity\V1\ExternalIdentity::class);
         $this->identity = $var;
 
         return $this;

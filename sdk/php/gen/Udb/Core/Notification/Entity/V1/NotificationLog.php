@@ -137,9 +137,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLogId(string $var)
+    public function setLogId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->log_id = $var;
 
         return $this;
@@ -159,9 +159,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTemplateId(string $var)
+    public function setTemplateId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->template_id = $var;
 
         return $this;
@@ -181,9 +181,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventType(string $var)
+    public function setEventType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_type = $var;
 
         return $this;
@@ -191,7 +191,7 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationChannel}
+     * @return int
      */
     public function getChannel()
     {
@@ -200,10 +200,10 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationChannel channel = 4 [json_name = "channel", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationChannel}
+     * @param int $var
      * @return $this
      */
-    public function setChannel(int $var)
+    public function setChannel($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Notification\Entity\V1\NotificationChannel::class);
         $this->channel = $var;
@@ -225,9 +225,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRecipientId(string $var)
+    public function setRecipientId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->recipient_id = $var;
 
         return $this;
@@ -247,9 +247,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRecipientAddress(string $var)
+    public function setRecipientAddress($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->recipient_address = $var;
 
         return $this;
@@ -269,9 +269,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -291,9 +291,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -313,9 +313,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceType(string $var)
+    public function setResourceType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_type = $var;
 
         return $this;
@@ -335,9 +335,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceId(string $var)
+    public function setResourceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_id = $var;
 
         return $this;
@@ -357,9 +357,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceName(string $var)
+    public function setResourceName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_name = $var;
 
         return $this;
@@ -379,9 +379,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -389,7 +389,7 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationStatus status = 13 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationStatus}
+     * @return int
      */
     public function getStatus()
     {
@@ -398,10 +398,10 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationStatus status = 13 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationStatus}
+     * @param int $var
      * @return $this
      */
-    public function setStatus(int $var)
+    public function setStatus($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Notification\Entity\V1\NotificationStatus::class);
         $this->status = $var;
@@ -423,9 +423,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setErrorMessage(string $var)
+    public function setErrorMessage($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->error_message = $var;
 
         return $this;
@@ -445,9 +445,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProviderMessageId(string $var)
+    public function setProviderMessageId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->provider_message_id = $var;
 
         return $this;
@@ -467,7 +467,7 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRetryCount(int $var)
+    public function setRetryCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->retry_count = $var;
@@ -499,8 +499,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setSentAt(\Google\Protobuf\Timestamp|null $var)
+    public function setSentAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->sent_at = $var;
 
         return $this;
@@ -530,8 +531,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setDeliveredAt(\Google\Protobuf\Timestamp|null $var)
+    public function setDeliveredAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->delivered_at = $var;
 
         return $this;
@@ -561,8 +563,9 @@ class NotificationLog extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;

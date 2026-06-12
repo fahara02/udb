@@ -85,7 +85,7 @@ class IssueCredentialsResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Webrtc\Services\V1\IceServer[] $var
      * @return $this
      */
-    public function setIceServers(array|RepeatedField $var)
+    public function setIceServers($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Webrtc\Services\V1\IceServer::class);
         $this->ice_servers = $arr;
@@ -107,9 +107,9 @@ class IssueCredentialsResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUsername(string $var)
+    public function setUsername($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->username = $var;
 
         return $this;
@@ -129,9 +129,9 @@ class IssueCredentialsResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCredential(string $var)
+    public function setCredential($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->credential = $var;
 
         return $this;
@@ -151,7 +151,7 @@ class IssueCredentialsResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setTtlSeconds(int $var)
+    public function setTtlSeconds($var)
     {
         GPBUtil::checkInt32($var);
         $this->ttl_seconds = $var;
@@ -183,8 +183,9 @@ class IssueCredentialsResponse extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setExpiresAt(\Google\Protobuf\Timestamp|null $var)
+    public function setExpiresAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->expires_at = $var;
 
         return $this;
@@ -218,8 +219,9 @@ class IssueCredentialsResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ApiError $var
      * @return $this
      */
-    public function setError(\Udb\Core\Common\V1\ApiError|null $var)
+    public function setError($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
 
         return $this;
@@ -245,9 +247,9 @@ class IssueCredentialsResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAllowedAction(string $var)
+    public function setAllowedAction($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->allowed_action = $var;
 
         return $this;

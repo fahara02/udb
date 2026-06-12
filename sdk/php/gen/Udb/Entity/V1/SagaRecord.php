@@ -97,9 +97,9 @@ class SagaRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSagaId(string $var)
+    public function setSagaId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->saga_id = $var;
 
         return $this;
@@ -119,9 +119,9 @@ class SagaRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTxId(string $var)
+    public function setTxId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tx_id = $var;
 
         return $this;
@@ -141,9 +141,9 @@ class SagaRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -163,9 +163,9 @@ class SagaRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -185,9 +185,9 @@ class SagaRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStatus(string $var)
+    public function setStatus($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->status = $var;
 
         return $this;
@@ -207,7 +207,7 @@ class SagaRecord extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setCurrentStep(int $var)
+    public function setCurrentStep($var)
     {
         GPBUtil::checkInt32($var);
         $this->current_step = $var;
@@ -229,9 +229,9 @@ class SagaRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStepsJson(string $var)
+    public function setStepsJson($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->steps_json = $var;
 
         return $this;
@@ -251,9 +251,9 @@ class SagaRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCompensationsJson(string $var)
+    public function setCompensationsJson($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->compensations_json = $var;
 
         return $this;
@@ -273,9 +273,9 @@ class SagaRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLastError(string $var)
+    public function setLastError($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->last_error = $var;
 
         return $this;
@@ -295,7 +295,7 @@ class SagaRecord extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setCreatedAtUnix(int|string $var)
+    public function setCreatedAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->created_at_unix = $var;
@@ -317,7 +317,7 @@ class SagaRecord extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setUpdatedAtUnix(int|string $var)
+    public function setUpdatedAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->updated_at_unix = $var;

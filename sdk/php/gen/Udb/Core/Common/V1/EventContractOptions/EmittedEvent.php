@@ -88,9 +88,9 @@ class EmittedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTopic(string $var)
+    public function setTopic($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->topic = $var;
 
         return $this;
@@ -114,9 +114,9 @@ class EmittedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPartitionKeyField(string $var)
+    public function setPartitionKeyField($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->partition_key_field = $var;
 
         return $this;
@@ -140,9 +140,9 @@ class EmittedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeliveryGuarantee(string $var)
+    public function setDeliveryGuarantee($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->delivery_guarantee = $var;
 
         return $this;
@@ -166,9 +166,9 @@ class EmittedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPayloadRedactionProfile(string $var)
+    public function setPayloadRedactionProfile($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->payload_redaction_profile = $var;
 
         return $this;
@@ -192,8 +192,9 @@ class EmittedEvent extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setConditional(bool $var)
+    public function setConditional($var)
     {
+        GPBUtil::checkBool($var);
         $this->conditional = $var;
 
         return $this;

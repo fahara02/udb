@@ -57,9 +57,9 @@ class IssueMfaChallengeResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setChallengeId(string $var)
+    public function setChallengeId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->challenge_id = $var;
 
         return $this;
@@ -79,7 +79,7 @@ class IssueMfaChallengeResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setExpiresAtUnix(int|string $var)
+    public function setExpiresAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->expires_at_unix = $var;
@@ -89,7 +89,7 @@ class IssueMfaChallengeResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 3 [json_name = "factorKind"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\AuthFactorKind}
+     * @return int
      */
     public function getFactorKind()
     {
@@ -98,10 +98,10 @@ class IssueMfaChallengeResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 3 [json_name = "factorKind"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\AuthFactorKind}
+     * @param int $var
      * @return $this
      */
-    public function setFactorKind(int $var)
+    public function setFactorKind($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\AuthFactorKind::class);
         $this->factor_kind = $var;

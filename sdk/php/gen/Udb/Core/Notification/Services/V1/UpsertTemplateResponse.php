@@ -57,8 +57,9 @@ class UpsertTemplateResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Notification\Entity\V1\NotificationTemplate $var
      * @return $this
      */
-    public function setTemplate(\Udb\Core\Notification\Entity\V1\NotificationTemplate|null $var)
+    public function setTemplate($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Notification\Entity\V1\NotificationTemplate::class);
         $this->template = $var;
 
         return $this;

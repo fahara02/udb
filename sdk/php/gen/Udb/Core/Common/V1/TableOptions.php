@@ -276,9 +276,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTableName(string $var)
+    public function setTableName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->table_name = $var;
 
         return $this;
@@ -298,9 +298,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSchemaName(string $var)
+    public function setSchemaName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->schema_name = $var;
 
         return $this;
@@ -320,7 +320,7 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setMigrationOrder(int $var)
+    public function setMigrationOrder($var)
     {
         GPBUtil::checkInt32($var);
         $this->migration_order = $var;
@@ -342,8 +342,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsTable(bool $var)
+    public function setIsTable($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_table = $var;
 
         return $this;
@@ -363,9 +364,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setComment(string $var)
+    public function setComment($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->comment = $var;
 
         return $this;
@@ -389,8 +390,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setSoftDelete(bool $var)
+    public function setSoftDelete($var)
     {
+        GPBUtil::checkBool($var);
         $this->soft_delete = $var;
 
         return $this;
@@ -410,8 +412,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setAuditFields(bool $var)
+    public function setAuditFields($var)
     {
+        GPBUtil::checkBool($var);
         $this->audit_fields = $var;
 
         return $this;
@@ -435,8 +438,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setEnableRls(bool $var)
+    public function setEnableRls($var)
     {
+        GPBUtil::checkBool($var);
         $this->enable_rls = $var;
 
         return $this;
@@ -444,7 +448,7 @@ class TableOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.PartitionStrategy partition_strategy = 9 [json_name = "partitionStrategy"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\PartitionStrategy}
+     * @return int
      */
     public function getPartitionStrategy()
     {
@@ -453,10 +457,10 @@ class TableOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.PartitionStrategy partition_strategy = 9 [json_name = "partitionStrategy"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\PartitionStrategy}
+     * @param int $var
      * @return $this
      */
-    public function setPartitionStrategy(int $var)
+    public function setPartitionStrategy($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\PartitionStrategy::class);
         $this->partition_strategy = $var;
@@ -478,9 +482,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPartitionColumn(string $var)
+    public function setPartitionColumn($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->partition_column = $var;
 
         return $this;
@@ -500,7 +504,7 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRetentionDays(int $var)
+    public function setRetentionDays($var)
     {
         GPBUtil::checkInt32($var);
         $this->retention_days = $var;
@@ -526,7 +530,7 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\RlsPolicy[] $var
      * @return $this
      */
-    public function setRlsPolicies(array|RepeatedField $var)
+    public function setRlsPolicies($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Common\V1\RlsPolicy::class);
         $this->rls_policies = $arr;
@@ -552,8 +556,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setForceRls(bool $var)
+    public function setForceRls($var)
     {
+        GPBUtil::checkBool($var);
         $this->force_rls = $var;
 
         return $this;
@@ -577,9 +582,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSoftDeleteColumn(string $var)
+    public function setSoftDeleteColumn($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->soft_delete_column = $var;
 
         return $this;
@@ -603,8 +608,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setUnlogged(bool $var)
+    public function setUnlogged($var)
     {
+        GPBUtil::checkBool($var);
         $this->unlogged = $var;
 
         return $this;
@@ -628,9 +634,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTablespace(string $var)
+    public function setTablespace($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tablespace = $var;
 
         return $this;
@@ -656,7 +662,7 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\IndexOptions[] $var
      * @return $this
      */
-    public function setIndexes(array|RepeatedField $var)
+    public function setIndexes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Common\V1\IndexOptions::class);
         $this->indexes = $arr;
@@ -682,7 +688,7 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\TableForeignKey[] $var
      * @return $this
      */
-    public function setForeignKeys(array|RepeatedField $var)
+    public function setForeignKeys($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Common\V1\TableForeignKey::class);
         $this->foreign_keys = $arr;
@@ -708,7 +714,7 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\DbExtension[] $var
      * @return $this
      */
-    public function setExtensions(array|RepeatedField $var)
+    public function setExtensions($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Common\V1\DbExtension::class);
         $this->extensions = $arr;
@@ -734,7 +740,7 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\MaterializedView[] $var
      * @return $this
      */
-    public function setMaterializedViews(array|RepeatedField $var)
+    public function setMaterializedViews($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Common\V1\MaterializedView::class);
         $this->materialized_views = $arr;
@@ -762,7 +768,7 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\DbTrigger[] $var
      * @return $this
      */
-    public function setTriggers(array|RepeatedField $var)
+    public function setTriggers($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Common\V1\DbTrigger::class);
         $this->triggers = $arr;
@@ -788,9 +794,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPreviousTableName(string $var)
+    public function setPreviousTableName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->previous_table_name = $var;
 
         return $this;
@@ -810,8 +816,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setAllowDrop(bool $var)
+    public function setAllowDrop($var)
     {
+        GPBUtil::checkBool($var);
         $this->allow_drop = $var;
 
         return $this;
@@ -837,7 +844,7 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\SqlArtifact[] $var
      * @return $this
      */
-    public function setSqlArtifacts(array|RepeatedField $var)
+    public function setSqlArtifacts($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Common\V1\SqlArtifact::class);
         $this->sql_artifacts = $arr;
@@ -865,9 +872,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPartitionInterval(string $var)
+    public function setPartitionInterval($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->partition_interval = $var;
 
         return $this;
@@ -891,7 +898,7 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setPartitionPremake(int $var)
+    public function setPartitionPremake($var)
     {
         GPBUtil::checkInt32($var);
         $this->partition_premake = $var;
@@ -917,8 +924,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPartitionDefault(bool $var)
+    public function setPartitionDefault($var)
     {
+        GPBUtil::checkBool($var);
         $this->partition_default = $var;
 
         return $this;
@@ -942,7 +950,7 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setPartitionRetentionMonths(int $var)
+    public function setPartitionRetentionMonths($var)
     {
         GPBUtil::checkInt32($var);
         $this->partition_retention_months = $var;
@@ -968,9 +976,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReplicaHint(string $var)
+    public function setReplicaHint($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->replica_hint = $var;
 
         return $this;
@@ -994,9 +1002,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCdcTopic(string $var)
+    public function setCdcTopic($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->cdc_topic = $var;
 
         return $this;
@@ -1020,9 +1028,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRequiredScope(string $var)
+    public function setRequiredScope($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->required_scope = $var;
 
         return $this;
@@ -1056,8 +1064,9 @@ class TableOptions extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\VectorStoreOptions $var
      * @return $this
      */
-    public function setVectorStore(\Udb\Core\Common\V1\VectorStoreOptions|null $var)
+    public function setVectorStore($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\VectorStoreOptions::class);
         $this->vector_store = $var;
 
         return $this;

@@ -47,8 +47,9 @@ class DeletePolicyRuleResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setDeleted(bool $var)
+    public function setDeleted($var)
     {
+        GPBUtil::checkBool($var);
         $this->deleted = $var;
 
         return $this;

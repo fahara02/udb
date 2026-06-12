@@ -82,9 +82,9 @@ class CatalogVersionResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCatalogId(string $var)
+    public function setCatalogId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->catalog_id = $var;
 
         return $this;
@@ -104,9 +104,9 @@ class CatalogVersionResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -126,9 +126,9 @@ class CatalogVersionResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setVersion(string $var)
+    public function setVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->version = $var;
 
         return $this;
@@ -148,9 +148,9 @@ class CatalogVersionResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStatus(string $var)
+    public function setStatus($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->status = $var;
 
         return $this;
@@ -170,9 +170,9 @@ class CatalogVersionResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setChecksumSha256(string $var)
+    public function setChecksumSha256($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->checksum_sha256 = $var;
 
         return $this;
@@ -192,7 +192,7 @@ class CatalogVersionResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setCreatedAtUnix(int|string $var)
+    public function setCreatedAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->created_at_unix = $var;
@@ -214,7 +214,7 @@ class CatalogVersionResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setErrors(array|RepeatedField $var)
+    public function setErrors($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->errors = $arr;
@@ -236,7 +236,7 @@ class CatalogVersionResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setWarnings(array|RepeatedField $var)
+    public function setWarnings($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->warnings = $arr;

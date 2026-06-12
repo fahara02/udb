@@ -92,8 +92,9 @@ class SdkSurfaceOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIncludeInFacade(bool $var)
+    public function setIncludeInFacade($var)
     {
+        GPBUtil::checkBool($var);
         $this->include_in_facade = $var;
 
         return $this;
@@ -113,9 +114,9 @@ class SdkSurfaceOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMethodAlias(string $var)
+    public function setMethodAlias($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->method_alias = $var;
 
         return $this;
@@ -135,9 +136,9 @@ class SdkSurfaceOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRequiredCredentialProvider(string $var)
+    public function setRequiredCredentialProvider($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->required_credential_provider = $var;
 
         return $this;
@@ -157,9 +158,9 @@ class SdkSurfaceOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStreamingHelperType(string $var)
+    public function setStreamingHelperType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->streaming_helper_type = $var;
 
         return $this;
@@ -179,7 +180,7 @@ class SdkSurfaceOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setDefaultDeadlineMs(int $var)
+    public function setDefaultDeadlineMs($var)
     {
         GPBUtil::checkInt32($var);
         $this->default_deadline_ms = $var;
@@ -201,7 +202,7 @@ class SdkSurfaceOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setDefaultMaxAttempts(int $var)
+    public function setDefaultMaxAttempts($var)
     {
         GPBUtil::checkInt32($var);
         $this->default_max_attempts = $var;
@@ -223,8 +224,9 @@ class SdkSurfaceOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setBrowserSafe(bool $var)
+    public function setBrowserSafe($var)
     {
+        GPBUtil::checkBool($var);
         $this->browser_safe = $var;
 
         return $this;
@@ -244,8 +246,9 @@ class SdkSurfaceOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setServerOnly(bool $var)
+    public function setServerOnly($var)
     {
+        GPBUtil::checkBool($var);
         $this->server_only = $var;
 
         return $this;
@@ -265,7 +268,7 @@ class SdkSurfaceOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setBoilerplateRecipeTags(array|RepeatedField $var)
+    public function setBoilerplateRecipeTags($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->boilerplate_recipe_tags = $arr;
@@ -287,8 +290,9 @@ class SdkSurfaceOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setGenerateMinimalExample(bool $var)
+    public function setGenerateMinimalExample($var)
     {
+        GPBUtil::checkBool($var);
         $this->generate_minimal_example = $var;
 
         return $this;

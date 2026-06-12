@@ -87,9 +87,9 @@ class DlqEventRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDlqId(string $var)
+    public function setDlqId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->dlq_id = $var;
 
         return $this;
@@ -109,9 +109,9 @@ class DlqEventRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventId(string $var)
+    public function setEventId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_id = $var;
 
         return $this;
@@ -131,9 +131,9 @@ class DlqEventRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTopic(string $var)
+    public function setTopic($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->topic = $var;
 
         return $this;
@@ -153,9 +153,9 @@ class DlqEventRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPayloadJson(string $var)
+    public function setPayloadJson($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->payload_json = $var;
 
         return $this;
@@ -175,9 +175,9 @@ class DlqEventRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setErrorType(string $var)
+    public function setErrorType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->error_type = $var;
 
         return $this;
@@ -197,9 +197,9 @@ class DlqEventRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setErrorMessage(string $var)
+    public function setErrorMessage($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->error_message = $var;
 
         return $this;
@@ -219,9 +219,9 @@ class DlqEventRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStatus(string $var)
+    public function setStatus($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->status = $var;
 
         return $this;
@@ -241,7 +241,7 @@ class DlqEventRecord extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setCreatedAtUnix(int|string $var)
+    public function setCreatedAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->created_at_unix = $var;
@@ -263,7 +263,7 @@ class DlqEventRecord extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setUpdatedAtUnix(int|string $var)
+    public function setUpdatedAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->updated_at_unix = $var;

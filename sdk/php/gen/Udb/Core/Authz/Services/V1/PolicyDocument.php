@@ -62,7 +62,7 @@ class PolicyDocument extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\AuthzPolicyRecord[] $var
      * @return $this
      */
-    public function setPolicies(array|RepeatedField $var)
+    public function setPolicies($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authz\Services\V1\AuthzPolicyRecord::class);
         $this->policies = $arr;
@@ -84,7 +84,7 @@ class PolicyDocument extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\RoleBinding[] $var
      * @return $this
      */
-    public function setRoleBindings(array|RepeatedField $var)
+    public function setRoleBindings($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authz\Services\V1\RoleBinding::class);
         $this->role_bindings = $arr;
@@ -106,7 +106,7 @@ class PolicyDocument extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\RelationshipTuple[] $var
      * @return $this
      */
-    public function setRelationshipTuples(array|RepeatedField $var)
+    public function setRelationshipTuples($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authz\Services\V1\RelationshipTuple::class);
         $this->relationship_tuples = $arr;

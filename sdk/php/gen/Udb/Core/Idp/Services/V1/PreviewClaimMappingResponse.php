@@ -80,9 +80,9 @@ class PreviewClaimMappingResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSubject(string $var)
+    public function setSubject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->subject = $var;
 
         return $this;
@@ -102,9 +102,9 @@ class PreviewClaimMappingResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEmail(string $var)
+    public function setEmail($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->email = $var;
 
         return $this;
@@ -124,8 +124,9 @@ class PreviewClaimMappingResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setEmailVerified(bool $var)
+    public function setEmailVerified($var)
     {
+        GPBUtil::checkBool($var);
         $this->email_verified = $var;
 
         return $this;
@@ -145,9 +146,9 @@ class PreviewClaimMappingResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDisplayName(string $var)
+    public function setDisplayName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->display_name = $var;
 
         return $this;
@@ -167,7 +168,7 @@ class PreviewClaimMappingResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setGroups(array|RepeatedField $var)
+    public function setGroups($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->groups = $arr;
@@ -177,7 +178,7 @@ class PreviewClaimMappingResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.AssuranceLevel assurance = 6 [json_name = "assurance"];</code>
-     * @return int one of the values in {@see \Udb\Core\Idp\Entity\V1\AssuranceLevel}
+     * @return int
      */
     public function getAssurance()
     {
@@ -186,10 +187,10 @@ class PreviewClaimMappingResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.AssuranceLevel assurance = 6 [json_name = "assurance"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Idp\Entity\V1\AssuranceLevel}
+     * @param int $var
      * @return $this
      */
-    public function setAssurance(int $var)
+    public function setAssurance($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Idp\Entity\V1\AssuranceLevel::class);
         $this->assurance = $var;
@@ -215,9 +216,9 @@ class PreviewClaimMappingResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMappedPrincipalJson(string $var)
+    public function setMappedPrincipalJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->mapped_principal_json = $var;
 
         return $this;

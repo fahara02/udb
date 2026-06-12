@@ -102,9 +102,9 @@ class CreatePolicyRuleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSubject(string $var)
+    public function setSubject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->subject = $var;
 
         return $this;
@@ -124,9 +124,9 @@ class CreatePolicyRuleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDomain(string $var)
+    public function setDomain($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->domain = $var;
 
         return $this;
@@ -146,9 +146,9 @@ class CreatePolicyRuleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setObject(string $var)
+    public function setObject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->object = $var;
 
         return $this;
@@ -168,9 +168,9 @@ class CreatePolicyRuleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAction(string $var)
+    public function setAction($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->action = $var;
 
         return $this;
@@ -178,7 +178,7 @@ class CreatePolicyRuleRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.PolicyEffect effect = 5 [json_name = "effect", (.google.api.field_behavior) = REQUIRED];</code>
-     * @return int one of the values in {@see \Udb\Core\Authz\Entity\V1\PolicyEffect}
+     * @return int
      */
     public function getEffect()
     {
@@ -187,10 +187,10 @@ class CreatePolicyRuleRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.PolicyEffect effect = 5 [json_name = "effect", (.google.api.field_behavior) = REQUIRED];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authz\Entity\V1\PolicyEffect}
+     * @param int $var
      * @return $this
      */
-    public function setEffect(int $var)
+    public function setEffect($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authz\Entity\V1\PolicyEffect::class);
         $this->effect = $var;
@@ -212,9 +212,9 @@ class CreatePolicyRuleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCondition(string $var)
+    public function setCondition($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->condition = $var;
 
         return $this;
@@ -234,9 +234,9 @@ class CreatePolicyRuleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDescription(string $var)
+    public function setDescription($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->description = $var;
 
         return $this;
@@ -256,9 +256,9 @@ class CreatePolicyRuleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCreatedBy(string $var)
+    public function setCreatedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->created_by = $var;
 
         return $this;
@@ -278,9 +278,9 @@ class CreatePolicyRuleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -300,9 +300,9 @@ class CreatePolicyRuleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -322,9 +322,9 @@ class CreatePolicyRuleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceType(string $var)
+    public function setResourceType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_type = $var;
 
         return $this;
@@ -344,7 +344,7 @@ class CreatePolicyRuleRequest extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setAttributes(array|\Google\Protobuf\Internal\MapField $var)
+    public function setAttributes($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->attributes = $arr;

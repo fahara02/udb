@@ -64,9 +64,9 @@ class CustomHttpPattern extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKind(string $var)
+    public function setKind($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->kind = $var;
 
         return $this;
@@ -90,9 +90,9 @@ class CustomHttpPattern extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPath(string $var)
+    public function setPath($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->path = $var;
 
         return $this;

@@ -47,7 +47,7 @@ class LintAuthzPoliciesResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setFindings(array|RepeatedField $var)
+    public function setFindings($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->findings = $arr;

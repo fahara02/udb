@@ -85,8 +85,9 @@ class SimulationCase extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\Principal $var
      * @return $this
      */
-    public function setPrincipal(\Udb\Core\Authz\Services\V1\Principal|null $var)
+    public function setPrincipal($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\Principal::class);
         $this->principal = $var;
 
         return $this;
@@ -116,8 +117,9 @@ class SimulationCase extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\ResourceRef $var
      * @return $this
      */
-    public function setResource(\Udb\Core\Authz\Services\V1\ResourceRef|null $var)
+    public function setResource($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\ResourceRef::class);
         $this->resource = $var;
 
         return $this;
@@ -137,9 +139,9 @@ class SimulationCase extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAction(string $var)
+    public function setAction($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->action = $var;
 
         return $this;
@@ -159,9 +161,9 @@ class SimulationCase extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPurpose(string $var)
+    public function setPurpose($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->purpose = $var;
 
         return $this;
@@ -181,7 +183,7 @@ class SimulationCase extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setAttributes(array|\Google\Protobuf\Internal\MapField $var)
+    public function setAttributes($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->attributes = $arr;
@@ -207,9 +209,9 @@ class SimulationCase extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLabel(string $var)
+    public function setLabel($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->label = $var;
 
         return $this;

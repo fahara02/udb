@@ -95,9 +95,9 @@ class ScimUser extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setId(string $var)
+    public function setId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->id = $var;
 
         return $this;
@@ -121,9 +121,9 @@ class ScimUser extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserName(string $var)
+    public function setUserName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_name = $var;
 
         return $this;
@@ -143,9 +143,9 @@ class ScimUser extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDisplayName(string $var)
+    public function setDisplayName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->display_name = $var;
 
         return $this;
@@ -165,9 +165,9 @@ class ScimUser extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEmail(string $var)
+    public function setEmail($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->email = $var;
 
         return $this;
@@ -187,8 +187,9 @@ class ScimUser extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setActive(bool $var)
+    public function setActive($var)
     {
+        GPBUtil::checkBool($var);
         $this->active = $var;
 
         return $this;
@@ -208,7 +209,7 @@ class ScimUser extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setGroups(array|RepeatedField $var)
+    public function setGroups($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->groups = $arr;
@@ -234,9 +235,9 @@ class ScimUser extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRawJson(string $var)
+    public function setRawJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->raw_json = $var;
 
         return $this;

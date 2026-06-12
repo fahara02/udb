@@ -67,8 +67,9 @@ class CacheGetResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setFound(bool $var)
+    public function setFound($var)
     {
+        GPBUtil::checkBool($var);
         $this->found = $var;
 
         return $this;
@@ -88,9 +89,9 @@ class CacheGetResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setValue(string $var)
+    public function setValue($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->value = $var;
 
         return $this;
@@ -110,9 +111,9 @@ class CacheGetResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setContentType(string $var)
+    public function setContentType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->content_type = $var;
 
         return $this;
@@ -132,7 +133,7 @@ class CacheGetResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTtlSeconds(int|string $var)
+    public function setTtlSeconds($var)
     {
         GPBUtil::checkInt64($var);
         $this->ttl_seconds = $var;
@@ -164,8 +165,9 @@ class CacheGetResponse extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Struct $var
      * @return $this
      */
-    public function setMetadata(\Google\Protobuf\Struct|null $var)
+    public function setMetadata($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->metadata = $var;
 
         return $this;

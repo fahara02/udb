@@ -75,8 +75,9 @@ class GetCanaryStatusResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Entity\V1\PolicyCanary $var
      * @return $this
      */
-    public function setCanary(\Udb\Core\Authz\Entity\V1\PolicyCanary|null $var)
+    public function setCanary($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Entity\V1\PolicyCanary::class);
         $this->canary = $var;
 
         return $this;
@@ -102,8 +103,9 @@ class GetCanaryStatusResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPromoteEligible(bool $var)
+    public function setPromoteEligible($var)
     {
+        GPBUtil::checkBool($var);
         $this->promote_eligible = $var;
 
         return $this;
@@ -127,7 +129,7 @@ class GetCanaryStatusResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setWindowRemainingSecs(int|string $var)
+    public function setWindowRemainingSecs($var)
     {
         GPBUtil::checkInt64($var);
         $this->window_remaining_secs = $var;

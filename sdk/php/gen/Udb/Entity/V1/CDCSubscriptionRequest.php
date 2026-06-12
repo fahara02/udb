@@ -67,8 +67,9 @@ class CDCSubscriptionRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -88,9 +89,9 @@ class CDCSubscriptionRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTopicPattern(string $var)
+    public function setTopicPattern($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->topic_pattern = $var;
 
         return $this;
@@ -110,9 +111,9 @@ class CDCSubscriptionRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSinceEventId(string $var)
+    public function setSinceEventId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->since_event_id = $var;
 
         return $this;

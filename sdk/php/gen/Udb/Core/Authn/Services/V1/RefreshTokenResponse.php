@@ -71,9 +71,9 @@ class RefreshTokenResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAccessToken(string $var)
+    public function setAccessToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->access_token = $var;
 
         return $this;
@@ -93,7 +93,7 @@ class RefreshTokenResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setAccessTokenExpiresIn(int $var)
+    public function setAccessTokenExpiresIn($var)
     {
         GPBUtil::checkInt32($var);
         $this->access_token_expires_in = $var;
@@ -125,9 +125,9 @@ class RefreshTokenResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRefreshToken(string $var)
+    public function setRefreshToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->refresh_token = $var;
 
         return $this;
@@ -147,7 +147,7 @@ class RefreshTokenResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRefreshTokenExpiresIn(int $var)
+    public function setRefreshTokenExpiresIn($var)
     {
         GPBUtil::checkInt32($var);
         $this->refresh_token_expires_in = $var;

@@ -84,9 +84,9 @@ class BackendProtocolSupport extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -110,8 +110,9 @@ class BackendProtocolSupport extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setSupportsStreamingReads(bool $var)
+    public function setSupportsStreamingReads($var)
     {
+        GPBUtil::checkBool($var);
         $this->supports_streaming_reads = $var;
 
         return $this;
@@ -135,8 +136,9 @@ class BackendProtocolSupport extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setSupportsObjectStreaming(bool $var)
+    public function setSupportsObjectStreaming($var)
     {
+        GPBUtil::checkBool($var);
         $this->supports_object_streaming = $var;
 
         return $this;
@@ -162,7 +164,7 @@ class BackendProtocolSupport extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setEncodings(array|RepeatedField $var)
+    public function setEncodings($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->encodings = $arr;

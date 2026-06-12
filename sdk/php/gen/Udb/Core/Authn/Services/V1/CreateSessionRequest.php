@@ -67,8 +67,9 @@ class CreateSessionRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authn\Services\V1\Principal $var
      * @return $this
      */
-    public function setPrincipal(\Udb\Core\Authn\Services\V1\Principal|null $var)
+    public function setPrincipal($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authn\Services\V1\Principal::class);
         $this->principal = $var;
 
         return $this;
@@ -88,7 +89,7 @@ class CreateSessionRequest extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTtlSeconds(int|string $var)
+    public function setTtlSeconds($var)
     {
         GPBUtil::checkInt64($var);
         $this->ttl_seconds = $var;
@@ -110,9 +111,9 @@ class CreateSessionRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setClientFingerprint(string $var)
+    public function setClientFingerprint($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->client_fingerprint = $var;
 
         return $this;

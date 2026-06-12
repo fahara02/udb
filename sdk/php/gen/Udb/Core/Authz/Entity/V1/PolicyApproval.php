@@ -91,9 +91,9 @@ class PolicyApproval extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setApprovalId(string $var)
+    public function setApprovalId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->approval_id = $var;
 
         return $this;
@@ -113,9 +113,9 @@ class PolicyApproval extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDraftId(string $var)
+    public function setDraftId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->draft_id = $var;
 
         return $this;
@@ -135,9 +135,9 @@ class PolicyApproval extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -157,9 +157,9 @@ class PolicyApproval extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setActor(string $var)
+    public function setActor($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->actor = $var;
 
         return $this;
@@ -179,9 +179,9 @@ class PolicyApproval extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRole(string $var)
+    public function setRole($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->role = $var;
 
         return $this;
@@ -201,9 +201,9 @@ class PolicyApproval extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDecision(string $var)
+    public function setDecision($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->decision = $var;
 
         return $this;
@@ -223,9 +223,9 @@ class PolicyApproval extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReason(string $var)
+    public function setReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reason = $var;
 
         return $this;
@@ -255,8 +255,9 @@ class PolicyApproval extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;

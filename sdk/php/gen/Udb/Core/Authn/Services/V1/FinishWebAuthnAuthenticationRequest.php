@@ -57,9 +57,9 @@ class FinishWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Mess
      * @param string $var
      * @return $this
      */
-    public function setChallengeId(string $var)
+    public function setChallengeId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->challenge_id = $var;
 
         return $this;
@@ -79,9 +79,9 @@ class FinishWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Mess
      * @param string $var
      * @return $this
      */
-    public function setPublicKeyCredentialJson(string $var)
+    public function setPublicKeyCredentialJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->public_key_credential_json = $var;
 
         return $this;
@@ -111,8 +111,9 @@ class FinishWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Mess
      * @param \Udb\Core\Common\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Core\Common\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;

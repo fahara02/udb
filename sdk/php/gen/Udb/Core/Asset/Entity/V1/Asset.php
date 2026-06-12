@@ -130,9 +130,9 @@ class Asset extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAssetId(string $var)
+    public function setAssetId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->asset_id = $var;
 
         return $this;
@@ -156,9 +156,9 @@ class Asset extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -182,9 +182,9 @@ class Asset extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -208,9 +208,9 @@ class Asset extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFileId(string $var)
+    public function setFileId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->file_id = $var;
 
         return $this;
@@ -234,9 +234,9 @@ class Asset extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -260,9 +260,9 @@ class Asset extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMediaType(string $var)
+    public function setMediaType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->media_type = $var;
 
         return $this;
@@ -272,7 +272,7 @@ class Asset extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:status;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.asset.entity.v1.AssetStatus status = 7 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Asset\Entity\V1\AssetStatus}
+     * @return int
      */
     public function getStatus()
     {
@@ -283,10 +283,10 @@ class Asset extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:status;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.asset.entity.v1.AssetStatus status = 7 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Asset\Entity\V1\AssetStatus}
+     * @param int $var
      * @return $this
      */
-    public function setStatus(int $var)
+    public function setStatus($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Asset\Entity\V1\AssetStatus::class);
         $this->status = $var;
@@ -312,9 +312,9 @@ class Asset extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMetadata(string $var)
+    public function setMetadata($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->metadata = $var;
 
         return $this;
@@ -348,8 +348,9 @@ class Asset extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\AuditInfo $var
      * @return $this
      */
-    public function setAuditInfo(\Udb\Core\Common\V1\AuditInfo|null $var)
+    public function setAuditInfo($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\AuditInfo::class);
         $this->audit_info = $var;
 
         return $this;
@@ -379,8 +380,9 @@ class Asset extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setDeletedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setDeletedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->deleted_at = $var;
 
         return $this;
@@ -400,9 +402,9 @@ class Asset extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeletedBy(string $var)
+    public function setDeletedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->deleted_by = $var;
 
         return $this;

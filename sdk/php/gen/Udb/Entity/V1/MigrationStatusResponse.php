@@ -85,9 +85,9 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRunId(string $var)
+    public function setRunId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->run_id = $var;
 
         return $this;
@@ -107,9 +107,9 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -129,9 +129,9 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCatalogVersion(string $var)
+    public function setCatalogVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->catalog_version = $var;
 
         return $this;
@@ -155,9 +155,9 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setState(string $var)
+    public function setState($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->state = $var;
 
         return $this;
@@ -177,9 +177,9 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStartedAt(string $var)
+    public function setStartedAt($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->started_at = $var;
 
         return $this;
@@ -199,9 +199,9 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFinishedAt(string $var)
+    public function setFinishedAt($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->finished_at = $var;
 
         return $this;
@@ -221,7 +221,7 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\MigrationOperationStatus[] $var
      * @return $this
      */
-    public function setOperations(array|RepeatedField $var)
+    public function setOperations($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\MigrationOperationStatus::class);
         $this->operations = $arr;
@@ -243,9 +243,9 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setError(string $var)
+    public function setError($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->error = $var;
 
         return $this;

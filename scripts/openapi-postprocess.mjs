@@ -62,6 +62,45 @@ if (!text.includes(`"description": ${JSON.stringify(DESCRIPTION)}`)) {
 // values. Normalize escaped CRLFs so Windows and Linux generation do not drift.
 text = text.replace(/\\r\\n/g, "\\n").replace(/\\r/g, "\\n");
 
+// OpenAPI plugin releases disagree on whether a leading source-comment heading
+// belongs in a schema title or description. Canonicalize the handful of known
+// shapes so cached local remote-plugin output and fresh CI output match.
+function escaped(value) {
+  return JSON.stringify(value).slice(1, -1);
+}
+
+const titledDescriptions = [
+  '── Stage 2: native database fast-path access ──────────────────────────────',
+  '── Stage 2: signed policy bundles for local SDK authorization caches ───────',
+];
+
+for (const title of titledDescriptions) {
+  const titleEscaped = escaped(title);
+  text = text.replace(
+    new RegExp(`"description": "${titleEscaped}\\\\n\\\\n([^"]+)"`, 'g'),
+    `"description": "$1"`,
+  );
+}
+
+const schemaTitles = new Map([
+  ['v1NativeAccessRequest', titledDescriptions[0]],
+  ['v1PolicyBundleRequest', titledDescriptions[1]],
+]);
+
+for (const [schemaName, title] of schemaTitles) {
+  text = text.replace(
+    new RegExp(`("${schemaName}": \\{\\n[\\s\\S]*?      "description": "(?:[^"\\\\]|\\\\.)*")(\\n      \\})`, 'm'),
+    `$1,\n      "title": ${JSON.stringify(title)}$2`,
+  );
+}
+
+for (const longCommentSchema of ['v1Session', 'v1User']) {
+  text = text.replace(
+    new RegExp(`("${longCommentSchema}": \\{\\n(?:        .+\\n)*?      )"title": ("(?:[^"\\\\]|\\\\.)*")`, 'm'),
+    '$1"description": $2',
+  );
+}
+
 if (!/"info":\s*\{[\s\S]*?"title":\s*"UDB Control-Plane API"[\s\S]*?"version":\s*"[^"]+"/m.test(text)) {
   console.error('openapi-postprocess: swagger info block shape changed?');
   process.exit(1);

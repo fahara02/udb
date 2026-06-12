@@ -84,9 +84,9 @@ class RelationshipTuple extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSubject(string $var)
+    public function setSubject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->subject = $var;
 
         return $this;
@@ -106,9 +106,9 @@ class RelationshipTuple extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRelation(string $var)
+    public function setRelation($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->relation = $var;
 
         return $this;
@@ -128,9 +128,9 @@ class RelationshipTuple extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setObject(string $var)
+    public function setObject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->object = $var;
 
         return $this;
@@ -150,9 +150,9 @@ class RelationshipTuple extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenant(string $var)
+    public function setTenant($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant = $var;
 
         return $this;
@@ -172,9 +172,9 @@ class RelationshipTuple extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProject(string $var)
+    public function setProject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project = $var;
 
         return $this;
@@ -194,7 +194,7 @@ class RelationshipTuple extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setVersion(int|string $var)
+    public function setVersion($var)
     {
         GPBUtil::checkInt64($var);
         $this->version = $var;
@@ -216,7 +216,7 @@ class RelationshipTuple extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setExpiresAtUnix(int|string $var)
+    public function setExpiresAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->expires_at_unix = $var;
@@ -238,9 +238,9 @@ class RelationshipTuple extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSource(string $var)
+    public function setSource($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->source = $var;
 
         return $this;

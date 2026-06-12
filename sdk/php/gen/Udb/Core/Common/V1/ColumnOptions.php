@@ -253,9 +253,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setColumnName(string $var)
+    public function setColumnName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->column_name = $var;
 
         return $this;
@@ -281,9 +281,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSqlType(string $var)
+    public function setSqlType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->sql_type = $var;
 
         return $this;
@@ -303,8 +303,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setNotNull(bool $var)
+    public function setNotNull($var)
     {
+        GPBUtil::checkBool($var);
         $this->not_null = $var;
 
         return $this;
@@ -324,8 +325,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setUnique(bool $var)
+    public function setUnique($var)
     {
+        GPBUtil::checkBool($var);
         $this->unique = $var;
 
         return $this;
@@ -345,8 +347,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPrimaryKey(bool $var)
+    public function setPrimaryKey($var)
     {
+        GPBUtil::checkBool($var);
         $this->primary_key = $var;
 
         return $this;
@@ -366,8 +369,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setAutoIncrement(bool $var)
+    public function setAutoIncrement($var)
     {
+        GPBUtil::checkBool($var);
         $this->auto_increment = $var;
 
         return $this;
@@ -391,9 +395,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDefaultValue(string $var)
+    public function setDefaultValue($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->default_value = $var;
 
         return $this;
@@ -413,9 +417,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCheckConstraint(string $var)
+    public function setCheckConstraint($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->check_constraint = $var;
 
         return $this;
@@ -445,8 +449,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ForeignKey $var
      * @return $this
      */
-    public function setForeignKey(\Udb\Core\Common\V1\ForeignKey|null $var)
+    public function setForeignKey($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ForeignKey::class);
         $this->foreign_key = $var;
 
         return $this;
@@ -476,8 +481,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\IndexOptions $var
      * @return $this
      */
-    public function setIndex(\Udb\Core\Common\V1\IndexOptions|null $var)
+    public function setIndex($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\IndexOptions::class);
         $this->index = $var;
 
         return $this;
@@ -497,9 +503,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setComment(string $var)
+    public function setComment($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->comment = $var;
 
         return $this;
@@ -525,8 +531,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setExcludeFromInsert(bool $var)
+    public function setExcludeFromInsert($var)
     {
+        GPBUtil::checkBool($var);
         $this->exclude_from_insert = $var;
 
         return $this;
@@ -546,8 +553,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setExcludeFromUpdate(bool $var)
+    public function setExcludeFromUpdate($var)
     {
+        GPBUtil::checkBool($var);
         $this->exclude_from_update = $var;
 
         return $this;
@@ -571,8 +579,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setEncrypted(bool $var)
+    public function setEncrypted($var)
     {
+        GPBUtil::checkBool($var);
         $this->encrypted = $var;
 
         return $this;
@@ -592,8 +601,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsJson(bool $var)
+    public function setIsJson($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_json = $var;
 
         return $this;
@@ -613,8 +623,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsJsonb(bool $var)
+    public function setIsJsonb($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_jsonb = $var;
 
         return $this;
@@ -634,8 +645,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setJsonPathOps(bool $var)
+    public function setJsonPathOps($var)
     {
+        GPBUtil::checkBool($var);
         $this->json_path_ops = $var;
 
         return $this;
@@ -655,8 +667,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsTsvector(bool $var)
+    public function setIsTsvector($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_tsvector = $var;
 
         return $this;
@@ -676,9 +689,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTsvectorLanguage(string $var)
+    public function setTsvectorLanguage($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tsvector_language = $var;
 
         return $this;
@@ -698,7 +711,7 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setTsvectorSourceColumns(array|RepeatedField $var)
+    public function setTsvectorSourceColumns($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->tsvector_source_columns = $arr;
@@ -720,8 +733,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setTrigramIndex(bool $var)
+    public function setTrigramIndex($var)
     {
+        GPBUtil::checkBool($var);
         $this->trigram_index = $var;
 
         return $this;
@@ -741,9 +755,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCollation(string $var)
+    public function setCollation($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->collation = $var;
 
         return $this;
@@ -763,7 +777,7 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setEnumValues(array|RepeatedField $var)
+    public function setEnumValues($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->enum_values = $arr;
@@ -785,9 +799,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPreviousColumnName(string $var)
+    public function setPreviousColumnName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->previous_column_name = $var;
 
         return $this;
@@ -807,9 +821,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackfillSql(string $var)
+    public function setBackfillSql($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backfill_sql = $var;
 
         return $this;
@@ -829,9 +843,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUsingExpression(string $var)
+    public function setUsingExpression($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->using_expression = $var;
 
         return $this;
@@ -851,8 +865,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setAllowDrop(bool $var)
+    public function setAllowDrop($var)
     {
+        GPBUtil::checkBool($var);
         $this->allow_drop = $var;
 
         return $this;
@@ -872,8 +887,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setGenerated(bool $var)
+    public function setGenerated($var)
     {
+        GPBUtil::checkBool($var);
         $this->generated = $var;
 
         return $this;
@@ -893,9 +909,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setGeneratedExpr(string $var)
+    public function setGeneratedExpr($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->generated_expr = $var;
 
         return $this;
@@ -915,8 +931,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIdentity(bool $var)
+    public function setIdentity($var)
     {
+        GPBUtil::checkBool($var);
         $this->identity = $var;
 
         return $this;
@@ -936,9 +953,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReferences(string $var)
+    public function setReferences($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->references = $var;
 
         return $this;
@@ -946,7 +963,7 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ReferentialAction on_delete = 32 [json_name = "onDelete"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\ReferentialAction}
+     * @return int
      */
     public function getOnDelete()
     {
@@ -955,10 +972,10 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ReferentialAction on_delete = 32 [json_name = "onDelete"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\ReferentialAction}
+     * @param int $var
      * @return $this
      */
-    public function setOnDelete(int $var)
+    public function setOnDelete($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\ReferentialAction::class);
         $this->on_delete = $var;
@@ -968,7 +985,7 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ReferentialAction on_update = 33 [json_name = "onUpdate"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\ReferentialAction}
+     * @return int
      */
     public function getOnUpdate()
     {
@@ -977,10 +994,10 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ReferentialAction on_update = 33 [json_name = "onUpdate"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\ReferentialAction}
+     * @param int $var
      * @return $this
      */
-    public function setOnUpdate(int $var)
+    public function setOnUpdate($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\ReferentialAction::class);
         $this->on_update = $var;
@@ -1008,8 +1025,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setNullable(bool $var)
+    public function setNullable($var)
     {
+        GPBUtil::checkBool($var);
         $this->nullable = $var;
 
         return $this;
@@ -1035,8 +1053,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setTenantColumn(bool $var)
+    public function setTenantColumn($var)
     {
+        GPBUtil::checkBool($var);
         $this->tenant_column = $var;
 
         return $this;
@@ -1062,8 +1081,9 @@ class ColumnOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setProjectColumn(bool $var)
+    public function setProjectColumn($var)
     {
+        GPBUtil::checkBool($var);
         $this->project_column = $var;
 
         return $this;

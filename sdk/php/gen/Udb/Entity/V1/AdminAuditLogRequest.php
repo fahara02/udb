@@ -92,8 +92,9 @@ class AdminAuditLogRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -113,9 +114,9 @@ class AdminAuditLogRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOperationFilter(string $var)
+    public function setOperationFilter($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->operation_filter = $var;
 
         return $this;
@@ -135,9 +136,9 @@ class AdminAuditLogRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setActorFilter(string $var)
+    public function setActorFilter($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->actor_filter = $var;
 
         return $this;
@@ -157,9 +158,9 @@ class AdminAuditLogRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantIdFilter(string $var)
+    public function setTenantIdFilter($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id_filter = $var;
 
         return $this;
@@ -179,9 +180,9 @@ class AdminAuditLogRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectIdFilter(string $var)
+    public function setProjectIdFilter($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id_filter = $var;
 
         return $this;
@@ -201,7 +202,7 @@ class AdminAuditLogRequest extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setLimit(int $var)
+    public function setLimit($var)
     {
         GPBUtil::checkInt32($var);
         $this->limit = $var;
@@ -223,9 +224,9 @@ class AdminAuditLogRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPageToken(string $var)
+    public function setPageToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->page_token = $var;
 
         return $this;
@@ -245,8 +246,9 @@ class AdminAuditLogRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRedact(bool $var)
+    public function setRedact($var)
     {
+        GPBUtil::checkBool($var);
         $this->redact = $var;
 
         return $this;

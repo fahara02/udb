@@ -60,7 +60,7 @@ class ListFilesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Storage\Entity\V1\File[] $var
      * @return $this
      */
-    public function setFiles(array|RepeatedField $var)
+    public function setFiles($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Storage\Entity\V1\File::class);
         $this->files = $arr;
@@ -82,7 +82,7 @@ class ListFilesResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setTotalCount(int $var)
+    public function setTotalCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->total_count = $var;
@@ -118,8 +118,9 @@ class ListFilesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ApiError $var
      * @return $this
      */
-    public function setError(\Udb\Core\Common\V1\ApiError|null $var)
+    public function setError($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
 
         return $this;

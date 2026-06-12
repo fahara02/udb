@@ -50,7 +50,7 @@ class TxStatus extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.entity.v1.TxStatus.State state = 1 [json_name = "state"];</code>
-     * @return int one of the values in {@see \Udb\Entity\V1\TxStatus\State}
+     * @return int
      */
     public function getState()
     {
@@ -59,10 +59,10 @@ class TxStatus extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.entity.v1.TxStatus.State state = 1 [json_name = "state"];</code>
-     * @param int $var one of the values in {@see \Udb\Entity\V1\TxStatus\State}
+     * @param int $var
      * @return $this
      */
-    public function setState(int $var)
+    public function setState($var)
     {
         GPBUtil::checkEnum($var, \Udb\Entity\V1\TxStatus\State::class);
         $this->state = $var;
@@ -84,9 +84,9 @@ class TxStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTxId(string $var)
+    public function setTxId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tx_id = $var;
 
         return $this;
@@ -106,9 +106,9 @@ class TxStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMutationId(string $var)
+    public function setMutationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->mutation_id = $var;
 
         return $this;
@@ -128,9 +128,9 @@ class TxStatus extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMessage(string $var)
+    public function setMessage($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->message = $var;
 
         return $this;

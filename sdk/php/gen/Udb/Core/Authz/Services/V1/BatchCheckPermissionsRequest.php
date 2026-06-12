@@ -62,9 +62,9 @@ class BatchCheckPermissionsRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -84,9 +84,9 @@ class BatchCheckPermissionsRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDomain(string $var)
+    public function setDomain($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->domain = $var;
 
         return $this;
@@ -106,7 +106,7 @@ class BatchCheckPermissionsRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\PermissionCheck[] $var
      * @return $this
      */
-    public function setChecks(array|RepeatedField $var)
+    public function setChecks($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authz\Services\V1\PermissionCheck::class);
         $this->checks = $arr;
@@ -138,8 +138,9 @@ class BatchCheckPermissionsRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\AccessContext $var
      * @return $this
      */
-    public function setContext(\Udb\Core\Authz\Services\V1\AccessContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\AccessContext::class);
         $this->context = $var;
 
         return $this;

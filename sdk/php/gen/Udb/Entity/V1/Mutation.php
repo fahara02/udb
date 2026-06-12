@@ -132,8 +132,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -153,9 +154,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTxId(string $var)
+    public function setTxId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tx_id = $var;
 
         return $this;
@@ -175,9 +176,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOperation(string $var)
+    public function setOperation($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->operation = $var;
 
         return $this;
@@ -197,9 +198,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMessageType(string $var)
+    public function setMessageType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->message_type = $var;
 
         return $this;
@@ -219,9 +220,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRecordJson(string $var)
+    public function setRecordJson($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->record_json = $var;
 
         return $this;
@@ -251,8 +252,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Struct $var
      * @return $this
      */
-    public function setPayload(\Google\Protobuf\Struct|null $var)
+    public function setPayload($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->payload = $var;
 
         return $this;
@@ -282,8 +284,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Struct $var
      * @return $this
      */
-    public function setFilter(\Google\Protobuf\Struct|null $var)
+    public function setFilter($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->filter = $var;
 
         return $this;
@@ -303,9 +306,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCollection(string $var)
+    public function setCollection($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->collection = $var;
 
         return $this;
@@ -325,7 +328,7 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\VectorPointMutation[] $var
      * @return $this
      */
-    public function setVectorPoints(array|RepeatedField $var)
+    public function setVectorPoints($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\VectorPointMutation::class);
         $this->vector_points = $arr;
@@ -347,8 +350,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setCommit(bool $var)
+    public function setCommit($var)
     {
+        GPBUtil::checkBool($var);
         $this->commit = $var;
 
         return $this;
@@ -368,8 +372,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRollback(bool $var)
+    public function setRollback($var)
     {
+        GPBUtil::checkBool($var);
         $this->rollback = $var;
 
         return $this;
@@ -389,9 +394,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBucket(string $var)
+    public function setBucket($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->bucket = $var;
 
         return $this;
@@ -411,9 +416,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setObjectKey(string $var)
+    public function setObjectKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->object_key = $var;
 
         return $this;
@@ -433,9 +438,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setObjectData(string $var)
+    public function setObjectData($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->object_data = $var;
 
         return $this;
@@ -455,9 +460,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setContentType(string $var)
+    public function setContentType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->content_type = $var;
 
         return $this;
@@ -477,9 +482,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIdempotencyKey(string $var)
+    public function setIdempotencyKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->idempotency_key = $var;
 
         return $this;

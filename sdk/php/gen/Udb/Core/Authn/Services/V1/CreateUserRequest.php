@@ -100,9 +100,9 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUsername(string $var)
+    public function setUsername($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->username = $var;
 
         return $this;
@@ -122,9 +122,9 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEmail(string $var)
+    public function setEmail($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->email = $var;
 
         return $this;
@@ -148,9 +148,9 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPassword(string $var)
+    public function setPassword($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->password = $var;
 
         return $this;
@@ -170,9 +170,9 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -192,9 +192,9 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFullName(string $var)
+    public function setFullName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->full_name = $var;
 
         return $this;
@@ -224,8 +224,9 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Core\Common\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -233,7 +234,7 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AccountKind account_kind = 7 [json_name = "accountKind"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\AccountKind}
+     * @return int
      */
     public function getAccountKind()
     {
@@ -242,10 +243,10 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AccountKind account_kind = 7 [json_name = "accountKind"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\AccountKind}
+     * @param int $var
      * @return $this
      */
-    public function setAccountKind(int $var)
+    public function setAccountKind($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\AccountKind::class);
         $this->account_kind = $var;
@@ -267,9 +268,9 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -289,9 +290,9 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setExternalProviderId(string $var)
+    public function setExternalProviderId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->external_provider_id = $var;
 
         return $this;
@@ -311,9 +312,9 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setExternalSubject(string $var)
+    public function setExternalSubject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->external_subject = $var;
 
         return $this;
@@ -333,7 +334,7 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setProfileAttributes(array|\Google\Protobuf\Internal\MapField $var)
+    public function setProfileAttributes($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->profile_attributes = $arr;

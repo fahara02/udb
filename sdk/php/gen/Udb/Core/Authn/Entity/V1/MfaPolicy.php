@@ -16,7 +16,6 @@ use Google\Protobuf\RepeatedField;
  * Migration order 7. One row per tenant. When require_mfa is true, password-only
  * login is rejected for that tenant's users until they enrol a second factor.
  * ---------------------------------------------------------------------------
- *
  * Generated from protobuf message <code>udb.core.authn.entity.v1.MfaPolicy</code>
  */
 class MfaPolicy extends \Google\Protobuf\Internal\Message
@@ -74,9 +73,9 @@ class MfaPolicy extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicyId(string $var)
+    public function setPolicyId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_id = $var;
 
         return $this;
@@ -96,9 +95,9 @@ class MfaPolicy extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -118,8 +117,9 @@ class MfaPolicy extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRequireMfa(bool $var)
+    public function setRequireMfa($var)
     {
+        GPBUtil::checkBool($var);
         $this->require_mfa = $var;
 
         return $this;
@@ -149,8 +149,9 @@ class MfaPolicy extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;
@@ -180,8 +181,9 @@ class MfaPolicy extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setUpdatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setUpdatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->updated_at = $var;
 
         return $this;

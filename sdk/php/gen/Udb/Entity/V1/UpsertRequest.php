@@ -92,8 +92,9 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -113,9 +114,9 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMessageType(string $var)
+    public function setMessageType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->message_type = $var;
 
         return $this;
@@ -135,9 +136,9 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRecordJson(string $var)
+    public function setRecordJson($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->record_json = $var;
 
         return $this;
@@ -167,8 +168,9 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Struct $var
      * @return $this
      */
-    public function setPayload(\Google\Protobuf\Struct|null $var)
+    public function setPayload($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->payload = $var;
 
         return $this;
@@ -188,7 +190,7 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setConflictFields(array|RepeatedField $var)
+    public function setConflictFields($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->conflict_fields = $arr;
@@ -210,8 +212,9 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setReturnRecord(bool $var)
+    public function setReturnRecord($var)
     {
+        GPBUtil::checkBool($var);
         $this->return_record = $var;
 
         return $this;
@@ -241,8 +244,9 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\CacheOptions $var
      * @return $this
      */
-    public function setCache(\Udb\Entity\V1\CacheOptions|null $var)
+    public function setCache($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\CacheOptions::class);
         $this->cache = $var;
 
         return $this;
@@ -262,9 +266,9 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIdempotencyKey(string $var)
+    public function setIdempotencyKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->idempotency_key = $var;
 
         return $this;

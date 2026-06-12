@@ -57,8 +57,9 @@ class DlqEventResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\DlqEventRecord $var
      * @return $this
      */
-    public function setEvent(\Udb\Entity\V1\DlqEventRecord|null $var)
+    public function setEvent($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\DlqEventRecord::class);
         $this->event = $var;
 
         return $this;

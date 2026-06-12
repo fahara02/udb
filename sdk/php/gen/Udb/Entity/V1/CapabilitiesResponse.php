@@ -141,9 +141,9 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSchemaChecksum(string $var)
+    public function setSchemaChecksum($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->schema_checksum = $var;
 
         return $this;
@@ -167,9 +167,9 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProtocolVersion(string $var)
+    public function setProtocolVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->protocol_version = $var;
 
         return $this;
@@ -193,7 +193,7 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setEnabledBackends(array|RepeatedField $var)
+    public function setEnabledBackends($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->enabled_backends = $arr;
@@ -219,7 +219,7 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setDegradedBackends(array|RepeatedField $var)
+    public function setDegradedBackends($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->degraded_backends = $arr;
@@ -245,7 +245,7 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setSystemCatalogRelations(array|RepeatedField $var)
+    public function setSystemCatalogRelations($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->system_catalog_relations = $arr;
@@ -271,7 +271,7 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setSupportedRpcs(array|RepeatedField $var)
+    public function setSupportedRpcs($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->supported_rpcs = $arr;
@@ -297,7 +297,7 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\BackendInstanceStatus[] $var
      * @return $this
      */
-    public function setBackendInstances(array|RepeatedField $var)
+    public function setBackendInstances($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\BackendInstanceStatus::class);
         $this->backend_instances = $arr;
@@ -323,7 +323,7 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\BackendCapabilityDescriptor[] $var
      * @return $this
      */
-    public function setBackendCapabilities(array|RepeatedField $var)
+    public function setBackendCapabilities($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\BackendCapabilityDescriptor::class);
         $this->backend_capabilities = $arr;
@@ -365,8 +365,9 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\ProtocolSupport $var
      * @return $this
      */
-    public function setProtocolSupport(\Udb\Entity\V1\ProtocolSupport|null $var)
+    public function setProtocolSupport($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\ProtocolSupport::class);
         $this->protocol_support = $var;
 
         return $this;
@@ -394,7 +395,7 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\BackendProtocolSupport[] $var
      * @return $this
      */
-    public function setBackendProtocolSupport(array|RepeatedField $var)
+    public function setBackendProtocolSupport($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\BackendProtocolSupport::class);
         $this->backend_protocol_support = $arr;
@@ -416,7 +417,7 @@ class CapabilitiesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\NativeServiceStatus[] $var
      * @return $this
      */
-    public function setNativeServices(array|RepeatedField $var)
+    public function setNativeServices($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\NativeServiceStatus::class);
         $this->native_services = $arr;

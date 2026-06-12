@@ -70,7 +70,7 @@ class ColumnStoreOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ColumnBackendType backend = 1 [json_name = "backend"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\ColumnBackendType}
+     * @return int
      */
     public function getBackend()
     {
@@ -79,10 +79,10 @@ class ColumnStoreOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ColumnBackendType backend = 1 [json_name = "backend"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\ColumnBackendType}
+     * @param int $var
      * @return $this
      */
-    public function setBackend(int $var)
+    public function setBackend($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\ColumnBackendType::class);
         $this->backend = $var;
@@ -104,9 +104,9 @@ class ColumnStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDatabaseName(string $var)
+    public function setDatabaseName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->database_name = $var;
 
         return $this;
@@ -126,9 +126,9 @@ class ColumnStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTableName(string $var)
+    public function setTableName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->table_name = $var;
 
         return $this;
@@ -148,9 +148,9 @@ class ColumnStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPartitionKey(string $var)
+    public function setPartitionKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->partition_key = $var;
 
         return $this;
@@ -170,9 +170,9 @@ class ColumnStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSortKey(string $var)
+    public function setSortKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->sort_key = $var;
 
         return $this;
@@ -192,9 +192,9 @@ class ColumnStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCompression(string $var)
+    public function setCompression($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->compression = $var;
 
         return $this;
@@ -214,7 +214,7 @@ class ColumnStoreOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setTtlSeconds(int $var)
+    public function setTtlSeconds($var)
     {
         GPBUtil::checkInt32($var);
         $this->ttl_seconds = $var;
@@ -236,9 +236,9 @@ class ColumnStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPayloadSchemaJson(string $var)
+    public function setPayloadSchemaJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->payload_schema_json = $var;
 
         return $this;

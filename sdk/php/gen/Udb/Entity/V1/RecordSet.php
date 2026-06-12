@@ -62,7 +62,7 @@ class RecordSet extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRecordsJson(array|RepeatedField $var)
+    public function setRecordsJson($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::BYTES);
         $this->records_json = $arr;
@@ -84,7 +84,7 @@ class RecordSet extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\Row[] $var
      * @return $this
      */
-    public function setRows(array|RepeatedField $var)
+    public function setRows($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\Row::class);
         $this->rows = $arr;
@@ -106,9 +106,9 @@ class RecordSet extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNextPageToken(string $var)
+    public function setNextPageToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->next_page_token = $var;
 
         return $this;
@@ -128,7 +128,7 @@ class RecordSet extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setTotalCount(int $var)
+    public function setTotalCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->total_count = $var;

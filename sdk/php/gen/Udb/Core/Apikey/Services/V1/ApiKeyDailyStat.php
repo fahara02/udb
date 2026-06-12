@@ -77,9 +77,9 @@ class ApiKeyDailyStat extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDate(string $var)
+    public function setDate($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->date = $var;
 
         return $this;
@@ -99,7 +99,7 @@ class ApiKeyDailyStat extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTotalRequests(int|string $var)
+    public function setTotalRequests($var)
     {
         GPBUtil::checkInt64($var);
         $this->total_requests = $var;
@@ -121,7 +121,7 @@ class ApiKeyDailyStat extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setRateLimitedCount(int|string $var)
+    public function setRateLimitedCount($var)
     {
         GPBUtil::checkInt64($var);
         $this->rate_limited_count = $var;
@@ -143,8 +143,9 @@ class ApiKeyDailyStat extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setAvgLatencyMs(float $var)
+    public function setAvgLatencyMs($var)
     {
+        GPBUtil::checkDouble($var);
         $this->avg_latency_ms = $var;
 
         return $this;
@@ -168,7 +169,7 @@ class ApiKeyDailyStat extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setStatusCounts(array|\Google\Protobuf\Internal\MapField $var)
+    public function setStatusCounts($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::INT64);
         $this->status_counts = $arr;

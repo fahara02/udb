@@ -52,7 +52,7 @@ class ListProvidersResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Idp\Entity\V1\IdentityProvider[] $var
      * @return $this
      */
-    public function setProviders(array|RepeatedField $var)
+    public function setProviders($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Idp\Entity\V1\IdentityProvider::class);
         $this->providers = $arr;
@@ -84,8 +84,9 @@ class ListProvidersResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\PageResponse $var
      * @return $this
      */
-    public function setPage(\Udb\Core\Common\V1\PageResponse|null $var)
+    public function setPage($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\PageResponse::class);
         $this->page = $var;
 
         return $this;

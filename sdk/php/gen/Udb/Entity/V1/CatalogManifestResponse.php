@@ -54,9 +54,9 @@ class CatalogManifestResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setManifestJson(string $var)
+    public function setManifestJson($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->manifest_json = $var;
 
         return $this;

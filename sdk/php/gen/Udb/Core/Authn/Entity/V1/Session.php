@@ -20,7 +20,6 @@ use Google\Protobuf\RepeatedField;
  *
  * Migration order 2. RLS scopes rows to the current tenant.
  * ---------------------------------------------------------------------------
- *
  * Generated from protobuf message <code>udb.core.authn.entity.v1.Session</code>
  */
 class Session extends \Google\Protobuf\Internal\Message
@@ -197,9 +196,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSessionId(string $var)
+    public function setSessionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->session_id = $var;
 
         return $this;
@@ -219,9 +218,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -229,7 +228,7 @@ class Session extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.SessionType session_type = 3 [json_name = "sessionType", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\SessionType}
+     * @return int
      */
     public function getSessionType()
     {
@@ -238,10 +237,10 @@ class Session extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.SessionType session_type = 3 [json_name = "sessionType", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\SessionType}
+     * @param int $var
      * @return $this
      */
-    public function setSessionType(int $var)
+    public function setSessionType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\SessionType::class);
         $this->session_type = $var;
@@ -269,9 +268,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSessionTokenLookup(string $var)
+    public function setSessionTokenLookup($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->session_token_lookup = $var;
 
         return $this;
@@ -295,9 +294,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSessionTokenHash(string $var)
+    public function setSessionTokenHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->session_token_hash = $var;
 
         return $this;
@@ -321,9 +320,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCsrfTokenHash(string $var)
+    public function setCsrfTokenHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->csrf_token_hash = $var;
 
         return $this;
@@ -349,9 +348,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAccessTokenJti(string $var)
+    public function setAccessTokenJti($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->access_token_jti = $var;
 
         return $this;
@@ -371,9 +370,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRefreshTokenJti(string $var)
+    public function setRefreshTokenJti($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->refresh_token_jti = $var;
 
         return $this;
@@ -383,7 +382,7 @@ class Session extends \Google\Protobuf\Internal\Message
      * ── Common fields ───────────────────────────────────────────────────────
      *
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.DeviceType device_type = 9 [json_name = "deviceType", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\DeviceType}
+     * @return int
      */
     public function getDeviceType()
     {
@@ -394,10 +393,10 @@ class Session extends \Google\Protobuf\Internal\Message
      * ── Common fields ───────────────────────────────────────────────────────
      *
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.DeviceType device_type = 9 [json_name = "deviceType", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\DeviceType}
+     * @param int $var
      * @return $this
      */
-    public function setDeviceType(int $var)
+    public function setDeviceType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\DeviceType::class);
         $this->device_type = $var;
@@ -419,9 +418,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeviceName(string $var)
+    public function setDeviceName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->device_name = $var;
 
         return $this;
@@ -441,9 +440,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIpAddress(string $var)
+    public function setIpAddress($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->ip_address = $var;
 
         return $this;
@@ -463,9 +462,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserAgent(string $var)
+    public function setUserAgent($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_agent = $var;
 
         return $this;
@@ -485,8 +484,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsActive(bool $var)
+    public function setIsActive($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_active = $var;
 
         return $this;
@@ -516,8 +516,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setExpiresAt(\Google\Protobuf\Timestamp|null $var)
+    public function setExpiresAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->expires_at = $var;
 
         return $this;
@@ -547,8 +548,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setLastActiveAt(\Google\Protobuf\Timestamp|null $var)
+    public function setLastActiveAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->last_active_at = $var;
 
         return $this;
@@ -568,9 +570,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRevokedBy(string $var)
+    public function setRevokedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->revoked_by = $var;
 
         return $this;
@@ -590,9 +592,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRevokeReason(string $var)
+    public function setRevokeReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->revoke_reason = $var;
 
         return $this;
@@ -622,8 +624,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;
@@ -643,9 +646,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -665,9 +668,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -687,9 +690,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPrincipalId(string $var)
+    public function setPrincipalId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->principal_id = $var;
 
         return $this;
@@ -709,9 +712,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProviderId(string $var)
+    public function setProviderId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->provider_id = $var;
 
         return $this;
@@ -731,9 +734,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAuthMethod(string $var)
+    public function setAuthMethod($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->auth_method = $var;
 
         return $this;
@@ -753,9 +756,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setScopesJson(string $var)
+    public function setScopesJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->scopes_json = $var;
 
         return $this;
@@ -775,9 +778,9 @@ class Session extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMetadataJson(string $var)
+    public function setMetadataJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->metadata_json = $var;
 
         return $this;

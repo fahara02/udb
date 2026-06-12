@@ -62,9 +62,9 @@ class RevokeSessionResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSessionId(string $var)
+    public function setSessionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->session_id = $var;
 
         return $this;
@@ -94,8 +94,9 @@ class RevokeSessionResponse extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setRevokedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setRevokedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->revoked_at = $var;
 
         return $this;
@@ -115,9 +116,9 @@ class RevokeSessionResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOperationId(string $var)
+    public function setOperationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->operation_id = $var;
 
         return $this;
@@ -137,7 +138,7 @@ class RevokeSessionResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRevokedCount(int $var)
+    public function setRevokedCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->revoked_count = $var;

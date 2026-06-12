@@ -74,9 +74,9 @@ class FileFinalized extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventId(string $var)
+    public function setEventId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_id = $var;
 
         return $this;
@@ -96,9 +96,9 @@ class FileFinalized extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFileId(string $var)
+    public function setFileId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->file_id = $var;
 
         return $this;
@@ -118,9 +118,9 @@ class FileFinalized extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -140,9 +140,9 @@ class FileFinalized extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setContentType(string $var)
+    public function setContentType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->content_type = $var;
 
         return $this;
@@ -162,9 +162,9 @@ class FileFinalized extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFileType(string $var)
+    public function setFileType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->file_type = $var;
 
         return $this;
@@ -194,8 +194,9 @@ class FileFinalized extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setTimestamp(\Google\Protobuf\Timestamp|null $var)
+    public function setTimestamp($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->timestamp = $var;
 
         return $this;

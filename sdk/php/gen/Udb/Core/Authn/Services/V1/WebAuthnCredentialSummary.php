@@ -62,9 +62,9 @@ class WebAuthnCredentialSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCredentialId(string $var)
+    public function setCredentialId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->credential_id = $var;
 
         return $this;
@@ -84,9 +84,9 @@ class WebAuthnCredentialSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLabel(string $var)
+    public function setLabel($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->label = $var;
 
         return $this;
@@ -106,7 +106,7 @@ class WebAuthnCredentialSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setCreatedAtUnix(int|string $var)
+    public function setCreatedAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->created_at_unix = $var;
@@ -128,7 +128,7 @@ class WebAuthnCredentialSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setLastUsedAtUnix(int|string $var)
+    public function setLastUsedAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->last_used_at_unix = $var;

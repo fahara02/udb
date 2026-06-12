@@ -57,9 +57,9 @@ class ListUserRolesRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -79,9 +79,9 @@ class ListUserRolesRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDomain(string $var)
+    public function setDomain($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->domain = $var;
 
         return $this;
@@ -101,8 +101,9 @@ class ListUserRolesRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setActiveOnly(bool $var)
+    public function setActiveOnly($var)
     {
+        GPBUtil::checkBool($var);
         $this->active_only = $var;
 
         return $this;

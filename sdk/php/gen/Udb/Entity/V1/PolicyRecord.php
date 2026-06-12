@@ -92,7 +92,7 @@ class PolicyRecord extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setPolicyId(int|string $var)
+    public function setPolicyId($var)
     {
         GPBUtil::checkInt64($var);
         $this->policy_id = $var;
@@ -114,9 +114,9 @@ class PolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEffect(string $var)
+    public function setEffect($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->effect = $var;
 
         return $this;
@@ -136,9 +136,9 @@ class PolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setServiceIdentity(string $var)
+    public function setServiceIdentity($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->service_identity = $var;
 
         return $this;
@@ -158,9 +158,9 @@ class PolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -180,9 +180,9 @@ class PolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPurpose(string $var)
+    public function setPurpose($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->purpose = $var;
 
         return $this;
@@ -202,9 +202,9 @@ class PolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMessageType(string $var)
+    public function setMessageType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->message_type = $var;
 
         return $this;
@@ -224,9 +224,9 @@ class PolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOperation(string $var)
+    public function setOperation($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->operation = $var;
 
         return $this;
@@ -246,9 +246,9 @@ class PolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRequiredScope(string $var)
+    public function setRequiredScope($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->required_scope = $var;
 
         return $this;
@@ -268,7 +268,7 @@ class PolicyRecord extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setPriority(int $var)
+    public function setPriority($var)
     {
         GPBUtil::checkInt32($var);
         $this->priority = $var;
@@ -290,8 +290,9 @@ class PolicyRecord extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setEnabled(bool $var)
+    public function setEnabled($var)
     {
+        GPBUtil::checkBool($var);
         $this->enabled = $var;
 
         return $this;

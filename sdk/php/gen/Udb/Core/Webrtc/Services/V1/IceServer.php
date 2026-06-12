@@ -57,7 +57,7 @@ class IceServer extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setUrls(array|RepeatedField $var)
+    public function setUrls($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->urls = $arr;
@@ -79,9 +79,9 @@ class IceServer extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUsername(string $var)
+    public function setUsername($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->username = $var;
 
         return $this;
@@ -101,9 +101,9 @@ class IceServer extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCredential(string $var)
+    public function setCredential($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->credential = $var;
 
         return $this;

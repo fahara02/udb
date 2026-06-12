@@ -132,9 +132,9 @@ class Peer extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPeerId(string $var)
+    public function setPeerId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->peer_id = $var;
 
         return $this;
@@ -158,9 +158,9 @@ class Peer extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRoomId(string $var)
+    public function setRoomId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->room_id = $var;
 
         return $this;
@@ -184,9 +184,9 @@ class Peer extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -210,9 +210,9 @@ class Peer extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDisplayName(string $var)
+    public function setDisplayName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->display_name = $var;
 
         return $this;
@@ -222,7 +222,7 @@ class Peer extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:state;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.webrtc.entity.v1.PeerState state = 5 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Webrtc\Entity\V1\PeerState}
+     * @return int
      */
     public function getState()
     {
@@ -233,10 +233,10 @@ class Peer extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:state;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.webrtc.entity.v1.PeerState state = 5 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Webrtc\Entity\V1\PeerState}
+     * @param int $var
      * @return $this
      */
-    public function setState(int $var)
+    public function setState($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Webrtc\Entity\V1\PeerState::class);
         $this->state = $var;
@@ -262,9 +262,9 @@ class Peer extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMetadata(string $var)
+    public function setMetadata($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->metadata = $var;
 
         return $this;
@@ -288,9 +288,9 @@ class Peer extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserAgent(string $var)
+    public function setUserAgent($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_agent = $var;
 
         return $this;
@@ -320,8 +320,9 @@ class Peer extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setJoinedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setJoinedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->joined_at = $var;
 
         return $this;
@@ -351,8 +352,9 @@ class Peer extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setLeftAt(\Google\Protobuf\Timestamp|null $var)
+    public function setLeftAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->left_at = $var;
 
         return $this;
@@ -386,8 +388,9 @@ class Peer extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\AuditInfo $var
      * @return $this
      */
-    public function setAuditInfo(\Udb\Core\Common\V1\AuditInfo|null $var)
+    public function setAuditInfo($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\AuditInfo::class);
         $this->audit_info = $var;
 
         return $this;
@@ -417,8 +420,9 @@ class Peer extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setDeletedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setDeletedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->deleted_at = $var;
 
         return $this;
@@ -438,9 +442,9 @@ class Peer extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeletedBy(string $var)
+    public function setDeletedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->deleted_by = $var;
 
         return $this;

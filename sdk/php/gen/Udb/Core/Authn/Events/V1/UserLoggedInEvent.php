@@ -107,9 +107,9 @@ class UserLoggedInEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventId(string $var)
+    public function setEventId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_id = $var;
 
         return $this;
@@ -129,9 +129,9 @@ class UserLoggedInEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -151,9 +151,9 @@ class UserLoggedInEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSessionId(string $var)
+    public function setSessionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->session_id = $var;
 
         return $this;
@@ -161,7 +161,7 @@ class UserLoggedInEvent extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.SessionType session_type = 4 [json_name = "sessionType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\SessionType}
+     * @return int
      */
     public function getSessionType()
     {
@@ -170,10 +170,10 @@ class UserLoggedInEvent extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.SessionType session_type = 4 [json_name = "sessionType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\SessionType}
+     * @param int $var
      * @return $this
      */
-    public function setSessionType(int $var)
+    public function setSessionType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\SessionType::class);
         $this->session_type = $var;
@@ -183,7 +183,7 @@ class UserLoggedInEvent extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.DeviceType device_type = 5 [json_name = "deviceType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\DeviceType}
+     * @return int
      */
     public function getDeviceType()
     {
@@ -192,10 +192,10 @@ class UserLoggedInEvent extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.DeviceType device_type = 5 [json_name = "deviceType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\DeviceType}
+     * @param int $var
      * @return $this
      */
-    public function setDeviceType(int $var)
+    public function setDeviceType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\DeviceType::class);
         $this->device_type = $var;
@@ -221,9 +221,9 @@ class UserLoggedInEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIpAddress(string $var)
+    public function setIpAddress($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->ip_address = $var;
 
         return $this;
@@ -243,9 +243,9 @@ class UserLoggedInEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -265,9 +265,9 @@ class UserLoggedInEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -297,8 +297,9 @@ class UserLoggedInEvent extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setOccurredAt(\Google\Protobuf\Timestamp|null $var)
+    public function setOccurredAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->occurred_at = $var;
 
         return $this;
@@ -318,9 +319,9 @@ class UserLoggedInEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -340,9 +341,9 @@ class UserLoggedInEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPrincipalId(string $var)
+    public function setPrincipalId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->principal_id = $var;
 
         return $this;
@@ -362,9 +363,9 @@ class UserLoggedInEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAccessSurface(string $var)
+    public function setAccessSurface($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->access_surface = $var;
 
         return $this;

@@ -52,9 +52,9 @@ class GetReconciliationAnalyticsRequest extends \Google\Protobuf\Internal\Messag
      * @param string $var
      * @return $this
      */
-    public function setDateFrom(string $var)
+    public function setDateFrom($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->date_from = $var;
 
         return $this;
@@ -74,9 +74,9 @@ class GetReconciliationAnalyticsRequest extends \Google\Protobuf\Internal\Messag
      * @param string $var
      * @return $this
      */
-    public function setDateTo(string $var)
+    public function setDateTo($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->date_to = $var;
 
         return $this;

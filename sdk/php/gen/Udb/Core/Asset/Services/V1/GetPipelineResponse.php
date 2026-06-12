@@ -70,8 +70,9 @@ class GetPipelineResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Asset\Entity\V1\PipelineInstance $var
      * @return $this
      */
-    public function setInstance(\Udb\Core\Asset\Entity\V1\PipelineInstance|null $var)
+    public function setInstance($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Asset\Entity\V1\PipelineInstance::class);
         $this->instance = $var;
 
         return $this;
@@ -91,7 +92,7 @@ class GetPipelineResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Asset\Entity\V1\PipelineStep[] $var
      * @return $this
      */
-    public function setSteps(array|RepeatedField $var)
+    public function setSteps($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Asset\Entity\V1\PipelineStep::class);
         $this->steps = $arr;
@@ -127,8 +128,9 @@ class GetPipelineResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ApiError $var
      * @return $this
      */
-    public function setError(\Udb\Core\Common\V1\ApiError|null $var)
+    public function setError($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
 
         return $this;

@@ -47,7 +47,7 @@ class ListMfaFactorsResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authn\Services\V1\MfaFactorSummary[] $var
      * @return $this
      */
-    public function setFactors(array|RepeatedField $var)
+    public function setFactors($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authn\Services\V1\MfaFactorSummary::class);
         $this->factors = $arr;

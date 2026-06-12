@@ -55,7 +55,7 @@ class GetTenantConfigResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Tenant\Entity\V1\TenantConfig[] $var
      * @return $this
      */
-    public function setConfigs(array|RepeatedField $var)
+    public function setConfigs($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Tenant\Entity\V1\TenantConfig::class);
         $this->configs = $arr;
@@ -91,8 +91,9 @@ class GetTenantConfigResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ApiError $var
      * @return $this
      */
-    public function setError(\Udb\Core\Common\V1\ApiError|null $var)
+    public function setError($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
 
         return $this;

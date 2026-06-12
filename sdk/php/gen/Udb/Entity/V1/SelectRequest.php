@@ -92,8 +92,9 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -113,9 +114,9 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMessageType(string $var)
+    public function setMessageType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->message_type = $var;
 
         return $this;
@@ -145,8 +146,9 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Struct $var
      * @return $this
      */
-    public function setFilter(\Google\Protobuf\Struct|null $var)
+    public function setFilter($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->filter = $var;
 
         return $this;
@@ -166,7 +168,7 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setFields(array|RepeatedField $var)
+    public function setFields($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->fields = $arr;
@@ -188,7 +190,7 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setLimit(int $var)
+    public function setLimit($var)
     {
         GPBUtil::checkInt32($var);
         $this->limit = $var;
@@ -210,9 +212,9 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPageToken(string $var)
+    public function setPageToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->page_token = $var;
 
         return $this;
@@ -232,7 +234,7 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\Sort[] $var
      * @return $this
      */
-    public function setSort(array|RepeatedField $var)
+    public function setSort($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\Sort::class);
         $this->sort = $arr;
@@ -264,8 +266,9 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\CacheOptions $var
      * @return $this
      */
-    public function setCache(\Udb\Entity\V1\CacheOptions|null $var)
+    public function setCache($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\CacheOptions::class);
         $this->cache = $var;
 
         return $this;

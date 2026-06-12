@@ -147,9 +147,9 @@ class SigningKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKeyId(string $var)
+    public function setKeyId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->key_id = $var;
 
         return $this;
@@ -173,9 +173,9 @@ class SigningKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -199,9 +199,9 @@ class SigningKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAlgorithm(string $var)
+    public function setAlgorithm($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->algorithm = $var;
 
         return $this;
@@ -225,9 +225,9 @@ class SigningKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPublicMaterial(string $var)
+    public function setPublicMaterial($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->public_material = $var;
 
         return $this;
@@ -253,9 +253,9 @@ class SigningKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEncryptedPrivateMaterial(string $var)
+    public function setEncryptedPrivateMaterial($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->encrypted_private_material = $var;
 
         return $this;
@@ -281,9 +281,9 @@ class SigningKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKmsKeyRef(string $var)
+    public function setKmsKeyRef($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->kms_key_ref = $var;
 
         return $this;
@@ -291,7 +291,7 @@ class SigningKey extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.SigningKeyState state = 7 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\SigningKeyState}
+     * @return int
      */
     public function getState()
     {
@@ -300,10 +300,10 @@ class SigningKey extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.SigningKeyState state = 7 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\SigningKeyState}
+     * @param int $var
      * @return $this
      */
-    public function setState(int $var)
+    public function setState($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\SigningKeyState::class);
         $this->state = $var;
@@ -335,8 +335,9 @@ class SigningKey extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setNotBefore(\Google\Protobuf\Timestamp|null $var)
+    public function setNotBefore($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->not_before = $var;
 
         return $this;
@@ -366,8 +367,9 @@ class SigningKey extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setNotAfter(\Google\Protobuf\Timestamp|null $var)
+    public function setNotAfter($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->not_after = $var;
 
         return $this;
@@ -397,8 +399,9 @@ class SigningKey extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;
@@ -428,8 +431,9 @@ class SigningKey extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setRetiredAt(\Google\Protobuf\Timestamp|null $var)
+    public function setRetiredAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->retired_at = $var;
 
         return $this;
@@ -449,9 +453,9 @@ class SigningKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCreatedBy(string $var)
+    public function setCreatedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->created_by = $var;
 
         return $this;
@@ -471,9 +475,9 @@ class SigningKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRetiredBy(string $var)
+    public function setRetiredBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->retired_by = $var;
 
         return $this;
@@ -493,9 +497,9 @@ class SigningKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRotationReason(string $var)
+    public function setRotationReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->rotation_reason = $var;
 
         return $this;

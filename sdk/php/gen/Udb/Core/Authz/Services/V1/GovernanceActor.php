@@ -91,9 +91,9 @@ class GovernanceActor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSubject(string $var)
+    public function setSubject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->subject = $var;
 
         return $this;
@@ -113,9 +113,9 @@ class GovernanceActor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -135,9 +135,9 @@ class GovernanceActor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -157,7 +157,7 @@ class GovernanceActor extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setScopes(array|RepeatedField $var)
+    public function setScopes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->scopes = $arr;
@@ -179,7 +179,7 @@ class GovernanceActor extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRoles(array|RepeatedField $var)
+    public function setRoles($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->roles = $arr;
@@ -205,8 +205,9 @@ class GovernanceActor extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setBreakGlass(bool $var)
+    public function setBreakGlass($var)
     {
+        GPBUtil::checkBool($var);
         $this->break_glass = $var;
 
         return $this;
@@ -226,9 +227,9 @@ class GovernanceActor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBreakGlassReason(string $var)
+    public function setBreakGlassReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->break_glass_reason = $var;
 
         return $this;
@@ -248,7 +249,7 @@ class GovernanceActor extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setBreakGlassExpiresAtUnix(int|string $var)
+    public function setBreakGlassExpiresAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->break_glass_expires_at_unix = $var;

@@ -62,9 +62,9 @@ class IssueCredentialsRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -84,9 +84,9 @@ class IssueCredentialsRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRoomId(string $var)
+    public function setRoomId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->room_id = $var;
 
         return $this;
@@ -106,9 +106,9 @@ class IssueCredentialsRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPeerId(string $var)
+    public function setPeerId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->peer_id = $var;
 
         return $this;
@@ -128,7 +128,7 @@ class IssueCredentialsRequest extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setTtlSeconds(int $var)
+    public function setTtlSeconds($var)
     {
         GPBUtil::checkInt32($var);
         $this->ttl_seconds = $var;

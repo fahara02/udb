@@ -85,9 +85,9 @@ class StoreResource extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -107,9 +107,9 @@ class StoreResource extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setInstance(string $var)
+    public function setInstance($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->instance = $var;
 
         return $this;
@@ -129,9 +129,9 @@ class StoreResource extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceKind(string $var)
+    public function setResourceKind($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_kind = $var;
 
         return $this;
@@ -151,9 +151,9 @@ class StoreResource extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceName(string $var)
+    public function setResourceName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_name = $var;
 
         return $this;
@@ -173,9 +173,9 @@ class StoreResource extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceUri(string $var)
+    public function setResourceUri($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_uri = $var;
 
         return $this;
@@ -195,9 +195,9 @@ class StoreResource extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMessageType(string $var)
+    public function setMessageType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->message_type = $var;
 
         return $this;
@@ -217,9 +217,9 @@ class StoreResource extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSchema(string $var)
+    public function setSchema($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->schema = $var;
 
         return $this;
@@ -239,7 +239,7 @@ class StoreResource extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setLabels(array|\Google\Protobuf\Internal\MapField $var)
+    public function setLabels($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->labels = $arr;

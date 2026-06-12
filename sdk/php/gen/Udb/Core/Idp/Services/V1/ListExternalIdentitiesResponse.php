@@ -52,7 +52,7 @@ class ListExternalIdentitiesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Idp\Entity\V1\ExternalIdentity[] $var
      * @return $this
      */
-    public function setIdentities(array|RepeatedField $var)
+    public function setIdentities($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Idp\Entity\V1\ExternalIdentity::class);
         $this->identities = $arr;
@@ -84,8 +84,9 @@ class ListExternalIdentitiesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\PageResponse $var
      * @return $this
      */
-    public function setPage(\Udb\Core\Common\V1\PageResponse|null $var)
+    public function setPage($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\PageResponse::class);
         $this->page = $var;
 
         return $this;

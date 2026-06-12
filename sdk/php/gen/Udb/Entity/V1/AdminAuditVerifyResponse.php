@@ -87,8 +87,9 @@ class AdminAuditVerifyResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPassed(bool $var)
+    public function setPassed($var)
     {
+        GPBUtil::checkBool($var);
         $this->passed = $var;
 
         return $this;
@@ -108,7 +109,7 @@ class AdminAuditVerifyResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setCheckedCount(int $var)
+    public function setCheckedCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->checked_count = $var;
@@ -130,9 +131,9 @@ class AdminAuditVerifyResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFirstBrokenAuditId(string $var)
+    public function setFirstBrokenAuditId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->first_broken_audit_id = $var;
 
         return $this;
@@ -152,9 +153,9 @@ class AdminAuditVerifyResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReason(string $var)
+    public function setReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reason = $var;
 
         return $this;
@@ -174,9 +175,9 @@ class AdminAuditVerifyResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setExpectedPreviousHash(string $var)
+    public function setExpectedPreviousHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->expected_previous_hash = $var;
 
         return $this;
@@ -196,9 +197,9 @@ class AdminAuditVerifyResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setActualPreviousHash(string $var)
+    public function setActualPreviousHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->actual_previous_hash = $var;
 
         return $this;
@@ -218,9 +219,9 @@ class AdminAuditVerifyResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setExpectedCurrentHash(string $var)
+    public function setExpectedCurrentHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->expected_current_hash = $var;
 
         return $this;
@@ -240,9 +241,9 @@ class AdminAuditVerifyResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setActualCurrentHash(string $var)
+    public function setActualCurrentHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->actual_current_hash = $var;
 
         return $this;
@@ -262,9 +263,9 @@ class AdminAuditVerifyResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLastHash(string $var)
+    public function setLastHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->last_hash = $var;
 
         return $this;

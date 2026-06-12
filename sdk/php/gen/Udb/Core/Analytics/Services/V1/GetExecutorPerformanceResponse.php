@@ -47,7 +47,7 @@ class GetExecutorPerformanceResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Analytics\Entity\V1\ExecutorPerformanceSummary[] $var
      * @return $this
      */
-    public function setSummaries(array|RepeatedField $var)
+    public function setSummaries($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Analytics\Entity\V1\ExecutorPerformanceSummary::class);
         $this->summaries = $arr;

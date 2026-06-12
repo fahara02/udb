@@ -40,6 +40,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_assert_1 = require("node:assert");
 const node_test_1 = require("node:test");
+const node_fs_1 = require("node:fs");
 const grpc = __importStar(require("@grpc/grpc-js"));
 const project_1 = require("./project");
 const generatedClient_1 = require("./generatedClient");
@@ -250,7 +251,7 @@ function surfaceProbeRequest(tenantId, projectId) {
         limit: 10,
     };
 }
-async function expectGeneratedUnarySurfaceMounted(label, generated, serviceNames, tenantId, projectId, counters) {
+async function expectGeneratedUnarySurfaceMounted(t, label, generated, serviceNames, tenantId, projectId, counters) {
     let count = 0;
     for (const serviceName of serviceNames) {
         const api = generated[serviceName];
@@ -269,7 +270,11 @@ async function expectGeneratedUnarySurfaceMounted(label, generated, serviceNames
             if (populated)
                 counters.populated += 1;
             const request = populated ? surfaceProbeRequest(tenantId, projectId) : {};
-            await expectMounted(`${label}.${serviceName}.${methodName}`, () => fn(request, { deadlineMs: 2_000, noRetry: true }));
+            // One node:test sub-test PER RPC so the reporter shows granular per-RPC
+            // pass/fail (like the Go sub-tests), not a single opaque test.
+            await t.test(`${api.serviceFull}/${methodName}`, async () => {
+                await expectMounted(`${label}.${serviceName}.${methodName}`, () => fn(request, { deadlineMs: 2_000, noRetry: true }));
+            });
         }
     }
     return count;
@@ -1020,7 +1025,7 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
 }
 (0, node_test_1.test)("live broker login refreshes once and hot-swaps SDK credentials", {
     skip: process.env.UDB_LIVE_SDK_TESTS === "1" ? false : "requires live UDB broker",
-}, async () => {
+}, async (t) => {
     const target = requiredEnv("UDB_GRPC_TARGET");
     const authTarget = process.env.UDB_AUTH_GRPC_TARGET?.trim() || target;
     const username = requiredEnv("UDB_LIVE_USERNAME");
@@ -1125,8 +1130,8 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         await runLiveNativeServiceE2E(project, project, tenantId, projectId, tenantId);
         const authGenerated = project.authGenerated ?? project.generated;
         const probeCounters = { populated: 0 };
-        const nativeCount = await expectGeneratedUnarySurfaceMounted("authTarget", authGenerated, NATIVE_SERVICE_APIS, tenantId, projectId, probeCounters);
-        const dataCount = await expectGeneratedUnarySurfaceMounted("target", project.generated, ["DataBroker"], tenantId, projectId, probeCounters);
+        const nativeCount = await expectGeneratedUnarySurfaceMounted(t, "authTarget", authGenerated, NATIVE_SERVICE_APIS, tenantId, projectId, probeCounters);
+        const dataCount = await expectGeneratedUnarySurfaceMounted(t, "target", project.generated, ["DataBroker"], tenantId, projectId, probeCounters);
         await expectStreamMounted("target.DataBroker.get_object", () => project.generated.DataBroker.get_object({}, { deadlineMs: 2_000 }));
         await expectStreamMounted("target.DataBroker.publish_c_d_c", () => project.generated.DataBroker.publish_c_d_c({}, { deadlineMs: 2_000 }));
         await expectStreamMounted("target.DataBroker.select_v2", () => project.generated.DataBroker.select_v2({}, { deadlineMs: 2_000 }));
@@ -1155,6 +1160,91 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         //   stream_resources, signal
         node_assert_1.strict.equal(nativeCount + dataCount + STREAMING_PROBED, 262, `TS probed ${nativeCount + dataCount} unary + ${STREAMING_PROBED} streaming = ${nativeCount + dataCount + STREAMING_PROBED}, want 262 — full-surface coverage regressed`);
         node_assert_1.strict.ok(probeCounters.populated >= 200, `only ${probeCounters.populated} unary RPCs received a populated typed request; full-surface coverage regressed`);
+    }
+    finally {
+        project.close();
+    }
+});
+// Per-RPC performance (gated on UDB_LIVE_PERF=1). Times every unary RPC over
+// multiple iterations and writes perf_report_ts.md — the TS counterpart of the
+// Go/Python perf harness. read_only RPCs are timed many times; mutations a few;
+// destructive once typed-empty (validation latency only).
+(0, node_test_1.test)("live per-RPC perf", {
+    skip: process.env.UDB_LIVE_SDK_TESTS === "1" && process.env.UDB_LIVE_PERF === "1"
+        ? false
+        : "requires live UDB broker + UDB_LIVE_PERF=1",
+}, async () => {
+    const target = requiredEnv("UDB_GRPC_TARGET");
+    const authTarget = process.env.UDB_AUTH_GRPC_TARGET?.trim() || target;
+    const username = requiredEnv("UDB_LIVE_USERNAME");
+    const password = requiredEnv("UDB_LIVE_PASSWORD");
+    let tenantId = process.env.UDB_LIVE_TENANT || "sdk-live";
+    const projectId = process.env.UDB_LIVE_PROJECT || "default";
+    const project = new project_1.UdbProject({
+        target, authTarget, tenantId, projectId,
+        purpose: "ts.live.perf", tokenStore: memoryStore(), deadlineMs: 20_000,
+    });
+    try {
+        const login = await project.login({ username, password, tenant_hint: tenantId, project_hint: projectId, device_name: "ts-sdk-perf" });
+        const who = await project.auth.authenticateBearer(login.access_token);
+        tenantId = who?.principal?.tenant_id || tenantId;
+        const authGenerated = project.authGenerated ?? project.generated;
+        const itersFor = (kind) => (kind === "destructive" ? 1 : kind === "mutation" ? 5 : 25);
+        const samples = [];
+        const timeMethod = async (fn, request) => {
+            const start = performance.now();
+            try {
+                await fn(request, { deadlineMs: 20_000, noRetry: true });
+            }
+            catch { /* latency still counts */ }
+            return performance.now() - start;
+        };
+        const surfaces = [
+            ["authTarget", authGenerated, NATIVE_SERVICE_APIS],
+            ["target", project.generated, ["DataBroker"]],
+        ];
+        for (const [, generated, serviceNames] of surfaces) {
+            for (const serviceName of serviceNames) {
+                const api = generated[serviceName];
+                if (!api)
+                    continue;
+                for (const [methodName, fn] of Object.entries(api)) {
+                    if (methodName === "serviceFull" || NON_UNARY_METHODS.has(methodName))
+                        continue;
+                    if (typeof fn !== "function")
+                        continue;
+                    const kind = operationKindOf(api.serviceFull, methodName) || "read_only";
+                    const request = kind !== "destructive" ? surfaceProbeRequest(tenantId, projectId) : {};
+                    await timeMethod(fn, request); // warm-up
+                    const durs = [];
+                    for (let i = 0; i < itersFor(kind); i++)
+                        durs.push(await timeMethod(fn, request));
+                    durs.sort((a, b) => a - b);
+                    const pct = (p) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
+                    samples.push({
+                        service: serviceName, rpc: methodName, kind,
+                        p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length,
+                    });
+                }
+            }
+        }
+        const svc = new Map();
+        for (const s of samples) {
+            (svc.get(s.service) ?? svc.set(s.service, []).get(s.service)).push(s.mean);
+        }
+        const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+        const lines = ["# UDB SDK Live Perf — TypeScript (localhost)", "", `RPCs measured: ${samples.length}`, "",
+            "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"];
+        for (const name of [...svc.keys()].sort((a, b) => mean(svc.get(b)) - mean(svc.get(a)))) {
+            lines.push(`| ${name} | ${svc.get(name).length} | ${mean(svc.get(name)).toFixed(2)} |`);
+        }
+        lines.push("", "## Slowest 20 by p99", "", "| RPC | kind | p50 ms | p99 ms | mean ms |", "|---|---|--:|--:|--:|");
+        for (const s of [...samples].sort((a, b) => b.p99 - a.p99).slice(0, 20)) {
+            lines.push(`| ${s.service}/${s.rpc} | ${s.kind} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} |`);
+        }
+        (0, node_fs_1.writeFileSync)("perf_report_ts.md", lines.join("\n") + "\n");
+        node_assert_1.strict.ok(samples.length >= 200, `perf measured only ${samples.length} unary RPCs`);
+        console.log(`\nTS perf: ${samples.length} RPCs measured → sdk/typescript/perf_report_ts.md`);
     }
     finally {
         project.close();

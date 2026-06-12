@@ -88,7 +88,7 @@ class ModelRegistryOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ModelBackendType backend = 1 [json_name = "backend"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\ModelBackendType}
+     * @return int
      */
     public function getBackend()
     {
@@ -97,10 +97,10 @@ class ModelRegistryOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ModelBackendType backend = 1 [json_name = "backend"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\ModelBackendType}
+     * @param int $var
      * @return $this
      */
-    public function setBackend(int $var)
+    public function setBackend($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\ModelBackendType::class);
         $this->backend = $var;
@@ -126,9 +126,9 @@ class ModelRegistryOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setExperimentName(string $var)
+    public function setExperimentName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->experiment_name = $var;
 
         return $this;
@@ -152,9 +152,9 @@ class ModelRegistryOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setArtifactPath(string $var)
+    public function setArtifactPath($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->artifact_path = $var;
 
         return $this;
@@ -178,8 +178,9 @@ class ModelRegistryOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setAutoRegister(bool $var)
+    public function setAutoRegister($var)
     {
+        GPBUtil::checkBool($var);
         $this->auto_register = $var;
 
         return $this;
@@ -203,9 +204,9 @@ class ModelRegistryOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStage(string $var)
+    public function setStage($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->stage = $var;
 
         return $this;
@@ -229,7 +230,7 @@ class ModelRegistryOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setMetricKeys(array|RepeatedField $var)
+    public function setMetricKeys($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->metric_keys = $arr;
@@ -251,7 +252,7 @@ class ModelRegistryOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setParamKeys(array|RepeatedField $var)
+    public function setParamKeys($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->param_keys = $arr;
@@ -277,9 +278,9 @@ class ModelRegistryOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStorageUriEnv(string $var)
+    public function setStorageUriEnv($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->storage_uri_env = $var;
 
         return $this;

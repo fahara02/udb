@@ -77,9 +77,9 @@ class GetPipelineSummaryRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStageName(string $var)
+    public function setStageName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->stage_name = $var;
 
         return $this;
@@ -99,9 +99,9 @@ class GetPipelineSummaryRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -125,9 +125,9 @@ class GetPipelineSummaryRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setHourFrom(string $var)
+    public function setHourFrom($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->hour_from = $var;
 
         return $this;
@@ -147,9 +147,9 @@ class GetPipelineSummaryRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setHourTo(string $var)
+    public function setHourTo($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->hour_to = $var;
 
         return $this;
@@ -179,8 +179,9 @@ class GetPipelineSummaryRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\PageRequest $var
      * @return $this
      */
-    public function setPage(\Udb\Core\Common\V1\PageRequest|null $var)
+    public function setPage($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\PageRequest::class);
         $this->page = $var;
 
         return $this;

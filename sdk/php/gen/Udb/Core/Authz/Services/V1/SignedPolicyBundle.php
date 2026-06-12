@@ -103,9 +103,9 @@ class SignedPolicyBundle extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBundle(string $var)
+    public function setBundle($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->bundle = $var;
 
         return $this;
@@ -129,9 +129,9 @@ class SignedPolicyBundle extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSignature(string $var)
+    public function setSignature($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->signature = $var;
 
         return $this;
@@ -155,9 +155,9 @@ class SignedPolicyBundle extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKeyId(string $var)
+    public function setKeyId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->key_id = $var;
 
         return $this;
@@ -181,9 +181,9 @@ class SignedPolicyBundle extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAlgorithm(string $var)
+    public function setAlgorithm($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->algorithm = $var;
 
         return $this;
@@ -203,9 +203,9 @@ class SignedPolicyBundle extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicyVersion(string $var)
+    public function setPolicyVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_version = $var;
 
         return $this;
@@ -225,9 +225,9 @@ class SignedPolicyBundle extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRelationshipVersion(string $var)
+    public function setRelationshipVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->relationship_version = $var;
 
         return $this;
@@ -247,7 +247,7 @@ class SignedPolicyBundle extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setIssuedAtUnix(int|string $var)
+    public function setIssuedAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->issued_at_unix = $var;
@@ -269,7 +269,7 @@ class SignedPolicyBundle extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setExpiresAtUnix(int|string $var)
+    public function setExpiresAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->expires_at_unix = $var;
@@ -291,7 +291,7 @@ class SignedPolicyBundle extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTtlSeconds(int|string $var)
+    public function setTtlSeconds($var)
     {
         GPBUtil::checkUint64($var);
         $this->ttl_seconds = $var;

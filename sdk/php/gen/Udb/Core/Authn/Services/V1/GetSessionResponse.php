@@ -57,8 +57,9 @@ class GetSessionResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authn\Entity\V1\Session $var
      * @return $this
      */
-    public function setSession(\Udb\Core\Authn\Entity\V1\Session|null $var)
+    public function setSession($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authn\Entity\V1\Session::class);
         $this->session = $var;
 
         return $this;

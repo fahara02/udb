@@ -47,7 +47,7 @@ class ListUserPermissionsResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\EffectivePermission[] $var
      * @return $this
      */
-    public function setPermissions(array|RepeatedField $var)
+    public function setPermissions($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authz\Services\V1\EffectivePermission::class);
         $this->permissions = $arr;

@@ -108,9 +108,9 @@ class PolicySimulation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSimulationId(string $var)
+    public function setSimulationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->simulation_id = $var;
 
         return $this;
@@ -130,9 +130,9 @@ class PolicySimulation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicyVersionId(string $var)
+    public function setPolicyVersionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_version_id = $var;
 
         return $this;
@@ -152,9 +152,9 @@ class PolicySimulation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPrincipalJson(string $var)
+    public function setPrincipalJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->principal_json = $var;
 
         return $this;
@@ -174,9 +174,9 @@ class PolicySimulation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceJson(string $var)
+    public function setResourceJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_json = $var;
 
         return $this;
@@ -196,9 +196,9 @@ class PolicySimulation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAction(string $var)
+    public function setAction($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->action = $var;
 
         return $this;
@@ -218,9 +218,9 @@ class PolicySimulation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPurpose(string $var)
+    public function setPurpose($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->purpose = $var;
 
         return $this;
@@ -240,9 +240,9 @@ class PolicySimulation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setActiveDecisionJson(string $var)
+    public function setActiveDecisionJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->active_decision_json = $var;
 
         return $this;
@@ -262,9 +262,9 @@ class PolicySimulation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDraftDecisionJson(string $var)
+    public function setDraftDecisionJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->draft_decision_json = $var;
 
         return $this;
@@ -284,9 +284,9 @@ class PolicySimulation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDiffJson(string $var)
+    public function setDiffJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->diff_json = $var;
 
         return $this;
@@ -306,9 +306,9 @@ class PolicySimulation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -328,9 +328,9 @@ class PolicySimulation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -360,8 +360,9 @@ class PolicySimulation extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;

@@ -77,8 +77,9 @@ class ColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsPii(bool $var)
+    public function setIsPii($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_pii = $var;
 
         return $this;
@@ -98,8 +99,9 @@ class ColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsEncrypted(bool $var)
+    public function setIsEncrypted($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_encrypted = $var;
 
         return $this;
@@ -119,8 +121,9 @@ class ColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsBlindIndex(bool $var)
+    public function setIsBlindIndex($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_blind_index = $var;
 
         return $this;
@@ -140,8 +143,9 @@ class ColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setMaskInLogs(bool $var)
+    public function setMaskInLogs($var)
     {
+        GPBUtil::checkBool($var);
         $this->mask_in_logs = $var;
 
         return $this;
@@ -161,9 +165,9 @@ class ColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDataClass(string $var)
+    public function setDataClass($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->data_class = $var;
 
         return $this;
@@ -183,8 +187,9 @@ class ColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setConsentRequired(bool $var)
+    public function setConsentRequired($var)
     {
+        GPBUtil::checkBool($var);
         $this->consent_required = $var;
 
         return $this;
@@ -204,7 +209,7 @@ class ColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRetentionDays(int $var)
+    public function setRetentionDays($var)
     {
         GPBUtil::checkInt32($var);
         $this->retention_days = $var;

@@ -57,8 +57,9 @@ class VerifyOTPResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setVerified(bool $var)
+    public function setVerified($var)
     {
+        GPBUtil::checkBool($var);
         $this->verified = $var;
 
         return $this;
@@ -78,9 +79,9 @@ class VerifyOTPResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -88,7 +89,7 @@ class VerifyOTPResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.OTPType otp_type = 3 [json_name = "otpType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\OTPType}
+     * @return int
      */
     public function getOtpType()
     {
@@ -97,10 +98,10 @@ class VerifyOTPResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.OTPType otp_type = 3 [json_name = "otpType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\OTPType}
+     * @param int $var
      * @return $this
      */
-    public function setOtpType(int $var)
+    public function setOtpType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\OTPType::class);
         $this->otp_type = $var;

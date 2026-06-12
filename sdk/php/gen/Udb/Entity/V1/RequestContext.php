@@ -184,9 +184,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -206,9 +206,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -228,9 +228,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -250,9 +250,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPurpose(string $var)
+    public function setPurpose($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->purpose = $var;
 
         return $this;
@@ -272,7 +272,7 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setScopes(array|RepeatedField $var)
+    public function setScopes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->scopes = $arr;
@@ -294,9 +294,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setServiceIdentity(string $var)
+    public function setServiceIdentity($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->service_identity = $var;
 
         return $this;
@@ -316,9 +316,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTraceId(string $var)
+    public function setTraceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->trace_id = $var;
 
         return $this;
@@ -342,9 +342,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTargetBackend(string $var)
+    public function setTargetBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->target_backend = $var;
 
         return $this;
@@ -364,9 +364,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTargetInstance(string $var)
+    public function setTargetInstance($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->target_instance = $var;
 
         return $this;
@@ -390,9 +390,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRoutingPolicy(string $var)
+    public function setRoutingPolicy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->routing_policy = $var;
 
         return $this;
@@ -416,8 +416,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPrimaryRead(bool $var)
+    public function setPrimaryRead($var)
     {
+        GPBUtil::checkBool($var);
         $this->primary_read = $var;
 
         return $this;
@@ -441,7 +442,7 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setMaxReplicaLagMs(int|string $var)
+    public function setMaxReplicaLagMs($var)
     {
         GPBUtil::checkUint64($var);
         $this->max_replica_lag_ms = $var;
@@ -467,8 +468,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setEventualConsistencyAllowed(bool $var)
+    public function setEventualConsistencyAllowed($var)
     {
+        GPBUtil::checkBool($var);
         $this->eventual_consistency_allowed = $var;
 
         return $this;
@@ -492,9 +494,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReadFenceJson(string $var)
+    public function setReadFenceJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->read_fence_json = $var;
 
         return $this;
@@ -520,9 +522,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -548,9 +550,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setClientCatalogVersion(string $var)
+    public function setClientCatalogVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->client_catalog_version = $var;
 
         return $this;
@@ -574,9 +576,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setClientId(string $var)
+    public function setClientId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->client_id = $var;
 
         return $this;
@@ -602,9 +604,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setConsistency(string $var)
+    public function setConsistency($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->consistency = $var;
 
         return $this;
@@ -628,9 +630,9 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRegion(string $var)
+    public function setRegion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->region = $var;
 
         return $this;
@@ -654,7 +656,7 @@ class RequestContext extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setAttributes(array|\Google\Protobuf\Internal\MapField $var)
+    public function setAttributes($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->attributes = $arr;

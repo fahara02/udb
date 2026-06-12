@@ -52,7 +52,7 @@ class ListSessionsResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authn\Entity\V1\Session[] $var
      * @return $this
      */
-    public function setSessions(array|RepeatedField $var)
+    public function setSessions($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authn\Entity\V1\Session::class);
         $this->sessions = $arr;
@@ -84,8 +84,9 @@ class ListSessionsResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\PageResponse $var
      * @return $this
      */
-    public function setPage(\Udb\Core\Common\V1\PageResponse|null $var)
+    public function setPage($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\PageResponse::class);
         $this->page = $var;
 
         return $this;

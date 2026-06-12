@@ -91,9 +91,9 @@ class SdkLiveRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRecordId(string $var)
+    public function setRecordId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->record_id = $var;
 
         return $this;
@@ -113,9 +113,9 @@ class SdkLiveRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -135,9 +135,9 @@ class SdkLiveRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -157,9 +157,9 @@ class SdkLiveRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLookupKey(string $var)
+    public function setLookupKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->lookup_key = $var;
 
         return $this;
@@ -179,9 +179,9 @@ class SdkLiveRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPayload(string $var)
+    public function setPayload($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->payload = $var;
 
         return $this;
@@ -201,7 +201,7 @@ class SdkLiveRecord extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setRevision(int|string $var)
+    public function setRevision($var)
     {
         GPBUtil::checkInt64($var);
         $this->revision = $var;
@@ -235,9 +235,9 @@ class SdkLiveRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBlobRef(string $var)
+    public function setBlobRef($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->blob_ref = $var;
 
         return $this;

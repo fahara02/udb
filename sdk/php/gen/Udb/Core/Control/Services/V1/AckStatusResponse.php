@@ -81,8 +81,9 @@ class AckStatusResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Control\Services\V1\NodeAckState $var
      * @return $this
      */
-    public function setNodeState(\Udb\Core\Control\Services\V1\NodeAckState|null $var)
+    public function setNodeState($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Control\Services\V1\NodeAckState::class);
         $this->node_state = $var;
 
         return $this;
@@ -106,9 +107,9 @@ class AckStatusResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCurrentVersion(string $var)
+    public function setCurrentVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->current_version = $var;
 
         return $this;
@@ -132,8 +133,9 @@ class AckStatusResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setAcknowledged(bool $var)
+    public function setAcknowledged($var)
     {
+        GPBUtil::checkBool($var);
         $this->acknowledged = $var;
 
         return $this;
@@ -157,8 +159,9 @@ class AckStatusResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setNacked(bool $var)
+    public function setNacked($var)
     {
+        GPBUtil::checkBool($var);
         $this->nacked = $var;
 
         return $this;

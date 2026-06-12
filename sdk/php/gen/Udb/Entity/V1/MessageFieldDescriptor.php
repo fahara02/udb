@@ -77,9 +77,9 @@ class MessageFieldDescriptor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -99,9 +99,9 @@ class MessageFieldDescriptor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setColumnName(string $var)
+    public function setColumnName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->column_name = $var;
 
         return $this;
@@ -121,9 +121,9 @@ class MessageFieldDescriptor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProtoType(string $var)
+    public function setProtoType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->proto_type = $var;
 
         return $this;
@@ -143,9 +143,9 @@ class MessageFieldDescriptor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSqlType(string $var)
+    public function setSqlType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->sql_type = $var;
 
         return $this;
@@ -165,8 +165,9 @@ class MessageFieldDescriptor extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setNotNull(bool $var)
+    public function setNotNull($var)
     {
+        GPBUtil::checkBool($var);
         $this->not_null = $var;
 
         return $this;
@@ -186,8 +187,9 @@ class MessageFieldDescriptor extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsPrimary(bool $var)
+    public function setIsPrimary($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_primary = $var;
 
         return $this;
@@ -207,8 +209,9 @@ class MessageFieldDescriptor extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsArray(bool $var)
+    public function setIsArray($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_array = $var;
 
         return $this;

@@ -102,8 +102,9 @@ class CacheSetRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -133,8 +134,9 @@ class CacheSetRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\StoreResource $var
      * @return $this
      */
-    public function setResource(\Udb\Entity\V1\StoreResource|null $var)
+    public function setResource($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\StoreResource::class);
         $this->resource = $var;
 
         return $this;
@@ -154,9 +156,9 @@ class CacheSetRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKey(string $var)
+    public function setKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->key = $var;
 
         return $this;
@@ -176,9 +178,9 @@ class CacheSetRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setValue(string $var)
+    public function setValue($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->value = $var;
 
         return $this;
@@ -198,9 +200,9 @@ class CacheSetRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setContentType(string $var)
+    public function setContentType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->content_type = $var;
 
         return $this;
@@ -220,7 +222,7 @@ class CacheSetRequest extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTtlSeconds(int|string $var)
+    public function setTtlSeconds($var)
     {
         GPBUtil::checkInt64($var);
         $this->ttl_seconds = $var;
@@ -242,8 +244,9 @@ class CacheSetRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setOnlyIfAbsent(bool $var)
+    public function setOnlyIfAbsent($var)
     {
+        GPBUtil::checkBool($var);
         $this->only_if_absent = $var;
 
         return $this;
@@ -263,8 +266,9 @@ class CacheSetRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setOnlyIfPresent(bool $var)
+    public function setOnlyIfPresent($var)
     {
+        GPBUtil::checkBool($var);
         $this->only_if_present = $var;
 
         return $this;
@@ -284,9 +288,9 @@ class CacheSetRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIdempotencyKey(string $var)
+    public function setIdempotencyKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->idempotency_key = $var;
 
         return $this;
@@ -316,8 +320,9 @@ class CacheSetRequest extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Struct $var
      * @return $this
      */
-    public function setMetadata(\Google\Protobuf\Struct|null $var)
+    public function setMetadata($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->metadata = $var;
 
         return $this;

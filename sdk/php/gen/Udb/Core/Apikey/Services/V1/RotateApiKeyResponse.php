@@ -70,8 +70,9 @@ class RotateApiKeyResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Apikey\Entity\V1\ApiKey $var
      * @return $this
      */
-    public function setKey(\Udb\Core\Apikey\Entity\V1\ApiKey|null $var)
+    public function setKey($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Apikey\Entity\V1\ApiKey::class);
         $this->key = $var;
 
         return $this;
@@ -95,9 +96,9 @@ class RotateApiKeyResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPlainKey(string $var)
+    public function setPlainKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->plain_key = $var;
 
         return $this;
@@ -117,9 +118,9 @@ class RotateApiKeyResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPreviousKeyId(string $var)
+    public function setPreviousKeyId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->previous_key_id = $var;
 
         return $this;

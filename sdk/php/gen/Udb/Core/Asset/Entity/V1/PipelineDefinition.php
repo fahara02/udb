@@ -120,9 +120,9 @@ class PipelineDefinition extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDefinitionId(string $var)
+    public function setDefinitionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->definition_id = $var;
 
         return $this;
@@ -146,9 +146,9 @@ class PipelineDefinition extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -172,9 +172,9 @@ class PipelineDefinition extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -198,9 +198,9 @@ class PipelineDefinition extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDescription(string $var)
+    public function setDescription($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->description = $var;
 
         return $this;
@@ -224,9 +224,9 @@ class PipelineDefinition extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMediaType(string $var)
+    public function setMediaType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->media_type = $var;
 
         return $this;
@@ -250,9 +250,9 @@ class PipelineDefinition extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSteps(string $var)
+    public function setSteps($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->steps = $var;
 
         return $this;
@@ -276,7 +276,7 @@ class PipelineDefinition extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setVersion(int $var)
+    public function setVersion($var)
     {
         GPBUtil::checkInt32($var);
         $this->version = $var;
@@ -302,9 +302,9 @@ class PipelineDefinition extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStatus(string $var)
+    public function setStatus($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->status = $var;
 
         return $this;
@@ -338,8 +338,9 @@ class PipelineDefinition extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\AuditInfo $var
      * @return $this
      */
-    public function setAuditInfo(\Udb\Core\Common\V1\AuditInfo|null $var)
+    public function setAuditInfo($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\AuditInfo::class);
         $this->audit_info = $var;
 
         return $this;

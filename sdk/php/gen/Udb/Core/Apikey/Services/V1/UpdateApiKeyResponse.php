@@ -57,8 +57,9 @@ class UpdateApiKeyResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Apikey\Entity\V1\ApiKey $var
      * @return $this
      */
-    public function setKey(\Udb\Core\Apikey\Entity\V1\ApiKey|null $var)
+    public function setKey($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Apikey\Entity\V1\ApiKey::class);
         $this->key = $var;
 
         return $this;

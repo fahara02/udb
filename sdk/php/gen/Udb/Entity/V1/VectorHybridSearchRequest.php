@@ -92,8 +92,9 @@ class VectorHybridSearchRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -113,9 +114,9 @@ class VectorHybridSearchRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCollection(string $var)
+    public function setCollection($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->collection = $var;
 
         return $this;
@@ -135,7 +136,7 @@ class VectorHybridSearchRequest extends \Google\Protobuf\Internal\Message
      * @param float[] $var
      * @return $this
      */
-    public function setVector(array|RepeatedField $var)
+    public function setVector($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::FLOAT);
         $this->vector = $arr;
@@ -157,9 +158,9 @@ class VectorHybridSearchRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTextQuery(string $var)
+    public function setTextQuery($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->text_query = $var;
 
         return $this;
@@ -189,8 +190,9 @@ class VectorHybridSearchRequest extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Struct $var
      * @return $this
      */
-    public function setFilter(\Google\Protobuf\Struct|null $var)
+    public function setFilter($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->filter = $var;
 
         return $this;
@@ -210,7 +212,7 @@ class VectorHybridSearchRequest extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setLimit(int $var)
+    public function setLimit($var)
     {
         GPBUtil::checkInt32($var);
         $this->limit = $var;
@@ -232,7 +234,7 @@ class VectorHybridSearchRequest extends \Google\Protobuf\Internal\Message
      * @param float[] $var
      * @return $this
      */
-    public function setFusionWeights(array|RepeatedField $var)
+    public function setFusionWeights($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::FLOAT);
         $this->fusion_weights = $arr;
@@ -254,8 +256,9 @@ class VectorHybridSearchRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setWithPayload(bool $var)
+    public function setWithPayload($var)
     {
+        GPBUtil::checkBool($var);
         $this->with_payload = $var;
 
         return $this;

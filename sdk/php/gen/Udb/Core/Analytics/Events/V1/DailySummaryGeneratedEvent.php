@@ -83,9 +83,9 @@ class DailySummaryGeneratedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventId(string $var)
+    public function setEventId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_id = $var;
 
         return $this;
@@ -109,9 +109,9 @@ class DailySummaryGeneratedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSummaryDate(string $var)
+    public function setSummaryDate($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->summary_date = $var;
 
         return $this;
@@ -131,7 +131,7 @@ class DailySummaryGeneratedEvent extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setExecutorSummariesCount(int $var)
+    public function setExecutorSummariesCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->executor_summaries_count = $var;
@@ -153,8 +153,9 @@ class DailySummaryGeneratedEvent extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setReconciliationSummaryReady(bool $var)
+    public function setReconciliationSummaryReady($var)
     {
+        GPBUtil::checkBool($var);
         $this->reconciliation_summary_ready = $var;
 
         return $this;
@@ -174,9 +175,9 @@ class DailySummaryGeneratedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -206,8 +207,9 @@ class DailySummaryGeneratedEvent extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setOccurredAt(\Google\Protobuf\Timestamp|null $var)
+    public function setOccurredAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->occurred_at = $var;
 
         return $this;
@@ -227,9 +229,9 @@ class DailySummaryGeneratedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;

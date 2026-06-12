@@ -57,7 +57,7 @@ class CacheScanResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\CacheEntry[] $var
      * @return $this
      */
-    public function setEntries(array|RepeatedField $var)
+    public function setEntries($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\CacheEntry::class);
         $this->entries = $arr;
@@ -79,9 +79,9 @@ class CacheScanResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNextPageToken(string $var)
+    public function setNextPageToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->next_page_token = $var;
 
         return $this;
@@ -111,8 +111,9 @@ class CacheScanResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\OperationStats $var
      * @return $this
      */
-    public function setStats(\Udb\Entity\V1\OperationStats|null $var)
+    public function setStats($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\OperationStats::class);
         $this->stats = $var;
 
         return $this;

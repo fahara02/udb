@@ -62,7 +62,7 @@ class Money extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setAmountMinor(int|string $var)
+    public function setAmountMinor($var)
     {
         GPBUtil::checkInt64($var);
         $this->amount_minor = $var;
@@ -88,9 +88,9 @@ class Money extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCurrency(string $var)
+    public function setCurrency($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->currency = $var;
 
         return $this;

@@ -82,8 +82,9 @@ class ViewDefinition extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -103,9 +104,9 @@ class ViewDefinition extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSchema(string $var)
+    public function setSchema($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->schema = $var;
 
         return $this;
@@ -125,9 +126,9 @@ class ViewDefinition extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -147,9 +148,9 @@ class ViewDefinition extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setQuery(string $var)
+    public function setQuery($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->query = $var;
 
         return $this;
@@ -169,8 +170,9 @@ class ViewDefinition extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setWithData(bool $var)
+    public function setWithData($var)
     {
+        GPBUtil::checkBool($var);
         $this->with_data = $var;
 
         return $this;
@@ -190,7 +192,7 @@ class ViewDefinition extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setTtlDays(int $var)
+    public function setTtlDays($var)
     {
         GPBUtil::checkInt32($var);
         $this->ttl_days = $var;

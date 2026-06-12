@@ -65,8 +65,9 @@ class GetRoomResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Webrtc\Entity\V1\Room $var
      * @return $this
      */
-    public function setRoom(\Udb\Core\Webrtc\Entity\V1\Room|null $var)
+    public function setRoom($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Webrtc\Entity\V1\Room::class);
         $this->room = $var;
 
         return $this;
@@ -100,8 +101,9 @@ class GetRoomResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ApiError $var
      * @return $this
      */
-    public function setError(\Udb\Core\Common\V1\ApiError|null $var)
+    public function setError($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
 
         return $this;

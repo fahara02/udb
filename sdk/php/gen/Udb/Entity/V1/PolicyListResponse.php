@@ -57,7 +57,7 @@ class PolicyListResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\PolicyRecord[] $var
      * @return $this
      */
-    public function setPolicies(array|RepeatedField $var)
+    public function setPolicies($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\PolicyRecord::class);
         $this->policies = $arr;
@@ -79,9 +79,9 @@ class PolicyListResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNextPageToken(string $var)
+    public function setNextPageToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->next_page_token = $var;
 
         return $this;
@@ -101,7 +101,7 @@ class PolicyListResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setTotalCount(int $var)
+    public function setTotalCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->total_count = $var;

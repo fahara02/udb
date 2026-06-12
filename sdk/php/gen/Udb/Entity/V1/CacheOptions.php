@@ -57,8 +57,9 @@ class CacheOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setBypassRead(bool $var)
+    public function setBypassRead($var)
     {
+        GPBUtil::checkBool($var);
         $this->bypass_read = $var;
 
         return $this;
@@ -78,8 +79,9 @@ class CacheOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setBypassWrite(bool $var)
+    public function setBypassWrite($var)
     {
+        GPBUtil::checkBool($var);
         $this->bypass_write = $var;
 
         return $this;
@@ -99,7 +101,7 @@ class CacheOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setTtlSeconds(int $var)
+    public function setTtlSeconds($var)
     {
         GPBUtil::checkInt32($var);
         $this->ttl_seconds = $var;

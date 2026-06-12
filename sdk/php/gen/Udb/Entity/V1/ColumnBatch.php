@@ -104,9 +104,9 @@ class ColumnBatch extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -114,7 +114,7 @@ class ColumnBatch extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.entity.v1.ColumnType type = 2 [json_name = "type"];</code>
-     * @return int one of the values in {@see \Udb\Entity\V1\ColumnType}
+     * @return int
      */
     public function getType()
     {
@@ -123,10 +123,10 @@ class ColumnBatch extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.entity.v1.ColumnType type = 2 [json_name = "type"];</code>
-     * @param int $var one of the values in {@see \Udb\Entity\V1\ColumnType}
+     * @param int $var
      * @return $this
      */
-    public function setType(int $var)
+    public function setType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Entity\V1\ColumnType::class);
         $this->type = $var;
@@ -154,7 +154,7 @@ class ColumnBatch extends \Google\Protobuf\Internal\Message
      * @param bool[] $var
      * @return $this
      */
-    public function setBoolValues(array|RepeatedField $var)
+    public function setBoolValues($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::BOOL);
         $this->bool_values = $arr;
@@ -176,7 +176,7 @@ class ColumnBatch extends \Google\Protobuf\Internal\Message
      * @param int[]|string[] $var
      * @return $this
      */
-    public function setInt64Values(array|RepeatedField $var)
+    public function setInt64Values($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::INT64);
         $this->int64_values = $arr;
@@ -198,7 +198,7 @@ class ColumnBatch extends \Google\Protobuf\Internal\Message
      * @param float[] $var
      * @return $this
      */
-    public function setDoubleValues(array|RepeatedField $var)
+    public function setDoubleValues($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::DOUBLE);
         $this->double_values = $arr;
@@ -220,7 +220,7 @@ class ColumnBatch extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setStringValues(array|RepeatedField $var)
+    public function setStringValues($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->string_values = $arr;
@@ -242,7 +242,7 @@ class ColumnBatch extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setBytesValues(array|RepeatedField $var)
+    public function setBytesValues($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::BYTES);
         $this->bytes_values = $arr;
@@ -268,7 +268,7 @@ class ColumnBatch extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setJsonValues(array|RepeatedField $var)
+    public function setJsonValues($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->json_values = $arr;
@@ -296,7 +296,7 @@ class ColumnBatch extends \Google\Protobuf\Internal\Message
      * @param bool[] $var
      * @return $this
      */
-    public function setNulls(array|RepeatedField $var)
+    public function setNulls($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::BOOL);
         $this->nulls = $arr;

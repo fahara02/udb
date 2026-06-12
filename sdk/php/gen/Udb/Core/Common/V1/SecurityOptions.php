@@ -67,9 +67,9 @@ class SecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setClassificationLevel(string $var)
+    public function setClassificationLevel($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->classification_level = $var;
 
         return $this;
@@ -89,8 +89,9 @@ class SecurityOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setAuditWrites(bool $var)
+    public function setAuditWrites($var)
     {
+        GPBUtil::checkBool($var);
         $this->audit_writes = $var;
 
         return $this;
@@ -110,8 +111,9 @@ class SecurityOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setAuditReads(bool $var)
+    public function setAuditReads($var)
     {
+        GPBUtil::checkBool($var);
         $this->audit_reads = $var;
 
         return $this;
@@ -131,7 +133,7 @@ class SecurityOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRetentionDays(int $var)
+    public function setRetentionDays($var)
     {
         GPBUtil::checkInt32($var);
         $this->retention_days = $var;
@@ -153,8 +155,9 @@ class SecurityOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setEncryptionRequired(bool $var)
+    public function setEncryptionRequired($var)
     {
+        GPBUtil::checkBool($var);
         $this->encryption_required = $var;
 
         return $this;

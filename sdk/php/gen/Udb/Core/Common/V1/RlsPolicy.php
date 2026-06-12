@@ -88,9 +88,9 @@ class RlsPolicy extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicyName(string $var)
+    public function setPolicyName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_name = $var;
 
         return $this;
@@ -114,9 +114,9 @@ class RlsPolicy extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCommand(string $var)
+    public function setCommand($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->command = $var;
 
         return $this;
@@ -140,9 +140,9 @@ class RlsPolicy extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUsing(string $var)
+    public function setUsing($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->using = $var;
 
         return $this;
@@ -166,9 +166,9 @@ class RlsPolicy extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setWithCheck(string $var)
+    public function setWithCheck($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->with_check = $var;
 
         return $this;
@@ -192,8 +192,9 @@ class RlsPolicy extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPermissive(bool $var)
+    public function setPermissive($var)
     {
+        GPBUtil::checkBool($var);
         $this->permissive = $var;
 
         return $this;

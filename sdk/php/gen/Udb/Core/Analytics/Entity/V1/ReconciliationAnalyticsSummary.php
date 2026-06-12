@@ -100,9 +100,9 @@ class ReconciliationAnalyticsSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSummaryId(string $var)
+    public function setSummaryId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->summary_id = $var;
 
         return $this;
@@ -132,8 +132,9 @@ class ReconciliationAnalyticsSummary extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setSummaryDate(\Google\Protobuf\Timestamp|null $var)
+    public function setSummaryDate($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->summary_date = $var;
 
         return $this;
@@ -153,7 +154,7 @@ class ReconciliationAnalyticsSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTotalReconciliations(int|string $var)
+    public function setTotalReconciliations($var)
     {
         GPBUtil::checkInt64($var);
         $this->total_reconciliations = $var;
@@ -175,7 +176,7 @@ class ReconciliationAnalyticsSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setExactMatches(int|string $var)
+    public function setExactMatches($var)
     {
         GPBUtil::checkInt64($var);
         $this->exact_matches = $var;
@@ -197,7 +198,7 @@ class ReconciliationAnalyticsSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setPartialConflicts(int|string $var)
+    public function setPartialConflicts($var)
     {
         GPBUtil::checkInt64($var);
         $this->partial_conflicts = $var;
@@ -219,7 +220,7 @@ class ReconciliationAnalyticsSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setHardConflicts(int|string $var)
+    public function setHardConflicts($var)
     {
         GPBUtil::checkInt64($var);
         $this->hard_conflicts = $var;
@@ -241,7 +242,7 @@ class ReconciliationAnalyticsSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setLowConfidenceFlagged(int|string $var)
+    public function setLowConfidenceFlagged($var)
     {
         GPBUtil::checkInt64($var);
         $this->low_confidence_flagged = $var;
@@ -263,8 +264,9 @@ class ReconciliationAnalyticsSummary extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setAvgReconciliationMs(float $var)
+    public function setAvgReconciliationMs($var)
     {
+        GPBUtil::checkDouble($var);
         $this->avg_reconciliation_ms = $var;
 
         return $this;
@@ -284,8 +286,9 @@ class ReconciliationAnalyticsSummary extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setResolutionRate(float $var)
+    public function setResolutionRate($var)
     {
+        GPBUtil::checkDouble($var);
         $this->resolution_rate = $var;
 
         return $this;
@@ -305,8 +308,9 @@ class ReconciliationAnalyticsSummary extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setAvgRecordConfidence(float $var)
+    public function setAvgRecordConfidence($var)
     {
+        GPBUtil::checkDouble($var);
         $this->avg_record_confidence = $var;
 
         return $this;
@@ -336,8 +340,9 @@ class ReconciliationAnalyticsSummary extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setRecordedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setRecordedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->recorded_at = $var;
 
         return $this;

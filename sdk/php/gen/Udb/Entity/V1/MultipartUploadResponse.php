@@ -57,9 +57,9 @@ class MultipartUploadResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUploadId(string $var)
+    public function setUploadId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->upload_id = $var;
 
         return $this;
@@ -79,7 +79,7 @@ class MultipartUploadResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setPartUrls(array|RepeatedField $var)
+    public function setPartUrls($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->part_urls = $arr;
@@ -101,7 +101,7 @@ class MultipartUploadResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setExpiresAtUnix(int|string $var)
+    public function setExpiresAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->expires_at_unix = $var;

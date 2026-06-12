@@ -106,9 +106,9 @@ class EventEnvelope extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventId(string $var)
+    public function setEventId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_id = $var;
 
         return $this;
@@ -132,9 +132,9 @@ class EventEnvelope extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventType(string $var)
+    public function setEventType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_type = $var;
 
         return $this;
@@ -168,8 +168,9 @@ class EventEnvelope extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setTimestamp(\Google\Protobuf\Timestamp|null $var)
+    public function setTimestamp($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->timestamp = $var;
 
         return $this;
@@ -189,9 +190,9 @@ class EventEnvelope extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -215,9 +216,9 @@ class EventEnvelope extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDocumentId(string $var)
+    public function setDocumentId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->document_id = $var;
 
         return $this;
@@ -241,9 +242,9 @@ class EventEnvelope extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSchemaUri(string $var)
+    public function setSchemaUri($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->schema_uri = $var;
 
         return $this;
@@ -277,8 +278,9 @@ class EventEnvelope extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Struct $var
      * @return $this
      */
-    public function setPayload(\Google\Protobuf\Struct|null $var)
+    public function setPayload($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->payload = $var;
 
         return $this;

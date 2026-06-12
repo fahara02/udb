@@ -62,9 +62,9 @@ class SignalRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRoomId(string $var)
+    public function setRoomId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->room_id = $var;
 
         return $this;
@@ -84,9 +84,9 @@ class SignalRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPeerId(string $var)
+    public function setPeerId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->peer_id = $var;
 
         return $this;
@@ -106,9 +106,9 @@ class SignalRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -133,9 +133,9 @@ class SignalRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOfferSdp(string $var)
+    public function setOfferSdp($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->writeOneof(3, $var);
 
         return $this;
@@ -160,9 +160,9 @@ class SignalRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAnswerSdp(string $var)
+    public function setAnswerSdp($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->writeOneof(4, $var);
 
         return $this;
@@ -187,9 +187,9 @@ class SignalRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIceCandidate(string $var)
+    public function setIceCandidate($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->writeOneof(5, $var);
 
         return $this;
@@ -214,8 +214,9 @@ class SignalRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPing(bool $var)
+    public function setPing($var)
     {
+        GPBUtil::checkBool($var);
         $this->writeOneof(6, $var);
 
         return $this;

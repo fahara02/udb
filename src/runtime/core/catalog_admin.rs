@@ -1610,8 +1610,12 @@ impl DataBrokerRuntime {
         let ctrl_rel = config.cdc_control_relation();
         let out_rel = config.cdc.outbox_relation();
         let row = sqlx::query(&format!(
+            // The transactional outbox is append-and-consume: the CDC tailer reads it
+            // via logical replication and rows are pruned after publish — there is no
+            // per-row `dispatched_at` column. Outbox depth is therefore the count of
+            // rows currently present (the pending/unconsumed backlog).
             "SELECT c.slot_name, c.paused, c.pause_reason,
-                    (SELECT COUNT(*) FROM {out_rel} WHERE dispatched_at IS NULL) AS outbox_depth
+                    (SELECT COUNT(*) FROM {out_rel}) AS outbox_depth
              FROM {ctrl_rel} c
              WHERE c.slot_name = $1 AND c.tenant_id = $2 AND c.project_id = $3"
         ))

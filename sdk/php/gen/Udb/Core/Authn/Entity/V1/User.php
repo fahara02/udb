@@ -18,7 +18,6 @@ use Google\Protobuf\RepeatedField;
  * The password_hash uses Argon2id PHC strings; legacy keyed-HMAC values are upgraded on login.
  * All PII fields are masked in application logs via (pii) + (log_masked).
  * ---------------------------------------------------------------------------
- *
  * Generated from protobuf message <code>udb.core.authn.entity.v1.User</code>
  */
 class User extends \Google\Protobuf\Internal\Message
@@ -197,9 +196,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -219,9 +218,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUsername(string $var)
+    public function setUsername($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->username = $var;
 
         return $this;
@@ -241,9 +240,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEmail(string $var)
+    public function setEmail($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->email = $var;
 
         return $this;
@@ -263,9 +262,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPasswordHash(string $var)
+    public function setPasswordHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->password_hash = $var;
 
         return $this;
@@ -273,7 +272,7 @@ class User extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AccountKind account_kind = 5 [json_name = "accountKind", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\AccountKind}
+     * @return int
      */
     public function getAccountKind()
     {
@@ -282,10 +281,10 @@ class User extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AccountKind account_kind = 5 [json_name = "accountKind", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\AccountKind}
+     * @param int $var
      * @return $this
      */
-    public function setAccountKind(int $var)
+    public function setAccountKind($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\AccountKind::class);
         $this->account_kind = $var;
@@ -295,7 +294,7 @@ class User extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.UserStatus status = 6 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\UserStatus}
+     * @return int
      */
     public function getStatus()
     {
@@ -304,10 +303,10 @@ class User extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.UserStatus status = 6 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\UserStatus}
+     * @param int $var
      * @return $this
      */
-    public function setStatus(int $var)
+    public function setStatus($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\UserStatus::class);
         $this->status = $var;
@@ -329,9 +328,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -351,9 +350,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFullName(string $var)
+    public function setFullName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->full_name = $var;
 
         return $this;
@@ -377,9 +376,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTotpSecretEnc(string $var)
+    public function setTotpSecretEnc($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->totp_secret_enc = $var;
 
         return $this;
@@ -399,8 +398,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setMfaEnabled(bool $var)
+    public function setMfaEnabled($var)
     {
+        GPBUtil::checkBool($var);
         $this->mfa_enabled = $var;
 
         return $this;
@@ -424,7 +424,7 @@ class User extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setFailedLoginCount(int $var)
+    public function setFailedLoginCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->failed_login_count = $var;
@@ -456,8 +456,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setLockedUntil(\Google\Protobuf\Timestamp|null $var)
+    public function setLockedUntil($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->locked_until = $var;
 
         return $this;
@@ -487,8 +488,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setEmailVerifiedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setEmailVerifiedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->email_verified_at = $var;
 
         return $this;
@@ -518,8 +520,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setLastLoginAt(\Google\Protobuf\Timestamp|null $var)
+    public function setLastLoginAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->last_login_at = $var;
 
         return $this;
@@ -539,9 +542,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCreatedBy(string $var)
+    public function setCreatedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->created_by = $var;
 
         return $this;
@@ -571,8 +574,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;
@@ -602,8 +606,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setUpdatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setUpdatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->updated_at = $var;
 
         return $this;
@@ -633,8 +638,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setDeletedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setDeletedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->deleted_at = $var;
 
         return $this;
@@ -654,9 +660,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeletedBy(string $var)
+    public function setDeletedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->deleted_by = $var;
 
         return $this;
@@ -676,9 +682,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -698,9 +704,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setExternalProviderId(string $var)
+    public function setExternalProviderId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->external_provider_id = $var;
 
         return $this;
@@ -720,9 +726,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setExternalSubject(string $var)
+    public function setExternalSubject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->external_subject = $var;
 
         return $this;
@@ -742,9 +748,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLocale(string $var)
+    public function setLocale($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->locale = $var;
 
         return $this;
@@ -764,9 +770,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTimezone(string $var)
+    public function setTimezone($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->timezone = $var;
 
         return $this;
@@ -786,9 +792,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProfileAttributesJson(string $var)
+    public function setProfileAttributesJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->profile_attributes_json = $var;
 
         return $this;
@@ -808,9 +814,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setExternalReferencesJson(string $var)
+    public function setExternalReferencesJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->external_references_json = $var;
 
         return $this;
@@ -830,9 +836,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPhone(string $var)
+    public function setPhone($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->phone = $var;
 
         return $this;
@@ -862,8 +868,9 @@ class User extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setPhoneVerifiedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setPhoneVerifiedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->phone_verified_at = $var;
 
         return $this;

@@ -62,8 +62,9 @@ class BoundingBox extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setX(float $var)
+    public function setX($var)
     {
+        GPBUtil::checkFloat($var);
         $this->x = $var;
 
         return $this;
@@ -83,8 +84,9 @@ class BoundingBox extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setY(float $var)
+    public function setY($var)
     {
+        GPBUtil::checkFloat($var);
         $this->y = $var;
 
         return $this;
@@ -104,8 +106,9 @@ class BoundingBox extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setWidth(float $var)
+    public function setWidth($var)
     {
+        GPBUtil::checkFloat($var);
         $this->width = $var;
 
         return $this;
@@ -125,8 +128,9 @@ class BoundingBox extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setHeight(float $var)
+    public function setHeight($var)
     {
+        GPBUtil::checkFloat($var);
         $this->height = $var;
 
         return $this;

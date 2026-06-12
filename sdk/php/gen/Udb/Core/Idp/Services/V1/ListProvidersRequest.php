@@ -65,9 +65,9 @@ class ListProvidersRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -77,7 +77,7 @@ class ListProvidersRequest extends \Google\Protobuf\Internal\Message
      * unspecified = all
      *
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.IdpKind kind = 2 [json_name = "kind"];</code>
-     * @return int one of the values in {@see \Udb\Core\Idp\Entity\V1\IdpKind}
+     * @return int
      */
     public function getKind()
     {
@@ -88,10 +88,10 @@ class ListProvidersRequest extends \Google\Protobuf\Internal\Message
      * unspecified = all
      *
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.IdpKind kind = 2 [json_name = "kind"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Idp\Entity\V1\IdpKind}
+     * @param int $var
      * @return $this
      */
-    public function setKind(int $var)
+    public function setKind($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Idp\Entity\V1\IdpKind::class);
         $this->kind = $var;
@@ -113,8 +113,9 @@ class ListProvidersRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setEnabledOnly(bool $var)
+    public function setEnabledOnly($var)
     {
+        GPBUtil::checkBool($var);
         $this->enabled_only = $var;
 
         return $this;
@@ -144,8 +145,9 @@ class ListProvidersRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\PageRequest $var
      * @return $this
      */
-    public function setPage(\Udb\Core\Common\V1\PageRequest|null $var)
+    public function setPage($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\PageRequest::class);
         $this->page = $var;
 
         return $this;

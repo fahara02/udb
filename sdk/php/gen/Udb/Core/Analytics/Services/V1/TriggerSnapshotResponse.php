@@ -47,7 +47,7 @@ class TriggerSnapshotResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setSnapshotsWritten(int $var)
+    public function setSnapshotsWritten($var)
     {
         GPBUtil::checkInt32($var);
         $this->snapshots_written = $var;

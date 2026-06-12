@@ -87,9 +87,9 @@ class WebAuthnCredential extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCredentialId(string $var)
+    public function setCredentialId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->credential_id = $var;
 
         return $this;
@@ -109,9 +109,9 @@ class WebAuthnCredential extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -131,9 +131,9 @@ class WebAuthnCredential extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPasskeyJson(string $var)
+    public function setPasskeyJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->passkey_json = $var;
 
         return $this;
@@ -153,9 +153,9 @@ class WebAuthnCredential extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLabel(string $var)
+    public function setLabel($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->label = $var;
 
         return $this;
@@ -175,9 +175,9 @@ class WebAuthnCredential extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -197,9 +197,9 @@ class WebAuthnCredential extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -229,8 +229,9 @@ class WebAuthnCredential extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;
@@ -260,8 +261,9 @@ class WebAuthnCredential extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setUpdatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setUpdatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->updated_at = $var;
 
         return $this;
@@ -291,8 +293,9 @@ class WebAuthnCredential extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setLastUsedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setLastUsedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->last_used_at = $var;
 
         return $this;

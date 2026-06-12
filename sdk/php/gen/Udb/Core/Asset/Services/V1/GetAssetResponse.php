@@ -65,8 +65,9 @@ class GetAssetResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Asset\Entity\V1\Asset $var
      * @return $this
      */
-    public function setAsset(\Udb\Core\Asset\Entity\V1\Asset|null $var)
+    public function setAsset($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Asset\Entity\V1\Asset::class);
         $this->asset = $var;
 
         return $this;
@@ -100,8 +101,9 @@ class GetAssetResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ApiError $var
      * @return $this
      */
-    public function setError(\Udb\Core\Common\V1\ApiError|null $var)
+    public function setError($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
 
         return $this;

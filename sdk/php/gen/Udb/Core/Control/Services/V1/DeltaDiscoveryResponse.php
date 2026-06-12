@@ -64,7 +64,7 @@ class DeltaDiscoveryResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.control.entity.v1.ResourceType resource_type = 1 [json_name = "resourceType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Control\Entity\V1\ResourceType}
+     * @return int
      */
     public function getResourceType()
     {
@@ -73,10 +73,10 @@ class DeltaDiscoveryResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.control.entity.v1.ResourceType resource_type = 1 [json_name = "resourceType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Control\Entity\V1\ResourceType}
+     * @param int $var
      * @return $this
      */
-    public function setResourceType(int $var)
+    public function setResourceType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Control\Entity\V1\ResourceType::class);
         $this->resource_type = $var;
@@ -98,9 +98,9 @@ class DeltaDiscoveryResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNonce(string $var)
+    public function setNonce($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->nonce = $var;
 
         return $this;
@@ -124,7 +124,7 @@ class DeltaDiscoveryResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Control\Services\V1\Resource[] $var
      * @return $this
      */
-    public function setResources(array|RepeatedField $var)
+    public function setResources($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Control\Services\V1\Resource::class);
         $this->resources = $arr;
@@ -150,7 +150,7 @@ class DeltaDiscoveryResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRemovedResources(array|RepeatedField $var)
+    public function setRemovedResources($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->removed_resources = $arr;
@@ -176,9 +176,9 @@ class DeltaDiscoveryResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSystemVersionInfo(string $var)
+    public function setSystemVersionInfo($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->system_version_info = $var;
 
         return $this;

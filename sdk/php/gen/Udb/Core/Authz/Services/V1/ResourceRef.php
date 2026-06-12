@@ -122,9 +122,9 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceType(string $var)
+    public function setResourceType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_type = $var;
 
         return $this;
@@ -144,9 +144,9 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceName(string $var)
+    public function setResourceName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_name = $var;
 
         return $this;
@@ -166,9 +166,9 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMessageType(string $var)
+    public function setMessageType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->message_type = $var;
 
         return $this;
@@ -188,9 +188,9 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSchema(string $var)
+    public function setSchema($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->schema = $var;
 
         return $this;
@@ -210,9 +210,9 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTable(string $var)
+    public function setTable($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->table = $var;
 
         return $this;
@@ -232,9 +232,9 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -254,9 +254,9 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setInstance(string $var)
+    public function setInstance($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->instance = $var;
 
         return $this;
@@ -276,9 +276,9 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceId(string $var)
+    public function setResourceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_id = $var;
 
         return $this;
@@ -298,9 +298,9 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCollection(string $var)
+    public function setCollection($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->collection = $var;
 
         return $this;
@@ -320,9 +320,9 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBucket(string $var)
+    public function setBucket($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->bucket = $var;
 
         return $this;
@@ -342,9 +342,9 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPath(string $var)
+    public function setPath($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->path = $var;
 
         return $this;
@@ -364,9 +364,9 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setService(string $var)
+    public function setService($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->service = $var;
 
         return $this;
@@ -386,9 +386,9 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setApi(string $var)
+    public function setApi($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->api = $var;
 
         return $this;
@@ -408,9 +408,9 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -430,9 +430,9 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -452,7 +452,7 @@ class ResourceRef extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setAttributes(array|\Google\Protobuf\Internal\MapField $var)
+    public function setAttributes($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->attributes = $arr;

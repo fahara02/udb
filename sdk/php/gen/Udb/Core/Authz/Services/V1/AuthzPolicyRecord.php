@@ -112,9 +112,9 @@ class AuthzPolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setId(string $var)
+    public function setId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->id = $var;
 
         return $this;
@@ -134,7 +134,7 @@ class AuthzPolicyRecord extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setPriority(int $var)
+    public function setPriority($var)
     {
         GPBUtil::checkInt32($var);
         $this->priority = $var;
@@ -156,8 +156,9 @@ class AuthzPolicyRecord extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setEnabled(bool $var)
+    public function setEnabled($var)
     {
+        GPBUtil::checkBool($var);
         $this->enabled = $var;
 
         return $this;
@@ -177,9 +178,9 @@ class AuthzPolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEffect(string $var)
+    public function setEffect($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->effect = $var;
 
         return $this;
@@ -199,9 +200,9 @@ class AuthzPolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenant(string $var)
+    public function setTenant($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant = $var;
 
         return $this;
@@ -221,9 +222,9 @@ class AuthzPolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProject(string $var)
+    public function setProject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project = $var;
 
         return $this;
@@ -243,9 +244,9 @@ class AuthzPolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSubject(string $var)
+    public function setSubject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->subject = $var;
 
         return $this;
@@ -265,9 +266,9 @@ class AuthzPolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRole(string $var)
+    public function setRole($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->role = $var;
 
         return $this;
@@ -287,9 +288,9 @@ class AuthzPolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAction(string $var)
+    public function setAction($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->action = $var;
 
         return $this;
@@ -309,9 +310,9 @@ class AuthzPolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResource(string $var)
+    public function setResource($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource = $var;
 
         return $this;
@@ -331,9 +332,9 @@ class AuthzPolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPurpose(string $var)
+    public function setPurpose($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->purpose = $var;
 
         return $this;
@@ -353,9 +354,9 @@ class AuthzPolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRelationship(string $var)
+    public function setRelationship($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->relationship = $var;
 
         return $this;
@@ -375,7 +376,7 @@ class AuthzPolicyRecord extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setConditions(array|\Google\Protobuf\Internal\MapField $var)
+    public function setConditions($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->conditions = $arr;
@@ -397,7 +398,7 @@ class AuthzPolicyRecord extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRequiredScopes(array|RepeatedField $var)
+    public function setRequiredScopes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->required_scopes = $arr;

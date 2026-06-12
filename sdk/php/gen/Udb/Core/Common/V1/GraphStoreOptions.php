@@ -70,7 +70,7 @@ class GraphStoreOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.GraphBackendType backend = 1 [json_name = "backend"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\GraphBackendType}
+     * @return int
      */
     public function getBackend()
     {
@@ -79,10 +79,10 @@ class GraphStoreOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.GraphBackendType backend = 1 [json_name = "backend"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\GraphBackendType}
+     * @param int $var
      * @return $this
      */
-    public function setBackend(int $var)
+    public function setBackend($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\GraphBackendType::class);
         $this->backend = $var;
@@ -104,9 +104,9 @@ class GraphStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setGraphName(string $var)
+    public function setGraphName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->graph_name = $var;
 
         return $this;
@@ -126,9 +126,9 @@ class GraphStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNodeLabel(string $var)
+    public function setNodeLabel($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->node_label = $var;
 
         return $this;
@@ -148,9 +148,9 @@ class GraphStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIdField(string $var)
+    public function setIdField($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->id_field = $var;
 
         return $this;
@@ -170,9 +170,9 @@ class GraphStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantField(string $var)
+    public function setTenantField($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_field = $var;
 
         return $this;
@@ -192,9 +192,9 @@ class GraphStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEdgeSourceField(string $var)
+    public function setEdgeSourceField($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->edge_source_field = $var;
 
         return $this;
@@ -214,9 +214,9 @@ class GraphStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEdgeTargetField(string $var)
+    public function setEdgeTargetField($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->edge_target_field = $var;
 
         return $this;
@@ -236,9 +236,9 @@ class GraphStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPayloadSchemaJson(string $var)
+    public function setPayloadSchemaJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->payload_schema_json = $var;
 
         return $this;

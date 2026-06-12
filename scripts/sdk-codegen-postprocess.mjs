@@ -67,10 +67,50 @@ function normalizeGeneratedText(text) {
     .replace(/\r?\n+$/u, "\n");
 }
 
+function normalizeGoGeneratedText(text) {
+  return normalizeGeneratedText(text).replace(
+    /(\/\/ Hybrid model:\n)\/\/   (SERVER_SIDE:[^\n]+)\n\/\/   (JWT:[^\n]+)/gu,
+    "$1//\n//\t$2\n//\t$3",
+  );
+}
+
+function normalizeJavaGeneratedText(text) {
+  return normalizeGeneratedText(text).replace(
+    /^ \*[ \t]*\n(?= \* (?:HTTP prefix:|The gateway calls|Auth method routing|The native fast-path|Signed policy bundles))/gmu,
+    "",
+  );
+}
+
+function normalizePhpGeneratedText(text) {
+  return normalizeGeneratedText(text).replace(
+    /^ \*[ \t]*\n(?= \* Generated from protobuf message)/gmu,
+    "",
+  );
+}
+
+const PHP_COMMENT_DRIFT_FILES = new Set([
+  path.normalize("sdk/php/gen/Udb/Core/Authn/Entity/V1/MfaPolicy.php"),
+  path.normalize("sdk/php/gen/Udb/Core/Authn/Entity/V1/OTP.php"),
+  path.normalize("sdk/php/gen/Udb/Core/Authn/Entity/V1/RecoveryCode.php"),
+  path.normalize("sdk/php/gen/Udb/Core/Authn/Entity/V1/Session.php"),
+  path.normalize("sdk/php/gen/Udb/Core/Authn/Entity/V1/User.php"),
+  path.normalize("sdk/php/gen/Udb/Core/Authz/Services/V1/NativeAccessRequest.php"),
+  path.normalize("sdk/php/gen/Udb/Core/Authz/Services/V1/PolicyBundleRequest.php"),
+]);
+
 for (const root of GENERATED_ROOTS) {
   for (const file of walkFiles(root)) {
     if (GENERATED_TEXT_EXTENSIONS.has(path.extname(file))) {
-      rewrite(file, normalizeGeneratedText);
+      const ext = path.extname(file);
+      if (ext === ".go") {
+        rewrite(file, normalizeGoGeneratedText);
+      } else if (ext === ".java") {
+        rewrite(file, normalizeJavaGeneratedText);
+      } else if (ext === ".php" && PHP_COMMENT_DRIFT_FILES.has(path.normalize(file))) {
+        rewrite(file, normalizePhpGeneratedText);
+      } else {
+        rewrite(file, normalizeGeneratedText);
+      }
     }
   }
 }

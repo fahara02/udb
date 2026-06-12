@@ -1394,16 +1394,38 @@ where
     strip_nul_text_params(&mut params, "authn write");
     let param_types =
         crate::runtime::core::dispatch_param_types(&spec).map_err(|err| err.to_string())?;
-    let result = crate::runtime::core::bind_typed_generic_pg_params(
+    let bound = crate::runtime::core::bind_typed_generic_pg_params(
         sqlx::query(sql),
         &params,
         param_types.as_deref(),
     )
-    .map_err(|err| err.to_string())?
-    .execute(executor)
-    .await
-    .map_err(|err| format!("typed authn write failed: {err}"))?;
-    Ok(result.rows_affected())
+    .map_err(|err| err.to_string())?;
+    match bound.execute(executor).await {
+        Ok(result) => Ok(result.rows_affected()),
+        Err(err) => {
+            let msg = err.to_string();
+            if msg.contains("0x00") || msg.contains("invalid byte sequence") {
+                // B14 DIAG: locate the NUL definitively — is it in the SQL text or a
+                // specific param (and of what param_type)?
+                tracing::error!(
+                    sql_has_nul = sql.contains('\u{0}'),
+                    "B14 DIAG typed authn write 0x00; dumping params"
+                );
+                for (i, p) in params.iter().enumerate() {
+                    let txt = p.to_string();
+                    if txt.contains('\u{0}') {
+                        let pt = param_types
+                            .as_ref()
+                            .and_then(|t| t.get(i))
+                            .cloned()
+                            .unwrap_or_default();
+                        tracing::error!(idx = i, ptype = %pt, "B14 DIAG param CONTAINS NUL");
+                    }
+                }
+            }
+            Err(format!("typed authn write failed: {msg}"))
+        }
+    }
 }
 
 /// B14: A NUL byte (`0x00`) cannot exist in a Postgres `text`/`varchar`/`json`

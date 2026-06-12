@@ -89,9 +89,9 @@ class UpdateApiKeyRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKeyId(string $var)
+    public function setKeyId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->key_id = $var;
 
         return $this;
@@ -111,9 +111,9 @@ class UpdateApiKeyRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -133,9 +133,9 @@ class UpdateApiKeyRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDescription(string $var)
+    public function setDescription($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->description = $var;
 
         return $this;
@@ -155,7 +155,7 @@ class UpdateApiKeyRequest extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setScopes(array|RepeatedField $var)
+    public function setScopes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->scopes = $arr;
@@ -177,7 +177,7 @@ class UpdateApiKeyRequest extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setIpAllowlist(array|RepeatedField $var)
+    public function setIpAllowlist($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->ip_allowlist = $arr;
@@ -199,7 +199,7 @@ class UpdateApiKeyRequest extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRateLimitPerMinute(int $var)
+    public function setRateLimitPerMinute($var)
     {
         GPBUtil::checkInt32($var);
         $this->rate_limit_per_minute = $var;
@@ -221,7 +221,7 @@ class UpdateApiKeyRequest extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setRateLimitPerDay(int|string $var)
+    public function setRateLimitPerDay($var)
     {
         GPBUtil::checkInt64($var);
         $this->rate_limit_per_day = $var;
@@ -253,8 +253,9 @@ class UpdateApiKeyRequest extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setExpiresAt(\Google\Protobuf\Timestamp|null $var)
+    public function setExpiresAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->expires_at = $var;
 
         return $this;
@@ -284,8 +285,9 @@ class UpdateApiKeyRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Core\Common\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;

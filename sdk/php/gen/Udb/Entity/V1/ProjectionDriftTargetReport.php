@@ -87,9 +87,9 @@ class ProjectionDriftTargetReport extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTargetBackend(string $var)
+    public function setTargetBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->target_backend = $var;
 
         return $this;
@@ -109,9 +109,9 @@ class ProjectionDriftTargetReport extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTargetInstance(string $var)
+    public function setTargetInstance($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->target_instance = $var;
 
         return $this;
@@ -131,9 +131,9 @@ class ProjectionDriftTargetReport extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTargetResource(string $var)
+    public function setTargetResource($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->target_resource = $var;
 
         return $this;
@@ -153,7 +153,7 @@ class ProjectionDriftTargetReport extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setSourceRowsScanned(int $var)
+    public function setSourceRowsScanned($var)
     {
         GPBUtil::checkInt32($var);
         $this->source_rows_scanned = $var;
@@ -175,7 +175,7 @@ class ProjectionDriftTargetReport extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\ProjectionDriftDivergentRow[] $var
      * @return $this
      */
-    public function setDivergentRows(array|RepeatedField $var)
+    public function setDivergentRows($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\ProjectionDriftDivergentRow::class);
         $this->divergent_rows = $arr;
@@ -197,7 +197,7 @@ class ProjectionDriftTargetReport extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRowsToRepair(int $var)
+    public function setRowsToRepair($var)
     {
         GPBUtil::checkInt32($var);
         $this->rows_to_repair = $var;
@@ -219,8 +219,9 @@ class ProjectionDriftTargetReport extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setEstimatedCostUnits(float $var)
+    public function setEstimatedCostUnits($var)
     {
+        GPBUtil::checkDouble($var);
         $this->estimated_cost_units = $var;
 
         return $this;
@@ -240,7 +241,7 @@ class ProjectionDriftTargetReport extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setRepairTasksEnqueued(int|string $var)
+    public function setRepairTasksEnqueued($var)
     {
         GPBUtil::checkInt64($var);
         $this->repair_tasks_enqueued = $var;
@@ -262,7 +263,7 @@ class ProjectionDriftTargetReport extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setWarnings(array|RepeatedField $var)
+    public function setWarnings($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->warnings = $arr;

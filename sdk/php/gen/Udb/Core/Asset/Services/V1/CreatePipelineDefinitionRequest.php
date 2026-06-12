@@ -75,9 +75,9 @@ class CreatePipelineDefinitionRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -97,9 +97,9 @@ class CreatePipelineDefinitionRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -119,9 +119,9 @@ class CreatePipelineDefinitionRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDescription(string $var)
+    public function setDescription($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->description = $var;
 
         return $this;
@@ -141,9 +141,9 @@ class CreatePipelineDefinitionRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMediaType(string $var)
+    public function setMediaType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->media_type = $var;
 
         return $this;
@@ -167,9 +167,9 @@ class CreatePipelineDefinitionRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSteps(string $var)
+    public function setSteps($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->steps = $var;
 
         return $this;
@@ -189,7 +189,7 @@ class CreatePipelineDefinitionRequest extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setVersion(int $var)
+    public function setVersion($var)
     {
         GPBUtil::checkInt32($var);
         $this->version = $var;

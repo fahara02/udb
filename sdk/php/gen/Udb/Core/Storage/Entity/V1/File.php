@@ -218,9 +218,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFileId(string $var)
+    public function setFileId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->file_id = $var;
 
         return $this;
@@ -244,9 +244,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -270,9 +270,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -296,9 +296,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFilename(string $var)
+    public function setFilename($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->filename = $var;
 
         return $this;
@@ -322,9 +322,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setContentType(string $var)
+    public function setContentType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->content_type = $var;
 
         return $this;
@@ -348,7 +348,7 @@ class File extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setSizeBytes(int|string $var)
+    public function setSizeBytes($var)
     {
         GPBUtil::checkInt64($var);
         $this->size_bytes = $var;
@@ -374,9 +374,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -400,9 +400,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBucket(string $var)
+    public function setBucket($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->bucket = $var;
 
         return $this;
@@ -426,9 +426,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setObjectKey(string $var)
+    public function setObjectKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->object_key = $var;
 
         return $this;
@@ -452,9 +452,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUrl(string $var)
+    public function setUrl($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->url = $var;
 
         return $this;
@@ -478,9 +478,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCdnUrl(string $var)
+    public function setCdnUrl($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->cdn_url = $var;
 
         return $this;
@@ -490,7 +490,7 @@ class File extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:file_type;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.storage.entity.v1.FileType file_type = 12 [json_name = "fileType", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Storage\Entity\V1\FileType}
+     * @return int
      */
     public function getFileType()
     {
@@ -501,10 +501,10 @@ class File extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:file_type;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.storage.entity.v1.FileType file_type = 12 [json_name = "fileType", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Storage\Entity\V1\FileType}
+     * @param int $var
      * @return $this
      */
-    public function setFileType(int $var)
+    public function setFileType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Storage\Entity\V1\FileType::class);
         $this->file_type = $var;
@@ -530,9 +530,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReferenceId(string $var)
+    public function setReferenceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reference_id = $var;
 
         return $this;
@@ -556,9 +556,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReferenceType(string $var)
+    public function setReferenceType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reference_type = $var;
 
         return $this;
@@ -582,8 +582,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsPublic(bool $var)
+    public function setIsPublic($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_public = $var;
 
         return $this;
@@ -593,7 +594,7 @@ class File extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:status;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.storage.entity.v1.FileStatus status = 16 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Storage\Entity\V1\FileStatus}
+     * @return int
      */
     public function getStatus()
     {
@@ -604,10 +605,10 @@ class File extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:status;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.storage.entity.v1.FileStatus status = 16 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Storage\Entity\V1\FileStatus}
+     * @param int $var
      * @return $this
      */
-    public function setStatus(int $var)
+    public function setStatus($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Storage\Entity\V1\FileStatus::class);
         $this->status = $var;
@@ -633,9 +634,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setChecksum(string $var)
+    public function setChecksum($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->checksum = $var;
 
         return $this;
@@ -669,8 +670,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setExpiresAt(\Google\Protobuf\Timestamp|null $var)
+    public function setExpiresAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->expires_at = $var;
 
         return $this;
@@ -694,9 +696,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUploadedBy(string $var)
+    public function setUploadedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->uploaded_by = $var;
 
         return $this;
@@ -730,8 +732,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\AuditInfo $var
      * @return $this
      */
-    public function setAuditInfo(\Udb\Core\Common\V1\AuditInfo|null $var)
+    public function setAuditInfo($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\AuditInfo::class);
         $this->audit_info = $var;
 
         return $this;
@@ -761,8 +764,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setDeletedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setDeletedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->deleted_at = $var;
 
         return $this;
@@ -782,9 +786,9 @@ class File extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeletedBy(string $var)
+    public function setDeletedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->deleted_by = $var;
 
         return $this;

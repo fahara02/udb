@@ -52,8 +52,9 @@ class AuthMutationResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setOk(bool $var)
+    public function setOk($var)
     {
+        GPBUtil::checkBool($var);
         $this->ok = $var;
 
         return $this;
@@ -73,9 +74,9 @@ class AuthMutationResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMessage(string $var)
+    public function setMessage($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->message = $var;
 
         return $this;

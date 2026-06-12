@@ -989,7 +989,7 @@ impl PrometheusMetrics {
     pub fn observe_pg_query(&self, op: &str, table: &str, seconds: f64) {
         // D.4: `table` is operator/request-defined — bound its cardinality.
         self.pg_duration
-            .with_label_values(&[op, bounded_label(table).as_ref()])
+            .with_label_values(&[op, bounded_label("pg_table", table).as_ref()])
             .observe(seconds);
     }
 
@@ -1002,7 +1002,7 @@ impl PrometheusMetrics {
     pub fn inc_vector_op(&self, collection: &str, op: &str) {
         // D.4: `collection` is untrusted — bound its cardinality.
         self.vector_ops
-            .with_label_values(&[bounded_label(collection).as_ref(), op])
+            .with_label_values(&[bounded_label("vector_collection", collection).as_ref(), op])
             .inc();
     }
 
@@ -1010,14 +1010,14 @@ impl PrometheusMetrics {
         // `backend` is a fixed backend-kind token (qdrant/s3/…), but bound it for
         // safety like the other backend labels.
         self.backend_fanout
-            .with_label_values(&[bounded_label(backend).as_ref()])
+            .with_label_values(&[bounded_label("backend", backend).as_ref()])
             .inc_by(count);
     }
 
     pub fn inc_object_op(&self, bucket: &str, method: &str) {
         // D.4: `bucket` is untrusted — bound its cardinality.
         self.object_ops
-            .with_label_values(&[bounded_label(bucket).as_ref(), method])
+            .with_label_values(&[bounded_label("object_bucket", bucket).as_ref(), method])
             .inc();
     }
 
@@ -1068,10 +1068,10 @@ impl PrometheusMetrics {
         // are server-controlled enums and stay raw.
         self.fair_admission
             .with_label_values(&[
-                bounded_label(project).as_ref(),
-                bounded_label(tenant_hash).as_ref(),
+                bounded_label("fair_project", project).as_ref(),
+                bounded_label("fair_tenant_hash", tenant_hash).as_ref(),
                 backend,
-                bounded_label(instance).as_ref(),
+                bounded_label("fair_instance", instance).as_ref(),
                 operation,
                 result,
             ])
@@ -1089,10 +1089,10 @@ impl PrometheusMetrics {
     ) {
         self.fair_cost
             .with_label_values(&[
-                bounded_label(project).as_ref(),
-                bounded_label(tenant_hash).as_ref(),
+                bounded_label("fair_project", project).as_ref(),
+                bounded_label("fair_tenant_hash", tenant_hash).as_ref(),
                 backend,
-                bounded_label(instance).as_ref(),
+                bounded_label("fair_instance", instance).as_ref(),
                 operation,
             ])
             .inc_by(cost.max(0.0));
@@ -1169,29 +1169,44 @@ fn sanitize_label(raw: &str) -> std::borrow::Cow<'static, str> {
 /// Cap the number of DISTINCT labels admitted into `seen` at `cap`; anything
 /// beyond collapses to `"overflow"`. Pure (takes the set) so the cardinality
 /// bound is unit-testable without touching global state.
+#[cfg(test)]
 fn intern_bounded(
     label: std::borrow::Cow<'static, str>,
     seen: &std::sync::Mutex<std::collections::HashSet<String>>,
     cap: usize,
 ) -> std::borrow::Cow<'static, str> {
     let mut guard = seen.lock().unwrap_or_else(|e| e.into_inner());
-    if guard.contains(label.as_ref()) {
+    intern_bounded_set(label, &mut guard, cap)
+}
+
+fn intern_bounded_set(
+    label: std::borrow::Cow<'static, str>,
+    seen: &mut std::collections::HashSet<String>,
+    cap: usize,
+) -> std::borrow::Cow<'static, str> {
+    if seen.contains(label.as_ref()) {
         return label;
     }
-    if guard.len() < cap {
-        guard.insert(label.clone().into_owned());
+    if seen.len() < cap {
+        seen.insert(label.clone().into_owned());
         return label;
     }
     std::borrow::Cow::Borrowed("overflow")
 }
 
-/// Bounded metric label for an untrusted resource name: sanitized + capped to
-/// `MAX_DISTINCT_LABELS` distinct values process-wide.
-fn bounded_label(raw: &str) -> std::borrow::Cow<'static, str> {
-    static SEEN: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<String>>> =
-        std::sync::OnceLock::new();
-    let seen = SEEN.get_or_init(|| std::sync::Mutex::new(std::collections::HashSet::new()));
-    intern_bounded(sanitize_label(raw), seen, max_distinct_labels())
+/// Bounded metric label for an untrusted resource name. Cardinality is scoped by
+/// metric label namespace so one noisy dimension cannot force unrelated labels
+/// into overflow.
+fn bounded_label(scope: &'static str, raw: &str) -> std::borrow::Cow<'static, str> {
+    static SEEN: std::sync::OnceLock<
+        std::sync::Mutex<
+            std::collections::HashMap<&'static str, std::collections::HashSet<String>>,
+        >,
+    > = std::sync::OnceLock::new();
+    let seen = SEEN.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+    let mut guard = seen.lock().unwrap_or_else(|e| e.into_inner());
+    let scoped = guard.entry(scope).or_default();
+    intern_bounded_set(sanitize_label(raw), scoped, max_distinct_labels())
 }
 
 impl MetricsRecorder for PrometheusMetrics {
@@ -1408,17 +1423,17 @@ impl MetricsRecorder for PrometheusMetrics {
     }
     fn record_idp_refresh_failure(&self, kind: &str) {
         self.idp_refresh_failures
-            .with_label_values(&[bounded_label(kind).as_ref()])
+            .with_label_values(&[bounded_label("idp_refresh_kind", kind).as_ref()])
             .inc();
     }
     fn record_scim_failure(&self, op: &str) {
         self.scim_failures
-            .with_label_values(&[bounded_label(op).as_ref()])
+            .with_label_values(&[bounded_label("scim_op", op).as_ref()])
             .inc();
     }
     fn record_audit_sink_failure(&self, sink: &str) {
         self.audit_sink_failures
-            .with_label_values(&[bounded_label(sink).as_ref()])
+            .with_label_values(&[bounded_label("audit_sink", sink).as_ref()])
             .inc();
     }
     fn set_auth_outbox_lag_seconds(&self, seconds: f64) {
@@ -1437,12 +1452,12 @@ impl MetricsRecorder for PrometheusMetrics {
     }
     fn inc_outbox_enqueue_failures_total(&self, path: &str) {
         self.outbox_enqueue_failures
-            .with_label_values(&[bounded_label(path).as_ref()])
+            .with_label_values(&[bounded_label("outbox_path", path).as_ref()])
             .inc();
     }
     fn set_native_service_degraded(&self, service: &str, degraded: bool) {
         self.native_service_degraded
-            .with_label_values(&[bounded_label(service).as_ref()])
+            .with_label_values(&[bounded_label("native_service", service).as_ref()])
             .set(i64::from(degraded));
     }
     fn inc_compensation_failures_total(&self) {
@@ -1520,10 +1535,10 @@ mod tests {
 
     #[test]
     fn fair_admission_labels_are_cardinality_bounded() {
-        // Item 12: project/instance/tenant_hash are request-controlled. Feeding 2×
-        // the distinct-label bound of projects must NOT mint 2× the series — the
-        // bounded_label interner caps distinct admitted values process-wide (the
-        // remainder collapses into "overflow"), so the series count stays ≤ cap+1.
+        // Item 12: project/instance/tenant_hash are request-controlled. Feeding 2x
+        // the distinct-label bound of projects must NOT mint 2x the series. The
+        // interner caps each metric label namespace independently, so the project
+        // dimension stays <= cap+1 including the overflow bucket.
         let m = PrometheusMetrics::new().expect("build PrometheusMetrics");
         let cap = max_distinct_labels();
         for i in 0..(cap * 2) {
@@ -1553,8 +1568,6 @@ mod tests {
             .lines()
             .filter(|line| line.starts_with("udb_fair_cost_units_total{"))
             .count();
-        // The SEEN interner is process-global (shared with other label dimensions
-        // and tests), so the bound here is the global cap + the overflow bucket.
         assert!(
             admission_series <= cap + 1,
             "fair_admission series must cap at {} (+overflow), got {admission_series}",
@@ -1577,6 +1590,18 @@ mod tests {
                 .collect::<Vec<_>>()
                 .join("\n")
         );
+    }
+
+    #[test]
+    fn bounded_labels_are_scoped_by_metric_namespace() {
+        let cap = max_distinct_labels();
+        for i in 0..(cap * 2) {
+            let _ = bounded_label("test_noisy_namespace", &format!("attacker-value-{i}"));
+        }
+
+        assert_eq!(bounded_label("idp_refresh_kind", "jwks"), "jwks");
+        assert_eq!(bounded_label("outbox_path", "native"), "native");
+        assert_eq!(bounded_label("native_service", "authn"), "authn");
     }
 
     #[test]

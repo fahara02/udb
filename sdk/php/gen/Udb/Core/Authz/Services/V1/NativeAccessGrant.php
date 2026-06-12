@@ -100,9 +100,9 @@ class NativeAccessGrant extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDsn(string $var)
+    public function setDsn($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->dsn = $var;
 
         return $this;
@@ -126,9 +126,9 @@ class NativeAccessGrant extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRole(string $var)
+    public function setRole($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->role = $var;
 
         return $this;
@@ -148,9 +148,9 @@ class NativeAccessGrant extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -170,9 +170,9 @@ class NativeAccessGrant extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDatabase(string $var)
+    public function setDatabase($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->database = $var;
 
         return $this;
@@ -192,9 +192,9 @@ class NativeAccessGrant extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSchema(string $var)
+    public function setSchema($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->schema = $var;
 
         return $this;
@@ -220,7 +220,7 @@ class NativeAccessGrant extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setSessionVariables(array|\Google\Protobuf\Internal\MapField $var)
+    public function setSessionVariables($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->session_variables = $arr;
@@ -242,7 +242,7 @@ class NativeAccessGrant extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setExpiresAtUnix(int|string $var)
+    public function setExpiresAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->expires_at_unix = $var;
@@ -264,7 +264,7 @@ class NativeAccessGrant extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTtlSeconds(int|string $var)
+    public function setTtlSeconds($var)
     {
         GPBUtil::checkUint64($var);
         $this->ttl_seconds = $var;

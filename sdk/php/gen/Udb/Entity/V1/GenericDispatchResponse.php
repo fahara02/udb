@@ -70,9 +70,9 @@ class GenericDispatchResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -92,9 +92,9 @@ class GenericDispatchResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOperation(string $var)
+    public function setOperation($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->operation = $var;
 
         return $this;
@@ -114,9 +114,9 @@ class GenericDispatchResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceUri(string $var)
+    public function setResourceUri($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_uri = $var;
 
         return $this;
@@ -140,9 +140,9 @@ class GenericDispatchResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResultJson(string $var)
+    public function setResultJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->result_json = $var;
 
         return $this;
@@ -162,7 +162,7 @@ class GenericDispatchResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setErrors(array|RepeatedField $var)
+    public function setErrors($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->errors = $arr;

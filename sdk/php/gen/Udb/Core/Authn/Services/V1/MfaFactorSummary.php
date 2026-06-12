@@ -45,7 +45,7 @@ class MfaFactorSummary extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1 [json_name = "factorKind"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\AuthFactorKind}
+     * @return int
      */
     public function getFactorKind()
     {
@@ -54,10 +54,10 @@ class MfaFactorSummary extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1 [json_name = "factorKind"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\AuthFactorKind}
+     * @param int $var
      * @return $this
      */
-    public function setFactorKind(int $var)
+    public function setFactorKind($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\AuthFactorKind::class);
         $this->factor_kind = $var;
@@ -79,8 +79,9 @@ class MfaFactorSummary extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setEnabled(bool $var)
+    public function setEnabled($var)
     {
+        GPBUtil::checkBool($var);
         $this->enabled = $var;
 
         return $this;
@@ -100,9 +101,9 @@ class MfaFactorSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLabel(string $var)
+    public function setLabel($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->label = $var;
 
         return $this;

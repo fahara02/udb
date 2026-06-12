@@ -57,9 +57,9 @@ class DbExtension extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -79,9 +79,9 @@ class DbExtension extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSchema(string $var)
+    public function setSchema($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->schema = $var;
 
         return $this;
@@ -101,9 +101,9 @@ class DbExtension extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setVersion(string $var)
+    public function setVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->version = $var;
 
         return $this;

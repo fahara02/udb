@@ -136,9 +136,9 @@ class PipelineInstance extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setInstanceId(string $var)
+    public function setInstanceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->instance_id = $var;
 
         return $this;
@@ -162,9 +162,9 @@ class PipelineInstance extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDefinitionId(string $var)
+    public function setDefinitionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->definition_id = $var;
 
         return $this;
@@ -188,9 +188,9 @@ class PipelineInstance extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAssetId(string $var)
+    public function setAssetId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->asset_id = $var;
 
         return $this;
@@ -214,9 +214,9 @@ class PipelineInstance extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -226,7 +226,7 @@ class PipelineInstance extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:status;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.asset.entity.v1.PipelineStatus status = 5 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Asset\Entity\V1\PipelineStatus}
+     * @return int
      */
     public function getStatus()
     {
@@ -237,10 +237,10 @@ class PipelineInstance extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:status;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.asset.entity.v1.PipelineStatus status = 5 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Asset\Entity\V1\PipelineStatus}
+     * @param int $var
      * @return $this
      */
-    public function setStatus(int $var)
+    public function setStatus($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Asset\Entity\V1\PipelineStatus::class);
         $this->status = $var;
@@ -266,9 +266,9 @@ class PipelineInstance extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCurrentStep(string $var)
+    public function setCurrentStep($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->current_step = $var;
 
         return $this;
@@ -292,9 +292,9 @@ class PipelineInstance extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setContext(string $var)
+    public function setContext($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->context = $var;
 
         return $this;
@@ -318,9 +318,9 @@ class PipelineInstance extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -354,8 +354,9 @@ class PipelineInstance extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setStartedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setStartedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->started_at = $var;
 
         return $this;
@@ -389,8 +390,9 @@ class PipelineInstance extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCompletedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCompletedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->completed_at = $var;
 
         return $this;
@@ -424,8 +426,9 @@ class PipelineInstance extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\AuditInfo $var
      * @return $this
      */
-    public function setAuditInfo(\Udb\Core\Common\V1\AuditInfo|null $var)
+    public function setAuditInfo($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\AuditInfo::class);
         $this->audit_info = $var;
 
         return $this;

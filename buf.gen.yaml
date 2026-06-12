@@ -26,9 +26,9 @@ managed:
       value: github.com/fahara02/udb/sdk/go/gen
 plugins:
   # ── PHP / Laravel SDK ──────────────────────────────────────────────
-  - remote: buf.build/protocolbuffers/php
+  - remote: buf.build/protocolbuffers/php:v31.1
     out: sdk/php/gen
-  - remote: buf.build/grpc/php
+  - remote: buf.build/grpc/php:v1.81.1
     out: sdk/php/gen
 
   # ── TypeScript SDK ─────────────────────────────────────────────────
@@ -41,7 +41,7 @@ plugins:
   # the merged document's title/version/scope (the openapiv2 merge mode titles it
   # after the first proto and emits "version not set"). CI runs this automatically
   # before the drift check; run it locally too or the committed swagger will drift.
-  - remote: buf.build/grpc-ecosystem/openapiv2
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.29.0
     out: api
     opt:
       - logtostderr=true
@@ -55,10 +55,10 @@ plugins:
   # Emits Go structs + gRPC service code into sdk/go/gen, importable
   # as github.com/fahara02/udb/sdk/go/gen/udb/{entity,events,services}/v1
   # via the `go_package_prefix` managed override above.
-  - remote: buf.build/protocolbuffers/go
+  - remote: buf.build/protocolbuffers/go:v1.36.11
     out: sdk/go/gen
     opt: [paths=source_relative]
-  - remote: buf.build/grpc/go
+  - remote: buf.build/grpc/go:v1.6.2
     out: sdk/go/gen
     opt: [paths=source_relative, require_unimplemented_servers=false]
 
@@ -74,14 +74,14 @@ plugins:
   # base_namespace= (empty) emits namespace-based subdirectories so the
   # duplicate proto basenames across domains (entities.proto, enums.proto,
   # core.proto) don't collide into one flat output dir.
-  - remote: buf.build/protocolbuffers/csharp
+  - remote: buf.build/protocolbuffers/csharp:v31.1
     out: sdk/csharp/gen
     opt: [base_namespace=]
-  - remote: buf.build/grpc/csharp
+  - remote: buf.build/grpc/csharp:v1.81.1
     out: sdk/csharp/gen
 
   # ── Java SDK ───────────────────────────────────────────────────────
-  - remote: buf.build/protocolbuffers/java
+  - remote: buf.build/protocolbuffers/java:v31.1
     out: sdk/java/gen
   - remote: buf.build/grpc/java:v1.81.0
     out: sdk/java/gen

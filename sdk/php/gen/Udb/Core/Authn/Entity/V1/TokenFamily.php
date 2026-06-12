@@ -128,9 +128,9 @@ class TokenFamily extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFamilyId(string $var)
+    public function setFamilyId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->family_id = $var;
 
         return $this;
@@ -150,9 +150,9 @@ class TokenFamily extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSessionId(string $var)
+    public function setSessionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->session_id = $var;
 
         return $this;
@@ -172,9 +172,9 @@ class TokenFamily extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -194,9 +194,9 @@ class TokenFamily extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPrincipalId(string $var)
+    public function setPrincipalId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->principal_id = $var;
 
         return $this;
@@ -216,9 +216,9 @@ class TokenFamily extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -238,9 +238,9 @@ class TokenFamily extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -260,9 +260,9 @@ class TokenFamily extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeviceId(string $var)
+    public function setDeviceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->device_id = $var;
 
         return $this;
@@ -286,9 +286,9 @@ class TokenFamily extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCurrentRefreshJtiHash(string $var)
+    public function setCurrentRefreshJtiHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->current_refresh_jti_hash = $var;
 
         return $this;
@@ -312,9 +312,9 @@ class TokenFamily extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPreviousRefreshJtiHash(string $var)
+    public function setPreviousRefreshJtiHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->previous_refresh_jti_hash = $var;
 
         return $this;
@@ -344,8 +344,9 @@ class TokenFamily extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setReuseDetectedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setReuseDetectedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->reuse_detected_at = $var;
 
         return $this;
@@ -375,8 +376,9 @@ class TokenFamily extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setRevokedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setRevokedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->revoked_at = $var;
 
         return $this;
@@ -396,9 +398,9 @@ class TokenFamily extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRevocationReason(string $var)
+    public function setRevocationReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->revocation_reason = $var;
 
         return $this;
@@ -428,8 +430,9 @@ class TokenFamily extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;
@@ -459,8 +462,9 @@ class TokenFamily extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setUpdatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setUpdatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->updated_at = $var;
 
         return $this;

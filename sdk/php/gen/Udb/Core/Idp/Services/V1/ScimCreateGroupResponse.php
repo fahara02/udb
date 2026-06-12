@@ -57,8 +57,9 @@ class ScimCreateGroupResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Idp\Services\V1\ScimGroup $var
      * @return $this
      */
-    public function setGroup(\Udb\Core\Idp\Services\V1\ScimGroup|null $var)
+    public function setGroup($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Idp\Services\V1\ScimGroup::class);
         $this->group = $var;
 
         return $this;

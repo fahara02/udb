@@ -82,9 +82,9 @@ class MessageSchemaDescriptor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMessageType(string $var)
+    public function setMessageType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->message_type = $var;
 
         return $this;
@@ -104,9 +104,9 @@ class MessageSchemaDescriptor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -126,9 +126,9 @@ class MessageSchemaDescriptor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCatalogVersion(string $var)
+    public function setCatalogVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->catalog_version = $var;
 
         return $this;
@@ -148,9 +148,9 @@ class MessageSchemaDescriptor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setManifestChecksum(string $var)
+    public function setManifestChecksum($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->manifest_checksum = $var;
 
         return $this;
@@ -170,9 +170,9 @@ class MessageSchemaDescriptor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSchema(string $var)
+    public function setSchema($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->schema = $var;
 
         return $this;
@@ -192,9 +192,9 @@ class MessageSchemaDescriptor extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTable(string $var)
+    public function setTable($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->table = $var;
 
         return $this;
@@ -214,7 +214,7 @@ class MessageSchemaDescriptor extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setPrimaryKey(array|RepeatedField $var)
+    public function setPrimaryKey($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->primary_key = $arr;
@@ -236,7 +236,7 @@ class MessageSchemaDescriptor extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\MessageFieldDescriptor[] $var
      * @return $this
      */
-    public function setFields(array|RepeatedField $var)
+    public function setFields($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\MessageFieldDescriptor::class);
         $this->fields = $arr;

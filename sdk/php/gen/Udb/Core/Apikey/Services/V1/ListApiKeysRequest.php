@@ -62,9 +62,9 @@ class ListApiKeysRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOwnerId(string $var)
+    public function setOwnerId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->owner_id = $var;
 
         return $this;
@@ -72,7 +72,7 @@ class ListApiKeysRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.apikey.entity.v1.ApiKeyOwnerType owner_type = 2 [json_name = "ownerType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Apikey\Entity\V1\ApiKeyOwnerType}
+     * @return int
      */
     public function getOwnerType()
     {
@@ -81,10 +81,10 @@ class ListApiKeysRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.apikey.entity.v1.ApiKeyOwnerType owner_type = 2 [json_name = "ownerType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Apikey\Entity\V1\ApiKeyOwnerType}
+     * @param int $var
      * @return $this
      */
-    public function setOwnerType(int $var)
+    public function setOwnerType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Apikey\Entity\V1\ApiKeyOwnerType::class);
         $this->owner_type = $var;
@@ -94,7 +94,7 @@ class ListApiKeysRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.apikey.entity.v1.ApiKeyStatus status = 3 [json_name = "status"];</code>
-     * @return int one of the values in {@see \Udb\Core\Apikey\Entity\V1\ApiKeyStatus}
+     * @return int
      */
     public function getStatus()
     {
@@ -103,10 +103,10 @@ class ListApiKeysRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.apikey.entity.v1.ApiKeyStatus status = 3 [json_name = "status"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Apikey\Entity\V1\ApiKeyStatus}
+     * @param int $var
      * @return $this
      */
-    public function setStatus(int $var)
+    public function setStatus($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Apikey\Entity\V1\ApiKeyStatus::class);
         $this->status = $var;
@@ -138,8 +138,9 @@ class ListApiKeysRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\PageRequest $var
      * @return $this
      */
-    public function setPage(\Udb\Core\Common\V1\PageRequest|null $var)
+    public function setPage($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\PageRequest::class);
         $this->page = $var;
 
         return $this;

@@ -80,9 +80,9 @@ class SamlReplayEntry extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSamlReplayEntryId(string $var)
+    public function setSamlReplayEntryId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->saml_replay_entry_id = $var;
 
         return $this;
@@ -102,9 +102,9 @@ class SamlReplayEntry extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -124,9 +124,9 @@ class SamlReplayEntry extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProviderId(string $var)
+    public function setProviderId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->provider_id = $var;
 
         return $this;
@@ -146,9 +146,9 @@ class SamlReplayEntry extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAssertionId(string $var)
+    public function setAssertionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->assertion_id = $var;
 
         return $this;
@@ -178,8 +178,9 @@ class SamlReplayEntry extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setNotOnOrAfter(\Google\Protobuf\Timestamp|null $var)
+    public function setNotOnOrAfter($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->not_on_or_after = $var;
 
         return $this;
@@ -209,8 +210,9 @@ class SamlReplayEntry extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setConsumedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setConsumedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->consumed_at = $var;
 
         return $this;

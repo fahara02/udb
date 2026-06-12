@@ -62,9 +62,9 @@ class ListUsersRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -72,7 +72,7 @@ class ListUsersRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AccountKind account_kind = 2 [json_name = "accountKind"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\AccountKind}
+     * @return int
      */
     public function getAccountKind()
     {
@@ -81,10 +81,10 @@ class ListUsersRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AccountKind account_kind = 2 [json_name = "accountKind"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\AccountKind}
+     * @param int $var
      * @return $this
      */
-    public function setAccountKind(int $var)
+    public function setAccountKind($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\AccountKind::class);
         $this->account_kind = $var;
@@ -94,7 +94,7 @@ class ListUsersRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.UserStatus status = 3 [json_name = "status"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\UserStatus}
+     * @return int
      */
     public function getStatus()
     {
@@ -103,10 +103,10 @@ class ListUsersRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.UserStatus status = 3 [json_name = "status"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\UserStatus}
+     * @param int $var
      * @return $this
      */
-    public function setStatus(int $var)
+    public function setStatus($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\UserStatus::class);
         $this->status = $var;
@@ -138,8 +138,9 @@ class ListUsersRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\PageRequest $var
      * @return $this
      */
-    public function setPage(\Udb\Core\Common\V1\PageRequest|null $var)
+    public function setPage($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\PageRequest::class);
         $this->page = $var;
 
         return $this;

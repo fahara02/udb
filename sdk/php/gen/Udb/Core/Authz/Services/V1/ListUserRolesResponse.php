@@ -47,7 +47,7 @@ class ListUserRolesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Entity\V1\UserRole[] $var
      * @return $this
      */
-    public function setUserRoles(array|RepeatedField $var)
+    public function setUserRoles($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authz\Entity\V1\UserRole::class);
         $this->user_roles = $arr;

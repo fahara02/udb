@@ -90,7 +90,7 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.SecretClassification secret_classification = 1 [json_name = "secretClassification"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\SecretClassification}
+     * @return int
      */
     public function getSecretClassification()
     {
@@ -99,10 +99,10 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.SecretClassification secret_classification = 1 [json_name = "secretClassification"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\SecretClassification}
+     * @param int $var
      * @return $this
      */
-    public function setSecretClassification(int $var)
+    public function setSecretClassification($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\SecretClassification::class);
         $this->secret_classification = $var;
@@ -112,7 +112,7 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.OutputView output_view = 2 [json_name = "outputView"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\OutputView}
+     * @return int
      */
     public function getOutputView()
     {
@@ -121,10 +121,10 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.OutputView output_view = 2 [json_name = "outputView"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\OutputView}
+     * @param int $var
      * @return $this
      */
-    public function setOutputView(int $var)
+    public function setOutputView($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\OutputView::class);
         $this->output_view = $var;
@@ -134,7 +134,7 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.RedactionStrategy redaction_strategy = 3 [json_name = "redactionStrategy"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\RedactionStrategy}
+     * @return int
      */
     public function getRedactionStrategy()
     {
@@ -143,10 +143,10 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.RedactionStrategy redaction_strategy = 3 [json_name = "redactionStrategy"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\RedactionStrategy}
+     * @param int $var
      * @return $this
      */
-    public function setRedactionStrategy(int $var)
+    public function setRedactionStrategy($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\RedactionStrategy::class);
         $this->redaction_strategy = $var;
@@ -168,9 +168,9 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTokenizationStrategy(string $var)
+    public function setTokenizationStrategy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tokenization_strategy = $var;
 
         return $this;
@@ -190,9 +190,9 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setHashingStrategy(string $var)
+    public function setHashingStrategy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->hashing_strategy = $var;
 
         return $this;
@@ -212,9 +212,9 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setHashingAlgorithm(string $var)
+    public function setHashingAlgorithm($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->hashing_algorithm = $var;
 
         return $this;
@@ -234,9 +234,9 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEncryptionKeyClass(string $var)
+    public function setEncryptionKeyClass($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->encryption_key_class = $var;
 
         return $this;
@@ -256,8 +256,9 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setSearchableEncrypted(bool $var)
+    public function setSearchableEncrypted($var)
     {
+        GPBUtil::checkBool($var);
         $this->searchable_encrypted = $var;
 
         return $this;
@@ -277,9 +278,9 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUniquenessScope(string $var)
+    public function setUniquenessScope($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->uniqueness_scope = $var;
 
         return $this;
@@ -299,8 +300,9 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setOwnerField(bool $var)
+    public function setOwnerField($var)
     {
+        GPBUtil::checkBool($var);
         $this->owner_field = $var;
 
         return $this;
@@ -320,8 +322,9 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setTenantField(bool $var)
+    public function setTenantField($var)
     {
+        GPBUtil::checkBool($var);
         $this->tenant_field = $var;
 
         return $this;
@@ -341,8 +344,9 @@ class DbColumnSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setProjectField(bool $var)
+    public function setProjectField($var)
     {
+        GPBUtil::checkBool($var);
         $this->project_field = $var;
 
         return $this;

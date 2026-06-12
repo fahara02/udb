@@ -62,7 +62,7 @@ class PreviewGroupMappingResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRoles(array|RepeatedField $var)
+    public function setRoles($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->roles = $arr;
@@ -88,7 +88,7 @@ class PreviewGroupMappingResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setUnmappedGroups(array|RepeatedField $var)
+    public function setUnmappedGroups($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->unmapped_groups = $arr;

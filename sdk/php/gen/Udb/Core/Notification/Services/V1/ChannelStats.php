@@ -60,7 +60,7 @@ class ChannelStats extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationChannel channel = 1 [json_name = "channel"];</code>
-     * @return int one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationChannel}
+     * @return int
      */
     public function getChannel()
     {
@@ -69,10 +69,10 @@ class ChannelStats extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationChannel channel = 1 [json_name = "channel"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationChannel}
+     * @param int $var
      * @return $this
      */
-    public function setChannel(int $var)
+    public function setChannel($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Notification\Entity\V1\NotificationChannel::class);
         $this->channel = $var;
@@ -94,7 +94,7 @@ class ChannelStats extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setSent(int|string $var)
+    public function setSent($var)
     {
         GPBUtil::checkInt64($var);
         $this->sent = $var;
@@ -116,7 +116,7 @@ class ChannelStats extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setDelivered(int|string $var)
+    public function setDelivered($var)
     {
         GPBUtil::checkInt64($var);
         $this->delivered = $var;
@@ -138,7 +138,7 @@ class ChannelStats extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setFailed(int|string $var)
+    public function setFailed($var)
     {
         GPBUtil::checkInt64($var);
         $this->failed = $var;
@@ -160,7 +160,7 @@ class ChannelStats extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setSuppressed(int|string $var)
+    public function setSuppressed($var)
     {
         GPBUtil::checkInt64($var);
         $this->suppressed = $var;
@@ -182,8 +182,9 @@ class ChannelStats extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setDeliveryRate(float $var)
+    public function setDeliveryRate($var)
     {
+        GPBUtil::checkDouble($var);
         $this->delivery_rate = $var;
 
         return $this;

@@ -126,9 +126,9 @@ class SendNotificationRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventType(string $var)
+    public function setEventType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_type = $var;
 
         return $this;
@@ -148,9 +148,9 @@ class SendNotificationRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRecipientId(string $var)
+    public function setRecipientId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->recipient_id = $var;
 
         return $this;
@@ -174,9 +174,9 @@ class SendNotificationRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRecipientAddress(string $var)
+    public function setRecipientAddress($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->recipient_address = $var;
 
         return $this;
@@ -196,9 +196,9 @@ class SendNotificationRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -218,9 +218,9 @@ class SendNotificationRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -240,9 +240,9 @@ class SendNotificationRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceType(string $var)
+    public function setResourceType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_type = $var;
 
         return $this;
@@ -262,9 +262,9 @@ class SendNotificationRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceId(string $var)
+    public function setResourceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_id = $var;
 
         return $this;
@@ -284,9 +284,9 @@ class SendNotificationRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceName(string $var)
+    public function setResourceName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_name = $var;
 
         return $this;
@@ -306,9 +306,9 @@ class SendNotificationRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -332,9 +332,9 @@ class SendNotificationRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLocale(string $var)
+    public function setLocale($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->locale = $var;
 
         return $this;
@@ -358,7 +358,7 @@ class SendNotificationRequest extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setVariables(array|\Google\Protobuf\Internal\MapField $var)
+    public function setVariables($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->variables = $arr;
@@ -370,7 +370,7 @@ class SendNotificationRequest extends \Google\Protobuf\Internal\Message
      * Empty = use template-default channels
      *
      * Generated from protobuf field <code>repeated .udb.core.notification.entity.v1.NotificationChannel channels = 12 [json_name = "channels"];</code>
-     * @return RepeatedField<int> one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationChannel}
+     * @return RepeatedField<int>
      */
     public function getChannels()
     {
@@ -381,10 +381,10 @@ class SendNotificationRequest extends \Google\Protobuf\Internal\Message
      * Empty = use template-default channels
      *
      * Generated from protobuf field <code>repeated .udb.core.notification.entity.v1.NotificationChannel channels = 12 [json_name = "channels"];</code>
-     * @param int[] $var one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationChannel}
+     * @param int[] $var
      * @return $this
      */
-    public function setChannels(array|RepeatedField $var)
+    public function setChannels($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::ENUM, \Udb\Core\Notification\Entity\V1\NotificationChannel::class);
         $this->channels = $arr;
@@ -416,8 +416,9 @@ class SendNotificationRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Core\Common\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;

@@ -52,7 +52,7 @@ class GetApiKeyUsageStatsResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Apikey\Services\V1\ApiKeyDailyStat[] $var
      * @return $this
      */
-    public function setStats(array|RepeatedField $var)
+    public function setStats($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Apikey\Services\V1\ApiKeyDailyStat::class);
         $this->stats = $arr;
@@ -74,7 +74,7 @@ class GetApiKeyUsageStatsResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTotalRequests(int|string $var)
+    public function setTotalRequests($var)
     {
         GPBUtil::checkInt64($var);
         $this->total_requests = $var;

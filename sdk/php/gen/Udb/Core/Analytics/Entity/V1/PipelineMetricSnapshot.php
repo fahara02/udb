@@ -115,9 +115,9 @@ class PipelineMetricSnapshot extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSnapshotId(string $var)
+    public function setSnapshotId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->snapshot_id = $var;
 
         return $this;
@@ -151,8 +151,9 @@ class PipelineMetricSnapshot extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setSnapshotHour(\Google\Protobuf\Timestamp|null $var)
+    public function setSnapshotHour($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->snapshot_hour = $var;
 
         return $this;
@@ -172,9 +173,9 @@ class PipelineMetricSnapshot extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStageName(string $var)
+    public function setStageName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->stage_name = $var;
 
         return $this;
@@ -194,9 +195,9 @@ class PipelineMetricSnapshot extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -216,7 +217,7 @@ class PipelineMetricSnapshot extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTotalRequests(int|string $var)
+    public function setTotalRequests($var)
     {
         GPBUtil::checkInt64($var);
         $this->total_requests = $var;
@@ -238,7 +239,7 @@ class PipelineMetricSnapshot extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setSuccessful(int|string $var)
+    public function setSuccessful($var)
     {
         GPBUtil::checkInt64($var);
         $this->successful = $var;
@@ -260,7 +261,7 @@ class PipelineMetricSnapshot extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setFailed(int|string $var)
+    public function setFailed($var)
     {
         GPBUtil::checkInt64($var);
         $this->failed = $var;
@@ -282,8 +283,9 @@ class PipelineMetricSnapshot extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setP50LatencyMs(float $var)
+    public function setP50LatencyMs($var)
     {
+        GPBUtil::checkDouble($var);
         $this->p50_latency_ms = $var;
 
         return $this;
@@ -303,8 +305,9 @@ class PipelineMetricSnapshot extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setP95LatencyMs(float $var)
+    public function setP95LatencyMs($var)
     {
+        GPBUtil::checkDouble($var);
         $this->p95_latency_ms = $var;
 
         return $this;
@@ -324,8 +327,9 @@ class PipelineMetricSnapshot extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setP99LatencyMs(float $var)
+    public function setP99LatencyMs($var)
     {
+        GPBUtil::checkDouble($var);
         $this->p99_latency_ms = $var;
 
         return $this;
@@ -345,8 +349,9 @@ class PipelineMetricSnapshot extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setAvgLatencyMs(float $var)
+    public function setAvgLatencyMs($var)
     {
+        GPBUtil::checkDouble($var);
         $this->avg_latency_ms = $var;
 
         return $this;
@@ -366,8 +371,9 @@ class PipelineMetricSnapshot extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setErrorRate(float $var)
+    public function setErrorRate($var)
     {
+        GPBUtil::checkDouble($var);
         $this->error_rate = $var;
 
         return $this;
@@ -387,8 +393,9 @@ class PipelineMetricSnapshot extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setThroughputRps(float $var)
+    public function setThroughputRps($var)
     {
+        GPBUtil::checkDouble($var);
         $this->throughput_rps = $var;
 
         return $this;
@@ -418,8 +425,9 @@ class PipelineMetricSnapshot extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setRecordedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setRecordedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->recorded_at = $var;
 
         return $this;

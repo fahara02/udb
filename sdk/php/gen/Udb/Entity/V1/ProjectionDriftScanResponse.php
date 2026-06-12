@@ -77,9 +77,9 @@ class ProjectionDriftScanResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -99,9 +99,9 @@ class ProjectionDriftScanResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMessageType(string $var)
+    public function setMessageType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->message_type = $var;
 
         return $this;
@@ -121,9 +121,9 @@ class ProjectionDriftScanResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setScanMode(string $var)
+    public function setScanMode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->scan_mode = $var;
 
         return $this;
@@ -143,7 +143,7 @@ class ProjectionDriftScanResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setSourceRowsLoaded(int $var)
+    public function setSourceRowsLoaded($var)
     {
         GPBUtil::checkInt32($var);
         $this->source_rows_loaded = $var;
@@ -165,7 +165,7 @@ class ProjectionDriftScanResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\ProjectionDriftTargetReport[] $var
      * @return $this
      */
-    public function setReports(array|RepeatedField $var)
+    public function setReports($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\ProjectionDriftTargetReport::class);
         $this->reports = $arr;
@@ -187,9 +187,9 @@ class ProjectionDriftScanResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSummaryJson(string $var)
+    public function setSummaryJson($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->summary_json = $var;
 
         return $this;
@@ -209,7 +209,7 @@ class ProjectionDriftScanResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setWarnings(array|RepeatedField $var)
+    public function setWarnings($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->warnings = $arr;

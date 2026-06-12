@@ -126,8 +126,9 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setValid(bool $var)
+    public function setValid($var)
     {
+        GPBUtil::checkBool($var);
         $this->valid = $var;
 
         return $this;
@@ -147,9 +148,9 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -169,9 +170,9 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSessionId(string $var)
+    public function setSessionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->session_id = $var;
 
         return $this;
@@ -179,7 +180,7 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AccountKind account_kind = 4 [json_name = "accountKind"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\AccountKind}
+     * @return int
      */
     public function getAccountKind()
     {
@@ -188,10 +189,10 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AccountKind account_kind = 4 [json_name = "accountKind"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\AccountKind}
+     * @param int $var
      * @return $this
      */
-    public function setAccountKind(int $var)
+    public function setAccountKind($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\AccountKind::class);
         $this->account_kind = $var;
@@ -213,9 +214,9 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -239,7 +240,7 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRoles(array|RepeatedField $var)
+    public function setRoles($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->roles = $arr;
@@ -271,8 +272,9 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setExpiresAt(\Google\Protobuf\Timestamp|null $var)
+    public function setExpiresAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->expires_at = $var;
 
         return $this;
@@ -292,9 +294,9 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAccessSurface(string $var)
+    public function setAccessSurface($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->access_surface = $var;
 
         return $this;
@@ -318,9 +320,9 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeviceId(string $var)
+    public function setDeviceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->device_id = $var;
 
         return $this;
@@ -344,9 +346,9 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTokenId(string $var)
+    public function setTokenId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->token_id = $var;
 
         return $this;
@@ -354,7 +356,7 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.SessionType session_type = 11 [json_name = "sessionType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\SessionType}
+     * @return int
      */
     public function getSessionType()
     {
@@ -363,10 +365,10 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.SessionType session_type = 11 [json_name = "sessionType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\SessionType}
+     * @param int $var
      * @return $this
      */
-    public function setSessionType(int $var)
+    public function setSessionType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\SessionType::class);
         $this->session_type = $var;
@@ -398,8 +400,9 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authn\Services\V1\Principal $var
      * @return $this
      */
-    public function setPrincipal(\Udb\Core\Authn\Services\V1\Principal|null $var)
+    public function setPrincipal($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authn\Services\V1\Principal::class);
         $this->principal = $var;
 
         return $this;
@@ -419,9 +422,9 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -441,7 +444,7 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setScopes(array|RepeatedField $var)
+    public function setScopes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->scopes = $arr;
@@ -463,7 +466,7 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setAttributes(array|\Google\Protobuf\Internal\MapField $var)
+    public function setAttributes($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->attributes = $arr;

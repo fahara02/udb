@@ -72,9 +72,9 @@ class SlaComplianceEntry extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStageName(string $var)
+    public function setStageName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->stage_name = $var;
 
         return $this;
@@ -94,9 +94,9 @@ class SlaComplianceEntry extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPeriod(string $var)
+    public function setPeriod($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->period = $var;
 
         return $this;
@@ -116,8 +116,9 @@ class SlaComplianceEntry extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setP99LatencyMs(float $var)
+    public function setP99LatencyMs($var)
     {
+        GPBUtil::checkDouble($var);
         $this->p99_latency_ms = $var;
 
         return $this;
@@ -137,8 +138,9 @@ class SlaComplianceEntry extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setErrorRate(float $var)
+    public function setErrorRate($var)
     {
+        GPBUtil::checkDouble($var);
         $this->error_rate = $var;
 
         return $this;
@@ -158,8 +160,9 @@ class SlaComplianceEntry extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setP99SlaMet(bool $var)
+    public function setP99SlaMet($var)
     {
+        GPBUtil::checkBool($var);
         $this->p99_sla_met = $var;
 
         return $this;
@@ -179,8 +182,9 @@ class SlaComplianceEntry extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setErrorRateSlaMet(bool $var)
+    public function setErrorRateSlaMet($var)
     {
+        GPBUtil::checkBool($var);
         $this->error_rate_sla_met = $var;
 
         return $this;

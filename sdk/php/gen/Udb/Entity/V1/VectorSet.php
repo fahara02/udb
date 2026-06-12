@@ -47,7 +47,7 @@ class VectorSet extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\VectorPoint[] $var
      * @return $this
      */
-    public function setPoints(array|RepeatedField $var)
+    public function setPoints($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\VectorPoint::class);
         $this->points = $arr;

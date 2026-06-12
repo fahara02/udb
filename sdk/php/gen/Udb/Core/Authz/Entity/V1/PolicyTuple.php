@@ -95,7 +95,7 @@ class PolicyTuple extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setPolicyTupleId(int|string $var)
+    public function setPolicyTupleId($var)
     {
         GPBUtil::checkInt64($var);
         $this->policy_tuple_id = $var;
@@ -117,9 +117,9 @@ class PolicyTuple extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTupleKind(string $var)
+    public function setTupleKind($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tuple_kind = $var;
 
         return $this;
@@ -139,9 +139,9 @@ class PolicyTuple extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSubject(string $var)
+    public function setSubject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->subject = $var;
 
         return $this;
@@ -161,9 +161,9 @@ class PolicyTuple extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDomain(string $var)
+    public function setDomain($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->domain = $var;
 
         return $this;
@@ -183,9 +183,9 @@ class PolicyTuple extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setObject(string $var)
+    public function setObject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->object = $var;
 
         return $this;
@@ -205,9 +205,9 @@ class PolicyTuple extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAction(string $var)
+    public function setAction($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->action = $var;
 
         return $this;
@@ -227,9 +227,9 @@ class PolicyTuple extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEffect(string $var)
+    public function setEffect($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->effect = $var;
 
         return $this;
@@ -249,9 +249,9 @@ class PolicyTuple extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCondition(string $var)
+    public function setCondition($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->condition = $var;
 
         return $this;
@@ -271,9 +271,9 @@ class PolicyTuple extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -293,9 +293,9 @@ class PolicyTuple extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;

@@ -72,8 +72,9 @@ class DocumentGetRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -103,8 +104,9 @@ class DocumentGetRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\StoreResource $var
      * @return $this
      */
-    public function setResource(\Udb\Entity\V1\StoreResource|null $var)
+    public function setResource($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\StoreResource::class);
         $this->resource = $var;
 
         return $this;
@@ -124,9 +126,9 @@ class DocumentGetRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDocumentId(string $var)
+    public function setDocumentId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->document_id = $var;
 
         return $this;
@@ -146,7 +148,7 @@ class DocumentGetRequest extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setFields(array|RepeatedField $var)
+    public function setFields($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->fields = $arr;

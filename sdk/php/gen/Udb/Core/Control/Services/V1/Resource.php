@@ -64,9 +64,9 @@ class Resource extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -86,9 +86,9 @@ class Resource extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setVersion(string $var)
+    public function setVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->version = $var;
 
         return $this;
@@ -108,9 +108,9 @@ class Resource extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPayloadJson(string $var)
+    public function setPayloadJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->payload_json = $var;
 
         return $this;
@@ -118,7 +118,7 @@ class Resource extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.control.entity.v1.ResourceType resource_type = 4 [json_name = "resourceType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Control\Entity\V1\ResourceType}
+     * @return int
      */
     public function getResourceType()
     {
@@ -127,10 +127,10 @@ class Resource extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.control.entity.v1.ResourceType resource_type = 4 [json_name = "resourceType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Control\Entity\V1\ResourceType}
+     * @param int $var
      * @return $this
      */
-    public function setResourceType(int $var)
+    public function setResourceType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Control\Entity\V1\ResourceType::class);
         $this->resource_type = $var;

@@ -55,8 +55,9 @@ class DeleteFileResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setSuccess(bool $var)
+    public function setSuccess($var)
     {
+        GPBUtil::checkBool($var);
         $this->success = $var;
 
         return $this;
@@ -90,8 +91,9 @@ class DeleteFileResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ApiError $var
      * @return $this
      */
-    public function setError(\Udb\Core\Common\V1\ApiError|null $var)
+    public function setError($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
 
         return $this;

@@ -130,9 +130,9 @@ class Room extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRoomId(string $var)
+    public function setRoomId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->room_id = $var;
 
         return $this;
@@ -156,9 +156,9 @@ class Room extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -182,9 +182,9 @@ class Room extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -194,7 +194,7 @@ class Room extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:state;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.webrtc.entity.v1.RoomState state = 4 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Webrtc\Entity\V1\RoomState}
+     * @return int
      */
     public function getState()
     {
@@ -205,10 +205,10 @@ class Room extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:state;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.webrtc.entity.v1.RoomState state = 4 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Webrtc\Entity\V1\RoomState}
+     * @param int $var
      * @return $this
      */
-    public function setState(int $var)
+    public function setState($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Webrtc\Entity\V1\RoomState::class);
         $this->state = $var;
@@ -234,7 +234,7 @@ class Room extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setMaxParticipants(int $var)
+    public function setMaxParticipants($var)
     {
         GPBUtil::checkInt32($var);
         $this->max_participants = $var;
@@ -260,7 +260,7 @@ class Room extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setParticipantCount(int $var)
+    public function setParticipantCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->participant_count = $var;
@@ -286,9 +286,9 @@ class Room extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setConfig(string $var)
+    public function setConfig($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->config = $var;
 
         return $this;
@@ -312,9 +312,9 @@ class Room extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCreatedBy(string $var)
+    public function setCreatedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->created_by = $var;
 
         return $this;
@@ -348,8 +348,9 @@ class Room extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\AuditInfo $var
      * @return $this
      */
-    public function setAuditInfo(\Udb\Core\Common\V1\AuditInfo|null $var)
+    public function setAuditInfo($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\AuditInfo::class);
         $this->audit_info = $var;
 
         return $this;
@@ -379,8 +380,9 @@ class Room extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setDeletedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setDeletedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->deleted_at = $var;
 
         return $this;
@@ -400,9 +402,9 @@ class Room extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeletedBy(string $var)
+    public function setDeletedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->deleted_by = $var;
 
         return $this;

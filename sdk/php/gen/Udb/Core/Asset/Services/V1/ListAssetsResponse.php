@@ -60,7 +60,7 @@ class ListAssetsResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Asset\Entity\V1\Asset[] $var
      * @return $this
      */
-    public function setAssets(array|RepeatedField $var)
+    public function setAssets($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Asset\Entity\V1\Asset::class);
         $this->assets = $arr;
@@ -82,7 +82,7 @@ class ListAssetsResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setTotalCount(int $var)
+    public function setTotalCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->total_count = $var;
@@ -118,8 +118,9 @@ class ListAssetsResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ApiError $var
      * @return $this
      */
-    public function setError(\Udb\Core\Common\V1\ApiError|null $var)
+    public function setError($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
 
         return $this;

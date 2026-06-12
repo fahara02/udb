@@ -47,8 +47,9 @@ class RevokeRoleResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRevoked(bool $var)
+    public function setRevoked($var)
     {
+        GPBUtil::checkBool($var);
         $this->revoked = $var;
 
         return $this;

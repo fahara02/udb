@@ -130,9 +130,9 @@ class Tenant extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -156,9 +156,9 @@ class Tenant extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCode(string $var)
+    public function setCode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->code = $var;
 
         return $this;
@@ -182,9 +182,9 @@ class Tenant extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -194,7 +194,7 @@ class Tenant extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:type;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.tenant.entity.v1.TenantType type = 4 [json_name = "type", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Tenant\Entity\V1\TenantType}
+     * @return int
      */
     public function getType()
     {
@@ -205,10 +205,10 @@ class Tenant extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:type;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.tenant.entity.v1.TenantType type = 4 [json_name = "type", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Tenant\Entity\V1\TenantType}
+     * @param int $var
      * @return $this
      */
-    public function setType(int $var)
+    public function setType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Tenant\Entity\V1\TenantType::class);
         $this->type = $var;
@@ -220,7 +220,7 @@ class Tenant extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:status;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.tenant.entity.v1.TenantStatus status = 5 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Tenant\Entity\V1\TenantStatus}
+     * @return int
      */
     public function getStatus()
     {
@@ -231,10 +231,10 @@ class Tenant extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:status;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.tenant.entity.v1.TenantStatus status = 5 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Tenant\Entity\V1\TenantStatus}
+     * @param int $var
      * @return $this
      */
-    public function setStatus(int $var)
+    public function setStatus($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Tenant\Entity\V1\TenantStatus::class);
         $this->status = $var;
@@ -260,9 +260,9 @@ class Tenant extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setParentTenantId(string $var)
+    public function setParentTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->parent_tenant_id = $var;
 
         return $this;
@@ -286,9 +286,9 @@ class Tenant extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setConfig(string $var)
+    public function setConfig($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->config = $var;
 
         return $this;
@@ -312,9 +312,9 @@ class Tenant extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBranding(string $var)
+    public function setBranding($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->branding = $var;
 
         return $this;
@@ -344,8 +344,9 @@ class Tenant extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\AuditInfo $var
      * @return $this
      */
-    public function setAuditInfo(\Udb\Core\Common\V1\AuditInfo|null $var)
+    public function setAuditInfo($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\AuditInfo::class);
         $this->audit_info = $var;
 
         return $this;
@@ -379,8 +380,9 @@ class Tenant extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setDeletedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setDeletedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->deleted_at = $var;
 
         return $this;
@@ -400,9 +402,9 @@ class Tenant extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeletedBy(string $var)
+    public function setDeletedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->deleted_by = $var;
 
         return $this;

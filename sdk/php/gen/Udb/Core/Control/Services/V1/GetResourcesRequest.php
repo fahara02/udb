@@ -63,7 +63,7 @@ class GetResourcesRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.control.entity.v1.ResourceType resource_type = 1 [json_name = "resourceType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Control\Entity\V1\ResourceType}
+     * @return int
      */
     public function getResourceType()
     {
@@ -72,10 +72,10 @@ class GetResourcesRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.control.entity.v1.ResourceType resource_type = 1 [json_name = "resourceType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Control\Entity\V1\ResourceType}
+     * @param int $var
      * @return $this
      */
-    public function setResourceType(int $var)
+    public function setResourceType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Control\Entity\V1\ResourceType::class);
         $this->resource_type = $var;
@@ -103,9 +103,9 @@ class GetResourcesRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -129,7 +129,7 @@ class GetResourcesRequest extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setResourceNames(array|RepeatedField $var)
+    public function setResourceNames($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->resource_names = $arr;
@@ -161,8 +161,9 @@ class GetResourcesRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\PageRequest $var
      * @return $this
      */
-    public function setPage(\Udb\Core\Common\V1\PageRequest|null $var)
+    public function setPage($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\PageRequest::class);
         $this->page = $var;
 
         return $this;
@@ -192,8 +193,9 @@ class GetResourcesRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Core\Common\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;

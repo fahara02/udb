@@ -87,9 +87,9 @@ class ListNotificationsRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRecipientId(string $var)
+    public function setRecipientId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->recipient_id = $var;
 
         return $this;
@@ -109,9 +109,9 @@ class ListNotificationsRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -131,9 +131,9 @@ class ListNotificationsRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -153,9 +153,9 @@ class ListNotificationsRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceType(string $var)
+    public function setResourceType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_type = $var;
 
         return $this;
@@ -175,9 +175,9 @@ class ListNotificationsRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceId(string $var)
+    public function setResourceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_id = $var;
 
         return $this;
@@ -197,9 +197,9 @@ class ListNotificationsRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventType(string $var)
+    public function setEventType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_type = $var;
 
         return $this;
@@ -207,7 +207,7 @@ class ListNotificationsRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationChannel channel = 7 [json_name = "channel"];</code>
-     * @return int one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationChannel}
+     * @return int
      */
     public function getChannel()
     {
@@ -216,10 +216,10 @@ class ListNotificationsRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationChannel channel = 7 [json_name = "channel"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationChannel}
+     * @param int $var
      * @return $this
      */
-    public function setChannel(int $var)
+    public function setChannel($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Notification\Entity\V1\NotificationChannel::class);
         $this->channel = $var;
@@ -229,7 +229,7 @@ class ListNotificationsRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationStatus status = 8 [json_name = "status"];</code>
-     * @return int one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationStatus}
+     * @return int
      */
     public function getStatus()
     {
@@ -238,10 +238,10 @@ class ListNotificationsRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.notification.entity.v1.NotificationStatus status = 8 [json_name = "status"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Notification\Entity\V1\NotificationStatus}
+     * @param int $var
      * @return $this
      */
-    public function setStatus(int $var)
+    public function setStatus($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Notification\Entity\V1\NotificationStatus::class);
         $this->status = $var;
@@ -273,8 +273,9 @@ class ListNotificationsRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\PageRequest $var
      * @return $this
      */
-    public function setPage(\Udb\Core\Common\V1\PageRequest|null $var)
+    public function setPage($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\PageRequest::class);
         $this->page = $var;
 
         return $this;

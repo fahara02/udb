@@ -85,8 +85,9 @@ class MigrateLegacyPoliciesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Entity\V1\PolicyDraft $var
      * @return $this
      */
-    public function setDraft(\Udb\Core\Authz\Entity\V1\PolicyDraft|null $var)
+    public function setDraft($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Entity\V1\PolicyDraft::class);
         $this->draft = $var;
 
         return $this;
@@ -110,7 +111,7 @@ class MigrateLegacyPoliciesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\PolicyDiffEntry[] $var
      * @return $this
      */
-    public function setDiff(array|RepeatedField $var)
+    public function setDiff($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authz\Services\V1\PolicyDiffEntry::class);
         $this->diff = $arr;
@@ -136,7 +137,7 @@ class MigrateLegacyPoliciesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\SimulationResult[] $var
      * @return $this
      */
-    public function setSimulation(array|RepeatedField $var)
+    public function setSimulation($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authz\Services\V1\SimulationResult::class);
         $this->simulation = $arr;
@@ -158,9 +159,9 @@ class MigrateLegacyPoliciesResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReportJson(string $var)
+    public function setReportJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->report_json = $var;
 
         return $this;

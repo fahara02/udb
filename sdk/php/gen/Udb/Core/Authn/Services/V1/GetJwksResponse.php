@@ -54,9 +54,9 @@ class GetJwksResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setJwksJson(string $var)
+    public function setJwksJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->jwks_json = $var;
 
         return $this;

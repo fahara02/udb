@@ -57,8 +57,9 @@ class AssignRoleResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Entity\V1\UserRole $var
      * @return $this
      */
-    public function setUserRole(\Udb\Core\Authz\Entity\V1\UserRole|null $var)
+    public function setUserRole($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Entity\V1\UserRole::class);
         $this->user_role = $var;
 
         return $this;

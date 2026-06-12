@@ -887,10 +887,7 @@ fn compiled_rendering_to_dispatch(
                 params.iter().map(logical_value_to_json).collect::<Vec<_>>()
             };
             let param_types = if matches!(backend, BackendKind::Postgres) {
-                params
-                    .iter()
-                    .map(logical_value_param_type)
-                    .collect::<Vec<_>>()
+                postgres_param_types(statement, params)
             } else {
                 Vec::new()
             };
@@ -1157,6 +1154,37 @@ fn logical_value_param_type(value: &crate::ir::value::LogicalValue) -> &'static 
     }
 }
 
+fn postgres_param_types(
+    statement: &str,
+    params: &[crate::ir::value::LogicalValue],
+) -> Vec<&'static str> {
+    params
+        .iter()
+        .enumerate()
+        .map(|(idx, value)| {
+            let value_type = logical_value_param_type(value);
+            if value_type.is_empty() {
+                postgres_placeholder_cast_type(statement, idx + 1).unwrap_or("")
+            } else {
+                value_type
+            }
+        })
+        .collect()
+}
+
+fn postgres_placeholder_cast_type(statement: &str, position: usize) -> Option<&'static str> {
+    let marker = format!("${position}::");
+    let (_, tail) = statement.split_once(&marker)?;
+    let lower = tail.trim_start().to_ascii_lowercase();
+    if lower.starts_with("timestamp with time zone") || lower.starts_with("timestamptz") {
+        Some("timestamptz")
+    } else if lower.starts_with("uuid") {
+        Some("uuid")
+    } else {
+        None
+    }
+}
+
 fn inline_sql_params(
     statement: &str,
     params: &[crate::ir::value::LogicalValue],
@@ -1293,5 +1321,23 @@ mod tests {
                 .contains("FROM \"public\".\"customers\"")
         );
         assert_eq!(dispatch["params"], serde_json::json!(["a@b.com"]));
+    }
+
+    #[test]
+    fn postgres_param_types_use_placeholder_casts_for_nulls() {
+        use crate::ir::value::LogicalValue;
+
+        let statement = r#"INSERT INTO "udb_authn"."users" ("id", "email_verified_at", "tenant_id")
+               VALUES ($1::UUID, $2::TIMESTAMPTZ, $3)"#;
+        let params = vec![
+            LogicalValue::Null,
+            LogicalValue::Null,
+            LogicalValue::String("tenant-a".into()),
+        ];
+
+        assert_eq!(
+            postgres_param_types(statement, &params),
+            vec!["uuid", "timestamptz", ""]
+        );
     }
 }

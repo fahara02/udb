@@ -70,9 +70,9 @@ class EnqueueOutboxEventResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventId(string $var)
+    public function setEventId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_id = $var;
 
         return $this;
@@ -96,8 +96,9 @@ class EnqueueOutboxEventResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setEnqueued(bool $var)
+    public function setEnqueued($var)
     {
+        GPBUtil::checkBool($var);
         $this->enqueued = $var;
 
         return $this;
@@ -121,8 +122,9 @@ class EnqueueOutboxEventResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setWasDuplicate(bool $var)
+    public function setWasDuplicate($var)
     {
+        GPBUtil::checkBool($var);
         $this->was_duplicate = $var;
 
         return $this;

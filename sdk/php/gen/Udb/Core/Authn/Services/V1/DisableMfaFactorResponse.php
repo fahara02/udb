@@ -47,8 +47,9 @@ class DisableMfaFactorResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setDisabled(bool $var)
+    public function setDisabled($var)
     {
+        GPBUtil::checkBool($var);
         $this->disabled = $var;
 
         return $this;

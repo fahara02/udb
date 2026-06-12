@@ -62,8 +62,9 @@ class CatalogValidationResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setValid(bool $var)
+    public function setValid($var)
     {
+        GPBUtil::checkBool($var);
         $this->valid = $var;
 
         return $this;
@@ -83,9 +84,9 @@ class CatalogValidationResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setChecksumSha256(string $var)
+    public function setChecksumSha256($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->checksum_sha256 = $var;
 
         return $this;
@@ -105,7 +106,7 @@ class CatalogValidationResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setErrors(array|RepeatedField $var)
+    public function setErrors($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->errors = $arr;
@@ -127,7 +128,7 @@ class CatalogValidationResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setWarnings(array|RepeatedField $var)
+    public function setWarnings($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->warnings = $arr;

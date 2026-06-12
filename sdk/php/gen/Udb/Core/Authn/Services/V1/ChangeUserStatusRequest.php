@@ -62,9 +62,9 @@ class ChangeUserStatusRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -72,7 +72,7 @@ class ChangeUserStatusRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.UserStatus new_status = 2 [json_name = "newStatus"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\UserStatus}
+     * @return int
      */
     public function getNewStatus()
     {
@@ -81,10 +81,10 @@ class ChangeUserStatusRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.UserStatus new_status = 2 [json_name = "newStatus"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\UserStatus}
+     * @param int $var
      * @return $this
      */
-    public function setNewStatus(int $var)
+    public function setNewStatus($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\UserStatus::class);
         $this->new_status = $var;
@@ -106,9 +106,9 @@ class ChangeUserStatusRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReason(string $var)
+    public function setReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reason = $var;
 
         return $this;
@@ -138,8 +138,9 @@ class ChangeUserStatusRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Core\Common\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;

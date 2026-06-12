@@ -17,7 +17,6 @@ use Google\Protobuf\RepeatedField;
  * regeneration); each is stored only as a keyed hash and consumed at most once
  * as an alternative MFA second factor when the user has lost their authenticator.
  * ---------------------------------------------------------------------------
- *
  * Generated from protobuf message <code>udb.core.authn.entity.v1.RecoveryCode</code>
  */
 class RecoveryCode extends \Google\Protobuf\Internal\Message
@@ -86,9 +85,9 @@ class RecoveryCode extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRecoveryCodeId(string $var)
+    public function setRecoveryCodeId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->recovery_code_id = $var;
 
         return $this;
@@ -108,9 +107,9 @@ class RecoveryCode extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -134,9 +133,9 @@ class RecoveryCode extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCodeHash(string $var)
+    public function setCodeHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->code_hash = $var;
 
         return $this;
@@ -166,8 +165,9 @@ class RecoveryCode extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setUsedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setUsedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->used_at = $var;
 
         return $this;
@@ -197,8 +197,9 @@ class RecoveryCode extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;
@@ -222,9 +223,9 @@ class RecoveryCode extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;

@@ -57,8 +57,9 @@ class PutAuthzPolicyRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\AuthzPolicyRecord $var
      * @return $this
      */
-    public function setPolicy(\Udb\Core\Authz\Services\V1\AuthzPolicyRecord|null $var)
+    public function setPolicy($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\AuthzPolicyRecord::class);
         $this->policy = $var;
 
         return $this;

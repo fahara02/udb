@@ -57,8 +57,9 @@ class ChangeUserStatusResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authn\Entity\V1\User $var
      * @return $this
      */
-    public function setUser(\Udb\Core\Authn\Entity\V1\User|null $var)
+    public function setUser($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authn\Entity\V1\User::class);
         $this->user = $var;
 
         return $this;

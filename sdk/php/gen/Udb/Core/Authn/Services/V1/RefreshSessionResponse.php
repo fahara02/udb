@@ -52,7 +52,7 @@ class RefreshSessionResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setExpiresAtUnix(int|string $var)
+    public function setExpiresAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->expires_at_unix = $var;
@@ -74,8 +74,9 @@ class RefreshSessionResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setActive(bool $var)
+    public function setActive($var)
     {
+        GPBUtil::checkBool($var);
         $this->active = $var;
 
         return $this;

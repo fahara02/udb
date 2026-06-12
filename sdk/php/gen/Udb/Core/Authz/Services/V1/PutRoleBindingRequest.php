@@ -57,8 +57,9 @@ class PutRoleBindingRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\RoleBinding $var
      * @return $this
      */
-    public function setBinding(\Udb\Core\Authz\Services\V1\RoleBinding|null $var)
+    public function setBinding($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\RoleBinding::class);
         $this->binding = $var;
 
         return $this;

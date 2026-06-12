@@ -89,9 +89,9 @@ class OTPSentEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventId(string $var)
+    public function setEventId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_id = $var;
 
         return $this;
@@ -111,9 +111,9 @@ class OTPSentEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOtpId(string $var)
+    public function setOtpId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->otp_id = $var;
 
         return $this;
@@ -133,9 +133,9 @@ class OTPSentEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -143,7 +143,7 @@ class OTPSentEvent extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.OTPType otp_type = 4 [json_name = "otpType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\OTPType}
+     * @return int
      */
     public function getOtpType()
     {
@@ -152,10 +152,10 @@ class OTPSentEvent extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.OTPType otp_type = 4 [json_name = "otpType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\OTPType}
+     * @param int $var
      * @return $this
      */
-    public function setOtpType(int $var)
+    public function setOtpType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\OTPType::class);
         $this->otp_type = $var;
@@ -177,9 +177,9 @@ class OTPSentEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeliveryChannel(string $var)
+    public function setDeliveryChannel($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->delivery_channel = $var;
 
         return $this;
@@ -199,7 +199,7 @@ class OTPSentEvent extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setExpiresInSeconds(int $var)
+    public function setExpiresInSeconds($var)
     {
         GPBUtil::checkInt32($var);
         $this->expires_in_seconds = $var;
@@ -221,9 +221,9 @@ class OTPSentEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -253,8 +253,9 @@ class OTPSentEvent extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setOccurredAt(\Google\Protobuf\Timestamp|null $var)
+    public function setOccurredAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->occurred_at = $var;
 
         return $this;
@@ -274,9 +275,9 @@ class OTPSentEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;

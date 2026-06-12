@@ -47,7 +47,7 @@ class SendNotificationResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Notification\Entity\V1\NotificationLog[] $var
      * @return $this
      */
-    public function setLogs(array|RepeatedField $var)
+    public function setLogs($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Notification\Entity\V1\NotificationLog::class);
         $this->logs = $arr;

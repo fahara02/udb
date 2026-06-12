@@ -77,9 +77,9 @@ class AdminCatalogSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -99,9 +99,9 @@ class AdminCatalogSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setActiveVersion(string $var)
+    public function setActiveVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->active_version = $var;
 
         return $this;
@@ -121,9 +121,9 @@ class AdminCatalogSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setActiveChecksum(string $var)
+    public function setActiveChecksum($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->active_checksum = $var;
 
         return $this;
@@ -143,9 +143,9 @@ class AdminCatalogSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setActiveSince(string $var)
+    public function setActiveSince($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->active_since = $var;
 
         return $this;
@@ -165,7 +165,7 @@ class AdminCatalogSummary extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setTableCount(int $var)
+    public function setTableCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->table_count = $var;
@@ -187,7 +187,7 @@ class AdminCatalogSummary extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setStoreCount(int $var)
+    public function setStoreCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->store_count = $var;
@@ -209,9 +209,9 @@ class AdminCatalogSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPendingMigrationState(string $var)
+    public function setPendingMigrationState($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->pending_migration_state = $var;
 
         return $this;

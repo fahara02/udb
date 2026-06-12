@@ -62,8 +62,9 @@ class GetThroughputResponse extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setAvgRps(float $var)
+    public function setAvgRps($var)
     {
+        GPBUtil::checkDouble($var);
         $this->avg_rps = $var;
 
         return $this;
@@ -83,8 +84,9 @@ class GetThroughputResponse extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setPeakRps(float $var)
+    public function setPeakRps($var)
     {
+        GPBUtil::checkDouble($var);
         $this->peak_rps = $var;
 
         return $this;
@@ -104,7 +106,7 @@ class GetThroughputResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTotalRequests(int|string $var)
+    public function setTotalRequests($var)
     {
         GPBUtil::checkInt64($var);
         $this->total_requests = $var;
@@ -126,8 +128,9 @@ class GetThroughputResponse extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setOverallSuccessRate(float $var)
+    public function setOverallSuccessRate($var)
     {
+        GPBUtil::checkDouble($var);
         $this->overall_success_rate = $var;
 
         return $this;

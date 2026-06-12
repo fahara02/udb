@@ -74,7 +74,7 @@ class PaginationMeta extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setPage(int $var)
+    public function setPage($var)
     {
         GPBUtil::checkInt32($var);
         $this->page = $var;
@@ -96,7 +96,7 @@ class PaginationMeta extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setPageSize(int $var)
+    public function setPageSize($var)
     {
         GPBUtil::checkInt32($var);
         $this->page_size = $var;
@@ -118,7 +118,7 @@ class PaginationMeta extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTotalCount(int|string $var)
+    public function setTotalCount($var)
     {
         GPBUtil::checkInt64($var);
         $this->total_count = $var;
@@ -140,7 +140,7 @@ class PaginationMeta extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setTotalPages(int $var)
+    public function setTotalPages($var)
     {
         GPBUtil::checkInt32($var);
         $this->total_pages = $var;
@@ -162,8 +162,9 @@ class PaginationMeta extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setHasNext(bool $var)
+    public function setHasNext($var)
     {
+        GPBUtil::checkBool($var);
         $this->has_next = $var;
 
         return $this;
@@ -183,8 +184,9 @@ class PaginationMeta extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setHasPrev(bool $var)
+    public function setHasPrev($var)
     {
+        GPBUtil::checkBool($var);
         $this->has_prev = $var;
 
         return $this;

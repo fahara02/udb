@@ -100,9 +100,9 @@ class TokenRevocation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setJtiHash(string $var)
+    public function setJtiHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->jti_hash = $var;
 
         return $this;
@@ -110,7 +110,7 @@ class TokenRevocation extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.TokenType token_type = 2 [json_name = "tokenType", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\TokenType}
+     * @return int
      */
     public function getTokenType()
     {
@@ -119,10 +119,10 @@ class TokenRevocation extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.TokenType token_type = 2 [json_name = "tokenType", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\TokenType}
+     * @param int $var
      * @return $this
      */
-    public function setTokenType(int $var)
+    public function setTokenType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\TokenType::class);
         $this->token_type = $var;
@@ -144,9 +144,9 @@ class TokenRevocation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -180,8 +180,9 @@ class TokenRevocation extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setExpiresAt(\Google\Protobuf\Timestamp|null $var)
+    public function setExpiresAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->expires_at = $var;
 
         return $this;
@@ -211,8 +212,9 @@ class TokenRevocation extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setRevokedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setRevokedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->revoked_at = $var;
 
         return $this;
@@ -232,9 +234,9 @@ class TokenRevocation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRevokedBy(string $var)
+    public function setRevokedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->revoked_by = $var;
 
         return $this;
@@ -254,9 +256,9 @@ class TokenRevocation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReason(string $var)
+    public function setReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reason = $var;
 
         return $this;

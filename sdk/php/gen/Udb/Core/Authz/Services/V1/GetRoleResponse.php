@@ -57,8 +57,9 @@ class GetRoleResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Entity\V1\Role $var
      * @return $this
      */
-    public function setRole(\Udb\Core\Authz\Entity\V1\Role|null $var)
+    public function setRole($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Entity\V1\Role::class);
         $this->role = $var;
 
         return $this;

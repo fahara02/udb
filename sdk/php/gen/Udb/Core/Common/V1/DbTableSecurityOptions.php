@@ -112,9 +112,9 @@ class DbTableSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantIsolationMode(string $var)
+    public function setTenantIsolationMode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_isolation_mode = $var;
 
         return $this;
@@ -134,9 +134,9 @@ class DbTableSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectIsolationMode(string $var)
+    public function setProjectIsolationMode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_isolation_mode = $var;
 
         return $this;
@@ -156,9 +156,9 @@ class DbTableSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantColumn(string $var)
+    public function setTenantColumn($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_column = $var;
 
         return $this;
@@ -178,9 +178,9 @@ class DbTableSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectColumn(string $var)
+    public function setProjectColumn($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_column = $var;
 
         return $this;
@@ -200,9 +200,9 @@ class DbTableSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRlsPolicyTemplate(string $var)
+    public function setRlsPolicyTemplate($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->rls_policy_template = $var;
 
         return $this;
@@ -222,9 +222,9 @@ class DbTableSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSoftDeleteMode(string $var)
+    public function setSoftDeleteMode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->soft_delete_mode = $var;
 
         return $this;
@@ -244,9 +244,9 @@ class DbTableSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRetentionClass(string $var)
+    public function setRetentionClass($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->retention_class = $var;
 
         return $this;
@@ -266,7 +266,7 @@ class DbTableSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRetentionDays(int $var)
+    public function setRetentionDays($var)
     {
         GPBUtil::checkInt32($var);
         $this->retention_days = $var;
@@ -276,7 +276,7 @@ class DbTableSecurityOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.AuditMode audit_mode = 9 [json_name = "auditMode"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\AuditMode}
+     * @return int
      */
     public function getAuditMode()
     {
@@ -285,10 +285,10 @@ class DbTableSecurityOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.AuditMode audit_mode = 9 [json_name = "auditMode"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\AuditMode}
+     * @param int $var
      * @return $this
      */
-    public function setAuditMode(int $var)
+    public function setAuditMode($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\AuditMode::class);
         $this->audit_mode = $var;
@@ -310,9 +310,9 @@ class DbTableSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEncryptionProfile(string $var)
+    public function setEncryptionProfile($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->encryption_profile = $var;
 
         return $this;
@@ -332,9 +332,9 @@ class DbTableSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPiiProfile(string $var)
+    public function setPiiProfile($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->pii_profile = $var;
 
         return $this;
@@ -354,8 +354,9 @@ class DbTableSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setBreakGlassVisible(bool $var)
+    public function setBreakGlassVisible($var)
     {
+        GPBUtil::checkBool($var);
         $this->break_glass_visible = $var;
 
         return $this;
@@ -375,8 +376,9 @@ class DbTableSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setExportEligible(bool $var)
+    public function setExportEligible($var)
     {
+        GPBUtil::checkBool($var);
         $this->export_eligible = $var;
 
         return $this;
@@ -396,9 +398,9 @@ class DbTableSecurityOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDataResidencyPolicyRef(string $var)
+    public function setDataResidencyPolicyRef($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->data_residency_policy_ref = $var;
 
         return $this;

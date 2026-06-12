@@ -146,9 +146,9 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStepId(string $var)
+    public function setStepId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->step_id = $var;
 
         return $this;
@@ -172,9 +172,9 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setInstanceId(string $var)
+    public function setInstanceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->instance_id = $var;
 
         return $this;
@@ -200,9 +200,9 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -226,9 +226,9 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStepName(string $var)
+    public function setStepName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->step_name = $var;
 
         return $this;
@@ -238,7 +238,7 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:step_type;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.asset.entity.v1.StepType step_type = 4 [json_name = "stepType", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Asset\Entity\V1\StepType}
+     * @return int
      */
     public function getStepType()
     {
@@ -249,10 +249,10 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:step_type;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.asset.entity.v1.StepType step_type = 4 [json_name = "stepType", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Asset\Entity\V1\StepType}
+     * @param int $var
      * @return $this
      */
-    public function setStepType(int $var)
+    public function setStepType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Asset\Entity\V1\StepType::class);
         $this->step_type = $var;
@@ -264,7 +264,7 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:status;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.asset.entity.v1.StepStatus status = 5 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Asset\Entity\V1\StepStatus}
+     * @return int
      */
     public function getStatus()
     {
@@ -275,10 +275,10 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:status;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.asset.entity.v1.StepStatus status = 5 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Asset\Entity\V1\StepStatus}
+     * @param int $var
      * @return $this
      */
-    public function setStatus(int $var)
+    public function setStatus($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Asset\Entity\V1\StepStatus::class);
         $this->status = $var;
@@ -304,9 +304,9 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResult(string $var)
+    public function setResult($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->result = $var;
 
         return $this;
@@ -330,9 +330,9 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setError(string $var)
+    public function setError($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->error = $var;
 
         return $this;
@@ -356,7 +356,7 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRetryCount(int $var)
+    public function setRetryCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->retry_count = $var;
@@ -392,8 +392,9 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setStartedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setStartedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->started_at = $var;
 
         return $this;
@@ -427,8 +428,9 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCompletedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCompletedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->completed_at = $var;
 
         return $this;
@@ -462,8 +464,9 @@ class PipelineStep extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\AuditInfo $var
      * @return $this
      */
-    public function setAuditInfo(\Udb\Core\Common\V1\AuditInfo|null $var)
+    public function setAuditInfo($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\AuditInfo::class);
         $this->audit_info = $var;
 
         return $this;

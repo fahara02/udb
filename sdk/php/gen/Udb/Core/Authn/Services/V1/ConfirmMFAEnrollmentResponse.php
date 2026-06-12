@@ -47,8 +47,9 @@ class ConfirmMFAEnrollmentResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setEnrolled(bool $var)
+    public function setEnrolled($var)
     {
+        GPBUtil::checkBool($var);
         $this->enrolled = $var;
 
         return $this;

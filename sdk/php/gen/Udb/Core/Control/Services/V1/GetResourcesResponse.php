@@ -60,7 +60,7 @@ class GetResourcesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Control\Services\V1\Resource[] $var
      * @return $this
      */
-    public function setResources(array|RepeatedField $var)
+    public function setResources($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Control\Services\V1\Resource::class);
         $this->resources = $arr;
@@ -86,9 +86,9 @@ class GetResourcesResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setVersionInfo(string $var)
+    public function setVersionInfo($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->version_info = $var;
 
         return $this;
@@ -118,8 +118,9 @@ class GetResourcesResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\PageResponse $var
      * @return $this
      */
-    public function setPage(\Udb\Core\Common\V1\PageResponse|null $var)
+    public function setPage($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\PageResponse::class);
         $this->page = $var;
 
         return $this;

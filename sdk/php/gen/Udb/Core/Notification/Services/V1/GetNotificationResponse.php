@@ -57,8 +57,9 @@ class GetNotificationResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Notification\Entity\V1\NotificationLog $var
      * @return $this
      */
-    public function setLog(\Udb\Core\Notification\Entity\V1\NotificationLog|null $var)
+    public function setLog($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Notification\Entity\V1\NotificationLog::class);
         $this->log = $var;
 
         return $this;

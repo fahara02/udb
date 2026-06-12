@@ -52,9 +52,9 @@ class GetMfaPolicyResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -74,8 +74,9 @@ class GetMfaPolicyResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRequireMfa(bool $var)
+    public function setRequireMfa($var)
     {
+        GPBUtil::checkBool($var);
         $this->require_mfa = $var;
 
         return $this;

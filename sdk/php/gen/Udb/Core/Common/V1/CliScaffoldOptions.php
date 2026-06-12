@@ -97,9 +97,9 @@ class CliScaffoldOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setScaffoldPackage(string $var)
+    public function setScaffoldPackage($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->scaffold_package = $var;
 
         return $this;
@@ -119,9 +119,9 @@ class CliScaffoldOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setImportPath(string $var)
+    public function setImportPath($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->import_path = $var;
 
         return $this;
@@ -141,7 +141,7 @@ class CliScaffoldOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRequiredEnv(array|RepeatedField $var)
+    public function setRequiredEnv($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->required_env = $arr;
@@ -163,7 +163,7 @@ class CliScaffoldOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setGeneratedFiles(array|RepeatedField $var)
+    public function setGeneratedFiles($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->generated_files = $arr;
@@ -185,9 +185,9 @@ class CliScaffoldOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRouteName(string $var)
+    public function setRouteName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->route_name = $var;
 
         return $this;
@@ -207,9 +207,9 @@ class CliScaffoldOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMiddlewareName(string $var)
+    public function setMiddlewareName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->middleware_name = $var;
 
         return $this;
@@ -229,7 +229,7 @@ class CliScaffoldOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRequiredNativeServices(array|RepeatedField $var)
+    public function setRequiredNativeServices($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->required_native_services = $arr;
@@ -251,7 +251,7 @@ class CliScaffoldOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setOptionalNativeServices(array|RepeatedField $var)
+    public function setOptionalNativeServices($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->optional_native_services = $arr;
@@ -273,7 +273,7 @@ class CliScaffoldOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setSecretPlaceholders(array|RepeatedField $var)
+    public function setSecretPlaceholders($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->secret_placeholders = $arr;
@@ -295,7 +295,7 @@ class CliScaffoldOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setPostGenerationCommands(array|RepeatedField $var)
+    public function setPostGenerationCommands($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->post_generation_commands = $arr;
@@ -317,9 +317,9 @@ class CliScaffoldOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSmokeTestCommand(string $var)
+    public function setSmokeTestCommand($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->smoke_test_command = $var;
 
         return $this;

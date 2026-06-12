@@ -57,8 +57,9 @@ class PutRelationshipRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\RelationshipTuple $var
      * @return $this
      */
-    public function setTuple(\Udb\Core\Authz\Services\V1\RelationshipTuple|null $var)
+    public function setTuple($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\RelationshipTuple::class);
         $this->tuple = $var;
 
         return $this;

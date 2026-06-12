@@ -54,9 +54,9 @@ class FieldViolation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setField(string $var)
+    public function setField($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->field = $var;
 
         return $this;
@@ -76,9 +76,9 @@ class FieldViolation extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDescription(string $var)
+    public function setDescription($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->description = $var;
 
         return $this;

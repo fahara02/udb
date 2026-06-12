@@ -128,9 +128,9 @@ class Track extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTrackId(string $var)
+    public function setTrackId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->track_id = $var;
 
         return $this;
@@ -154,9 +154,9 @@ class Track extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRoomId(string $var)
+    public function setRoomId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->room_id = $var;
 
         return $this;
@@ -180,9 +180,9 @@ class Track extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPeerId(string $var)
+    public function setPeerId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->peer_id = $var;
 
         return $this;
@@ -206,9 +206,9 @@ class Track extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -218,7 +218,7 @@ class Track extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:kind;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.webrtc.entity.v1.TrackKind kind = 5 [json_name = "kind", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Webrtc\Entity\V1\TrackKind}
+     * @return int
      */
     public function getKind()
     {
@@ -229,10 +229,10 @@ class Track extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:kind;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.webrtc.entity.v1.TrackKind kind = 5 [json_name = "kind", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Webrtc\Entity\V1\TrackKind}
+     * @param int $var
      * @return $this
      */
-    public function setKind(int $var)
+    public function setKind($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Webrtc\Entity\V1\TrackKind::class);
         $this->kind = $var;
@@ -258,9 +258,9 @@ class Track extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLabel(string $var)
+    public function setLabel($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->label = $var;
 
         return $this;
@@ -270,7 +270,7 @@ class Track extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:state;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.webrtc.entity.v1.TrackState state = 7 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Webrtc\Entity\V1\TrackState}
+     * @return int
      */
     public function getState()
     {
@@ -281,10 +281,10 @@ class Track extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:state;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.webrtc.entity.v1.TrackState state = 7 [json_name = "state", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Webrtc\Entity\V1\TrackState}
+     * @param int $var
      * @return $this
      */
-    public function setState(int $var)
+    public function setState($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Webrtc\Entity\V1\TrackState::class);
         $this->state = $var;
@@ -310,9 +310,9 @@ class Track extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSettings(string $var)
+    public function setSettings($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->settings = $var;
 
         return $this;
@@ -336,9 +336,9 @@ class Track extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMetadata(string $var)
+    public function setMetadata($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->metadata = $var;
 
         return $this;
@@ -372,8 +372,9 @@ class Track extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\AuditInfo $var
      * @return $this
      */
-    public function setAuditInfo(\Udb\Core\Common\V1\AuditInfo|null $var)
+    public function setAuditInfo($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\AuditInfo::class);
         $this->audit_info = $var;
 
         return $this;

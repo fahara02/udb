@@ -18,7 +18,6 @@ use Google\Protobuf\RepeatedField;
  * `app.current_*` session variables the SDK must `SET LOCAL` so the
  * broker-generated RLS policies still apply. UDB stays the source of the
  * authorization decision; the native grant only carries it forward.
- *
  * Generated from protobuf message <code>udb.core.authz.services.v1.NativeAccessRequest</code>
  */
 class NativeAccessRequest extends \Google\Protobuf\Internal\Message
@@ -119,8 +118,9 @@ class NativeAccessRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\Principal $var
      * @return $this
      */
-    public function setPrincipal(\Udb\Core\Authz\Services\V1\Principal|null $var)
+    public function setPrincipal($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\Principal::class);
         $this->principal = $var;
 
         return $this;
@@ -140,9 +140,9 @@ class NativeAccessRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSessionId(string $var)
+    public function setSessionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->session_id = $var;
 
         return $this;
@@ -162,9 +162,9 @@ class NativeAccessRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -184,9 +184,9 @@ class NativeAccessRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -216,8 +216,9 @@ class NativeAccessRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\ResourceRef $var
      * @return $this
      */
-    public function setResource(\Udb\Core\Authz\Services\V1\ResourceRef|null $var)
+    public function setResource($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\ResourceRef::class);
         $this->resource = $var;
 
         return $this;
@@ -237,9 +238,9 @@ class NativeAccessRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAction(string $var)
+    public function setAction($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->action = $var;
 
         return $this;
@@ -259,9 +260,9 @@ class NativeAccessRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPurpose(string $var)
+    public function setPurpose($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->purpose = $var;
 
         return $this;
@@ -281,7 +282,7 @@ class NativeAccessRequest extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRequestedScopes(array|RepeatedField $var)
+    public function setRequestedScopes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->requested_scopes = $arr;
@@ -313,8 +314,9 @@ class NativeAccessRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\AccessContext $var
      * @return $this
      */
-    public function setContext(\Udb\Core\Authz\Services\V1\AccessContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\AccessContext::class);
         $this->context = $var;
 
         return $this;
@@ -338,9 +340,9 @@ class NativeAccessRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -360,7 +362,7 @@ class NativeAccessRequest extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setAttributes(array|\Google\Protobuf\Internal\MapField $var)
+    public function setAttributes($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->attributes = $arr;

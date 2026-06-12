@@ -57,9 +57,9 @@ class MuteTrackRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -79,9 +79,9 @@ class MuteTrackRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTrackId(string $var)
+    public function setTrackId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->track_id = $var;
 
         return $this;
@@ -101,8 +101,9 @@ class MuteTrackRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setMuted(bool $var)
+    public function setMuted($var)
     {
+        GPBUtil::checkBool($var);
         $this->muted = $var;
 
         return $this;

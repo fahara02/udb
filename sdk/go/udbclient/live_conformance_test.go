@@ -138,6 +138,11 @@ func TestLiveGeneratedRPCSurface(t *testing.T) {
 	// cache, vector, graph) — not just the canonical postgres/mongodb/minio trio.
 	runLiveAllBackendKindsMatrix(t, servicesv1.NewDataBrokerClient(brokerConn), brokerGen.outgoingContext(ctx), tenant, project, caps)
 
+	// Deep, result-asserted E2E for the operational DataBroker RPCs (CDC / DLQ / saga /
+	// catalog / schema / health / admin / projects) — these are NOT covered by the
+	// all-backend CRUD matrix and were previously surface-probe only.
+	runLiveDataBrokerOpsE2E(t, servicesv1.NewDataBrokerClient(brokerConn), brokerGen.outgoingContext(ctx), tenant, project)
+
 	// Real create→read→assert CRUD against every native control-plane service, not
 	// just the empty-request mount probe below. A SINGLE admin (bound to the
 	// canonical tenant UUID) now serves the UUID-strict services

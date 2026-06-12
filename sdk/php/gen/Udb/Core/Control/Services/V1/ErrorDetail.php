@@ -54,7 +54,7 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setCode(int $var)
+    public function setCode($var)
     {
         GPBUtil::checkInt32($var);
         $this->code = $var;
@@ -76,9 +76,9 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMessage(string $var)
+    public function setMessage($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->message = $var;
 
         return $this;

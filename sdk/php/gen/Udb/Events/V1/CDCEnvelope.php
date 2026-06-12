@@ -69,9 +69,9 @@ class CDCEnvelope extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventId(string $var)
+    public function setEventId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_id = $var;
 
         return $this;
@@ -91,9 +91,9 @@ class CDCEnvelope extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTopic(string $var)
+    public function setTopic($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->topic = $var;
 
         return $this;
@@ -113,9 +113,9 @@ class CDCEnvelope extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPartitionKey(string $var)
+    public function setPartitionKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->partition_key = $var;
 
         return $this;
@@ -135,9 +135,9 @@ class CDCEnvelope extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPayloadJson(string $var)
+    public function setPayloadJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->payload_json = $var;
 
         return $this;
@@ -167,8 +167,9 @@ class CDCEnvelope extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setPublishedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setPublishedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->published_at = $var;
 
         return $this;

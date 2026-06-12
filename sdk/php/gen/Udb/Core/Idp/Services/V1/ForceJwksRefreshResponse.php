@@ -67,8 +67,9 @@ class ForceJwksRefreshResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setOk(bool $var)
+    public function setOk($var)
     {
+        GPBUtil::checkBool($var);
         $this->ok = $var;
 
         return $this;
@@ -88,7 +89,7 @@ class ForceJwksRefreshResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setKeyCount(int $var)
+    public function setKeyCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->key_count = $var;
@@ -110,7 +111,7 @@ class ForceJwksRefreshResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setKeyIds(array|RepeatedField $var)
+    public function setKeyIds($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->key_ids = $arr;
@@ -142,8 +143,9 @@ class ForceJwksRefreshResponse extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setRefreshedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setRefreshedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->refreshed_at = $var;
 
         return $this;
@@ -163,9 +165,9 @@ class ForceJwksRefreshResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStatus(string $var)
+    public function setStatus($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->status = $var;
 
         return $this;

@@ -82,8 +82,9 @@ class ListPolicyVersionsRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\GovernanceActor $var
      * @return $this
      */
-    public function setActor(\Udb\Core\Authz\Services\V1\GovernanceActor|null $var)
+    public function setActor($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\GovernanceActor::class);
         $this->actor = $var;
 
         return $this;
@@ -103,9 +104,9 @@ class ListPolicyVersionsRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -125,9 +126,9 @@ class ListPolicyVersionsRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -147,9 +148,9 @@ class ListPolicyVersionsRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicySetId(string $var)
+    public function setPolicySetId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_set_id = $var;
 
         return $this;
@@ -157,7 +158,7 @@ class ListPolicyVersionsRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.PolicyVersionState state = 5 [json_name = "state"];</code>
-     * @return int one of the values in {@see \Udb\Core\Authz\Entity\V1\PolicyVersionState}
+     * @return int
      */
     public function getState()
     {
@@ -166,10 +167,10 @@ class ListPolicyVersionsRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.PolicyVersionState state = 5 [json_name = "state"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authz\Entity\V1\PolicyVersionState}
+     * @param int $var
      * @return $this
      */
-    public function setState(int $var)
+    public function setState($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authz\Entity\V1\PolicyVersionState::class);
         $this->state = $var;
@@ -201,8 +202,9 @@ class ListPolicyVersionsRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\PageRequest $var
      * @return $this
      */
-    public function setPage(\Udb\Core\Common\V1\PageRequest|null $var)
+    public function setPage($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\PageRequest::class);
         $this->page = $var;
 
         return $this;

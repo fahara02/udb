@@ -86,9 +86,9 @@ class EventContractOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventType(string $var)
+    public function setEventType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_type = $var;
 
         return $this;
@@ -108,9 +108,9 @@ class EventContractOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOutboxTopic(string $var)
+    public function setOutboxTopic($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->outbox_topic = $var;
 
         return $this;
@@ -130,9 +130,9 @@ class EventContractOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPartitionKeyField(string $var)
+    public function setPartitionKeyField($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->partition_key_field = $var;
 
         return $this;
@@ -152,9 +152,9 @@ class EventContractOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPayloadRedactionProfile(string $var)
+    public function setPayloadRedactionProfile($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->payload_redaction_profile = $var;
 
         return $this;
@@ -174,9 +174,9 @@ class EventContractOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeliveryGuarantee(string $var)
+    public function setDeliveryGuarantee($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->delivery_guarantee = $var;
 
         return $this;
@@ -196,9 +196,9 @@ class EventContractOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReplayCompatibility(string $var)
+    public function setReplayCompatibility($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->replay_compatibility = $var;
 
         return $this;
@@ -228,7 +228,7 @@ class EventContractOptions extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\EventContractOptions\EmittedEvent[] $var
      * @return $this
      */
-    public function setEmits(array|RepeatedField $var)
+    public function setEmits($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Common\V1\EventContractOptions\EmittedEvent::class);
         $this->emits = $arr;

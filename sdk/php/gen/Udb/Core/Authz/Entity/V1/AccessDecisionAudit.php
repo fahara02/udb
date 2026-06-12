@@ -209,9 +209,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDecisionAuditId(string $var)
+    public function setDecisionAuditId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->decision_audit_id = $var;
 
         return $this;
@@ -231,9 +231,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -253,9 +253,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDomain(string $var)
+    public function setDomain($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->domain = $var;
 
         return $this;
@@ -275,9 +275,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setObject(string $var)
+    public function setObject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->object = $var;
 
         return $this;
@@ -297,9 +297,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAction(string $var)
+    public function setAction($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->action = $var;
 
         return $this;
@@ -307,7 +307,7 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.PolicyEffect effect = 6 [json_name = "effect", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authz\Entity\V1\PolicyEffect}
+     * @return int
      */
     public function getEffect()
     {
@@ -316,10 +316,10 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.PolicyEffect effect = 6 [json_name = "effect", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authz\Entity\V1\PolicyEffect}
+     * @param int $var
      * @return $this
      */
-    public function setEffect(int $var)
+    public function setEffect($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authz\Entity\V1\PolicyEffect::class);
         $this->effect = $var;
@@ -329,7 +329,7 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.DecisionSource decision_source = 7 [json_name = "decisionSource", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authz\Entity\V1\DecisionSource}
+     * @return int
      */
     public function getDecisionSource()
     {
@@ -338,10 +338,10 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.DecisionSource decision_source = 7 [json_name = "decisionSource", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authz\Entity\V1\DecisionSource}
+     * @param int $var
      * @return $this
      */
-    public function setDecisionSource(int $var)
+    public function setDecisionSource($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authz\Entity\V1\DecisionSource::class);
         $this->decision_source = $var;
@@ -363,9 +363,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMatchedRule(string $var)
+    public function setMatchedRule($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->matched_rule = $var;
 
         return $this;
@@ -385,9 +385,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReason(string $var)
+    public function setReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reason = $var;
 
         return $this;
@@ -407,9 +407,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIpAddress(string $var)
+    public function setIpAddress($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->ip_address = $var;
 
         return $this;
@@ -429,9 +429,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -461,8 +461,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setDecidedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setDecidedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->decided_at = $var;
 
         return $this;
@@ -482,9 +483,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -512,9 +513,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDecisionId(string $var)
+    public function setDecisionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->decision_id = $var;
 
         return $this;
@@ -538,9 +539,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicyVersion(string $var)
+    public function setPolicyVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_version = $var;
 
         return $this;
@@ -560,9 +561,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRelationshipVersion(string $var)
+    public function setRelationshipVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->relationship_version = $var;
 
         return $this;
@@ -586,9 +587,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPurpose(string $var)
+    public function setPurpose($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->purpose = $var;
 
         return $this;
@@ -612,9 +613,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setScopes(string $var)
+    public function setScopes($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->scopes = $var;
 
         return $this;
@@ -638,7 +639,7 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setMatchedPolicyIds(array|RepeatedField $var)
+    public function setMatchedPolicyIds($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->matched_policy_ids = $arr;
@@ -664,9 +665,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -690,9 +691,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setActorKind(string $var)
+    public function setActorKind($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->actor_kind = $var;
 
         return $this;
@@ -716,9 +717,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceType(string $var)
+    public function setResourceType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_type = $var;
 
         return $this;
@@ -742,9 +743,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTraceId(string $var)
+    public function setTraceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->trace_id = $var;
 
         return $this;
@@ -764,9 +765,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSpanId(string $var)
+    public function setSpanId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->span_id = $var;
 
         return $this;
@@ -790,9 +791,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserAgentHash(string $var)
+    public function setUserAgentHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_agent_hash = $var;
 
         return $this;
@@ -816,9 +817,9 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDecisionInput(string $var)
+    public function setDecisionInput($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->decision_input = $var;
 
         return $this;

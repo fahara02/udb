@@ -77,7 +77,7 @@ class OperationStats extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setScannedCount(int|string $var)
+    public function setScannedCount($var)
     {
         GPBUtil::checkInt64($var);
         $this->scanned_count = $var;
@@ -99,7 +99,7 @@ class OperationStats extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setMatchedCount(int|string $var)
+    public function setMatchedCount($var)
     {
         GPBUtil::checkInt64($var);
         $this->matched_count = $var;
@@ -121,7 +121,7 @@ class OperationStats extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setAffectedCount(int|string $var)
+    public function setAffectedCount($var)
     {
         GPBUtil::checkInt64($var);
         $this->affected_count = $var;
@@ -143,7 +143,7 @@ class OperationStats extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setReturnedCount(int|string $var)
+    public function setReturnedCount($var)
     {
         GPBUtil::checkInt64($var);
         $this->returned_count = $var;
@@ -165,7 +165,7 @@ class OperationStats extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setElapsedMs(int|string $var)
+    public function setElapsedMs($var)
     {
         GPBUtil::checkInt64($var);
         $this->elapsed_ms = $var;
@@ -187,9 +187,9 @@ class OperationStats extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -209,9 +209,9 @@ class OperationStats extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setInstance(string $var)
+    public function setInstance($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->instance = $var;
 
         return $this;

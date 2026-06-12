@@ -17,7 +17,6 @@ use Google\Protobuf\RepeatedField;
  * Migration order 3.  OTPs are never updated — a new row is inserted on each
  * send (including resend, which sets superseded_by_id on the previous row).
  * ---------------------------------------------------------------------------
- *
  * Generated from protobuf message <code>udb.core.authn.entity.v1.OTP</code>
  */
 class OTP extends \Google\Protobuf\Internal\Message
@@ -132,9 +131,9 @@ class OTP extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOtpId(string $var)
+    public function setOtpId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->otp_id = $var;
 
         return $this;
@@ -154,9 +153,9 @@ class OTP extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -164,7 +163,7 @@ class OTP extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.OTPType otp_type = 3 [json_name = "otpType", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\OTPType}
+     * @return int
      */
     public function getOtpType()
     {
@@ -173,10 +172,10 @@ class OTP extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.OTPType otp_type = 3 [json_name = "otpType", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\OTPType}
+     * @param int $var
      * @return $this
      */
-    public function setOtpType(int $var)
+    public function setOtpType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\OTPType::class);
         $this->otp_type = $var;
@@ -202,9 +201,9 @@ class OTP extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCodeHash(string $var)
+    public function setCodeHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->code_hash = $var;
 
         return $this;
@@ -224,9 +223,9 @@ class OTP extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeliveryChannel(string $var)
+    public function setDeliveryChannel($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->delivery_channel = $var;
 
         return $this;
@@ -246,9 +245,9 @@ class OTP extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeliveryAddress(string $var)
+    public function setDeliveryAddress($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->delivery_address = $var;
 
         return $this;
@@ -256,7 +255,7 @@ class OTP extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.OTPStatus status = 7 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\OTPStatus}
+     * @return int
      */
     public function getStatus()
     {
@@ -265,10 +264,10 @@ class OTP extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.OTPStatus status = 7 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\OTPStatus}
+     * @param int $var
      * @return $this
      */
-    public function setStatus(int $var)
+    public function setStatus($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\OTPStatus::class);
         $this->status = $var;
@@ -294,7 +293,7 @@ class OTP extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setAttemptCount(int $var)
+    public function setAttemptCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->attempt_count = $var;
@@ -320,9 +319,9 @@ class OTP extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSupersededById(string $var)
+    public function setSupersededById($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->superseded_by_id = $var;
 
         return $this;
@@ -352,8 +351,9 @@ class OTP extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setExpiresAt(\Google\Protobuf\Timestamp|null $var)
+    public function setExpiresAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->expires_at = $var;
 
         return $this;
@@ -383,8 +383,9 @@ class OTP extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setUsedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setUsedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->used_at = $var;
 
         return $this;
@@ -414,8 +415,9 @@ class OTP extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;
@@ -435,9 +437,9 @@ class OTP extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -461,9 +463,9 @@ class OTP extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;

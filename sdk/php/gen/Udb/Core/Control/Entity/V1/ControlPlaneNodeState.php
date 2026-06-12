@@ -141,9 +141,9 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNodeStateId(string $var)
+    public function setNodeStateId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->node_state_id = $var;
 
         return $this;
@@ -167,9 +167,9 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNodeId(string $var)
+    public function setNodeId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->node_id = $var;
 
         return $this;
@@ -177,7 +177,7 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.control.entity.v1.ResourceType resource_type = 3 [json_name = "resourceType", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Control\Entity\V1\ResourceType}
+     * @return int
      */
     public function getResourceType()
     {
@@ -186,10 +186,10 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.control.entity.v1.ResourceType resource_type = 3 [json_name = "resourceType", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Control\Entity\V1\ResourceType}
+     * @param int $var
      * @return $this
      */
-    public function setResourceType(int $var)
+    public function setResourceType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Control\Entity\V1\ResourceType::class);
         $this->resource_type = $var;
@@ -217,9 +217,9 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSubscribedNames(string $var)
+    public function setSubscribedNames($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->subscribed_names = $var;
 
         return $this;
@@ -243,9 +243,9 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAcceptedVersion(string $var)
+    public function setAcceptedVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->accepted_version = $var;
 
         return $this;
@@ -271,9 +271,9 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLastGoodVersion(string $var)
+    public function setLastGoodVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->last_good_version = $var;
 
         return $this;
@@ -297,9 +297,9 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLastResponseNonce(string $var)
+    public function setLastResponseNonce($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->last_response_nonce = $var;
 
         return $this;
@@ -323,9 +323,9 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNackErrorDetail(string $var)
+    public function setNackErrorDetail($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->nack_error_detail = $var;
 
         return $this;
@@ -349,7 +349,7 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setNonceCounter(int|string $var)
+    public function setNonceCounter($var)
     {
         GPBUtil::checkInt64($var);
         $this->nonce_counter = $var;
@@ -381,8 +381,9 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;
@@ -412,8 +413,9 @@ class ControlPlaneNodeState extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setUpdatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setUpdatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->updated_at = $var;
 
         return $this;

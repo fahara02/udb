@@ -62,9 +62,9 @@ class MaterializedView extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setViewName(string $var)
+    public function setViewName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->view_name = $var;
 
         return $this;
@@ -84,9 +84,9 @@ class MaterializedView extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSchemaName(string $var)
+    public function setSchemaName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->schema_name = $var;
 
         return $this;
@@ -106,9 +106,9 @@ class MaterializedView extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setQuery(string $var)
+    public function setQuery($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->query = $var;
 
         return $this;
@@ -128,8 +128,9 @@ class MaterializedView extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setWithData(bool $var)
+    public function setWithData($var)
     {
+        GPBUtil::checkBool($var);
         $this->with_data = $var;
 
         return $this;

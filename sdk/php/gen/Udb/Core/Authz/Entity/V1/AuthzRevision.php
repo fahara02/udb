@@ -97,9 +97,9 @@ class AuthzRevision extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRevisionId(string $var)
+    public function setRevisionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->revision_id = $var;
 
         return $this;
@@ -119,9 +119,9 @@ class AuthzRevision extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -141,9 +141,9 @@ class AuthzRevision extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -163,7 +163,7 @@ class AuthzRevision extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setPolicyRevision(int|string $var)
+    public function setPolicyRevision($var)
     {
         GPBUtil::checkInt64($var);
         $this->policy_revision = $var;
@@ -185,7 +185,7 @@ class AuthzRevision extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setRelationshipRevision(int|string $var)
+    public function setRelationshipRevision($var)
     {
         GPBUtil::checkInt64($var);
         $this->relationship_revision = $var;
@@ -207,9 +207,9 @@ class AuthzRevision extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setContentHash(string $var)
+    public function setContentHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->content_hash = $var;
 
         return $this;
@@ -229,9 +229,9 @@ class AuthzRevision extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setChangedBy(string $var)
+    public function setChangedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->changed_by = $var;
 
         return $this;
@@ -261,8 +261,9 @@ class AuthzRevision extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setChangedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setChangedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->changed_at = $var;
 
         return $this;
@@ -270,7 +271,7 @@ class AuthzRevision extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.AuthzChangeType change_type = 9 [json_name = "changeType", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authz\Entity\V1\AuthzChangeType}
+     * @return int
      */
     public function getChangeType()
     {
@@ -279,10 +280,10 @@ class AuthzRevision extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.AuthzChangeType change_type = 9 [json_name = "changeType", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authz\Entity\V1\AuthzChangeType}
+     * @param int $var
      * @return $this
      */
-    public function setChangeType(int $var)
+    public function setChangeType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authz\Entity\V1\AuthzChangeType::class);
         $this->change_type = $var;

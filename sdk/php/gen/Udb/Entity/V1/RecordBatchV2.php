@@ -86,7 +86,7 @@ class RecordBatchV2 extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\ColumnBatch[] $var
      * @return $this
      */
-    public function setColumns(array|RepeatedField $var)
+    public function setColumns($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\ColumnBatch::class);
         $this->columns = $arr;
@@ -108,7 +108,7 @@ class RecordBatchV2 extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRowCount(int $var)
+    public function setRowCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->row_count = $var;
@@ -134,9 +134,9 @@ class RecordBatchV2 extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSchemaVersion(string $var)
+    public function setSchemaVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->schema_version = $var;
 
         return $this;
@@ -162,7 +162,7 @@ class RecordBatchV2 extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setFieldOrder(array|RepeatedField $var)
+    public function setFieldOrder($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->field_order = $arr;
@@ -188,9 +188,9 @@ class RecordBatchV2 extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNextPageToken(string $var)
+    public function setNextPageToken($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->next_page_token = $var;
 
         return $this;
@@ -210,7 +210,7 @@ class RecordBatchV2 extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setTotalCount(int $var)
+    public function setTotalCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->total_count = $var;

@@ -92,9 +92,9 @@ class ApiKeyUsage extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUsageId(string $var)
+    public function setUsageId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->usage_id = $var;
 
         return $this;
@@ -114,9 +114,9 @@ class ApiKeyUsage extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKeyId(string $var)
+    public function setKeyId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->key_id = $var;
 
         return $this;
@@ -136,9 +136,9 @@ class ApiKeyUsage extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEndpoint(string $var)
+    public function setEndpoint($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->endpoint = $var;
 
         return $this;
@@ -158,9 +158,9 @@ class ApiKeyUsage extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIpAddress(string $var)
+    public function setIpAddress($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->ip_address = $var;
 
         return $this;
@@ -180,7 +180,7 @@ class ApiKeyUsage extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setHttpStatus(int $var)
+    public function setHttpStatus($var)
     {
         GPBUtil::checkInt32($var);
         $this->http_status = $var;
@@ -202,7 +202,7 @@ class ApiKeyUsage extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setLatencyMs(int $var)
+    public function setLatencyMs($var)
     {
         GPBUtil::checkInt32($var);
         $this->latency_ms = $var;
@@ -224,8 +224,9 @@ class ApiKeyUsage extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRateLimited(bool $var)
+    public function setRateLimited($var)
     {
+        GPBUtil::checkBool($var);
         $this->rate_limited = $var;
 
         return $this;
@@ -255,8 +256,9 @@ class ApiKeyUsage extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setRequestedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setRequestedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->requested_at = $var;
 
         return $this;
@@ -276,9 +278,9 @@ class ApiKeyUsage extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;

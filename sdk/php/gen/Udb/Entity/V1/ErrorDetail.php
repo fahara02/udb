@@ -124,9 +124,9 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -152,9 +152,9 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOperation(string $var)
+    public function setOperation($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->operation = $var;
 
         return $this;
@@ -182,9 +182,9 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCapabilityRequired(string $var)
+    public function setCapabilityRequired($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->capability_required = $var;
 
         return $this;
@@ -208,8 +208,9 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRetryable(bool $var)
+    public function setRetryable($var)
     {
+        GPBUtil::checkBool($var);
         $this->retryable = $var;
 
         return $this;
@@ -233,7 +234,7 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setRetryAfterMs(int|string $var)
+    public function setRetryAfterMs($var)
     {
         GPBUtil::checkInt64($var);
         $this->retry_after_ms = $var;
@@ -261,9 +262,9 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicyDecisionId(string $var)
+    public function setPolicyDecisionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_decision_id = $var;
 
         return $this;
@@ -289,9 +290,9 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -301,7 +302,7 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
      * Coarse classification of the failure.
      *
      * Generated from protobuf field <code>.udb.entity.v1.ErrorKind kind = 8 [json_name = "kind"];</code>
-     * @return int one of the values in {@see \Udb\Entity\V1\ErrorKind}
+     * @return int
      */
     public function getKind()
     {
@@ -312,10 +313,10 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
      * Coarse classification of the failure.
      *
      * Generated from protobuf field <code>.udb.entity.v1.ErrorKind kind = 8 [json_name = "kind"];</code>
-     * @param int $var one of the values in {@see \Udb\Entity\V1\ErrorKind}
+     * @param int $var
      * @return $this
      */
-    public function setKind(int $var)
+    public function setKind($var)
     {
         GPBUtil::checkEnum($var, \Udb\Entity\V1\ErrorKind::class);
         $this->kind = $var;

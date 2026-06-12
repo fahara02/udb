@@ -54,8 +54,9 @@ class ScimDeleteUserResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setDeactivated(bool $var)
+    public function setDeactivated($var)
     {
+        GPBUtil::checkBool($var);
         $this->deactivated = $var;
 
         return $this;

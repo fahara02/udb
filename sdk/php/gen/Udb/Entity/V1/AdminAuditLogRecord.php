@@ -112,9 +112,9 @@ class AdminAuditLogRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAuditId(string $var)
+    public function setAuditId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->audit_id = $var;
 
         return $this;
@@ -134,9 +134,9 @@ class AdminAuditLogRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setActor(string $var)
+    public function setActor($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->actor = $var;
 
         return $this;
@@ -156,9 +156,9 @@ class AdminAuditLogRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOperation(string $var)
+    public function setOperation($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->operation = $var;
 
         return $this;
@@ -178,9 +178,9 @@ class AdminAuditLogRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTarget(string $var)
+    public function setTarget($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->target = $var;
 
         return $this;
@@ -200,9 +200,9 @@ class AdminAuditLogRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRequestJson(string $var)
+    public function setRequestJson($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->request_json = $var;
 
         return $this;
@@ -222,9 +222,9 @@ class AdminAuditLogRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResult(string $var)
+    public function setResult($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->result = $var;
 
         return $this;
@@ -244,9 +244,9 @@ class AdminAuditLogRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -266,9 +266,9 @@ class AdminAuditLogRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -288,9 +288,9 @@ class AdminAuditLogRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -310,7 +310,7 @@ class AdminAuditLogRecord extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setCreatedAtUnix(int|string $var)
+    public function setCreatedAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->created_at_unix = $var;
@@ -332,9 +332,9 @@ class AdminAuditLogRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPreviousHash(string $var)
+    public function setPreviousHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->previous_hash = $var;
 
         return $this;
@@ -354,9 +354,9 @@ class AdminAuditLogRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCurrentHash(string $var)
+    public function setCurrentHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->current_hash = $var;
 
         return $this;
@@ -376,9 +376,9 @@ class AdminAuditLogRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSignerKeyId(string $var)
+    public function setSignerKeyId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->signer_key_id = $var;
 
         return $this;
@@ -398,9 +398,9 @@ class AdminAuditLogRecord extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setExternalAnchor(string $var)
+    public function setExternalAnchor($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->external_anchor = $var;
 
         return $this;

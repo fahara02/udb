@@ -62,9 +62,9 @@ class ImportSamlMetadataResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEntityId(string $var)
+    public function setEntityId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->entity_id = $var;
 
         return $this;
@@ -84,9 +84,9 @@ class ImportSamlMetadataResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSsoUrl(string $var)
+    public function setSsoUrl($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->sso_url = $var;
 
         return $this;
@@ -106,7 +106,7 @@ class ImportSamlMetadataResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setCertCount(int $var)
+    public function setCertCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->cert_count = $var;
@@ -138,8 +138,9 @@ class ImportSamlMetadataResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Idp\Entity\V1\IdentityProvider $var
      * @return $this
      */
-    public function setProvider(\Udb\Core\Idp\Entity\V1\IdentityProvider|null $var)
+    public function setProvider($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Idp\Entity\V1\IdentityProvider::class);
         $this->provider = $var;
 
         return $this;

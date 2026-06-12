@@ -72,8 +72,9 @@ class VectorUpsertRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -93,9 +94,9 @@ class VectorUpsertRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCollection(string $var)
+    public function setCollection($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->collection = $var;
 
         return $this;
@@ -115,7 +116,7 @@ class VectorUpsertRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\VectorPointMutation[] $var
      * @return $this
      */
-    public function setPoints(array|RepeatedField $var)
+    public function setPoints($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\VectorPointMutation::class);
         $this->points = $arr;
@@ -137,9 +138,9 @@ class VectorUpsertRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIdempotencyKey(string $var)
+    public function setIdempotencyKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->idempotency_key = $var;
 
         return $this;

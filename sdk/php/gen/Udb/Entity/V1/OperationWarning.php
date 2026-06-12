@@ -57,9 +57,9 @@ class OperationWarning extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCode(string $var)
+    public function setCode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->code = $var;
 
         return $this;
@@ -79,9 +79,9 @@ class OperationWarning extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMessage(string $var)
+    public function setMessage($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->message = $var;
 
         return $this;
@@ -101,7 +101,7 @@ class OperationWarning extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setMetadata(array|\Google\Protobuf\Internal\MapField $var)
+    public function setMetadata($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->metadata = $arr;

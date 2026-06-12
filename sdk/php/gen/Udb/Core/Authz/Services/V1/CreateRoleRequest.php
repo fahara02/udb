@@ -92,9 +92,9 @@ class CreateRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setName(string $var)
+    public function setName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->name = $var;
 
         return $this;
@@ -114,9 +114,9 @@ class CreateRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDescription(string $var)
+    public function setDescription($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->description = $var;
 
         return $this;
@@ -136,9 +136,9 @@ class CreateRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCreatedBy(string $var)
+    public function setCreatedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->created_by = $var;
 
         return $this;
@@ -158,9 +158,9 @@ class CreateRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRoleCode(string $var)
+    public function setRoleCode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->role_code = $var;
 
         return $this;
@@ -180,9 +180,9 @@ class CreateRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDomain(string $var)
+    public function setDomain($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->domain = $var;
 
         return $this;
@@ -202,9 +202,9 @@ class CreateRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -224,9 +224,9 @@ class CreateRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -234,7 +234,7 @@ class CreateRoleRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.RoleScopeType scope_type = 8 [json_name = "scopeType", (.google.api.field_behavior) = OPTIONAL];</code>
-     * @return int one of the values in {@see \Udb\Core\Authz\Entity\V1\RoleScopeType}
+     * @return int
      */
     public function getScopeType()
     {
@@ -243,10 +243,10 @@ class CreateRoleRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.RoleScopeType scope_type = 8 [json_name = "scopeType", (.google.api.field_behavior) = OPTIONAL];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authz\Entity\V1\RoleScopeType}
+     * @param int $var
      * @return $this
      */
-    public function setScopeType(int $var)
+    public function setScopeType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authz\Entity\V1\RoleScopeType::class);
         $this->scope_type = $var;
@@ -268,9 +268,9 @@ class CreateRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAccessSurface(string $var)
+    public function setAccessSurface($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->access_surface = $var;
 
         return $this;
@@ -290,7 +290,7 @@ class CreateRoleRequest extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setMetadata(array|\Google\Protobuf\Internal\MapField $var)
+    public function setMetadata($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->metadata = $arr;

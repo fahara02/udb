@@ -75,8 +75,9 @@ class RollbackPolicyVersionRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\GovernanceActor $var
      * @return $this
      */
-    public function setActor(\Udb\Core\Authz\Services\V1\GovernanceActor|null $var)
+    public function setActor($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\GovernanceActor::class);
         $this->actor = $var;
 
         return $this;
@@ -96,9 +97,9 @@ class RollbackPolicyVersionRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicySetId(string $var)
+    public function setPolicySetId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_set_id = $var;
 
         return $this;
@@ -122,9 +123,9 @@ class RollbackPolicyVersionRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTargetVersionId(string $var)
+    public function setTargetVersionId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->target_version_id = $var;
 
         return $this;
@@ -144,9 +145,9 @@ class RollbackPolicyVersionRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setChangeReason(string $var)
+    public function setChangeReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->change_reason = $var;
 
         return $this;

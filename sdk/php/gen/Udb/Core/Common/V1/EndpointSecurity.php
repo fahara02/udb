@@ -120,7 +120,7 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.AuthMode mode = 1 [json_name = "mode"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\AuthMode}
+     * @return int
      */
     public function getMode()
     {
@@ -129,10 +129,10 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.AuthMode mode = 1 [json_name = "mode"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\AuthMode}
+     * @param int $var
      * @return $this
      */
-    public function setMode(int $var)
+    public function setMode($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\AuthMode::class);
         $this->mode = $var;
@@ -154,7 +154,7 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRoles(array|RepeatedField $var)
+    public function setRoles($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->roles = $arr;
@@ -176,7 +176,7 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setScopes(array|RepeatedField $var)
+    public function setScopes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->scopes = $arr;
@@ -198,8 +198,9 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setTenantRequired(bool $var)
+    public function setTenantRequired($var)
     {
+        GPBUtil::checkBool($var);
         $this->tenant_required = $var;
 
         return $this;
@@ -219,8 +220,9 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setCsrfRequired(bool $var)
+    public function setCsrfRequired($var)
     {
+        GPBUtil::checkBool($var);
         $this->csrf_required = $var;
 
         return $this;
@@ -240,9 +242,9 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicyRef(string $var)
+    public function setPolicyRef($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_ref = $var;
 
         return $this;
@@ -262,8 +264,9 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setInternalGrpcOnly(bool $var)
+    public function setInternalGrpcOnly($var)
     {
+        GPBUtil::checkBool($var);
         $this->internal_grpc_only = $var;
 
         return $this;
@@ -283,7 +286,7 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRequiredAssuranceLevel(int $var)
+    public function setRequiredAssuranceLevel($var)
     {
         GPBUtil::checkInt32($var);
         $this->required_assurance_level = $var;
@@ -293,7 +296,7 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
-     * @return RepeatedField<int> one of the values in {@see \Udb\Core\Common\V1\CredentialType}
+     * @return RepeatedField<int>
      */
     public function getAllowedCredentialTypes()
     {
@@ -302,10 +305,10 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>repeated .udb.core.common.v1.CredentialType allowed_credential_types = 9 [json_name = "allowedCredentialTypes"];</code>
-     * @param int[] $var one of the values in {@see \Udb\Core\Common\V1\CredentialType}
+     * @param int[] $var
      * @return $this
      */
-    public function setAllowedCredentialTypes(array|RepeatedField $var)
+    public function setAllowedCredentialTypes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::ENUM, \Udb\Core\Common\V1\CredentialType::class);
         $this->allowed_credential_types = $arr;
@@ -327,9 +330,9 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRateLimitPolicyRef(string $var)
+    public function setRateLimitPolicyRef($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->rate_limit_policy_ref = $var;
 
         return $this;
@@ -349,9 +352,9 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAbusePolicyRef(string $var)
+    public function setAbusePolicyRef($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->abuse_policy_ref = $var;
 
         return $this;
@@ -371,9 +374,9 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAuditEventType(string $var)
+    public function setAuditEventType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->audit_event_type = $var;
 
         return $this;
@@ -393,9 +396,9 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDecisionResource(string $var)
+    public function setDecisionResource($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->decision_resource = $var;
 
         return $this;
@@ -415,9 +418,9 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOwnerField(string $var)
+    public function setOwnerField($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->owner_field = $var;
 
         return $this;
@@ -437,9 +440,9 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantField(string $var)
+    public function setTenantField($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_field = $var;
 
         return $this;
@@ -459,9 +462,9 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectField(string $var)
+    public function setProjectField($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_field = $var;
 
         return $this;
@@ -481,8 +484,9 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIdempotencyRequired(bool $var)
+    public function setIdempotencyRequired($var)
     {
+        GPBUtil::checkBool($var);
         $this->idempotency_required = $var;
 
         return $this;
@@ -502,8 +506,9 @@ class EndpointSecurity extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRequestContextRequired(bool $var)
+    public function setRequestContextRequired($var)
     {
+        GPBUtil::checkBool($var);
         $this->request_context_required = $var;
 
         return $this;

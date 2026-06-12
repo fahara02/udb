@@ -52,7 +52,7 @@ class ListApiKeysResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Apikey\Entity\V1\ApiKey[] $var
      * @return $this
      */
-    public function setKeys(array|RepeatedField $var)
+    public function setKeys($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Apikey\Entity\V1\ApiKey::class);
         $this->keys = $arr;
@@ -84,8 +84,9 @@ class ListApiKeysResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\PageResponse $var
      * @return $this
      */
-    public function setPage(\Udb\Core\Common\V1\PageResponse|null $var)
+    public function setPage($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\PageResponse::class);
         $this->page = $var;
 
         return $this;

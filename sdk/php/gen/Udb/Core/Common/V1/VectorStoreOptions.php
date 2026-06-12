@@ -106,7 +106,7 @@ class VectorStoreOptions extends \Google\Protobuf\Internal\Message
      * Which vector DB
      *
      * Generated from protobuf field <code>.udb.core.common.v1.VectorBackendType backend = 1 [json_name = "backend"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\VectorBackendType}
+     * @return int
      */
     public function getBackend()
     {
@@ -117,10 +117,10 @@ class VectorStoreOptions extends \Google\Protobuf\Internal\Message
      * Which vector DB
      *
      * Generated from protobuf field <code>.udb.core.common.v1.VectorBackendType backend = 1 [json_name = "backend"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\VectorBackendType}
+     * @param int $var
      * @return $this
      */
-    public function setBackend(int $var)
+    public function setBackend($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\VectorBackendType::class);
         $this->backend = $var;
@@ -146,9 +146,9 @@ class VectorStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCollectionName(string $var)
+    public function setCollectionName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->collection_name = $var;
 
         return $this;
@@ -172,7 +172,7 @@ class VectorStoreOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setDimension(int $var)
+    public function setDimension($var)
     {
         GPBUtil::checkInt32($var);
         $this->dimension = $var;
@@ -184,7 +184,7 @@ class VectorStoreOptions extends \Google\Protobuf\Internal\Message
      * Similarity metric
      *
      * Generated from protobuf field <code>.udb.core.common.v1.VectorDistanceMetric distance = 4 [json_name = "distance"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\VectorDistanceMetric}
+     * @return int
      */
     public function getDistance()
     {
@@ -195,10 +195,10 @@ class VectorStoreOptions extends \Google\Protobuf\Internal\Message
      * Similarity metric
      *
      * Generated from protobuf field <code>.udb.core.common.v1.VectorDistanceMetric distance = 4 [json_name = "distance"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\VectorDistanceMetric}
+     * @param int $var
      * @return $this
      */
-    public function setDistance(int $var)
+    public function setDistance($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\VectorDistanceMetric::class);
         $this->distance = $var;
@@ -224,7 +224,7 @@ class VectorStoreOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setShardCount(int $var)
+    public function setShardCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->shard_count = $var;
@@ -246,7 +246,7 @@ class VectorStoreOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setReplicaCount(int $var)
+    public function setReplicaCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->replica_count = $var;
@@ -272,8 +272,9 @@ class VectorStoreOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setOnDisk(bool $var)
+    public function setOnDisk($var)
     {
+        GPBUtil::checkBool($var);
         $this->on_disk = $var;
 
         return $this;
@@ -297,9 +298,9 @@ class VectorStoreOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPayloadSchemaJson(string $var)
+    public function setPayloadSchemaJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->payload_schema_json = $var;
 
         return $this;
@@ -323,7 +324,7 @@ class VectorStoreOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setHnswM(int $var)
+    public function setHnswM($var)
     {
         GPBUtil::checkInt32($var);
         $this->hnsw_m = $var;
@@ -345,7 +346,7 @@ class VectorStoreOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setHnswEfConstruction(int $var)
+    public function setHnswEfConstruction($var)
     {
         GPBUtil::checkInt32($var);
         $this->hnsw_ef_construction = $var;

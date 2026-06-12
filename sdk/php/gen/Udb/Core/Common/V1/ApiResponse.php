@@ -66,8 +66,9 @@ class ApiResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setSuccess(bool $var)
+    public function setSuccess($var)
     {
+        GPBUtil::checkBool($var);
         $this->success = $var;
 
         return $this;
@@ -97,8 +98,9 @@ class ApiResponse extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Any $var
      * @return $this
      */
-    public function setData(\Google\Protobuf\Any|null $var)
+    public function setData($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Any::class);
         $this->data = $var;
 
         return $this;
@@ -128,8 +130,9 @@ class ApiResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ApiError $var
      * @return $this
      */
-    public function setError(\Udb\Core\Common\V1\ApiError|null $var)
+    public function setError($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
 
         return $this;
@@ -159,8 +162,9 @@ class ApiResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\ResponseMeta $var
      * @return $this
      */
-    public function setMeta(\Udb\Core\Common\V1\ResponseMeta|null $var)
+    public function setMeta($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ResponseMeta::class);
         $this->meta = $var;
 
         return $this;

@@ -105,9 +105,9 @@ class ScimDirectoryState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setScimDirectoryStateId(string $var)
+    public function setScimDirectoryStateId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->scim_directory_state_id = $var;
 
         return $this;
@@ -127,9 +127,9 @@ class ScimDirectoryState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -149,9 +149,9 @@ class ScimDirectoryState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProviderId(string $var)
+    public function setProviderId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->provider_id = $var;
 
         return $this;
@@ -177,9 +177,9 @@ class ScimDirectoryState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCursor(string $var)
+    public function setCursor($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->cursor = $var;
 
         return $this;
@@ -209,8 +209,9 @@ class ScimDirectoryState extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setLastSyncAt(\Google\Protobuf\Timestamp|null $var)
+    public function setLastSyncAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->last_sync_at = $var;
 
         return $this;
@@ -230,7 +231,7 @@ class ScimDirectoryState extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setFailureCount(int $var)
+    public function setFailureCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->failure_count = $var;
@@ -252,9 +253,9 @@ class ScimDirectoryState extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLastError(string $var)
+    public function setLastError($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->last_error = $var;
 
         return $this;
@@ -262,7 +263,7 @@ class ScimDirectoryState extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.DeprovisionPolicy deprovision_policy = 8 [json_name = "deprovisionPolicy", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Idp\Entity\V1\DeprovisionPolicy}
+     * @return int
      */
     public function getDeprovisionPolicy()
     {
@@ -271,10 +272,10 @@ class ScimDirectoryState extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.DeprovisionPolicy deprovision_policy = 8 [json_name = "deprovisionPolicy", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Idp\Entity\V1\DeprovisionPolicy}
+     * @param int $var
      * @return $this
      */
-    public function setDeprovisionPolicy(int $var)
+    public function setDeprovisionPolicy($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Idp\Entity\V1\DeprovisionPolicy::class);
         $this->deprovision_policy = $var;
@@ -306,8 +307,9 @@ class ScimDirectoryState extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;
@@ -337,8 +339,9 @@ class ScimDirectoryState extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setUpdatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setUpdatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->updated_at = $var;
 
         return $this;

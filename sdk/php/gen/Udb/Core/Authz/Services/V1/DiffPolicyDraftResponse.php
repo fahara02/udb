@@ -55,7 +55,7 @@ class DiffPolicyDraftResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\PolicyDiffEntry[] $var
      * @return $this
      */
-    public function setEntries(array|RepeatedField $var)
+    public function setEntries($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authz\Services\V1\PolicyDiffEntry::class);
         $this->entries = $arr;
@@ -81,9 +81,9 @@ class DiffPolicyDraftResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDiffJson(string $var)
+    public function setDiffJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->diff_json = $var;
 
         return $this;

@@ -98,9 +98,9 @@ class RegisterUploadRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -120,9 +120,9 @@ class RegisterUploadRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -142,9 +142,9 @@ class RegisterUploadRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFilename(string $var)
+    public function setFilename($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->filename = $var;
 
         return $this;
@@ -164,9 +164,9 @@ class RegisterUploadRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setContentType(string $var)
+    public function setContentType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->content_type = $var;
 
         return $this;
@@ -186,9 +186,9 @@ class RegisterUploadRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFileType(string $var)
+    public function setFileType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->file_type = $var;
 
         return $this;
@@ -208,9 +208,9 @@ class RegisterUploadRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReferenceId(string $var)
+    public function setReferenceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reference_id = $var;
 
         return $this;
@@ -230,9 +230,9 @@ class RegisterUploadRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReferenceType(string $var)
+    public function setReferenceType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reference_type = $var;
 
         return $this;
@@ -266,8 +266,9 @@ class RegisterUploadRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsPublic(bool $var)
+    public function setIsPublic($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_public = $var;
 
         return $this;
@@ -287,7 +288,7 @@ class RegisterUploadRequest extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setExpiresInMinutes(int $var)
+    public function setExpiresInMinutes($var)
     {
         GPBUtil::checkInt32($var);
         $this->expires_in_minutes = $var;
@@ -313,7 +314,7 @@ class RegisterUploadRequest extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setSizeBytes(int|string $var)
+    public function setSizeBytes($var)
     {
         GPBUtil::checkInt64($var);
         $this->size_bytes = $var;

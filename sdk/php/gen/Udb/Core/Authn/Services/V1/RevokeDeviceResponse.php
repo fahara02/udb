@@ -57,8 +57,9 @@ class RevokeDeviceResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRevoked(bool $var)
+    public function setRevoked($var)
     {
+        GPBUtil::checkBool($var);
         $this->revoked = $var;
 
         return $this;
@@ -78,9 +79,9 @@ class RevokeDeviceResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeviceId(string $var)
+    public function setDeviceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->device_id = $var;
 
         return $this;
@@ -100,7 +101,7 @@ class RevokeDeviceResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setSessionsRevoked(int|string $var)
+    public function setSessionsRevoked($var)
     {
         GPBUtil::checkInt64($var);
         $this->sessions_revoked = $var;

@@ -47,8 +47,9 @@ class ValidateCSRFResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setValid(bool $var)
+    public function setValid($var)
     {
+        GPBUtil::checkBool($var);
         $this->valid = $var;
 
         return $this;

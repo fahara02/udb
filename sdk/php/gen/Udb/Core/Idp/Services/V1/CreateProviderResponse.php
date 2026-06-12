@@ -57,8 +57,9 @@ class CreateProviderResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Idp\Entity\V1\IdentityProvider $var
      * @return $this
      */
-    public function setProvider(\Udb\Core\Idp\Entity\V1\IdentityProvider|null $var)
+    public function setProvider($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Idp\Entity\V1\IdentityProvider::class);
         $this->provider = $var;
 
         return $this;

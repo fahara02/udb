@@ -60,9 +60,9 @@ class SendOTPResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOtpId(string $var)
+    public function setOtpId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->otp_id = $var;
 
         return $this;
@@ -82,7 +82,7 @@ class SendOTPResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setExpiresInSeconds(int $var)
+    public function setExpiresInSeconds($var)
     {
         GPBUtil::checkInt32($var);
         $this->expires_in_seconds = $var;
@@ -108,7 +108,7 @@ class SendOTPResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setCooldownSeconds(int $var)
+    public function setCooldownSeconds($var)
     {
         GPBUtil::checkInt32($var);
         $this->cooldown_seconds = $var;

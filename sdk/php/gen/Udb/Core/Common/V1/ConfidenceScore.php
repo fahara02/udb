@@ -52,8 +52,9 @@ class ConfidenceScore extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setValue(float $var)
+    public function setValue($var)
     {
+        GPBUtil::checkFloat($var);
         $this->value = $var;
 
         return $this;
@@ -61,7 +62,7 @@ class ConfidenceScore extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ConfidenceLevel level = 2 [json_name = "level"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\ConfidenceLevel}
+     * @return int
      */
     public function getLevel()
     {
@@ -70,10 +71,10 @@ class ConfidenceScore extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ConfidenceLevel level = 2 [json_name = "level"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\ConfidenceLevel}
+     * @param int $var
      * @return $this
      */
-    public function setLevel(int $var)
+    public function setLevel($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\ConfidenceLevel::class);
         $this->level = $var;

@@ -72,9 +72,9 @@ class ForeignKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReferencesTable(string $var)
+    public function setReferencesTable($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->references_table = $var;
 
         return $this;
@@ -94,9 +94,9 @@ class ForeignKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReferencesColumn(string $var)
+    public function setReferencesColumn($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->references_column = $var;
 
         return $this;
@@ -116,9 +116,9 @@ class ForeignKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReferencesSchema(string $var)
+    public function setReferencesSchema($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->references_schema = $var;
 
         return $this;
@@ -126,7 +126,7 @@ class ForeignKey extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ReferentialAction on_delete = 4 [json_name = "onDelete"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\ReferentialAction}
+     * @return int
      */
     public function getOnDelete()
     {
@@ -135,10 +135,10 @@ class ForeignKey extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ReferentialAction on_delete = 4 [json_name = "onDelete"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\ReferentialAction}
+     * @param int $var
      * @return $this
      */
-    public function setOnDelete(int $var)
+    public function setOnDelete($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\ReferentialAction::class);
         $this->on_delete = $var;
@@ -148,7 +148,7 @@ class ForeignKey extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ReferentialAction on_update = 5 [json_name = "onUpdate"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\ReferentialAction}
+     * @return int
      */
     public function getOnUpdate()
     {
@@ -157,10 +157,10 @@ class ForeignKey extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ReferentialAction on_update = 5 [json_name = "onUpdate"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\ReferentialAction}
+     * @param int $var
      * @return $this
      */
-    public function setOnUpdate(int $var)
+    public function setOnUpdate($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\ReferentialAction::class);
         $this->on_update = $var;
@@ -182,9 +182,9 @@ class ForeignKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setConstraintName(string $var)
+    public function setConstraintName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->constraint_name = $var;
 
         return $this;

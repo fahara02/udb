@@ -88,9 +88,9 @@ class ResolveExternalIdentityResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -110,9 +110,9 @@ class ResolveExternalIdentityResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSubject(string $var)
+    public function setSubject($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->subject = $var;
 
         return $this;
@@ -132,9 +132,9 @@ class ResolveExternalIdentityResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEmail(string $var)
+    public function setEmail($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->email = $var;
 
         return $this;
@@ -158,8 +158,9 @@ class ResolveExternalIdentityResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setProvisioned(bool $var)
+    public function setProvisioned($var)
     {
+        GPBUtil::checkBool($var);
         $this->provisioned = $var;
 
         return $this;
@@ -183,8 +184,9 @@ class ResolveExternalIdentityResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setLinked(bool $var)
+    public function setLinked($var)
     {
+        GPBUtil::checkBool($var);
         $this->linked = $var;
 
         return $this;
@@ -204,7 +206,7 @@ class ResolveExternalIdentityResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRoles(array|RepeatedField $var)
+    public function setRoles($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->roles = $arr;
@@ -214,7 +216,7 @@ class ResolveExternalIdentityResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.AssuranceLevel assurance = 7 [json_name = "assurance"];</code>
-     * @return int one of the values in {@see \Udb\Core\Idp\Entity\V1\AssuranceLevel}
+     * @return int
      */
     public function getAssurance()
     {
@@ -223,10 +225,10 @@ class ResolveExternalIdentityResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.AssuranceLevel assurance = 7 [json_name = "assurance"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Idp\Entity\V1\AssuranceLevel}
+     * @param int $var
      * @return $this
      */
-    public function setAssurance(int $var)
+    public function setAssurance($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Idp\Entity\V1\AssuranceLevel::class);
         $this->assurance = $var;
@@ -248,9 +250,9 @@ class ResolveExternalIdentityResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDetail(string $var)
+    public function setDetail($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->detail = $var;
 
         return $this;

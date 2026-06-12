@@ -582,7 +582,7 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                 let values = json_array_values(value, "array_string")?
                     .iter()
                     .map(|item| {
-                        item.as_str().map(str::to_string).ok_or_else(|| {
+                        item.as_str().map(strip_nul).ok_or_else(|| {
                             tonic::Status::invalid_argument(
                                 "array_string params must contain only strings",
                             )
@@ -630,23 +630,80 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                     .collect::<Result<Vec<_>, _>>()?;
                 query.bind(values)
             }
-            "json" => query.bind(sqlx::types::Json(value.clone())),
+            "json" => query.bind(sqlx::types::Json(strip_nul_json(value))),
             "timestamptz" => {
-                // Parse the RFC-3339 text back into a real `DateTime<Utc>` so sqlx
-                // binds a `timestamptz` (a bare text bind is rejected by Postgres
-                // on INSERT/UPDATE into a `timestamp with time zone` column).
-                match value
-                    .as_str()
-                    .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
-                {
-                    Some(dt) => query.bind(dt.with_timezone(&chrono::Utc)),
-                    None => bind_generic_pg_param(query, value),
+                // Parse RFC-3339 text back into a real DateTime<Utc> so sqlx
+                // binds timestamptz. A typed NULL must bind as a nullable
+                // timestamptz too; otherwise compiler-emitted `$n::TIMESTAMPTZ`
+                // placeholders can still receive an untyped text/null bind.
+                match value {
+                    JsonValue::Null => query.bind(Option::<chrono::DateTime<chrono::Utc>>::None),
+                    JsonValue::String(raw) if raw.trim().is_empty() => {
+                        query.bind(Option::<chrono::DateTime<chrono::Utc>>::None)
+                    }
+                    JsonValue::String(raw) => {
+                        let dt = chrono::DateTime::parse_from_rfc3339(raw).map_err(|err| {
+                            tonic::Status::invalid_argument(format!(
+                                "timestamptz params must be RFC3339 strings: {err}"
+                            ))
+                        })?;
+                        query.bind(dt.with_timezone(&chrono::Utc))
+                    }
+                    _ => {
+                        return Err(tonic::Status::invalid_argument(
+                            "timestamptz params must be strings or null",
+                        ));
+                    }
                 }
             }
+            "uuid" => match value {
+                JsonValue::Null => query.bind(Option::<uuid::Uuid>::None),
+                JsonValue::String(raw) if raw.trim().is_empty() => {
+                    query.bind(Option::<uuid::Uuid>::None)
+                }
+                JsonValue::String(raw) => {
+                    let parsed = uuid::Uuid::parse_str(raw).map_err(|err| {
+                        tonic::Status::invalid_argument(format!(
+                            "uuid params must be UUID strings: {err}"
+                        ))
+                    })?;
+                    query.bind(parsed)
+                }
+                _ => {
+                    return Err(tonic::Status::invalid_argument(
+                        "uuid params must be strings or null",
+                    ));
+                }
+            },
             _ => bind_generic_pg_param(query, value),
         };
     }
     Ok(query)
+}
+
+/// A NUL (`0x00`) byte can never be stored in a Postgres `text`/`varchar`/
+/// `text[]`/`json(b)` value. Strip NULs at the bind edge so generic dispatch
+/// cannot fail a whole statement with Postgres' UTF-8 NUL rejection.
+fn strip_nul(s: &str) -> String {
+    if s.contains('\u{0}') {
+        s.replace('\u{0}', "")
+    } else {
+        s.to_string()
+    }
+}
+
+/// Recursively strip NUL bytes from every string in a JSON value (for JSONB binds).
+fn strip_nul_json(value: &JsonValue) -> JsonValue {
+    match value {
+        JsonValue::String(s) if s.contains('\u{0}') => JsonValue::String(s.replace('\u{0}', "")),
+        JsonValue::Array(items) => JsonValue::Array(items.iter().map(strip_nul_json).collect()),
+        JsonValue::Object(map) => JsonValue::Object(
+            map.iter()
+                .map(|(k, v)| (k.clone(), strip_nul_json(v)))
+                .collect(),
+        ),
+        other => other.clone(),
+    }
 }
 
 fn bind_generic_pg_param<'q>(
@@ -669,8 +726,10 @@ fn bind_generic_pg_param<'q>(
                 query.bind(number.as_f64().unwrap_or_default())
             }
         }
-        JsonValue::String(value) => query.bind(value.clone()),
-        JsonValue::Array(_) | JsonValue::Object(_) => query.bind(sqlx::types::Json(value.clone())),
+        JsonValue::String(value) => query.bind(strip_nul(value)),
+        JsonValue::Array(_) | JsonValue::Object(_) => {
+            query.bind(sqlx::types::Json(strip_nul_json(value)))
+        }
     }
 }
 

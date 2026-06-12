@@ -63,7 +63,7 @@ class GenerateRecoveryCodesResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setCodes(array|RepeatedField $var)
+    public function setCodes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->codes = $arr;
@@ -85,7 +85,7 @@ class GenerateRecoveryCodesResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setGenerated(int $var)
+    public function setGenerated($var)
     {
         GPBUtil::checkInt32($var);
         $this->generated = $var;

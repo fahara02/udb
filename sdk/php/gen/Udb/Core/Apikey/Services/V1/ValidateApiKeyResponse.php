@@ -75,8 +75,9 @@ class ValidateApiKeyResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setValid(bool $var)
+    public function setValid($var)
     {
+        GPBUtil::checkBool($var);
         $this->valid = $var;
 
         return $this;
@@ -96,9 +97,9 @@ class ValidateApiKeyResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKeyId(string $var)
+    public function setKeyId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->key_id = $var;
 
         return $this;
@@ -118,9 +119,9 @@ class ValidateApiKeyResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOwnerId(string $var)
+    public function setOwnerId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->owner_id = $var;
 
         return $this;
@@ -128,7 +129,7 @@ class ValidateApiKeyResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.apikey.entity.v1.ApiKeyOwnerType owner_type = 4 [json_name = "ownerType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Apikey\Entity\V1\ApiKeyOwnerType}
+     * @return int
      */
     public function getOwnerType()
     {
@@ -137,10 +138,10 @@ class ValidateApiKeyResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.apikey.entity.v1.ApiKeyOwnerType owner_type = 4 [json_name = "ownerType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Apikey\Entity\V1\ApiKeyOwnerType}
+     * @param int $var
      * @return $this
      */
-    public function setOwnerType(int $var)
+    public function setOwnerType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Apikey\Entity\V1\ApiKeyOwnerType::class);
         $this->owner_type = $var;
@@ -166,7 +167,7 @@ class ValidateApiKeyResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setScopes(array|RepeatedField $var)
+    public function setScopes($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->scopes = $arr;
@@ -188,8 +189,9 @@ class ValidateApiKeyResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRateLimited(bool $var)
+    public function setRateLimited($var)
     {
+        GPBUtil::checkBool($var);
         $this->rate_limited = $var;
 
         return $this;

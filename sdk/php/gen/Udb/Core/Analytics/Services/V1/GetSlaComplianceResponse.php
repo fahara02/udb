@@ -57,7 +57,7 @@ class GetSlaComplianceResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Analytics\Services\V1\SlaComplianceEntry[] $var
      * @return $this
      */
-    public function setEntries(array|RepeatedField $var)
+    public function setEntries($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Analytics\Services\V1\SlaComplianceEntry::class);
         $this->entries = $arr;
@@ -79,8 +79,9 @@ class GetSlaComplianceResponse extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setOverallP99ComplianceRate(float $var)
+    public function setOverallP99ComplianceRate($var)
     {
+        GPBUtil::checkDouble($var);
         $this->overall_p99_compliance_rate = $var;
 
         return $this;
@@ -100,8 +101,9 @@ class GetSlaComplianceResponse extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setOverallErrorRateComplianceRate(float $var)
+    public function setOverallErrorRateComplianceRate($var)
     {
+        GPBUtil::checkDouble($var);
         $this->overall_error_rate_compliance_rate = $var;
 
         return $this;

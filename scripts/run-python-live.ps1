@@ -8,7 +8,7 @@
 param(
     [string]$Broker = "", [string]$Auth = "", [string]$Username = "", [string]$Password = "",
     [string]$Tenant = "", [string]$Project = "", [string]$Backends = "", [string]$Bucket = "",
-    [string]$K = "test_live_generated_rpc_surface", [string]$EnvFile = ""
+    [string]$K = "test_live_generated_rpc_surface or test_rpc_surface", [string]$EnvFile = ""
 )
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot

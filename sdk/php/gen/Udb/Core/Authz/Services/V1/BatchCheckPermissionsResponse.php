@@ -54,7 +54,7 @@ class BatchCheckPermissionsResponse extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setResults(array|\Google\Protobuf\Internal\MapField $var)
+    public function setResults($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::BOOL);
         $this->results = $arr;

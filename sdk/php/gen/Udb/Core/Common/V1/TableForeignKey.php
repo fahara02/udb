@@ -92,7 +92,7 @@ class TableForeignKey extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setColumns(array|RepeatedField $var)
+    public function setColumns($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->columns = $arr;
@@ -114,9 +114,9 @@ class TableForeignKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReferencesTable(string $var)
+    public function setReferencesTable($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->references_table = $var;
 
         return $this;
@@ -136,7 +136,7 @@ class TableForeignKey extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setReferencesColumn(array|RepeatedField $var)
+    public function setReferencesColumn($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->references_column = $arr;
@@ -158,9 +158,9 @@ class TableForeignKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReferencesSchema(string $var)
+    public function setReferencesSchema($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->references_schema = $var;
 
         return $this;
@@ -168,7 +168,7 @@ class TableForeignKey extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ReferentialAction on_delete = 5 [json_name = "onDelete"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\ReferentialAction}
+     * @return int
      */
     public function getOnDelete()
     {
@@ -177,10 +177,10 @@ class TableForeignKey extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ReferentialAction on_delete = 5 [json_name = "onDelete"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\ReferentialAction}
+     * @param int $var
      * @return $this
      */
-    public function setOnDelete(int $var)
+    public function setOnDelete($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\ReferentialAction::class);
         $this->on_delete = $var;
@@ -190,7 +190,7 @@ class TableForeignKey extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ReferentialAction on_update = 6 [json_name = "onUpdate"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\ReferentialAction}
+     * @return int
      */
     public function getOnUpdate()
     {
@@ -199,10 +199,10 @@ class TableForeignKey extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.ReferentialAction on_update = 6 [json_name = "onUpdate"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\ReferentialAction}
+     * @param int $var
      * @return $this
      */
-    public function setOnUpdate(int $var)
+    public function setOnUpdate($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\ReferentialAction::class);
         $this->on_update = $var;
@@ -224,9 +224,9 @@ class TableForeignKey extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setConstraintName(string $var)
+    public function setConstraintName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->constraint_name = $var;
 
         return $this;
@@ -246,8 +246,9 @@ class TableForeignKey extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setNotValid(bool $var)
+    public function setNotValid($var)
     {
+        GPBUtil::checkBool($var);
         $this->not_valid = $var;
 
         return $this;
@@ -267,8 +268,9 @@ class TableForeignKey extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setDeferrable(bool $var)
+    public function setDeferrable($var)
     {
+        GPBUtil::checkBool($var);
         $this->deferrable = $var;
 
         return $this;
@@ -288,8 +290,9 @@ class TableForeignKey extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setInitiallyDeferred(bool $var)
+    public function setInitiallyDeferred($var)
     {
+        GPBUtil::checkBool($var);
         $this->initially_deferred = $var;
 
         return $this;

@@ -91,7 +91,7 @@ class CacheOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.CacheBackendType backend = 1 [json_name = "backend"];</code>
-     * @return int one of the values in {@see \Udb\Core\Common\V1\CacheBackendType}
+     * @return int
      */
     public function getBackend()
     {
@@ -100,10 +100,10 @@ class CacheOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.common.v1.CacheBackendType backend = 1 [json_name = "backend"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Common\V1\CacheBackendType}
+     * @param int $var
      * @return $this
      */
-    public function setBackend(int $var)
+    public function setBackend($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Common\V1\CacheBackendType::class);
         $this->backend = $var;
@@ -129,9 +129,9 @@ class CacheOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKeyPattern(string $var)
+    public function setKeyPattern($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->key_pattern = $var;
 
         return $this;
@@ -155,7 +155,7 @@ class CacheOptions extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setTtlSeconds(int $var)
+    public function setTtlSeconds($var)
     {
         GPBUtil::checkInt32($var);
         $this->ttl_seconds = $var;
@@ -181,8 +181,9 @@ class CacheOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setWriteThrough(bool $var)
+    public function setWriteThrough($var)
     {
+        GPBUtil::checkBool($var);
         $this->write_through = $var;
 
         return $this;
@@ -206,8 +207,9 @@ class CacheOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setReadThrough(bool $var)
+    public function setReadThrough($var)
     {
+        GPBUtil::checkBool($var);
         $this->read_through = $var;
 
         return $this;
@@ -231,9 +233,9 @@ class CacheOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEvictionPolicy(string $var)
+    public function setEvictionPolicy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->eviction_policy = $var;
 
         return $this;
@@ -257,9 +259,9 @@ class CacheOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setClusterEnvKey(string $var)
+    public function setClusterEnvKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->cluster_env_key = $var;
 
         return $this;
@@ -283,9 +285,9 @@ class CacheOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNamespace(string $var)
+    public function setNamespace($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->namespace = $var;
 
         return $this;

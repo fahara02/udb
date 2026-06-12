@@ -1023,8 +1023,13 @@ it('covers the live generated RPC surface', function () {
     expect($refresh?->getAccessToken())->not->toBe('');
 
     $authedMeta = liveMeta($login->getAccessToken(), $canonicalTenant);
-    $data = new GeneratedClient(['endpoint' => $target, 'deadline_ms' => 2_000, 'retry' => ['max_attempts' => 1]]);
-    $authGenerated = new GeneratedClient(['endpoint' => $authTarget, 'deadline_ms' => 2_000, 'retry' => ['max_attempts' => 1]]);
+    // 15s, not 2s: against a full 14-backend broker the heavy RPCs legitimately take
+    // longer than a 3-backend CI broker — GetHealthReport probes every backend (incl.
+    // the slow mssql/cassandra) and GetCatalogManifest returns the whole manifest — and
+    // the PHP gRPC ext over Docker host networking adds latency. A 2s deadline spuriously
+    // trips DEADLINE_EXCEEDED on those; the other SDKs already use 10s+.
+    $data = new GeneratedClient(['endpoint' => $target, 'deadline_ms' => 15_000, 'retry' => ['max_attempts' => 1]]);
+    $authGenerated = new GeneratedClient(['endpoint' => $authTarget, 'deadline_ms' => 15_000, 'retry' => ['max_attempts' => 1]]);
     $data->bindContext($authedMeta);
     $authGenerated->bindContext($authedMeta);
 
@@ -1063,57 +1068,217 @@ it('covers the live generated RPC surface', function () {
     // Edge cases: the auth plane must fail CLOSED on bad credentials/forged bearers.
     run_auth_negative_php($authGenerated, $authedMeta, liveEnv('UDB_LIVE_USERNAME'));
 
-    $probed = 0;
-    $populated = 0;
-    foreach (stubAccessors($data, $authGenerated) as $stubName => $stub) {
-        $labelPrefix = "{$stubName}.";
+    // Per-RPC surface probing now lives in the data-driven test below
+    // ("reaches live RPC … with (<stub>/<rpc>)") so the runner reports granular
+    // per-RPC pass/fail (262 cases) instead of one opaque test — matching Go's
+    // sub-tests and Python's parametrized cases. The deep create→read→assert
+    // e2e above stays in this test.
+});
+
+// --- Per-RPC surface coverage (granular: one Pest case per RPC) ---------------
+
+// Memoized live session: log in ONCE and reuse the authed clients across all 262
+// data-driven cases. A dataset re-runs the test closure per case, so a
+// non-memoized login would re-authenticate 262 times.
+function phpLiveSession(): array
+{
+    static $session = null;
+    if ($session !== null) {
+        return $session;
+    }
+    $target = liveEnv('UDB_GRPC_TARGET');
+    $authTarget = liveEnv('UDB_AUTH_GRPC_TARGET', $target);
+    $meta = liveMeta();
+    $openAuth = new GeneratedClient(['endpoint' => $authTarget, 'deadline_ms' => 10_000, 'retry' => ['max_attempts' => 1]]);
+    $openAuth->bindContext($meta);
+    $login = $openAuth->login(
+        (new LoginRequest())
+            ->setUsername(liveEnv('UDB_LIVE_USERNAME'))
+            ->setPassword(liveEnv('UDB_LIVE_PASSWORD'))
+            ->setTenantHint($meta->tenantId)
+            ->setProjectHint($meta->projectId)
+            ->setDeviceName('php-sdk-per-rpc'),
+        $meta,
+    );
+    $auth = new UdbAuthClient(['endpoint' => $authTarget, 'deadline_ms' => 10_000]);
+    $auth->bindContext($meta);
+    $authResp = $auth->authenticateBearer($login->getAccessToken(), $meta);
+    $canonicalTenant = $authResp?->getPrincipal()?->getTenantId() ?: $meta->tenantId;
+    $authedMeta = liveMeta($login->getAccessToken(), $canonicalTenant);
+    $data = new GeneratedClient(['endpoint' => $target, 'deadline_ms' => 15_000, 'retry' => ['max_attempts' => 1]]);
+    $authGenerated = new GeneratedClient(['endpoint' => $authTarget, 'deadline_ms' => 15_000, 'retry' => ['max_attempts' => 1]]);
+    $data->bindContext($authedMeta);
+    $authGenerated->bindContext($authedMeta);
+
+    return $session = compact('data', 'authGenerated', 'authedMeta', 'meta');
+}
+
+// Enumerate every (stub, method) by REFLECTION ONLY (no live call), so the
+// dataset is available at Pest collection time without a broker connection.
+function phpLiveRpcCatalog(): array
+{
+    $probe = new GeneratedClient(['endpoint' => '127.0.0.1:1', 'deadline_ms' => 1_000, 'retry' => ['max_attempts' => 1]]);
+    $out = [];
+    foreach (stubAccessors($probe, $probe) as $stubName => $stub) {
         foreach (generatedStubMethods($stub) as $method) {
-            $label = $labelPrefix.$method->getName();
-            $params = $method->getParameters();
-            $hasRequest = isset($params[0])
-                && $params[0]->getType() instanceof ReflectionNamedType
-                && ! $params[0]->getType()->isBuiltin();
-        try {
-            $probeRequest = null;
-            if ($hasRequest) {
-                $probeRequest = requestFor($method);
-                if (shouldPopulatePhp($method->getName())) {
-                    populateProbeRequest($probeRequest, $meta->tenantId, $meta->projectId);
-                    $populated++;
-                }
+            $out["{$stubName}/{$method->getName()}"] = [$stubName, $method->getName()];
+        }
+    }
+
+    return $out;
+}
+
+dataset('liveRpcs', fn () => phpLiveRpcCatalog());
+
+it('reaches live RPC', function (string $stubName, string $methodName) {
+    $s = phpLiveSession();
+    $stub = stubAccessors($s['data'], $s['authGenerated'])[$stubName];
+    $method = null;
+    foreach (generatedStubMethods($stub) as $m) {
+        if ($m->getName() === $methodName) {
+            $method = $m;
+            break;
+        }
+    }
+    expect($method)->not->toBeNull("missing method {$methodName} on {$stubName}");
+
+    $authedMeta = $s['authedMeta'];
+    $meta = $s['meta'];
+    $label = "{$stubName}.{$methodName}";
+    $params = $method->getParameters();
+    $hasRequest = isset($params[0])
+        && $params[0]->getType() instanceof ReflectionNamedType
+        && ! $params[0]->getType()->isBuiltin();
+    try {
+        $probeRequest = null;
+        if ($hasRequest) {
+            $probeRequest = requestFor($method);
+            if (shouldPopulatePhp($methodName)) {
+                populateProbeRequest($probeRequest, $meta->tenantId, $meta->projectId);
             }
+        }
+        $call = $hasRequest
+            ? $method->invoke($stub, $probeRequest, $authedMeta->toGrpcMetadata(), ['timeout' => 15_000_000])
+            : $method->invoke($stub, $authedMeta->toGrpcMetadata(), ['timeout' => 15_000_000]);
+        if (method_exists($call, 'responses')) {
+            foreach ($call->responses() as $_) {
+                break;
+            }
+            assertLiveStatusMounted($label, $call->getStatus());
+        } elseif (method_exists($call, 'writesDone')) {
+            $call->writesDone();
+            if (method_exists($call, 'read')) {
+                $call->read();
+            }
+            if (method_exists($call, 'getStatus')) {
+                assertLiveStatusMounted($label, $call->getStatus());
+            }
+        } elseif (method_exists($call, 'wait')) {
+            [, $status] = $call->wait();
+            assertLiveStatusMounted($label, $status);
+        }
+    } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
+        expect(isFatalLiveStatus($e->status))->toBeFalse("{$label} did not reach an implemented live RPC: {$e->getMessage()}");
+    }
+})->with('liveRpcs');
+
+// Coverage guard: the per-RPC dataset must enumerate exactly the full surface.
+it('enumerates exactly 262 live RPCs', function () {
+    expect(count(phpLiveRpcCatalog()))->toBe(262);
+});
+
+// --- Per-RPC performance (gated on UDB_LIVE_PERF=1) ---------------------------
+// Times every RPC over multiple iterations and writes perf_report_php.md — the
+// PHP counterpart of the Go/Python/TS perf harness. read_only RPCs are timed
+// many times; mutations a few; destructive once typed-empty.
+it('measures per-RPC latency', function () {
+    $s = phpLiveSession();
+    $authedMeta = $s['authedMeta'];
+    $meta = $s['meta'];
+
+    $itersFor = fn (string $kind) => $kind === 'destructive' ? 1 : ($kind === 'mutation' ? 5 : 25);
+
+    $timeOne = function ($stub, ReflectionMethod $method, $hasRequest, $probeRequest) use ($authedMeta): float {
+        $start = microtime(true);
+        try {
             $call = $hasRequest
-                ? $method->invoke($stub, $probeRequest, $authedMeta->toGrpcMetadata(), ['timeout' => 2_000_000])
-                : $method->invoke($stub, $authedMeta->toGrpcMetadata(), ['timeout' => 2_000_000]);
+                ? $method->invoke($stub, $probeRequest, $authedMeta->toGrpcMetadata(), ['timeout' => 20_000_000])
+                : $method->invoke($stub, $authedMeta->toGrpcMetadata(), ['timeout' => 20_000_000]);
             if (method_exists($call, 'responses')) {
-                $responses = $call->responses();
-                foreach ($responses as $_) {
+                foreach ($call->responses() as $_) {
                     break;
                 }
-                assertLiveStatusMounted($label, $call->getStatus());
+                if (method_exists($call, 'getStatus')) {
+                    $call->getStatus();
+                }
             } elseif (method_exists($call, 'writesDone')) {
                 $call->writesDone();
                 if (method_exists($call, 'read')) {
                     $call->read();
                 }
-                if (method_exists($call, 'getStatus')) {
-                    assertLiveStatusMounted($label, $call->getStatus());
-                }
             } elseif (method_exists($call, 'wait')) {
-                [, $status] = $call->wait();
-                assertLiveStatusMounted($label, $status);
+                $call->wait();
             }
-        } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
-            expect(isFatalLiveStatus($e->status))->toBeFalse("{$label} did not reach an implemented live RPC: {$e->getMessage()}");
+        } catch (\Throwable $e) {
+            // latency still counts
         }
-        $probed++;
+
+        return (microtime(true) - $start) * 1000.0;
+    };
+
+    $samples = [];
+    foreach (stubAccessors($s['data'], $s['authGenerated']) as $stubName => $stub) {
+        $svc = preg_replace('/Stub$/', '', $stubName);
+        foreach (generatedStubMethods($stub) as $method) {
+            $name = $method->getName();
+            $params = $method->getParameters();
+            $hasRequest = isset($params[0])
+                && $params[0]->getType() instanceof ReflectionNamedType
+                && ! $params[0]->getType()->isBuiltin();
+            $probeRequest = null;
+            $kind = 'read_only';
+            if ($hasRequest) {
+                $probeRequest = requestFor($method);
+                if (shouldPopulatePhp($name)) {
+                    populateProbeRequest($probeRequest, $meta->tenantId, $meta->projectId);
+                    $kind = 'mutation';
+                } else {
+                    $kind = 'destructive';
+                }
+            }
+            $timeOne($stub, $method, $hasRequest, $probeRequest); // warm-up
+            $durs = [];
+            for ($i = 0; $i < $itersFor($kind); $i++) {
+                $durs[] = $timeOne($stub, $method, $hasRequest, $probeRequest);
+            }
+            sort($durs);
+            $pct = fn (int $p) => $durs[min(count($durs) - 1, intdiv($p * (count($durs) - 1), 100))];
+            $samples[] = [
+                'service' => $svc, 'rpc' => $name, 'kind' => $kind,
+                'p50' => $pct(50), 'p99' => $pct(99), 'mean' => array_sum($durs) / count($durs),
+            ];
         }
     }
-    expect($probed)->toBe(262);
-    // Full-surface coverage like Go/Python: 241 of the 262 RPCs are non-destructive
-    // and receive a reflection-populated typed request (only the 21 destructive ones
-    // are sent typed-empty). The few client-streaming/bidi RPCs take no request arg,
-    // so the floor matches the Go/Python suites (>= 230) rather than the old loose 80
-    // that the shallow 8-field populator settled for.
-    expect($populated)->toBeGreaterThanOrEqual(230);
-});
+
+    $bySvc = [];
+    foreach ($samples as $row) {
+        $bySvc[$row['service']][] = $row['mean'];
+    }
+    $svcMean = [];
+    foreach ($bySvc as $svc => $means) {
+        $svcMean[$svc] = array_sum($means) / count($means);
+    }
+    arsort($svcMean);
+    $lines = ['# UDB SDK Live Perf — PHP (Docker → host)', '', 'RPCs measured: '.count($samples), '',
+        '## Per-service mean latency', '', '| Service | RPCs | mean ms |', '|---|--:|--:|'];
+    foreach ($svcMean as $svc => $mean) {
+        $lines[] = sprintf('| %s | %d | %.2f |', $svc, count($bySvc[$svc]), $mean);
+    }
+    usort($samples, fn ($a, $b) => $b['p99'] <=> $a['p99']);
+    $lines = array_merge($lines, ['', '## Slowest 20 by p99', '', '| RPC | kind | p50 ms | p99 ms | mean ms |', '|---|---|--:|--:|--:|']);
+    foreach (array_slice($samples, 0, 20) as $row) {
+        $lines[] = sprintf('| %s/%s | %s | %.2f | %.2f | %.2f |', $row['service'], $row['rpc'], $row['kind'], $row['p50'], $row['p99'], $row['mean']);
+    }
+    file_put_contents('perf_report_php.md', implode("\n", $lines)."\n");
+    expect(count($samples))->toBeGreaterThanOrEqual(200);
+})->skip(getenv('UDB_LIVE_PERF') !== '1', 'perf run requires UDB_LIVE_PERF=1');

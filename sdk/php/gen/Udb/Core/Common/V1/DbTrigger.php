@@ -86,9 +86,9 @@ class DbTrigger extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTriggerName(string $var)
+    public function setTriggerName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->trigger_name = $var;
 
         return $this;
@@ -112,9 +112,9 @@ class DbTrigger extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTiming(string $var)
+    public function setTiming($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->timing = $var;
 
         return $this;
@@ -138,9 +138,9 @@ class DbTrigger extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEvent(string $var)
+    public function setEvent($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event = $var;
 
         return $this;
@@ -166,9 +166,9 @@ class DbTrigger extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFunctionName(string $var)
+    public function setFunctionName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->function_name = $var;
 
         return $this;
@@ -192,9 +192,9 @@ class DbTrigger extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setForEach(string $var)
+    public function setForEach($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->for_each = $var;
 
         return $this;
@@ -214,9 +214,9 @@ class DbTrigger extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setWhenClause(string $var)
+    public function setWhenClause($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->when_clause = $var;
 
         return $this;

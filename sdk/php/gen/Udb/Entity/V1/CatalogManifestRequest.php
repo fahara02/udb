@@ -65,8 +65,9 @@ class CatalogManifestRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -90,8 +91,9 @@ class CatalogManifestRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setRedact(bool $var)
+    public function setRedact($var)
     {
+        GPBUtil::checkBool($var);
         $this->redact = $var;
 
         return $this;

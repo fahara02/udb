@@ -62,9 +62,9 @@ class ProjectionDriftDivergentRow extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRowKeyJson(string $var)
+    public function setRowKeyJson($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->row_key_json = $var;
 
         return $this;
@@ -84,9 +84,9 @@ class ProjectionDriftDivergentRow extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSourceChecksum(string $var)
+    public function setSourceChecksum($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->source_checksum = $var;
 
         return $this;
@@ -106,9 +106,9 @@ class ProjectionDriftDivergentRow extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTargetChecksum(string $var)
+    public function setTargetChecksum($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->target_checksum = $var;
 
         return $this;
@@ -128,9 +128,9 @@ class ProjectionDriftDivergentRow extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setKind(string $var)
+    public function setKind($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->kind = $var;
 
         return $this;

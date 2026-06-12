@@ -52,9 +52,9 @@ class ResetPasswordResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -74,7 +74,7 @@ class ResetPasswordResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setChangedAtUnix(int|string $var)
+    public function setChangedAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->changed_at_unix = $var;

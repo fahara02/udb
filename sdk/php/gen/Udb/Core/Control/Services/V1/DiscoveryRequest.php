@@ -95,9 +95,9 @@ class DiscoveryRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setNodeId(string $var)
+    public function setNodeId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->node_id = $var;
 
         return $this;
@@ -105,7 +105,7 @@ class DiscoveryRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.control.entity.v1.ResourceType resource_type = 2 [json_name = "resourceType"];</code>
-     * @return int one of the values in {@see \Udb\Core\Control\Entity\V1\ResourceType}
+     * @return int
      */
     public function getResourceType()
     {
@@ -114,10 +114,10 @@ class DiscoveryRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.control.entity.v1.ResourceType resource_type = 2 [json_name = "resourceType"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Control\Entity\V1\ResourceType}
+     * @param int $var
      * @return $this
      */
-    public function setResourceType(int $var)
+    public function setResourceType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Control\Entity\V1\ResourceType::class);
         $this->resource_type = $var;
@@ -143,9 +143,9 @@ class DiscoveryRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setVersionInfo(string $var)
+    public function setVersionInfo($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->version_info = $var;
 
         return $this;
@@ -169,9 +169,9 @@ class DiscoveryRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResponseNonce(string $var)
+    public function setResponseNonce($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->response_nonce = $var;
 
         return $this;
@@ -195,7 +195,7 @@ class DiscoveryRequest extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setResourceNames(array|RepeatedField $var)
+    public function setResourceNames($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->resource_names = $arr;
@@ -231,8 +231,9 @@ class DiscoveryRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Control\Services\V1\ErrorDetail $var
      * @return $this
      */
-    public function setErrorDetail(\Udb\Core\Control\Services\V1\ErrorDetail|null $var)
+    public function setErrorDetail($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Control\Services\V1\ErrorDetail::class);
         $this->error_detail = $var;
 
         return $this;
@@ -262,8 +263,9 @@ class DiscoveryRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Core\Common\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;

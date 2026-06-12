@@ -104,9 +104,9 @@ class TenantConfig extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setId(string $var)
+    public function setId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->id = $var;
 
         return $this;
@@ -130,9 +130,9 @@ class TenantConfig extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -156,9 +156,9 @@ class TenantConfig extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setConfigKey(string $var)
+    public function setConfigKey($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->config_key = $var;
 
         return $this;
@@ -182,9 +182,9 @@ class TenantConfig extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setConfigValue(string $var)
+    public function setConfigValue($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->config_value = $var;
 
         return $this;
@@ -194,7 +194,7 @@ class TenantConfig extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:type;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.tenant.entity.v1.ConfigType type = 5 [json_name = "type", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Tenant\Entity\V1\ConfigType}
+     * @return int
      */
     public function getType()
     {
@@ -205,10 +205,10 @@ class TenantConfig extends \Google\Protobuf\Internal\Message
      * \@inject_tag: gorm:"column:type;not null;serializer:proto_enum"
      *
      * Generated from protobuf field <code>.udb.core.tenant.entity.v1.ConfigType type = 5 [json_name = "type", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Tenant\Entity\V1\ConfigType}
+     * @param int $var
      * @return $this
      */
-    public function setType(int $var)
+    public function setType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Tenant\Entity\V1\ConfigType::class);
         $this->type = $var;
@@ -234,9 +234,9 @@ class TenantConfig extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDescription(string $var)
+    public function setDescription($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->description = $var;
 
         return $this;
@@ -270,8 +270,9 @@ class TenantConfig extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Common\V1\AuditInfo $var
      * @return $this
      */
-    public function setAuditInfo(\Udb\Core\Common\V1\AuditInfo|null $var)
+    public function setAuditInfo($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Common\V1\AuditInfo::class);
         $this->audit_info = $var;
 
         return $this;

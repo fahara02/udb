@@ -72,9 +72,9 @@ class StartSamlLoginResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRedirectUrl(string $var)
+    public function setRedirectUrl($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->redirect_url = $var;
 
         return $this;
@@ -98,9 +98,9 @@ class StartSamlLoginResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSamlRequest(string $var)
+    public function setSamlRequest($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->saml_request = $var;
 
         return $this;
@@ -120,9 +120,9 @@ class StartSamlLoginResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRequestId(string $var)
+    public function setRequestId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->request_id = $var;
 
         return $this;
@@ -142,8 +142,9 @@ class StartSamlLoginResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setSigned(bool $var)
+    public function setSigned($var)
     {
+        GPBUtil::checkBool($var);
         $this->signed = $var;
 
         return $this;

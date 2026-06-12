@@ -95,9 +95,9 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMutationId(string $var)
+    public function setMutationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->mutation_id = $var;
 
         return $this;
@@ -117,9 +117,9 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceUri(string $var)
+    public function setResourceUri($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_uri = $var;
 
         return $this;
@@ -139,9 +139,9 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setChecksumSha256(string $var)
+    public function setChecksumSha256($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->checksum_sha256 = $var;
 
         return $this;
@@ -161,9 +161,9 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRecordJson(string $var)
+    public function setRecordJson($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->record_json = $var;
 
         return $this;
@@ -183,7 +183,7 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setAffectedRows(int|string $var)
+    public function setAffectedRows($var)
     {
         GPBUtil::checkInt64($var);
         $this->affected_rows = $var;
@@ -205,8 +205,9 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setWasDuplicate(bool $var)
+    public function setWasDuplicate($var)
     {
+        GPBUtil::checkBool($var);
         $this->was_duplicate = $var;
 
         return $this;
@@ -230,9 +231,9 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setWriteReceiptJson(string $var)
+    public function setWriteReceiptJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->write_receipt_json = $var;
 
         return $this;
@@ -252,9 +253,9 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResourceVersion(string $var)
+    public function setResourceVersion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resource_version = $var;
 
         return $this;
@@ -274,7 +275,7 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setMetadata(array|\Google\Protobuf\Internal\MapField $var)
+    public function setMetadata($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->metadata = $arr;
@@ -296,7 +297,7 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\OperationWarning[] $var
      * @return $this
      */
-    public function setWarnings(array|RepeatedField $var)
+    public function setWarnings($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\OperationWarning::class);
         $this->warnings = $arr;

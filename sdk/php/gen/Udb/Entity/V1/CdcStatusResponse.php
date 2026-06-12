@@ -82,9 +82,9 @@ class CdcStatusResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSlotName(string $var)
+    public function setSlotName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->slot_name = $var;
 
         return $this;
@@ -104,8 +104,9 @@ class CdcStatusResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsLeader(bool $var)
+    public function setIsLeader($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_leader = $var;
 
         return $this;
@@ -125,8 +126,9 @@ class CdcStatusResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPaused(bool $var)
+    public function setPaused($var)
     {
+        GPBUtil::checkBool($var);
         $this->paused = $var;
 
         return $this;
@@ -146,9 +148,9 @@ class CdcStatusResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPauseReason(string $var)
+    public function setPauseReason($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->pause_reason = $var;
 
         return $this;
@@ -168,9 +170,9 @@ class CdcStatusResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLastEventId(string $var)
+    public function setLastEventId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->last_event_id = $var;
 
         return $this;
@@ -190,8 +192,9 @@ class CdcStatusResponse extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setLagSeconds(float $var)
+    public function setLagSeconds($var)
     {
+        GPBUtil::checkDouble($var);
         $this->lag_seconds = $var;
 
         return $this;
@@ -211,7 +214,7 @@ class CdcStatusResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setOutboxDepth(int|string $var)
+    public function setOutboxDepth($var)
     {
         GPBUtil::checkInt64($var);
         $this->outbox_depth = $var;
@@ -233,7 +236,7 @@ class CdcStatusResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setUpdatedAtUnix(int|string $var)
+    public function setUpdatedAtUnix($var)
     {
         GPBUtil::checkInt64($var);
         $this->updated_at_unix = $var;

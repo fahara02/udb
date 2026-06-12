@@ -115,9 +115,9 @@ class ExecutorPerformanceSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSummaryId(string $var)
+    public function setSummaryId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->summary_id = $var;
 
         return $this;
@@ -147,8 +147,9 @@ class ExecutorPerformanceSummary extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setSummaryDate(\Google\Protobuf\Timestamp|null $var)
+    public function setSummaryDate($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->summary_date = $var;
 
         return $this;
@@ -168,9 +169,9 @@ class ExecutorPerformanceSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setExecutorIdentity(string $var)
+    public function setExecutorIdentity($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->executor_identity = $var;
 
         return $this;
@@ -190,9 +191,9 @@ class ExecutorPerformanceSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setWorkloadKind(string $var)
+    public function setWorkloadKind($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->workload_kind = $var;
 
         return $this;
@@ -212,7 +213,7 @@ class ExecutorPerformanceSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTotalDispatches(int|string $var)
+    public function setTotalDispatches($var)
     {
         GPBUtil::checkInt64($var);
         $this->total_dispatches = $var;
@@ -234,7 +235,7 @@ class ExecutorPerformanceSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setSuccessfulResults(int|string $var)
+    public function setSuccessfulResults($var)
     {
         GPBUtil::checkInt64($var);
         $this->successful_results = $var;
@@ -256,7 +257,7 @@ class ExecutorPerformanceSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTimeoutCount(int|string $var)
+    public function setTimeoutCount($var)
     {
         GPBUtil::checkInt64($var);
         $this->timeout_count = $var;
@@ -278,7 +279,7 @@ class ExecutorPerformanceSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setErrorCount(int|string $var)
+    public function setErrorCount($var)
     {
         GPBUtil::checkInt64($var);
         $this->error_count = $var;
@@ -300,8 +301,9 @@ class ExecutorPerformanceSummary extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setAvgExecutionMs(float $var)
+    public function setAvgExecutionMs($var)
     {
+        GPBUtil::checkDouble($var);
         $this->avg_execution_ms = $var;
 
         return $this;
@@ -321,8 +323,9 @@ class ExecutorPerformanceSummary extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setP99ExecutionMs(float $var)
+    public function setP99ExecutionMs($var)
     {
+        GPBUtil::checkDouble($var);
         $this->p99_execution_ms = $var;
 
         return $this;
@@ -342,8 +345,9 @@ class ExecutorPerformanceSummary extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setAvgConfidence(float $var)
+    public function setAvgConfidence($var)
     {
+        GPBUtil::checkDouble($var);
         $this->avg_confidence = $var;
 
         return $this;
@@ -363,8 +367,9 @@ class ExecutorPerformanceSummary extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setSuccessRate(float $var)
+    public function setSuccessRate($var)
     {
+        GPBUtil::checkDouble($var);
         $this->success_rate = $var;
 
         return $this;
@@ -384,8 +389,9 @@ class ExecutorPerformanceSummary extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setAvgCapacityUtilisation(float $var)
+    public function setAvgCapacityUtilisation($var)
     {
+        GPBUtil::checkDouble($var);
         $this->avg_capacity_utilisation = $var;
 
         return $this;
@@ -415,8 +421,9 @@ class ExecutorPerformanceSummary extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setRecordedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setRecordedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->recorded_at = $var;
 
         return $this;

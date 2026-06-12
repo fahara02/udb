@@ -65,9 +65,9 @@ class ScimGroup extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setId(string $var)
+    public function setId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->id = $var;
 
         return $this;
@@ -87,9 +87,9 @@ class ScimGroup extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDisplayName(string $var)
+    public function setDisplayName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->display_name = $var;
 
         return $this;
@@ -113,7 +113,7 @@ class ScimGroup extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setMembers(array|RepeatedField $var)
+    public function setMembers($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->members = $arr;
@@ -135,9 +135,9 @@ class ScimGroup extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRawJson(string $var)
+    public function setRawJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->raw_json = $var;
 
         return $this;

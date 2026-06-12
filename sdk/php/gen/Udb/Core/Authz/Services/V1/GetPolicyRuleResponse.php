@@ -57,8 +57,9 @@ class GetPolicyRuleResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Entity\V1\PolicyRule $var
      * @return $this
      */
-    public function setPolicy(\Udb\Core\Authz\Entity\V1\PolicyRule|null $var)
+    public function setPolicy($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Entity\V1\PolicyRule::class);
         $this->policy = $var;
 
         return $this;

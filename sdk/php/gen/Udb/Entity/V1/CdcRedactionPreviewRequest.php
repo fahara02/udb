@@ -87,8 +87,9 @@ class CdcRedactionPreviewRequest extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\RequestContext $var
      * @return $this
      */
-    public function setContext(\Udb\Entity\V1\RequestContext|null $var)
+    public function setContext($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\RequestContext::class);
         $this->context = $var;
 
         return $this;
@@ -108,9 +109,9 @@ class CdcRedactionPreviewRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setMessageType(string $var)
+    public function setMessageType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->message_type = $var;
 
         return $this;
@@ -130,9 +131,9 @@ class CdcRedactionPreviewRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTopic(string $var)
+    public function setTopic($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->topic = $var;
 
         return $this;
@@ -152,9 +153,9 @@ class CdcRedactionPreviewRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSchemaUri(string $var)
+    public function setSchemaUri($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->schema_uri = $var;
 
         return $this;
@@ -174,9 +175,9 @@ class CdcRedactionPreviewRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPayloadJson(string $var)
+    public function setPayloadJson($var)
     {
-        GPBUtil::checkString($var, false);
+        GPBUtil::checkString($var, False);
         $this->payload_json = $var;
 
         return $this;
@@ -196,9 +197,9 @@ class CdcRedactionPreviewRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRedactionMode(string $var)
+    public function setRedactionMode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->redaction_mode = $var;
 
         return $this;
@@ -218,7 +219,7 @@ class CdcRedactionPreviewRequest extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setRedactionVersion(int $var)
+    public function setRedactionVersion($var)
     {
         GPBUtil::checkInt32($var);
         $this->redaction_version = $var;

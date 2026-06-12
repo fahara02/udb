@@ -52,9 +52,9 @@ class Sort extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setField(string $var)
+    public function setField($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->field = $var;
 
         return $this;
@@ -74,8 +74,9 @@ class Sort extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setDescending(bool $var)
+    public function setDescending($var)
     {
+        GPBUtil::checkBool($var);
         $this->descending = $var;
 
         return $this;

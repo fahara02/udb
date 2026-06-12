@@ -120,9 +120,9 @@ class IndexOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIndexName(string $var)
+    public function setIndexName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->index_name = $var;
 
         return $this;
@@ -146,9 +146,9 @@ class IndexOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIndexType(string $var)
+    public function setIndexType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->index_type = $var;
 
         return $this;
@@ -168,8 +168,9 @@ class IndexOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setUnique(bool $var)
+    public function setUnique($var)
     {
+        GPBUtil::checkBool($var);
         $this->unique = $var;
 
         return $this;
@@ -189,7 +190,7 @@ class IndexOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setCompositeFields(array|RepeatedField $var)
+    public function setCompositeFields($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->composite_fields = $arr;
@@ -211,7 +212,7 @@ class IndexOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setIncludeColumns(array|RepeatedField $var)
+    public function setIncludeColumns($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->include_columns = $arr;
@@ -237,9 +238,9 @@ class IndexOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIndexMethod(string $var)
+    public function setIndexMethod($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->index_method = $var;
 
         return $this;
@@ -263,9 +264,9 @@ class IndexOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setWhereClause(string $var)
+    public function setWhereClause($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->where_clause = $var;
 
         return $this;
@@ -289,9 +290,9 @@ class IndexOptions extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOperatorClass(string $var)
+    public function setOperatorClass($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->operator_class = $var;
 
         return $this;
@@ -317,7 +318,7 @@ class IndexOptions extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setIndexParams(array|\Google\Protobuf\Internal\MapField $var)
+    public function setIndexParams($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->index_params = $arr;
@@ -343,8 +344,9 @@ class IndexOptions extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setConcurrent(bool $var)
+    public function setConcurrent($var)
     {
+        GPBUtil::checkBool($var);
         $this->concurrent = $var;
 
         return $this;
@@ -368,7 +370,7 @@ class IndexOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setColumns(array|RepeatedField $var)
+    public function setColumns($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->columns = $arr;

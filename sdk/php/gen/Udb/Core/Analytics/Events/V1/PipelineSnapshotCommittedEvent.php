@@ -93,9 +93,9 @@ class PipelineSnapshotCommittedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEventId(string $var)
+    public function setEventId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->event_id = $var;
 
         return $this;
@@ -115,9 +115,9 @@ class PipelineSnapshotCommittedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStageName(string $var)
+    public function setStageName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->stage_name = $var;
 
         return $this;
@@ -141,9 +141,9 @@ class PipelineSnapshotCommittedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSnapshotHour(string $var)
+    public function setSnapshotHour($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->snapshot_hour = $var;
 
         return $this;
@@ -163,7 +163,7 @@ class PipelineSnapshotCommittedEvent extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setTotalRequests(int|string $var)
+    public function setTotalRequests($var)
     {
         GPBUtil::checkInt64($var);
         $this->total_requests = $var;
@@ -185,8 +185,9 @@ class PipelineSnapshotCommittedEvent extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setErrorRate(float $var)
+    public function setErrorRate($var)
     {
+        GPBUtil::checkDouble($var);
         $this->error_rate = $var;
 
         return $this;
@@ -206,8 +207,9 @@ class PipelineSnapshotCommittedEvent extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setP99LatencyMs(float $var)
+    public function setP99LatencyMs($var)
     {
+        GPBUtil::checkDouble($var);
         $this->p99_latency_ms = $var;
 
         return $this;
@@ -227,9 +229,9 @@ class PipelineSnapshotCommittedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCorrelationId(string $var)
+    public function setCorrelationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->correlation_id = $var;
 
         return $this;
@@ -259,8 +261,9 @@ class PipelineSnapshotCommittedEvent extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setOccurredAt(\Google\Protobuf\Timestamp|null $var)
+    public function setOccurredAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->occurred_at = $var;
 
         return $this;
@@ -280,9 +283,9 @@ class PipelineSnapshotCommittedEvent extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;

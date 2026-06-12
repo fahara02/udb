@@ -62,8 +62,9 @@ class SagaResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\SagaRecord $var
      * @return $this
      */
-    public function setSaga(\Udb\Entity\V1\SagaRecord|null $var)
+    public function setSaga($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\SagaRecord::class);
         $this->saga = $var;
 
         return $this;
@@ -83,7 +84,7 @@ class SagaResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setErrors(array|RepeatedField $var)
+    public function setErrors($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->errors = $arr;

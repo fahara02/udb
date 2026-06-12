@@ -62,7 +62,7 @@ class GetAuthzRevisionResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setPolicyRevision(int|string $var)
+    public function setPolicyRevision($var)
     {
         GPBUtil::checkInt64($var);
         $this->policy_revision = $var;
@@ -84,7 +84,7 @@ class GetAuthzRevisionResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setRelationshipRevision(int|string $var)
+    public function setRelationshipRevision($var)
     {
         GPBUtil::checkInt64($var);
         $this->relationship_revision = $var;
@@ -106,9 +106,9 @@ class GetAuthzRevisionResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setContentHash(string $var)
+    public function setContentHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->content_hash = $var;
 
         return $this;
@@ -138,8 +138,9 @@ class GetAuthzRevisionResponse extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setChangedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setChangedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->changed_at = $var;
 
         return $this;

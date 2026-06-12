@@ -52,8 +52,9 @@ class GeoPoint extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setLatitude(float $var)
+    public function setLatitude($var)
     {
+        GPBUtil::checkDouble($var);
         $this->latitude = $var;
 
         return $this;
@@ -73,8 +74,9 @@ class GeoPoint extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setLongitude(float $var)
+    public function setLongitude($var)
     {
+        GPBUtil::checkDouble($var);
         $this->longitude = $var;
 
         return $this;

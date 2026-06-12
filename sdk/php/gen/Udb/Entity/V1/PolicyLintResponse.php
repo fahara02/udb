@@ -52,8 +52,9 @@ class PolicyLintResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setPassed(bool $var)
+    public function setPassed($var)
     {
+        GPBUtil::checkBool($var);
         $this->passed = $var;
 
         return $this;
@@ -73,7 +74,7 @@ class PolicyLintResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setFindings(array|RepeatedField $var)
+    public function setFindings($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->findings = $arr;

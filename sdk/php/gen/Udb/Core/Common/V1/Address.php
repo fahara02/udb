@@ -82,9 +82,9 @@ class Address extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAddressLine1(string $var)
+    public function setAddressLine1($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->address_line1 = $var;
 
         return $this;
@@ -104,9 +104,9 @@ class Address extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAddressLine2(string $var)
+    public function setAddressLine2($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->address_line2 = $var;
 
         return $this;
@@ -126,9 +126,9 @@ class Address extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLocality(string $var)
+    public function setLocality($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->locality = $var;
 
         return $this;
@@ -148,9 +148,9 @@ class Address extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRegion(string $var)
+    public function setRegion($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->region = $var;
 
         return $this;
@@ -170,9 +170,9 @@ class Address extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPostalCode(string $var)
+    public function setPostalCode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->postal_code = $var;
 
         return $this;
@@ -192,9 +192,9 @@ class Address extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCountryCode(string $var)
+    public function setCountryCode($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->country_code = $var;
 
         return $this;
@@ -214,8 +214,9 @@ class Address extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setLatitude(float $var)
+    public function setLatitude($var)
     {
+        GPBUtil::checkDouble($var);
         $this->latitude = $var;
 
         return $this;
@@ -235,8 +236,9 @@ class Address extends \Google\Protobuf\Internal\Message
      * @param float $var
      * @return $this
      */
-    public function setLongitude(float $var)
+    public function setLongitude($var)
     {
+        GPBUtil::checkDouble($var);
         $this->longitude = $var;
 
         return $this;

@@ -62,8 +62,9 @@ class NativeAccessResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\Decision $var
      * @return $this
      */
-    public function setDecision(\Udb\Core\Authz\Services\V1\Decision|null $var)
+    public function setDecision($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\Decision::class);
         $this->decision = $var;
 
         return $this;
@@ -93,8 +94,9 @@ class NativeAccessResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\NativeAccessGrant $var
      * @return $this
      */
-    public function setGrant(\Udb\Core\Authz\Services\V1\NativeAccessGrant|null $var)
+    public function setGrant($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\NativeAccessGrant::class);
         $this->grant = $var;
 
         return $this;

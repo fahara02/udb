@@ -47,8 +47,9 @@ class UnlinkIdentityResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setUnlinked(bool $var)
+    public function setUnlinked($var)
     {
+        GPBUtil::checkBool($var);
         $this->unlinked = $var;
 
         return $this;

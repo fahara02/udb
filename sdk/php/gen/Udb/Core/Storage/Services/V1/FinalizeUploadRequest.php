@@ -88,9 +88,9 @@ class FinalizeUploadRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -110,9 +110,9 @@ class FinalizeUploadRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFileId(string $var)
+    public function setFileId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->file_id = $var;
 
         return $this;
@@ -132,9 +132,9 @@ class FinalizeUploadRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setContentType(string $var)
+    public function setContentType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->content_type = $var;
 
         return $this;
@@ -154,9 +154,9 @@ class FinalizeUploadRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFileType(string $var)
+    public function setFileType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->file_type = $var;
 
         return $this;
@@ -176,9 +176,9 @@ class FinalizeUploadRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReferenceId(string $var)
+    public function setReferenceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reference_id = $var;
 
         return $this;
@@ -198,9 +198,9 @@ class FinalizeUploadRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setReferenceType(string $var)
+    public function setReferenceType($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->reference_type = $var;
 
         return $this;
@@ -234,8 +234,9 @@ class FinalizeUploadRequest extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setIsPublic(bool $var)
+    public function setIsPublic($var)
     {
+        GPBUtil::checkBool($var);
         $this->is_public = $var;
 
         return $this;
@@ -259,7 +260,7 @@ class FinalizeUploadRequest extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setSizeBytes(int|string $var)
+    public function setSizeBytes($var)
     {
         GPBUtil::checkInt64($var);
         $this->size_bytes = $var;

@@ -77,7 +77,7 @@ class DependencyContractOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRequiredNativeServices(array|RepeatedField $var)
+    public function setRequiredNativeServices($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->required_native_services = $arr;
@@ -99,7 +99,7 @@ class DependencyContractOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setOptionalNativeServices(array|RepeatedField $var)
+    public function setOptionalNativeServices($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->optional_native_services = $arr;
@@ -121,7 +121,7 @@ class DependencyContractOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRequiredBackends(array|RepeatedField $var)
+    public function setRequiredBackends($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->required_backends = $arr;
@@ -143,7 +143,7 @@ class DependencyContractOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setOptionalBackends(array|RepeatedField $var)
+    public function setOptionalBackends($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->optional_backends = $arr;
@@ -165,7 +165,7 @@ class DependencyContractOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRequiredFeatures(array|RepeatedField $var)
+    public function setRequiredFeatures($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->required_features = $arr;
@@ -187,7 +187,7 @@ class DependencyContractOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setRequiredEnv(array|RepeatedField $var)
+    public function setRequiredEnv($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->required_env = $arr;
@@ -209,7 +209,7 @@ class DependencyContractOptions extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setDegradedWhenMissing(array|RepeatedField $var)
+    public function setDegradedWhenMissing($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->degraded_when_missing = $arr;

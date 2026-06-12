@@ -237,9 +237,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProviderId(string $var)
+    public function setProviderId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->provider_id = $var;
 
         return $this;
@@ -259,9 +259,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -269,7 +269,7 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.IdpKind kind = 3 [json_name = "kind", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Idp\Entity\V1\IdpKind}
+     * @return int
      */
     public function getKind()
     {
@@ -278,10 +278,10 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.IdpKind kind = 3 [json_name = "kind", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Idp\Entity\V1\IdpKind}
+     * @param int $var
      * @return $this
      */
-    public function setKind(int $var)
+    public function setKind($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Idp\Entity\V1\IdpKind::class);
         $this->kind = $var;
@@ -303,9 +303,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDisplayName(string $var)
+    public function setDisplayName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->display_name = $var;
 
         return $this;
@@ -329,9 +329,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setIssuer(string $var)
+    public function setIssuer($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->issuer = $var;
 
         return $this;
@@ -355,9 +355,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEntityId(string $var)
+    public function setEntityId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->entity_id = $var;
 
         return $this;
@@ -377,9 +377,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setJwksUrl(string $var)
+    public function setJwksUrl($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->jwks_url = $var;
 
         return $this;
@@ -399,9 +399,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSamlMetadataUrl(string $var)
+    public function setSamlMetadataUrl($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->saml_metadata_url = $var;
 
         return $this;
@@ -425,9 +425,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setClientIdsJson(string $var)
+    public function setClientIdsJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->client_ids_json = $var;
 
         return $this;
@@ -451,9 +451,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAudiencesJson(string $var)
+    public function setAudiencesJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->audiences_json = $var;
 
         return $this;
@@ -477,9 +477,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setClaimMappingJson(string $var)
+    public function setClaimMappingJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->claim_mapping_json = $var;
 
         return $this;
@@ -503,9 +503,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setGroupMappingJson(string $var)
+    public function setGroupMappingJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->group_mapping_json = $var;
 
         return $this;
@@ -531,9 +531,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setJitPolicyJson(string $var)
+    public function setJitPolicyJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->jit_policy_json = $var;
 
         return $this;
@@ -559,9 +559,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAccountLinkingPolicy(string $var)
+    public function setAccountLinkingPolicy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->account_linking_policy = $var;
 
         return $this;
@@ -581,8 +581,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setEnabled(bool $var)
+    public function setEnabled($var)
     {
+        GPBUtil::checkBool($var);
         $this->enabled = $var;
 
         return $this;
@@ -608,9 +609,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setClientSecret(string $var)
+    public function setClientSecret($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->client_secret = $var;
 
         return $this;
@@ -634,9 +635,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSamlSigningKeyPem(string $var)
+    public function setSamlSigningKeyPem($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->saml_signing_key_pem = $var;
 
         return $this;
@@ -662,9 +663,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSamlIdpCertsJson(string $var)
+    public function setSamlIdpCertsJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->saml_idp_certs_json = $var;
 
         return $this;
@@ -688,9 +689,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setSamlSsoUrl(string $var)
+    public function setSamlSsoUrl($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->saml_sso_url = $var;
 
         return $this;
@@ -700,7 +701,7 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * ── Provider health (J2.1) ────────────────────────────────────────────────
      *
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.ProviderHealth health = 20 [json_name = "health", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Idp\Entity\V1\ProviderHealth}
+     * @return int
      */
     public function getHealth()
     {
@@ -711,10 +712,10 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * ── Provider health (J2.1) ────────────────────────────────────────────────
      *
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.ProviderHealth health = 20 [json_name = "health", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Idp\Entity\V1\ProviderHealth}
+     * @param int $var
      * @return $this
      */
-    public function setHealth(int $var)
+    public function setHealth($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Idp\Entity\V1\ProviderHealth::class);
         $this->health = $var;
@@ -746,8 +747,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setLastJwksRefreshAt(\Google\Protobuf\Timestamp|null $var)
+    public function setLastJwksRefreshAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->last_jwks_refresh_at = $var;
 
         return $this;
@@ -767,9 +769,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLastJwksRefreshStatus(string $var)
+    public function setLastJwksRefreshStatus($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->last_jwks_refresh_status = $var;
 
         return $this;
@@ -793,9 +795,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setCreatedBy(string $var)
+    public function setCreatedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->created_by = $var;
 
         return $this;
@@ -815,9 +817,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUpdatedBy(string $var)
+    public function setUpdatedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->updated_by = $var;
 
         return $this;
@@ -847,8 +849,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;
@@ -878,8 +881,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setUpdatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setUpdatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->updated_at = $var;
 
         return $this;
@@ -909,8 +913,9 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setDeletedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setDeletedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->deleted_at = $var;
 
         return $this;

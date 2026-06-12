@@ -47,7 +47,7 @@ class ListWebAuthnCredentialsResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authn\Services\V1\WebAuthnCredentialSummary[] $var
      * @return $this
      */
-    public function setCredentials(array|RepeatedField $var)
+    public function setCredentials($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Authn\Services\V1\WebAuthnCredentialSummary::class);
         $this->credentials = $arr;

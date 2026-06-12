@@ -47,9 +47,9 @@ class GetPolicyRuleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPolicyId(string $var)
+    public function setPolicyId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->policy_id = $var;
 
         return $this;

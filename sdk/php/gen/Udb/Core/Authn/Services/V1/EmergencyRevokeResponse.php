@@ -62,7 +62,7 @@ class EmergencyRevokeResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setFamiliesRevoked(int|string $var)
+    public function setFamiliesRevoked($var)
     {
         GPBUtil::checkInt64($var);
         $this->families_revoked = $var;
@@ -84,7 +84,7 @@ class EmergencyRevokeResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setSessionsRevoked(int|string $var)
+    public function setSessionsRevoked($var)
     {
         GPBUtil::checkInt64($var);
         $this->sessions_revoked = $var;
@@ -106,7 +106,7 @@ class EmergencyRevokeResponse extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setKeysCompromised(int|string $var)
+    public function setKeysCompromised($var)
     {
         GPBUtil::checkInt64($var);
         $this->keys_compromised = $var;
@@ -128,9 +128,9 @@ class EmergencyRevokeResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setOperationId(string $var)
+    public function setOperationId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->operation_id = $var;
 
         return $this;

@@ -123,9 +123,9 @@ class Device extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeviceId(string $var)
+    public function setDeviceId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->device_id = $var;
 
         return $this;
@@ -145,9 +145,9 @@ class Device extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -167,9 +167,9 @@ class Device extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -189,9 +189,9 @@ class Device extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;
@@ -211,9 +211,9 @@ class Device extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDeviceName(string $var)
+    public function setDeviceName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->device_name = $var;
 
         return $this;
@@ -221,7 +221,7 @@ class Device extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.DeviceType device_type = 6 [json_name = "deviceType", (.udb.core.common.v1.pg_column) = {</code>
-     * @return int one of the values in {@see \Udb\Core\Authn\Entity\V1\DeviceType}
+     * @return int
      */
     public function getDeviceType()
     {
@@ -230,10 +230,10 @@ class Device extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.DeviceType device_type = 6 [json_name = "deviceType", (.udb.core.common.v1.pg_column) = {</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authn\Entity\V1\DeviceType}
+     * @param int $var
      * @return $this
      */
-    public function setDeviceType(int $var)
+    public function setDeviceType($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\DeviceType::class);
         $this->device_type = $var;
@@ -259,9 +259,9 @@ class Device extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setFingerprintHash(string $var)
+    public function setFingerprintHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->fingerprint_hash = $var;
 
         return $this;
@@ -287,9 +287,9 @@ class Device extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLastIpMasked(string $var)
+    public function setLastIpMasked($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->last_ip_masked = $var;
 
         return $this;
@@ -309,9 +309,9 @@ class Device extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLastUserAgentHash(string $var)
+    public function setLastUserAgentHash($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->last_user_agent_hash = $var;
 
         return $this;
@@ -341,8 +341,9 @@ class Device extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setLastSeenAt(\Google\Protobuf\Timestamp|null $var)
+    public function setLastSeenAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->last_seen_at = $var;
 
         return $this;
@@ -372,8 +373,9 @@ class Device extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setCreatedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setCreatedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
 
         return $this;
@@ -403,8 +405,9 @@ class Device extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setRevokedAt(\Google\Protobuf\Timestamp|null $var)
+    public function setRevokedAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->revoked_at = $var;
 
         return $this;
@@ -424,9 +427,9 @@ class Device extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRevokedBy(string $var)
+    public function setRevokedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->revoked_by = $var;
 
         return $this;

@@ -57,8 +57,9 @@ class MessageSchemaLookupResponse extends \Google\Protobuf\Internal\Message
      * @param \Udb\Entity\V1\MessageSchemaDescriptor $var
      * @return $this
      */
-    public function setSchema(\Udb\Entity\V1\MessageSchemaDescriptor|null $var)
+    public function setSchema($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\MessageSchemaDescriptor::class);
         $this->schema = $var;
 
         return $this;

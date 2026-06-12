@@ -87,9 +87,9 @@ class AssignRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setUserId(string $var)
+    public function setUserId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->user_id = $var;
 
         return $this;
@@ -109,9 +109,9 @@ class AssignRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRoleId(string $var)
+    public function setRoleId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->role_id = $var;
 
         return $this;
@@ -131,9 +131,9 @@ class AssignRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDomain(string $var)
+    public function setDomain($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->domain = $var;
 
         return $this;
@@ -153,9 +153,9 @@ class AssignRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAssignedBy(string $var)
+    public function setAssignedBy($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->assigned_by = $var;
 
         return $this;
@@ -185,8 +185,9 @@ class AssignRoleRequest extends \Google\Protobuf\Internal\Message
      * @param \Google\Protobuf\Timestamp $var
      * @return $this
      */
-    public function setExpiresAt(\Google\Protobuf\Timestamp|null $var)
+    public function setExpiresAt($var)
     {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->expires_at = $var;
 
         return $this;
@@ -206,9 +207,9 @@ class AssignRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPrincipalId(string $var)
+    public function setPrincipalId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->principal_id = $var;
 
         return $this;
@@ -216,7 +217,7 @@ class AssignRoleRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.PrincipalKind principal_kind = 7 [json_name = "principalKind", (.google.api.field_behavior) = OPTIONAL];</code>
-     * @return int one of the values in {@see \Udb\Core\Authz\Entity\V1\PrincipalKind}
+     * @return int
      */
     public function getPrincipalKind()
     {
@@ -225,10 +226,10 @@ class AssignRoleRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.authz.entity.v1.PrincipalKind principal_kind = 7 [json_name = "principalKind", (.google.api.field_behavior) = OPTIONAL];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Authz\Entity\V1\PrincipalKind}
+     * @param int $var
      * @return $this
      */
-    public function setPrincipalKind(int $var)
+    public function setPrincipalKind($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authz\Entity\V1\PrincipalKind::class);
         $this->principal_kind = $var;
@@ -250,9 +251,9 @@ class AssignRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTenantId(string $var)
+    public function setTenantId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->tenant_id = $var;
 
         return $this;
@@ -272,9 +273,9 @@ class AssignRoleRequest extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setProjectId(string $var)
+    public function setProjectId($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->project_id = $var;
 
         return $this;

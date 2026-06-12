@@ -120,9 +120,9 @@ class AdminBackendSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setBackend(string $var)
+    public function setBackend($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->backend = $var;
 
         return $this;
@@ -142,9 +142,9 @@ class AdminBackendSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setStatus(string $var)
+    public function setStatus($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->status = $var;
 
         return $this;
@@ -164,9 +164,9 @@ class AdminBackendSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setTransport(string $var)
+    public function setTransport($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->transport = $var;
 
         return $this;
@@ -186,9 +186,9 @@ class AdminBackendSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setConsistencyModel(string $var)
+    public function setConsistencyModel($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->consistency_model = $var;
 
         return $this;
@@ -208,8 +208,9 @@ class AdminBackendSummary extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setSupportsTransactions(bool $var)
+    public function setSupportsTransactions($var)
     {
+        GPBUtil::checkBool($var);
         $this->supports_transactions = $var;
 
         return $this;
@@ -229,8 +230,9 @@ class AdminBackendSummary extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setSupportsSchemaMigration(bool $var)
+    public function setSupportsSchemaMigration($var)
     {
+        GPBUtil::checkBool($var);
         $this->supports_schema_migration = $var;
 
         return $this;
@@ -250,8 +252,9 @@ class AdminBackendSummary extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setSupportsVectorSearch(bool $var)
+    public function setSupportsVectorSearch($var)
     {
+        GPBUtil::checkBool($var);
         $this->supports_vector_search = $var;
 
         return $this;
@@ -271,8 +274,9 @@ class AdminBackendSummary extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setSupportsHybridSearch(bool $var)
+    public function setSupportsHybridSearch($var)
     {
+        GPBUtil::checkBool($var);
         $this->supports_hybrid_search = $var;
 
         return $this;
@@ -292,7 +296,7 @@ class AdminBackendSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setMaxPayloadBytes(int|string $var)
+    public function setMaxPayloadBytes($var)
     {
         GPBUtil::checkInt64($var);
         $this->max_payload_bytes = $var;
@@ -318,8 +322,9 @@ class AdminBackendSummary extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setProbeOk(bool $var)
+    public function setProbeOk($var)
     {
+        GPBUtil::checkBool($var);
         $this->probe_ok = $var;
 
         return $this;
@@ -339,7 +344,7 @@ class AdminBackendSummary extends \Google\Protobuf\Internal\Message
      * @param int|string $var
      * @return $this
      */
-    public function setProbeLatencyMs(int|string $var)
+    public function setProbeLatencyMs($var)
     {
         GPBUtil::checkInt64($var);
         $this->probe_latency_ms = $var;
@@ -361,9 +366,9 @@ class AdminBackendSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setInstanceName(string $var)
+    public function setInstanceName($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->instance_name = $var;
 
         return $this;
@@ -383,9 +388,9 @@ class AdminBackendSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRole(string $var)
+    public function setRole($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->role = $var;
 
         return $this;
@@ -405,7 +410,7 @@ class AdminBackendSummary extends \Google\Protobuf\Internal\Message
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
-    public function setLabels(array|\Google\Protobuf\Internal\MapField $var)
+    public function setLabels($var)
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->labels = $arr;
@@ -427,9 +432,9 @@ class AdminBackendSummary extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setRoutingStatus(string $var)
+    public function setRoutingStatus($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->routing_status = $var;
 
         return $this;

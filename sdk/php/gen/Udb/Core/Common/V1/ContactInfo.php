@@ -62,9 +62,9 @@ class ContactInfo extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setPrimaryPhone(string $var)
+    public function setPrimaryPhone($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->primary_phone = $var;
 
         return $this;
@@ -84,9 +84,9 @@ class ContactInfo extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setEmail(string $var)
+    public function setEmail($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->email = $var;
 
         return $this;
@@ -106,9 +106,9 @@ class ContactInfo extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setAlternatePhone(string $var)
+    public function setAlternatePhone($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->alternate_phone = $var;
 
         return $this;
@@ -128,9 +128,9 @@ class ContactInfo extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setWebsite(string $var)
+    public function setWebsite($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->website = $var;
 
         return $this;

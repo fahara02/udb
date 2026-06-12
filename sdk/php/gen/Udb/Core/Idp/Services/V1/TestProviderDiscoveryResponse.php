@@ -80,8 +80,9 @@ class TestProviderDiscoveryResponse extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setReachable(bool $var)
+    public function setReachable($var)
     {
+        GPBUtil::checkBool($var);
         $this->reachable = $var;
 
         return $this;
@@ -89,7 +90,7 @@ class TestProviderDiscoveryResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.ProviderHealth health = 2 [json_name = "health"];</code>
-     * @return int one of the values in {@see \Udb\Core\Idp\Entity\V1\ProviderHealth}
+     * @return int
      */
     public function getHealth()
     {
@@ -98,10 +99,10 @@ class TestProviderDiscoveryResponse extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>.udb.core.idp.entity.v1.ProviderHealth health = 2 [json_name = "health"];</code>
-     * @param int $var one of the values in {@see \Udb\Core\Idp\Entity\V1\ProviderHealth}
+     * @param int $var
      * @return $this
      */
-    public function setHealth(int $var)
+    public function setHealth($var)
     {
         GPBUtil::checkEnum($var, \Udb\Core\Idp\Entity\V1\ProviderHealth::class);
         $this->health = $var;
@@ -123,9 +124,9 @@ class TestProviderDiscoveryResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResolvedIssuer(string $var)
+    public function setResolvedIssuer($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resolved_issuer = $var;
 
         return $this;
@@ -145,9 +146,9 @@ class TestProviderDiscoveryResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setResolvedJwksUrl(string $var)
+    public function setResolvedJwksUrl($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->resolved_jwks_url = $var;
 
         return $this;
@@ -167,7 +168,7 @@ class TestProviderDiscoveryResponse extends \Google\Protobuf\Internal\Message
      * @param int $var
      * @return $this
      */
-    public function setKeyCount(int $var)
+    public function setKeyCount($var)
     {
         GPBUtil::checkInt32($var);
         $this->key_count = $var;
@@ -193,7 +194,7 @@ class TestProviderDiscoveryResponse extends \Google\Protobuf\Internal\Message
      * @param string[] $var
      * @return $this
      */
-    public function setKeyIds(array|RepeatedField $var)
+    public function setKeyIds($var)
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->key_ids = $arr;
@@ -215,9 +216,9 @@ class TestProviderDiscoveryResponse extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDetail(string $var)
+    public function setDetail($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->detail = $var;
 
         return $this;

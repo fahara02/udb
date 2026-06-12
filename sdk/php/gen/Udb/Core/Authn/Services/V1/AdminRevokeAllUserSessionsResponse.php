@@ -47,7 +47,7 @@ class AdminRevokeAllUserSessionsResponse extends \Google\Protobuf\Internal\Messa
      * @param int|string $var
      * @return $this
      */
-    public function setSessionsRevoked(int|string $var)
+    public function setSessionsRevoked($var)
     {
         GPBUtil::checkInt64($var);
         $this->sessions_revoked = $var;

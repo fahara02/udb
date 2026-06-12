@@ -70,9 +70,9 @@ class SimulationResult extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setLabel(string $var)
+    public function setLabel($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->label = $var;
 
         return $this;
@@ -102,8 +102,9 @@ class SimulationResult extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\Decision $var
      * @return $this
      */
-    public function setActiveDecision(\Udb\Core\Authz\Services\V1\Decision|null $var)
+    public function setActiveDecision($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\Decision::class);
         $this->active_decision = $var;
 
         return $this;
@@ -133,8 +134,9 @@ class SimulationResult extends \Google\Protobuf\Internal\Message
      * @param \Udb\Core\Authz\Services\V1\Decision $var
      * @return $this
      */
-    public function setDraftDecision(\Udb\Core\Authz\Services\V1\Decision|null $var)
+    public function setDraftDecision($var)
     {
+        GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\Decision::class);
         $this->draft_decision = $var;
 
         return $this;
@@ -158,8 +160,9 @@ class SimulationResult extends \Google\Protobuf\Internal\Message
      * @param bool $var
      * @return $this
      */
-    public function setChanged(bool $var)
+    public function setChanged($var)
     {
+        GPBUtil::checkBool($var);
         $this->changed = $var;
 
         return $this;
@@ -179,9 +182,9 @@ class SimulationResult extends \Google\Protobuf\Internal\Message
      * @param string $var
      * @return $this
      */
-    public function setDiffJson(string $var)
+    public function setDiffJson($var)
     {
-        GPBUtil::checkString($var, true);
+        GPBUtil::checkString($var, True);
         $this->diff_json = $var;
 
         return $this;
