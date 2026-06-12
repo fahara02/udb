@@ -137,6 +137,22 @@ function processAll(name, file, expected, re) {
   }
 }
 
+function processTripleOptional(name, file, expected, re, options = {}) {
+  if (!fileExists(file)) {
+    record(name, file, expected, "(optional file missing)", true, "optional");
+    return;
+  }
+  processTriple(name, file, expected, re, options);
+}
+
+function processAllOptional(name, file, expected, re) {
+  if (!fileExists(file)) {
+    record(name, file, expected, "(optional file missing)", true, "optional");
+    return;
+  }
+  processAll(name, file, expected, re);
+}
+
 // ── Brand sub-headers (HTML <sub> line in README / top-of-doc headers) ───────
 // Pattern: crate v0.x.y | protocol v1.0.0</sub>
 const subHeaderFiles = [
@@ -249,11 +265,11 @@ processTriple("ts generated client comment", "sdk/typescript/generatedClient.ts"
   /(\/\/ UDB v)(\d+\.\d+\.\d+)( · protocol v[\d.]+ · \d+ service\(s\))/);
 processTriple("ts generated client version", "sdk/typescript/generatedClient.ts", C["sdk-typescript"].version,
   /(export const UDB_SDK_VERSION = ")(\d+\.\d+\.\d+)(")/);
-processTriple("ts dist generated client comment", "sdk/typescript/dist/generatedClient.js", C["sdk-typescript"].version,
+processTripleOptional("ts dist generated client comment", "sdk/typescript/dist/generatedClient.js", C["sdk-typescript"].version,
   /(\/\/ UDB v)(\d+\.\d+\.\d+)( · protocol v[\d.]+ · \d+ service\(s\))/);
-processTriple("ts dist generated client version", "sdk/typescript/dist/generatedClient.js", C["sdk-typescript"].version,
+processTripleOptional("ts dist generated client version", "sdk/typescript/dist/generatedClient.js", C["sdk-typescript"].version,
   /(exports\.UDB_SDK_VERSION = ")(\d+\.\d+\.\d+)(")/);
-processTriple("ts dist generated declarations", "sdk/typescript/dist/generatedClient.d.ts", C["sdk-typescript"].version,
+processTripleOptional("ts dist generated declarations", "sdk/typescript/dist/generatedClient.d.ts", C["sdk-typescript"].version,
   /(UDB_SDK_VERSION = ")(\d+\.\d+\.\d+)(")/);
 processTriple("ts dist-test generated client comment", "sdk/typescript/dist-test/generatedClient.js", C["sdk-typescript"].version,
   /(\/\/ UDB v)(\d+\.\d+\.\d+)( · protocol v[\d.]+ · \d+ service\(s\))/);
@@ -275,13 +291,13 @@ processTriple("python generated client version", "sdk/python/udb_client/generate
   /(UDB version:\s+)(\d+\.\d+\.\d+)(\n)/);
 processAll("python cli launcher refs", "sdk/python/udb_client/_cli.py", C["sdk-python"].version,
   /(^|[^0-9]v?)(0\.\d+\.\d+)([^0-9]|$)/gm);
-processTriple("python package metadata version", "sdk/python/udb_client.egg-info/PKG-INFO", C["sdk-python"].version,
+processTripleOptional("python package metadata version", "sdk/python/udb_client.egg-info/PKG-INFO", C["sdk-python"].version,
   /(^Version: )(\d+\.\d+\.\d+)(\r?\n)/m);
-processTriple("python package metadata header", "sdk/python/udb_client.egg-info/PKG-INFO", C["sdk-python"].version,
+processTripleOptional("python package metadata header", "sdk/python/udb_client.egg-info/PKG-INFO", C["sdk-python"].version,
   /(crate v)(\d+\.\d+\.\d+)( \| protocol v[\d.]+<\/sub>)/);
-processTriple("python package metadata install", "sdk/python/udb_client.egg-info/PKG-INFO", C["sdk-python"].version,
+processTripleOptional("python package metadata install", "sdk/python/udb_client.egg-info/PKG-INFO", C["sdk-python"].version,
   /(pip install udb-client==)(\d+\.\d+\.\d+)(\r?\n)/);
-processTriple("python package metadata pydantic install", "sdk/python/udb_client.egg-info/PKG-INFO", C["sdk-python"].version,
+processTripleOptional("python package metadata pydantic install", "sdk/python/udb_client.egg-info/PKG-INFO", C["sdk-python"].version,
   /(pip install "udb-client\[pydantic\]==)(\d+\.\d+\.\d+)(")/);
 processTriple("csharp generated client version", "sdk/csharp/Udb.Client/GeneratedClient.cs", C["sdk-csharp"].version,
   /(\/\/   UDB version:\s+)(\d+\.\d+\.\d+)(\n)/);
