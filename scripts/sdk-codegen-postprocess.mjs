@@ -76,14 +76,14 @@ function normalizeGoGeneratedText(text) {
 
 function normalizeJavaGeneratedText(text) {
   return normalizeGeneratedText(text).replace(
-    /^ \*[ \t]*\n(?= \* (?:HTTP prefix:|The gateway calls|Auth method routing|The native fast-path|Signed policy bundles))/gmu,
+    /^[ \t]*\*[ \t]*\n(?=[ \t]*\* (?:HTTP prefix:|The gateway calls|Auth method routing|The native fast-path|Signed policy bundles|Server-only control plane:))/gmu,
     "",
   );
 }
 
 function normalizePhpGeneratedText(text) {
   return normalizeGeneratedText(text).replace(
-    /^ \*[ \t]*\n(?= \* Generated from protobuf message)/gmu,
+    /^[ \t]*\*[ \t]*\n(?=[ \t]*\* (?:Generated from protobuf message|Migration order|Hybrid model:|`GetNativeAccess`|`GetPolicyBundle`))/gmu,
     "",
   );
 }

@@ -60,7 +60,13 @@ if (!text.includes(`"description": ${JSON.stringify(DESCRIPTION)}`)) {
 
 // The openapiv2 plugin preserves source comment newlines inside JSON string
 // values. Normalize escaped CRLFs so Windows and Linux generation do not drift.
-text = text.replace(/\\r\\n/g, "\\n").replace(/\\r/g, "\\n");
+// Normalize actual file newlines too; otherwise the schema-shape fixups below
+// only match fresh LF output from Linux CI and not a CRLF checkout.
+text = text
+  .replace(/\r\n/g, "\n")
+  .replace(/\r/g, "\n")
+  .replace(/\\r\\n/g, "\\n")
+  .replace(/\\r/g, "\\n");
 
 // OpenAPI plugin releases disagree on whether a leading source-comment heading
 // belongs in a schema title or description. Canonicalize the handful of known
@@ -87,16 +93,18 @@ const schemaTitles = new Map([
   ['v1PolicyBundleRequest', titledDescriptions[1]],
 ]);
 
+const sameSchema = '(?:(?!\\n    "v1[A-Za-z0-9]+": \\{)[\\s\\S])*?';
+
 for (const [schemaName, title] of schemaTitles) {
   text = text.replace(
-    new RegExp(`("${schemaName}": \\{\\n[\\s\\S]*?      "description": "(?:[^"\\\\]|\\\\.)*")(\\n      \\})`, 'm'),
+    new RegExp(`("${schemaName}": \\{${sameSchema}\\n[ \\t]*\\},\\n[ \\t]*"description": "(?:[^"\\\\]|\\\\.)*")([,]?\\n[ \\t]*\\})`, 'm'),
     `$1,\n      "title": ${JSON.stringify(title)}$2`,
   );
 }
 
 for (const longCommentSchema of ['v1Session', 'v1User']) {
   text = text.replace(
-    new RegExp(`("${longCommentSchema}": \\{\\n(?:        .+\\n)*?      )"title": ("(?:[^"\\\\]|\\\\.)*")`, 'm'),
+    new RegExp(`("${longCommentSchema}": \\{${sameSchema}\\n[ \\t]*\\},\\n[ \\t]*)"title": ("(?:[^"\\\\]|\\\\.)*")`, 'm'),
     '$1"description": $2',
   );
 }

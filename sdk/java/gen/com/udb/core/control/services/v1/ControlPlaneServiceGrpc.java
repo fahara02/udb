@@ -13,7 +13,6 @@ import static io.grpc.MethodDescriptor.generateFullMethodName;
  * response carrying a fresh nonce the node echoes to ACK (apply) or NACK (reject
  * without applying). A node that NACKs keeps its last-good version. Unary helpers
  * fetch resources on demand (incl. by tenant) and expose per-node ack visibility.
- *
  * Server-only control plane: runs on the isolated native auth listener with an
  * admin/service-account credential; never exposed on the public DataBroker port.
  * ---------------------------------------------------------------------------
@@ -252,7 +251,6 @@ public final class ControlPlaneServiceGrpc {
    * response carrying a fresh nonce the node echoes to ACK (apply) or NACK (reject
    * without applying). A node that NACKs keeps its last-good version. Unary helpers
    * fetch resources on demand (incl. by tenant) and expose per-node ack visibility.
-   *
    * Server-only control plane: runs on the isolated native auth listener with an
    * admin/service-account credential; never exposed on the public DataBroker port.
    * ---------------------------------------------------------------------------
@@ -320,7 +318,6 @@ public final class ControlPlaneServiceGrpc {
    * response carrying a fresh nonce the node echoes to ACK (apply) or NACK (reject
    * without applying). A node that NACKs keeps its last-good version. Unary helpers
    * fetch resources on demand (incl. by tenant) and expose per-node ack visibility.
-   *
    * Server-only control plane: runs on the isolated native auth listener with an
    * admin/service-account credential; never exposed on the public DataBroker port.
    * ---------------------------------------------------------------------------
@@ -346,7 +343,6 @@ public final class ControlPlaneServiceGrpc {
    * response carrying a fresh nonce the node echoes to ACK (apply) or NACK (reject
    * without applying). A node that NACKs keeps its last-good version. Unary helpers
    * fetch resources on demand (incl. by tenant) and expose per-node ack visibility.
-   *
    * Server-only control plane: runs on the isolated native auth listener with an
    * admin/service-account credential; never exposed on the public DataBroker port.
    * ---------------------------------------------------------------------------
@@ -430,7 +426,6 @@ public final class ControlPlaneServiceGrpc {
    * response carrying a fresh nonce the node echoes to ACK (apply) or NACK (reject
    * without applying). A node that NACKs keeps its last-good version. Unary helpers
    * fetch resources on demand (incl. by tenant) and expose per-node ack visibility.
-   *
    * Server-only control plane: runs on the isolated native auth listener with an
    * admin/service-account credential; never exposed on the public DataBroker port.
    * ---------------------------------------------------------------------------
@@ -513,7 +508,6 @@ public final class ControlPlaneServiceGrpc {
    * response carrying a fresh nonce the node echoes to ACK (apply) or NACK (reject
    * without applying). A node that NACKs keeps its last-good version. Unary helpers
    * fetch resources on demand (incl. by tenant) and expose per-node ack visibility.
-   *
    * Server-only control plane: runs on the isolated native auth listener with an
    * admin/service-account credential; never exposed on the public DataBroker port.
    * ---------------------------------------------------------------------------
@@ -572,7 +566,6 @@ public final class ControlPlaneServiceGrpc {
    * response carrying a fresh nonce the node echoes to ACK (apply) or NACK (reject
    * without applying). A node that NACKs keeps its last-good version. Unary helpers
    * fetch resources on demand (incl. by tenant) and expose per-node ack visibility.
-   *
    * Server-only control plane: runs on the isolated native auth listener with an
    * admin/service-account credential; never exposed on the public DataBroker port.
    * ---------------------------------------------------------------------------
