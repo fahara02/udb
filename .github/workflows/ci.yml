@@ -739,7 +739,7 @@ jobs:
         working-directory: sdk/typescript
         run: npm ci --no-audit --no-fund
       - name: Build UDB broker
-        run: cargo build --locked --bin udb --no-default-features --features "postgres,s3,runtime-logging"
+        run: cargo build --locked --bin udb --no-default-features --features "postgres,mongodb,s3,runtime-logging"
       - name: Create live-sdk MinIO bucket
         shell: bash
         run: |
