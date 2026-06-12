@@ -1,0 +1,17 @@
+# Bench image: php-live (grpc + generated client, cached) + a native PostgreSQL
+# driver (pdo_pgsql) and a native Redis driver (phpredis) so the "direct" baseline
+# can talk to its dedicated dockerised Postgres/Redis with zero UDB in the path.
+FROM udb-php-live:latest
+
+ENV MAKEFLAGS="-j2"
+RUN apt-get -o Acquire::Check-Valid-Until=false update || true \
+    && apt-get install -y --no-install-recommends libpq-dev \
+    && docker-php-ext-install pdo_pgsql \
+    && printf "no\nno\nno\nno\n" | pecl install redis \
+    && docker-php-ext-enable redis \
+    && rm -rf /var/lib/apt/lists/*
+
+# The bench script (overlaid on the existing /sdk from the base image).
+COPY bench/bench.php /sdk/bench/bench.php
+
+CMD ["php", "bench/bench.php"]

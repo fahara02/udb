@@ -844,6 +844,37 @@ mod tests {
     }
 
     #[test]
+    fn partition_setup_creates_current_child_without_partman() {
+        let table = partitioned_table();
+        let sql = render_partition_setup(&table);
+
+        assert!(
+            sql.contains("OR to_regclass('partman.part_config') IS NOT NULL THEN"),
+            "{sql}"
+        );
+        assert!(sql.contains("date_trunc('month', now())"), "{sql}");
+        assert!(sql.contains("INTERVAL '1 month'"), "{sql}");
+        assert!(sql.contains("to_char(_start_ts, 'YYYYMM')"), "{sql}");
+        assert!(
+            sql.contains("PARTITION OF %I.%I FOR VALUES FROM (%L) TO (%L)"),
+            "{sql}"
+        );
+    }
+
+    #[test]
+    fn partition_setup_skips_current_child_when_default_partition_is_declared() {
+        let mut table = partitioned_table();
+        table.partition_default = true;
+        let sql = render_partition_setup(&table);
+
+        assert!(sql.contains("PARTITION OF \"example_mfs\".\"mfs_transactions\" DEFAULT"));
+        assert!(
+            !sql.contains("date_trunc('month', now())"),
+            "default partition should remain the fallback for tables that opt in:\n{sql}"
+        );
+    }
+
+    #[test]
     fn pg_partman_extension_creation_is_skipped_when_unavailable() {
         let sql = render_create_extension(&ManifestExtension {
             name: "pg_partman".to_string(),

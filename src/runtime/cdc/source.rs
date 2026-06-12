@@ -32,10 +32,12 @@
 
 use std::pin::Pin;
 
+#[cfg(any(feature = "kafka", feature = "mysql"))]
 use async_stream::stream;
 use async_trait::async_trait;
 use futures::Stream;
 use serde::{Deserialize, Serialize};
+#[cfg(any(feature = "kafka", feature = "mysql"))]
 use sqlx::Row;
 
 /// One change event surfaced by a CDC source. Backend-agnostic: the

@@ -1423,6 +1423,8 @@ fn native_contract_findings(
 ) -> Vec<serde_json::Value> {
     let mut findings = Vec::new();
     for service in &manifest.services {
+        let requires_endpoint_security =
+            service.package.starts_with("udb.core.") && service.package.contains(".services.");
         if service.package.starts_with("udb.core.") && service.native_service.is_none() {
             findings.push(serde_json::json!({
                 "severity": "error",
@@ -1455,11 +1457,13 @@ fn native_contract_findings(
         }
         for rpc in &service.methods {
             let Some(security) = rpc.endpoint_security.as_ref() else {
-                findings.push(serde_json::json!({
-                    "severity": "error",
-                    "kind": "endpoint_security_missing",
-                    "rpc": rpc.grpc_path(),
-                }));
+                if requires_endpoint_security {
+                    findings.push(serde_json::json!({
+                        "severity": "error",
+                        "kind": "endpoint_security_missing",
+                        "rpc": rpc.grpc_path(),
+                    }));
+                }
                 continue;
             };
             if security.auth_mode_name() != "public"

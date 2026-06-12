@@ -317,3 +317,26 @@ required-features = ["bench-internals"]
 [[example]]
 name = "dhat_hotpath"
 required-features = ["bench-internals"]
+
+# ── Build profiles ────────────────────────────────────────────────────────────
+# Default `--release` (dev + CI): thin LTO + a single codegen unit capture most of
+# the cross-crate-inlining win without fat-LTO's multi-minute link. `panic` stays
+# "unwind" ON PURPOSE — the broker isolates per-request/task panics (tonic/tokio)
+# and must NOT abort the whole process.
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+# Benches MUST measure the shipped, optimised path (bench-integrity doctrine), not a
+# default-profile build.
+[profile.bench]
+inherits = "release"
+
+# Maximum-optimisation profile for the SHIPPED release binaries: `release-binaries.yml`
+# builds `--profile dist`. Compile time is irrelevant for a tagged release, so go fat
+# LTO + 1 codegen unit + symbol strip for the fastest, smallest artifact. Per-target
+# `target-cpu` is supplied by the workflow (portable per-OS baselines, never `native`).
+[profile.dist]
+inherits = "release"
+lto = "fat"
+strip = "symbols"

@@ -74,24 +74,33 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # target_cpu = the per-OS micro-arch floor the shipped binary is tuned for.
+          # x86-64-v2 (Nehalem/2009+: SSE4.2 + POPCNT) is universally safe on any modern
+          # CPU — a real uplift over the generic baseline with ZERO SIGILL risk. Bump to
+          # `x86-64-v3` (Haswell/2013+: AVX2/FMA/BMI2) ONLY for a known-modern fleet.
+          # apple-m1 is 100% safe for Apple Silicon (every arm64 Mac is >= M1).
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             asset: udb-linux-amd64
             ext: ''
+            target_cpu: x86-64-v2
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             asset: udb-windows-amd64.exe
             ext: '.exe'
+            target_cpu: x86-64-v2
           - os: macos-14
             target: aarch64-apple-darwin
             asset: udb-darwin-arm64
             ext: ''
+            target_cpu: apple-m1
           # Intel macOS (x86_64). macos-13 is retired; macos-15-intel is the
           # standard GitHub-hosted Intel label while x64 macOS remains available.
           - os: macos-15-intel
             target: x86_64-apple-darwin
             asset: udb-darwin-amd64
             ext: ''
+            target_cpu: x86-64-v2
 
     steps:
       - uses: actions/checkout@v4
@@ -137,7 +146,10 @@ jobs:
             export PATH="${msvc_bin}:/c/Strawberry/perl/bin:/c/Program Files/NASM:${PATH}"
             export CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER="${msvc_bin}/link.exe"
           fi
-          cargo build --release --locked --target ${{ matrix.target }} \
+          # Tune the SHIPPED artifact to this target's safe micro-arch floor (applies to
+          # the whole dep graph). `dist` profile = fat LTO + 1 codegen unit + symbol strip.
+          export RUSTFLAGS="-C target-cpu=${{ matrix.target_cpu }} ${RUSTFLAGS:-}"
+          cargo build --profile dist --locked --target ${{ matrix.target }} \
             --bin udb \
             --no-default-features --features "${PORTABLE_FEATURES}"
 
@@ -146,7 +158,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          cp "target/${{ matrix.target }}/release/udb${{ matrix.ext }}" "dist/${{ matrix.asset }}"
+          # `--profile dist` outputs under target/<target>/dist/ (distinct from this ./dist staging dir).
+          cp "target/${{ matrix.target }}/dist/udb${{ matrix.ext }}" "dist/${{ matrix.asset }}"
           cd dist
           if command -v sha256sum >/dev/null 2>&1; then
             sha256sum "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256"

@@ -1,13 +1,13 @@
 //! Phase 0A (Section F5/F13) descriptor lints.
 //!
 //! These lints complement `native_contract_findings` in [`super`] (which already
-//! emits `endpoint_security_missing`, `non_public_rpc_without_policy`, and
-//! `db_table_security_missing`). This module covers the F13 gaps that the
-//! existing pass does *not* catch — abuse/rate-limit hygiene on public RPCs,
-//! tenant-source enforceability, tenant-scoped table RLS misconfiguration, loss
-//! of scalar field security signals during descriptor decoding, and a hard RPC
-//! inventory drift gate so that proto surface changes can't silently slip past
-//! the contract.
+//! emits native-control-plane `endpoint_security_missing`,
+//! `non_public_rpc_without_policy`, and `db_table_security_missing`). This module
+//! covers the F13 gaps that the existing pass does *not* catch —
+//! abuse/rate-limit hygiene on public RPCs, tenant-source enforceability,
+//! tenant-scoped table RLS misconfiguration, loss of scalar field security
+//! signals during descriptor decoding, and a hard RPC inventory drift gate so
+//! that proto surface changes can't silently slip past the contract.
 //!
 //! Every finding is a JSON object shaped `{severity, code, path, message, hint}`
 //! so the CLI gate can render and aggregate them uniformly. `severity` is one of
@@ -56,8 +56,10 @@ pub(crate) fn descriptor_lint_findings(
             }
 
             let Some(security) = rpc.endpoint_security.as_ref() else {
-                // `endpoint_security_missing` is already emitted upstream; the
-                // F13 lints below all presuppose a present contract.
+                // Native control-plane `endpoint_security_missing` is already
+                // emitted upstream; the F13 lints below all presuppose a
+                // present contract. DataBroker facade RPCs intentionally carry
+                // operation_kind without endpoint_security.
                 continue;
             };
 

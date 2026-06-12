@@ -691,6 +691,29 @@ fn generated_native_contract_json_matches_embedded_descriptor() {
 }
 
 #[test]
+fn native_contract_lint_does_not_require_data_broker_endpoint_security() {
+    let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest();
+    let findings = native_contract_findings(&manifest);
+    let data_broker_endpoint_errors: Vec<&serde_json::Value> = findings
+        .iter()
+        .filter(|finding| {
+            finding.get("severity").and_then(|value| value.as_str()) == Some("error")
+                && finding.get("kind").and_then(|value| value.as_str())
+                    == Some("endpoint_security_missing")
+                && finding
+                    .get("rpc")
+                    .and_then(|value| value.as_str())
+                    .is_some_and(|rpc| rpc.starts_with("/udb.services.v1.DataBroker/"))
+        })
+        .collect();
+
+    assert!(
+        data_broker_endpoint_errors.is_empty(),
+        "native lint must not require endpoint_security on the public DataBroker facade: {data_broker_endpoint_errors:#?}"
+    );
+}
+
+#[test]
 fn generated_native_docs_match_embedded_descriptor() {
     let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest();
     let rendered = native_docs_markdown(&manifest);

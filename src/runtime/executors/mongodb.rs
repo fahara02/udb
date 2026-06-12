@@ -396,17 +396,6 @@ impl MongoDbExecutor {
         }
     }
 
-    /// B.9: hand the native driver `Client` to in-crate consumers (e.g. the
-    /// MongoDB `CanonicalStore`). Returns `Some` only when this executor owns a
-    /// native wire-protocol transport; the Data API transport returns `None`.
-    #[cfg(feature = "mongodb-native")]
-    pub(crate) fn native_client(&self) -> Option<mongodb_driver::Client> {
-        match &self.transport {
-            MongoDbTransport::Native(native) => Some(native.client.clone()),
-            MongoDbTransport::DataApi { .. } => None,
-        }
-    }
-
     /// B.9: the native default `Database` handle (the database resolved from the
     /// native config). `Some` only for the native transport. The canonical store
     /// builds its outbox / lease collections on this handle.

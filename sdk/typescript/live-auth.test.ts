@@ -326,6 +326,64 @@ async function runLiveAuthNegative(authn: any, tenantId: string, projectId: stri
   assert.equal(failures.length, 0, `SECURITY (auth did not fail closed): ${failures.join("; ")}`);
 }
 
+// runLiveEdgeCases: per-RPC EDGE cases (malformed/hostile inputs + isolation
+// boundaries). Each must fail closed with a typed error (or safely accept-and-
+// sanitise), never leak cross-tenant data, and never surface a server fault
+// (UNKNOWN/INTERNAL/DATA_LOSS = the input crashed the handler). Mirrors the Go suite.
+const EDGE_SERVER_FAULTS = new Set([2, 13, 15]); // UNKNOWN, INTERNAL, DATA_LOSS
+async function runLiveEdgeCases(data: any, tenantId: string, projectId: string): Promise<void> {
+  const ctx = requestContext(tenantId, projectId, "ts.live.edge");
+  const opts = { deadlineMs: 8_000, noRetry: true };
+  const suffix = `${tenantId}-edge`;
+  const notFault = (label: string, err: unknown) => {
+    const c = grpcCode(err);
+    if (c !== undefined && EDGE_SERVER_FAULTS.has(c)) {
+      throw new Error(`${label} faulted the server (code ${c}): ${describeGrpcError(err)}`);
+    }
+  };
+
+  // 1. missing project_id in the filter -> project isolation must reject.
+  let accepted1 = false;
+  try { await data.select({ context: ctx, message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: tenantId }, limit: 1 }, opts); accepted1 = true; }
+  catch (err) { notFault("missing project_id", err); }
+  assert.equal(accepted1, false, "Select without a project_id filter was ACCEPTED — project isolation not enforced");
+
+  // 2. cross-tenant read -> RLS scopes to the JWT tenant; a foreign filter leaks nothing.
+  const foreign = "00000000-0000-0000-0000-0000deadbeef";
+  try {
+    const resp = await data.select({ context: ctx, message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: foreign, project_id: projectId }, limit: 10 }, opts);
+    const n = (resp?.records_json ?? []).length;
+    assert.equal(n, 0, `cross-tenant Select LEAKED ${n} record(s) for ${foreign}`);
+  } catch (err) { notFault("cross-tenant Select", err); }
+
+  // 3. NUL byte in a text field -> stripped/rejected, never a raw UTF8 0x00 fault (B14).
+  try {
+    await data.upsert({
+      context: ctx, message_type: LIVE_MESSAGE_TYPE,
+      record_json: jsonBytes({ record_id: `edge-nul-${suffix}`, tenant_id: tenantId, project_id: projectId, lookup_key: `edge-nul-lk-${suffix}`, payload: "payload with-nul", revision: 1 }),
+      conflict_fields: ["record_id"],
+    }, opts);
+  } catch (err) { notFault("NUL-byte payload", err); }
+
+  // 4. limit boundaries (negative/zero/huge) -> clamped/validated, never a crash.
+  for (const lim of [-1, 0, 1_000_000]) {
+    try { await data.select({ context: ctx, message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: tenantId, project_id: projectId }, limit: lim }, opts); }
+    catch (err) { notFault(`Select limit=${lim}`, err); }
+  }
+
+  // 5. unknown message_type -> typed error, not a 500.
+  let accepted5 = false;
+  try { await data.select({ context: ctx, message_type: "udb.does.not.Exist", filter: { tenant_id: tenantId, project_id: projectId }, limit: 1 }, opts); accepted5 = true; }
+  catch (err) { notFault("unknown message_type", err); }
+  assert.equal(accepted5, false, "Select on an unknown message_type was ACCEPTED");
+
+  // 6. invalid backend -> typed error, never a panic/Internal.
+  let accepted6 = false;
+  try { await data.list_resources({ context: ctx, backend: "nonexistent-backend-xyz" }, opts); accepted6 = true; }
+  catch (err) { notFault("invalid backend", err); }
+  assert.equal(accepted6, false, "ListResources on a nonexistent backend was ACCEPTED");
+}
+
 async function drainReadable(stream: grpc.ClientReadableStream<any>): Promise<any[]> {
   return await new Promise<any[]>((resolve, reject) => {
     const chunks: any[] = [];

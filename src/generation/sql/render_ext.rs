@@ -733,6 +733,7 @@ pub(crate) fn render_partition_setup(table: &ManifestTable) -> String {
             .map(|value| ql(&value))
             .unwrap_or_else(|| "NULL".to_string()),
     ));
+    out.push_str(&render_current_partition_fallback(table, &interval));
 
     // DEFAULT partition: catches rows whose partition key falls outside every
     // premade child range (without it such an INSERT errors). pg_partman does
@@ -767,6 +768,58 @@ pub(crate) fn render_partition_setup(table: &ManifestTable) -> String {
         ));
     }
     out
+}
+
+fn render_current_partition_fallback(table: &ManifestTable, interval: &str) -> String {
+    if table.partition_default {
+        return String::new();
+    }
+    let Some(date_trunc) = partition_date_trunc_interval(interval) else {
+        return String::new();
+    };
+    let suffix_format = match date_trunc.as_str() {
+        "year" => "YYYY",
+        "month" => "YYYYMM",
+        "week" | "day" => "YYYYMMDD",
+        "hour" => "YYYYMMDDHH24",
+        _ => return String::new(),
+    };
+    let normalized = normalize_partition_interval(interval);
+    format!(
+        "DO $$\n\
+         DECLARE\n\
+         \t_parent REGCLASS := to_regclass({parent_table});\n\
+         \t_schema TEXT := {schema};\n\
+         \t_table TEXT := {table};\n\
+         \t_child_table TEXT;\n\
+         \t_start_ts TIMESTAMPTZ;\n\
+         \t_end_ts TIMESTAMPTZ;\n\
+         BEGIN\n\
+         \tIF _parent IS NULL OR to_regclass('partman.part_config') IS NOT NULL THEN\n\
+         \t\tRETURN;\n\
+         \tEND IF;\n\
+         \t_start_ts := date_trunc({date_trunc}, now());\n\
+         \t_end_ts := _start_ts + INTERVAL {interval};\n\
+         \t_child_table := format('%s_p_%s', _table, to_char(_start_ts, {suffix_format}));\n\
+         \tIF to_regclass(format('%I.%I', _schema, _child_table)) IS NOT NULL THEN\n\
+         \t\tRETURN;\n\
+         \tEND IF;\n\
+         \tBEGIN\n\
+         \t\tEXECUTE format(\n\
+         \t\t\t'CREATE TABLE IF NOT EXISTS %I.%I PARTITION OF %I.%I FOR VALUES FROM (%L) TO (%L)',\n\
+         \t\t\t_schema, _child_table, _schema, _table, _start_ts, _end_ts\n\
+         \t\t);\n\
+         \tEXCEPTION WHEN duplicate_table OR invalid_object_definition THEN\n\
+         \t\tRAISE NOTICE 'Skipping fallback current partition %.%: %', _schema, _child_table, SQLERRM;\n\
+         \tEND;\n\
+         END$$;\n\n",
+        parent_table = ql(&format!("{}.{}", table.schema, table.table)),
+        schema = ql(&table.schema),
+        table = ql(&table.table),
+        date_trunc = ql(&date_trunc),
+        interval = ql(&normalized),
+        suffix_format = ql(suffix_format),
+    )
 }
 
 pub(crate) fn is_partitioned(table: &ManifestTable) -> bool {

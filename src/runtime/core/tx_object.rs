@@ -587,8 +587,10 @@ impl DataBrokerRuntime {
                     pool.clone(),
                     tx,
                 );
-                let mut participants: Vec<Box<dyn crate::runtime::xa::XaParticipant>> =
-                    vec![Box::new(participant)];
+                #[cfg_attr(not(feature = "mysql"), allow(unused_mut))]
+                let mut participants: Vec<
+                    Box<dyn crate::runtime::xa::XaParticipant>,
+                > = vec![Box::new(participant)];
                 #[cfg(feature = "mysql")]
                 participants.extend(mysql_participants);
                 let xa_request = crate::runtime::xa::XaRequest {

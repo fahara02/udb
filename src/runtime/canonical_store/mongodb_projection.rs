@@ -47,12 +47,6 @@ pub(super) fn mongo_err(op: &str, err: impl std::fmt::Display) -> SystemStoreErr
     }
 }
 
-/// `bson::DateTime` from a chrono `DateTime<Utc>` (millisecond precision — the
-/// resolution the conformance ordering relies on).
-pub(super) fn chrono_to_bdt(dt: DateTime<Utc>) -> bson::DateTime {
-    bson::DateTime::from_millis(dt.timestamp_millis())
-}
-
 /// chrono `DateTime<Utc>` from a `bson::DateTime`.
 pub(super) fn bdt_to_chrono(bdt: bson::DateTime) -> DateTime<Utc> {
     DateTime::<Utc>::from_timestamp_millis(bdt.timestamp_millis()).unwrap_or_else(Utc::now)

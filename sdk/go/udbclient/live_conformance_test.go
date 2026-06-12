@@ -143,6 +143,11 @@ func TestLiveGeneratedRPCSurface(t *testing.T) {
 	// all-backend CRUD matrix and were previously surface-probe only.
 	runLiveDataBrokerOpsE2E(t, servicesv1.NewDataBrokerClient(brokerConn), brokerGen.outgoingContext(ctx), tenant, project)
 
+	// Per-RPC EDGE cases (malformed/hostile inputs + isolation-boundary probes):
+	// every one must fail closed with a typed error and never leak cross-tenant data
+	// or surface a server fault. Complements the happy-path CRUD above.
+	runLiveEdgeCasesE2E(t, servicesv1.NewDataBrokerClient(brokerConn), brokerGen.outgoingContext(ctx), tenant, project)
+
 	// Real create→read→assert CRUD against every native control-plane service, not
 	// just the empty-request mount probe below. A SINGLE admin (bound to the
 	// canonical tenant UUID) now serves the UUID-strict services

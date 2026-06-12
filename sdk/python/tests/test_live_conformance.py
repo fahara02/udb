@@ -154,6 +154,82 @@ def contains_resource(resources, name: str) -> bool:
     return any(name in resource for resource in resources)
 
 
+_SERVER_FAULTS = {grpc.StatusCode.INTERNAL, grpc.StatusCode.UNKNOWN, grpc.StatusCode.DATA_LOSS}
+
+
+def run_live_edge_cases(stub, meta: Metadata) -> None:
+    """Per-RPC EDGE cases: malformed/hostile inputs + isolation-boundary probes.
+
+    Every case must FAIL CLOSED with a typed client-side error (or safely
+    accept-and-sanitise), never leak another tenant's rows, and never surface a
+    server fault (INTERNAL/UNKNOWN/DATA_LOSS = the input crashed the handler
+    instead of being validated). Mirrors the Go ``runLiveEdgeCasesE2E`` suite.
+    """
+    suffix = uuid.uuid4().hex
+    ctx = meta.with_purpose("python.live.edge").to_request_context()
+    md = meta.to_grpc_metadata()
+
+    # 1. missing project_id in the filter -> project isolation must reject it.
+    try:
+        stub.Select(relational_pb2.SelectRequest(
+            context=ctx, message_type=LIVE_MESSAGE_TYPE,
+            filter=live_struct({"tenant_id": meta.tenant_id}), limit=1,
+        ), metadata=md, timeout=8.0)
+        raise AssertionError("Select without a project_id filter was ACCEPTED — project isolation not enforced")
+    except grpc.RpcError as exc:
+        assert exc.code() not in _SERVER_FAULTS, f"missing project_id faulted the server ({exc.code()}): {exc.details()}"
+
+    # 2. cross-tenant read -> RLS scopes to the JWT tenant; a foreign filter leaks nothing.
+    foreign = "00000000-0000-0000-0000-0000deadbeef"
+    try:
+        resp = stub.Select(relational_pb2.SelectRequest(
+            context=ctx, message_type=LIVE_MESSAGE_TYPE,
+            filter=live_struct({"tenant_id": foreign, "project_id": meta.project_id}), limit=10,
+        ), metadata=md, timeout=8.0)
+        assert len(resp.records_json) == 0, f"cross-tenant Select LEAKED {len(resp.records_json)} record(s) for {foreign}"
+    except grpc.RpcError as exc:
+        assert exc.code() not in _SERVER_FAULTS, f"cross-tenant Select faulted the server ({exc.code()}): {exc.details()}"
+
+    # 3. NUL byte in a text field -> stripped/rejected, never a raw UTF8 0x00 fault (B14).
+    try:
+        stub.Upsert(relational_pb2.UpsertRequest(
+            context=ctx, message_type=LIVE_MESSAGE_TYPE,
+            record_json=live_record_json(
+                f"edge-nul-{suffix}", meta.tenant_id, meta.project_id, f"edge-nul-lk-{suffix}", "payload\x00with-nul", 1
+            ),
+            conflict_fields=["record_id"],
+        ), metadata=md, timeout=8.0)
+    except grpc.RpcError as exc:
+        assert exc.code() not in _SERVER_FAULTS, f"NUL-byte payload faulted the server ({exc.code()}): {exc.details()}"
+
+    # 4. limit boundaries (negative/zero/huge) -> clamped/validated, never a crash.
+    for lim in (-1, 0, 1_000_000):
+        try:
+            stub.Select(relational_pb2.SelectRequest(
+                context=ctx, message_type=LIVE_MESSAGE_TYPE,
+                filter=live_struct({"tenant_id": meta.tenant_id, "project_id": meta.project_id}), limit=lim,
+            ), metadata=md, timeout=8.0)
+        except grpc.RpcError as exc:
+            assert exc.code() not in _SERVER_FAULTS, f"Select limit={lim} faulted the server ({exc.code()}): {exc.details()}"
+
+    # 5. unknown message_type -> typed error, not a 500.
+    try:
+        stub.Select(relational_pb2.SelectRequest(
+            context=ctx, message_type="udb.does.not.Exist",
+            filter=live_struct({"tenant_id": meta.tenant_id, "project_id": meta.project_id}), limit=1,
+        ), metadata=md, timeout=8.0)
+        raise AssertionError("Select on an unknown message_type was ACCEPTED")
+    except grpc.RpcError as exc:
+        assert exc.code() not in _SERVER_FAULTS, f"unknown message_type faulted the server ({exc.code()}): {exc.details()}"
+
+    # 6. invalid backend -> typed error, never a panic/Internal.
+    try:
+        stub.ListResources(admin_pb2.ResourceAdminRequest(context=ctx, backend="nonexistent-backend-xyz"), metadata=md, timeout=8.0)
+        raise AssertionError("ListResources on a nonexistent backend was ACCEPTED")
+    except grpc.RpcError as exc:
+        assert exc.code() not in _SERVER_FAULTS, f"invalid backend faulted the server ({exc.code()}): {exc.details()}"
+
+
 def run_live_backend_e2e(stub, meta: Metadata) -> None:
     suffix = uuid.uuid4().hex
     record_id = f"py-{suffix}"
@@ -1293,6 +1369,9 @@ def test_live_generated_rpc_surface():
     run_auth_negative(auth_target, authed_meta, required_env("UDB_LIVE_USERNAME"))
 
     run_live_backend_e2e(caps_stub, authed_meta)
+
+    # Per-RPC EDGE cases (fail-closed / no cross-tenant leak / no server fault).
+    run_live_edge_cases(caps_stub, authed_meta)
 
     # Breadth: a real category-appropriate round-trip against EVERY advertised backend
     # kind (relational SQL, object, document, cache, vector, graph) — not just the
